@@ -27,7 +27,7 @@ window.DS = (function () {
       icon: "folder",
       sections: [
         {
-          id: "projects", title: "Projects",
+          id: "projects", title: "Projects", headless: true,
           items: [{
             id: "projects", title: "Danh mục project", icon: "folder", cap: CAP["06"],
             blurb: "Tạo project từ template, quản lý danh mục project trong workspace và mở không gian làm việc của từng project.",
@@ -37,8 +37,9 @@ window.DS = (function () {
             ],
           }],
         },
+        { id: "pfilters", title: "Filters", items: [] },
         {
-          id: "pre", title: "Pre-Production",
+          id: "pre", title: "Pre-Production", hidden: true,
           items: [
             {
               id: "scripting", title: "Scripting", icon: "pen", cap: CAP["07"],
@@ -66,7 +67,7 @@ window.DS = (function () {
           ],
         },
         {
-          id: "prod", title: "Production",
+          id: "prod", title: "Production", hidden: true,
           items: [
             {
               id: "audiobook", title: "Audiobook", icon: "mic", cap: CAP["08"],
@@ -84,7 +85,7 @@ window.DS = (function () {
           ],
         },
         {
-          id: "post", title: "Post-Production",
+          id: "post", title: "Post-Production", hidden: true,
           items: [{
             id: "video", title: "Video editor", icon: "film", cap: CAP["09"],
             blurb: "Dựng video hậu kỳ từ các tài nguyên của project, áp dụng hiệu ứng và kết xuất thành phẩm.",
@@ -104,7 +105,7 @@ window.DS = (function () {
       icon: "book",
       sections: [
         {
-          id: "novels", title: "Novels",
+          id: "novels", title: "Novels", headless: true,
           items: [{
             id: "novels", title: "Novel management", icon: "frames", cap: CAP["02"],
             blurb: "Danh sách novel của workspace. Mỗi novel có ba màn hình: Chapters (đọc, chỉnh sửa), Translation và Knowledgebase.",
@@ -125,7 +126,7 @@ window.DS = (function () {
       icon: "library",
       sections: [
         {
-          id: "assets", title: "Tài nguyên",
+          id: "assets", title: "Tài nguyên", headless: true,
           items: [
             {
               id: "images", title: "Images", icon: "image", cap: CAP["05"],
@@ -174,7 +175,7 @@ window.DS = (function () {
       icon: "send",
       sections: [
         {
-          id: "dist", title: "Distribution",
+          id: "dist", title: "Distribution", headless: true,
           items: [
             {
               id: "channels", title: "Channels", icon: "globe", cap: CAP["10"],

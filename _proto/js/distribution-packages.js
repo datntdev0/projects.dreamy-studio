@@ -1,0 +1,425 @@
+(function () {
+  const A = window.DSApp;
+  const DT = window.DT;
+  const PJ = window.PJ;
+  const U = window.NVU;
+  const LB = window.LB;
+  const { esc, ic } = A;
+  const CAP = window.DS.CAP["10"];
+  const P = DT.PLATFORMS;
+  const CH = DT.chApi;
+  const pad = (n, w = 2) => String(n).padStart(w, "0");
+
+  const st = () => DT.state;
+  const byId = (id) => DT.pkgById(id);
+  const pui = () => (DT.ui.pk ||= { q: "", status: "", ch: "", sel: null });
+  const pkgId = (tabId) => String(tabId).split(":")[1];
+  const outOf = (k) => PJ.outputRef(k.outId);
+  const locked = (k) => ["publishing", "published"].includes(k.status);
+  const ratioOf = (o) => (o.w > o.h ? "16:9" : o.w < o.h ? "9:16" : "1:1");
+  const thumbBg = (id) => { const a = LB.state.assets.find((x) => x.id === id); return a ? (a.img ? `url(${a.img}) center / cover no-repeat` : a.bg) : ""; };
+  const short = (s, n = 30) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  const folderOf = (k) => { const r = outOf(k); return `${r ? r.p.folder : "projects"}\\packages\\${k.id}`; };
+  const refresh = () => { A.renderExplorer(); A.rerender(); };
+  const touch = (k) => { k.updated = A.stamp(); };
+
+  const secs = (s) => s.split(":").reduce((a, x) => a * 60 + +x, 0);
+  function parseChapters(text) {
+    const items = [];
+    const bad = [];
+    String(text).split("\n").forEach((line, i) => {
+      if (!line.trim()) return;
+      const m = line.match(/^\s*((?:\d{1,2}:)?\d{1,2}:\d{2})\s+(.+?)\s*$/);
+      if (m) items.push({ t: secs(m[1]), title: m[2] }); else bad.push(i + 1);
+    });
+    return { items, bad };
+  }
+  function chapterIssues(text, dur) {
+    const { items, bad } = parseChapters(text);
+    const out = [];
+    if (bad.length) out.push(`Dòng ${bad.join(", ")} không đúng dạng “mm:ss Tiêu đề”.`);
+    if (!items.length) return out;
+    if (items[0].t !== 0) out.push("Mốc đầu tiên phải là 00:00.");
+    if (items.length < 3) out.push("Cần ít nhất 3 mốc thời gian.");
+    if (items.some((x, i) => i && x.t - items[i - 1].t < 10)) out.push("Mỗi mốc phải theo thứ tự tăng dần và cách mốc trước ít nhất 10 giây.");
+    if (dur && items[items.length - 1].t >= dur) out.push(`Mốc cuối vượt thời lượng video (${LB.dur(dur)}).`);
+    return out;
+  }
+  const captionOf = (k) => [k.title, k.tags.map((x) => `#${x.replace(/\s+/g, "")}`).join(" ")].join(" ").trim();
+
+  function check(k) {
+    const r = [];
+    const push = (scope, level, text) => r.push({ scope, level, text });
+    const ref = outOf(k);
+    if (!ref) push("all", "error", "Tệp thành phẩm không còn trong project.");
+    if (!k.title.trim()) push("all", "error", "Chưa có tiêu đề.");
+    if (ref && !k.reviewed && !locked(k)) push("all", "warn", "Chưa xem lại thành phẩm trước khi đăng.");
+    if (!k.desc.trim()) push("all", "warn", "Chưa có mô tả.");
+    if (!k.targets.length) push("all", "error", "Chưa chọn kênh đích.");
+    if (!k.thumb && k.targets.some((t) => DT.chById(t.ch)?.platform === "youtube")) push("all", "warn", "Chưa có thumbnail. YouTube sẽ tự chọn một khung hình.");
+    k.targets.forEach((t) => {
+      const c = DT.chById(t.ch);
+      const before = r.length;
+      if (!c) { push(t.ch, "error", "Kênh đã bị ngắt kết nối. Gỡ khỏi package hoặc kết nối lại."); return; }
+      if (c.status !== "ok") push(t.ch, "error", "Cần kết nối lại kênh trước khi đăng.");
+      if (c.platform === "youtube") {
+        const tagLen = k.tags.join(",").length;
+        if (k.title.length > P.youtube.titleMax) push(t.ch, "error", `Tiêu đề dài ${k.title.length}/${P.youtube.titleMax} ký tự.`);
+        if (k.desc.length > P.youtube.descMax) push(t.ch, "error", `Mô tả dài ${k.desc.length}/${P.youtube.descMax} ký tự.`);
+        if (tagLen > P.youtube.tagsMax) push(t.ch, "error", `Tổng độ dài tag ${tagLen}/${P.youtube.tagsMax} ký tự.`);
+        if (!t.kids) push(t.ch, "error", "Chưa khai báo video có dành cho trẻ em hay không (YouTube bắt buộc).");
+        const ci = chapterIssues(k.chapters, ref?.o.dur);
+        if (ci.length) push(t.ch, "warn", `YouTube sẽ bỏ qua mốc thời gian: ${ci[0]}`);
+        if (t.sched && new Date(t.sched) <= new Date()) push(t.ch, "error", "Thời điểm hẹn giờ phải ở tương lai.");
+      } else if (c.platform === "tiktok") {
+        if (captionOf(k).length > P.tiktok.titleMax) push(t.ch, "error", `Chú thích (tiêu đề và tag) dài ${captionOf(k).length}/${P.tiktok.titleMax} ký tự.`);
+        if (ref && ref.o.w >= ref.o.h) push(t.ch, "warn", `TikTok phù hợp nhất với video dọc 9:16. Video này là ${ratioOf(ref.o)} nên có thể bị viền hoặc cắt.`);
+      }
+      if (!t.ai) push(t.ch, "warn", "Video có hình và giọng do AI tạo nhưng chưa bật nhãn nội dung AI.");
+      if (r.length === before) push(t.ch, "ok", `Sẵn sàng đăng lên ${c.name}.`);
+    });
+    return r;
+  }
+  DT.check = check;
+  const counts = (k) => { const c = check(k); return { err: c.filter((x) => x.level === "error").length, warn: c.filter((x) => x.level === "warn").length }; };
+  DT.statusBadge = (k) => { const [label, cls] = DT.PKG_STATUS[DT.pkgStatus(k)]; return `<span class="badge ${cls}">${label}</span>`; };
+  const checkCell = (k) => {
+    const { err, warn } = counts(k);
+    return err ? `<span class="pk-chk is-err">${ic("x-circle")}${err} lỗi</span>` : warn ? `<span class="pk-chk is-warn">${ic("alert")}${warn} cảnh báo</span>` : `<span class="pk-chk is-ok">${ic("check-circle")}Ổn</span>`;
+  };
+  const chipRow = (k) => `<span class="pk-chs">${k.targets.map((t) => {
+    const c = DT.chById(t.ch);
+    const r = k.results[t.ch];
+    const tone = r ? (r.state === "error" ? "is-err" : "is-ok") : "";
+    return c ? `<span class="pk-ch ${tone}" title="${esc(c.name)}${r ? ` · ${r.state === "error" ? "lỗi" : "đã đăng"}` : ""}">${CH.avatar(c, "is-sm")}</span>` : `<span class="pk-ch is-err" title="Kênh đã ngắt kết nối">${ic("unlink")}</span>`;
+  }).join("")}</span>`;
+
+  function filtered() {
+    const u = pui();
+    const needle = u.q.trim().toLowerCase();
+    return [...st().packages].filter((k) => (!u.status || DT.pkgStatus(k) === u.status) && (!u.ch || k.targets.some((t) => t.ch === u.ch))
+      && (!needle || `${k.title} ${outOf(k)?.p.name || ""}`.toLowerCase().includes(needle))).sort((a, b) => b.updated.localeCompare(a.updated));
+  }
+
+  function listView() {
+    const u = pui();
+    const list = filtered();
+    const rows = list.map((k) => {
+      const ref = outOf(k);
+      return `<tr data-testid="pk-row-${k.id}" tabindex="0" data-act="pk-sel" data-id="${k.id}" data-pk-open="${k.id}" class="${u.sel === k.id ? "is-selected" : ""}">
+        <td><div class="nm-title"><span class="pk-th" style="background:${esc(thumbBg(k.thumb) || (ref ? LB.bgFor(ref.p.name) : ""))}"></span><div class="pk-t"><div class="t-ink ellip" title="${esc(k.title)}">${esc(k.title)}</div><div class="t-sm t-mute ellip">${esc(ref ? ref.p.name : "Project đã bị xóa")}</div></div></div></td>
+        <td class="mono t-mute">${ref ? `${LB.dur(ref.o.dur)} · ${ratioOf(ref.o)}` : "—"}</td><td>${chipRow(k)}</td><td>${DT.statusBadge(k)}</td><td>${checkCell(k)}</td><td class="mono t-mute">${esc(k.updated.slice(0, 10))}</td></tr>`;
+    }).join("");
+    const body = list.length
+      ? `<table class="table is-nw" data-testid="pk-table"><thead><tr><th>Package</th><th>Video</th><th>Kênh đích</th><th>Trạng thái</th><th>Kiểm tra</th><th>Cập nhật</th></tr></thead><tbody>${rows}</tbody></table>`
+      : st().packages.length
+        ? U.empty("Không có package nào khớp", "Thử từ khóa khác hoặc bỏ bộ lọc.", `<button class="btn" data-act="pk-clear">Xóa bộ lọc</button>`)
+        : U.empty("Chưa có package nào", "Package gom video thành phẩm, thumbnail, tiêu đề, mô tả và kênh đích của một project để sẵn sàng đăng.", `<div class="empty-act"><button class="btn btn-primary" data-act="pk-new">${ic("plus")}Tạo package</button></div>`);
+    return `<div class="nv">
+      ${U.bar(`<label class="search"><span class="sr-only">Tìm package</span><input id="pk-q" data-testid="pk-search" class="input" type="search" value="${esc(u.q)}" placeholder="Tìm theo tiêu đề hoặc project…" data-on="pk-q"></label><span class="t-sm t-mute">${list.length} package</span>`,
+        `<select class="select" data-testid="pk-filter-status" data-change="pk-fstatus" aria-label="Lọc theo trạng thái">${U.options([["", "Mọi trạng thái"], ...Object.entries(DT.PKG_STATUS).map(([k, [l]]) => [k, l.charAt(0) + l.slice(1).toLowerCase()])], u.status)}</select>
+         <select class="select" data-testid="pk-filter-channel" data-change="pk-fch" aria-label="Lọc theo kênh">${U.options([["", "Mọi kênh"], ...st().channels.map((c) => [c.id, c.name])], u.ch)}</select>
+         <button class="btn btn-sm btn-primary" data-testid="pk-create-btn" data-act="pk-new">${ic("plus")}Tạo package</button>`)}
+      <div class="nv-body"><div class="nv-scroll" data-keep="pk-l">${body}</div></div></div>`;
+  }
+
+  function checkList(k) {
+    const r = check(k);
+    const groups = [["all", "Chung"], ...k.targets.map((t) => [t.ch, DT.chById(t.ch)?.name || t.ch])];
+    const icn = { error: "x-circle", warn: "alert", ok: "check-circle" };
+    return groups.map(([sc, label]) => {
+      const rows = r.filter((x) => x.scope === sc);
+      return rows.length ? `<div class="pk-cg"><span class="eyebrow">${esc(label)}</span>${rows.map((x) => `<div class="pk-cr is-${x.level}">${ic(icn[x.level])}<span>${esc(x.text)}</span></div>`).join("")}</div>` : "";
+    }).join("");
+  }
+  function summary(k) {
+    const { err, warn } = counts(k);
+    const s = DT.pkgStatus(k);
+    if (s === "published") return { cls: "is-ok", icon: "check-circle", text: "Đã đăng" };
+    if (s === "publishing") return { cls: "is-warn", icon: "clock", text: "Đang đăng…" };
+    if (err) return { cls: "is-err", icon: "x-circle", text: `Còn ${err} lỗi cần sửa` };
+    return warn ? { cls: "is-warn", icon: "alert", text: `Sẵn sàng · ${warn} cảnh báo` } : { cls: "is-ok", icon: "check-circle", text: "Sẵn sàng đăng" };
+  }
+
+  function packagePanel(k, inEditor) {
+    const ref = outOf(k);
+    const s = summary(k);
+    const files = [["video", ref ? ref.o.name : "(thiếu tệp)"], ["image", k.thumb ? LB.state.assets.find((x) => x.id === k.thumb)?.name || "thumbnail" : "(chưa có thumbnail)"], ["file-code", "metadata.json"], ...(k.chapters.trim() ? [["list", "chapters.txt"]] : [])];
+    const act = inEditor
+      ? `<button class="btn btn-primary" data-testid="pk-inspector-publish-btn" data-act="pk-publish" data-id="${k.id}" ${locked(k) || counts(k).err ? "disabled" : ""}>${ic("send-up")}${["partial", "failed"].includes(k.status) ? "Đăng lại kênh lỗi…" : "Đăng…"}</button>`
+      : `<button class="btn btn-primary" data-testid="pk-inspector-open-btn" data-act="pk-open" data-id="${k.id}">${ic("folder-open")}Mở</button>`;
+    return `<section class="ins-sec pk-ins-top" data-testid="pk-inspector-summary"><div class="pk-ins-thumb" style="background:${esc(thumbBg(k.thumb) || (ref ? LB.bgFor(ref.p.name) : ""))}"></div>
+        <div class="ins-hero-t">${esc(k.title)}</div><div class="ins-hero-m">${DT.statusBadge(k)}<span class="mono t-mute">${esc(k.id)}</span></div>
+        <div class="pk-sum ${s.cls}">${ic(s.icon)}<span>${s.text}</span></div>
+        ${ref ? `<div class="pk-ins-review" data-testid="pk-inspector-review">${k.reviewed ? `<span class="badge badge-success" data-testid="pk-inspector-review-status">ĐÃ XEM LẠI</span>` : `<span class="badge badge-warning" data-testid="pk-inspector-review-status">CHƯA XEM LẠI</span>`}<span class="spacer"></span><button class="btn btn-sm" data-testid="pk-inspector-review-btn" data-act="pk-review" data-id="${k.id}">${ic("play")}Xem lại</button></div>` : ""}
+        ${DT.pkgStatus(k) === "publishing" && k.plId ? `<div class="progress" data-prog="${k.plId}"><i style="width:0%"></i></div>` : ""}</section>
+      ${U.insSec(inEditor ? "Kiểm tra trước khi đăng" : "Kiểm tra", `<div class="pk-checks" data-testid="pk-checks">${checkList(k)}</div>`)}
+      ${U.insSec("Thông tin", U.kv([["Project", ref ? `<button type="button" class="pk-link" data-act="pj-open" data-id="${ref.p.id}">${esc(ref.p.name)}</button>` : "—"], ["Video", ref ? `${LB.dur(ref.o.dur)} · ${ref.o.w}×${ref.o.h} · ${LB.bytes(ref.o.size)}` : "—"], ["Kênh đích", k.targets.length || "—"], ["Tạo lúc", `<span class="mono">${esc(k.created)}</span>`], ["Cập nhật", `<span class="mono">${esc(k.updated)}</span>`]]))}
+      ${U.insSec("Nội dung gói", `<div class="pk-files" data-testid="pk-files">${files.map(([i, n]) => `<div class="pk-file-r">${ic(i === "video" ? "film" : i)}<span class="tree-label">${esc(n)}</span></div>`).join("")}</div><div class="path t-mute">${esc(folderOf(k))}\\</div><span class="field-hint">Video được tham chiếu từ project, không sao chép thêm dung lượng. Có thể đăng thủ công từ thư mục này.</span>`)}
+      <section class="ins-sec ins-actions" data-testid="pk-inspector-actions">${act}<button class="btn" data-testid="pk-inspector-folder-btn" data-act="pk-open-folder" data-id="${k.id}">${ic("folder-open")}Thư mục</button><button class="btn" data-testid="pk-inspector-dup-btn" data-act="pk-dup" data-id="${k.id}">${ic("copy")}Nhân bản</button><button class="btn btn-danger" data-testid="pk-inspector-delete-btn" data-act="pk-del" data-id="${k.id}">${ic("trash")}Xóa</button></section>`;
+  }
+  function listPanel() {
+    const all = st().packages;
+    const by = (s) => all.filter((k) => DT.pkgStatus(k) === s).length;
+    return `${U.insSec("Package", U.kv([["Tổng", all.length], ["Nháp", by("draft")], ["Sẵn sàng", by("ready")], ["Đã đăng", by("published")], ["Một phần / lỗi", by("partial") + by("failed")]]))}
+      <section class="ins-sec"><span class="eyebrow">Tạo package</span><button class="btn btn-block btn-primary" data-act="pk-new">${ic("plus")}Tạo package…</button>
+        <span class="field-hint">Một package đại diện cho một lần phân phối: video, thumbnail, thông tin mô tả và các kênh đích.</span></section>
+      <section class="ins-sec"><span class="eyebrow">Trước khi đăng</span><p class="t-sm t-mute">Mỗi lần đăng bạn sẽ xem lại bản cuối, tài khoản đích, chế độ hiển thị, dữ liệu sẽ được gửi đi, và xác nhận quyền công bố các tài nguyên trong video.</p></section>`;
+  }
+  const listInspector = () => { const k = pui().sel && byId(pui().sel); return k ? packagePanel(k, false) : listPanel(); };
+
+  const field = (label, id, control, extra = "") => `<div class="field"><label for="${id}">${label}${extra}</label>${control}</div>`;
+  const counter = (n, max) => `<span class="pk-cnt ${max && n > max ? "is-over" : ""}">${n}${max ? ` / ${max}` : ""}</span>`;
+  const hasYT = (k) => k.targets.some((t) => DT.chById(t.ch)?.platform === "youtube");
+
+  function targetCard(k, t, lock) {
+    const c = DT.chById(t.ch);
+    const dis = lock ? "disabled" : "";
+    const chk = check(k).filter((x) => x.scope === t.ch);
+    const res = k.results[t.ch];
+    if (!c) return `<div class="pk-tg is-err"><header class="pk-tg-h"><span class="pk-ch is-err">${ic("unlink")}</span><div><div class="t-ink">${esc(res?.name || t.ch)}</div><div class="t-sm t-mute">Kênh đã bị ngắt kết nối</div></div><span class="spacer"></span>${lock ? "" : `<button class="btn btn-sm" data-act="pk-t-del" data-id="${k.id}" data-ch="${t.ch}">${ic("x")}Gỡ</button>`}</header></div>`;
+    const p = P[c.platform];
+    const f = (key, v) => `data-change="pk-tedit" data-id="${k.id}" data-ch="${t.ch}" data-f="${key}" ${dis}`;
+    const sched = c.platform === "youtube"
+      ? field("Hẹn giờ đăng", `pk-s-${t.ch}`, `<input id="pk-s-${t.ch}" data-testid="pk-target-schedule-${t.ch}" class="input" type="datetime-local" value="${esc(t.sched)}" ${f("sched")}>`, "")
+      : field("Thời điểm", `pk-s-${t.ch}`, `<div class="t-sm t-mute pk-static">Đăng ngay. TikTok không hỗ trợ hẹn giờ qua API.</div>`);
+    const yt = c.platform === "youtube"
+      ? `<div class="form-2">${field("Danh mục", `pk-c-${t.ch}`, `<select id="pk-c-${t.ch}" data-testid="pk-target-category-${t.ch}" class="select" ${f("cat")}>${U.options(DT.CATEGORIES, t.cat)}</select>`)}
+          ${field("Dành cho trẻ em?", `pk-k-${t.ch}`, `<select id="pk-k-${t.ch}" data-testid="pk-target-kids-${t.ch}" class="select ${t.kids ? "" : "is-invalid"}" ${f("kids")}>${U.options(DT.KIDS, t.kids)}</select>`)}</div>`
+      : `<div class="pk-toggles"><label class="check"><input type="checkbox" data-testid="pk-target-comments-${t.ch}" ${f("comments")} ${t.comments ? "checked" : ""}><span>Cho phép bình luận</span></label>
+          <label class="check"><input type="checkbox" data-testid="pk-target-commercial-${t.ch}" ${f("commercial")} ${t.commercial ? "checked" : ""}><span>Nội dung thương mại (có quảng cáo hoặc tài trợ)</span></label></div>`;
+    const resRow = res ? `<div data-testid="pk-target-result-${t.ch}" class="pk-res is-${res.state === "error" ? "err" : "ok"}">${ic(res.state === "error" ? "x-circle" : "check-circle")}<div class="pk-res-b">${res.state === "error" ? `<div class="t-ink">Đăng thất bại</div><div class="t-sm t-mute mono">${esc(res.error)}</div>` : res.state === "scheduled" ? `<div class="t-ink">Đã hẹn giờ lúc ${esc(res.when)}</div><div class="t-sm t-mute"><span class="path">${esc(res.url)}</span></div>` : `<div class="t-ink">Đã đăng</div><div class="t-sm t-mute"><span class="path">${esc(res.url)}</span></div>`}</div><span class="mono t-mute">${esc(res.at)}</span>
+        ${res.url ? `<button class="btn btn-sm" data-act="pk-open-url" data-url="${esc(res.url)}">${ic("external")}Mở</button>` : ""}</div>` : "";
+    return `<div data-testid="pk-target-${t.ch}" class="pk-tg ${chk.some((x) => x.level === "error") ? "is-err" : ""}"><header class="pk-tg-h">${CH.avatar(c)}<div><div class="t-ink">${esc(c.name)}</div><div class="t-sm t-mute">${esc(c.handle)} · ${esc(p.label)}</div></div><span class="spacer"></span>${CH.chBadges(c)}${lock ? "" : `<button class="btn btn-icon btn-sm" data-testid="pk-target-remove-${t.ch}" data-act="pk-t-del" data-id="${k.id}" data-ch="${t.ch}" data-tip="Gỡ kênh khỏi package" aria-label="Gỡ kênh">${ic("x")}</button>`}</header>
+      <div class="form-2">${field("Chế độ hiển thị", `pk-v-${t.ch}`, `<select id="pk-v-${t.ch}" data-testid="pk-target-visibility-${t.ch}" class="select" ${f("vis")}>${U.options(p.vis, t.vis)}</select>`)}${sched}</div>
+      ${t.sched && c.platform === "youtube" ? `<span class="field-hint">Bài ở chế độ riêng tư cho đến giờ hẹn, sau đó tự chuyển sang “${esc(p.vis.find((x) => x[0] === t.vis)?.[1] || t.vis)}”.</span>` : ""}
+      ${yt}
+      <label class="check"><input type="checkbox" data-testid="pk-target-ai-${t.ch}" ${f("ai")} ${t.ai ? "checked" : ""}><span>Gắn nhãn nội dung do AI tạo hoặc chỉnh sửa trên ${esc(p.label)}</span></label>${resRow}</div>`;
+  }
+
+  function editorView(tabId) {
+    const k = byId(pkgId(tabId));
+    if (!k) return U.empty("Package không còn tồn tại", "Package này đã bị xóa.", `<button class="btn" data-act="open" data-id="packages">Về danh sách package</button>`);
+    const lock = locked(k);
+    const dis = lock ? "disabled" : "";
+    const ref = outOf(k);
+    const outs = ref ? ref.p.outputs : [];
+    const imgs = LB.state.assets.filter((x) => x.type === "image");
+    const yt = hasYT(k);
+    const ci = k.chapters.trim() ? chapterIssues(k.chapters, ref?.o.dur) : [];
+    const free = st().channels.filter((c) => !k.targets.some((t) => t.ch === c.id));
+    const s = DT.pkgStatus(k);
+    const banner = s === "published" ? `<div data-testid="pk-banner" class="pk-banner is-ok">${ic("check-circle")}<span>Package đã đăng. Chỉnh sửa ở đây không cập nhật bài đã đăng trên nền tảng. Muốn đăng lại, hãy nhân bản package.</span><button class="btn btn-sm" data-testid="pk-banner-dup-btn" data-act="pk-dup" data-id="${k.id}">${ic("copy")}Nhân bản</button></div>`
+      : s === "publishing" ? `<div data-testid="pk-banner" class="pk-banner is-warn">${ic("clock")}<span>Đang đăng lên các kênh. Theo dõi tiến độ ở panel Pipelines.</span><button class="btn btn-sm" data-act="toggle-bottom">${ic("panel-bottom")}Mở Pipelines</button></div>`
+      : ["partial", "failed"].includes(s) ? `<div data-testid="pk-banner" class="pk-banner is-warn">${ic("alert")}<span>${s === "partial" ? "Một số kênh đã đăng, một số kênh lỗi." : "Đăng không thành công."} Sửa lỗi ở kênh tương ứng rồi chọn “Đăng lại kênh lỗi”. Kênh đã đăng sẽ không bị đăng lại.</span></div>` : "";
+    return `<div class="nv">
+      ${U.bar(`<span class="nv-ttl">${ic("package")}<span class="t-ink ellip pk-bar-t" title="${esc(k.title)}">${esc(short(k.title, 60))}</span>${DT.statusBadge(k)}</span><span class="t-sm t-mute">Tự động lưu</span>`,
+        `<button class="btn btn-sm" data-testid="pk-open-folder-btn" data-act="pk-open-folder" data-id="${k.id}">${ic("folder-open")}Thư mục</button><button class="btn btn-sm" data-testid="pk-dup-btn" data-act="pk-dup" data-id="${k.id}">${ic("copy")}Nhân bản</button>
+         <button class="btn btn-sm btn-primary" data-testid="pk-publish-btn" data-act="pk-publish" data-id="${k.id}" ${lock || counts(k).err ? `disabled data-tip="${lock ? "Package đã khóa" : "Còn lỗi cần sửa"}"` : ""}>${ic("send-up")}${["partial", "failed"].includes(s) ? "Đăng lại kênh lỗi…" : "Đăng…"}</button>`)}
+      <div class="nv-body"><div class="nv-scroll pk" data-testid="pk-editor" data-keep="pk-e"><div class="pk-in">
+        ${banner}
+        <section class="pw-card" data-testid="pk-file-card"><h3 class="t-display-xs">Thành phẩm</h3>
+          <div class="pk-file">${ref ? `<span class="pk-file-i">${ic("film")}</span><div class="pk-file-b"><div class="t-ink ellip">${esc(ref.o.name)}</div><div class="t-sm t-mute">${LB.dur(ref.o.dur)} · ${ref.o.w}×${ref.o.h} (${ratioOf(ref.o)}) · ${LB.bytes(ref.o.size)} · project <button type="button" class="pk-link" data-act="pj-open" data-id="${ref.p.id}">${esc(ref.p.name)}</button></div></div>
+            ${outs.length > 1 ? `<select class="select" data-testid="pk-output-select" data-change="pk-edit" data-id="${k.id}" data-f="outId" aria-label="Đổi tệp thành phẩm" ${dis}>${U.options(outs.map((o) => [o.id, o.name]), k.outId)}</select>` : ""}`
+        : `<div class="ld-warn">${ic("alert")}<span>Tệp thành phẩm hoặc project không còn tồn tại.</span></div>`}</div>
+          <div class="pk-thumbrow"><div class="pk-thumb" data-testid="pk-thumb-preview" style="background:${esc(thumbBg(k.thumb) || (ref ? LB.bgFor(ref.p.name) : ""))}">${k.thumb ? "" : `<span class="t-sm">Chưa có thumbnail</span>`}</div>
+            <div class="pk-thumb-b">${field("Thumbnail", "pk-thumb", `<select id="pk-thumb" data-testid="pk-thumb-select" class="select" data-change="pk-edit" data-id="${k.id}" data-f="thumb" ${dis}><option value="">Không dùng thumbnail</option>${imgs.map((x) => `<option value="${x.id}" ${x.id === k.thumb ? "selected" : ""}>${esc(x.name)} · ${x.meta.w}×${x.meta.h}</option>`).join("")}</select>`)}
+              <span class="field-hint">Chọn ảnh từ thư viện. Nên dùng ảnh 1280×720 trở lên cho YouTube.</span></div></div></section>
+        <section class="pw-card" data-testid="pk-content-card"><h3 class="t-display-xs">Nội dung</h3>
+          ${field("Tiêu đề", "pk-title", `<input id="pk-title" data-testid="pk-title" class="input" value="${esc(k.title)}" data-change="pk-edit" data-on="pk-count" data-max="${yt ? P.youtube.titleMax : 0}" data-id="${k.id}" data-f="title" autocomplete="off" ${dis}>`, counter(k.title.length, yt ? P.youtube.titleMax : 0))}
+          ${field("Mô tả", "pk-desc", `<textarea id="pk-desc" data-testid="pk-desc" class="textarea" rows="6" data-change="pk-edit" data-on="pk-count" data-max="${yt ? P.youtube.descMax : 0}" data-id="${k.id}" data-f="desc" ${dis}>${esc(k.desc)}</textarea>`, counter(k.desc.length, yt ? P.youtube.descMax : 0))}
+          <div class="field"><label for="pk-tag-in">Tags ${counter(k.tags.join(",").length, yt ? P.youtube.tagsMax : 0)}</label><div class="tags">${k.tags.map((t) => `<span class="tag">${esc(t)}${lock ? "" : `<button type="button" class="tag-x" data-act="pk-tag-del" data-id="${k.id}" data-t="${esc(t)}" aria-label="Xóa tag ${esc(t)}">${ic("x")}</button>`}</span>`).join("")}
+            <input id="pk-tag-in" data-testid="pk-tag-input" class="input tag-in" placeholder="Thêm tag, nhấn Enter…" data-enter="pk-tag-add" data-id="${k.id}" autocomplete="off" ${dis}></div></div>
+          ${field("Ngôn ngữ", "pk-lang", `<select id="pk-lang" data-testid="pk-lang" class="select" data-change="pk-edit" data-id="${k.id}" data-f="lang" ${dis}>${U.options(DT.LANGS, k.lang)}</select>`)}
+          ${field("Mốc thời gian (chapters)", "pk-chap", `<textarea id="pk-chap" data-testid="pk-chapters" class="textarea mono-area" rows="5" placeholder="00:00 Mở đầu&#10;01:42 Chương một&#10;06:15 Chương hai" data-change="pk-edit" data-id="${k.id}" data-f="chapters" ${dis}>${esc(k.chapters)}</textarea>`)}
+          <span class="field-hint ${ci.length ? "pk-bad" : ""}">${ci.length ? esc(ci[0]) : "Mỗi dòng dạng “mm:ss Tiêu đề”. YouTube cần mốc đầu 00:00, ít nhất 3 mốc, cách nhau từ 10 giây."}</span></section>
+        <section class="pw-card" data-testid="pk-targets-card"><div class="pk-h"><h3 class="t-display-xs">Kênh đích</h3><span class="t-sm t-mute">${k.targets.length} kênh</span></div>
+          ${k.targets.map((t) => targetCard(k, t, lock)).join("") || `<p class="t-sm t-mute">Chưa chọn kênh nào. Thêm kênh bên dưới.</p>`}
+          ${lock ? "" : `<div class="pk-add"><select class="select" data-testid="pk-target-add" data-change="pk-t-add" data-id="${k.id}" aria-label="Thêm kênh đích"><option value="">Thêm kênh đích…</option>${free.map((c) => `<option value="${c.id}" ${c.status !== "ok" ? "disabled" : ""}>${esc(c.name)} · ${esc(P[c.platform].label)}${c.status !== "ok" ? " (cần kết nối lại)" : ""}</option>`).join("")}</select>
+            <button class="btn btn-sm" data-act="ch-connect">${ic("link")}Kết nối kênh mới</button></div>`}</section>
+      </div></div></div></div>`;
+  }
+  const editorInspector = (tabId) => { const k = byId(pkgId(tabId)); return k ? packagePanel(k, true) : ""; };
+
+  A.VIEWS.packages = { fill: true, render: listView, inspector: listInspector };
+  A.VIEWS.package = { fill: true, render: editorView, inspector: editorInspector };
+
+  function openPackage(id) {
+    const k = byId(id);
+    if (!k) return;
+    A.openTab(`package:${id}`, { title: k.title, tab: short(k.title, 26), icon: "package", section: "Packages", cap: CAP, rail: "distribution", blurb: "", reqs: [] });
+  }
+
+  let NP = null;
+  const pretty = (name) => { const s = name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
+  const eligible = () => PJ.state.projects.filter((p) => !p.archived);
+
+  function openNew(o = {}) {
+    const p0 = (o.p && PJ.api.byId(o.p)) || eligible().find((p) => p.outputs.length);
+    const out = p0 ? p0.outputs.find((x) => x.id === o.o) || p0.outputs[0] : null;
+    NP = { p: p0?.id || "", o: out?.id || "", title: out ? pretty(out.name) : "", touched: false, chs: new Set() };
+    drawNew();
+  }
+  function drawNew() {
+    const projects = eligible();
+    const p = PJ.api.byId(NP.p);
+    const outs = p ? p.outputs : [];
+    const chs = st().channels;
+    const none = !projects.some((x) => x.outputs.length);
+    A.modal({
+      title: "Tạo package", eyebrow: CAP, cls: "modal-lg", testid: "np-dialog",
+      body: none ? U.empty("Chưa có video thành phẩm", "Package cần một video đã kết xuất từ Video editor của một project. Hoàn tất hậu kỳ rồi quay lại đây.", `<button class="btn" data-act="open" data-id="projects">Về danh mục project</button>`)
+        : `<div class="form-2">
+          <div class="field"><label for="np-p">Project</label><select id="np-p" data-testid="np-project" class="select" data-change="np-p">${projects.map((x) => `<option value="${x.id}" ${x.id === NP.p ? "selected" : ""} ${x.outputs.length ? "" : "disabled"}>${esc(x.name)}${x.outputs.length ? "" : " · chưa có video thành phẩm"}</option>`).join("")}</select></div>
+          <div class="field"><label for="np-o">Video thành phẩm</label><select id="np-o" data-testid="np-output" class="select" data-change="np-o">${outs.map((o) => `<option value="${o.id}" ${o.id === NP.o ? "selected" : ""}>${esc(o.name)} · ${LB.dur(o.dur)}</option>`).join("")}</select></div></div>
+        <div class="field"><label for="np-title">Tiêu đề</label><input id="np-title" data-testid="np-title" class="input" value="${esc(NP.title)}" data-on="np-title" autocomplete="off"><p class="field-err" id="np-err" data-testid="np-error" hidden></p></div>
+        <div class="field"><label>Kênh đích</label>${chs.length ? `<div class="opts">${chs.map((c) => `<label class="opt ${c.status !== "ok" ? "is-off" : NP.chs.has(c.id) ? "is-on" : ""}"><input type="checkbox" data-testid="np-channel-${c.id}" data-change="np-ch" data-id="${c.id}" ${NP.chs.has(c.id) ? "checked" : ""} ${c.status !== "ok" ? "disabled" : ""}>${CH.avatar(c)}<div class="opt-b"><span class="t-ink">${esc(c.name)}</span><span class="t-sm t-mute">${esc(P[c.platform].label)} · ${esc(c.handle)}${c.status !== "ok" ? " · cần kết nối lại" : ""}</span></div></label>`).join("")}</div>`
+          : `<div class="ld-warn">${ic("info")}<span>Chưa kết nối kênh nào. <button type="button" class="pk-link" data-act="ch-connect">Kết nối kênh</button> trước khi tạo package.</span></div>`}</div>
+        <p class="t-sm t-mute">Bạn sẽ hoàn thiện mô tả, thumbnail và tùy chọn riêng của từng kênh ở bước tiếp theo. Chưa có gì được gửi đi.</p>`,
+      foot: `<button class="btn" data-act="close-modal">Hủy</button>${none ? "" : `<button class="btn btn-primary" data-testid="np-submit-btn" data-act="np-submit">${ic("package")}Tạo package</button>`}`,
+    });
+  }
+  function submitNew() {
+    const err = A.$("#np-err");
+    const fail = (m) => { err.textContent = m; err.hidden = false; };
+    const p = PJ.api.byId(NP.p);
+    const out = p?.outputs.find((x) => x.id === NP.o);
+    if (!p || !out) return fail("Chọn project có video thành phẩm.");
+    if (!NP.title.trim()) { A.$("#np-title").classList.add("is-invalid"); return fail("Nhập tiêu đề."); }
+    if (!NP.chs.size) return fail("Chọn ít nhất một kênh đích.");
+    const now = A.stamp();
+    const nv = PJ.api.novelOf(p);
+    const k = {
+      id: `PKG-${pad(++st().seq.pkg, 4)}`, projectId: p.id, outId: out.id, status: "draft", rights: false, reviewed: null, thumb: null, lang: p.src?.lang === "EN" ? "en" : "vi",
+      title: NP.title.trim(), desc: nv?.desc || p.desc || "", tags: [], chapters: "",
+      targets: [...NP.chs].map((id) => { const c = DT.chById(id); return DT.tgt(id, { vis: c.defaults.vis, cat: c.defaults.cat || "22", ai: c.defaults.ai }); }), results: {}, created: now, updated: now,
+    };
+    st().packages.unshift(k);
+    NP = null;
+    A.closeModal();
+    pui().sel = k.id;
+    openPackage(k.id);
+    A.toast(`Đã tạo package “${short(k.title, 40)}”.`);
+  }
+
+  let pendingDel = null;
+  function openDelete(id) {
+    const k = byId(id);
+    if (!k) return;
+    pendingDel = id;
+    const posted = Object.values(k.results).some((r) => r.state !== "error");
+    A.modal({
+      title: "Xóa package", eyebrow: CAP, testid: "pk-delete-dialog",
+      body: `<p>Xóa package <b class="t-ink">${esc(k.title)}</b>?</p>
+        <div class="ld-warn">${ic("alert")}<span>Thư mục <span class="path">${esc(folderOf(k))}\\</span> sẽ bị xóa. Video thành phẩm và project không bị ảnh hưởng.</span></div>
+        ${posted ? `<div class="ld-warn">${ic("alert")}<span>Các bài đã đăng trên nền tảng không bị gỡ. Hãy xóa chúng trực tiếp trên nền tảng nếu cần.</span></div>` : ""}
+        ${DT.pkgStatus(k) === "publishing" ? `<div class="ld-warn">${ic("alert")}<span>Package đang được đăng. Hủy tiến trình ở panel Pipelines trước khi xóa.</span></div>` : ""}`,
+      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-danger" data-testid="pk-delete-confirm-btn" data-act="pk-del-confirm" ${DT.pkgStatus(k) === "publishing" ? "disabled" : ""}>${ic("trash")}Xóa package</button>`,
+    });
+  }
+
+  Object.assign(A.ACT, {
+    "pk-new": (el) => openNew({ p: el?.dataset?.p, o: el?.dataset?.o }),
+    "pk-open": (el) => openPackage(el.dataset.id),
+    "pk-sel": (el) => {
+      pui().sel = pui().sel === el.dataset.id ? null : el.dataset.id;
+      A.$$("#editor [data-pk-open]").forEach((r) => r.classList.toggle("is-selected", r.dataset.pkOpen === pui().sel));
+      A.renderInspector();
+    },
+    "pk-clear": () => { Object.assign(pui(), { q: "", status: "", ch: "" }); A.rerender(); },
+    "np-submit": submitNew,
+    "pk-del": (el) => openDelete(el.dataset.id),
+    "pk-del-confirm": () => {
+      const k = byId(pendingDel);
+      st().packages = st().packages.filter((x) => x.id !== pendingDel);
+      A.closeTab(`package:${pendingDel}`);
+      delete A.ITEMS[`package:${pendingDel}`];
+      if (pui().sel === pendingDel) pui().sel = null;
+      pendingDel = null;
+      A.closeModal();
+      refresh();
+      A.toast(`Đã xóa package “${short(k?.title || "", 40)}”.`);
+    },
+    "pk-dup": (el) => {
+      const k = byId(el.dataset.id);
+      if (!k) return;
+      const now = A.stamp();
+      const c = { ...JSON.parse(JSON.stringify(k)), id: `PKG-${pad(++st().seq.pkg, 4)}`, status: "draft", rights: false, results: {}, plId: null, reviewed: null, created: now, updated: now };
+      c.title = `${k.title} (bản sao)`;
+      st().packages.unshift(c);
+      openPackage(c.id);
+      A.toast("Đã nhân bản package. Bản sao ở trạng thái nháp.");
+    },
+    "pk-open-folder": (el) => { const k = byId(el.dataset.id); if (k) A.toast(`Đã mở ${folderOf(k)}\\ trong File Explorer (mô phỏng).`); },
+    "pk-open-url": (el) => A.toast(`Mở ${el.dataset.url} trong trình duyệt (mô phỏng).`),
+    "pk-tag-add": (el) => {
+      const k = byId(el.dataset.id);
+      const t = String(el.value).toLowerCase().replace(/#/g, "").trim().slice(0, 30);
+      if (!k || !t) return;
+      if (k.tags.includes(t)) { A.toast(`Tag “${t}” đã có.`, "warning"); el.value = ""; return; }
+      k.tags.push(t);
+      touch(k);
+      refresh();
+      A.$("#pk-tag-in")?.focus();
+    },
+    "pk-tag-del": (el) => { const k = byId(el.dataset.id); k.tags = k.tags.filter((t) => t !== el.dataset.t); touch(k); refresh(); },
+    "pk-t-del": (el) => { const k = byId(el.dataset.id); k.targets = k.targets.filter((t) => t.ch !== el.dataset.ch); touch(k); refresh(); },
+  });
+
+  Object.assign(A.ON, {
+    "pk-q": (el) => { pui().q = el.value; A.rerender(); },
+    "pk-fstatus": (el) => { pui().status = el.value; A.rerender(); },
+    "pk-fch": (el) => { pui().ch = el.value; A.rerender(); },
+    "np-p": (el) => { NP.p = el.value; const p = PJ.api.byId(el.value); NP.o = p?.outputs[0]?.id || ""; if (!NP.touched && p?.outputs[0]) NP.title = pretty(p.outputs[0].name); drawNew(); },
+    "np-o": (el) => { NP.o = el.value; const o = PJ.api.byId(NP.p)?.outputs.find((x) => x.id === el.value); if (!NP.touched && o) NP.title = pretty(o.name); drawNew(); },
+    "np-title": (el) => { NP.title = el.value; NP.touched = true; el.classList.remove("is-invalid"); const e = A.$("#np-err"); if (e) e.hidden = true; },
+    "np-ch": (el) => { if (el.checked) NP.chs.add(el.dataset.id); else NP.chs.delete(el.dataset.id); drawNew(); },
+    "pk-count": (el) => {
+      const max = +el.dataset.max || 0;
+      const n = el.value.length;
+      const c = el.closest(".field")?.querySelector(".pk-cnt");
+      if (c) { c.textContent = `${n}${max ? ` / ${max}` : ""}`; c.classList.toggle("is-over", !!max && n > max); }
+    },
+    "pk-edit": (el) => {
+      const k = byId(el.dataset.id);
+      if (!k) return;
+      const f = el.dataset.f;
+      if (f === "title") {
+        k.title = el.value.trim();
+        const it = A.ITEMS[`package:${k.id}`];
+        if (it) { it.title = k.title || "Package"; it.tab = short(k.title || "Package", 26); }
+      } else if (f === "desc" || f === "chapters") k[f] = el.value;
+      else if (f === "outId") { k.outId = el.value; k.reviewed = null; }
+      else k[f] = el.value || (f === "thumb" ? null : "");
+      touch(k);
+      refresh();
+    },
+    "pk-tedit": (el) => {
+      const k = byId(el.dataset.id);
+      const t = k?.targets.find((x) => x.ch === el.dataset.ch);
+      if (!t) return;
+      t[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value;
+      touch(k);
+      refresh();
+    },
+    "pk-t-add": (el) => {
+      const k = byId(el.dataset.id);
+      const c = DT.chById(el.value);
+      el.value = "";
+      if (!k || !c) return;
+      k.targets.push(DT.tgt(c.id, { vis: c.defaults.vis, cat: c.defaults.cat || "22", ai: c.defaults.ai }));
+      touch(k);
+      refresh();
+    },
+  });
+
+  document.addEventListener("dblclick", (e) => {
+    const el = e.target.closest("[data-pk-open]");
+    if (el && !e.target.closest("input,button,select")) openPackage(el.dataset.pkOpen);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.matches?.("[data-pk-open]")) openPackage(e.target.dataset.pkOpen);
+  });
+
+  DT.pkApi = { parseChapters, thumbBg, byId, check, counts, outOf, locked, openPackage, refresh, touch, folderOf, ratioOf, captionOf, short };
+})();

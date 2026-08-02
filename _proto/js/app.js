@@ -36,6 +36,7 @@
 
   const VIEWS = {};
   const EXPLORER_EXTRA = {};
+  const EXPLORER_HEAD = {};
   const viewKey = (id) => String(id).split(":")[0];
 
   /* ---------------- state ---------------- */
@@ -190,6 +191,8 @@
     PL.list = [];
     window.NV?.reseed();
     window.LB?.reseed();
+    window.PJ?.reseed();
+    window.DT?.reseed();
     S.rail = "projects";
     S.rightTab = "inspector";
     document.title = `${entry.name} — Dreamy Studio`;
@@ -233,14 +236,14 @@
 
   function renderExplorer() {
     const rail = D.NAV[S.rail];
-    const sections = rail.sections.map((s) => {
+    const sections = rail.sections.filter((s) => !s.hidden).map((s) => {
       const key = `${S.rail}.${s.id}`;
-      const open = !S.collapsed.has(key);
+      const open = s.headless || !S.collapsed.has(key);
       const rows = s.items.map((i) =>
         `<div class="tree-row ${S.active === i.id ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="open" data-id="${i.id}">${ic(i.icon)}<span class="tree-label">${esc(i.title)}</span></div>`).join("");
       return `<section class="ex-sec">
-        <header class="ex-sec-head" tabindex="0" data-act="sec-toggle" data-k="${key}">${ic(open ? "chev-d" : "chev-r")}<span>${esc(s.title)}</span></header>
-        ${open ? `<div class="ex-sec-body" role="tree">${rows}${EXPLORER_EXTRA[s.id]?.() || ""}</div>` : ""}
+        ${s.headless ? "" : `<header class="ex-sec-head" tabindex="0" data-act="sec-toggle" data-k="${key}">${ic(open ? "chev-d" : "chev-r")}<span>${esc(s.title)}</span></header>`}
+        ${open ? `<div class="ex-sec-body" role="tree">${EXPLORER_HEAD[s.id]?.() || ""}${rows}${EXPLORER_EXTRA[s.id]?.() || ""}</div>` : ""}
       </section>`;
     }).join("");
     $("#explorer").innerHTML = `
@@ -415,8 +418,8 @@
   }
 
   /* ---------------- dialogs ---------------- */
-  function modal({ title, eyebrow = "", body, foot = "", cls = "" }) {
-    $("#layer").innerHTML = `<div class="scrim" data-act="scrim"><div class="modal ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+  function modal({ title, eyebrow = "", body, foot = "", cls = "", testid = "" }) {
+    $("#layer").innerHTML = `<div class="scrim" data-act="scrim"><div class="modal ${cls}" ${testid ? `data-testid="${testid}"` : ""} role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <header class="modal-head">${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}<h2 class="t-display-xs">${esc(title)}</h2><span class="spacer"></span>
         <button class="btn btn-icon btn-sm" data-act="close-modal" aria-label="Đóng (Esc)" data-tip="Đóng (Esc)">${ic("x")}</button></header>
       <div class="modal-body">${body}</div>${foot ? `<footer class="modal-foot">${foot}</footer>` : ""}</div></div>`;
@@ -816,7 +819,7 @@
   }
 
   window.DSApp = {
-    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, PL, SETTINGS_VIEWS, openSettings, refreshSettings,
+    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, EXPLORER_HEAD, PL, SETTINGS_VIEWS, openSettings, refreshSettings,
     $, $$, esc, ic, stamp, store, modal, closeModal, openMenu, toast, openTab, closeTab, rerender, renderInspector, renderExplorer, renderStatus, log, startPipeline, cancelPipeline,
   };
 

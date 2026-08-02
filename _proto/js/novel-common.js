@@ -38,9 +38,9 @@ window.NVU = (function () {
   /** `2/12` kèm icon, dùng thay cho chữ dài ở danh sách, lưới và bảng chương. */
   const frac = (icon, a, b, title) => `<span class="frac ${a >= b && b ? "is-full" : a ? "is-part" : ""}" title="${esc(title)}">${ic(icon)}<b>${a}</b>/${b}</span>`;
 
-  const seg = (act, list, currentValue, extra = "") => `<div class="seg" role="group">${list.map(([v, label, tip]) => {
+  const seg = (act, list, currentValue, extra = "", testid = "") => `<div class="seg" role="group" ${testid ? `data-testid="${testid}"` : ""}>${list.map(([v, label, tip]) => {
     const on = String(v) === String(currentValue);
-    return `<button type="button" class="${on ? "is-active" : ""}" data-act="${act}" data-v="${esc(v)}" ${extra} ${tip ? `data-tip="${esc(tip)}" aria-label="${esc(tip)}"` : ""} aria-pressed="${on}">${label}</button>`;
+    return `<button type="button" ${testid ? `data-testid="${testid}-${esc(v)}"` : ""} class="${on ? "is-active" : ""}" data-act="${act}" data-v="${esc(v)}" ${extra} ${tip ? `data-tip="${esc(tip)}" aria-label="${esc(tip)}"` : ""} aria-pressed="${on}">${label}</button>`;
   }).join("")}</div>`;
   const options = (list, currentValue) => list.map(([v, label, disabled]) =>
     `<option value="${esc(v)}" ${String(v) === String(currentValue) ? "selected" : ""} ${disabled ? "disabled" : ""}>${esc(label)}</option>`).join("");

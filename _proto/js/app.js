@@ -189,6 +189,7 @@
     S.renderedFor = null;
     PL.list = [];
     window.NV?.reseed();
+    window.LB?.reseed();
     S.rail = "projects";
     S.rightTab = "inspector";
     document.title = `${entry.name} — Dreamy Studio`;
@@ -408,7 +409,7 @@
       <button class="sb-item" data-act="switch-workspace" data-tip-t="Đổi workspace">${ic("hdd")}<span class="path">${esc(S.workspace.path)}</span></button>
       <span class="spacer"></span>
       ${pipelineStatus()}
-      ${tts.result === "warn" ? `<button class="sb-item sb-warn" data-act="settings" data-v="tts" data-tip-t="Chưa cài mô hình TTS"><span class="dot dot-warning"></span><span class="mono">LOCAL TTS · NOT INSTALLED</span></button>` : ""}
+      ${tts.result === "warn" ? `<button class="sb-item sb-warn" data-act="settings" data-v="tts" data-tip-t="Local TTS chưa sẵn sàng"><span class="dot dot-warning"></span><span class="mono">LOCAL TTS · ${window.LB?.tts && !window.LB.tts.backendOk() ? "BACKEND STOPPED" : "NOT INSTALLED"}</span></button>` : ""}
       <button class="sb-item" data-act="theme" data-tip-t="Đổi theme" aria-label="Đổi theme">${ic(theme === "light" ? "moon" : "sun")}</button>
       <span class="sb-item mono">V${esc(D.version)}</span>`;
   }
@@ -487,21 +488,30 @@
     $(input)?.classList.toggle("is-invalid", !!msg);
   };
 
-  /** Settings dialog (REQ-12-001..005). Content is coming soon. */
+  const SETTINGS_VIEWS = {};
   function openSettings(tab) {
     if (tab && D.SETTINGS.some((s) => s.id === tab)) S.settingsTab = tab;
     const cur = D.SETTINGS.find((s) => s.id === S.settingsTab);
+    const view = SETTINGS_VIEWS[cur.id];
     modal({
-      title: "Settings", eyebrow: D.CAP["12"], cls: "modal-lg",
-      body: `<div class="settings">
+      title: "Settings", eyebrow: D.CAP["12"], cls: view?.cls || "modal-lg",
+      body: `<div class="settings ${view ? "has-view" : ""}">
         <nav class="settings-nav" aria-label="Settings sections">${D.SETTINGS.map((s) =>
           `<div class="tree-row ${s.id === cur.id ? "is-selected" : ""}" tabindex="0" data-act="settings-tab" data-v="${s.id}">${ic(s.icon)}<span class="tree-label">${esc(s.title)}</span></div>`).join("")}</nav>
-        <div style="display:grid;gap:12px;align-content:start">
+        ${view ? `<div class="settings-pane">${view.render()}</div>` : `<div style="display:grid;gap:12px;align-content:start">
           <div class="cs-title"><h3 class="t-display-xs">${esc(cur.title)}</h3><span class="badge badge-info">COMING SOON</span></div>
           ${reqList(cur.reqs)}
-        </div></div>`,
+        </div>`}</div>`,
       foot: `<button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
     });
+    view?.mount?.();
+  }
+  function refreshSettings(tab) {
+    if (!$("#layer .settings") || S.settingsTab !== tab) return;
+    const y = $("#layer .modal-body")?.scrollTop || 0;
+    openSettings(tab);
+    const b = $("#layer .modal-body");
+    if (b) b.scrollTop = y;
   }
 
   function openAbout() {
@@ -806,8 +816,8 @@
   }
 
   window.DSApp = {
-    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, PL,
-    $, $$, esc, ic, stamp, store, modal, closeModal, toast, openTab, closeTab, rerender, renderInspector, renderExplorer, renderStatus, log, startPipeline, cancelPipeline,
+    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, PL, SETTINGS_VIEWS, openSettings, refreshSettings,
+    $, $$, esc, ic, stamp, store, modal, closeModal, openMenu, toast, openTab, closeTab, rerender, renderInspector, renderExplorer, renderStatus, log, startPipeline, cancelPipeline,
   };
 
   renderWelcome();

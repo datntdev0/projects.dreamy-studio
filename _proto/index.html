@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/novel.css">
   <link rel="stylesheet" href="css/import.css">
+  <link rel="stylesheet" href="css/library.css">
+  <link rel="stylesheet" href="css/settings.css">
   <script>
     // apply the saved theme before first paint (no flash)
     try { var t = JSON.parse(localStorage.getItem("ds.theme")); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
@@ -73,6 +75,17 @@
       <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></symbol>
       <symbol id="i-merge" viewBox="0 0 24 24"><path d="M6 3v6a6 6 0 0 0 6 6h6M18 12l3 3-3 3M6 21V9"/></symbol>
       <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+      <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+      <symbol id="i-ratio-1-1" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1.5"/></symbol>
+      <symbol id="i-ratio-16-9" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10.5" rx="1.5"/></symbol>
+      <symbol id="i-ratio-9-16" viewBox="0 0 24 24"><rect x="6.75" y="2.5" width="10.5" height="19" rx="1.5"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
       <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 22V4M4 4h13l-2 4 2 4H4"/></symbol>
     </defs>
   </svg>
@@ -130,5 +143,12 @@
   <script src="js/novel-kb-graph.js"></script>
   <script src="js/novel-kb-edit.js"></script>
   <script src="js/novel-knowledge.js"></script>
+  <script src="js/library-data.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/library-upload.js"></script>
+  <script src="js/settings-backend.js"></script>
+  <script src="js/settings-tts.js"></script>
+  <script src="js/settings-speech.js"></script>
+  <script src="js/library-voices.js"></script>
 </body>
 </html>

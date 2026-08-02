@@ -147,6 +147,14 @@ window.DS = (function () {
               blurb: "Upload và quản lý prompt dùng chung trong workspace.",
               reqs: [["REQ-05-004", "Upload PROMPTS lên thư viện tài nguyên chung của workspace"]],
             },
+            {
+              id: "voices", title: "Voices", icon: "voice", cap: CAP["05"],
+              blurb: "Clone voice từ audio file hoặc tự ghi âm, nghe thử với default voice hoặc cloned voice.",
+              reqs: [
+                ["REQ-05-006", "Clone voice từ một audio file hoặc tự ghi âm"],
+                ["REQ-05-007", "Preview voice với default voice hoặc cloned voice"],
+              ],
+            },
           ],
         },
         {
@@ -157,17 +165,7 @@ window.DS = (function () {
             reqs: [["REQ-05-005", "Hệ thống phân loại và quản lý tài nguyên gồm collections và tags"]],
           }],
         },
-        {
-          id: "voice", title: "Voice",
-          items: [{
-            id: "voices", title: "Voices", icon: "voice", cap: CAP["05"],
-            blurb: "Clone voice từ audio file hoặc tự ghi âm, nghe thử với default voice hoặc cloned voice.",
-            reqs: [
-              ["REQ-05-006", "Clone voice từ một audio file hoặc tự ghi âm"],
-              ["REQ-05-007", "Preview voice với default voice hoặc cloned voice"],
-            ],
-          }],
-        },
+        { id: "libfilters", title: "Filters", items: [] },
       ],
     },
 
@@ -208,6 +206,7 @@ window.DS = (function () {
     { id: "general", title: "General", icon: "settings", reqs: [["REQ-12-001", "Dialog chung để cài đặt và cấu hình các chức năng của phần mềm - cơ bản"]] },
     { id: "cli", title: "CLI providers", icon: "terminal", reqs: [["REQ-12-002", "Cấu hình sử dụng các CLI providers đã cài ở máy tính đang chạy"]] },
     { id: "pipeline", title: "Pipeline executor", icon: "activity", reqs: [["REQ-12-003", "Pipeline executor với cấu hình concurrency cho pipeline và tasks được chạy"]] },
+    { id: "backend", title: "Python backend", icon: "server", reqs: [["REQ-12-004", "Tải xuống và cài đặt mô hình TTS chạy trên python local backend"]] },
     { id: "tts", title: "Local TTS models", icon: "cpu", reqs: [["REQ-12-004", "Tải xuống và cài đặt mô hình TTS chạy trên python local backend"]] },
     { id: "speech", title: "Speech providers", icon: "cloud", reqs: [["REQ-12-005", "Cấu hình sử dụng các speech providers từ cloud services"]] },
   ];
@@ -219,7 +218,7 @@ window.DS = (function () {
     { id: "index", label: "Nạp danh mục project, novel và thư viện", detail: "Quét thư mục", result: "ok" },
     { id: "cli", label: "Phát hiện CLI providers đã cài", detail: "Tìm trên máy này", result: "ok" },
     { id: "executor", label: "Khởi động pipeline executor", detail: "Concurrency mặc định", result: "ok" },
-    { id: "tts", label: "Kiểm tra local TTS backend", detail: "Python backend & mô hình", result: "warn", note: "Chưa cài mô hình TTS. Có thể cài sau trong Settings." },
+    { id: "tts", label: "Kiểm tra local TTS backend", detail: "FastAPI backend & mô hình", result: "warn", note: "Chưa cài mô hình TTS. Có thể cài sau trong Settings." },
   ];
 
   const WORKSPACE_FOLDERS = ["novels\\", "projects\\", "library\\", "cache\\", "workspace.json"];

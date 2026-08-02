@@ -106,39 +106,17 @@ window.DS = (function () {
         {
           id: "novels", title: "Novels",
           items: [{
-            id: "novels", title: "Novel management", icon: "book", cap: CAP["02"],
-            blurb: "Tạo mới hoặc nhập novel từ file package, đọc và chỉnh sửa nội dung novel trong phần mềm.",
+            id: "novels", title: "Novel management", icon: "frames", cap: CAP["02"],
+            blurb: "Danh sách novel của workspace. Mỗi novel có ba màn hình: Chapters (đọc, chỉnh sửa), Translation và Knowledgebase.",
             reqs: [
               ["REQ-02-001", "Tạo mới, hoặc nhập novel từ một file package theo cấu trúc của phần mềm"],
               ["REQ-02-002", "Trình đọc và chỉnh sửa nội dung của novel đã có trong phần mềm"],
-            ],
-          }],
-        },
-        {
-          id: "translation", title: "Translation",
-          items: [{
-            id: "translation", title: "Novel translation", icon: "lang", cap: CAP["03"],
-            blurb: "Dịch theo chương, giữ liên kết giữa đoạn gốc và đoạn dịch; rà soát và chỉnh sửa bản dịch.",
-            reqs: [
               ["REQ-03-001", "Cấu hình hướng dẫn dịch và từ điển dịch thuật để AI sử dụng"],
-              ["REQ-03-002", "Bắt đầu pipeline dịch và có thể theo dõi tiến độ dịch"],
-              ["REQ-03-003", "Đọc bản dịch, điều chỉnh trực tiếp. Thêm và quản lý ghi chú theo đoạn"],
-              ["REQ-03-004", "Cảnh báo khi nguồn hoặc hướng dẫn bị thay đổi. Quản lý các cảnh báo"],
-            ],
-          }],
-        },
-        {
-          id: "knowledge", title: "Knowledgebase",
-          items: [{
-            id: "knowledge", title: "Novel knowledgebase", icon: "graph", cap: CAP["04"],
-            blurb: "Phân tích, kiểm chứng và khám phá tri thức về nhân vật, địa điểm, sự kiện và quan hệ trong tác phẩm.",
-            reqs: [
               ["REQ-04-001", "Phân tích nội dung novel theo ontology được định nghĩa"],
-              ["REQ-04-002", "Kiểm tra, thay đổi kết quả phân tích tri thức cho novel"],
-              ["REQ-04-003", "Duy trì và cập nhật tri thức nếu có thay đổi nội dung novel"],
             ],
           }],
         },
+        { id: "filters", title: "Filters", items: [] },
       ],
     },
 

@@ -34,6 +34,10 @@
 
   const FIRST_RUN = /[?&]first-run\b/.test(location.search);
 
+  const VIEWS = {};
+  const EXPLORER_EXTRA = {};
+  const viewKey = (id) => String(id).split(":")[0];
+
   /* ---------------- state ---------------- */
   const S = {
     screen: "splash", // "splash" | "app"
@@ -51,6 +55,8 @@
     active: "home",
     collapsed: new Set(),
     log: [],
+    scroll: {},
+    renderedFor: null,
     settingsTab: "general",
     onOk: null,
   };
@@ -179,6 +185,10 @@
     S.loading = null;
     S.tabs = ["home"];
     S.active = "home";
+    S.scroll = {};
+    S.renderedFor = null;
+    PL.list = [];
+    window.NV?.reseed();
     S.rail = "projects";
     S.rightTab = "inspector";
     document.title = `${entry.name} — Dreamy Studio`;
@@ -229,7 +239,7 @@
         `<div class="tree-row ${S.active === i.id ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="open" data-id="${i.id}">${ic(i.icon)}<span class="tree-label">${esc(i.title)}</span></div>`).join("");
       return `<section class="ex-sec">
         <header class="ex-sec-head" tabindex="0" data-act="sec-toggle" data-k="${key}">${ic(open ? "chev-d" : "chev-r")}<span>${esc(s.title)}</span></header>
-        ${open ? `<div class="ex-sec-body" role="tree">${rows}</div>` : ""}
+        ${open ? `<div class="ex-sec-body" role="tree">${rows}${EXPLORER_EXTRA[s.id]?.() || ""}</div>` : ""}
       </section>`;
     }).join("");
     $("#explorer").innerHTML = `
@@ -238,7 +248,7 @@
       <div class="pane-body">${sections}</div>`;
   }
 
-  const tabInfo = (id) => id === "home" ? { title: "Home", logo: true } : { title: ITEMS[id].title, icon: ITEMS[id].icon };
+  const tabInfo = (id) => id === "home" ? { title: "Home", logo: true } : { title: ITEMS[id].tab || ITEMS[id].title, icon: ITEMS[id].icon };
 
   function renderTabs() {
     $("#tabbar").innerHTML = `<div class="etabs">${S.tabs.map((id) => {
@@ -289,10 +299,52 @@
     </div>`;
   }
 
+  function saveScroll() {
+    if (!S.renderedFor) return;
+    const ed = $("#editor");
+    S.scroll[`${S.renderedFor}|#`] = ed.scrollTop;
+    $$("[data-keep]", ed).forEach((el) => { S.scroll[`${S.renderedFor}|${el.dataset.keep}`] = el.scrollTop; });
+  }
+  function restoreScroll() {
+    const ed = $("#editor");
+    ed.scrollTop = S.scroll[`${S.active}|#`] || 0;
+    $$("[data-keep]", ed).forEach((el) => { el.scrollTop = S.scroll[`${S.active}|${el.dataset.keep}`] || 0; });
+  }
   function renderEditor() {
     renderCrumbs();
-    $("#editor").innerHTML = S.active === "home" ? renderHome() : comingSoon(ITEMS[S.active]);
+    saveScroll();
+    const ed = $("#editor");
+    const view = VIEWS[viewKey(S.active)];
+    ed.classList.toggle("is-fill", !!view?.fill);
+    if (S.active === "home") ed.innerHTML = renderHome();
+    else if (view) { ed.innerHTML = view.render(S.active); view.mount?.(ed, S.active); }
+    else ed.innerHTML = comingSoon(ITEMS[S.active]);
+    S.renderedFor = S.active;
+    restoreScroll();
   }
+  function rerender() {
+    const f = document.activeElement;
+    const fid = f && f.id && $("#editor").contains(f) ? f.id : null;
+    const sel = fid && typeof f.selectionStart === "number" ? [f.selectionStart, f.selectionEnd] : null;
+    renderEditor();
+    renderInspector();
+    renderTabs();
+    renderStatus();
+    if (fid) {
+      const n = document.getElementById(fid);
+      n?.focus();
+      if (sel && n?.setSelectionRange) { try { n.setSelectionRange(sel[0], sel[1]); } catch { } }
+    }
+  }
+  let pendingRefresh = false;
+  function softRerender() {
+    if (document.activeElement?.matches?.("#editor textarea")) { pendingRefresh = true; return; }
+    rerender();
+  }
+  document.addEventListener("focusout", () => {
+    if (!pendingRefresh) return;
+    setTimeout(() => { if (!document.activeElement?.matches?.("#editor textarea")) { pendingRefresh = false; rerender(); } }, 0);
+  });
 
   function renderInspector() {
     const head = `<header class="ins-head">${[["inspector", "Inspector"], ["assistant", "Assistant"]].map(([id, label]) =>
@@ -311,6 +363,8 @@
         </div>
         <div class="asst-input"><input class="input" placeholder="Hỏi Assistant…" disabled aria-label="Hỏi Assistant"><button class="btn btn-icon btn-primary" disabled aria-label="Gửi">${ic("send-up")}</button></div>
       </div>`;
+    } else if (VIEWS[viewKey(S.active)]?.inspector) {
+      body = VIEWS[viewKey(S.active)].inspector(S.active);
     } else if (S.active === "home") {
       body = `<section class="ins-sec"><span class="eyebrow">Workspace</span>
         <dl class="kv"><dt>Tên</dt><dd>${esc(S.workspace.name)}</dd><dt>Đường dẫn</dt><dd class="path">${esc(S.workspace.path)}</dd><dt>Mở lúc</dt><dd class="mono">${esc(S.workspace.lastOpened)}</dd></dl></section>`;
@@ -328,24 +382,32 @@
     el.hidden = !S.bottomOpen;
     if (!S.bottomOpen) return;
     const tab = (id, label) => `<button class="ins-tab ${S.bottomTab === id ? "is-active" : ""}" data-act="bottom-tab" data-v="${id}">${label}</button>`;
-    const body = S.bottomTab === "pipelines"
+    const nRun = PL.list.filter((p) => p.status === "running").length;
+    const body = S.bottomTab === "pipelines" && PL.list.length
+      ? `<div class="pl-list">${PL.list.map(plRow).join("")}</div>`
+      : S.bottomTab === "pipelines"
       ? `<div class="empty"><div class="empty-inner"><h3 class="t-display-xs">Chưa có pipeline nào chạy</h3>
           <p class="t-sm t-mute">Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây. Số pipeline và task chạy song song được cấu hình trong Settings.</p>
           <button class="btn btn-sm" data-act="settings" data-v="pipeline">${ic("settings")}Pipeline executor</button></div></div>`
       : `<div class="log">${S.log.map(([t, lv, src, msg]) => `<div class="log-row log-${lv}"><span class="t-mute">${t}</span><span class="log-lv">${lv}</span><span class="t-mute">${esc(src)}</span><span>${esc(msg)}</span></div>`).join("")}</div>`;
     el.innerHTML = `<div class="resizer-h" data-resize="bottom" aria-hidden="true"></div>
-      <header class="bottom-head">${tab("pipelines", "Pipelines")}${tab("output", "Output")}<span class="spacer"></span>
+      <header class="bottom-head">${tab("pipelines", `Pipelines${PL.list.length ? ` <span class="count">${nRun ? nRun + " chạy / " : ""}${PL.list.length}</span>` : ""}`)}${tab("output", "Output")}<span class="spacer"></span>
         <button class="btn btn-icon btn-sm" data-act="toggle-bottom" data-tip="Đóng panel" aria-label="Đóng panel">${ic("x")}</button></header>
       <div class="bottom-body">${body}</div>`;
   }
 
+  function pipelineStatus() {
+    const run = PL.list.filter((p) => p.status === "running");
+    if (!run.length) return `<button class="sb-item" data-act="toggle-bottom" data-tip-t="Pipelines (Ctrl J)" aria-label="Pipelines">${ic("activity")}<span class="mono">PIPELINES · IDLE</span></button>`;
+    return `<button class="sb-item sb-running" data-act="toggle-bottom" data-tip-t="Pipelines (Ctrl J)" aria-label="Pipelines"><span class="dot dot-running"></span><span class="mono">${run.length} RUNNING · <span data-sb-avg>${avgProgress(run)}%</span></span></button>`;
+  }
   function renderStatus() {
     const theme = document.documentElement.getAttribute("data-theme");
     const tts = D.STARTUP_STEPS.find((s) => s.id === "tts");
     $("#statusbar").innerHTML = `
       <button class="sb-item" data-act="switch-workspace" data-tip-t="Đổi workspace">${ic("hdd")}<span class="path">${esc(S.workspace.path)}</span></button>
       <span class="spacer"></span>
-      <button class="sb-item" data-act="toggle-bottom" data-tip-t="Pipelines (Ctrl J)" aria-label="Pipelines">${ic("activity")}<span class="mono">PIPELINES · IDLE</span></button>
+      ${pipelineStatus()}
       ${tts.result === "warn" ? `<button class="sb-item sb-warn" data-act="settings" data-v="tts" data-tip-t="Chưa cài mô hình TTS"><span class="dot dot-warning"></span><span class="mono">LOCAL TTS · NOT INSTALLED</span></button>` : ""}
       <button class="sb-item" data-act="theme" data-tip-t="Đổi theme" aria-label="Đổi theme">${ic(theme === "light" ? "moon" : "sun")}</button>
       <span class="sb-item mono">V${esc(D.version)}</span>`;
@@ -486,7 +548,8 @@
   };
 
   /* ---------------- actions ---------------- */
-  function openTab(id) {
+  function openTab(id, info) {
+    if (info) ITEMS[id] = { id, ...info };
     if (!S.tabs.includes(id)) S.tabs.push(id);
     S.active = id;
     if (ITEMS[id]) S.rail = ITEMS[id].rail;
@@ -558,6 +621,8 @@
     },
     "rail-open": (el) => { S.rail = el.dataset.v; S.explorerOpen = true; openTab(el.dataset.id); },
     open: (el) => openTab(el.dataset.id),
+    "pl-cancel": (el) => cancelPipeline(el.dataset.id),
+    "pl-clear": () => { PL.list = PL.list.filter((p) => p.status === "running"); renderBottom(); renderStatus(); },
     "close-tab": (el, e) => { e?.stopPropagation(); closeTab(el.dataset.id || el.dataset.v); },
     "sec-toggle": (el) => {
       const k = el.dataset.k;
@@ -590,13 +655,18 @@
     const a = e.target.closest("[data-act]");
     if (!a?.dataset.act.endsWith("menu") || !e.target.closest("body > .menu")) closeMenu();
     if (a && ACT[a.dataset.act]) {
-      e.preventDefault();
+      // không chặn radio / checkbox (trong dialog hoặc ô chọn của danh sách), nếu không trình duyệt hoàn lại trạng thái checked sau khi handler chạy
+      if (a.dataset.act !== "scrim" && !e.target.matches?.('input[type="checkbox"], input[type="radio"]')) e.preventDefault();
       ACT[a.dataset.act](a, e);
     }
   });
   document.addEventListener("input", (e) => {
     const el = e.target.closest("[data-on]");
     if (el && ON[el.dataset.on]) ON[el.dataset.on](el, e);
+  });
+  document.addEventListener("change", (e) => {
+    const el = e.target.closest("[data-change]");
+    if (el && ON[el.dataset.change]) ON[el.dataset.change](el, e);
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -605,6 +675,7 @@
       return;
     }
     if (e.key === "Enter") {
+      if (e.target.dataset?.enter && ACT[e.target.dataset.enter]) { ACT[e.target.dataset.enter](e.target, e); return; }
       if ($("#layer .modal") && e.target.matches("#layer input")) {
         $("#layer .modal-foot .btn-primary")?.click();
         return;
@@ -640,6 +711,104 @@
     addEventListener("pointerup", up);
   });
 
-  /* ---------------- boot ---------------- */
+  function toast(msg, kind = "success") {
+    let box = $("#toasts");
+    if (!box) { box = document.createElement("div"); box.id = "toasts"; box.className = "toast-stack"; document.body.appendChild(box); }
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.setAttribute("role", "status");
+    el.innerHTML = `<span class="dot dot-${kind}"></span><span>${esc(msg)}</span>`;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 3800);
+  }
+
+  const PL = { list: [], seq: 1, concurrency: 2, timer: null };
+  const avgProgress = (ps) => Math.round(ps.reduce((a, p) => a + p.progress, 0) / (ps.length || 1));
+  const taskDone = (p) => p.tasks.filter((t) => t.status === "done").length;
+
+  function plRow(p) {
+    const badge = { running: `<span class="badge badge-running">RUNNING</span>`, done: `<span class="badge badge-success">DONE</span>`, cancelled: `<span class="badge">CANCELLED</span>` }[p.status];
+    return `<div class="pl-row">
+      <div class="pl-main"><div class="t-ink">${esc(p.label)}</div><div class="t-sm t-mute">${esc(p.detail)} · <span class="mono">${p.id}</span> · ${taskDone(p)}/${p.tasks.length} task</div></div>
+      <div class="pl-prog"><div class="progress" data-prog="${p.id}"><i style="width:${p.progress}%"></i></div><span class="mono" data-prog-text="${p.id}">${p.progress}%</span></div>
+      ${badge}
+      ${p.status === "running" ? `<button class="btn btn-sm" data-act="pl-cancel" data-id="${p.id}">Hủy</button>` : ""}
+    </div>`;
+  }
+
+  function startPipeline({ kind, label, detail = "", tasks, onTask, onDone, onCancel }) {
+    const p = {
+      id: `PL-${String(PL.seq++).padStart(3, "0")}`, kind, label, detail, status: "running", progress: 0, started: stamp(), onTask, onDone, onCancel,
+      tasks: tasks.map((t) => ({ ...t, status: "queued", progress: 0 })),
+    };
+    PL.list.unshift(p);
+    log("info", p.id, `${label} · ${p.tasks.length} task`);
+    if (!PL.timer) PL.timer = setInterval(plTick, 450);
+    renderStatus();
+    renderBottom();
+    toast(`Đã bắt đầu: ${label}`, "running");
+    return p;
+  }
+  function cancelPipeline(id) {
+    const p = PL.list.find((x) => x.id === id);
+    if (!p || p.status !== "running") return;
+    p.status = "cancelled";
+    p.tasks.forEach((t) => { if (t.status !== "done") t.status = "cancelled"; });
+    log("warn", p.id, "Cancelled");
+    p.onCancel?.(p);
+    toast(`Đã hủy: ${p.label}`, "warning");
+    plAfterChange();
+  }
+  function plAfterChange() {
+    renderStatus();
+    renderBottom();
+    softRerender();
+    if (!PL.list.some((p) => p.status === "running")) { clearInterval(PL.timer); PL.timer = null; }
+  }
+  function plTick() {
+    let changed = false;
+    PL.list.filter((p) => p.status === "running").forEach((p) => {
+      const running = p.tasks.filter((t) => t.status === "running");
+      for (const t of p.tasks) {
+        if (running.length >= PL.concurrency) break;
+        if (t.status === "queued") { t.status = "running"; running.push(t); changed = true; }
+      }
+      running.forEach((t) => {
+        t.progress = Math.min(100, t.progress + 9 + Math.random() * 14);
+        if (t.progress >= 100) { t.status = "done"; changed = true; p.onTask?.(t, p); }
+      });
+      p.progress = Math.round(p.tasks.reduce((a, t) => a + t.progress, 0) / p.tasks.length);
+      if (p.tasks.every((t) => t.status === "done")) {
+        p.status = "done";
+        p.progress = 100;
+        changed = true;
+        log("ok", p.id, `${p.label} · done`);
+        p.onDone?.(p);
+        toast(`Hoàn tất: ${p.label}`, "success");
+      }
+    });
+    updateBars();
+    if (changed) plAfterChange();
+  }
+  function updateBars() {
+    const value = (ref) => {
+      const [pid, key] = ref.split("|");
+      const p = PL.list.find((x) => x.id === pid);
+      return key ? Math.round(p?.tasks.find((t) => t.key === key)?.progress ?? 0) : p?.progress ?? 0;
+    };
+    $$("[data-prog]").forEach((el) => {
+      const bar = el.querySelector("i");
+      if (bar) bar.style.width = `${value(el.dataset.prog)}%`;
+    });
+    $$("[data-prog-text]").forEach((el) => { el.textContent = `${value(el.dataset.progText)}%`; });
+    const sb = $("[data-sb-avg]");
+    if (sb) sb.textContent = `${avgProgress(PL.list.filter((p) => p.status === "running"))}%`;
+  }
+
+  window.DSApp = {
+    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, PL,
+    $, $$, esc, ic, stamp, store, modal, closeModal, toast, openTab, closeTab, rerender, renderInspector, renderExplorer, renderStatus, log, startPipeline, cancelPipeline,
+  };
+
   renderWelcome();
 })();

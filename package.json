@@ -2,11 +2,12 @@
   "name": "dreamy-studio",
   "version": "0.1.0",
   "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "tauri": "tauri"
+    "start": "tauri dev",
+    "build": "tauri build",
+    "watch": "tauri dev",
+    "tauri": "tauri",
+    "angular:serve": "ng serve",
+    "angular:build": "ng build"
   },
   "private": true,
   "dependencies": {

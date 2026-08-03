@@ -2,6 +2,7 @@
 
 # Compiled output
 /_output/
+/storybook-static/
 /tmp
 /out-tsc
 /bazel-out

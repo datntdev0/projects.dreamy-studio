@@ -7,7 +7,9 @@
     "watch": "tauri dev",
     "tauri": "tauri",
     "angular:serve": "ng serve",
-    "angular:build": "ng build"
+    "angular:build": "ng build",
+    "story": "storybook dev -p 6006",
+    "story:build": "storybook build -o _output/storybook"
   },
   "private": true,
   "dependencies": {
@@ -17,16 +19,19 @@
     "@angular/forms": "^22.0.1",
     "@angular/platform-browser": "^22.0.1",
     "@angular/router": "^22.0.1",
-    "rxjs": "~7.8.2",
-    "tslib": "^2.8.1",
     "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
+    "@tauri-apps/plugin-opener": "^2",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@angular/build": "^22.0.1",
     "@angular/cli": "^22.0.1",
     "@angular/compiler-cli": "^22.0.1",
+    "@storybook/angular-vite": "^10.6.7",
     "@tauri-apps/cli": "^2",
+    "sass": "^1.108.1",
+    "storybook": "^10.6.7",
     "typescript": "~6.0.3"
   }
 }

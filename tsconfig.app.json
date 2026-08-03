@@ -8,5 +8,5 @@
     "types": []
   },
   "include": ["angular/**/*.ts"],
-  "exclude": ["angular/**/*.spec.ts"]
+  "exclude": ["angular/**/*.spec.ts", "angular/stories/**"]
 }

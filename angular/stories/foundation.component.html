@@ -1,74 +1,4 @@
-<!doctype html>
-<html lang="vi" data-theme="dark">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dreamy Studio — Design system</title>
-  <link rel="icon" href="assets/dreamy-studio-mark.svg">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/app.css">
-  <script>
-    try { var t = JSON.parse(localStorage.getItem("ds.theme")); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
-  </script>
-  <style>
-    /* page chrome only; every value below goes through the tokens */
-    body { overflow: auto; }
-    .page { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
-    .side { position: sticky; top: 0; height: 100vh; padding: var(--sp-xl) var(--sp-lg); border-right: 1px solid var(--hairline); background: var(--canvas-card); display: flex; flex-direction: column; gap: var(--sp-lg); overflow: auto; }
-    .side .brand { display: flex; align-items: center; gap: var(--sp-md); color: var(--ink); font-weight: 500; }
-    .side .brand img { width: 24px; height: 24px; }
-    .side nav { display: grid; gap: 2px; }
-    .side nav a { display: block; padding: 3px var(--sp-md); border-radius: var(--r-sm); color: var(--body); font-size: 13px; }
-    .side nav a:hover { background: var(--canvas-soft); text-decoration: none; color: var(--ink); }
-    main { padding: var(--sp-3xl) var(--sp-3xl) 96px; max-width: 1040px; }
-    section { padding-top: var(--sp-3xl); }
-    section > h2 { font-size: 24px; line-height: 30px; letter-spacing: -0.4px; margin-bottom: var(--sp-sm); }
-    section > .lead { color: var(--body); max-width: 70ch; margin-bottom: var(--sp-xl); }
-    h3 { font-size: 16px; line-height: 22px; margin: var(--sp-2xl) 0 var(--sp-md); }
-    .grid { display: grid; gap: var(--sp-lg); }
-    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .row { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
-    table.spec { width: 100%; border-collapse: collapse; font-size: 13px; }
-    table.spec th { text-align: left; font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--mute); padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--hairline); }
-    table.spec td { padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--hairline); vertical-align: middle; }
-    table.spec code, code { font: 400 12px/16px var(--font-mono); color: var(--primary-text); }
-    .sw { display: inline-block; width: 28px; height: 18px; border-radius: var(--r-xs); border: 1px solid var(--hairline-strong); vertical-align: middle; margin-right: var(--sp-sm); }
-    .val { font: 400 12px/16px var(--font-mono); color: var(--mute); }
-    .demo { padding: var(--sp-xl); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas); display: grid; gap: var(--sp-lg); }
-    .demo.flush { padding: 0; overflow: hidden; }
-    .cap { font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--mute); margin-bottom: var(--sp-sm); }
-    .ladder > div { display: flex; align-items: baseline; gap: var(--sp-xl); padding: var(--sp-md) 0; border-bottom: 1px solid var(--hairline); }
-    .ladder .meta { width: 220px; flex: none; }
-    .bar { display: inline-block; height: 12px; background: var(--primary-soft); border: 1px solid var(--primary); border-radius: var(--r-xs); vertical-align: middle; }
-    .box { width: 88px; height: 56px; display: grid; place-items: center; background: var(--canvas-card); border: 1px solid var(--hairline-strong); font: 400 11px/14px var(--font-mono); color: var(--mute); }
-    .lvl { padding: var(--sp-lg); background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--r-md); }
-    .lvl.l2 { box-shadow: var(--shadow-float); }
-    .lvl.l0 { border-color: transparent; background: var(--canvas); }
-    .do, .dont { padding: var(--sp-lg); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
-    .do h3, .dont h3 { margin-top: 0; }
-    .do h3 { color: var(--success); }
-    .dont h3 { color: var(--danger); }
-    .do ul, .dont ul { margin: 0; padding-left: 18px; display: grid; gap: var(--sp-sm); color: var(--body); }
-    .accents { display: flex; gap: var(--sp-md); flex-wrap: wrap; }
-    .accents div { width: 120px; }
-    .accents i { display: block; height: 44px; border-radius: var(--r-md); border: 1px solid var(--hairline); margin-bottom: var(--sp-xs); }
-    .skel { height: 12px; background: var(--canvas-mid); border-radius: var(--r-xs); position: relative; overflow: hidden; }
-    .skel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent); animation: shimmer 1.8s infinite; }
-    @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-    .toast { display: flex; align-items: center; gap: var(--sp-md); width: fit-content; min-width: 260px; background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--r-md); box-shadow: var(--shadow-float); padding: var(--sp-md) var(--sp-lg); font-size: 13px; }
-    .tabs-demo { display: flex; height: 32px; background: var(--canvas-card); border-bottom: 1px solid var(--hairline); }
-    .tabs-demo .etab { position: relative; }
-    .layout-map { display: grid; grid-template-columns: 44px 1.1fr 3fr 1.3fr; grid-template-rows: 32px 1fr 24px; gap: 1px; height: 220px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; font: 400 11px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 1px; color: var(--mute); }
-    .layout-map > div { background: var(--canvas-card); display: grid; place-items: center; text-align: center; }
-    .layout-map .tb { grid-column: 1 / -1; }
-    .layout-map .ed { background: var(--canvas); }
-    .layout-map .sb { grid-column: 1 / -1; }
-    @media (max-width: 900px) { .page { grid-template-columns: 1fr; } .side { position: static; height: auto; } .g2, .g3 { grid-template-columns: 1fr; } main { padding: var(--sp-2xl) var(--sp-xl) 64px; } }
-  </style>
-</head>
-<body>
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
@@ -82,33 +12,29 @@
     </defs>
   </svg>
 
-  <div class="page">
+  <div class="page" data-testid="foundation">
     <aside class="side">
       <div class="brand"><img src="assets/dreamy-studio-mark.svg" alt="">Design system</div>
       <nav aria-label="Sections">
-        <a href="#overview">Overview</a>
-        <a href="#colors">Colors</a>
-        <a href="#typography">Typography</a>
-        <a href="#layout">Layout &amp; spacing</a>
-        <a href="#shapes">Shapes</a>
-        <a href="#elevation">Elevation</a>
-        <a href="#components">Components</a>
-        <a href="#dos">Do's and Don'ts</a>
+        <button type="button" (click)="scrollToSection('overview')">Overview</button>
+        <button type="button" (click)="scrollToSection('colors')">Colors</button>
+        <button type="button" (click)="scrollToSection('typography')">Typography</button>
+        <button type="button" (click)="scrollToSection('layout')">Layout &amp; spacing</button>
+        <button type="button" (click)="scrollToSection('shapes')">Shapes</button>
+        <button type="button" (click)="scrollToSection('elevation')">Elevation</button>
+        <button type="button" (click)="scrollToSection('dos')">Do's and Don'ts</button>
       </nav>
       <span class="spacer"></span>
-      <button class="btn btn-sm" id="theme-btn" type="button"></button>
-      <a class="t-sm" href="index.html">← Mở prototype</a>
     </aside>
 
     <main>
-      <!-- ================= OVERVIEW ================= -->
-      <section id="overview" style="padding-top:0">
+<section id="overview" style="padding-top:0">
         <span class="eyebrow">Dreamy Studio</span>
         <h1 class="t-display-lg" style="margin:var(--sp-sm) 0 var(--sp-lg)">Design system</h1>
-        <p class="lead" style="color:var(--body);max-width:70ch">
+        <p class="lead" style="color:var(--body);">
           Dreamy Studio là một studio desktop chạy trên máy cá nhân, nơi một người sáng tạo biến ý tưởng thành hình ảnh, audiobook và video với sự hỗ trợ của AI. Giao diện giữ yên tĩnh và không chen vào việc của người dùng: nền phẳng, viền hairline, nút outline, và chính tác phẩm của người dùng (ảnh, chương truyện, canvas) là màu sắc thật sự duy nhất trên màn hình.
         </p>
-        <p style="color:var(--body);max-width:70ch;margin-bottom:var(--sp-xl)">
+        <p style="color:var(--body);margin-bottom:var(--sp-xl)">
           Hai màu thương hiệu lấy từ không khí "dream at dusk" của cái tên.
           <strong style="color:var(--primary-text);font-weight:500">Dusk Purple</strong> là tiếng nói chính: CTA, vùng đang chọn, focus, điều hướng đang hoạt động.
           <strong style="color:var(--secondary-text);font-weight:500">Sunset Orange</strong> là tiếng nói phụ: hoạt động đang diễn ra (đang tạo, tác vụ nền), điểm nhấn và những khoảnh khắc "mới". Cam được dùng dè dặt để luôn mang ý nghĩa.
@@ -127,9 +53,7 @@
           <li>Component chỉ tham chiếu token ngữ nghĩa, không dùng hex trực tiếp, nên chạy được ở cả hai theme.</li>
         </ul>
       </section>
-
-      <!-- ================= COLORS ================= -->
-      <section id="colors">
+<section id="colors">
         <h2>Colors</h2>
         <p class="lead">Mọi màu là token ngữ nghĩa có giá trị dark và light. Theme đặt trên phần tử root bằng <code>data-theme="dark" | "light"</code>. Ô màu bên dưới hiển thị theme đang chọn.</p>
 
@@ -191,9 +115,7 @@
           <li><code>--mute</code> giữ tối thiểu 4.5 : 1 trên <code>--canvas</code> ở cả hai theme.</li>
         </ul>
       </section>
-
-      <!-- ================= TYPOGRAPHY ================= -->
-      <section id="typography">
+<section id="typography">
         <h2>Typography</h2>
         <p class="lead">Hai typeface: <strong style="color:var(--ink);font-weight:500">Geist</strong> (dự phòng Inter, system-ui) cho tiêu đề, nội dung, nút, điều hướng; <strong style="color:var(--ink);font-weight:500">Geist Mono</strong> (dự phòng JetBrains Mono, ui-monospace) cho eyebrow, nhãn, ID, bộ đếm, thời gian, tiến độ job.</p>
         <div class="ladder">
@@ -215,9 +137,7 @@
           <li>Body của app là 14 px (mật độ desktop), không phải 16 px như trang marketing.</li>
         </ul>
       </section>
-
-      <!-- ================= LAYOUT ================= -->
-      <section id="layout">
+<section id="layout">
         <h2>Layout &amp; spacing</h2>
         <h3>Spacing scale</h3>
         <p class="lead">Đơn vị cơ sở 4 px, thang dày.</p>
@@ -254,9 +174,7 @@
         <h3>Hình ảnh</h3>
         <p class="t-sm" style="color:var(--body)">Ảnh của người dùng hiển thị <code>object-fit: cover</code> trong lưới và <code>contain</code> trong trình xem, trên nền <code>--canvas-mid</code> khi đang tải.</p>
       </section>
-
-      <!-- ================= SHAPES ================= -->
-      <section id="shapes">
+<section id="shapes">
         <h2>Shapes</h2>
         <p class="lead">Radius nhỏ, gần với công cụ chuyên nghiệp. Hình tròn chỉ dành cho status dot và avatar.</p>
         <table class="spec"><thead><tr><th>Token</th><th>Giá trị</th><th>Dùng cho</th><th></th></tr></thead><tbody>
@@ -267,9 +185,7 @@
           <tr><td><code>--r-full</code></td><td class="val">9999 px</td><td>Status dot, avatar.</td><td><div class="box" style="border-radius:var(--r-full);width:56px">●</div></td></tr>
         </tbody></table>
       </section>
-
-      <!-- ================= ELEVATION ================= -->
-      <section id="elevation">
+<section id="elevation">
         <h2>Elevation &amp; depth</h2>
         <p class="lead">Bề mặt tĩnh không có bóng; viền hairline đảm nhiệm vai trò nâng lớp.</p>
         <div class="grid g3">
@@ -278,119 +194,7 @@
           <div class="lvl l2"><div class="cap">Level 2 · Floating</div><div class="t-sm">Hairline + <code>--shadow-float</code> (<span class="val">0 8px 24px</span>). Chỉ cho menu, popover, modal, toast.</div></div>
         </div>
       </section>
-
-      <!-- ================= COMPONENTS ================= -->
-      <section id="components">
-        <h2>Components</h2>
-        <p class="lead">Dưới đây là component thật, dùng cùng CSS với prototype.</p>
-
-        <h3>Buttons</h3>
-        <div class="demo">
-          <div class="row">
-            <button class="btn btn-primary" type="button"><svg class="ic"><use href="#i-plus"/></svg>Primary</button>
-            <button class="btn" type="button">Outline</button>
-            <button class="btn btn-ghost" type="button">Ghost</button>
-            <button class="btn btn-danger" type="button">Danger</button>
-            <button class="btn" type="button" disabled>Disabled</button>
-            <button class="btn btn-sm" type="button">Small</button>
-            <button class="btn btn-icon" type="button" aria-label="Search" data-tip="Icon button"><svg class="ic"><use href="#i-search"/></svg></button>
-            <button class="btn btn-icon is-active" type="button" aria-label="Active"><svg class="ic"><use href="#i-folder"/></svg></button>
-          </div>
-          <div class="t-sm t-mute">
-            <code>button-primary</code>: hành động chính của một view, nền <code>--primary</code>. <code>button-outline</code>: mặc định cho mọi hành động khác. <code>button-ghost</code>: toolbar và nút icon. <code>button-danger</code>: xác nhận hủy diệt, viền và chữ <code>--danger</code>. Tất cả dùng <code>button-md</code>, padding <code>0 --sp-lg</code>, radius <code>--r-sm</code>.
-          </div>
-        </div>
-
-        <h3>Inputs &amp; forms</h3>
-        <div class="demo">
-          <div class="grid g2">
-            <div class="field"><label for="d1">Tên workspace</label><input id="d1" class="input" value="DreamyWorkspace"><span class="field-hint">Gợi ý nằm dưới input.</span></div>
-            <div class="field"><label for="d2">Vị trí</label><input id="d2" class="input is-invalid" value="D:Studio"><span class="field-err">Vị trí phải là đường dẫn đầy đủ.</span></div>
-          </div>
-          <div class="t-sm t-mute"><code>text-input</code>: nền <code>--canvas-soft</code>, viền hairline, radius <code>--r-sm</code>, focus ring 2 px <code>--primary</code>.</div>
-        </div>
-
-        <h3>Cards &amp; containers</h3>
-        <div class="demo">
-          <div class="grid g2">
-            <div class="card"><div class="t-ink">card-content</div><div class="t-sm t-mute">Nền <code>--canvas-card</code>, hairline, padding <code>--sp-lg</code>, radius <code>--r-md</code>.</div></div>
-            <div class="card" style="border-color:var(--primary);background:var(--primary-soft)"><div class="t-ink">card-content · selected</div><div class="t-sm t-mute">Viền <code>--primary</code> + nền <code>--primary-soft</code>.</div></div>
-          </div>
-        </div>
-
-        <h3>Feedback</h3>
-        <div class="demo">
-          <div>
-            <div class="cap">badge</div>
-            <div class="row"><span class="badge">Default</span><span class="badge badge-primary">Primary</span><span class="badge badge-running">Running</span><span class="badge badge-success">Success</span><span class="badge badge-warning">Warning</span><span class="badge badge-danger">Danger</span><span class="badge badge-info">Coming soon</span></div>
-          </div>
-          <div>
-            <div class="cap">job-indicator</div>
-            <div class="grid g3">
-              <div><div class="row" style="margin-bottom:var(--sp-sm)"><span class="dot dot-running"></span><span class="mono" style="color:var(--secondary-text)">Running · 62%</span></div><div class="progress"><i style="width:62%"></i></div></div>
-              <div><div class="row"><span class="dot dot-success"></span><span class="mono" style="color:var(--success)">Done</span></div></div>
-              <div><div class="row"><span class="dot dot-danger"></span><span class="mono" style="color:var(--danger)">Failed</span></div></div>
-            </div>
-            <div class="t-sm t-mute" style="margin-top:var(--sp-sm)">Running: chấm cam <code>--secondary</code> nhấp nháy + tiến độ Geist Mono. Progress bar 4 px, track <code>--canvas-mid</code>, fill <code>--secondary</code>.</div>
-          </div>
-          <div>
-            <div class="cap">toast</div>
-            <div class="toast"><span class="dot dot-success"></span>Đã lưu workspace</div>
-          </div>
-          <div>
-            <div class="cap">inline notice</div>
-            <div class="ld-warn" style="max-width:520px"><svg class="ic"><use href="#i-alert"/></svg><span>Chưa cài mô hình TTS. Có thể cài sau trong Settings.</span></div>
-          </div>
-          <div>
-            <div class="cap">skeleton</div>
-            <div class="grid" style="max-width:420px"><div class="skel" style="width:70%"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:45%"></div></div>
-          </div>
-        </div>
-
-        <h3>Empty state &amp; coming soon</h3>
-        <div class="demo flush">
-          <div class="empty" style="height:auto;padding:var(--sp-3xl)"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" style="margin:var(--sp-sm) 0 0">Chưa có workspace nào</h3><p class="t-sm t-mute">Minh họa dùng illustration accents, tiêu đề <code>display-xs</code>, gợi ý <code>body-sm</code> màu <code>--mute</code>, tối đa một nút primary.</p><button class="btn btn-primary" type="button"><svg class="ic"><use href="#i-plus"/></svg>Tạo workspace mới</button></div></div>
-        </div>
-        <div class="demo" style="margin-top:var(--sp-lg)">
-          <div class="cs" style="padding:0;margin:0"><div class="cs-ico"><svg class="ic"><use href="#i-book"/></svg></div>
-            <div><span class="eyebrow">CAP-03 · Novel Translation</span><div class="cs-title"><h2 class="t-display-md" style="margin:0">Novel translation</h2><span class="badge badge-info">COMING SOON</span></div></div>
-            <p>Màn hình chưa làm: eyebrow capability, tiêu đề, badge, mô tả và danh sách requirement sẽ phủ.</p>
-            <div class="req-list"><div class="req-row"><span class="mono">REQ-03-001</span><span>Cấu hình hướng dẫn dịch và từ điển dịch thuật để AI sử dụng</span></div><div class="req-row"><span class="mono">REQ-03-002</span><span>Bắt đầu pipeline dịch và có thể theo dõi tiến độ dịch</span></div></div>
-          </div>
-        </div>
-
-        <h3>Navigation</h3>
-        <div class="demo flush">
-          <div class="tabs-demo">
-            <div class="etab"><svg class="ic"><use href="#i-folder"/></svg><span class="etab-label">Danh mục project</span><button class="etab-close" type="button" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button></div>
-            <div class="etab is-active"><svg class="ic"><use href="#i-book"/></svg><span class="etab-label">Novel translation</span><button class="etab-close" type="button" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button></div>
-          </div>
-          <div style="padding:var(--sp-md);width:260px">
-            <div class="tree-row"><svg class="ic"><use href="#i-folder"/></svg><span class="tree-label">Danh mục project</span></div>
-            <div class="tree-row is-selected"><svg class="ic"><use href="#i-book"/></svg><span class="tree-label">Novel translation</span></div>
-            <div class="tree-row"><svg class="ic"><use href="#i-search"/></svg><span class="tree-label">Novel knowledgebase</span></div>
-          </div>
-        </div>
-        <p class="t-sm t-mute" style="margin-top:var(--sp-md)">Tab active: vạch <code>--primary</code> 2 px trên đầu. Hàng cây / rail đang chọn: <code>--primary-soft</code> + icon <code>--primary-text</code>.</p>
-
-        <h3>Floating layers</h3>
-        <div class="demo">
-          <div class="grid g2">
-            <div class="modal" style="width:auto"><header class="modal-head"><span class="eyebrow">Workspace</span><h2 class="t-display-xs">Modal</h2><span class="spacer"></span><button class="btn btn-icon btn-sm" type="button" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button></header><div class="modal-body"><p class="t-sm" style="color:var(--body)">Level 2, radius <code>--r-lg</code>. Header có eyebrow Geist Mono + tiêu đề <code>display-xs</code>; footer chứa nút, primary nằm bên phải.</p></div><footer class="modal-foot"><button class="btn" type="button">Hủy</button><button class="btn btn-primary" type="button">Xác nhận</button></footer></div>
-            <div><div class="menu" style="position:static;width:240px"><div class="menu-row"><svg class="ic"><use href="#i-plus"/></svg><span>Tạo workspace mới…</span></div><div class="menu-row"><svg class="ic"><use href="#i-folder"/></svg><span>Mở workspace…</span><span class="spacer"></span><span class="kbd">Ctrl O</span></div><hr class="divider"><div class="menu-row is-disabled"><span class="ic"></span><span>Mục bị khóa</span></div></div><div class="t-sm t-mute" style="margin-top:var(--sp-md)">Menu / popover: Level 2, radius <code>--r-md</code>.</div></div>
-          </div>
-        </div>
-
-        <h3>Signature components</h3>
-        <div class="demo">
-          <div><div class="cap">eyebrow-mono</div><div class="eyebrow">Workspace gần đây</div><div class="t-sm t-mute" style="margin-top:var(--sp-sm)">Nhãn Geist Mono UPPERCASE đặt phía trên tiêu đề section (<code>caption-mono</code>, <code>--mute</code>).</div></div>
-          <div><div class="cap">divider-hairline</div><hr class="divider"><div class="t-sm t-mute" style="margin-top:var(--sp-sm)">Đường kẻ 1 px <code>--hairline</code>.</div></div>
-          <div><div class="cap">kbd</div><span class="kbd">Ctrl K</span><div class="t-sm t-mute" style="margin-top:var(--sp-sm)">Gợi ý phím tắt, <code>caption-mono-sm</code>.</div></div>
-        </div>
-      </section>
-
-      <!-- ================= DOS ================= -->
-      <section id="dos">
+<section id="dos">
         <h2>Do's and Don'ts</h2>
         <div class="grid g2" style="margin-top:var(--sp-lg)">
           <div class="do"><h3>Do</h3><ul>
@@ -413,23 +217,3 @@
       </section>
     </main>
   </div>
-
-  <script>
-    (function () {
-      var root = document.documentElement;
-      var btn = document.getElementById("theme-btn");
-      function paint() {
-        var light = root.getAttribute("data-theme") === "light";
-        btn.innerHTML = '<svg class="ic"><use href="#i-' + (light ? "moon" : "sun") + '"/></svg>' + (light ? "Dark theme" : "Light theme");
-      }
-      btn.addEventListener("click", function () {
-        var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-        root.setAttribute("data-theme", next);
-        try { localStorage.setItem("ds.theme", JSON.stringify(next)); } catch (e) {}
-        paint();
-      });
-      paint();
-    })();
-  </script>
-</body>
-</html>

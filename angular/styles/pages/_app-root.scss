@@ -1,0 +1,47 @@
+app-root {
+  display: block;
+    min-height: 100vh;
+    background: var(--canvas);
+    color: var(--body);
+
+  .container {
+    min-height: 100vh;
+    padding: var(--sp-3xl);
+    display: grid;
+    place-items: center;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-xl);
+    padding: var(--sp-2xl);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-lg);
+    background: var(--canvas-card);
+  }
+
+  .logo {
+    width: 56px;
+    height: 56px;
+    flex: none;
+  }
+
+  h1 {
+    font-size: 24px;
+    line-height: 30px;
+    letter-spacing: -0.4px;
+  }
+
+  .brand p {
+    margin-top: var(--sp-xs);
+    color: var(--mute);
+  }
+
+  @media (max-width: 480px) {
+    .brand {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+}

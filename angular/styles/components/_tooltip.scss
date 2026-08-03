@@ -1,0 +1,8 @@
+ds-tooltip {
+  & { display: inline-flex; vertical-align: middle; }
+  .tooltip-host { position: relative; display: inline-flex; align-items: center; outline-offset: 2px; }
+  .tooltip-bubble { position: absolute; z-index: 120; top: calc(100% + var(--sp-sm)); left: 50%; transform: translateX(-50%); width: max-content; max-width: 240px; padding: 3px var(--sp-md); border: 1px solid var(--hairline); border-radius: var(--r-xs); background: var(--canvas-soft); color: var(--ink); box-shadow: var(--shadow-float); font: 400 12px/15px var(--font); opacity: 0; visibility: hidden; pointer-events: none; }
+  .tooltip-host:hover .tooltip-bubble, .tooltip-host:focus-within .tooltip-bubble { opacity: 1; visibility: visible; }
+  .is-top .tooltip-bubble { top: auto; bottom: calc(100% + var(--sp-sm)); }
+  .is-right .tooltip-bubble { top: 50%; left: calc(100% + var(--sp-md)); transform: translateY(-50%); }
+}

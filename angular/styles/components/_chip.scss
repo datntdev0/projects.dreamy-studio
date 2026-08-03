@@ -1,0 +1,10 @@
+ds-chip {
+  & { display: inline-flex; vertical-align: middle; }
+  .chip { display: inline-flex; align-items: center; height: 20px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: transparent; color: var(--body); font: 400 12px/1 var(--font); white-space: nowrap; }
+  .chip:hover { background: var(--canvas-soft); color: var(--ink); }
+  .chip.is-selected { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-text); }
+  .chip.is-disabled { opacity: 0.45; }
+  .chip button { height: 100%; padding: 0 var(--sp-sm); border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+  .chip button:disabled { cursor: not-allowed; }
+  .chip-remove { font-size: 15px !important; line-height: 1 !important; border-left: 1px solid var(--hairline) !important; }
+}

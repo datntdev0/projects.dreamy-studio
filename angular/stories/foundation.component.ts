@@ -3,7 +3,6 @@ import { Component, ElementRef, OnDestroy, OnInit, inject, signal } from "@angul
 @Component({
   selector: "app-foundation",
   templateUrl: "./foundation.component.html",
-  styleUrl: "./foundation.component.scss",
 })
 export class FoundationComponent implements OnInit, OnDestroy {
   readonly theme = signal<"dark" | "light">("dark");

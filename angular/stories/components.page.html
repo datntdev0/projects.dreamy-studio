@@ -1,0 +1,124 @@
+<main class="page" data-testid="components-page">
+  <header class="intro">
+    <span class="eyebrow">Dreamy Studio</span>
+    <h1 class="t-display-md">Components</h1>
+    <p>Common components dùng token thiết kế của ứng dụng. Đổi dark/light bằng toolbar Storybook.</p>
+  </header>
+
+  <section>
+    <div class="section-head"><h2>Icon</h2><code>ds-icon</code></div>
+    <div class="demo row icon-row">
+      <ds-icon name="folder" [size]="16" label="Folder" />
+      <ds-icon name="book" [size]="18" label="Book" />
+      <ds-icon name="image" [size]="20" label="Image" />
+      <ds-icon name="music" [size]="24" label="Music" />
+      <ds-icon name="settings" [size]="24" label="Settings" />
+      <span class="note">16 / 18 / 20 / 24 px · icon có nhãn hoặc mang tính trang trí</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Button</h2><code>ds-button</code></div>
+    <div class="demo row">
+      <ds-button variant="primary"><ds-icon name="plus" [size]="16" />Primary</ds-button>
+      <ds-button>Outline</ds-button>
+      <ds-button variant="ghost">Ghost</ds-button>
+      <ds-button variant="danger">Danger</ds-button>
+      <ds-button [disabled]="true">Disabled</ds-button>
+      <ds-button size="small">Small</ds-button>
+      <ds-button [iconOnly]="true" label="Search"><ds-icon name="search" [size]="17" /></ds-button>
+      <ds-button [iconOnly]="true" [active]="true" label="Active folder"><ds-icon name="folder" [size]="17" /></ds-button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Form</h2><code>ds-form</code></div>
+    <div class="demo grid two">
+      <ds-form label="Tên workspace" value="DreamyWorkspace" hint="Tên hiển thị trong ứng dụng." [required]="true" />
+      <ds-form label="Vị trí" value="D:Studio" error="Vị trí phải là đường dẫn đầy đủ." />
+      <ds-form kind="select" label="Ngôn ngữ" value="vi" [options]="languageOptions" />
+      <ds-form kind="textarea" label="Mô tả" placeholder="Mô tả project" hint="Tối đa 200 ký tự." />
+      <ds-form kind="checkbox" label="Tự động lưu thay đổi" [checked]="true" />
+      <ds-form label="Không khả dụng" placeholder="Disabled" [disabled]="true" />
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Segments</h2><code>ds-segments</code></div>
+    <div class="demo row">
+      <ds-segments label="Cách hiển thị" [options]="viewOptions" [(value)]="view" />
+      <ds-segments label="Mật độ" [options]="densityOptions" [(value)]="density" />
+      <span class="note">Đang chọn: {{ view }} · {{ density }}</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Chip</h2><code>ds-chip</code></div>
+    <div class="demo row">
+      <ds-chip label="Default" />
+      <ds-chip label="Selected" [(selected)]="chipSelected" />
+      <ds-chip label="Removable" [removable]="true" />
+      <ds-chip label="Disabled" [disabled]="true" />
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Card</h2><code>ds-card</code></div>
+    <div class="grid three">
+      <ds-card><strong>Default</strong><p>Canvas card, viền hairline, padding gọn.</p></ds-card>
+      <ds-card [selected]="true"><strong>Selected</strong><p>Viền tím và nền primary soft.</p></ds-card>
+      <ds-card [spacious]="true"><strong>Spacious</strong><p>Padding lớn hơn cho nội dung nổi bật.</p></ds-card>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Badge</h2><code>ds-badge</code></div>
+    <div class="demo row">
+      <ds-badge>Default</ds-badge>
+      <ds-badge tone="primary">Primary</ds-badge>
+      <ds-badge tone="running">Running</ds-badge>
+      <ds-badge tone="success">Success</ds-badge>
+      <ds-badge tone="warning">Warning</ds-badge>
+      <ds-badge tone="danger">Danger</ds-badge>
+      <ds-badge tone="info">Info</ds-badge>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Toast</h2><code>ds-toast</code></div>
+    <div class="demo grid two">
+      <ds-toast message="Đã lưu workspace" tone="success" />
+      <ds-toast message="Model sắp hết dung lượng" tone="warning" />
+      <ds-toast message="Không thể tạo project" tone="danger" />
+      <ds-toast message="Có phiên bản mới" tone="info" />
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Tooltip</h2><code>ds-tooltip</code></div>
+    <div class="demo row tooltip-row">
+      <ds-tooltip text="Mở workspace" position="top"><ds-button size="small">Top</ds-button></ds-tooltip>
+      <ds-tooltip text="Tìm kiếm trong workspace"><ds-button size="small">Bottom</ds-button></ds-tooltip>
+      <ds-tooltip text="Mở bảng điều khiển" position="right"><ds-button size="small">Right</ds-button></ds-tooltip>
+      <span class="note">Hover hoặc focus để xem.</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Breadcrumbs</h2><code>ds-breadcrumbs</code></div>
+    <div class="demo grid">
+      <ds-breadcrumbs [items]="workspacePath" (navigate)="lastBreadcrumb = workspacePath[$event].label" />
+      <ds-breadcrumbs [items]="projectPath" (navigate)="lastBreadcrumb = projectPath[$event].label" />
+      @if (lastBreadcrumb) { <span class="note">Đã chọn: {{ lastBreadcrumb }}</span> }
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Datatable</h2><code>ds-datatable</code></div>
+    <div class="demo grid">
+      <ds-datatable [columns]="columns" [rows]="rows" [selectedIndex]="selectedRow" (rowSelected)="selectedRow = $event" />
+      <div class="note">Hàng đang chọn: {{ selectedRow + 1 }}</div>
+      <ds-datatable [columns]="columns" [rows]="[]" emptyMessage="Chưa có tài nguyên nào" />
+    </div>
+  </section>
+</main>

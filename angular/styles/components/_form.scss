@@ -1,0 +1,18 @@
+ds-form {
+  & { display: block; min-width: 0; }
+  .field { display: grid; gap: var(--sp-xs); }
+  .field > label { color: var(--body); font: 500 13px/18px var(--font); }
+  .field > label span { color: var(--danger); }
+  .input, .select, .textarea { width: 100%; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-soft); color: var(--ink); font: 400 14px/20px var(--font); }
+  .input, .select { height: var(--ctl-h); padding: 0 var(--sp-md); }
+  .textarea { min-height: 76px; padding: var(--sp-sm) var(--sp-md); resize: vertical; }
+  .input::placeholder, .textarea::placeholder { color: var(--mute); }
+  .input:focus, .select:focus, .textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  [aria-invalid="true"] { border-color: var(--danger); }
+  :disabled { opacity: 0.45; cursor: not-allowed; }
+  .field-hint, .field-err { font: 400 12.5px/17px var(--font); }
+  .field-hint { color: var(--mute); }
+  .field-err { color: var(--danger); }
+  .check { display: inline-flex; align-items: flex-start; gap: var(--sp-sm); color: var(--body); font: 400 13px/18px var(--font); cursor: pointer; }
+  .check input { margin: 2px 0 0; accent-color: var(--primary); }
+}

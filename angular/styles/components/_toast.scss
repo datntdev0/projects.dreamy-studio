@@ -1,0 +1,11 @@
+ds-toast {
+  & { display: block; }
+  .toast { display: flex; align-items: center; gap: var(--sp-md); min-width: 260px; max-width: 380px; padding: var(--sp-md) var(--sp-lg); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); color: var(--body); box-shadow: var(--shadow-float); font: 400 13px/18px var(--font); }
+  .message { flex: 1; }
+  .dot { width: 8px; height: 8px; flex: none; border-radius: var(--r-full); background: var(--success); }
+  .is-warning .dot { background: var(--warning); }
+  .is-danger .dot { background: var(--danger); }
+  .is-info .dot { background: var(--info); }
+  .close { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--r-xs); background: transparent; color: var(--mute); cursor: pointer; }
+  .close:hover { background: var(--canvas-soft); color: var(--ink); }
+}

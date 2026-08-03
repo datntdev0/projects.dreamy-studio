@@ -7,7 +7,7 @@
     "beforeDevCommand": "npm run angular:serve",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run angular:build",
-    "frontendDist": "../dist/dreamy-studio/browser"
+    "frontendDist": "../_output/angular/dist/browser"
   },
   "app": {
     "windows": [

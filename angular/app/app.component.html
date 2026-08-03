@@ -7,14 +7,5 @@
     </div>
   </header>
 
-  <form class="greeting-form" (submit)="greet($event, greetInput.value)" data-testid="greeting-form">
-    <label for="greet-input">Thử kết nối với ứng dụng</label>
-    <div class="row">
-      <input #greetInput id="greet-input" placeholder="Tên của bạn" data-testid="greet-input" />
-      <button type="submit" data-testid="greet-button">Chào</button>
-    </div>
-  </form>
-  <p class="greeting-message" data-testid="greeting-message">{{ greetingMessage() }}</p>
-
   <router-outlet />
 </main>

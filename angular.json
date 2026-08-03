@@ -21,6 +21,7 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "angular/main.ts",
+            "outputPath": "_output/angular/dist",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [

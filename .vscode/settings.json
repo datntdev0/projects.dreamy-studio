@@ -5,6 +5,7 @@
         "**/.hg": true,
         "**/.jj": true,
         "**/dist": true,
+        "**/.angular": true,
         "**/node_modules": true,
         "**/.DS_Store": true,
         "**/Thumbs.db": true

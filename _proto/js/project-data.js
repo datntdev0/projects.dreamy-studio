@@ -94,7 +94,7 @@ window.PJ = (function () {
       P("PRJ-0003", "Harrowmere — Phim", {
         template: "filmseries", desc: "Mùa 1: tập 1 dựng từ chương 1–2, tập 2 từ chương 3.", novel: "NOV-0001", src: { kind: "translation", lang: "VI" }, range: [1, 3],
         modules: ["scripting", "character", "world", "storyboard", "canvas", "video"],
-        prog: { scripting: prog("doing", 0, 2, "0/2 tập đã chốt · tập 1 đang viết"), character: prog("doing", 1, 4, "1/4 nhân vật"), world: prog("idle", 0, 0, ""), storyboard: prog("idle", 0, 0, ""), canvas: prog("idle", 0, 0, ""), video: prog("idle", 0, 0, "") },
+        prog: { scripting: prog("doing", 0, 2, "0/2 tập đã chốt · tập 1 đang viết"), character: prog("doing", 1, 3, "1/3 nhân vật"), world: prog("idle", 0, 0, ""), storyboard: prog("idle", 0, 0, ""), canvas: prog("idle", 0, 0, ""), video: prog("idle", 0, 0, "") },
         attention: [{ level: "info", module: "world", text: "Chưa có mô hình thế giới. Cần thiết lập trước khi lập storyboard." }],
         activity: [[day(4, "17:20"), "Dựng danh sách cảnh tập 1 từ Knowledgebase"], [day(8, "21:00"), "Tạo project từ template Filmseries"]],
         created: day(8, "21:00"), updated: day(4, "17:20"), opened: day(4, "17:25"),

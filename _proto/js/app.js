@@ -193,6 +193,7 @@
     window.LB?.reseed();
     window.PJ?.reseed();
     window.SC?.reseed();
+    window.CR?.reseed();
     window.AB?.reseed();
     window.DT?.reseed();
     S.rail = "projects";

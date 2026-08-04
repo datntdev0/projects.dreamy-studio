@@ -2,6 +2,7 @@
 
 # Compiled output
 /_output/
+/tauri/target/
 /storybook-static/
 /tmp
 /out-tsc

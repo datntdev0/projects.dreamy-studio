@@ -6,6 +6,7 @@
     "build": "tauri build",
     "watch": "tauri dev",
     "tauri": "tauri",
+    "test": "cargo test --manifest-path tauri/Cargo.toml --target-dir _output/tauri/target",
     "angular:serve": "ng serve",
     "angular:build": "ng build",
     "story": "storybook dev -p 6006",

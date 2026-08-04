@@ -277,6 +277,7 @@
     const p = byId(pid);
     const mod = PJ.MODULES[m];
     if (!p || !mod) return U.empty("Module không khả dụng", "Project hoặc module này không còn tồn tại.");
+    if (PJ.modViews && PJ.modViews[m]) return PJ.modViews[m].render(p, tabId);
     const g = p.prog[m] || { state: "idle", note: "" };
     const item = A.ITEMS[m];
     return `<div class="nv">${U.bar(`<button class="btn btn-sm" data-testid="pmod-back-btn" data-act="pj-back" data-id="${p.id}">${ic("arrow-left")}${esc(p.name)}</button><span class="nv-ttl">${ic(mod.icon)}<span class="t-ink">${esc(mod.label)}</span>${stateBadge(g.state)}</span>`)}
@@ -287,11 +288,21 @@
         ${item?.reqs?.length ? `<div><span class="eyebrow">Sẽ bao gồm</span></div><div class="req-list">${item.reqs.map(([id, text]) => `<div class="req-row"><span class="mono">${esc(id)}</span><span>${esc(text)}</span></div>`).join("")}</div>` : ""}
       </div></div></div></div>`;
   }
-  const modInspector = (tabId) => { const p = byId(String(tabId).split(":")[1]); return p ? projectPanel(p, true) : ""; };
+  const modInspector = (tabId) => {
+    const [, pid, m] = String(tabId).split(":");
+    const p = byId(pid);
+    if (p && PJ.modViews && PJ.modViews[m] && PJ.modViews[m].inspector) return PJ.modViews[m].inspector(p, tabId);
+    return p ? projectPanel(p, true) : "";
+  };
+  const modMount = (ed, tabId) => {
+    const [, pid, m] = String(tabId).split(":");
+    const p = byId(pid);
+    if (p && PJ.modViews && PJ.modViews[m] && PJ.modViews[m].mount) PJ.modViews[m].mount(ed, p);
+  };
 
   A.VIEWS.projects = { fill: true, render: catalogView, inspector: catalogInspector };
   A.VIEWS.project = { fill: true, render: wsView, inspector: wsInspector };
-  A.VIEWS.pmod = { fill: true, render: modView, inspector: modInspector };
+  A.VIEWS.pmod = { fill: true, render: modView, inspector: modInspector, mount: modMount };
 
   function openProject(id, tab) {
     const p = byId(id);

@@ -73,7 +73,7 @@ window.PJ = (function () {
         novel: "NOV-0001", src: { kind: "translation", lang: "VI" }, range: [1, 12], staleCh: [3, 5],
         modules: ["scripting", "character", "storyboard", "audiobook", "canvas", "video"],
         prog: {
-          scripting: prog("done", 12, 12, "12/12 chương"), character: prog("done", 4, 4, "4 nhân vật"), storyboard: prog("doing", 5, 12, "5/12 chương"),
+          scripting: prog("doing", 11, 12, "11/12 chương đã chốt · chương 3 cần rà soát"), character: prog("done", 4, 4, "4 nhân vật"), storyboard: prog("doing", 5, 12, "5/12 chương"),
           audiobook: prog("stale", 8, 12, "8/12 chương · 2 cần xem lại"), canvas: prog("idle", 0, 0, ""), video: prog("doing", 0, 1, "1 timeline · 2 bản xuất"),
         },
         outputs: [out(1, "harrowmere-ch01-lantern-keeper.mp4", 1243, 1920, 1080, 412 * MB, day(3, "22:40")), out(2, "harrowmere-teaser-30s.mp4", 30, 1920, 1080, 38 * MB, day(2, "10:15"))],
@@ -91,12 +91,12 @@ window.PJ = (function () {
         activity: [[day(12, "10:42"), "Kết xuất channel-intro-final.mp4"], [day(13, "09:30"), "Tạo project trống"]],
         created: day(13, "09:30"), updated: day(12, "10:42"), opened: day(5, "20:00"),
       }),
-      P("PRJ-0003", "Ash Under the Glass Sea — Phim", {
-        template: "filmseries", desc: "Mùa 1 gồm 6 tập, mỗi tập dựng từ một chương.", novel: "NOV-0002", src: { kind: "original", lang: "EN" }, range: [1, 6],
+      P("PRJ-0003", "Harrowmere — Phim", {
+        template: "filmseries", desc: "Mùa 1: tập 1 dựng từ chương 1–2, tập 2 từ chương 3.", novel: "NOV-0001", src: { kind: "translation", lang: "VI" }, range: [1, 3],
         modules: ["scripting", "character", "world", "storyboard", "canvas", "video"],
-        prog: { scripting: prog("doing", 2, 6, "2/6 chương"), character: prog("doing", 1, 5, "1/5 nhân vật"), world: prog("idle", 0, 0, ""), storyboard: prog("idle", 0, 0, ""), canvas: prog("idle", 0, 0, ""), video: prog("idle", 0, 0, "") },
+        prog: { scripting: prog("doing", 0, 2, "0/2 tập đã chốt · tập 1 đang viết"), character: prog("doing", 1, 4, "1/4 nhân vật"), world: prog("idle", 0, 0, ""), storyboard: prog("idle", 0, 0, ""), canvas: prog("idle", 0, 0, ""), video: prog("idle", 0, 0, "") },
         attention: [{ level: "info", module: "world", text: "Chưa có mô hình thế giới. Cần thiết lập trước khi lập storyboard." }],
-        activity: [[day(4, "17:20"), "Hoàn tất kịch bản chương 2"], [day(8, "21:00"), "Tạo project từ template Filmseries"]],
+        activity: [[day(4, "17:20"), "Dựng danh sách cảnh tập 1 từ Knowledgebase"], [day(8, "21:00"), "Tạo project từ template Filmseries"]],
         created: day(8, "21:00"), updated: day(4, "17:20"), opened: day(4, "17:25"),
       }),
       P("PRJ-0004", "Gió Muộn — Audiobook thử", {

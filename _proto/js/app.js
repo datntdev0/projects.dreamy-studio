@@ -192,6 +192,8 @@
     window.NV?.reseed();
     window.LB?.reseed();
     window.PJ?.reseed();
+    window.SC?.reseed();
+    window.AB?.reseed();
     window.DT?.reseed();
     S.rail = "projects";
     S.rightTab = "inspector";

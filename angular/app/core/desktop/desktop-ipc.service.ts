@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { Channel, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { DesktopIpcError } from "./desktop-ipc-error";
 
 @Injectable({ providedIn: "root" })
@@ -13,5 +13,9 @@ export class DesktopIpcService {
     } catch (cause) {
       throw new DesktopIpcError(command, cause);
     }
+  }
+
+  channel<TMessage>(onMessage: (message: TMessage) => void): Channel<TMessage> {
+    return new Channel<TMessage>(onMessage);
   }
 }

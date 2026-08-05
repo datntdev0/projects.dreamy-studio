@@ -12,6 +12,7 @@ Khi đưa ra các câu hỏi hoặc tìm kiếm quyết định từ con ngườ
 ## Conventions
 
 - no member comments, single-line imports, no `Omit`.
+- avoid using nested and anonymous functions, extract to functions.
 - always have `data-testid` in html element for the component name.
 - no isolated stylesheet for angular component, must use global scss at styles.
 - Commits: `<type>(<scope>): <summary>`. Do not over 100 characters in the summary.

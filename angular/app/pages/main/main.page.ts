@@ -1,8 +1,8 @@
 import { Component, effect, inject } from "@angular/core";
 import { Title } from "@angular/platform-browser";
 import { Icon } from "../../../components/icon";
-import { WorkspaceService } from "../../core/workspace/workspace.service";
-import { CurrentWorkspace } from "../../core/workspace/workspace.models";
+import { WorkspaceService } from "../../features/workspace/workspace.service";
+import { CurrentWorkspace } from "../../features/workspace/workspace.models";
 
 const APP_TITLE = "Dreamy Studio";
 

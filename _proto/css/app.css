@@ -56,6 +56,8 @@
 .ld-step .ld-detail { margin-left: auto; font-size: 11px; color: var(--mute); }
 .ld-warn { width: 100%; text-align: left; display: flex; gap: var(--sp-sm); padding: var(--sp-sm) var(--sp-md); border-radius: var(--r-sm); background: var(--warning-soft); color: var(--body); font-size: 12.5px; line-height: 17px; }
 .ld-warn .ic { color: var(--warning); width: 15px; height: 15px; margin-top: 1px; }
+.ld-warn.is-error { background: var(--danger-soft); }
+.ld-warn.is-error .ic { color: var(--danger); }
 
 /* ---------------- app frame ---------------- */
 .app { height: 100vh; display: grid; grid-template-rows: 32px minmax(0, 1fr) 24px; }

@@ -212,7 +212,7 @@ window.DS = (function () {
     { id: "speech", title: "Speech providers", icon: "cloud", reqs: [["REQ-12-005", "Cấu hình sử dụng các speech providers từ cloud services"]] },
   ];
 
-  /** Startup checks shown on the loading splash (REQ-01-002). `result` is what the mock run reports. */
+  /** Mock local TTS state used by the status bar and settings (not part of the loading splash). */
   const STARTUP_STEPS = [
     { id: "folder", label: "Kiểm tra thư mục workspace", detail: "Quyền đọc / ghi", result: "ok" },
     { id: "config", label: "Đọc cấu hình workspace", detail: "workspace.json", result: "ok" },
@@ -222,7 +222,23 @@ window.DS = (function () {
     { id: "tts", label: "Kiểm tra local TTS backend", detail: "FastAPI backend & mô hình", result: "warn", note: "Chưa cài mô hình TTS. Có thể cài sau trong Settings." },
   ];
 
-  const WORKSPACE_FOLDERS = ["novels\\", "projects\\", "library\\", "cache\\", "workspace.json"];
+  /** Loading steps of REQ-01-001. `{mode}` is "new" (no workspace.dreamydb yet) or "open". */
+  const APP_DIR = "%LOCALAPPDATA%\\DreamyStudio\\";
+  const LOAD_STEPS = {
+    check: { id: "check", label: "Kiểm tra thư mục workspace", detail: "Quyền đọc / ghi" },
+    wsdb: { new: { id: "wsdb", label: "Khởi tạo workspace.dreamydb", detail: "Trong thư mục workspace" }, open: { id: "wsdb", label: "Nâng cấp workspace.dreamydb nếu cần", detail: "Trong thư mục workspace" } },
+    appdb: { id: "appdb", label: "Khởi tạo hoặc nâng cấp application.dreamydb", detail: APP_DIR },
+    logs: { id: "logs", label: "Chuẩn bị nhật ký ứng dụng theo ngày", detail: `${APP_DIR}logs\\` },
+  };
+
+  /** Fake folders shown in the mock system folder picker. `kind` decides what happens after picking. */
+  const DISK_FOLDERS = [
+    { path: "D:\\DreamyWorkspace", kind: "workspace", note: "Đã là workspace" },
+    { path: "E:\\Archive\\Dreamy-2025", kind: "workspace", note: "Đã là workspace" },
+    { path: "D:\\Studio\\NewWorkspace", kind: "empty", note: "Thư mục rỗng" },
+    { path: "D:\\Documents\\Novels", kind: "files", note: "Có 12 tệp, chưa là workspace" },
+    { path: "C:\\Program Files\\Locked", kind: "locked", note: "Không có quyền ghi" },
+  ];
 
   const seedWorkspaces = [
     { path: "D:\\DreamyWorkspace", name: "DreamyWorkspace", lastOpened: "2026-11-09 21:12", projects: 6, size: "48.2 GB" },
@@ -230,5 +246,5 @@ window.DS = (function () {
     { path: "F:\\USB\\dreamy-test", name: "dreamy-test", lastOpened: "2026-07-02 10:03", projects: 1, size: "—", missing: true, error: "Thư mục không còn tồn tại hoặc ổ đĩa chưa được gắn." },
   ];
 
-  return { version: "0.1.0-dev", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, WORKSPACE_FOLDERS, seedWorkspaces };
+  return { version: "0.1.0-dev", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, LOAD_STEPS, DISK_FOLDERS, seedWorkspaces };
 })();

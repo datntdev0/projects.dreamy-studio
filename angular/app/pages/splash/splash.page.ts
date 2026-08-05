@@ -2,15 +2,44 @@ import { Component, OnInit, computed, inject, signal } from "@angular/core";
 import { Badge } from "../../../components/badge";
 import { Button } from "../../../components/button";
 import { Icon } from "../../../components/icon";
-import { WorkspaceLoadService } from "../../core/workspace/workspace-load.service";
-import { WorkspaceService } from "../../core/workspace/workspace.service";
-import { AppInfo } from "../../core/workspace/workspace.models";
-import { RecentWorkspace } from "../../core/workspace/workspace.models";
-import { SIZE_PENDING } from "./splash.format";
-import { SIZE_UNKNOWN } from "./splash.format";
-import { formatLastOpened } from "./splash.format";
-import { formatSize } from "./splash.format";
-import { reasonText } from "./splash.format";
+import { WorkspaceService } from "../../features/workspace/workspace.service";
+import { LoadMode } from "../../features/workspace/workspace.models";
+import { AppInfo } from "../../features/workspace/workspace.models";
+import { RecentWorkspace } from "../../features/workspace/workspace.models";
+import { RecentWorkspaceReason } from "../../features/workspace/workspace.models";
+
+const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"];
+const KILO = 1024;
+const DATE_FORMAT = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });
+
+const SIZE_PENDING = "…";
+const SIZE_UNKNOWN = "—";
+
+const REASON_TEXT: Record<RecentWorkspaceReason, string> = {
+  missing: "Thư mục không còn tồn tại hoặc ổ đĩa chưa được gắn.",
+  not_a_directory: "Đường dẫn này không còn là một thư mục.",
+  no_access: "Không có quyền truy cập thư mục này.",
+};
+
+function formatSize(bytes: number): string {
+  let value = bytes;
+  let unit = 0;
+  while (value >= KILO && unit < SIZE_UNITS.length - 1) {
+    value /= KILO;
+    unit += 1;
+  }
+  const digits = unit === 0 || value >= 100 ? 0 : 1;
+  return `${value.toFixed(digits)} ${SIZE_UNITS[unit]}`;
+}
+
+function formatLastOpened(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : DATE_FORMAT.format(date);
+}
+
+function reasonText(reason: RecentWorkspaceReason | undefined): string {
+  return REASON_TEXT[reason ?? "missing"];
+}
 
 @Component({
   selector: "app-splash-page",
@@ -20,12 +49,12 @@ import { reasonText } from "./splash.format";
 })
 export class SplashPage implements OnInit {
   private readonly workspace = inject(WorkspaceService);
-  private readonly loader = inject(WorkspaceLoadService);
 
   readonly info = signal<AppInfo | null>(null);
   readonly recent = signal<RecentWorkspace[]>([]);
   readonly sizes = signal<Record<string, string>>({});
-  readonly notice = this.loader.notice;
+  readonly notice = this.workspace.notice;
+  readonly state = this.workspace.state;
   readonly lastUsedPath = computed(() => this.firstAccessiblePath(this.recent()));
 
   readonly formatLastOpened = formatLastOpened;
@@ -36,6 +65,20 @@ export class SplashPage implements OnInit {
     void this.refresh();
   }
 
+  modeTitle(mode: LoadMode | null): string {
+    if (mode === "create") {
+      return "Đang khởi tạo workspace";
+    }
+    if (mode === "open") {
+      return "Đang mở workspace";
+    }
+    return "Đang chuẩn bị workspace";
+  }
+
+  cancel(): void {
+    void this.workspace.cancel();
+  }
+
   sizeOf(path: string): string {
     return this.sizes()[path] ?? SIZE_PENDING;
   }
@@ -43,12 +86,12 @@ export class SplashPage implements OnInit {
   async openWorkspace(): Promise<void> {
     const path = await this.workspace.folderPick();
     if (path) {
-      await this.loader.start({ path });
+      await this.workspace.start({ path });
     }
   }
 
   openRecent(row: RecentWorkspace): void {
-    void this.loader.start({ path: row.path });
+    void this.workspace.start({ path: row.path });
   }
 
   openRecentByKey(event: Event, row: RecentWorkspace): void {
@@ -61,7 +104,7 @@ export class SplashPage implements OnInit {
   async relocate(row: RecentWorkspace): Promise<void> {
     const path = await this.workspace.folderPick();
     if (path) {
-      await this.loader.start({ path, relocateFrom: row.path });
+      await this.workspace.start({ path, relocateFrom: row.path });
     }
   }
 

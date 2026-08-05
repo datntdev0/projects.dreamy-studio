@@ -1,6 +1,6 @@
 /*
  * Dreamy Studio prototype.
- *  - Splash: welcome (create / open workspace) → loading (startup checks) → main layout.
+ *  - Splash: welcome (open workspace via folder picker) → loading (init workspace + start app) → main layout.
  *  - Main layout: title bar, activity rail, explorer, editor tabs, inspector / assistant, pipelines panel, status bar.
  *  - Functional screens are "coming soon": each lists the requirements it will cover.
  * Everything is mock; no backend. Open index.html directly in a browser.
@@ -44,6 +44,8 @@
     screen: "splash", // "splash" | "app"
     loading: null, // { ws, steps, pct } while the loading splash is shown
     token: 0, // bumped to cancel an in-flight loading run
+    notice: null, // error shown on the welcome splash after a failed start
+    relocate: null, // index of the NOT FOUND entry being re-located via the folder picker
     recent: FIRST_RUN ? [] : store.get("recent", D.seedWorkspaces),
     workspace: null,
     rail: "projects",
@@ -82,7 +84,7 @@
             <div class="ws-name"><span class="path">${esc(w.path)}</span><span class="badge badge-danger">NOT FOUND</span></div>
             <div class="t-sm ws-err">${esc(w.error)}</div>
           </div>
-          <button class="btn btn-sm" data-act="open-dialog" data-v="${esc(w.path)}">Tìm lại…</button>
+          <button class="btn btn-sm" data-act="pick-folder" data-i="${i}">Tìm lại…</button>
           <button class="btn btn-sm btn-ghost" data-act="remove-recent" data-i="${i}">Bỏ khỏi danh sách</button>
         </div>`
       : `<div class="ws-row" tabindex="0" data-act="open-recent" data-i="${i}">
@@ -101,9 +103,10 @@
       : `<div class="ws-first">
           <div class="illus"></div>
           <h2 class="t-display-xs">Chưa có workspace nào</h2>
-          <p class="t-sm t-mute">Workspace là một thư mục bình thường trên máy tính. Dreamy Studio lưu toàn bộ novel, project và thư viện của bạn bên trong đó.</p>
-          <pre class="tree-block">${esc(`<workspace>\\\n${D.WORKSPACE_FOLDERS.map((f, i, a) => `${i === a.length - 1 ? "└─" : "├─"} ${f}`).join("\n")}`)}</pre>
+          <p class="t-sm t-mute">Workspace là một thư mục bình thường trên máy tính do bạn chọn. Dreamy Studio lưu toàn bộ novel, project và thư viện của bạn bên trong đó.</p>
+          <p class="t-sm t-mute">Nếu thư mục chưa phải workspace, Dreamy Studio sẽ khởi tạo tại đó bằng tệp <span class="mono">workspace.dreamydb</span> và giữ nguyên các tệp sẵn có.</p>
         </div>`;
+    const notice = S.notice ? `<div class="ld-warn is-error" role="alert">${ic("alert")}<span>${esc(S.notice)}</span></div>` : "";
 
     $("#splash").innerHTML = `
       <div class="sp-card">
@@ -113,17 +116,16 @@
           <p class="mono t-mute">V${esc(D.version)}</p>
           <p class="t-sm">Biến tác phẩm văn học thành audiobook, hình ảnh và video, ngay trên máy tính của bạn.</p>
           <div class="sp-actions">
-            <button class="btn btn-primary" data-act="create-dialog">${ic("plus")}Tạo workspace mới</button>
-            <button class="btn" data-act="open-dialog">${ic("folder-open")}Mở workspace…</button>
+            <button class="btn btn-primary" data-act="pick-folder" data-testid="sp-open-workspace">${ic("folder-open")}Mở workspace…</button>
           </div>
           <span class="spacer"></span>
           <div class="sp-note">${ic("lock")}<span>Nội dung dự án chỉ được lưu trên máy tính của bạn.</span></div>
         </div>
-        <div class="sp-right">${right}</div>
+        <div class="sp-right">${notice}${right}</div>
       </div>`;
   }
 
-  /* ---- splash: loading (REQ-01-002) ---- */
+  /* ---- splash: loading (REQ-01-001) ---- */
   function renderLoading() {
     const L = S.loading;
     const stepIcon = (st) => ({
@@ -133,12 +135,12 @@
       running: `<span class="dot dot-running"></span>`,
       pending: `<span class="dot"></span>`,
     }[st]);
-    const warns = L.steps.filter((s) => s.state === "warn" && s.note);
+    const warns = L.steps.filter((s) => (s.state === "warn" || s.state === "error") && s.note);
     $("#splash").innerHTML = `
       <div class="ld" role="status" aria-live="polite">
         <img class="ld-logo" src="assets/dreamy-studio-mark.svg" alt="">
         <div>
-          <span class="eyebrow">${L.created ? "Đang tạo workspace" : "Đang mở workspace"}</span>
+          <span class="eyebrow">${L.created ? "Đang khởi tạo workspace" : "Đang mở workspace"}</span>
           <h2 class="t-display-xs">${esc(L.ws.name)}</h2>
           <div class="path ld-path t-mute">${esc(L.ws.path)}</div>
         </div>
@@ -146,21 +148,38 @@
         <div class="ld-steps">
           ${L.steps.map((s) => `<div class="ld-step is-${s.state}">${stepIcon(s.state)}<span>${esc(s.label)}</span><span class="ld-detail mono">${esc(s.detail)}</span></div>`).join("")}
         </div>
-        ${warns.map((s) => `<div class="ld-warn">${ic("alert")}<span>${esc(s.note)}</span></div>`).join("")}
+        ${warns.map((s) => `<div class="ld-warn ${s.state === "error" ? "is-error" : ""}">${ic("alert")}<span>${esc(s.note)}</span></div>`).join("")}
         <button class="btn btn-ghost btn-sm" data-act="cancel-loading">Hủy</button>
       </div>`;
   }
 
-  async function startWorkspace(ws, { created = false } = {}) {
+  /** Where a picked folder stands on the (mock) disk. Unknown folders count as empty. */
+  function folderKind(path) {
+    const key = path.toLowerCase();
+    const disk = D.DISK_FOLDERS.find((f) => f.path.toLowerCase() === key);
+    if (disk) return disk.kind;
+    return S.recent.some((w) => !w.missing && w.path.toLowerCase() === key) ? "workspace" : "empty";
+  }
+
+  /** `relocate`: index of a NOT FOUND entry that this pick should replace. */
+  async function startWorkspace(ws, { relocate = null } = {}) {
     const token = ++S.token;
     closeModal();
-    const steps = D.STARTUP_STEPS.map((s) => ({ ...s, state: "pending" }));
-    if (created) steps.unshift({ id: "create", label: "Tạo cấu trúc thư mục workspace", detail: "novels, projects, library, cache", result: "ok", state: "pending" });
+    S.notice = null;
+    const kind = folderKind(ws.path);
+    const created = kind !== "workspace";
+    const L = D.LOAD_STEPS;
+    const steps = [
+      { ...L.check, fail: kind === "locked" ? "Không có quyền ghi vào thư mục này. Hãy chọn thư mục khác." : "" },
+      { ...L.wsdb[created ? "new" : "open"] },
+      { ...L.appdb },
+      { ...L.logs },
+    ].map((s) => ({ ...s, state: "pending" }));
     S.loading = { ws, created, steps, pct: 0 };
     S.log = [];
     showScreen("splash");
     renderLoading();
-    log("info", "workspace", `${created ? "Creating" : "Opening"} ${ws.path}`);
+    log("info", "workspace", `${created ? "Initializing" : "Opening"} ${ws.path}`);
 
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
@@ -168,13 +187,24 @@
       renderLoading();
       await sleep(240 + Math.random() * 220);
       if (token !== S.token) return;
-      step.state = step.result === "warn" ? "warn" : "done";
+      if (step.fail) {
+        step.state = "error";
+        step.note = `${step.label}: ${step.fail}`;
+        log("err", step.id, step.note);
+        renderLoading();
+        await sleep(1600);
+        if (token !== S.token) return;
+        S.notice = step.note;
+        return renderWelcome();
+      }
+      step.state = "done";
       S.loading.pct = Math.round(((i + 1) / steps.length) * 100);
-      log(step.result === "warn" ? "warn" : "ok", step.id, step.note || step.label);
+      log("ok", step.id, step.label);
       renderLoading();
     }
     await sleep(500);
     if (token !== S.token) return;
+    if (relocate !== null) S.recent = S.recent.filter((_, i) => i !== relocate);
     enterShell(ws);
   }
 
@@ -430,7 +460,7 @@
   }
   const closeModal = () => { $("#layer").innerHTML = ""; };
 
-  /** Switch workspace dialog (REQ-01-003). */
+  /** Switch workspace dialog (REQ-01-002). */
   function openSwitchDialog() {
     const rows = S.recent.map((w, i) => {
       const cur = S.workspace && w.path === S.workspace.path;
@@ -445,45 +475,24 @@
       title: "Đổi workspace", eyebrow: "Workspace", cls: "modal-lg",
       body: `<p class="t-sm t-mute">Các tab đang mở sẽ được đóng và ứng dụng khởi động lại với workspace mới. Nội dung của workspace hiện tại vẫn được giữ nguyên trong thư mục của nó.</p>
         <div class="ws-list">${rows}</div>`,
-      foot: `<button class="btn" data-act="open-dialog">${ic("folder-open")}Mở thư mục khác…</button><button class="btn" data-act="create-dialog">${ic("plus")}Tạo workspace mới</button><span class="spacer"></span><button class="btn btn-ghost" data-act="close-modal">Đóng</button>`,
+      foot: `<button class="btn" data-act="pick-folder">${ic("folder-open")}Mở thư mục khác…</button><span class="spacer"></span><button class="btn btn-ghost" data-act="close-modal">Đóng</button>`,
     });
   }
 
-  const BAD_NAME = /[<>:"/\\|?*]/;
   const ABS_PATH = /^[A-Za-z]:\\/;
-  const joinPath = (loc, name) => `${loc.replace(/\\+$/, "")}\\${name}`;
   const baseName = (p) => p.replace(/\\+$/, "").split("\\").pop() || p;
 
-  function openCreateDialog() {
-    const taken = (n) => S.recent.some((w) => w.path.toLowerCase() === joinPath("D:\\", n).toLowerCase());
-    let name = "DreamyWorkspace";
-    for (let i = 2; taken(name); i++) name = `DreamyWorkspace${i}`;
+  /** Mock of the operating system's "select folder" dialog (REQ-01-001). Picking a folder starts loading at once. */
+  function openFolderPicker() {
+    const rows = D.DISK_FOLDERS.map((f) => `<div class="ws-row" tabindex="0" data-act="pick-row" data-path="${esc(f.path)}">
+        ${ic("folder-open")}<div class="ws-main"><div class="path">${esc(f.path)}</div><div class="t-sm t-mute">${esc(f.note)}</div></div></div>`).join("");
     modal({
-      title: "Tạo workspace mới", eyebrow: "Workspace",
-      body: `<div class="form-2">
-          <div class="field"><label for="c-name">Tên workspace</label><input id="c-name" class="input" value="${esc(name)}" data-on="create-preview" autocomplete="off"></div>
-          <div class="field"><label for="c-loc">Vị trí</label><input id="c-loc" class="input" value="D:\\" data-on="create-preview" autocomplete="off"></div>
-        </div>
-        <div class="field"><span class="eyebrow">Thư mục sẽ được tạo</span><div class="preview-path path" id="c-preview"></div></div>
-        <div class="field"><span class="eyebrow">Cấu trúc</span><pre class="tree-block">${esc(D.WORKSPACE_FOLDERS.map((f, i, a) => `${i === a.length - 1 ? "└─" : "├─"} ${f}`).join("\n"))}</pre></div>
-        <p class="field-err" id="c-err" hidden></p>`,
-      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-act="create-submit">Tạo workspace</button>`,
-    });
-    updateCreatePreview();
-  }
-  function updateCreatePreview() {
-    const el = $("#c-preview");
-    if (el) el.textContent = joinPath($("#c-loc").value.trim() || "…", $("#c-name").value.trim() || "…");
-  }
-
-  function openOpenDialog(initial = "") {
-    modal({
-      title: "Mở workspace", eyebrow: "Workspace",
-      body: `<div class="field"><label for="o-path">Thư mục workspace</label>
-          <input id="o-path" class="input" value="${esc(initial)}" placeholder="D:\\DreamyWorkspace" autocomplete="off">
-          <span class="field-hint">Chọn thư mục đã được Dreamy Studio tạo trước đó.</span></div>
-        <p class="field-err" id="o-err" hidden></p>`,
-      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-act="open-submit">Mở workspace</button>`,
+      title: "Chọn thư mục", eyebrow: "Hệ điều hành", cls: "modal-lg", testid: "folder-picker",
+      body: `<p class="t-sm t-mute">Hộp thoại chọn thư mục của hệ điều hành (mô phỏng). Chọn một thư mục làm workspace.</p>
+        <div class="ws-list">${rows}</div>
+        <div class="field"><label for="p-path">Thư mục</label><input id="p-path" class="input" placeholder="D:\\DreamyWorkspace" autocomplete="off"></div>
+        <p class="field-err" id="p-err" hidden></p>`,
+      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-act="pick-submit">Chọn thư mục</button>`,
     });
   }
 
@@ -546,8 +555,7 @@
   }
   const MENUS = {
     file: () => [
-      { label: "Tạo workspace mới…", icon: "plus", act: "create-dialog" },
-      { label: "Mở workspace…", icon: "folder-open", act: "open-dialog" },
+      { label: "Mở workspace…", icon: "folder-open", act: "pick-folder" },
       { label: "Đổi workspace…", icon: "swap", act: "switch-workspace" },
       "-",
       { label: "Settings", icon: "settings", act: "settings", kbd: "Ctrl ," },
@@ -588,8 +596,16 @@
   const ACT = {
     scrim: (el, e) => { if (e.target === el) closeModal(); },
     "close-modal": closeModal,
-    "create-dialog": openCreateDialog,
-    "open-dialog": (el) => openOpenDialog(el?.dataset?.v || ""),
+    "pick-folder": (el) => {
+      S.relocate = el?.dataset?.i === undefined ? null : +el.dataset.i;
+      openFolderPicker();
+    },
+    "pick-row": (el) => {
+      const input = $("#p-path");
+      input.value = el.dataset.path;
+      showErr("#p-err", "#p-path", "");
+      input.focus();
+    },
     "switch-workspace": openSwitchDialog,
     "open-recent": (el) => {
       const w = S.recent[+el.dataset.i];
@@ -600,32 +616,21 @@
       saveRecent();
       renderWelcome();
     },
-    "create-submit": () => {
-      const name = $("#c-name").value.trim();
-      const loc = $("#c-loc").value.trim();
+    "pick-submit": () => {
+      const path = $("#p-path").value.trim().replace(/\\+$/, "");
       let err = "";
-      if (!name) err = "Nhập tên workspace.";
-      else if (BAD_NAME.test(name)) err = "Tên workspace không được chứa các ký tự < > : \" / \\ | ? *";
-      else if (!ABS_PATH.test(loc)) err = "Vị trí phải là đường dẫn đầy đủ, ví dụ D:\\Studio.";
-      else if (S.recent.some((w) => w.path.toLowerCase() === joinPath(loc, name).toLowerCase())) err = "Workspace này đã có trong danh sách. Hãy dùng Mở workspace.";
-      showErr("#c-err", "#c-name", err);
-      if (err) return;
-      startWorkspace({ path: joinPath(loc, name), name, projects: 0, size: "0 B" }, { created: true });
-    },
-    "open-submit": () => {
-      const path = $("#o-path").value.trim();
-      let err = "";
-      if (!path) err = "Nhập đường dẫn thư mục workspace.";
+      if (!path) err = "Chọn một thư mục.";
       else if (!ABS_PATH.test(path)) err = "Đường dẫn phải là đường dẫn đầy đủ, ví dụ D:\\DreamyWorkspace.";
-      showErr("#o-err", "#o-path", err);
+      showErr("#p-err", "#p-path", err);
       if (err) return;
-      const known = S.recent.find((w) => w.path.toLowerCase() === path.toLowerCase());
-      if (known) {
-        known.missing = false; // a re-located folder counts as found
+      const idx = S.recent.findIndex((w) => w.path.toLowerCase() === path.toLowerCase());
+      if (idx >= 0) {
+        const known = S.recent[idx];
+        known.missing = false; // a re-selected folder counts as found
         delete known.error;
-        return startWorkspace(known);
+        return startWorkspace(known, { relocate: S.relocate === idx ? null : S.relocate });
       }
-      startWorkspace({ path, name: baseName(path), projects: 0, size: "—" });
+      startWorkspace({ path, name: baseName(path), projects: 0, size: "—" }, { relocate: S.relocate });
     },
     "cancel-loading": () => { S.token++; renderWelcome(); },
 
@@ -662,9 +667,7 @@
     "app-menu": (el) => openMenu(el, MENUS[el.dataset.v]()),
   };
 
-  const ON = {
-    "create-preview": updateCreatePreview,
-  };
+  const ON = {};
 
   /* ---------------- events ---------------- */
   document.addEventListener("click", (e) => {

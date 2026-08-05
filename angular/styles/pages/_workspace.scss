@@ -15,3 +15,6 @@
 .ld-warn.is-error .ic { color: var(--danger); }
 
 .ws-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+.ld-step > ds-icon { display: inline-flex; flex: none; }
+.ld-step.is-error .ic { color: var(--danger); }

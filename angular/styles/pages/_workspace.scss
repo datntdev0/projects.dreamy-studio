@@ -18,3 +18,9 @@
 
 .ld-step > ds-icon { display: inline-flex; flex: none; }
 .ld-step.is-error .ic { color: var(--danger); }
+
+.tb-ws > ds-icon { display: inline-flex; flex: none; color: var(--mute); }
+.tb-ws.is-static { cursor: default; }
+.tb-ws.is-static:hover { border-color: var(--hairline); color: var(--body); }
+
+.app-body { min-height: 0; overflow: auto; }

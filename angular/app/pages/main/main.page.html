@@ -1,0 +1,22 @@
+<div class="app" data-testid="main-page">
+  <header class="titlebar" data-testid="main-titlebar">
+    <img class="tb-logo" src="/assets/dreamy-studio-mark.svg" alt="" data-testid="main-logo" />
+    <span class="tb-name" data-testid="main-app-name">Dreamy Studio</span>
+    <span class="spacer"></span>
+    @if (workspace(); as ws) {
+      <span class="tb-ws is-static" [attr.title]="ws.path" data-testid="main-workspace"><ds-icon name="hdd" [size]="15" /><span class="name" data-testid="main-workspace-name">{{ ws.name }}</span></span>
+    }
+    <span class="spacer"></span>
+  </header>
+  <main class="app-body">
+    @if (workspace(); as ws) {
+      <section class="home" data-testid="home-panel">
+        <div class="home-head">
+          <span class="eyebrow" data-testid="home-eyebrow">Workspace</span>
+          <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
+          <span class="path t-mute" data-testid="home-workspace-path">{{ ws.path }}</span>
+        </div>
+      </section>
+    }
+  </main>
+</div>

@@ -1,0 +1,17 @@
+.ws-row > ds-icon,
+.sp-note > ds-icon,
+.ld-warn > ds-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.ws-row > ds-icon { color: var(--mute); }
+.ws-row.is-error > ds-icon { color: var(--danger); }
+
+.ws-name > ds-badge { flex: none; }
+
+.sp-right > .ld-warn { margin-bottom: var(--sp-md); }
+.ld-warn.is-error { background: var(--danger-soft); }
+.ld-warn.is-error .ic { color: var(--danger); }
+
+.ws-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }

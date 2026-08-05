@@ -1,7 +1,6 @@
 use std::fs::OpenOptions;
 use std::fs::create_dir_all;
 use std::io::Write;
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -27,10 +26,6 @@ impl Logger {
             logs,
             clock: Arc::new(clock),
         }
-    }
-
-    pub fn logs_dir(&self) -> &Path {
-        &self.logs
     }
 
     pub fn prepare(&self) -> std::io::Result<()> {

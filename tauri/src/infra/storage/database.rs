@@ -45,8 +45,4 @@ impl Database {
     pub fn connection_mut(&mut self) -> &mut Connection {
         &mut self.conn
     }
-
-    pub fn into_connection(self) -> Connection {
-        self.conn
-    }
 }

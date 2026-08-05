@@ -5,6 +5,8 @@
         "**/.hg": true,
         "**/.jj": true,
         "**/dist": true,
+        "**/out-tsc": true,
+        "**/tauri/target": true,
         "**/.angular": true,
         "tauri/gen/": true,
         "**/node_modules": true,

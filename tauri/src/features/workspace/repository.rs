@@ -9,7 +9,6 @@ use rusqlite::OptionalExtension;
 use rusqlite::Row;
 use rusqlite::Transaction;
 use serde::Serialize;
-use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -32,10 +31,6 @@ pub struct WorkspaceRepository {
 impl WorkspaceRepository {
     pub fn new(db_path: PathBuf) -> Self {
         Self { db_path }
-    }
-
-    pub fn db_path(&self) -> &Path {
-        &self.db_path
     }
 
     pub fn list(&self) -> Vec<RecentWorkspace> {

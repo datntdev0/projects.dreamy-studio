@@ -91,6 +91,7 @@ impl WorkspaceLoader {
         )
     }
 
+    #[cfg(test)]
     pub fn with_write_probe(mut self, probe: WriteProbe) -> Self {
         self.probe = probe;
         self

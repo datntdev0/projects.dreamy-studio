@@ -1,11 +1,28 @@
 use tauri::App;
 use tauri::Manager;
 
+use crate::commands;
 use crate::container::AppContainer;
+use crate::features::workspace::loader::WorkspaceLoader;
+use crate::features::workspace::repository::WorkspaceRepository;
+use crate::features::workspace::service::WorkspaceService;
+use crate::features::workspace::session::WorkspaceSession;
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::app::app_info,
+            commands::workspace::recent_list,
+            commands::workspace::workspace_measure,
+            commands::workspace::recent_remove,
+            commands::workspace::folder_pick,
+            commands::workspace::workspace_load,
+            commands::workspace::workspace_cancel,
+            commands::workspace::workspace_enter,
+            commands::workspace::workspace_current,
+        ])
         .setup(setup)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -14,8 +31,18 @@ pub fn run() {
 fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let container = AppContainer::new(app)?;
     log_startup(app, &container);
+    manage_workspace(app, &container);
     app.manage(container);
     Ok(())
+}
+
+fn manage_workspace(app: &App, container: &AppContainer) {
+    let repository = WorkspaceRepository::new(container.database_path.clone());
+    let service = WorkspaceService::new(repository);
+    let loader = WorkspaceLoader::from_container(container, service.clone());
+    app.manage(WorkspaceSession::new());
+    app.manage(service);
+    app.manage(loader);
 }
 
 fn log_startup(app: &App, container: &AppContainer) {
@@ -29,7 +56,10 @@ fn log_startup(app: &App, container: &AppContainer) {
         format!("{} {} started", package.name, package.version),
         format!("data directory: {}", container.directories.root.display()),
         format!("log directory: {}", container.directories.logs.display()),
-        format!("application database: {}", container.database_path.display()),
+        format!(
+            "application database: {}",
+            container.database_path.display()
+        ),
     ];
     for line in &lines {
         logger.info("app", line);

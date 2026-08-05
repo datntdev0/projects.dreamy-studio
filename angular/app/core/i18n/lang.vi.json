@@ -1,5 +1,7 @@
 {
   "language.label": "Ngôn ngữ",
+  "theme.toLight": "Chuyển sang giao diện sáng",
+  "theme.toDark": "Chuyển sang giao diện tối",
   "common.cancel": "Hủy",
   "splash.tagline": "Biến tác phẩm văn học thành audiobook, hình ảnh và video, ngay trên máy tính của bạn.",
   "splash.openWorkspace": "Mở workspace…",

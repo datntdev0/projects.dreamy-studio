@@ -1,5 +1,7 @@
 {
   "language.label": "Language",
+  "theme.toLight": "Switch to light theme",
+  "theme.toDark": "Switch to dark theme",
   "common.cancel": "Cancel",
   "splash.tagline": "Turn literary works into audiobooks, images and videos, right on your computer.",
   "splash.openWorkspace": "Open workspace…",

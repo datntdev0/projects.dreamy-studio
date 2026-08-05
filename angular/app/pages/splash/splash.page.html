@@ -38,6 +38,10 @@
   </div>
 } @else {
   <div class="splash" data-testid="splash-page">
+    <div class="sp-tools" data-testid="splash-tools">
+      <ds-segments data-testid="splash-language" [label]="'language.label' | t" [options]="languageOptions" [value]="language()" (valueChange)="changeLanguage($event)" />
+      <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="themeToggleKey() | t" data-testid="splash-theme-toggle" (pressed)="toggleTheme()"><ds-icon [name]="themeIcon()" [size]="16" /></ds-button>
+    </div>
     <div class="sp-card" data-testid="splash-card">
       <div class="sp-left" data-testid="splash-intro">
         <img class="logo" src="/assets/dreamy-studio-mark.svg" alt="Dreamy Studio" data-testid="splash-logo" />
@@ -50,10 +54,7 @@
           <ds-button variant="primary" [block]="true" data-testid="splash-open-workspace" (pressed)="openWorkspace()"><ds-icon name="folder-open" />{{ "splash.openWorkspace" | t }}</ds-button>
         </div>
         <span class="spacer"></span>
-        <div class="sp-lang" data-testid="splash-language">
-          <ds-segments [label]="'language.label' | t" [options]="languageOptions" [value]="language()" (valueChange)="changeLanguage($event)" />
-        </div>
-        <div class="sp-note" data-testid="splash-local-note"><ds-icon name="lock" /><span>{{ "splash.localNote" | t }}</span></div>
+        <div class="sp-note" data-testid="splash-local-note"><ds-icon name="lock" [size]="15" /><span>{{ "splash.localNote" | t }}</span></div>
       </div>
       <div class="sp-right" data-testid="splash-recent">
         @if (notice(); as message) {

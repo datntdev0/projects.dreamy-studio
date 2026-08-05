@@ -11,15 +11,15 @@
     radial-gradient(700px 420px at 100% 105%, var(--secondary-soft), transparent 65%),
     var(--canvas);
 }
+.sp-tools { position: absolute; top: var(--sp-xl); right: var(--sp-xl); display: flex; align-items: center; gap: var(--sp-md); }
 .sp-card {
-  width: min(960px, 100%); min-height: 520px; display: grid; grid-template-columns: 340px minmax(0, 1fr);
+  width: min(960px, 100%); min-height: 420px; display: grid; grid-template-columns: 340px minmax(0, 1fr);
   background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-float);
 }
 .sp-left { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-md); border-right: 1px solid var(--hairline); }
 .sp-left .logo { width: 56px; height: 56px; }
 .sp-actions { display: grid; gap: var(--sp-sm); margin-top: var(--sp-sm); }
 .sp-note { display: flex; gap: var(--sp-sm); align-items: flex-start; color: var(--mute); font-size: 12.5px; line-height: 17px; }
-.sp-lang { align-self: flex-start; }
 .sp-note .ic { width: 15px; height: 15px; margin-top: 1px; }
 .sp-right { padding: var(--sp-xl); overflow: auto; display: flex; flex-direction: column; min-width: 0; }
 .sp-head { display: flex; align-items: center; gap: var(--sp-sm); margin-bottom: var(--sp-md); }

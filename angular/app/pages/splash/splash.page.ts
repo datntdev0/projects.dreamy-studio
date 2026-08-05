@@ -6,6 +6,7 @@ import { Segments, SegmentOption } from "../../../components/segments";
 import { I18nKey } from "../../core/i18n/i18n.models";
 import { I18nPipe } from "../../core/i18n/i18n.pipe";
 import { I18nService, isLanguage } from "../../core/i18n/i18n.service";
+import { ThemeService } from "../../core/theme/theme.service";
 import { WorkspaceService } from "../../features/workspace/workspace.service";
 import { LoadMode } from "../../features/workspace/workspace.models";
 import { AppInfo } from "../../features/workspace/workspace.models";
@@ -17,8 +18,8 @@ const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 const KILO = 1024;
 
 const LANGUAGE_OPTIONS: SegmentOption[] = [
-  { value: "vi", label: "Tiếng Việt" },
-  { value: "en", label: "English" },
+  { value: "vi", label: "VI" },
+  { value: "en", label: "EN" },
 ];
 
 const SIZE_PENDING = "…";
@@ -76,12 +77,15 @@ function projectsKey(count: number): I18nKey {
 export class SplashPage implements OnInit {
   private readonly workspace = inject(WorkspaceService);
   private readonly i18n = inject(I18nService);
+  private readonly themes = inject(ThemeService);
 
   readonly info = signal<AppInfo | null>(null);
   readonly recent = signal<RecentWorkspace[]>([]);
   readonly sizes = signal<Record<string, string>>({});
   readonly language = this.i18n.language;
   readonly languageOptions = LANGUAGE_OPTIONS;
+  readonly themeIcon = computed(() => this.themes.theme() === "dark" ? "sun" : "moon");
+  readonly themeToggleKey = computed(() => this.themes.theme() === "dark" ? "theme.toLight" : "theme.toDark");
   readonly notice = this.workspace.notice;
   readonly state = this.workspace.state;
   readonly lastUsedPath = computed(() => this.firstAccessiblePath(this.recent()));
@@ -110,6 +114,10 @@ export class SplashPage implements OnInit {
     if (isLanguage(value)) {
       this.i18n.setLanguage(value);
     }
+  }
+
+  toggleTheme(): void {
+    this.themes.setTheme(this.themes.theme() === "dark" ? "light" : "dark");
   }
 
   cancel(): void {

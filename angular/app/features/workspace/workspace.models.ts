@@ -111,7 +111,6 @@ export type LoadStepView = "pending" | LoadStepState;
 
 export interface LoadStepItem {
   id: LoadStepId;
-  label: string;
   state: LoadStepView;
 }
 

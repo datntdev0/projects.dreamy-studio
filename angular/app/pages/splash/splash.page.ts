@@ -2,23 +2,44 @@ import { Component, OnInit, computed, inject, signal } from "@angular/core";
 import { Badge } from "../../../components/badge";
 import { Button } from "../../../components/button";
 import { Icon } from "../../../components/icon";
+import { Segments, SegmentOption } from "../../../components/segments";
+import { I18nKey } from "../../core/i18n/i18n.models";
+import { I18nPipe } from "../../core/i18n/i18n.pipe";
+import { I18nService, isLanguage } from "../../core/i18n/i18n.service";
 import { WorkspaceService } from "../../features/workspace/workspace.service";
 import { LoadMode } from "../../features/workspace/workspace.models";
 import { AppInfo } from "../../features/workspace/workspace.models";
 import { RecentWorkspace } from "../../features/workspace/workspace.models";
+import { LoadStepId } from "../../features/workspace/workspace.models";
 import { RecentWorkspaceReason } from "../../features/workspace/workspace.models";
 
 const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 const KILO = 1024;
-const DATE_FORMAT = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });
+
+const LANGUAGE_OPTIONS: SegmentOption[] = [
+  { value: "vi", label: "Tiếng Việt" },
+  { value: "en", label: "English" },
+];
 
 const SIZE_PENDING = "…";
 const SIZE_UNKNOWN = "—";
 
-const REASON_TEXT: Record<RecentWorkspaceReason, string> = {
-  missing: "Thư mục không còn tồn tại hoặc ổ đĩa chưa được gắn.",
-  not_a_directory: "Đường dẫn này không còn là một thư mục.",
-  no_access: "Không có quyền truy cập thư mục này.",
+const REASON_KEYS: Record<RecentWorkspaceReason, I18nKey> = {
+  missing: "splash.reason.missing",
+  not_a_directory: "splash.reason.not_a_directory",
+  no_access: "splash.reason.no_access",
+};
+
+const STEP_KEYS: Record<LoadStepId, I18nKey> = {
+  check_folder: "loading.step.check_folder",
+  workspace_db: "loading.step.workspace_db",
+  app_db: "loading.step.app_db",
+  logs: "loading.step.logs",
+};
+
+const MODE_KEYS: Record<LoadMode, I18nKey> = {
+  create: "loading.mode.create",
+  open: "loading.mode.open",
 };
 
 function formatSize(bytes: number): string {
@@ -32,47 +53,63 @@ function formatSize(bytes: number): string {
   return `${value.toFixed(digits)} ${SIZE_UNITS[unit]}`;
 }
 
-function formatLastOpened(iso: string): string {
+function formatLastOpened(iso: string, locale: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : DATE_FORMAT.format(date);
+  const format = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
+  return Number.isNaN(date.getTime()) ? iso : format.format(date);
 }
 
-function reasonText(reason: RecentWorkspaceReason | undefined): string {
-  return REASON_TEXT[reason ?? "missing"];
+function reasonKey(reason: RecentWorkspaceReason | undefined): I18nKey {
+  return REASON_KEYS[reason ?? "missing"];
+}
+
+function projectsKey(count: number): I18nKey {
+  return count === 1 ? "splash.recent.projects.one" : "splash.recent.projects.other";
 }
 
 @Component({
   selector: "app-splash-page",
   standalone: true,
-  imports: [Badge, Button, Icon],
+  imports: [Badge, Button, Icon, Segments, I18nPipe],
   templateUrl: "./splash.page.html",
 })
 export class SplashPage implements OnInit {
   private readonly workspace = inject(WorkspaceService);
+  private readonly i18n = inject(I18nService);
 
   readonly info = signal<AppInfo | null>(null);
   readonly recent = signal<RecentWorkspace[]>([]);
   readonly sizes = signal<Record<string, string>>({});
+  readonly language = this.i18n.language;
+  readonly languageOptions = LANGUAGE_OPTIONS;
   readonly notice = this.workspace.notice;
   readonly state = this.workspace.state;
   readonly lastUsedPath = computed(() => this.firstAccessiblePath(this.recent()));
 
-  readonly formatLastOpened = formatLastOpened;
-  readonly reasonText = reasonText;
+  readonly reasonKey = reasonKey;
+  readonly projectsKey = projectsKey;
 
   ngOnInit(): void {
     void this.loadInfo();
     void this.refresh();
   }
 
-  modeTitle(mode: LoadMode | null): string {
-    if (mode === "create") {
-      return "Đang khởi tạo workspace";
+  modeKey(mode: LoadMode | null): I18nKey {
+    return mode ? MODE_KEYS[mode] : "loading.mode.prepare";
+  }
+
+  stepKey(id: LoadStepId): I18nKey {
+    return STEP_KEYS[id];
+  }
+
+  formatLastOpened(iso: string): string {
+    return formatLastOpened(iso, this.i18n.locale());
+  }
+
+  changeLanguage(value: string): void {
+    if (isLanguage(value)) {
+      this.i18n.setLanguage(value);
     }
-    if (mode === "open") {
-      return "Đang mở workspace";
-    }
-    return "Đang chuẩn bị workspace";
   }
 
   cancel(): void {

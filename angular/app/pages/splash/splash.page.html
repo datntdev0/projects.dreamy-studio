@@ -3,7 +3,7 @@
       <div class="ld" role="status" aria-live="polite" data-testid="loading-card">
         <img class="ld-logo" src="/assets/dreamy-studio-mark.svg" alt="" data-testid="loading-logo" />
         <div data-testid="loading-header">
-          <span class="eyebrow" data-testid="loading-mode">{{ modeTitle(s.mode) }}</span>
+          <span class="eyebrow" data-testid="loading-mode">{{ modeKey(s.mode) | t }}</span>
           <h2 class="t-display-xs" data-testid="loading-name">{{ s.name }}</h2>
           <div class="path ld-path t-mute" data-testid="loading-path">{{ s.path }}</div>
         </div>
@@ -26,14 +26,14 @@
                   <span class="dot" data-testid="loading-step-pending"></span>
                 }
               }
-              <span data-testid="loading-step-label">{{ step.label }}</span>
+              <span data-testid="loading-step-label">{{ stepKey(step.id) | t }}</span>
             </div>
           }
         </div>
         @if (s.status === "failed") {
-          <div class="ld-warn is-error" role="alert" data-testid="loading-failed"><ds-icon name="alert" /><span>Không thể hoàn tất, đang quay lại màn hình chính.</span></div>
+          <div class="ld-warn is-error" role="alert" data-testid="loading-failed"><ds-icon name="alert" /><span>{{ "splash.failed" | t }}</span></div>
         }
-        <ds-button variant="ghost" size="small" data-testid="loading-cancel" (pressed)="cancel()">Hủy</ds-button>
+        <ds-button variant="ghost" size="small" data-testid="loading-cancel" (pressed)="cancel()">{{ "common.cancel" | t }}</ds-button>
       </div>
   </div>
 } @else {
@@ -45,12 +45,15 @@
         @if (info(); as app) {
           <p class="mono t-mute" data-testid="splash-version">V{{ app.version }}</p>
         }
-        <p class="t-sm" data-testid="splash-tagline">Biến tác phẩm văn học thành audiobook, hình ảnh và video, ngay trên máy tính của bạn.</p>
+        <p class="t-sm" data-testid="splash-tagline">{{ "splash.tagline" | t }}</p>
         <div class="sp-actions" data-testid="splash-actions">
-          <ds-button variant="primary" [block]="true" data-testid="splash-open-workspace" (pressed)="openWorkspace()"><ds-icon name="folder-open" />Mở workspace…</ds-button>
+          <ds-button variant="primary" [block]="true" data-testid="splash-open-workspace" (pressed)="openWorkspace()"><ds-icon name="folder-open" />{{ "splash.openWorkspace" | t }}</ds-button>
         </div>
         <span class="spacer"></span>
-        <div class="sp-note" data-testid="splash-local-note"><ds-icon name="lock" /><span>Nội dung dự án chỉ được lưu trên máy tính của bạn.</span></div>
+        <div class="sp-lang" data-testid="splash-language">
+          <ds-segments [label]="'language.label' | t" [options]="languageOptions" [value]="language()" (valueChange)="changeLanguage($event)" />
+        </div>
+        <div class="sp-note" data-testid="splash-local-note"><ds-icon name="lock" /><span>{{ "splash.localNote" | t }}</span></div>
       </div>
       <div class="sp-right" data-testid="splash-recent">
         @if (notice(); as message) {
@@ -58,7 +61,7 @@
         }
         @if (recent().length) {
           <div class="sp-head" data-testid="splash-recent-head">
-            <span class="eyebrow">Workspace gần đây</span>
+            <span class="eyebrow">{{ "splash.recent.title" | t }}</span>
             <ds-badge data-testid="splash-recent-count">{{ recent().length }}</ds-badge>
           </div>
           <div class="ws-list" data-testid="splash-recent-list">
@@ -67,21 +70,21 @@
                 <div class="ws-row" role="button" tabindex="0" data-testid="splash-recent-row" (click)="openRecent(row)" (keydown.enter)="openRecentByKey($event, row)" (keydown.space)="openRecentByKey($event, row)">
                   <ds-icon name="hdd" />
                   <div class="ws-main">
-                    <div class="ws-name" data-testid="splash-row-name">{{ row.name }}@if (row.path === lastUsedPath()) {<ds-badge tone="primary" data-testid="splash-last-used">LAST USED</ds-badge>}</div>
+                    <div class="ws-name" data-testid="splash-row-name">{{ row.name }}@if (row.path === lastUsedPath()) {<ds-badge tone="primary" data-testid="splash-last-used">{{ "splash.recent.lastUsed" | t }}</ds-badge>}</div>
                     <div class="path t-mute" data-testid="splash-row-path">{{ row.path }}</div>
-                    <div class="t-sm t-mute" data-testid="splash-row-meta"><span data-testid="splash-row-projects">{{ row.projectCount ?? 0 }} project</span> · <span data-testid="splash-row-size">{{ sizeOf(row.path) }}</span> · mở lần cuối <span class="mono" data-testid="splash-row-opened">{{ formatLastOpened(row.lastOpenedAt) }}</span></div>
+                    <div class="t-sm t-mute" data-testid="splash-row-meta"><span data-testid="splash-row-projects">{{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}</span> · <span data-testid="splash-row-size">{{ sizeOf(row.path) }}</span> · {{ "splash.recent.lastOpened" | t }} <span class="mono" data-testid="splash-row-opened">{{ formatLastOpened(row.lastOpenedAt) }}</span></div>
                   </div>
-                  <ds-button size="small" data-testid="splash-open-recent">Mở</ds-button>
+                  <ds-button size="small" data-testid="splash-open-recent">{{ "splash.recent.open" | t }}</ds-button>
                 </div>
               } @else {
                 <div class="ws-row is-error" data-testid="splash-recent-row">
                   <ds-icon name="alert" />
                   <div class="ws-main">
-                    <div class="ws-name"><span class="path" data-testid="splash-row-path">{{ row.path }}</span><ds-badge tone="danger" data-testid="splash-not-found">NOT FOUND</ds-badge></div>
-                    <div class="t-sm ws-err" data-testid="splash-not-found-reason">{{ reasonText(row.reason) }}</div>
+                    <div class="ws-name"><span class="path" data-testid="splash-row-path">{{ row.path }}</span><ds-badge tone="danger" data-testid="splash-not-found">{{ "splash.recent.notFound" | t }}</ds-badge></div>
+                    <div class="t-sm ws-err" data-testid="splash-not-found-reason">{{ reasonKey(row.reason) | t }}</div>
                   </div>
-                  <ds-button size="small" data-testid="splash-relocate" (pressed)="relocate(row)">Tìm lại…</ds-button>
-                  <ds-button size="small" variant="ghost" data-testid="splash-remove" (pressed)="remove(row)">Bỏ khỏi danh sách</ds-button>
+                  <ds-button size="small" data-testid="splash-relocate" (pressed)="relocate(row)">{{ "splash.recent.relocate" | t }}</ds-button>
+                  <ds-button size="small" variant="ghost" data-testid="splash-remove" (pressed)="remove(row)">{{ "splash.recent.remove" | t }}</ds-button>
                 </div>
               }
             }
@@ -89,9 +92,9 @@
         } @else {
           <div class="ws-first" data-testid="splash-first-run">
             <div class="illus"></div>
-            <h2 class="t-display-xs">Chưa có workspace nào</h2>
-            <p class="t-sm t-mute">Workspace là một thư mục bình thường trên máy tính do bạn chọn. Dreamy Studio lưu toàn bộ novel, project và thư viện của bạn bên trong đó.</p>
-            <p class="t-sm t-mute">Nếu thư mục chưa phải workspace, Dreamy Studio sẽ khởi tạo tại đó bằng tệp <span class="mono">workspace.dreamydb</span> và giữ nguyên các tệp sẵn có.</p>
+            <h2 class="t-display-xs">{{ "splash.first.title" | t }}</h2>
+            <p class="t-sm t-mute">{{ "splash.first.description" | t }}</p>
+            <p class="t-sm t-mute">{{ "splash.first.initPrefix" | t }} <span class="mono">workspace.dreamydb</span> {{ "splash.first.initSuffix" | t }}</p>
           </div>
         }
       </div>

@@ -3,6 +3,8 @@ import { Router } from "@angular/router";
 import { Channel } from "@tauri-apps/api/core";
 import { DesktopIpcError } from "../../core/desktop/desktop-ipc-error";
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
+import { I18nKey } from "../../core/i18n/i18n.models";
+import { I18nService } from "../../core/i18n/i18n.service";
 import { AppInfo } from "./workspace.models";
 import { CancelOutcome } from "./workspace.models";
 import { CurrentWorkspace } from "./workspace.models";
@@ -27,31 +29,23 @@ const STEP_ORDER: LoadStepId[] = [
   "logs",
 ];
 
-const STEP_LABELS: Record<LoadStepId, string> = {
-  check_folder: "Kiểm tra thư mục workspace",
-  workspace_db: "Khởi tạo hoặc nâng cấp workspace.dreamydb",
-  app_db: "Khởi tạo hoặc nâng cấp application.dreamydb",
-  logs: "Chuẩn bị nhật ký ứng dụng",
+const STEP_NAME_KEYS: Record<LoadStepId, I18nKey> = {
+  check_folder: "loading.stepName.check_folder",
+  workspace_db: "loading.stepName.workspace_db",
+  app_db: "loading.stepName.app_db",
+  logs: "loading.stepName.logs",
 };
 
-const STEP_NAMES: Record<LoadStepId, string> = {
-  check_folder: "kiểm tra thư mục workspace",
-  workspace_db: "workspace.dreamydb",
-  app_db: "application.dreamydb",
-  logs: "nhật ký ứng dụng",
-};
-
-const ERROR_CAUSES: Record<LoadErrorCode, string> = {
-  folder_missing: "thư mục workspace không tồn tại",
-  folder_not_directory: "đường dẫn đã chọn không phải là thư mục",
-  folder_not_readable: "không có quyền đọc thư mục workspace",
-  folder_not_writable: "không có quyền ghi vào thư mục workspace",
-  db_corrupt: "dữ liệu bị hỏng hoặc không phải tệp CSDL hợp lệ",
-  db_newer_version:
-    "dữ liệu do phiên bản phần mềm mới hơn tạo ra, không thể nâng cấp",
-  db_migration_failed: "nâng cấp dữ liệu thất bại",
-  db_io: "không đọc hoặc ghi được dữ liệu",
-  logs_failed: "không chuẩn bị được nhật ký ứng dụng",
+const ERROR_CAUSE_KEYS: Record<LoadErrorCode, I18nKey> = {
+  folder_missing: "loading.cause.folder_missing",
+  folder_not_directory: "loading.cause.folder_not_directory",
+  folder_not_readable: "loading.cause.folder_not_readable",
+  folder_not_writable: "loading.cause.folder_not_writable",
+  db_corrupt: "loading.cause.db_corrupt",
+  db_newer_version: "loading.cause.db_newer_version",
+  db_migration_failed: "loading.cause.db_migration_failed",
+  db_io: "loading.cause.db_io",
+  logs_failed: "loading.cause.logs_failed",
 };
 
 const CODES_WITHOUT_DETAIL: LoadErrorCode[] = [
@@ -59,10 +53,6 @@ const CODES_WITHOUT_DETAIL: LoadErrorCode[] = [
   "folder_not_directory",
   "db_newer_version",
 ];
-
-function stepName(id: LoadStepId): string {
-  return STEP_NAMES[id];
-}
 
 function folderName(path: string): string {
   const trimmed = path.replace(/[\\/]+$/, "");
@@ -72,7 +62,7 @@ function folderName(path: string): string {
 }
 
 function pendingStep(id: LoadStepId): LoadStepItem {
-  return { id, label: STEP_LABELS[id], state: "pending" };
+  return { id, state: "pending" };
 }
 
 function initialLoadState(path: string): LoadState {
@@ -135,18 +125,11 @@ function toLoadError(error: unknown, fallbackStep: LoadStepId): LoadError {
   return { step: fallbackStep, code: "db_io", detail: String(payload) };
 }
 
-function describeLoadError(error: LoadError): string {
-  const cause = ERROR_CAUSES[error.code];
-  const showDetail =
-    error.detail !== "" && !CODES_WITHOUT_DETAIL.includes(error.code);
-  const suffix = showDetail ? ` (${error.detail})` : "";
-  return `Bước ${stepName(error.step)} lỗi: ${cause}${suffix}`;
-}
-
 @Injectable({ providedIn: "root" })
 export class WorkspaceService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
   private readonly opened = signal<CurrentWorkspace | null>(null);
 
   readonly current = this.opened.asReadonly();
@@ -203,6 +186,16 @@ export class WorkspaceService {
       return;
     }
     this.returnToSplash();
+  }
+
+  private describeLoadError(error: LoadError): string {
+    const showDetail =
+      error.detail !== "" && !CODES_WITHOUT_DETAIL.includes(error.code);
+    return this.i18n.translate("loading.error", {
+      step: this.i18n.translate(STEP_NAME_KEYS[error.step]),
+      cause: this.i18n.translate(ERROR_CAUSE_KEYS[error.code]),
+      suffix: showDetail ? ` (${error.detail})` : "",
+    });
   }
 
   private requestLoad(
@@ -320,7 +313,7 @@ export class WorkspaceService {
     this.state.update((state) => this.markFailed(state, error.step));
     await this.hold(FAILURE_HOLD_MS);
     if (this.isCurrent(token)) {
-      this.notice.set(describeLoadError(error));
+      this.notice.set(this.describeLoadError(error));
       this.returnToSplash();
     }
   }

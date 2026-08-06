@@ -15,4 +15,7 @@
     <span data-testid="editor-crumbs-current">{{ "main.editor.home" | t }}</span>
   </div>
   <section class="editor" data-testid="editor-body"><ng-content /></section>
+  @if (layout.bottomOpen()) {
+    <app-bottom />
+  }
 </main>

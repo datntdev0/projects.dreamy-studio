@@ -70,5 +70,19 @@
   "main.assistant.description": "A smart assistant that helps you with every task.",
   "main.assistant.placeholder": "Ask Assistant…",
   "main.assistant.send": "Send",
-  "main.statusbar.pipelinesIdle": "Pipelines · Idle"
+  "main.statusbar.pipelinesIdle": "Pipelines · Idle",
+  "main.menu.viewMenu.toggleLeft": "Toggle left panel",
+  "main.menu.viewMenu.toggleRight": "Toggle right panel",
+  "main.menu.viewMenu.toggleBottom": "Toggle bottom panel",
+  "main.menu.viewMenu.switchTheme": "Switch theme",
+  "main.menu.viewMenu.changeLanguage": "Change language",
+  "main.titlebar.toggleBottom": "Pipelines",
+  "main.bottom.label": "Bottom panel",
+  "main.bottom.tab.pipelines": "Pipelines",
+  "main.bottom.tab.output": "Output",
+  "main.bottom.close": "Close panel",
+  "main.bottom.pipelines.title": "No pipelines running",
+  "main.bottom.pipelines.description": "Long-running tasks such as translation, analysis, audio generation and rendering will show their progress here. The number of pipelines and tasks running in parallel is configured in Settings.",
+  "main.bottom.output.title": "No output yet",
+  "main.bottom.output.description": "Application activity logs will appear here."
 }

@@ -1,0 +1,22 @@
+<section class="bottom" [attr.aria-label]="'main.bottom.label' | t" data-testid="bottom">
+  <header class="bottom-head" data-testid="bottom-head">
+    @for (item of tabs; track item.id) {
+      <button type="button" class="ins-tab" [class.is-active]="tab() === item.id" [attr.aria-pressed]="tab() === item.id" [attr.data-tab]="item.id" data-testid="bottom-tab" (click)="selectTab(item.id)">{{ item.labelKey | t }}</button>
+    }
+    <span class="spacer"></span>
+    <ds-button size="small" [iconOnly]="true" [label]="'main.bottom.close' | t" [attr.title]="'main.bottom.close' | t" data-testid="bottom-close" (pressed)="layout.toggleBottom()"><ds-icon name="x" [size]="17" /></ds-button>
+  </header>
+  <div class="bottom-body" data-testid="bottom-body">
+    <div class="empty" data-testid="bottom-empty">
+      <div class="empty-inner">
+        @if (tab() === "pipelines") {
+          <h3 class="t-display-xs" data-testid="bottom-empty-title">{{ "main.bottom.pipelines.title" | t }}</h3>
+          <p class="t-sm t-mute" data-testid="bottom-empty-description">{{ "main.bottom.pipelines.description" | t }}</p>
+        } @else {
+          <h3 class="t-display-xs" data-testid="bottom-empty-title">{{ "main.bottom.output.title" | t }}</h3>
+          <p class="t-sm t-mute" data-testid="bottom-empty-description">{{ "main.bottom.output.description" | t }}</p>
+        }
+      </div>
+    </div>
+  </div>
+</section>

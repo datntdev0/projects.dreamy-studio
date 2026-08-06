@@ -70,5 +70,19 @@
   "main.assistant.description": "Trợ lý thông minh hỗ trợ bạn trong mọi công việc.",
   "main.assistant.placeholder": "Hỏi Assistant…",
   "main.assistant.send": "Gửi",
-  "main.statusbar.pipelinesIdle": "Pipelines · Idle"
+  "main.statusbar.pipelinesIdle": "Pipelines · Idle",
+  "main.menu.viewMenu.toggleLeft": "Ẩn/hiện panel trái",
+  "main.menu.viewMenu.toggleRight": "Ẩn/hiện panel phải",
+  "main.menu.viewMenu.toggleBottom": "Ẩn/hiện panel dưới",
+  "main.menu.viewMenu.switchTheme": "Đổi giao diện sáng/tối",
+  "main.menu.viewMenu.changeLanguage": "Đổi ngôn ngữ",
+  "main.titlebar.toggleBottom": "Pipelines",
+  "main.bottom.label": "Panel dưới",
+  "main.bottom.tab.pipelines": "Pipelines",
+  "main.bottom.tab.output": "Output",
+  "main.bottom.close": "Đóng panel",
+  "main.bottom.pipelines.title": "Chưa có pipeline nào chạy",
+  "main.bottom.pipelines.description": "Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây. Số pipeline và task chạy song song được cấu hình trong Settings.",
+  "main.bottom.output.title": "Chưa có nhật ký",
+  "main.bottom.output.description": "Nhật ký hoạt động của ứng dụng sẽ hiển thị tại đây."
 }

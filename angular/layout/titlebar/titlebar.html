@@ -4,7 +4,39 @@
     <span class="tb-name" data-testid="main-app-name">Dreamy Studio</span>
     <nav class="tb-menu" [attr.aria-label]="'main.menu.label' | t" data-testid="titlebar-menu">
       <button type="button" class="tb-mi" data-testid="titlebar-menu-file">{{ "main.menu.file" | t }}</button>
-      <button type="button" class="tb-mi" data-testid="titlebar-menu-view">{{ "main.menu.view" | t }}</button>
+      <span class="tb-menu-host" data-testid="titlebar-menu-view-host">
+        <button type="button" class="tb-mi" [class.is-open]="viewOpen()" aria-haspopup="menu" [attr.aria-expanded]="viewOpen()" data-testid="titlebar-menu-view" (click)="toggleViewMenu($event)">{{ "main.menu.view" | t }}</button>
+        @if (viewOpen()) {
+          <div class="menu tb-dropdown" role="menu" data-testid="titlebar-view-menu">
+            <button type="button" class="menu-row" role="menuitemcheckbox" [attr.aria-checked]="layout.explorerOpen()" data-testid="titlebar-view-toggle-left" (click)="layout.toggleExplorer()">
+              <ds-icon name="panel-left" [size]="16" /><span>{{ "main.menu.viewMenu.toggleLeft" | t }}</span>
+              @if (layout.explorerOpen()) {
+                <ds-icon class="menu-end" name="check" [size]="14" />
+              }
+            </button>
+            <button type="button" class="menu-row" role="menuitemcheckbox" [attr.aria-checked]="layout.inspectorOpen()" data-testid="titlebar-view-toggle-right" (click)="layout.toggleInspector()">
+              <ds-icon name="panel-right" [size]="16" /><span>{{ "main.menu.viewMenu.toggleRight" | t }}</span>
+              @if (layout.inspectorOpen()) {
+                <ds-icon class="menu-end" name="check" [size]="14" />
+              }
+            </button>
+            <button type="button" class="menu-row" role="menuitemcheckbox" [attr.aria-checked]="layout.bottomOpen()" data-testid="titlebar-view-toggle-bottom" (click)="layout.toggleBottom()">
+              <ds-icon name="panel-bottom" [size]="16" /><span>{{ "main.menu.viewMenu.toggleBottom" | t }}</span>
+              @if (layout.bottomOpen()) {
+                <ds-icon class="menu-end" name="check" [size]="14" />
+              }
+            </button>
+            <div class="divider" role="separator"></div>
+            <button type="button" class="menu-row" role="menuitem" data-testid="titlebar-view-switch-theme" (click)="toggleTheme()">
+              <ds-icon [name]="themeIcon()" [size]="16" /><span>{{ "main.menu.viewMenu.switchTheme" | t }}</span>
+            </button>
+            <button type="button" class="menu-row" role="menuitem" data-testid="titlebar-view-change-language" (click)="toggleLanguage()">
+              <ds-icon name="lang" [size]="16" /><span>{{ "main.menu.viewMenu.changeLanguage" | t }}</span>
+              <span class="menu-end mono" data-testid="titlebar-view-language-name">{{ languageName() }}</span>
+            </button>
+          </div>
+        }
+      </span>
       <button type="button" class="tb-mi" data-testid="titlebar-menu-help">{{ "main.menu.help" | t }}</button>
     </nav>
   </div>
@@ -16,6 +48,7 @@
   <div class="tb-right" data-testid="titlebar-right">
     <span class="tb-actions" data-testid="titlebar-actions">
       <ds-button size="small" [iconOnly]="true" [active]="layout.explorerOpen()" [label]="'main.titlebar.toggleExplorer' | t" [attr.title]="'main.titlebar.toggleExplorer' | t" data-testid="titlebar-toggle-explorer" (pressed)="layout.toggleExplorer()"><ds-icon name="panel-left" [size]="17" /></ds-button>
+      <ds-button size="small" [iconOnly]="true" [active]="layout.bottomOpen()" [label]="'main.titlebar.toggleBottom' | t" [attr.title]="'main.titlebar.toggleBottom' | t" data-testid="titlebar-toggle-bottom" (pressed)="layout.toggleBottom()"><ds-icon name="panel-bottom" [size]="17" /></ds-button>
       <ds-button size="small" [iconOnly]="true" [active]="layout.inspectorOpen()" [label]="'main.titlebar.toggleInspector' | t" [attr.title]="'main.titlebar.toggleInspector' | t" data-testid="titlebar-toggle-inspector" (pressed)="layout.toggleInspector()"><ds-icon name="panel-right" [size]="17" /></ds-button>
     </span>
   </div>

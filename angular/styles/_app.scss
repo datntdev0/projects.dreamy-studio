@@ -60,7 +60,7 @@
 
 /* ---------------- app frame ---------------- */
 .app { height: 100vh; display: grid; grid-template-rows: 32px minmax(0, 1fr) 24px; }
-app-titlebar, app-railbar, app-explorer, app-editor, app-inspector, app-statusbar { display: contents; }
+app-titlebar, app-railbar, app-explorer, app-editor, app-bottom, app-inspector, app-statusbar { display: contents; }
 .titlebar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; background: var(--canvas-card); border-bottom: 1px solid var(--hairline); }
 .tb-left { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; padding-left: var(--sp-md); }
 .tb-center { display: flex; align-items: center; justify-content: center; min-width: 0; }
@@ -75,6 +75,12 @@ app-titlebar, app-railbar, app-explorer, app-editor, app-inspector, app-statusba
 .tb-ws .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-ws:hover { border-color: var(--hairline-strong); color: var(--ink); }
 .tb-actions { display: flex; gap: 2px; }
+.tb-menu-host { position: relative; display: inline-flex; }
+.tb-mi.is-open { background: var(--canvas-soft); color: var(--ink); }
+.tb-dropdown { position: absolute; top: calc(100% + var(--sp-xs)); left: 0; }
+button.menu-row { width: 100%; border: 0; background: transparent; font: 400 13px/1 var(--font); text-align: left; }
+.menu-end { margin-left: auto; color: var(--mute); }
+.menu .divider { height: 1px; }
 
 .shell {
   --exc: var(--ex-w, 264px); --exr: 1px; --inc: var(--in-w, 320px); --inr: 1px;
@@ -159,11 +165,11 @@ app-titlebar, app-railbar, app-explorer, app-editor, app-inspector, app-statusba
 .home-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; color: var(--mute); }
 
 /* inspector */
-.ins-head { height: 30px; flex: none; display: flex; align-items: stretch; gap: var(--sp-xs); padding: 0 var(--sp-xs) 0 var(--sp-sm); border-bottom: 1px solid var(--hairline); }
+.ins-head, .bottom-head { height: 30px; flex: none; display: flex; align-items: stretch; gap: var(--sp-xs); padding: 0 var(--sp-xs) 0 var(--sp-sm); border-bottom: 1px solid var(--hairline); }
 .ins-tab { padding: 0 var(--sp-sm); border: 0; background: none; color: var(--mute); font: 500 13px/1 var(--font); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .ins-tab:hover { color: var(--body); }
 .ins-tab.is-active { color: var(--ink); border-bottom-color: var(--primary); }
-.ins-head .btn { align-self: center; }
+.ins-head .btn, .bottom-head .btn { align-self: center; }
 .ins-sec { padding: var(--sp-md); border-bottom: 1px solid var(--hairline); display: grid; gap: var(--sp-sm); }
 .kv { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: var(--sp-xs) var(--sp-sm); margin: 0; font-size: 13px; align-items: baseline; }
 .kv dt { color: var(--mute); }
@@ -177,7 +183,6 @@ app-titlebar, app-railbar, app-explorer, app-editor, app-inspector, app-statusba
 .bottom { flex: none; height: var(--bt-h, 200px); border-top: 1px solid var(--hairline); background: var(--canvas-card); display: flex; flex-direction: column; position: relative; }
 .resizer-h { position: absolute; left: 0; right: 0; top: -3px; height: 5px; cursor: row-resize; z-index: 4; }
 .resizer-h:hover { background: var(--primary); }
-.bottom-head { height: 28px; flex: none; display: flex; align-items: center; gap: var(--sp-xs); padding: 0 var(--sp-xs) 0 var(--sp-sm); border-bottom: 1px solid var(--hairline); }
 .bottom-body { flex: 1; overflow: auto; min-height: 0; }
 .log { font: 400 12px/18px var(--font-mono); padding: var(--sp-xs) 0; }
 .log-row { display: flex; align-items: baseline; gap: var(--sp-md); padding: 1px var(--sp-md); }

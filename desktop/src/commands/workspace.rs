@@ -80,7 +80,9 @@ pub fn perform_load(
 }
 
 fn list_recent(app: &AppHandle) -> Vec<RecentWorkspaceView> {
-    app.state::<WorkspaceService>().recent_list()
+    let current = app.state::<WorkspaceSession>().current();
+    app.state::<WorkspaceService>()
+        .recent_list_for(current.as_ref())
 }
 
 fn measure_folder(app: &AppHandle, path: &str) -> u64 {
@@ -182,6 +184,11 @@ pub async fn workspace_enter(app: AppHandle) -> Result<EnterOutcome, LoadError> 
         apply_window_title(&app, &title);
     }
     Ok(outcome)
+}
+
+#[tauri::command]
+pub async fn workspace_is_current(app: AppHandle, path: String) -> bool {
+    app.state::<WorkspaceSession>().is_current(&path)
 }
 
 #[tauri::command]

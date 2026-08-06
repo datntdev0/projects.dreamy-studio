@@ -24,6 +24,7 @@ pub fn run() {
             commands::workspace::workspace_cancel,
             commands::workspace::workspace_enter,
             commands::workspace::workspace_current,
+            commands::workspace::workspace_is_current,
         ])
         .setup(setup)
         .build(tauri::generate_context!())

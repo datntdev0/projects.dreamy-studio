@@ -54,6 +54,14 @@ impl WorkspaceSession {
         lock(&self.current).clone()
     }
 
+    pub fn is_current(&self, path: &str) -> bool {
+        let key = NormalizedPath::new(path).key;
+        match lock(&self.current).as_ref() {
+            Some(current) => NormalizedPath::new(&current.path).key == key,
+            None => false,
+        }
+    }
+
     pub fn cancel(&self) -> CancelOutcome {
         let mut active = lock(&self.active);
         let phase = match active.as_ref() {

@@ -505,6 +505,8 @@ mod tests {
     use crate::features::workspace::inspector::StatusKind;
     use crate::features::workspace::load::CancelOutcome;
     use crate::features::workspace::repository::WorkspaceRepository;
+    use crate::features::workspace::service::RecentWorkspaceView;
+    use crate::features::workspace::session::CurrentWorkspace;
     use crate::infra::backend::StubBackend;
     use rusqlite::Connection;
     use serde_json::Value;
@@ -608,12 +610,21 @@ mod tests {
     }
 
     fn run_request(fixture: &Fixture, request: LoadRequest, trigger: Option<LoadEvent>) -> Loaded {
+        run_request_on(&fixture.loader, fixture, request, trigger)
+    }
+
+    fn run_request_on(
+        loader: &WorkspaceLoader,
+        fixture: &Fixture,
+        request: LoadRequest,
+        trigger: Option<LoadEvent>,
+    ) -> Loaded {
         let recorder = Recorder {
             events: Mutex::new(Vec::new()),
             session: &fixture.session,
             trigger,
         };
-        let result = fixture.loader.load(&fixture.session, request, &recorder);
+        let result = loader.load(&fixture.session, request, &recorder);
         let events = recorder.events.into_inner().unwrap();
         (result, events)
     }
@@ -1289,5 +1300,315 @@ mod tests {
         let logs = read_logs(&fixture);
         assert!(logs.contains("load step=application result=done"));
         assert!(logs.contains("load result=cancelled"));
+    }
+
+    struct Baseline {
+        current: Option<CurrentWorkspace>,
+        list: Vec<RecentWorkspaceView>,
+        files: BTreeMap<String, Vec<u8>>,
+    }
+
+    fn make_target(fixture: &Fixture, name: &str) -> PathBuf {
+        let folder = fixture.dir.path().join(name);
+        fs::create_dir(&folder).unwrap();
+        folder
+    }
+
+    fn target_db(folder: &Path) -> PathBuf {
+        folder.join(WORKSPACE_DB_FILE)
+    }
+
+    fn garbage_bytes() -> Vec<u8> {
+        (0..8192u32)
+            .map(|i| ((i.wrapping_mul(2654435761) >> 13) as u8) | 0x80)
+            .collect()
+    }
+
+    fn open_first(fixture: &Fixture) -> Baseline {
+        populate(&fixture.folder);
+        load_and_enter(fixture);
+        baseline(fixture)
+    }
+
+    fn baseline(fixture: &Fixture) -> Baseline {
+        let current = fixture.session.current();
+        Baseline {
+            list: fixture.service.recent_list_for(current.as_ref()),
+            files: snapshot(&fixture.folder),
+            current,
+        }
+    }
+
+    fn assert_first_kept(fixture: &Fixture, base: &Baseline, label: &str) {
+        assert_eq!(fixture.session.current(), base.current, "{label}");
+        let list = fixture.service.recent_list_for(base.current.as_ref());
+        assert_eq!(list, base.list, "{label}");
+        assert_eq!(snapshot(&fixture.folder), base.files, "{label}");
+        assert_eq!(history_rows(&db_file(fixture)), 1, "{label}");
+        assert!(fixture.container.database_path.is_file(), "{label}");
+        assert_eq!(fixture.backend.stopped(), 0, "{label}");
+    }
+
+    fn listed(fixture: &Fixture) -> Vec<(String, bool)> {
+        let current = fixture.session.current();
+        let views = fixture.service.recent_list_for(current.as_ref());
+        views
+            .into_iter()
+            .map(|view| (view.name, view.is_current))
+            .collect()
+    }
+
+    fn recent_names(fixture: &Fixture) -> Vec<String> {
+        fixture
+            .service
+            .recent_list()
+            .into_iter()
+            .map(|view| view.name)
+            .collect()
+    }
+
+    fn record_old_entry(fixture: &Fixture) -> PathBuf {
+        let old = fixture.dir.path().join("Old");
+        fixture
+            .service
+            .record_opened(text(&old), chrono::Utc::now())
+            .unwrap();
+        old
+    }
+
+    #[test]
+    fn switch_enters_the_target_and_lists_it_first() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        let (result, _) = run_load_at(&fixture, &second, None);
+        assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
+        assert_eq!(fixture.session.current(), base.current);
+        let entered = fixture.loader.enter(&fixture.session).unwrap();
+        assert_eq!(
+            entered,
+            EnterOutcome::Entered {
+                name: "Second".to_string(),
+                path: text(&second).to_string(),
+            }
+        );
+        let current = fixture.session.current().unwrap();
+        assert_eq!(current.name, "Second");
+        assert_eq!(current.path, text(&second));
+        let shouted = format!("{}\\", text(&second).to_uppercase());
+        assert!(fixture.session.is_current(&shouted));
+        assert!(!fixture.session.is_current(text(&fixture.folder)));
+        assert_eq!(
+            listed(&fixture),
+            vec![("Second".to_string(), true), ("Novel".to_string(), false)]
+        );
+        assert!(target_db(&second).is_file());
+        assert!(db_file(&fixture).is_file());
+        assert_eq!(fixture.backend.stopped(), 0);
+    }
+
+    #[test]
+    fn switch_fails_on_unwritable_folder_and_keeps_the_open_workspace() {
+        let mut fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        fixture.loader = fixture.loader.clone().with_write_probe(deny_write);
+        let (result, events) = run_load_at(&fixture, &second, None);
+        let error = result.unwrap_err();
+        assert_eq!(error.step, LoadStep::Workspace);
+        assert_eq!(error.code, ErrorCode::FolderNotWritable);
+        assert_eq!(step_errors(&events), vec![LoadStep::Workspace]);
+        assert!(!target_db(&second).exists());
+        assert_first_kept(&fixture, &base, "unwritable");
+    }
+
+    #[test]
+    fn switch_fails_on_newer_database_and_keeps_the_open_workspace() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        make_newer_workspace_db(&target_db(&second));
+        let before = fs::read(target_db(&second)).unwrap();
+        let (result, _) = run_load_at(&fixture, &second, None);
+        assert_eq!(result.unwrap_err().code, ErrorCode::DbNewerVersion);
+        assert_eq!(fs::read(target_db(&second)).unwrap(), before);
+        assert_first_kept(&fixture, &base, "newer");
+    }
+
+    #[test]
+    fn switch_fails_on_corrupt_database_and_keeps_the_open_workspace() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        let garbage = garbage_bytes();
+        fs::write(target_db(&second), &garbage).unwrap();
+        let (result, _) = run_load_at(&fixture, &second, None);
+        assert_eq!(result.unwrap_err().code, ErrorCode::DbCorrupt);
+        assert_eq!(fs::read(target_db(&second)).unwrap(), garbage);
+        assert_first_kept(&fixture, &base, "corrupt");
+    }
+
+    #[test]
+    fn switch_fails_on_backend_error_and_keeps_the_open_workspace() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        let failing = Arc::new(StubBackend::failing(BackendError::StartFailed(
+            "exited".to_string(),
+        )));
+        let loader = WorkspaceLoader::new(
+            fixture.container.directories.root.clone(),
+            fixture.container.database_path.clone(),
+            fixture.container.logger.clone(),
+            fixture.service.clone(),
+            failing.clone(),
+        );
+        let request = LoadRequest::new(text(&second), None);
+        let (result, events) = run_request_on(&loader, &fixture, request, None);
+        assert_eq!(result.unwrap_err().code, ErrorCode::BackendStartFailed);
+        assert_eq!(step_errors(&events), vec![LoadStep::Backend]);
+        assert_eq!(failing.stopped(), 0);
+        assert!(!target_db(&second).exists());
+        assert_first_kept(&fixture, &base, "backend");
+    }
+
+    #[test]
+    fn switch_enter_failure_removes_created_database_and_keeps_the_open_workspace() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        let (result, _) = run_load_at(&fixture, &second, None);
+        assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
+        assert!(target_db(&second).is_file());
+        drop_recent_table(&fixture);
+        let error = fixture.loader.enter(&fixture.session).unwrap_err();
+        assert_eq!(error.step, LoadStep::Application);
+        assert!(!target_db(&second).exists());
+        assert_eq!(fixture.session.current(), base.current);
+        assert_eq!(snapshot(&fixture.folder), base.files);
+        assert_eq!(fixture.backend.stopped(), 0);
+    }
+
+    #[test]
+    fn switch_cancel_at_each_step_keeps_the_open_workspace() {
+        for trigger in cancel_triggers() {
+            let fixture = fixture_with(StubBackend::reusing());
+            let base = open_first(&fixture);
+            let second = make_target(&fixture, "Second");
+            let (result, _) = run_load_at(&fixture, &second, Some(trigger.clone()));
+            assert_eq!(result.unwrap(), LoadOutcome::Cancelled, "{trigger:?}");
+            assert!(!target_db(&second).exists(), "{trigger:?}");
+            assert_first_kept(&fixture, &base, &format!("{trigger:?}"));
+        }
+    }
+
+    #[test]
+    fn switch_cancel_after_last_step_before_enter_keeps_the_open_workspace() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        let (result, _) = run_load_at(&fixture, &second, None);
+        assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
+        assert!(target_db(&second).is_file());
+        assert_eq!(fixture.session.cancel(), CancelOutcome::Cancelled);
+        assert!(!target_db(&second).exists());
+        assert_eq!(
+            fixture.loader.enter(&fixture.session).unwrap(),
+            EnterOutcome::Cancelled
+        );
+        assert_first_kept(&fixture, &base, "cancel before enter");
+    }
+
+    #[test]
+    fn relocate_failure_keeps_the_not_found_entry() {
+        let mut fixture = fixture_with(StubBackend::reusing());
+        open_first(&fixture);
+        let old = record_old_entry(&fixture);
+        let base = baseline(&fixture);
+        let moved = make_target(&fixture, "Moved");
+        fixture.loader = fixture.loader.clone().with_write_probe(deny_write);
+        let request = LoadRequest::new(text(&moved), Some(text(&old).to_string()));
+        let (result, _) = run_request(&fixture, request, None);
+        assert!(result.is_err());
+        assert_first_kept(&fixture, &base, "relocate failure");
+        let names = recent_names(&fixture);
+        assert!(names.contains(&"Old".to_string()));
+        assert!(!names.contains(&"Moved".to_string()));
+        let old_row = fixture
+            .service
+            .recent_list()
+            .into_iter()
+            .find(is_old_row)
+            .unwrap();
+        assert_eq!(old_row.status, StatusKind::NotFound);
+    }
+
+    fn is_old_row(view: &RecentWorkspaceView) -> bool {
+        view.name == "Old"
+    }
+
+    #[test]
+    fn relocate_cancel_keeps_the_not_found_entry() {
+        for trigger in cancel_triggers() {
+            let fixture = fixture_with(StubBackend::reusing());
+            open_first(&fixture);
+            let old = record_old_entry(&fixture);
+            let base = baseline(&fixture);
+            let moved = make_target(&fixture, "Moved");
+            let request = LoadRequest::new(text(&moved), Some(text(&old).to_string()));
+            let (result, _) = run_request(&fixture, request, Some(trigger.clone()));
+            assert_eq!(result.unwrap(), LoadOutcome::Cancelled, "{trigger:?}");
+            assert_first_kept(&fixture, &base, &format!("{trigger:?}"));
+            let names = recent_names(&fixture);
+            assert!(names.contains(&"Old".to_string()), "{trigger:?}");
+            assert!(!names.contains(&"Moved".to_string()), "{trigger:?}");
+        }
+    }
+
+    #[test]
+    fn relocate_onto_another_entry_removes_the_old_entry() {
+        let fixture = fixture_with(StubBackend::reusing());
+        open_first(&fixture);
+        let existing = make_target(&fixture, "Existing");
+        fixture
+            .service
+            .record_opened(text(&existing), chrono::Utc::now())
+            .unwrap();
+        let old = record_old_entry(&fixture);
+        let request = LoadRequest::new(text(&existing), Some(text(&old).to_string()));
+        let (result, _) = run_request(&fixture, request, None);
+        assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
+        fixture.loader.enter(&fixture.session).unwrap();
+        assert_eq!(
+            listed(&fixture),
+            vec![("Existing".to_string(), true), ("Novel".to_string(), false)]
+        );
+        assert_eq!(fixture.session.current().unwrap().name, "Existing");
+    }
+
+    #[test]
+    fn cancel_after_a_cancelled_switch_reports_already_entered() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        let trigger = Some(done(LoadStep::Workspace));
+        let (result, _) = run_load_at(&fixture, &second, trigger);
+        assert_eq!(result.unwrap(), LoadOutcome::Cancelled);
+        assert_eq!(fixture.session.cancel(), CancelOutcome::AlreadyEntered);
+        assert_first_kept(&fixture, &base, "late cancel");
+    }
+
+    #[test]
+    fn too_early_cancel_is_ignored_and_a_later_cancel_discards_the_load() {
+        let fixture = fixture_with(StubBackend::reusing());
+        let base = open_first(&fixture);
+        let second = make_target(&fixture, "Second");
+        assert_eq!(fixture.session.cancel(), CancelOutcome::AlreadyEntered);
+        let (result, _) = run_load_at(&fixture, &second, None);
+        assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
+        assert!(target_db(&second).is_file());
+        assert_eq!(fixture.session.cancel(), CancelOutcome::Cancelled);
+        assert!(!target_db(&second).exists());
+        assert_first_kept(&fixture, &base, "too early cancel");
     }
 }

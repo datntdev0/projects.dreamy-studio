@@ -3,7 +3,10 @@ use crate::features::workspace::inspector::StatusKind;
 use crate::features::workspace::inspector::WorkspaceInspector;
 use crate::features::workspace::repository::RecentWorkspace;
 use crate::features::workspace::repository::WorkspaceRepository;
+use crate::features::workspace::repository::format_timestamp;
+use crate::features::workspace::session::CurrentWorkspace;
 use crate::infra::storage::StorageResult;
+use crate::shared::path::NormalizedPath;
 use chrono::DateTime;
 use chrono::Utc;
 use serde::Serialize;
@@ -20,6 +23,7 @@ pub struct RecentWorkspaceView {
     pub reason: Option<NotFoundReason>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_count: Option<u64>,
+    pub is_current: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -40,10 +44,25 @@ impl WorkspaceService {
         }
     }
 
+    #[cfg(test)]
     pub fn recent_list(&self) -> Vec<RecentWorkspaceView> {
+        self.recent_list_for(None)
+    }
+
+    pub fn recent_list_for(&self, current: Option<&CurrentWorkspace>) -> Vec<RecentWorkspaceView> {
+        let current_key = current.map(current_key_of);
         let mut views = Vec::new();
+        let mut found = false;
         for entry in self.repository.list() {
-            views.push(self.to_view(entry));
+            if is_entry_current(&entry, current_key.as_deref()) {
+                found = true;
+                views.push(self.to_current_view(entry));
+            } else {
+                views.push(self.to_view(entry));
+            }
+        }
+        if let (Some(current), false) = (current, found) {
+            views.insert(0, self.to_current_view(entry_of_current(current)));
         }
         views
     }
@@ -83,7 +102,44 @@ impl WorkspaceService {
             status: folder_status.status,
             reason: folder_status.reason,
             project_count,
+            is_current: false,
         }
+    }
+
+    fn to_current_view(&self, entry: RecentWorkspace) -> RecentWorkspaceView {
+        let folder = Path::new(&entry.path);
+        let project_count = match self.inspector.status(folder).status {
+            StatusKind::Ok => self.inspector.project_count(folder),
+            StatusKind::NotFound => 0,
+        };
+        RecentWorkspaceView {
+            path: entry.path,
+            name: entry.name,
+            last_opened_at: entry.last_opened_at,
+            status: StatusKind::Ok,
+            reason: None,
+            project_count: Some(project_count),
+            is_current: true,
+        }
+    }
+}
+
+fn current_key_of(current: &CurrentWorkspace) -> String {
+    NormalizedPath::new(&current.path).key
+}
+
+fn is_entry_current(entry: &RecentWorkspace, current_key: Option<&str>) -> bool {
+    match current_key {
+        Some(key) => NormalizedPath::new(&entry.path).key == key,
+        None => false,
+    }
+}
+
+fn entry_of_current(current: &CurrentWorkspace) -> RecentWorkspace {
+    RecentWorkspace {
+        path: current.path.clone(),
+        name: current.name.clone(),
+        last_opened_at: format_timestamp(Utc::now()),
     }
 }
 
@@ -216,6 +272,7 @@ mod tests {
         assert_eq!(row["status"], "ok");
         assert_eq!(row["projectCount"], 2);
         assert_eq!(row.get("reason"), None);
+        assert_eq!(row["isCurrent"], false);
     }
 
     #[test]
@@ -276,5 +333,126 @@ mod tests {
         assert_eq!(views.len(), 1);
         assert_eq!(views[0].name, "New");
         assert_eq!(views[0].status, StatusKind::Ok);
+    }
+
+    fn current_of(folder: &Path) -> CurrentWorkspace {
+        let target = NormalizedPath::new(text(folder));
+        CurrentWorkspace {
+            name: target.name,
+            path: target.path,
+        }
+    }
+
+    fn current_flags(views: &[RecentWorkspaceView]) -> Vec<bool> {
+        views.iter().map(view_is_current).collect()
+    }
+
+    fn view_is_current(view: &RecentWorkspaceView) -> bool {
+        view.is_current
+    }
+
+    #[test]
+    fn no_open_workspace_flags_every_row_as_not_current() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let first = make_folder(&dir, "First");
+        let second = make_folder(&dir, "Second");
+        service.record_opened(text(&first), at(1)).unwrap();
+        service.record_opened(text(&second), at(2)).unwrap();
+        assert_eq!(current_flags(&service.recent_list()), vec![false, false]);
+        assert_eq!(
+            current_flags(&service.recent_list_for(None)),
+            vec![false, false]
+        );
+    }
+
+    #[test]
+    fn open_row_is_flagged_and_others_are_not() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let first = make_folder(&dir, "First");
+        let second = make_folder(&dir, "Second");
+        make_projects(&first, 4);
+        service.record_opened(text(&first), at(1)).unwrap();
+        service.record_opened(text(&second), at(2)).unwrap();
+        let views = service.recent_list_for(Some(&current_of(&first)));
+        assert_eq!(current_flags(&views), vec![false, true]);
+        assert_eq!(views[1].status, StatusKind::Ok);
+        assert_eq!(views[1].project_count, Some(4));
+    }
+
+    #[test]
+    fn open_row_is_ok_with_zero_projects_when_folder_is_gone() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let gone = dir.path().join("Gone");
+        service.record_opened(text(&gone), at(1)).unwrap();
+        let views = service.recent_list_for(Some(&current_of(&gone)));
+        assert_eq!(views.len(), 1);
+        assert_eq!(views[0].status, StatusKind::Ok);
+        assert_eq!(views[0].reason, None);
+        assert_eq!(views[0].project_count, Some(0));
+        assert!(views[0].is_current);
+    }
+
+    #[test]
+    fn open_row_is_built_when_its_entry_was_removed() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let open = make_folder(&dir, "Open");
+        let other = make_folder(&dir, "Other");
+        make_projects(&open, 2);
+        service.record_opened(text(&other), at(1)).unwrap();
+        let views = service.recent_list_for(Some(&current_of(&open)));
+        assert_eq!(views.len(), 2);
+        assert_eq!(views[0].name, "Open");
+        assert_eq!(views[0].path, text(&open));
+        assert_eq!(views[0].status, StatusKind::Ok);
+        assert_eq!(views[0].project_count, Some(2));
+        assert!(views[0].is_current);
+        assert!(!views[0].last_opened_at.is_empty());
+        assert!(!views[1].is_current);
+    }
+
+    #[test]
+    fn open_row_is_built_when_the_list_is_empty() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let open = make_folder(&dir, "Open");
+        let views = service.recent_list_for(Some(&current_of(&open)));
+        assert_eq!(views.len(), 1);
+        assert!(views[0].is_current);
+    }
+
+    #[test]
+    fn matching_ignores_case_and_trailing_separator() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let folder = make_folder(&dir, "Novel");
+        service.record_opened(text(&folder), at(1)).unwrap();
+        let shouted = format!("{}\\", text(&folder).to_uppercase());
+        let current = CurrentWorkspace {
+            name: "Novel".to_string(),
+            path: shouted,
+        };
+        let views = service.recent_list_for(Some(&current));
+        assert_eq!(views.len(), 1);
+        assert!(views[0].is_current);
+        assert_eq!(views[0].path, text(&folder));
+    }
+
+    #[test]
+    fn current_row_serializes_with_is_current() {
+        let dir = TempDir::new().unwrap();
+        let service = service_in(&dir);
+        let gone = dir.path().join("Gone");
+        service.record_opened(text(&gone), at(1)).unwrap();
+        let views = service.recent_list_for(Some(&current_of(&gone)));
+        let json = serde_json::to_value(views).unwrap();
+        assert_eq!(json[0]["isCurrent"], true);
+        assert_eq!(json[0]["status"], "ok");
+        assert_eq!(json[0]["projectCount"], 0);
+        assert_eq!(json[0].get("reason"), None);
+        assert!(json[0].get("is_current").is_none());
     }
 }

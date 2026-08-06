@@ -349,6 +349,7 @@ fn kill_tree(_pid: u32) {}
 #[cfg(test)]
 pub struct StubBackend {
     failure: Mutex<Option<BackendError>>,
+    spawned: bool,
     started: std::sync::atomic::AtomicUsize,
     stopped: std::sync::atomic::AtomicUsize,
 }
@@ -358,9 +359,16 @@ impl StubBackend {
     pub fn new() -> Self {
         Self {
             failure: Mutex::new(None),
+            spawned: true,
             started: std::sync::atomic::AtomicUsize::new(0),
             stopped: std::sync::atomic::AtomicUsize::new(0),
         }
+    }
+
+    pub fn reusing() -> Self {
+        let mut stub = Self::new();
+        stub.spawned = false;
+        stub
     }
 
     pub fn failing(error: BackendError) -> Self {
@@ -390,7 +398,7 @@ impl BackendHost for StubBackend {
         self.started.fetch_add(1, Ordering::SeqCst);
         Ok(BackendReady {
             port: 4321,
-            spawned: true,
+            spawned: self.spawned,
         })
     }
 

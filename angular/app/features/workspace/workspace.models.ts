@@ -109,6 +109,7 @@ export interface LoadError {
 export interface LoadRequest {
   path: string;
   relocateFrom?: string;
+  origin?: LoadOrigin;
 }
 
 export type LoadStepView = "pending" | LoadStepState;

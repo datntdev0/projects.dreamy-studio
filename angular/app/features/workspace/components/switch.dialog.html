@@ -1,0 +1,11 @@
+@if (open()) {
+  <ds-dialog size="large" [title]="'switch.title' | t" [eyebrow]="'switch.eyebrow' | t" [closeLabel]="'switch.close' | t" data-testid="switch-dialog" (closed)="close()">
+    <p class="t-sm t-mute switch-note" data-testid="switch-dialog-note">{{ "switch.note" | t }}</p>
+    @if (notice(); as message) {
+      <div class="ld-warn is-error" role="alert" data-testid="switch-dialog-notice"><ds-icon name="alert" /><span>{{ message }}</span></div>
+    }
+    <app-recent-workspace-list [rows]="rows()" (opened)="openRecent($event)" (relocated)="relocate($event)" (removed)="remove($event)" />
+    <ds-button dialogFoot variant="ghost" data-testid="switch-close" (pressed)="close()">{{ "switch.close" | t }}</ds-button>
+    <ds-button dialogFoot data-testid="switch-open-folder" (pressed)="openFolder()"><ds-icon name="folder-open" />{{ "switch.openFolder" | t }}</ds-button>
+  </ds-dialog>
+}

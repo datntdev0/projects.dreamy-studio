@@ -130,11 +130,15 @@ export class WorkspaceService {
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
   private readonly opened = signal<CurrentWorkspace | null>(null);
+  private previous: CurrentWorkspace | null = null;
+  private origin: LoadOrigin = "splash";
 
   readonly current = this.opened.asReadonly();
   readonly state = signal<LoadState | null>(null);
   readonly notice = signal<string | null>(null);
   readonly run = signal(0);
+  readonly switchDialogOpen = signal(false);
+  readonly switchNotice = signal<string | null>(null);
 
   appInfo(): Promise<AppInfo> {
     return this.ipc.invoke<AppInfo>("app_info");
@@ -163,10 +167,30 @@ export class WorkspaceService {
     return current;
   }
 
+  isCurrentPath(path: string): Promise<boolean> {
+    return this.ipc.invoke<boolean>("workspace_is_current", { path });
+  }
+
+  openSwitchDialog(): void {
+    this.switchDialogOpen.set(true);
+  }
+
+  closeSwitchDialog(): void {
+    this.switchDialogOpen.set(false);
+  }
+
+  async switchTo(request: LoadRequest): Promise<void> {
+    this.closeSwitchDialog();
+    this.switchNotice.set(null);
+    this.previous = this.opened();
+    await this.start({ ...request, origin: "switch" });
+  }
+
   async start(request: LoadRequest): Promise<void> {
     const token = this.nextRun();
+    this.origin = request.origin ?? "splash";
     this.notice.set(null);
-    this.state.set(initialLoadState(request.path, "splash"));
+    this.state.set(initialLoadState(request.path, this.origin));
     if (this.isCurrent(token)) {
       await this.load(token, request);
     }
@@ -174,17 +198,18 @@ export class WorkspaceService {
 
   async cancel(): Promise<void> {
     this.nextRun();
+    const origin = this.origin;
     try {
       const outcome = await this.requestCancel();
       if (outcome.result === "already_entered") {
-        await this.enterHome();
+        await this.enterAfterCancel(origin);
         return;
       }
     } catch {
-      this.returnToSplash();
+      this.clearState();
       return;
     }
-    this.returnToSplash();
+    this.clearState();
   }
 
   private describeLoadError(error: LoadError): string {
@@ -263,13 +288,25 @@ export class WorkspaceService {
 
   private async afterLoad(token: number, outcome: LoadOutcome): Promise<void> {
     if (!this.isCurrent(token)) {
+      await this.discardStale(outcome);
       return;
     }
     if (outcome.result === "ready") {
       await this.enter(token);
       return;
     }
-    this.returnToSplash();
+    this.clearState();
+  }
+
+  private async discardStale(outcome: LoadOutcome): Promise<void> {
+    if (outcome.result !== "ready" || this.state() !== null) {
+      return;
+    }
+    try {
+      await this.requestCancel();
+    } catch {
+      return;
+    }
   }
 
   private async enter(token: number): Promise<void> {
@@ -288,7 +325,15 @@ export class WorkspaceService {
       await this.goHome();
       return;
     }
-    this.returnToSplash();
+    this.clearState();
+  }
+
+  private async enterAfterCancel(origin: LoadOrigin): Promise<void> {
+    if (origin === "switch") {
+      await this.enterAfterSwitchCancel();
+      return;
+    }
+    await this.enterHome();
   }
 
   private async enterHome(): Promise<void> {
@@ -297,7 +342,22 @@ export class WorkspaceService {
       await this.goHome();
       return;
     }
-    this.returnToSplash();
+    this.clearState();
+  }
+
+  private async enterAfterSwitchCancel(): Promise<void> {
+    let current: CurrentWorkspace | null;
+    try {
+      current = await this.restoreCurrent();
+    } catch {
+      this.clearState();
+      return;
+    }
+    if (current && current.path !== this.previous?.path) {
+      await this.goHome();
+      return;
+    }
+    this.clearState();
   }
 
   private async fail(
@@ -312,9 +372,17 @@ export class WorkspaceService {
     this.state.update((state) => this.markFailed(state, error.step));
     await this.hold(FAILURE_HOLD_MS);
     if (this.isCurrent(token)) {
-      this.notice.set(this.describeLoadError(error));
-      this.returnToSplash();
+      this.publishFailure(this.describeLoadError(error));
+      this.clearState();
     }
+  }
+
+  private publishFailure(message: string): void {
+    if (this.origin === "switch") {
+      this.switchNotice.set(message);
+      return;
+    }
+    this.notice.set(message);
   }
 
   private markFailed(
@@ -333,7 +401,7 @@ export class WorkspaceService {
     this.state.set(null);
   }
 
-  private returnToSplash(): void {
+  private clearState(): void {
     this.state.set(null);
   }
 }

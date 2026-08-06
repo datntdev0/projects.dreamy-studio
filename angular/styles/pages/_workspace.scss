@@ -20,9 +20,21 @@
 .ld-step.is-error .ic { color: var(--danger); }
 
 .tb-ws > ds-icon { display: inline-flex; flex: none; color: var(--mute); }
-.tb-ws.is-static { cursor: default; }
-.tb-ws.is-static:hover { border-color: var(--hairline); color: var(--body); }
+.tb-ws:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+.ld-overlay {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--sp-xl); overflow: auto;
+  background:
+    radial-gradient(900px 520px at 12% -5%, var(--primary-soft), transparent 65%),
+    radial-gradient(700px 420px at 100% 105%, var(--secondary-soft), transparent 65%),
+    var(--canvas);
+}
+
+.main-notice { position: fixed; right: var(--sp-lg); bottom: calc(24px + var(--sp-lg)); z-index: 95; }
+
+.switch-note { margin: 0; }
 
 
 app-recent-workspace-list,
-app-workspace-loading { display: contents; }
+app-workspace-loading,
+app-switch-workspace-dialog { display: contents; }

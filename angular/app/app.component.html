@@ -1,3 +1,8 @@
 <div data-testid="app-root">
   <router-outlet />
+  @if (switching(); as s) {
+    <div class="ld-overlay" data-testid="switch-loading-overlay">
+      <app-workspace-loading [state]="s" />
+    </div>
+  }
 </div>

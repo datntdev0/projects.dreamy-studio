@@ -17,4 +17,8 @@
     <app-inspector />
   </div>
   <app-statusbar />
+  @if (switchNotice(); as message) {
+    <ds-toast class="main-notice" tone="danger" [message]="message" data-testid="main-switch-notice" (dismissed)="dismissSwitchNotice()" />
+  }
+  <app-switch-workspace-dialog />
 </div>

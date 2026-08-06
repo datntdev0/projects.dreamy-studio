@@ -22,9 +22,10 @@ const LANGUAGE_NAMES: Record<Language, string> = {
 export class Titlebar {
   private readonly i18n = inject(I18nService);
   private readonly themes = inject(ThemeService);
+  private readonly workspaceService = inject(WorkspaceService);
 
   readonly layout = inject(LayoutService);
-  readonly workspace = inject(WorkspaceService).current;
+  readonly workspace = this.workspaceService.current;
   readonly viewOpen = signal(false);
   readonly languageName = computed(this.currentLanguageName.bind(this));
   readonly themeIcon = computed(this.currentThemeIcon.bind(this));
@@ -38,6 +39,10 @@ export class Titlebar {
   toggleViewMenu(event: Event): void {
     event.stopPropagation();
     this.viewOpen.set(!this.viewOpen());
+  }
+
+  openSwitchDialog(): void {
+    this.workspaceService.openSwitchDialog();
   }
 
   toggleTheme(): void {

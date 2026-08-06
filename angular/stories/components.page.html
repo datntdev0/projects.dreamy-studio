@@ -121,4 +121,20 @@
       <ds-datatable [columns]="columns" [rows]="[]" emptyMessage="Chưa có tài nguyên nào" />
     </div>
   </section>
+
+  <section>
+    <div class="section-head"><h2>Dialog</h2><code>ds-dialog</code></div>
+    <div class="demo row">
+      <ds-button size="small" (pressed)="openDialog('default')">Mở dialog</ds-button>
+      <ds-button size="small" (pressed)="openDialog('large')">Mở dialog lớn</ds-button>
+      <span class="note">Nhấn Esc hoặc nút đóng để đóng; focus được trả về nút đã mở.</span>
+    </div>
+    @if (dialogSize) {
+      <ds-dialog title="Đổi workspace" eyebrow="Workspace" [size]="dialogSize" closeLabel="Đóng" (closed)="closeDialog()">
+        <p class="t-sm t-mute">Nội dung dialog hiển thị trong vùng thân và cuộn khi dài.</p>
+        <ds-button dialogFoot variant="ghost" (pressed)="closeDialog()">Hủy</ds-button>
+        <ds-button dialogFoot variant="primary" (pressed)="closeDialog()">Xác nhận</ds-button>
+      </ds-dialog>
+    }
+  </section>
 </main>

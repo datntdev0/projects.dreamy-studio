@@ -42,7 +42,7 @@
   </div>
   <div class="tb-center" data-testid="titlebar-center">
     @if (workspace(); as ws) {
-      <span class="tb-ws is-static" [attr.title]="ws.path" data-testid="main-workspace"><ds-icon name="hdd" [size]="15" /><span class="name" data-testid="main-workspace-name">{{ ws.name }}</span></span>
+      <button type="button" class="tb-ws" aria-haspopup="dialog" [attr.title]="ws.path" [attr.aria-label]="'main.titlebar.switchWorkspace' | t" data-testid="main-workspace" (click)="openSwitchDialog()"><ds-icon name="hdd" [size]="15" /><span class="name" data-testid="main-workspace-name">{{ ws.name }}</span></button>
     }
   </div>
   <div class="tb-right" data-testid="titlebar-right">

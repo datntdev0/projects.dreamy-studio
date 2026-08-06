@@ -22,18 +22,12 @@ import { RecentWorkspace } from "./workspace.models";
 
 const FAILURE_HOLD_MS = 1200;
 
-const STEP_ORDER: LoadStepId[] = [
-  "check_folder",
-  "workspace_db",
-  "app_db",
-  "logs",
-];
+const STEP_ORDER: LoadStepId[] = ["application", "backend", "workspace"];
 
 const STEP_NAME_KEYS: Record<LoadStepId, I18nKey> = {
-  check_folder: "loading.stepName.check_folder",
-  workspace_db: "loading.stepName.workspace_db",
-  app_db: "loading.stepName.app_db",
-  logs: "loading.stepName.logs",
+  application: "loading.stepName.application",
+  backend: "loading.stepName.backend",
+  workspace: "loading.stepName.workspace",
 };
 
 const ERROR_CAUSE_KEYS: Record<LoadErrorCode, I18nKey> = {
@@ -46,6 +40,9 @@ const ERROR_CAUSE_KEYS: Record<LoadErrorCode, I18nKey> = {
   db_migration_failed: "loading.cause.db_migration_failed",
   db_io: "loading.cause.db_io",
   logs_failed: "loading.cause.logs_failed",
+  backend_missing: "loading.cause.backend_missing",
+  backend_start_failed: "loading.cause.backend_start_failed",
+  backend_timeout: "loading.cause.backend_timeout",
 };
 
 const CODES_WITHOUT_DETAIL: LoadErrorCode[] = [
@@ -256,7 +253,7 @@ export class WorkspaceService {
         request.relocateFrom,
       );
     } catch (cause) {
-      await this.fail(token, cause, "check_folder");
+      await this.fail(token, cause, "application");
       return;
     }
     await this.afterLoad(token, outcome);
@@ -279,7 +276,7 @@ export class WorkspaceService {
       const outcome = await this.requestEnter();
       entered = outcome.result === "entered";
     } catch (cause) {
-      await this.fail(token, cause, "app_db");
+      await this.fail(token, cause, "application");
       return;
     }
     if (!this.isCurrent(token)) {

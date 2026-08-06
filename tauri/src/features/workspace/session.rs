@@ -107,7 +107,7 @@ impl WorkspaceSession {
             }
             Err(error) => {
                 discard_created(&load);
-                Err(LoadError::from_storage(LoadStep::AppDb, &error))
+                Err(LoadError::from_storage(LoadStep::Application, &error))
             }
         }
     }

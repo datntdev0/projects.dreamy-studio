@@ -18,7 +18,7 @@ export interface RecentWorkspace {
 
 export type LoadMode = "create" | "open";
 
-export type LoadStepId = "check_folder" | "workspace_db" | "app_db" | "logs";
+export type LoadStepId = "application" | "backend" | "workspace";
 
 export type LoadStepState = "running" | "done" | "error";
 
@@ -94,7 +94,10 @@ export type LoadErrorCode =
   | "db_newer_version"
   | "db_migration_failed"
   | "db_io"
-  | "logs_failed";
+  | "logs_failed"
+  | "backend_missing"
+  | "backend_start_failed"
+  | "backend_timeout";
 
 export interface LoadError {
   step: LoadStepId;

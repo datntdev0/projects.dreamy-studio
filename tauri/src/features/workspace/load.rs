@@ -12,26 +12,23 @@ pub enum LoadMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LoadStep {
-    CheckFolder,
-    WorkspaceDb,
-    AppDb,
-    Logs,
+    Application,
+    Backend,
+    Workspace,
 }
 
 impl LoadStep {
-    pub const ALL: [LoadStep; 4] = [
-        LoadStep::CheckFolder,
-        LoadStep::WorkspaceDb,
-        LoadStep::AppDb,
-        LoadStep::Logs,
+    pub const ALL: [LoadStep; 3] = [
+        LoadStep::Application,
+        LoadStep::Backend,
+        LoadStep::Workspace,
     ];
 
     pub fn as_str(self) -> &'static str {
         match self {
-            LoadStep::CheckFolder => "check_folder",
-            LoadStep::WorkspaceDb => "workspace_db",
-            LoadStep::AppDb => "app_db",
-            LoadStep::Logs => "logs",
+            LoadStep::Application => "application",
+            LoadStep::Backend => "backend",
+            LoadStep::Workspace => "workspace",
         }
     }
 }
@@ -91,6 +88,9 @@ pub enum ErrorCode {
     DbMigrationFailed,
     DbIo,
     LogsFailed,
+    BackendMissing,
+    BackendStartFailed,
+    BackendTimeout,
 }
 
 impl ErrorCode {
@@ -105,6 +105,9 @@ impl ErrorCode {
             ErrorCode::DbMigrationFailed => "db_migration_failed",
             ErrorCode::DbIo => "db_io",
             ErrorCode::LogsFailed => "logs_failed",
+            ErrorCode::BackendMissing => "backend_missing",
+            ErrorCode::BackendStartFailed => "backend_start_failed",
+            ErrorCode::BackendTimeout => "backend_timeout",
         }
     }
 }

@@ -12,6 +12,8 @@ use crate::features::workspace::load::LoadStep;
 use crate::features::workspace::load::StepState;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
+use crate::infra::backend::BackendError;
+use crate::infra::backend::BackendHost;
 use crate::infra::logging::Logger;
 use crate::infra::storage::StorageError;
 use crate::infra::storage::StorageResult;
@@ -36,7 +38,7 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 const LOG_TARGET: &str = "workspace";
-const PERCENT_PER_STEP: u8 = 25;
+const TOTAL_STEPS: usize = LoadStep::ALL.len();
 
 pub type WriteProbe = fn(&Path) -> io::Result<()>;
 
@@ -63,6 +65,7 @@ pub struct WorkspaceLoader {
     database_path: PathBuf,
     logger: Logger,
     service: WorkspaceService,
+    backend: Arc<dyn BackendHost>,
     probe: WriteProbe,
 }
 
@@ -72,12 +75,14 @@ impl WorkspaceLoader {
         database_path: PathBuf,
         logger: Logger,
         service: WorkspaceService,
+        backend: Arc<dyn BackendHost>,
     ) -> Self {
         Self {
             root,
             database_path,
             logger,
             service,
+            backend,
             probe: default_write_probe,
         }
     }
@@ -88,6 +93,7 @@ impl WorkspaceLoader {
             container.database_path.clone(),
             container.logger.clone(),
             service,
+            container.backend.clone(),
         )
     }
 
@@ -116,6 +122,7 @@ impl WorkspaceLoader {
             target,
             mode,
             finished: 0,
+            backend_spawned: false,
         };
         run.start();
         let result = run.execute();
@@ -219,6 +226,7 @@ struct LoadRun<'a> {
     target: NormalizedPath,
     mode: LoadMode,
     finished: u8,
+    backend_spawned: bool,
 }
 
 impl LoadRun<'_> {
@@ -257,6 +265,7 @@ impl LoadRun<'_> {
             }
             Ok(()) | Err(Stop::Cancelled) => {
                 self.session.abandon();
+                self.release_backend();
                 self.log
                     .info(format!("load result=cancelled path={}", self.target.path));
                 self.log.finish();
@@ -264,9 +273,16 @@ impl LoadRun<'_> {
             }
             Err(Stop::Failed(error)) => {
                 self.session.abandon();
+                self.release_backend();
                 self.log.finish();
                 Err(error)
             }
+        }
+    }
+
+    fn release_backend(&self) {
+        if self.backend_spawned {
+            self.loader.backend.stop();
         }
     }
 
@@ -289,7 +305,7 @@ impl LoadRun<'_> {
                 ));
                 self.emit_step(step, StepState::Done, None);
                 self.sink.emit(LoadEvent::Progress {
-                    percent: self.finished * PERCENT_PER_STEP,
+                    percent: percent_done(self.finished),
                 });
                 Ok(())
             }
@@ -312,17 +328,37 @@ impl LoadRun<'_> {
 
     fn perform(&mut self, step: LoadStep) -> Result<(), Stop> {
         match step {
-            LoadStep::CheckFolder => self.check_folder().map_err(Stop::Failed),
-            LoadStep::WorkspaceDb => {
-                let result = self.prepare_workspace_db();
-                storage_stop(LoadStep::WorkspaceDb, result)
-            }
-            LoadStep::AppDb => {
-                let result = self.prepare_app_db();
-                storage_stop(LoadStep::AppDb, result)
-            }
-            LoadStep::Logs => self.prepare_logs().map_err(Stop::Failed),
+            LoadStep::Application => self.start_application(),
+            LoadStep::Backend => self.start_backend(),
+            LoadStep::Workspace => self.start_workspace(),
         }
+    }
+
+    fn start_application(&mut self) -> Result<(), Stop> {
+        let app_db = self.prepare_app_db();
+        storage_stop(LoadStep::Application, app_db)?;
+        self.checked("app_db");
+        self.ensure_active()?;
+        self.prepare_logs().map_err(Stop::Failed)?;
+        self.checked("logs");
+        Ok(())
+    }
+
+    fn start_workspace(&mut self) -> Result<(), Stop> {
+        self.check_folder().map_err(Stop::Failed)?;
+        self.checked("folder");
+        self.ensure_active()?;
+        let workspace_db = self.prepare_workspace_db();
+        storage_stop(LoadStep::Workspace, workspace_db)?;
+        self.checked("workspace_db");
+        Ok(())
+    }
+
+    fn checked(&mut self, name: &str) {
+        self.log.info(format!(
+            "load check={name} result=done path={}",
+            self.target.path
+        ));
     }
 
     fn check_folder(&self) -> Result<(), LoadError> {
@@ -333,21 +369,21 @@ impl LoadRun<'_> {
         };
         if !metadata.is_dir() {
             return Err(LoadError::new(
-                LoadStep::CheckFolder,
+                LoadStep::Workspace,
                 ErrorCode::FolderNotDirectory,
                 format!("{} is not a folder", self.target.path),
             ));
         }
         if let Err(error) = fs::read_dir(folder) {
             return Err(LoadError::new(
-                LoadStep::CheckFolder,
+                LoadStep::Workspace,
                 ErrorCode::FolderNotReadable,
                 error.to_string(),
             ));
         }
         if let Err(error) = (self.loader.probe)(folder) {
             return Err(LoadError::new(
-                LoadStep::CheckFolder,
+                LoadStep::Workspace,
                 ErrorCode::FolderNotWritable,
                 error.to_string(),
             ));
@@ -394,12 +430,41 @@ impl LoadRun<'_> {
                 Ok(())
             }
             Err(error) => Err(LoadError::new(
-                LoadStep::Logs,
+                LoadStep::Application,
                 ErrorCode::LogsFailed,
                 error.to_string(),
             )),
         }
     }
+
+    fn start_backend(&mut self) -> Result<(), Stop> {
+        match self.loader.backend.start(&self.cancel) {
+            Ok(ready) => {
+                self.backend_spawned = ready.spawned;
+                self.log.info(format!(
+                    "backend ready port={} spawned={}",
+                    ready.port, ready.spawned
+                ));
+                Ok(())
+            }
+            Err(error) => Err(backend_stop(error)),
+        }
+    }
+}
+
+fn percent_done(finished: u8) -> u8 {
+    let percent = usize::from(finished) * 100 / TOTAL_STEPS;
+    u8::try_from(percent).unwrap_or(100)
+}
+
+fn backend_stop(error: BackendError) -> Stop {
+    let (code, detail) = match error {
+        BackendError::Cancelled => return Stop::Cancelled,
+        BackendError::Missing(detail) => (ErrorCode::BackendMissing, detail),
+        BackendError::StartFailed(detail) => (ErrorCode::BackendStartFailed, detail),
+        BackendError::Timeout(detail) => (ErrorCode::BackendTimeout, detail),
+    };
+    Stop::Failed(LoadError::new(LoadStep::Backend, code, detail))
 }
 
 fn storage_stop(step: LoadStep, result: StorageResult<()>) -> Result<(), Stop> {
@@ -416,7 +481,7 @@ fn folder_access_error(error: &io::Error) -> LoadError {
     } else {
         ErrorCode::FolderNotReadable
     };
-    LoadError::new(LoadStep::CheckFolder, code, error.to_string())
+    LoadError::new(LoadStep::Workspace, code, error.to_string())
 }
 
 fn detect_mode(folder: &str) -> LoadMode {
@@ -440,6 +505,7 @@ mod tests {
     use crate::features::workspace::inspector::StatusKind;
     use crate::features::workspace::load::CancelOutcome;
     use crate::features::workspace::repository::WorkspaceRepository;
+    use crate::infra::backend::StubBackend;
     use rusqlite::Connection;
     use serde_json::Value;
     use serde_json::json;
@@ -454,6 +520,7 @@ mod tests {
         session: WorkspaceSession,
         service: WorkspaceService,
         loader: WorkspaceLoader,
+        backend: Arc<StubBackend>,
     }
 
     struct Recorder<'a> {
@@ -475,10 +542,18 @@ mod tests {
     type Loaded = (Result<LoadOutcome, LoadError>, Vec<LoadEvent>);
 
     fn fixture() -> Fixture {
+        fixture_with(StubBackend::new())
+    }
+
+    fn fixture_with(backend: StubBackend) -> Fixture {
         let dir = TempDir::new().unwrap();
         let folder = dir.path().join("Novel");
         fs::create_dir(&folder).unwrap();
-        let container = AppContainer::from_root(dir.path().join("app").join("DreamyStudio"));
+        let backend = Arc::new(backend);
+        let container = AppContainer::with_backend(
+            dir.path().join("app").join("DreamyStudio"),
+            backend.clone(),
+        );
         let repository = WorkspaceRepository::new(container.database_path.clone());
         let service = WorkspaceService::new(repository);
         let loader = WorkspaceLoader::from_container(&container, service.clone());
@@ -489,6 +564,7 @@ mod tests {
             session: WorkspaceSession::new(),
             service,
             loader,
+            backend,
         }
     }
 
@@ -621,14 +697,12 @@ mod tests {
 
     fn cancel_triggers() -> Vec<LoadEvent> {
         vec![
-            running(LoadStep::CheckFolder),
-            done(LoadStep::CheckFolder),
-            running(LoadStep::WorkspaceDb),
-            done(LoadStep::WorkspaceDb),
-            running(LoadStep::AppDb),
-            done(LoadStep::AppDb),
-            running(LoadStep::Logs),
-            done(LoadStep::Logs),
+            running(LoadStep::Application),
+            done(LoadStep::Application),
+            running(LoadStep::Backend),
+            done(LoadStep::Backend),
+            running(LoadStep::Workspace),
+            done(LoadStep::Workspace),
             progress(100),
         ]
     }
@@ -728,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    fn events_follow_step_order_with_quarter_progress() {
+    fn events_follow_the_three_step_order_with_thirds_progress() {
         let fixture = fixture();
         let (result, events) = run_load(&fixture, None);
         assert!(result.is_ok());
@@ -738,17 +812,14 @@ mod tests {
                 name: "Novel".to_string(),
                 path: text(&fixture.folder).to_string(),
             },
-            running(LoadStep::CheckFolder),
-            done(LoadStep::CheckFolder),
-            progress(25),
-            running(LoadStep::WorkspaceDb),
-            done(LoadStep::WorkspaceDb),
-            progress(50),
-            running(LoadStep::AppDb),
-            done(LoadStep::AppDb),
-            progress(75),
-            running(LoadStep::Logs),
-            done(LoadStep::Logs),
+            running(LoadStep::Application),
+            done(LoadStep::Application),
+            progress(33),
+            running(LoadStep::Backend),
+            done(LoadStep::Backend),
+            progress(66),
+            running(LoadStep::Workspace),
+            done(LoadStep::Workspace),
             progress(100),
         ];
         assert_eq!(events, expected);
@@ -766,30 +837,26 @@ mod tests {
             json!({"kind": "started", "mode": "create", "name": "Novel", "path": "D:\\Novel"})
         );
         assert_eq!(
-            serde_json::to_value(running(LoadStep::WorkspaceDb)).unwrap(),
-            json!({"kind": "step", "id": "workspace_db", "state": "running"})
+            serde_json::to_value(running(LoadStep::Workspace)).unwrap(),
+            json!({"kind": "step", "id": "workspace", "state": "running"})
         );
         let failed = LoadEvent::Step {
-            id: LoadStep::AppDb,
+            id: LoadStep::Application,
             state: StepState::Error,
             detail: Some("boom".to_string()),
         };
         assert_eq!(
             serde_json::to_value(failed).unwrap(),
-            json!({"kind": "step", "id": "app_db", "state": "error", "detail": "boom"})
+            json!({"kind": "step", "id": "application", "state": "error", "detail": "boom"})
         );
         assert_eq!(
             serde_json::to_value(progress(75)).unwrap(),
             json!({"kind": "progress", "percent": 75})
         );
-        let error = LoadError::new(
-            LoadStep::CheckFolder,
-            ErrorCode::FolderNotWritable,
-            "denied",
-        );
+        let error = LoadError::new(LoadStep::Workspace, ErrorCode::FolderNotWritable, "denied");
         assert_eq!(
             serde_json::to_value(error).unwrap(),
-            json!({"step": "check_folder", "code": "folder_not_writable", "detail": "denied"})
+            json!({"step": "workspace", "code": "folder_not_writable", "detail": "denied"})
         );
         let ready = LoadOutcome::Ready {
             name: "N".to_string(),
@@ -827,33 +894,34 @@ mod tests {
     }
 
     #[test]
-    fn folder_not_writable_stops_at_check_folder_and_creates_nothing() {
+    fn folder_not_writable_stops_the_workspace_step_and_stops_the_backend() {
         let mut fixture = fixture();
         populate(&fixture.folder);
         fixture.loader = fixture.loader.clone().with_write_probe(deny_write);
         let before = snapshot(&fixture.folder);
         let (result, events) = run_load(&fixture, None);
         let error = result.unwrap_err();
-        assert_eq!(error.step, LoadStep::CheckFolder);
+        assert_eq!(error.step, LoadStep::Workspace);
         assert_eq!(error.code, ErrorCode::FolderNotWritable);
         assert!(error.detail.contains("access is denied"));
-        assert_eq!(step_errors(&events), vec![LoadStep::CheckFolder]);
+        assert_eq!(step_errors(&events), vec![LoadStep::Workspace]);
         assert_eq!(
-            events[1..],
+            events[7..],
             [
-                running(LoadStep::CheckFolder),
+                running(LoadStep::Workspace),
                 LoadEvent::Step {
-                    id: LoadStep::CheckFolder,
+                    id: LoadStep::Workspace,
                     state: StepState::Error,
                     detail: Some(error.detail.clone()),
                 },
             ]
         );
         assert_eq!(snapshot(&fixture.folder), before);
-        assert!(!fixture.container.database_path.exists());
+        assert!(fixture.container.database_path.is_file());
+        assert_eq!(fixture.backend.stopped(), 1);
         assert_nothing_recorded(&fixture);
         let logs = read_logs(&fixture);
-        assert!(logs.contains("step=check_folder result=error code=folder_not_writable"));
+        assert!(logs.contains("step=workspace result=error code=folder_not_writable"));
     }
 
     #[test]
@@ -862,7 +930,7 @@ mod tests {
         let missing = fixture.dir.path().join("gone");
         let (result, _) = run_load_at(&fixture, &missing, None);
         let error = result.unwrap_err();
-        assert_eq!(error.step, LoadStep::CheckFolder);
+        assert_eq!(error.step, LoadStep::Workspace);
         assert_eq!(error.code, ErrorCode::FolderMissing);
         assert!(!missing.exists());
         assert_nothing_recorded(&fixture);
@@ -887,9 +955,9 @@ mod tests {
         let before = fs::read(db_file(&fixture)).unwrap();
         let (result, events) = run_load(&fixture, None);
         let error = result.unwrap_err();
-        assert_eq!(error.step, LoadStep::WorkspaceDb);
+        assert_eq!(error.step, LoadStep::Workspace);
         assert_eq!(error.code, ErrorCode::DbNewerVersion);
-        assert_eq!(step_errors(&events), vec![LoadStep::WorkspaceDb]);
+        assert_eq!(step_errors(&events), vec![LoadStep::Workspace]);
         assert_eq!(fs::read(db_file(&fixture)).unwrap(), before);
         assert_eq!(fs::read_dir(&fixture.folder).unwrap().count(), 1);
         assert_nothing_recorded(&fixture);
@@ -904,11 +972,11 @@ mod tests {
         fs::write(db_file(&fixture), &garbage).unwrap();
         let (result, events) = run_load(&fixture, None);
         let error = result.unwrap_err();
-        assert_eq!(error.step, LoadStep::WorkspaceDb);
+        assert_eq!(error.step, LoadStep::Workspace);
         assert_eq!(error.code, ErrorCode::DbCorrupt);
-        assert_eq!(step_errors(&events), vec![LoadStep::WorkspaceDb]);
+        assert_eq!(step_errors(&events), vec![LoadStep::Workspace]);
         assert_eq!(fs::read(db_file(&fixture)).unwrap(), garbage);
-        assert!(!fixture.container.database_path.exists());
+        assert!(fixture.container.database_path.is_file());
         assert_nothing_recorded(&fixture);
     }
 
@@ -928,9 +996,11 @@ mod tests {
     #[test]
     fn cancel_keeps_application_db_once_it_exists() {
         let late = [
-            done(LoadStep::AppDb),
-            running(LoadStep::Logs),
-            done(LoadStep::Logs),
+            done(LoadStep::Application),
+            running(LoadStep::Backend),
+            done(LoadStep::Backend),
+            running(LoadStep::Workspace),
+            done(LoadStep::Workspace),
             progress(100),
         ];
         for trigger in late {
@@ -987,7 +1057,7 @@ mod tests {
     #[test]
     fn reopen_after_cancel_works() {
         let fixture = fixture();
-        let (cancelled, _) = run_load(&fixture, Some(done(LoadStep::WorkspaceDb)));
+        let (cancelled, _) = run_load(&fixture, Some(done(LoadStep::Workspace)));
         assert_eq!(cancelled.unwrap(), LoadOutcome::Cancelled);
         assert!(!db_file(&fixture).exists());
         load_and_enter(&fixture);
@@ -1068,7 +1138,7 @@ mod tests {
         run_load(&fixture, None).0.unwrap();
         drop_recent_table(&fixture);
         let error = fixture.loader.enter(&fixture.session).unwrap_err();
-        assert_eq!(error.step, LoadStep::AppDb);
+        assert_eq!(error.step, LoadStep::Application);
         assert!(!db_file(&fixture).exists());
         assert!(fixture.container.database_path.is_file());
         assert_eq!(fixture.session.current(), None);
@@ -1117,17 +1187,78 @@ mod tests {
     }
 
     #[test]
-    fn logs_failure_removes_created_db_and_keeps_application_db() {
+    fn logs_failure_stops_the_application_step_before_backend_and_workspace() {
         let fixture = fixture();
         fs::create_dir_all(&fixture.container.directories.root).unwrap();
         fs::write(&fixture.container.directories.logs, b"occupied").unwrap();
         let (result, events) = run_load(&fixture, None);
         let error = result.unwrap_err();
-        assert_eq!(error.step, LoadStep::Logs);
+        assert_eq!(error.step, LoadStep::Application);
         assert_eq!(error.code, ErrorCode::LogsFailed);
-        assert_eq!(step_errors(&events), vec![LoadStep::Logs]);
+        assert_eq!(step_errors(&events), vec![LoadStep::Application]);
         assert!(!db_file(&fixture).exists());
         assert!(fixture.container.database_path.is_file());
+        assert_eq!(fixture.backend.started(), 0);
+        assert_nothing_recorded(&fixture);
+    }
+
+    #[test]
+    fn backend_failure_reports_the_step_and_cleans_up() {
+        let cases = [
+            (
+                BackendError::Missing("absent".to_string()),
+                ErrorCode::BackendMissing,
+            ),
+            (
+                BackendError::StartFailed("exited".to_string()),
+                ErrorCode::BackendStartFailed,
+            ),
+            (
+                BackendError::Timeout("slow".to_string()),
+                ErrorCode::BackendTimeout,
+            ),
+        ];
+        for (failure, code) in cases {
+            let detail = failure.to_string();
+            let fixture = fixture_with(StubBackend::failing(failure));
+            let (result, events) = run_load(&fixture, None);
+            let error = result.unwrap_err();
+            assert_eq!(error.step, LoadStep::Backend, "{detail}");
+            assert_eq!(error.code, code, "{detail}");
+            assert_eq!(step_errors(&events), vec![LoadStep::Backend]);
+            assert!(!db_file(&fixture).exists());
+            assert!(fixture.container.database_path.is_file());
+            assert_eq!(fixture.backend.started(), 0);
+            assert_nothing_recorded(&fixture);
+        }
+    }
+
+    #[test]
+    fn backend_start_is_logged_with_its_port() {
+        let fixture = fixture();
+        run_load(&fixture, None).0.unwrap();
+        assert_eq!(fixture.backend.started(), 1);
+        assert_eq!(fixture.backend.stopped(), 0);
+        assert!(read_logs(&fixture).contains("backend ready port=4321 spawned=true"));
+    }
+
+    #[test]
+    fn cancel_after_backend_started_stops_it() {
+        let fixture = fixture();
+        let (result, _) = run_load(&fixture, Some(done(LoadStep::Backend)));
+        assert_eq!(result.unwrap(), LoadOutcome::Cancelled);
+        assert_eq!(fixture.backend.started(), 1);
+        assert_eq!(fixture.backend.stopped(), 1);
+        assert_nothing_recorded(&fixture);
+    }
+
+    #[test]
+    fn cancel_while_starting_backend_does_not_start_it() {
+        let fixture = fixture();
+        let (result, _) = run_load(&fixture, Some(running(LoadStep::Backend)));
+        assert_eq!(result.unwrap(), LoadOutcome::Cancelled);
+        assert_eq!(fixture.backend.started(), 0);
+        assert!(!db_file(&fixture).exists());
         assert_nothing_recorded(&fixture);
     }
 
@@ -1140,6 +1271,10 @@ mod tests {
             let expected = format!("load step={step} result=done");
             assert!(logs.contains(&expected), "{expected}");
         }
+        for check in ["app_db", "logs", "folder", "workspace_db"] {
+            let expected = format!("load check={check} result=done");
+            assert!(logs.contains(&expected), "{expected}");
+        }
         assert!(logs.contains("load started mode=create"));
         assert!(logs.contains("load result=ready"));
         assert!(logs.contains(" INFO workspace "));
@@ -1148,9 +1283,11 @@ mod tests {
     #[test]
     fn log_file_records_cancellation() {
         let fixture = fixture();
-        run_load(&fixture, Some(done(LoadStep::AppDb))).0.unwrap();
+        run_load(&fixture, Some(done(LoadStep::Application)))
+            .0
+            .unwrap();
         let logs = read_logs(&fixture);
-        assert!(logs.contains("load step=app_db result=done"));
+        assert!(logs.contains("load step=application result=done"));
         assert!(logs.contains("load result=cancelled"));
     }
 }

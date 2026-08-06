@@ -1,5 +1,7 @@
 use tauri::App;
+use tauri::AppHandle;
 use tauri::Manager;
+use tauri::RunEvent;
 
 use crate::commands;
 use crate::container::AppContainer;
@@ -9,7 +11,7 @@ use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
 
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -24,8 +26,18 @@ pub fn run() {
             commands::workspace::workspace_current,
         ])
         .setup(setup)
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+    app.run(handle_run_event);
+}
+
+fn handle_run_event(app: &AppHandle, event: RunEvent) {
+    if let RunEvent::Exit = event
+        && let Some(container) = app.try_state::<AppContainer>()
+    {
+        container.backend.stop();
+        container.logger.info("app", "backend stopped on exit");
+    }
 }
 
 fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {

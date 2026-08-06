@@ -32,10 +32,9 @@ const REASON_KEYS: Record<RecentWorkspaceReason, I18nKey> = {
 };
 
 const STEP_KEYS: Record<LoadStepId, I18nKey> = {
-  check_folder: "loading.step.check_folder",
-  workspace_db: "loading.step.workspace_db",
-  app_db: "loading.step.app_db",
-  logs: "loading.step.logs",
+  application: "loading.step.application",
+  backend: "loading.step.backend",
+  workspace: "loading.step.workspace",
 };
 
 const MODE_KEYS: Record<LoadMode, I18nKey> = {

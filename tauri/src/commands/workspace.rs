@@ -89,7 +89,7 @@ fn measure_folder(app: &AppHandle, path: &str) -> u64 {
 
 fn remove_recent_entry(app: &AppHandle, path: &str) -> Result<(), LoadError> {
     let result = app.state::<WorkspaceService>().remove_recent(path);
-    result.map_err(|error| LoadError::from_storage(LoadStep::AppDb, &error))
+    result.map_err(|error| LoadError::from_storage(LoadStep::Application, &error))
 }
 
 fn pick_folder(app: &AppHandle) -> Option<String> {
@@ -139,7 +139,7 @@ pub async fn recent_remove(app: AppHandle, path: String) -> Result<(), LoadError
     let task = spawn_blocking(move || remove_recent_entry(&app, &path));
     match task.await {
         Ok(result) => result,
-        Err(error) => Err(task_failure(LoadStep::AppDb, error)),
+        Err(error) => Err(task_failure(LoadStep::Application, error)),
     }
 }
 
@@ -161,7 +161,7 @@ pub async fn workspace_load(
     let task = spawn_blocking(move || load_workspace_blocking(&app, request, &sink));
     match task.await {
         Ok(result) => result,
-        Err(error) => Err(task_failure(LoadStep::CheckFolder, error)),
+        Err(error) => Err(task_failure(LoadStep::Application, error)),
     }
 }
 
@@ -176,7 +176,7 @@ pub async fn workspace_enter(app: AppHandle) -> Result<EnterOutcome, LoadError> 
     let task = spawn_blocking(move || enter_workspace_blocking(&background));
     let outcome = match task.await {
         Ok(result) => result?,
-        Err(error) => return Err(task_failure(LoadStep::AppDb, error)),
+        Err(error) => return Err(task_failure(LoadStep::Application, error)),
     };
     if let Some(title) = entered_title(&outcome) {
         apply_window_title(&app, &title);
@@ -196,7 +196,9 @@ mod tests {
     use crate::features::workspace::load::LoadMode;
     use crate::features::workspace::load::StepState;
     use crate::features::workspace::repository::WorkspaceRepository;
+    use crate::infra::backend::StubBackend;
     use std::path::PathBuf;
+    use std::sync::Arc;
     use std::sync::Mutex;
     use tempfile::TempDir;
     use tempfile::tempdir;
@@ -235,7 +237,8 @@ mod tests {
         let dir = tempdir().unwrap();
         let workspace = dir.path().join("studio");
         std::fs::create_dir(&workspace).unwrap();
-        let container = AppContainer::from_root(dir.path().join("DreamyStudio"));
+        let backend = Arc::new(StubBackend::new());
+        let container = AppContainer::with_backend(dir.path().join("DreamyStudio"), backend);
         let repository = WorkspaceRepository::new(container.database_path.clone());
         let service = WorkspaceService::new(repository);
         let loader = WorkspaceLoader::from_container(&container, service);
@@ -309,7 +312,7 @@ mod tests {
             })
         ));
         assert_eq!(events.last(), Some(&LoadEvent::Progress { percent: 100 }));
-        assert_eq!(events.iter().filter(is_done_step).count(), 4);
+        assert_eq!(events.iter().filter(is_done_step).count(), 3);
         assert!(matches!(outcome, Ok(LoadOutcome::Ready { .. })));
     }
 
@@ -328,7 +331,7 @@ mod tests {
         );
 
         let value = serde_json::to_value(outcome.unwrap_err()).unwrap();
-        assert_eq!(value["step"], "check_folder");
+        assert_eq!(value["step"], "workspace");
         assert_eq!(value["code"], "folder_missing");
         assert!(value["detail"].is_string());
     }
@@ -371,9 +374,9 @@ mod tests {
     fn task_failure_maps_to_a_load_error_for_the_given_step() {
         let cause = std::io::Error::other("boom");
 
-        let error = task_failure(LoadStep::AppDb, tauri::Error::InvalidIcon(cause));
+        let error = task_failure(LoadStep::Application, tauri::Error::InvalidIcon(cause));
 
-        assert_eq!(error.step, LoadStep::AppDb);
+        assert_eq!(error.step, LoadStep::Application);
         assert_eq!(error.code, ErrorCode::DbIo);
         assert!(!error.detail.is_empty());
     }

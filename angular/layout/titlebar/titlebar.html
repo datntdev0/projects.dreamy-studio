@@ -1,0 +1,22 @@
+<header class="titlebar" data-testid="titlebar">
+  <div class="tb-left" data-testid="titlebar-left">
+    <img class="tb-logo" src="/assets/dreamy-studio-mark.svg" alt="" data-testid="main-logo" />
+    <span class="tb-name" data-testid="main-app-name">Dreamy Studio</span>
+    <nav class="tb-menu" [attr.aria-label]="'main.menu.label' | t" data-testid="titlebar-menu">
+      <button type="button" class="tb-mi" data-testid="titlebar-menu-file">{{ "main.menu.file" | t }}</button>
+      <button type="button" class="tb-mi" data-testid="titlebar-menu-view">{{ "main.menu.view" | t }}</button>
+      <button type="button" class="tb-mi" data-testid="titlebar-menu-help">{{ "main.menu.help" | t }}</button>
+    </nav>
+  </div>
+  <div class="tb-center" data-testid="titlebar-center">
+    @if (workspace(); as ws) {
+      <span class="tb-ws is-static" [attr.title]="ws.path" data-testid="main-workspace"><ds-icon name="hdd" [size]="15" /><span class="name" data-testid="main-workspace-name">{{ ws.name }}</span></span>
+    }
+  </div>
+  <div class="tb-right" data-testid="titlebar-right">
+    <span class="tb-actions" data-testid="titlebar-actions">
+      <ds-button size="small" [iconOnly]="true" [active]="layout.explorerOpen()" [label]="'main.titlebar.toggleExplorer' | t" [attr.title]="'main.titlebar.toggleExplorer' | t" data-testid="titlebar-toggle-explorer" (pressed)="layout.toggleExplorer()"><ds-icon name="panel-left" [size]="17" /></ds-button>
+      <ds-button size="small" [iconOnly]="true" [active]="layout.inspectorOpen()" [label]="'main.titlebar.toggleInspector' | t" [attr.title]="'main.titlebar.toggleInspector' | t" data-testid="titlebar-toggle-inspector" (pressed)="layout.toggleInspector()"><ds-icon name="panel-right" [size]="17" /></ds-button>
+    </span>
+  </div>
+</header>

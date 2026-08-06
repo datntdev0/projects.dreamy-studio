@@ -1,0 +1,29 @@
+<div class="divider divider-inspector" aria-hidden="true" data-testid="inspector-divider"></div>
+<aside class="inspector" data-testid="inspector">
+  <header class="ins-head" data-testid="inspector-head">
+    @for (tab of tabs; track tab.id) {
+      <button type="button" class="ins-tab" [class.is-active]="layout.rightTab() === tab.id" [attr.aria-pressed]="layout.rightTab() === tab.id" [attr.data-tab]="tab.id" data-testid="inspector-tab" (click)="layout.selectRightTab(tab.id)">{{ tab.labelKey | t }}</button>
+    }
+    <span class="spacer"></span>
+    <ds-button size="small" [iconOnly]="true" [label]="'main.inspector.collapse' | t" [attr.title]="'main.inspector.collapse' | t" data-testid="inspector-collapse" (pressed)="layout.toggleInspector()"><ds-icon name="chev-r" [size]="17" /></ds-button>
+  </header>
+  <div class="pane-body" data-testid="inspector-body">
+    @if (layout.rightTab() === "assistant") {
+      <div class="asst" data-testid="assistant">
+        <div class="asst-body" data-testid="assistant-empty">
+          <div class="ins-empty">
+            <div class="cs-ico"><ds-icon name="spark" [size]="26" /></div>
+            <h3 class="t-display-xs" data-testid="assistant-title">{{ "main.assistant.title" | t }}</h3>
+            <p class="t-sm" data-testid="assistant-description">{{ "main.assistant.description" | t }}</p>
+          </div>
+        </div>
+        <div class="asst-input" data-testid="assistant-input">
+          <input class="input" [attr.placeholder]="'main.assistant.placeholder' | t" [attr.aria-label]="'main.assistant.placeholder' | t" disabled data-testid="assistant-field" />
+          <ds-button variant="primary" [iconOnly]="true" [disabled]="true" [label]="'main.assistant.send' | t" data-testid="assistant-send"><ds-icon name="send-up" [size]="17" /></ds-button>
+        </div>
+      </div>
+    } @else {
+      <div class="ins-empty" data-testid="inspector-empty"><p>{{ "main.inspector.empty" | t }}</p></div>
+    }
+  </div>
+</aside>

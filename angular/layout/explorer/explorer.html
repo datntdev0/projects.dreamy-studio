@@ -1,0 +1,17 @@
+<aside class="explorer" [attr.aria-label]="'main.explorer.label' | t" data-testid="explorer">
+  <header class="pane-head" data-testid="explorer-head">
+    <span class="eyebrow" data-testid="explorer-title">{{ titleKey() | t }}</span>
+    <span class="spacer"></span>
+    <ds-button size="small" [iconOnly]="true" [label]="'main.explorer.collapse' | t" [attr.title]="'main.explorer.collapse' | t" data-testid="explorer-collapse" (pressed)="layout.toggleExplorer()"><ds-icon name="chev-l" [size]="17" /></ds-button>
+  </header>
+  <div class="pane-body" data-testid="explorer-body">
+    <div class="empty" data-testid="explorer-empty">
+      <div class="empty-inner">
+        <div class="illus"></div>
+        <h3 class="t-display-xs" data-testid="explorer-empty-title">{{ "main.explorer.empty.title" | t }}</h3>
+        <p class="t-sm t-mute" data-testid="explorer-empty-description">{{ "main.explorer.empty.description" | t }}</p>
+      </div>
+    </div>
+  </div>
+</aside>
+<div class="divider divider-explorer" aria-hidden="true" data-testid="explorer-divider"></div>

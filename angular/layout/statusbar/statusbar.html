@@ -1,0 +1,11 @@
+<footer class="statusbar" data-testid="statusbar">
+  @if (workspace(); as ws) {
+    <span class="sb-item" [attr.title]="ws.path" data-testid="statusbar-workspace"><ds-icon name="hdd" [size]="14" /><span class="path">{{ ws.path }}</span></span>
+  }
+  <span class="spacer"></span>
+  <span class="sb-item" data-testid="statusbar-pipelines"><ds-icon name="activity" [size]="14" /><span class="mono">{{ "main.statusbar.pipelinesIdle" | t }}</span></span>
+  <button type="button" class="sb-item" [attr.aria-label]="themeToggleKey() | t" [attr.title]="themeToggleKey() | t" data-testid="statusbar-theme" (click)="toggleTheme()"><ds-icon [name]="themeIcon()" [size]="14" /></button>
+  @if (info(); as app) {
+    <span class="sb-item mono" data-testid="statusbar-version">V{{ app.version }}</span>
+  }
+</footer>

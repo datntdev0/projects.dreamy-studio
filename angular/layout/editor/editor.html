@@ -1,0 +1,18 @@
+<main class="edcol" data-testid="editor">
+  <div class="tabbar" role="tablist" data-testid="editor-tabbar">
+    <div class="etabs">
+      <div class="etab is-active is-fixed" role="tab" aria-selected="true" [attr.title]="'main.editor.home' | t" data-testid="editor-tab-home">
+        <img src="/assets/dreamy-studio-mark.svg" alt="" />
+        <span class="etab-label">{{ "main.editor.home" | t }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="crumbs" data-testid="editor-crumbs">
+    @if (workspace(); as ws) {
+      <span data-testid="editor-crumbs-workspace">{{ ws.name }}</span>
+      <ds-icon name="chev-r" [size]="13" />
+    }
+    <span data-testid="editor-crumbs-current">{{ "main.editor.home" | t }}</span>
+  </div>
+  <section class="editor" data-testid="editor-body"><ng-content /></section>
+</main>

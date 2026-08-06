@@ -13,6 +13,19 @@
 npm-debug.log
 yarn-error.log
 
+# Python
+__pycache__/
+*.egg-info/
+*.py[cod]
+*.pyo
+*.pyd
+*.pycache
+*.pytest_cache
+*.mypy_cache
+*.coverage
+*.tox
+*.nox
+
 # IDEs and editors
 .idea/
 .project

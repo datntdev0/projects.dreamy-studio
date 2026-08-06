@@ -1,40 +1,6 @@
 @if (state(); as s) {
   <div class="splash" data-testid="loading-page">
-      <div class="ld" role="status" aria-live="polite" data-testid="loading-card">
-        <img class="ld-logo" src="/assets/dreamy-studio-mark.svg" alt="" data-testid="loading-logo" />
-        <div data-testid="loading-header">
-          <span class="eyebrow" data-testid="loading-mode">{{ modeKey(s.mode) | t }}</span>
-          <h2 class="t-display-xs" data-testid="loading-name">{{ s.name }}</h2>
-          <div class="path ld-path t-mute" data-testid="loading-path">{{ s.path }}</div>
-        </div>
-        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="s.percent" data-testid="loading-progress"><i [style.width.%]="s.percent"></i></div>
-        <div class="mono t-mute" data-testid="loading-percent">{{ s.percent }}%</div>
-        <div class="ld-steps" data-testid="loading-steps">
-          @for (step of s.steps; track step.id) {
-            <div class="ld-step" [class.is-running]="step.state === 'running'" [class.is-done]="step.state === 'done'" [class.is-error]="step.state === 'error'" [attr.data-state]="step.state" data-testid="loading-step">
-              @switch (step.state) {
-                @case ("done") {
-                  <ds-icon name="check" />
-                }
-                @case ("error") {
-                  <ds-icon name="x" />
-                }
-                @case ("running") {
-                  <span class="dot dot-running" data-testid="loading-step-running"></span>
-                }
-                @default {
-                  <span class="dot" data-testid="loading-step-pending"></span>
-                }
-              }
-              <span data-testid="loading-step-label">{{ stepKey(step.id) | t }}</span>
-            </div>
-          }
-        </div>
-        @if (s.status === "failed") {
-          <div class="ld-warn is-error" role="alert" data-testid="loading-failed"><ds-icon name="alert" /><span>{{ "splash.failed" | t }}</span></div>
-        }
-        <ds-button variant="ghost" size="small" data-testid="loading-cancel" (pressed)="cancel()">{{ "common.cancel" | t }}</ds-button>
-      </div>
+    <app-workspace-loading [state]="s" />
   </div>
 } @else {
   <div class="splash" data-testid="splash-page">
@@ -65,31 +31,7 @@
             <span class="eyebrow">{{ "splash.recent.title" | t }}</span>
             <ds-badge data-testid="splash-recent-count">{{ recent().length }}</ds-badge>
           </div>
-          <div class="ws-list" data-testid="splash-recent-list">
-            @for (row of recent(); track row.path) {
-              @if (row.status === "ok") {
-                <div class="ws-row" role="button" tabindex="0" data-testid="splash-recent-row" (click)="openRecent(row)" (keydown.enter)="openRecentByKey($event, row)" (keydown.space)="openRecentByKey($event, row)">
-                  <ds-icon name="hdd" />
-                  <div class="ws-main">
-                    <div class="ws-name" data-testid="splash-row-name">{{ row.name }}@if (row.path === lastUsedPath()) {<ds-badge tone="primary" data-testid="splash-last-used">{{ "splash.recent.lastUsed" | t }}</ds-badge>}</div>
-                    <div class="path t-mute" data-testid="splash-row-path">{{ row.path }}</div>
-                    <div class="t-sm t-mute" data-testid="splash-row-meta"><span data-testid="splash-row-projects">{{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}</span> · <span data-testid="splash-row-size">{{ sizeOf(row.path) }}</span> · {{ "splash.recent.lastOpened" | t }} <span class="mono" data-testid="splash-row-opened">{{ formatLastOpened(row.lastOpenedAt) }}</span></div>
-                  </div>
-                  <ds-button size="small" data-testid="splash-open-recent">{{ "splash.recent.open" | t }}</ds-button>
-                </div>
-              } @else {
-                <div class="ws-row is-error" data-testid="splash-recent-row">
-                  <ds-icon name="alert" />
-                  <div class="ws-main">
-                    <div class="ws-name"><span class="path" data-testid="splash-row-path">{{ row.path }}</span><ds-badge tone="danger" data-testid="splash-not-found">{{ "splash.recent.notFound" | t }}</ds-badge></div>
-                    <div class="t-sm ws-err" data-testid="splash-not-found-reason">{{ reasonKey(row.reason) | t }}</div>
-                  </div>
-                  <ds-button size="small" data-testid="splash-relocate" (pressed)="relocate(row)">{{ "splash.recent.relocate" | t }}</ds-button>
-                  <ds-button size="small" variant="ghost" data-testid="splash-remove" (pressed)="remove(row)">{{ "splash.recent.remove" | t }}</ds-button>
-                </div>
-              }
-            }
-          </div>
+          <app-recent-workspace-list [rows]="recent()" [lastUsedPath]="lastUsedPath()" (opened)="openRecent($event)" (relocated)="relocate($event)" (removed)="remove($event)" />
         } @else {
           <div class="ws-first" data-testid="splash-first-run">
             <div class="illus"></div>

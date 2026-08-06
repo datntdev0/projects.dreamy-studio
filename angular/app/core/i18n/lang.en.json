@@ -9,6 +9,7 @@
   "splash.failed": "Could not complete, returning to the home screen.",
   "splash.recent.title": "Recent workspaces",
   "splash.recent.lastUsed": "LAST USED",
+  "splash.recent.current": "IN USE",
   "splash.recent.notFound": "NOT FOUND",
   "splash.recent.open": "Open",
   "splash.recent.relocate": "Locate…",

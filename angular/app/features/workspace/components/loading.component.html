@@ -1,0 +1,35 @@
+<div class="ld" role="status" aria-live="polite" data-testid="loading-card">
+  <img class="ld-logo" src="/assets/dreamy-studio-mark.svg" alt="" data-testid="loading-logo" />
+  <div data-testid="loading-header">
+    <span class="eyebrow" data-testid="loading-mode">{{ modeKey(state.mode) | t }}</span>
+    <h2 class="t-display-xs" data-testid="loading-name">{{ state.name }}</h2>
+    <div class="path ld-path t-mute" data-testid="loading-path">{{ state.path }}</div>
+  </div>
+  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="state.percent" data-testid="loading-progress"><i [style.width.%]="state.percent"></i></div>
+  <div class="mono t-mute" data-testid="loading-percent">{{ state.percent }}%</div>
+  <div class="ld-steps" data-testid="loading-steps">
+    @for (step of state.steps; track step.id) {
+      <div class="ld-step" [class.is-running]="step.state === 'running'" [class.is-done]="step.state === 'done'" [class.is-error]="step.state === 'error'" [attr.data-state]="step.state" data-testid="loading-step">
+        @switch (step.state) {
+          @case ("done") {
+            <ds-icon name="check" />
+          }
+          @case ("error") {
+            <ds-icon name="x" />
+          }
+          @case ("running") {
+            <span class="dot dot-running" data-testid="loading-step-running"></span>
+          }
+          @default {
+            <span class="dot" data-testid="loading-step-pending"></span>
+          }
+        }
+        <span data-testid="loading-step-label">{{ stepKey(step.id) | t }}</span>
+      </div>
+    }
+  </div>
+  @if (state.status === "failed") {
+    <div class="ld-warn is-error" role="alert" data-testid="loading-failed"><ds-icon name="alert" /><span>{{ "splash.failed" | t }}</span></div>
+  }
+  <ds-button variant="ghost" size="small" data-testid="loading-cancel" (pressed)="cancel()">{{ "common.cancel" | t }}</ds-button>
+</div>

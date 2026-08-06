@@ -12,6 +12,7 @@ import { EnterOutcome } from "./workspace.models";
 import { LoadError } from "./workspace.models";
 import { LoadErrorCode } from "./workspace.models";
 import { LoadEvent } from "./workspace.models";
+import { LoadOrigin } from "./workspace.models";
 import { LoadOutcome } from "./workspace.models";
 import { LoadRequest } from "./workspace.models";
 import { LoadState } from "./workspace.models";
@@ -62,8 +63,9 @@ function pendingStep(id: LoadStepId): LoadStepItem {
   return { id, state: "pending" };
 }
 
-function initialLoadState(path: string): LoadState {
+function initialLoadState(path: string, origin: LoadOrigin): LoadState {
   return {
+    origin,
     path,
     name: folderName(path),
     mode: null,
@@ -164,7 +166,7 @@ export class WorkspaceService {
   async start(request: LoadRequest): Promise<void> {
     const token = this.nextRun();
     this.notice.set(null);
-    this.state.set(initialLoadState(request.path));
+    this.state.set(initialLoadState(request.path, "splash"));
     if (this.isCurrent(token)) {
       await this.load(token, request);
     }

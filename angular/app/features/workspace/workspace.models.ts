@@ -14,6 +14,7 @@ export interface RecentWorkspace {
   status: RecentWorkspaceStatus;
   reason?: RecentWorkspaceReason;
   projectCount?: number;
+  isCurrent?: boolean;
 }
 
 export type LoadMode = "create" | "open";
@@ -119,7 +120,10 @@ export interface LoadStepItem {
 
 export type LoadStatus = "running" | "failed";
 
+export type LoadOrigin = "splash" | "switch";
+
 export interface LoadState {
+  origin: LoadOrigin;
   path: string;
   name: string;
   mode: LoadMode | null;

@@ -5,6 +5,7 @@ use tauri::RunEvent;
 
 use crate::commands;
 use crate::container::AppContainer;
+use crate::features::novel::service::NovelService;
 use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
@@ -25,6 +26,19 @@ pub fn run() {
             commands::workspace::workspace_enter,
             commands::workspace::workspace_current,
             commands::workspace::workspace_is_current,
+            commands::novel::novel_list,
+            commands::novel::novel_create,
+            commands::novel::novel_update,
+            commands::novel::novel_delete,
+            commands::novel::novel_cover_get,
+            commands::novel::novel_cover_set,
+            commands::novel::novel_cover_clear,
+            commands::novel::novel_chapters,
+            commands::novel::novel_chapter_read,
+            commands::novel::novel_paragraph_update,
+            commands::novel::novel_package_pick,
+            commands::novel::novel_package_inspect,
+            commands::novel::novel_package_import,
         ])
         .setup(setup)
         .build(tauri::generate_context!())
@@ -56,6 +70,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(WorkspaceSession::new());
     app.manage(service);
     app.manage(loader);
+    app.manage(NovelService::new());
 }
 
 fn log_startup(app: &App, container: &AppContainer) {

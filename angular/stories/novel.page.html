@@ -1,0 +1,90 @@
+<div class="page" data-testid="novel-page">
+  <header class="intro">
+    <span class="eyebrow">Novel management</span>
+    <h1 class="t-display-md">Novel primitives</h1>
+    <p>Cover, progress fraction, status dots, tags, search field and the global table rules ported from the prototype.</p>
+  </header>
+
+  <section data-testid="novel-page-cover">
+    <div class="section-head"><h2>Cover</h2><code>app-novel-cover</code></div>
+    <div class="demo row">
+      @for (size of sizes; track size) {
+        <div class="cell"><app-novel-cover [colors]="palettes[0]" [size]="size" /><span class="note">{{ sizeLabel(size) }}</span></div>
+      }
+      @for (palette of palettes; track $index) {
+        <div class="cell"><app-novel-cover [colors]="palette" size="lg" /><span class="note">palette {{ $index + 1 }}</span></div>
+      }
+      <div class="cell"><app-novel-cover [image]="image" size="lg" /><span class="note">image</span></div>
+    </div>
+  </section>
+
+  <section data-testid="novel-page-frac">
+    <div class="section-head"><h2>Progress fraction</h2><code>app-novel-progress-frac</code></div>
+    <div class="demo row">
+      @for (item of fractions; track item.label) {
+        <div class="cell">
+          <app-novel-progress-frac icon="lang" [done]="item.done" [total]="item.total" label="Chương đã dịch" />
+          <app-novel-progress-frac icon="graph" [done]="item.done" [total]="item.total" label="Chương đã phân tích" />
+          <span class="note">{{ item.label }}</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section data-testid="novel-page-dots">
+    <div class="section-head"><h2>Status dots</h2><code>.dot .dot-o</code></div>
+    <div class="demo row">
+      <span class="dot-o" title="Chưa"></span>
+      <span class="dot dot-success"></span>
+      <span class="dot dot-warning"></span>
+      <span class="dot dot-info"></span>
+      <span class="dot dot-running"></span>
+    </div>
+  </section>
+
+  <section data-testid="novel-page-tags">
+    <div class="section-head"><h2>Tags and search</h2><code>.tag .tag-x .tag-in .search</code></div>
+    <div class="demo row">
+      <span class="tags">
+        @for (tag of tags; track tag) {
+          <span class="tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'Bỏ ' + tag"><ds-icon name="x" [size]="18" /></button></span>
+        }
+        <span class="tag is-more">+2</span>
+      </span>
+      <input class="input tag-in" placeholder="Thêm tag, nhấn Enter…" data-testid="novel-tag-input" />
+      <label class="search"><span class="sr-only">Tìm novel</span><input class="input" type="search" placeholder="Tìm theo tên hoặc tác giả…" data-testid="novel-search" /></label>
+      <label class="check"><input type="checkbox" checked /><span>Hiện số đoạn</span></label>
+    </div>
+  </section>
+
+  <section data-testid="novel-page-table">
+    <div class="section-head"><h2>Table</h2><code>.table .chk .num .cen</code></div>
+    <div class="demo table-demo">
+      <table class="table">
+        <thead>
+          <tr><th class="chk"><input type="checkbox" class="nm-chk" aria-label="Chọn tất cả" /></th><th>Novel</th><th>Gốc</th><th class="num">Chương</th><th class="num">Số từ</th><th class="cen">Dịch</th><th class="cen">Tri thức</th><th>Cập nhật</th></tr>
+        </thead>
+        <tbody>
+          <tr class="is-clickable">
+            <td class="chk"><input type="checkbox" class="nm-chk" aria-label="Chọn" /></td>
+            <td><div class="nm-title"><app-novel-cover [colors]="palettes[0]" /><div><div class="t-ink">The Lantern Keeper of Harrowmere</div><div class="t-sm t-mute">Mira Okonkwo</div></div></div></td>
+            <td><ds-badge>EN</ds-badge></td>
+            <td class="num">12</td><td class="num">29,400</td>
+            <td class="cen"><app-novel-progress-frac icon="lang" [done]="3" [total]="12" label="Chương đã dịch" /></td>
+            <td class="cen"><app-novel-progress-frac icon="graph" [done]="12" [total]="12" label="Chương đã phân tích" /></td>
+            <td class="mono t-mute">2026-06-01</td>
+          </tr>
+          <tr class="is-selected is-clickable">
+            <td class="chk"><input type="checkbox" class="nm-chk" checked aria-label="Chọn" /></td>
+            <td><div class="nm-title"><app-novel-cover [colors]="palettes[1]" /><div><div class="t-ink">Gió Muộn Trên Đồi Thông</div><div class="t-sm t-mute">Chưa rõ</div></div></div></td>
+            <td><ds-badge>VI</ds-badge></td>
+            <td class="num">0</td><td class="num">0</td>
+            <td class="cen"><app-novel-progress-frac icon="lang" [done]="0" [total]="0" label="Chương đã dịch" /></td>
+            <td class="cen"><span class="dot-o" title="Chưa phân tích"></span></td>
+            <td class="mono t-mute">2026-06-02</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

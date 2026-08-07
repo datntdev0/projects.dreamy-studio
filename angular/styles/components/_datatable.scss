@@ -1,3 +1,23 @@
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { position: sticky; top: 0; z-index: 1; background: var(--canvas-card); text-align: left; font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--mute); padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+.table td { padding: var(--sp-xs) var(--sp-md); border-bottom: 1px solid var(--hairline); vertical-align: middle; }
+.table tbody tr:hover td { background: var(--canvas-soft); }
+.table tbody tr.is-selected td { background: var(--primary-soft); }
+.table tbody tr.is-muted td { opacity: 0.55; }
+.table tbody tr[data-act], .table tbody tr[data-open], .table tbody tr.is-clickable { cursor: pointer; }
+.table .num { text-align: right; white-space: nowrap; }
+.table .chk { width: 30px; text-align: center; }
+.table .row-actions { text-align: right; white-space: nowrap; }
+.table .tl-st { min-width: 190px; }
+.cen { text-align: center; }
+.table tbody tr.is-current td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
+.table th .ic { width: 14px; height: 14px; vertical-align: -3px; }
+.table td .tags { flex-wrap: nowrap; overflow: hidden; }
+.table th.cen, .table td.cen { text-align: center; }
+.table td.cen .frac, .table td.cen .dot, .table td.cen .dot-o { margin-inline: auto; }
+.table td:has(> .is-inline) { padding-inline: var(--sp-xs); }
+.table tr.is-draft td { background: var(--primary-soft); }
+
 ds-datatable {
   & { display: block; min-width: 0; }
   .table-wrap { max-width: 100%; overflow: auto; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
@@ -7,6 +27,7 @@ ds-datatable {
   .table tbody tr:last-child td { border-bottom: 0; }
   .table tbody tr:not(:has(.empty-cell)) { cursor: pointer; }
   .table tbody tr:not(:has(.empty-cell)):hover td { background: var(--canvas-soft); }
+  .table tbody tr:has(.empty-cell):hover td { background: transparent; }
   .table tbody tr.is-selected td { background: var(--primary-soft); }
   .table .num { text-align: right; white-space: nowrap; }
   .table .empty-cell { padding: var(--sp-2xl); color: var(--mute); text-align: center; }

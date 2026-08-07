@@ -1,0 +1,11 @@
+.cover { display: inline-block; width: 28px; height: auto; aspect-ratio: 3 / 4; flex: none; border-radius: var(--r-xs); border: 1px solid var(--hairline-strong); background-size: cover; }
+.cover-lg { width: 96px; height: auto; border-radius: var(--r-md); }
+.cover-xs { width: 14px; height: auto; border-radius: 2px; }
+.cover-md { width: 44px; height: auto; border-radius: var(--r-sm); }
+.frac { display: inline-flex; align-items: center; gap: 4px; font: 400 12px/1 var(--font-mono); color: var(--mute); white-space: nowrap; }
+.frac .ic { width: 13px; height: 13px; }
+.frac b { font-weight: 500; color: var(--ink); }
+.frac.is-full, .frac.is-full b { color: var(--success); }
+.frac:not(.is-part):not(.is-full) b { color: var(--mute); font-weight: 400; }
+.dot-o { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-full); border: 1.5px solid var(--hairline-strong); box-sizing: border-box; }
+.dot-info { background: var(--info); }

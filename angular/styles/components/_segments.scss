@@ -7,3 +7,11 @@ ds-segments {
   .seg button.is-active { background: var(--primary-soft); color: var(--primary-text); }
   .seg button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
+.seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--r-sm); overflow: hidden; flex: none; }
+.seg > button { height: 22px; padding: 0 var(--sp-md); border: 0; background: transparent; color: var(--mute); font: 500 12.5px/1 var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-xs); }
+.seg > button + button { border-left: 1px solid var(--hairline); }
+.seg > button:hover { color: var(--body); }
+.seg > button.is-active { background: var(--primary-soft); color: var(--primary-text); }
+.seg > button .ic { width: 14px; height: 14px; }
+.pill-n { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: var(--r-xs); background: var(--primary-soft); color: var(--primary-text); font: 400 10.5px/15px var(--font-mono); text-align: center; }
+.pill-n.is-warn { background: var(--warning-soft); color: var(--warning); }

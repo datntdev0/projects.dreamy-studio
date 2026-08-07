@@ -16,3 +16,16 @@ ds-form {
   .check { display: inline-flex; align-items: flex-start; gap: var(--sp-sm); color: var(--body); font: 400 13px/18px var(--font); cursor: pointer; }
   .check input { margin: 2px 0 0; accent-color: var(--primary); }
 }
+.select, .textarea { background: var(--canvas-soft); color: var(--ink); border: 1px solid var(--hairline); border-radius: var(--r-sm); font: 400 13px/18px var(--font); }
+.select { height: var(--ctl-h); padding: 0 var(--sp-md); max-width: 100%; }
+.textarea { width: 100%; padding: var(--sp-sm) var(--sp-md); resize: vertical; line-height: 1.6; }
+.select:focus, .textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+.search { position: relative; display: inline-block; }
+.search .input { width: 220px; }
+.check { display: flex; align-items: flex-start; gap: var(--sp-sm); font-size: 13px; line-height: 18px; color: var(--body); cursor: pointer; }
+.check input { margin-top: 2px; accent-color: var(--primary); }
+input[type="checkbox"] { accent-color: var(--primary); }
+.range { width: 100%; accent-color: var(--primary); }
+.tag-in { height: 22px; width: 110px; padding: 0 var(--sp-sm); border: 1px dashed var(--hairline-strong); border-radius: var(--r-full); background: transparent; color: var(--ink); font: 400 12px/1 var(--font); }
+.tag-in:focus { outline: 2px solid var(--primary); outline-offset: -1px; border-style: solid; }
+.tag-in::placeholder { color: var(--mute); }

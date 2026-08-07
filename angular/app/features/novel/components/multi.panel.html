@@ -1,0 +1,17 @@
+<section class="ins-sec" data-testid="novel-multi-panel">
+  <span class="eyebrow">{{ "novel.multi.title" | t: { count: novels.selectedNovels().length } }}</span>
+  @for (novel of novels.selectedNovels(); track novel.id) {
+    <button type="button" class="nm-recent" [attr.aria-label]="'novel.multi.remove' | t: { name: nameOf(novel) }" data-testid="novel-multi-item" (click)="deselect($event, novel)"><app-novel-cover size="xs" [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button>
+  }
+</section>
+<section class="ins-sec" data-testid="novel-multi-total">
+  <span class="eyebrow">{{ "novel.multi.total" | t }}</span>
+  <dl class="kv" data-testid="novel-multi-total-list">
+    <dt>{{ "novel.multi.chapters" | t }}</dt><dd>{{ fmt(chapterTotal()) }}</dd>
+    <dt>{{ "novel.multi.words" | t }}</dt><dd>{{ fmt(wordTotal()) }}</dd>
+  </dl>
+</section>
+<section class="ins-sec ins-actions" data-testid="novel-multi-actions">
+  <button class="btn btn-danger" type="button" data-testid="novel-multi-delete" (click)="deleteSelected()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-trash"/></svg>{{ "novel.multi.delete" | t: { count: novels.selectedNovels().length } }}</button>
+  <button class="btn btn-ghost" type="button" data-testid="novel-multi-clear" (click)="novels.clearSelection()">{{ "novel.multi.clear" | t }}</button>
+</section>

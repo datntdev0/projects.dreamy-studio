@@ -1,0 +1,33 @@
+<section class="ins-sec" data-testid="novel-library-panel">
+  <span class="eyebrow">{{ "novel.library.title" | t }}</span>
+  <dl class="kv" data-testid="novel-library-totals">
+    <dt>{{ "novel.library.novels" | t }}</dt><dd>{{ novels.totals().novels }}</dd>
+    <dt>{{ "novel.library.chapters" | t }}</dt><dd>{{ fmt(novels.totals().chapters) }}</dd>
+    <dt>{{ "novel.library.words" | t }}</dt><dd>{{ fmt(novels.totals().words) }}</dd>
+    <dt>{{ "novel.library.translated" | t }}</dt><dd><app-novel-progress-frac icon="lang" [done]="novels.totals().translated" [total]="novels.totals().chapters" [label]="'novel.frac.translated' | t" /></dd>
+    <dt>{{ "novel.library.analyzed" | t }}</dt><dd><app-novel-progress-frac icon="graph" [done]="novels.totals().analyzed" [total]="novels.totals().chapters" [label]="'novel.frac.analyzed' | t" /></dd>
+  </dl>
+</section>
+@if (novels.allTags().length) {
+  <section class="ins-sec" data-testid="novel-library-tags">
+    <span class="eyebrow">{{ "novel.library.tags" | t }}</span>
+    <span class="tags">
+      @for (entry of novels.allTags(); track entry.tag) {
+        <span class="tag" data-testid="novel-library-tag">{{ entry.tag }} <span class="mono t-mute">{{ entry.count }}</span></span>
+      }
+    </span>
+  </section>
+}
+<section class="ins-sec" data-testid="novel-library-add">
+  <span class="eyebrow">{{ "novel.library.add" | t }}</span>
+  <button class="btn btn-block" type="button" data-testid="novel-library-create" (click)="openCreate()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus"/></svg>{{ "novel.library.create" | t }}</button>
+  <button class="btn btn-block" type="button" data-testid="novel-library-import" (click)="openImport()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload"/></svg>{{ "novel.library.import" | t }}</button>
+</section>
+@if (novels.novels().length) {
+  <section class="ins-sec" data-testid="novel-library-recent">
+    <span class="eyebrow">{{ "novel.library.recent" | t }}</span>
+    @for (novel of novels.recent(); track novel.id) {
+      <button type="button" class="nm-recent" data-testid="novel-library-recent-item" (click)="select($event, novel)"><app-novel-cover size="xs" [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span><span class="mono t-mute">{{ dayOf(novel) }}</span></button>
+    }
+  </section>
+}

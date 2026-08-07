@@ -1,0 +1,22 @@
+@if (open()) {
+  <ds-dialog [title]="(one() ? 'novel.delete.title.one' : 'novel.delete.title.other') | t: { count: rows().length }" [eyebrow]="'novel.cap' | t" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-delete-dialog-panel" (closed)="close()">
+    <div class="del-list" data-testid="novel-delete-list">
+      @for (novel of rows(); track novel.id) {
+        <div class="del-row" data-testid="novel-delete-row">
+          <app-novel-cover size="md" [colors]="colorsOf(novel)" [image]="imageOf(novel)" />
+          <div data-testid="novel-delete-info">
+            <div class="t-ink" data-testid="novel-delete-name">{{ nameOf(novel) }}</div>
+            <div class="t-sm t-mute" data-testid="novel-delete-meta">{{ "novel.delete.meta" | t: { author: authorOf(novel), chapters: chaptersOf(novel) } }}</div>
+            <div class="nm-fr" data-testid="novel-delete-progress">
+              <app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" />
+              <app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" />
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="ld-warn" data-testid="novel-delete-warning"><ds-icon name="alert" [size]="15" /><span>{{ (one() ? "novel.delete.warn.one" : "novel.delete.warn.other") | t }}</span></div>
+    <ds-button dialogFoot data-testid="novel-delete-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button>
+    <ds-button dialogFoot variant="danger" [disabled]="busy()" data-testid="novel-delete-confirm" (pressed)="confirm()"><ds-icon name="trash" [size]="16" />{{ (one() ? "novel.delete.confirm.one" : "novel.delete.confirm.other") | t: { count: rows().length } }}</ds-button>
+  </ds-dialog>
+}

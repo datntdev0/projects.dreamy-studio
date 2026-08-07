@@ -1,0 +1,39 @@
+@if (open()) {
+  <ds-dialog [title]="'novel.create.title' | t" [eyebrow]="'novel.cap' | t" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-create-dialog-panel" (closed)="close()">
+    <div class="field" data-testid="novel-create-title">
+      <label for="nn-title">{{ "novel.form.title" | t }}</label>
+      <input #titleInput id="nn-title" class="input" [class.is-invalid]="titleInvalid()" [placeholder]="'novel.form.titlePlaceholder' | t" [value]="form().title" autocomplete="off" data-testid="novel-create-title-input" (input)="onInput('title', $event)" />
+      <p class="field-err" id="nn-err" [hidden]="!titleInvalid()" data-testid="novel-create-title-error">{{ "novel.form.titleRequired" | t }}</p>
+    </div>
+    <div class="field" data-testid="novel-create-name">
+      <label for="nn-display">{{ "novel.form.name" | t }}</label>
+      <input id="nn-display" class="input" [placeholder]="'novel.form.namePlaceholder' | t" [value]="form().name" autocomplete="off" data-testid="novel-create-name-input" (input)="onInput('name', $event)" />
+    </div>
+    <div class="form-2" data-testid="novel-create-row">
+      <div class="field" data-testid="novel-create-author">
+        <label for="nn-author">{{ "novel.form.author" | t }}</label>
+        <input id="nn-author" class="input" [value]="form().author" autocomplete="off" data-testid="novel-create-author-input" (input)="onInput('author', $event)" />
+      </div>
+      <div class="field" data-testid="novel-create-lang">
+        <label for="nn-lang">{{ "novel.form.lang" | t }}</label>
+        <select id="nn-lang" class="select" data-testid="novel-create-lang-select" (change)="onLang($event)">
+          @for (lang of langs; track lang) {
+            <option [value]="lang" [selected]="form().lang === lang">{{ langKey(lang) | t }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="field" data-testid="novel-create-tags">
+      <label for="nn-tags">{{ "novel.form.tags" | t }}</label>
+      <input id="nn-tags" class="input" [placeholder]="'novel.form.tagsPlaceholder' | t" [value]="form().tags" autocomplete="off" data-testid="novel-create-tags-input" (input)="onInput('tags', $event)" />
+      <span class="field-hint">{{ "novel.create.tagsHint" | t }}</span>
+    </div>
+    <div class="field" data-testid="novel-create-description">
+      <label for="nn-desc">{{ "novel.form.description" | t }}</label>
+      <textarea id="nn-desc" class="textarea" rows="3" [value]="form().description" data-testid="novel-create-description-input" (input)="onInput('description', $event)"></textarea>
+      <span class="field-hint">{{ "novel.create.descriptionHint" | t }}</span>
+    </div>
+    <ds-button dialogFoot data-testid="novel-create-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button>
+    <ds-button dialogFoot variant="primary" [disabled]="busy()" data-testid="novel-create-submit" (pressed)="submit()">{{ "novel.create.submit" | t }}</ds-button>
+  </ds-dialog>
+}

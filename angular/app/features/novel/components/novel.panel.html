@@ -1,0 +1,73 @@
+@if (novel(); as n) {
+  <section class="ins-hero" data-testid="novel-panel-hero">
+    <div class="ins-hero-cv" data-testid="novel-panel-cover"><app-novel-cover size="lg" [colors]="colorsOf(n)" [image]="imageOf(n)" /></div>
+    <div class="ins-hero-b" data-testid="novel-panel-hero-body">
+      <div class="ins-hero-t" data-testid="novel-panel-name">{{ nameOf(n) }}</div>
+      @if (hasOriginal(n)) {
+        <div class="t-sm t-mute ins-orig" [attr.title]="'novel.panel.originalTitle' | t" data-testid="novel-panel-original">{{ n.title }}</div>
+      }
+      <div class="t-sm t-mute" data-testid="novel-panel-author">{{ authorOf(n) }}</div>
+      <div class="ins-hero-m" data-testid="novel-panel-meta"><span class="badge" data-testid="novel-panel-lang">{{ n.lang }}</span><span class="t-sm t-mute" data-testid="novel-panel-stats">{{ "novel.chaptersWords" | t: { chapters: chaptersOf(n), words: wordsOf(n) } }}</span></div>
+      <div class="nm-fr" data-testid="novel-panel-progress">
+        <app-novel-progress-frac icon="lang" [done]="n.translatedCount" [total]="n.chapterCount" [label]="'novel.frac.translated' | t" />
+        <app-novel-progress-frac icon="graph" [done]="n.analyzedCount" [total]="n.chapterCount" [label]="'novel.frac.analyzed' | t" />
+      </div>
+      <div class="ins-hero-act" data-testid="novel-panel-actions">
+        <label class="btn btn-sm btn-icon" [attr.data-tip]="coverKey() | t" [attr.aria-label]="coverKey() | t" data-testid="novel-panel-cover-pick"><ds-icon name="image" [size]="15" /><input type="file" accept="image/jpeg,image/png" hidden data-testid="novel-panel-cover-input" (change)="onCoverFile(n, $event)" /></label>
+        <button type="button" class="btn btn-sm btn-icon" [attr.data-tip]="'novel.panel.coverRemove' | t" [attr.aria-label]="'novel.panel.coverRemove' | t" [disabled]="!hasCover()" data-testid="novel-panel-cover-remove" (click)="clearCover(n)"><ds-icon name="x" [size]="15" /></button>
+        <button type="button" class="btn btn-sm btn-danger" [attr.data-tip]="'novel.panel.deleteTip' | t" [attr.aria-label]="'novel.panel.deleteTip' | t" data-testid="novel-panel-delete" (click)="requestDelete(n)"><ds-icon name="trash" [size]="15" />{{ "novel.panel.delete" | t }}</button>
+        @if (showOpen()) {
+          <button type="button" class="btn btn-sm btn-primary" data-testid="novel-panel-open" (click)="openNovel(n)"><ds-icon name="book" [size]="15" />{{ "novel.panel.open" | t }}</button>
+        }
+      </div>
+    </div>
+  </section>
+  <section class="ins-sec ins-form" data-testid="novel-panel-form">
+    <span class="eyebrow">{{ "novel.info.title" | t }}</span>
+    <div class="field" data-testid="novel-panel-field-name">
+      <label for="nv-f-display">{{ "novel.form.name" | t }}</label>
+      <input id="nv-f-display" class="input" [value]="n.name" [placeholder]="n.title" autocomplete="off" data-testid="novel-panel-name-input" (change)="onField(n, 'name', $event)" />
+      <span class="field-hint">{{ "novel.form.nameHint" | t }}</span>
+    </div>
+    <div class="field" data-testid="novel-panel-field-title">
+      <label for="nv-f-title">{{ "novel.form.title" | t }}</label>
+      <input id="nv-f-title" class="input" [value]="n.title" autocomplete="off" data-testid="novel-panel-title-input" (change)="onField(n, 'title', $event)" />
+    </div>
+    <div class="field" data-testid="novel-panel-field-author">
+      <label for="nv-f-author">{{ "novel.form.author" | t }}</label>
+      <input id="nv-f-author" class="input" [value]="n.author" autocomplete="off" data-testid="novel-panel-author-input" (change)="onField(n, 'author', $event)" />
+    </div>
+    <div class="field" data-testid="novel-panel-field-lang">
+      <label for="nv-f-lang">{{ "novel.form.lang" | t }}</label>
+      <select id="nv-f-lang" class="select" data-testid="novel-panel-lang-select" (change)="onField(n, 'lang', $event)">
+        @for (lang of langs; track lang) {
+          <option [value]="lang" [selected]="n.lang === lang">{{ langKey(lang) | t }}</option>
+        }
+      </select>
+    </div>
+    <div class="field" data-testid="novel-panel-field-description">
+      <label for="nv-f-desc">{{ "novel.form.description" | t }}</label>
+      <textarea id="nv-f-desc" class="textarea" rows="4" [value]="n.description" data-testid="novel-panel-description-input" (change)="onField(n, 'description', $event)"></textarea>
+    </div>
+    <div class="field" data-testid="novel-panel-field-tags">
+      <label for="nv-tag-in">{{ "novel.form.tags" | t }} <span class="t-mute mono">{{ n.tags.length }}/{{ maxTags }}</span></label>
+      <div class="tags" data-testid="novel-panel-tags">
+        @for (tag of n.tags; track tag) {
+          <span class="tag" data-testid="novel-panel-tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'novel.info.tagRemove' | t: { tag: tag }" data-testid="novel-panel-tag-remove" (click)="removeTag(n, tag)"><ds-icon name="x" [size]="18" /></button></span>
+        } @empty {
+          <span class="t-sm t-mute" data-testid="novel-panel-tags-empty">{{ "novel.info.tagsEmpty" | t }}</span>
+        }
+      </div>
+      <input id="nv-tag-in" class="input tag-in" list="nv-tag-sug" [placeholder]="'novel.info.tagsAdd' | t" [disabled]="n.tags.length >= maxTags" autocomplete="off" data-testid="novel-panel-tag-input" (keydown.enter)="onTagEnter(n, $event)" />
+      <datalist id="nv-tag-sug">
+        @for (tag of suggestions(); track tag) {
+          <option [value]="tag"></option>
+        }
+      </datalist>
+    </div>
+    <dl class="kv" data-testid="novel-panel-meta">
+      <dt>{{ "novel.info.source" | t }}</dt><dd>{{ originKey(n) | t }}</dd>
+      <dt>{{ "novel.info.updated" | t }}</dt><dd><span class="mono">{{ stampOf(n) }}</span></dd>
+    </dl>
+  </section>
+}

@@ -5,7 +5,6 @@
 /desktop/target/
 /storybook-static/
 /tmp
-/out-tsc
 /bazel-out
 
 # Node

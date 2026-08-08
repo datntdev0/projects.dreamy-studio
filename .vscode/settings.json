@@ -5,7 +5,6 @@
         "**/.hg": true,
         "**/.jj": true,
         "**/dist": true,
-        "**/out-tsc": true,
         "**/desktop/target": true,
         "**/__pycache__": true,
         "**/.pytest_cache": true,

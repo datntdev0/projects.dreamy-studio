@@ -18,8 +18,6 @@ import { NovelTotals } from "./novel.models";
 import { ReaderFont } from "./novel.models";
 import { ReaderPaper } from "./novel.models";
 import { ReaderPrefs } from "./novel.models";
-import { SelectEvent } from "./novel.models";
-import { SelectionState } from "./novel.models";
 import { TagCheck } from "./novel.models";
 import { TagCount } from "./novel.models";
 
@@ -228,80 +226,6 @@ export function filterNovels(
     }
   }
   return out;
-}
-
-function rangeBetween(order: number[], anchor: number, id: number): number[] | null {
-  const a = order.indexOf(anchor);
-  const b = order.indexOf(id);
-  if (a < 0 || b < 0) {
-    return null;
-  }
-  return order.slice(Math.min(a, b), Math.max(a, b) + 1);
-}
-
-export function clickSelection(
-  state: SelectionState,
-  id: number,
-  event: SelectEvent | undefined,
-  order: number[],
-  known: Set<number>,
-): SelectionState {
-  const anchor = state.anchor;
-  if (event?.shiftKey && anchor !== null && known.has(anchor)) {
-    const range = rangeBetween(order, anchor, id);
-    return range ? { ids: range, anchor } : state;
-  }
-  if (event?.ctrlKey || event?.metaKey) {
-    return { ids: toggled(state.ids, id), anchor: id };
-  }
-  return { ids: [id], anchor: id };
-}
-
-export function toggleSelection(state: SelectionState, id: number): SelectionState {
-  return { ids: toggled(state.ids, id), anchor: id };
-}
-
-function allIncluded(ids: number[], selected: number[]): boolean {
-  for (const id of ids) {
-    if (!selected.includes(id)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function withoutIds(selected: number[], ids: number[]): number[] {
-  const out: number[] = [];
-  for (const id of selected) {
-    if (!ids.includes(id)) {
-      out.push(id);
-    }
-  }
-  return out;
-}
-
-export function toggleAllSelection(
-  state: SelectionState,
-  visible: number[],
-): SelectionState {
-  if (allIncluded(visible, state.ids)) {
-    return { ids: withoutIds(state.ids, visible), anchor: state.anchor };
-  }
-  return { ids: [...new Set([...state.ids, ...visible])], anchor: state.anchor };
-}
-
-export function pruneSelection(
-  state: SelectionState,
-  known: Set<number>,
-): SelectionState {
-  const ids: number[] = [];
-  for (const id of state.ids) {
-    if (known.has(id)) {
-      ids.push(id);
-    }
-  }
-  const anchor = state.anchor !== null && known.has(state.anchor) ? state.anchor : null;
-  return { ids, anchor };
 }
 
 export function novelProgress(novel: NovelSummary): NovelProgress {

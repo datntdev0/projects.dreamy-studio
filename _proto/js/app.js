@@ -27,6 +27,23 @@
     },
   };
 
+  const PANEL_LIMITS = {
+    explorer: { min: 200, max: 420, initial: 264 },
+    inspector: { min: 240, max: 480, initial: 320 },
+    bottom: { min: 120, max: 520, initial: 200 },
+  };
+
+  function readPanelSize(panel, stored) {
+    const limits = PANEL_LIMITS[panel];
+    const size = stored?.[panel];
+    return Number.isFinite(size) ? Math.max(limits.min, Math.min(limits.max, size)) : limits.initial;
+  }
+
+  function readPanelSizes() {
+    const stored = store.get("layout.panelSizes", {});
+    return { explorer: readPanelSize("explorer", stored), inspector: readPanelSize("inspector", stored), bottom: readPanelSize("bottom", stored) };
+  }
+
   /* ---------------- data lookups ---------------- */
   const ITEMS = {};
   Object.entries(D.NAV).forEach(([rail, r]) =>
@@ -54,6 +71,7 @@
     rightTab: "inspector",
     bottomOpen: false,
     bottomTab: "pipelines",
+    panelSizes: readPanelSizes(),
     tabs: ["home"],
     active: "home",
     collapsed: new Set(),
@@ -64,6 +82,19 @@
     onOk: null,
   };
   const saveRecent = () => store.set("recent", S.recent);
+
+  function setPanelSize(panel, size, handle = null) {
+    const limits = PANEL_LIMITS[panel];
+    const nextSize = Math.max(limits.min, Math.min(limits.max, size));
+    S.panelSizes[panel] = nextSize;
+    const target = panel === "bottom" ? $("#edcol") : $("#shell");
+    const property = { explorer: "--ex-w", inspector: "--in-w", bottom: "--bt-h" }[panel];
+    target.style.setProperty(property, `${nextSize}px`);
+    if (handle) {
+      handle.setAttribute("aria-valuenow", String(nextSize));
+    }
+    store.set("layout.panelSizes", S.panelSizes);
+  }
 
   /* ---------------- screens ---------------- */
   function showScreen(name) {
@@ -239,6 +270,9 @@
   function renderShell() {
     $("#shell").classList.toggle("no-explorer", !S.explorerOpen);
     $("#shell").classList.toggle("no-inspector", !S.inspectorOpen);
+    $("#shell").style.setProperty("--ex-w", `${S.panelSizes.explorer}px`);
+    $("#shell").style.setProperty("--in-w", `${S.panelSizes.inspector}px`);
+    $("#edcol").style.setProperty("--bt-h", `${S.panelSizes.bottom}px`);
     $("#tb-ws").innerHTML = `${ic("hdd")}<span class="name">${esc(S.workspace.name)}</span>${ic("chev-d")}`;
     renderRail();
     renderExplorer();
@@ -246,6 +280,14 @@
     renderEditor();
     renderInspector();
     renderBottom();
+    for (const panel of Object.keys(PANEL_LIMITS)) {
+      const handle = $(`[data-resize="${panel}"]`);
+      if (handle) {
+        handle.setAttribute("aria-valuenow", String(S.panelSizes[panel]));
+        handle.setAttribute("aria-valuemin", String(PANEL_LIMITS[panel].min));
+        handle.setAttribute("aria-valuemax", String(PANEL_LIMITS[panel].max));
+      }
+    }
     renderStatus();
     syncToggles();
   }
@@ -427,7 +469,7 @@
           <p class="t-sm t-mute">Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây. Số pipeline và task chạy song song được cấu hình trong Settings.</p>
           <button class="btn btn-sm" data-act="settings" data-v="pipeline">${ic("settings")}Pipeline executor</button></div></div>`
       : `<div class="log">${S.log.map(([t, lv, src, msg]) => `<div class="log-row log-${lv}"><span class="t-mute">${t}</span><span class="log-lv">${lv}</span><span class="t-mute">${esc(src)}</span><span>${esc(msg)}</span></div>`).join("")}</div>`;
-    el.innerHTML = `<div class="resizer-h" data-resize="bottom" aria-hidden="true"></div>
+    el.innerHTML = `<div class="resizer-h" data-resize="bottom" role="separator" aria-orientation="horizontal" aria-label="Điều chỉnh kích thước bảng dưới" aria-valuenow="${S.panelSizes.bottom}" aria-valuemin="${PANEL_LIMITS.bottom.min}" aria-valuemax="${PANEL_LIMITS.bottom.max}" tabindex="0"></div>
       <header class="bottom-head">${tab("pipelines", `Pipelines${PL.list.length ? ` <span class="count">${nRun ? nRun + " chạy / " : ""}${PL.list.length}</span>` : ""}`)}${tab("output", "Output")}<span class="spacer"></span>
         <button class="btn btn-icon btn-sm" data-act="toggle-bottom" data-tip="Đóng panel" aria-label="Đóng panel">${ic("x")}</button></header>
       <div class="bottom-body">${body}</div>`;
@@ -713,21 +755,63 @@
   /* panel resizers */
   document.addEventListener("pointerdown", (e) => {
     const r = e.target.closest("[data-resize]");
-    if (!r) return;
+    if (!r) {
+      return;
+    }
     const which = r.dataset.resize;
     const shell = $("#shell");
     const startX = e.clientX, startY = e.clientY;
-    const start = which === "explorer" ? $("#explorer").offsetWidth : which === "inspector" ? $("#inspector").offsetWidth : $("#bottom").offsetHeight;
-    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const start = S.panelSizes[which];
     const move = (ev) => {
-      if (which === "explorer") shell.style.setProperty("--ex-w", `${clamp(start + ev.clientX - startX, 200, 420)}px`);
-      if (which === "inspector") shell.style.setProperty("--in-w", `${clamp(start - (ev.clientX - startX), 240, 480)}px`);
-      if (which === "bottom") $("#edcol").style.setProperty("--bt-h", `${clamp(start - (ev.clientY - startY), 120, 520)}px`);
+      const handle = e.target.closest("[data-resize]");
+      if (which === "explorer") {
+        setPanelSize(which, start + ev.clientX - startX, handle);
+      }
+      if (which === "inspector") {
+        setPanelSize(which, start - (ev.clientX - startX), handle);
+      }
+      if (which === "bottom") {
+        setPanelSize(which, start - (ev.clientY - startY), handle);
+      }
     };
     const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); document.body.classList.remove("is-resizing"); };
     document.body.classList.add("is-resizing");
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
+  });
+
+  document.addEventListener("dblclick", (e) => {
+    const handle = e.target.closest("[data-resize]");
+    if (!handle) {
+      return;
+    }
+    const which = handle.dataset.resize;
+    setPanelSize(which, PANEL_LIMITS[which].initial, handle);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const handle = e.target.closest("[data-resize]");
+    if (!handle) {
+      return;
+    }
+    const which = handle.dataset.resize;
+    const step = e.shiftKey ? 40 : 10;
+    const keyDelta = {
+      explorer: { ArrowRight: step, ArrowLeft: -step },
+      inspector: { ArrowLeft: step, ArrowRight: -step },
+      bottom: { ArrowUp: step, ArrowDown: -step },
+    }[which];
+    if (e.key === "Home") {
+      e.preventDefault();
+      handle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      return;
+    }
+    const delta = keyDelta[e.key];
+    if (delta === undefined) {
+      return;
+    }
+    e.preventDefault();
+    setPanelSize(which, S.panelSizes[which] + delta, handle);
   });
 
   function toast(msg, kind = "success") {

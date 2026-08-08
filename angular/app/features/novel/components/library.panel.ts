@@ -1,7 +1,6 @@
 import { Component, effect, inject } from "@angular/core";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { NovelSummary } from "../novel.models";
-import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelService } from "../novel.service";
 import { displayName, formatCount, formatMonthDay } from "../novel.rules";
 import { NovelCover, coverColorsFor } from "./cover.component";
@@ -14,8 +13,6 @@ import { NovelProgressFrac } from "./progress-frac.component";
   templateUrl: "./library.panel.html",
 })
 export class NovelLibraryPanel {
-  private readonly dialogs = inject(NovelDialogsService);
-
   readonly novels = inject(NovelService);
 
   constructor() {
@@ -42,16 +39,8 @@ export class NovelLibraryPanel {
     return this.novels.coverUrl(novel) ?? "";
   }
 
-  select(event: MouseEvent, novel: NovelSummary): void {
-    this.novels.select(novel.id, event);
-  }
-
-  openCreate(): void {
-    this.dialogs.openCreate();
-  }
-
-  openImport(): void {
-    this.dialogs.openImport();
+  select(novel: NovelSummary): void {
+    this.novels.select(novel.id);
   }
 
   private loadCovers(): void {

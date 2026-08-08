@@ -20,9 +20,14 @@
 
 ds-datatable {
   & { display: block; min-width: 0; }
-  .table-wrap { max-width: 100%; overflow: auto; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
-  .table { width: 100%; border-collapse: collapse; font: 400 13px/18px var(--font); }
-  .table th { position: sticky; top: 0; z-index: 1; padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--hairline); background: var(--canvas-card); color: var(--mute); font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-align: left; text-transform: uppercase; white-space: nowrap; }
+  &.is-fill { display: flex; flex: 1; min-height: 0; min-width: 0; }
+  .table-wrap { display: block; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
+  .table-wrap.is-fill { display: flex; flex: 1; min-height: 0; flex-direction: column; border: 0; border-radius: 0; background: transparent; }
+  .table-head { flex: none; overflow: hidden; scrollbar-gutter: stable; background: var(--canvas-card); border-bottom: 1px solid var(--hairline); }
+  .table-body { min-width: 0; overflow: auto; scrollbar-gutter: stable; background: var(--canvas-card); }
+  .is-fill .table-body { flex: 1; min-height: 0; }
+  .table { width: 100%; border-collapse: collapse; table-layout: fixed; font: 400 13px/18px var(--font); }
+  .table th { position: static; z-index: auto; padding: var(--sp-sm) var(--sp-md); border-bottom: 0; background: transparent; color: var(--mute); font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-align: left; text-transform: uppercase; white-space: nowrap; }
   .table td { padding: var(--sp-xs) var(--sp-md); border-bottom: 1px solid var(--hairline); color: var(--body); vertical-align: middle; }
   .table tbody tr:last-child td { border-bottom: 0; }
   .table tbody tr:not(:has(.empty-cell)) { cursor: pointer; }
@@ -30,5 +35,7 @@ ds-datatable {
   .table tbody tr:has(.empty-cell):hover td { background: transparent; }
   .table tbody tr.is-selected td { background: var(--primary-soft); }
   .table .num { text-align: right; white-space: nowrap; }
+  .table .cen { text-align: center; }
+  .table td.cell-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .table .empty-cell { padding: var(--sp-2xl); color: var(--mute); text-align: center; }
 }

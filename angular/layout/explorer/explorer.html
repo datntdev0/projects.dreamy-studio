@@ -20,4 +20,4 @@
     }
   </div>
 </aside>
-<div class="divider divider-explorer" aria-hidden="true" data-testid="explorer-divider"></div>
+<div class="divider resizer-v divider-explorer" role="separator" aria-orientation="vertical" [attr.aria-label]="'main.panel.resize.explorer' | t" tabindex="0" [attr.aria-valuenow]="layout.explorerSize()" [attr.aria-valuemin]="layout.panelLimits.explorer.min" [attr.aria-valuemax]="layout.panelLimits.explorer.max" data-testid="explorer-divider" (pointerdown)="layout.beginResize('explorer', $event)" (keydown)="layout.handleResizeKey('explorer', $event)" (dblclick)="layout.resetSize('explorer')"></div>

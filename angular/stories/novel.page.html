@@ -60,31 +60,15 @@
   <section data-testid="novel-page-table">
     <div class="section-head"><h2>Table</h2><code>.table .chk .num .cen</code></div>
     <div class="demo table-demo">
-      <table class="table">
-        <thead>
-          <tr><th class="chk"><input type="checkbox" class="nm-chk" aria-label="Chọn tất cả" /></th><th>Novel</th><th>Gốc</th><th class="num">Chương</th><th class="num">Số từ</th><th class="cen">Dịch</th><th class="cen">Tri thức</th><th>Cập nhật</th></tr>
-        </thead>
-        <tbody>
-          <tr class="is-clickable">
-            <td class="chk"><input type="checkbox" class="nm-chk" aria-label="Chọn" /></td>
-            <td><div class="nm-title"><app-novel-cover [colors]="palettes[0]" /><div><div class="t-ink">The Lantern Keeper of Harrowmere</div><div class="t-sm t-mute">Mira Okonkwo</div></div></div></td>
-            <td><ds-badge>EN</ds-badge></td>
-            <td class="num">12</td><td class="num">29,400</td>
-            <td class="cen"><app-novel-progress-frac icon="lang" [done]="3" [total]="12" label="Chương đã dịch" /></td>
-            <td class="cen"><app-novel-progress-frac icon="graph" [done]="12" [total]="12" label="Chương đã phân tích" /></td>
-            <td class="mono t-mute">2026-06-01</td>
-          </tr>
-          <tr class="is-selected is-clickable">
-            <td class="chk"><input type="checkbox" class="nm-chk" checked aria-label="Chọn" /></td>
-            <td><div class="nm-title"><app-novel-cover [colors]="palettes[1]" /><div><div class="t-ink">Gió Muộn Trên Đồi Thông</div><div class="t-sm t-mute">Chưa rõ</div></div></div></td>
-            <td><ds-badge>VI</ds-badge></td>
-            <td class="num">0</td><td class="num">0</td>
-            <td class="cen"><app-novel-progress-frac icon="lang" [done]="0" [total]="0" label="Chương đã dịch" /></td>
-            <td class="cen"><span class="dot-o" title="Chưa phân tích"></span></td>
-            <td class="mono t-mute">2026-06-02</td>
-          </tr>
-        </tbody>
-      </table>
+      <ds-datatable [columns]="tableColumns" [rows]="tableRows" trackKey="id" minWidth="720px" variant="card" data-testid="novel-page-table-datatable">
+        <ng-template dsCell="title" let-row>
+          @let novel = novelSample(row);
+          <div class="nm-title" data-testid="novel-page-table-title"><app-novel-cover [colors]="novel.colors" data-testid="novel-page-table-cover" /><div><div class="t-ink">{{ novel.title }}</div><div class="t-sm t-mute">{{ novel.author }}</div></div></div>
+        </ng-template>
+        <ng-template dsCell="lang" let-row><ds-badge data-testid="novel-page-table-source">{{ novelSample(row).lang }}</ds-badge></ng-template>
+        <ng-template dsCell="translated" let-row><app-novel-progress-frac icon="lang" [done]="novelSample(row).translated" [total]="novelSample(row).total" label="Chapters translated" data-testid="novel-page-table-translation" /></ng-template>
+        <ng-template dsCell="analyzed" let-row><app-novel-progress-frac icon="graph" [done]="novelSample(row).analyzed" [total]="novelSample(row).total" label="Chapters analyzed" data-testid="novel-page-table-analysis" /></ng-template>
+      </ds-datatable>
     </div>
   </section>
 </div>

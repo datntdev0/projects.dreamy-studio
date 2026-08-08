@@ -2,6 +2,8 @@ import { I18nKey } from "../app/core/i18n/i18n.models";
 
 export type RailId = "projects" | "novels" | "library" | "distribution";
 
+export type PanelId = "explorer" | "inspector" | "bottom";
+
 export type RightTabId = "inspector" | "assistant";
 
 export type EditorTabKind = "home" | "novels" | "novel";

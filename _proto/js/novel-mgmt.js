@@ -8,7 +8,7 @@
   const U = window.NVU;
   const NV = window.NV;
   const { esc, ic } = A;
-  const { N, ui, fmt, frac, cover } = U;
+  const { N, ui, fmt, frac, cover, datatable } = U;
 
   const CAP = window.DS.CAP["02"];
   const LANGS = [["EN", "Tiếng Anh"], ["VI", "Tiếng Việt"], ["ZH", "Tiếng Trung"], ["JA", "Tiếng Nhật"], ["KO", "Tiếng Hàn"]];
@@ -46,8 +46,8 @@
   /* ---------------- Novel management: list / grid ---------------- */
   const view = () => A.store.get("nm.view", "grid");
 
-  const NM = () => ui("nm", { q: "", sel: [], anchor: null });
-  const selIds = () => NM().sel.filter((id) => U.novelById(id));
+  const NM = () => ui("nm", { q: "", selected: null });
+  const selIds = () => NM().selected && U.novelById(NM().selected) ? [NM().selected] : [];
 
   function filtered() {
     const q = NM();
@@ -72,63 +72,56 @@
     return `<span class="nm-chips">${f.tags.map((t) => chip("tag", t, t)).join("")}${f.langs.map((l) => chip("lang", l, l)).join("")}<button type="button" class="btn btn-sm btn-ghost" data-act="nf-clear">Xóa bộ lọc</button></span>`;
   }
 
-  const selBar = () => {
-    const n = selIds().length;
-    return n ? `<span class="nm-selbar"><b>Đã chọn ${n}</b><button class="btn btn-sm btn-danger" data-act="nm-del">${ic("trash")}Xóa</button><button class="btn btn-sm btn-ghost" data-act="nm-sel-clear">Bỏ chọn</button></span>`
-      : `<button class="btn btn-sm btn-ghost" data-act="nm-sel-all">Chọn tất cả</button>`;
-  };
-
   function mgmtView() {
     const q = NM();
     const list = filtered();
-    const sel = new Set(selIds());
-    const chk = (n) => `<input type="checkbox" class="nm-chk" data-act="nm-tog" data-id="${n.id}" ${sel.has(n.id) ? "checked" : ""} aria-label="Chọn ${esc(U.nameOf(n))}">`;
+    const selected = q.selected;
     let body;
     if (!list.length) {
       body = N().novels.length
         ? U.empty("Không có novel nào khớp", "Thử từ khóa khác hoặc bỏ bộ lọc.", `<button class="btn" data-act="nm-clear">Xóa bộ lọc</button>`)
         : U.empty("Chưa có novel nào", "Tạo novel mới hoặc nhập từ một package .dsnovel / .zip.", `<div class="empty-act"><button class="btn btn-primary" data-act="nm-new">${ic("plus")}Tạo novel</button><button class="btn" data-act="nm-import">${ic("upload")}Nhập từ package…</button></div>`);
     } else if (view() === "grid") {
-      body = `<div class="nm-grid">${list.map((n) => `<div class="nm-card ${sel.has(n.id) ? "is-selected" : ""}" tabindex="0" data-act="nm-sel" data-id="${n.id}" data-open="${n.id}" title="${esc(U.nameOf(n))}">
-          <div class="nm-cover ${n.coverImg ? "has-img" : ""}" style="background:${esc(U.coverBg(n))}">${chk(n)}
+      body = `<div class="nm-grid">${list.map((n) => `<div class="nm-card ${selected === n.id ? "is-selected" : ""}" tabindex="0" data-act="nm-sel" data-id="${n.id}" data-open="${n.id}" title="${esc(U.nameOf(n))}">
+          <div class="nm-cover ${n.coverImg ? "has-img" : ""}" style="background:${esc(U.coverBg(n))}">
             <span class="badge nm-lang">${n.lang}</span>${n.coverImg ? "" : `<span class="nm-cover-t">${esc(n.title)}</span><span class="nm-cover-a">${esc(n.author)}</span>`}</div>
           <div class="nm-card-b"><div class="nm-card-t t-ink">${esc(U.nameOf(n))}</div><div class="nm-fr">${fracs(n)}</div></div></div>`).join("")}</div>`;
     } else {
-      const rows = list.map((n) => `<tr class="${sel.has(n.id) ? "is-selected" : ""}" tabindex="0" data-act="nm-sel" data-id="${n.id}" data-open="${n.id}">
-        <td class="chk">${chk(n)}</td>
-        <td><div class="nm-title">${cover(n)}<div><div class="t-ink">${esc(U.nameOf(n))}</div><div class="t-sm t-mute">${U.nameOf(n) !== n.title ? `${esc(n.title)} · ` : ""}${esc(n.author)}</div></div></div></td>
-        <td><span class="badge">${n.lang}</span></td>
-        <td class="num">${fmt(n.chapters)}</td><td class="num">${fmt(n.words)}</td>
-        <td class="cen">${fracOf(n, "tr")}</td><td class="cen">${fracOf(n, "kb")}</td>
-        <td class="mono t-mute">${esc(n.updated)}</td></tr>`).join("");
-      const all = list.every((n) => sel.has(n.id));
-      body = `<table class="table"><thead><tr><th class="chk"><input type="checkbox" class="nm-chk" data-act="nm-sel-all" ${all ? "checked" : ""} aria-label="Chọn tất cả"></th><th>Novel</th><th>Gốc</th><th class="num">Chương</th><th class="num">Số từ</th><th class="cen">Dịch</th><th class="cen">Tri thức</th><th>Cập nhật</th></tr></thead><tbody>${rows}</tbody></table>`;
+      body = datatable({
+        columns: [
+          { key: "title", label: "Novel", ellipsis: true, render: (n) => `<div class="nm-title">${cover(n)}<div><div class="t-ink">${esc(U.nameOf(n))}</div><div class="t-sm t-mute">${U.nameOf(n) !== n.title ? `${esc(n.title)} · ` : ""}${esc(n.author)}</div></div></div>` },
+          { key: "lang", label: "G\u1ed1c", width: "64px", render: (n) => `<span class="badge">${esc(n.lang)}</span>` },
+          { key: "chapters", label: "Ch\u01b0\u01a1ng", align: "right", width: "80px", render: (n) => fmt(n.chapters) },
+          { key: "words", label: "S\u1ed1 t\u1eeb", align: "right", width: "88px", render: (n) => fmt(n.words) },
+          { key: "translation", label: "D\u1ecbch", align: "center", width: "96px", render: (n) => fracOf(n, "tr") },
+          { key: "knowledge", label: "Tri th\u1ee9c", align: "center", width: "96px", render: (n) => fracOf(n, "kb") },
+          { key: "updated", label: "C\u1eadp nh\u1eadt", width: "152px", ellipsis: true, render: (n) => `<span class="mono t-mute">${esc(n.updated)}</span>` },
+        ],
+        rows: list,
+        minWidth: "720px",
+        variant: "fill",
+        testId: "novel-list-table",
+        keep: "nm",
+        rowTestId: "novel-list-row",
+        rowClass: (n) => ({ "is-selected": selected === n.id }),
+        rowAttrs: (n) => `data-act="nm-sel" data-id="${esc(n.id)}" data-open="${esc(n.id)}"`,
+      });
     }
     return `<div class="nv">
       ${U.bar(
         `<label class="search"><span class="sr-only">Tìm novel</span><input id="nm-q" class="input" type="search" value="${esc(q.q)}" placeholder="Tìm theo tên hoặc tác giả…" data-on="nm-q"></label>
-         <span class="t-sm t-mute">${list.length} novel</span><span id="nm-selbar">${list.length ? selBar() : ""}</span>${activeChips()}`,
+         <span class="t-sm t-mute">${list.length} novel</span>${activeChips()}`,
         `${U.seg("nm-view", [["grid", ic("frames"), "Dạng lưới"], ["list", ic("list"), "Dạng danh sách"]], view())}
-         <button class="btn btn-sm" data-act="nm-import" data-tip="Nhập từ package .dsnovel / .zip">${ic("upload")}Nhập…</button><button class="btn btn-sm btn-primary" data-act="nm-new">${ic("plus")}Tạo novel</button>`,
+         <button class="btn btn-sm" data-act="nm-import" data-tip="Nhập từ package .dsnovel / .zip">${ic("upload")}Nhập…</button><button class="btn btn-sm btn-primary" data-act="nm-new">${ic("plus")}Mới</button>`,
       )}
-      <div class="nv-body"><div class="nv-scroll ${sel.size ? "has-sel" : ""}" data-keep="nm">${body}</div></div>
+      <div class="nv-body">${list.length && view() !== "grid" ? body : `<div class="nv-scroll" data-keep="nm">${body}</div>`}</div>
     </div>`;
   }
 
   /** Cập nhật vùng chọn tại chỗ (không vẽ lại danh sách để nhấp đúp vẫn trúng phần tử). */
   function applySel() {
-    const ids = new Set(selIds());
-    A.$$("#editor [data-open]").forEach((el) => {
-      const on = ids.has(el.dataset.id);
-      el.classList.toggle("is-selected", on);
-      const c = el.querySelector('input[data-act="nm-tog"]');
-      if (c) c.checked = on;
-    });
-    const all = A.$('#editor input[data-act="nm-sel-all"]');
-    if (all) all.checked = ids.size > 0 && filtered().every((n) => ids.has(n.id));
-    const sb = A.$("#nm-selbar");
-    if (sb) sb.innerHTML = filtered().length ? selBar() : "";
-    A.$("#editor .nv-scroll")?.classList.toggle("has-sel", ids.size > 0);
+    const id = selIds()[0];
+    A.$("#editor [data-open]").forEach((el) => el.classList.toggle("is-selected", id === el.dataset.id));
     A.renderInspector();
   }
 
@@ -137,25 +130,13 @@
     const tot = all.reduce((a, n) => { const p = U.progress(n); return { ch: a.ch + n.chapters, tr: a.tr + p.tr, kb: a.kb + p.kb, w: a.w + n.words }; }, { ch: 0, tr: 0, kb: 0, w: 0 });
     return `${U.insSec("Thư viện novel", U.kv([["Novel", all.length], ["Chương", fmt(tot.ch)], ["Số từ", fmt(tot.w)], ["Đã dịch", frac("lang", tot.tr, tot.ch, "Chương đã dịch")], ["Đã phân tích", frac("graph", tot.kb, tot.ch, "Chương đã phân tích")]]))}
       ${U.allTags().length ? `<section class="ins-sec"><span class="eyebrow">Tags</span><span class="tags">${U.allTags().map(([t, n]) => `<span class="tag">${esc(t)} <span class="mono t-mute">${n}</span></span>`).join("")}</span></section>` : ""}
-      <section class="ins-sec"><span class="eyebrow">Thêm novel</span>
-        <button class="btn btn-block" data-act="nm-new">${ic("plus")}Tạo novel mới</button>
-        <button class="btn btn-block" data-act="nm-import">${ic("upload")}Nhập từ package…</button></section>
       ${all.length ? `<section class="ins-sec"><span class="eyebrow">Gần đây</span>${[...all].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3).map((n) =>
         `<button type="button" class="nm-recent" data-act="nm-sel" data-id="${n.id}">${cover(n, "cover-xs")}<span class="tree-label">${esc(U.nameOf(n))}</span><span class="mono t-mute">${esc(n.updated.slice(5, 10))}</span></button>`).join("")}</section>` : ""}`;
   }
 
-  function multiPanel(list) {
-    const tot = list.reduce((a, n) => ({ ch: a.ch + n.chapters, w: a.w + n.words }), { ch: 0, w: 0 });
-    return `<section class="ins-sec"><span class="eyebrow">Đã chọn ${list.length} novel</span>
-        ${list.map((n) => `<button type="button" class="nm-recent" data-act="nm-tog" data-id="${n.id}" aria-label="Bỏ chọn ${esc(U.nameOf(n))}">${cover(n, "cover-xs")}<span class="tree-label">${esc(U.nameOf(n))}</span>${ic("x")}</button>`).join("")}</section>
-      ${U.insSec("Tổng", U.kv([["Chương", fmt(tot.ch)], ["Số từ", fmt(tot.w)]]))}
-      <section class="ins-sec ins-actions"><button class="btn btn-danger" data-act="nm-del">${ic("trash")}Xóa ${list.length} novel</button><button class="btn btn-ghost" data-act="nm-sel-clear">Bỏ chọn</button></section>`;
-  }
-
   function mgmtInspector() {
     const list = selIds().map(U.novelById);
-    if (list.length === 1) return novelPanel(list[0], true);
-    return list.length > 1 ? multiPanel(list) : libraryPanel();
+    return list.length ? novelPanel(list[0], true) : libraryPanel();
   }
 
   /* ---------------- Novel: Chapters → Reading ---------------- */
@@ -192,10 +173,24 @@
     const all = U.chaptersFor(novel);
     const list = all.filter((c) => !needle || `${c.n} ${c.title}`.toLowerCase().includes(needle));
     const sample = novel.id === U.SAMPLE;
-    const rows = list.map((c) => `<tr tabindex="0" data-act="ch-open" data-n="${c.n}" class="${R().ch === c.n && sample ? "is-current" : ""}">
-        <td class="mono t-mute">${String(c.n).padStart(2, "0")}</td><td class="t-ink">${esc(c.title)}</td><td class="num">${fmt(c.words)}</td>
-        <td class="cen">${sample ? trCell(c.n) : `<span class="dot-o"></span>`}</td><td class="cen">${sample ? kbCell(c.n) : `<span class="dot-o"></span>`}</td></tr>`).join("");
     const pg = U.progress(novel);
+    const tableMarkup = datatable({
+      columns: [
+        { key: "n", label: "#", width: "56px", render: (c) => `<span class="mono t-mute">${String(c.n).padStart(2, "0")}</span>` },
+        { key: "title", label: "Ch\u01b0\u01a1ng", ellipsis: true },
+        { key: "words", label: "S\u1ed1 t\u1eeb", align: "right", width: "80px", render: (c) => fmt(c.words) },
+        { key: "translation", label: "D\u1ecbch", align: "center", width: "104px", render: (c) => sample ? trCell(c.n) : `<span class="dot-o"></span>` },
+        { key: "knowledge", label: "Tri th\u1ee9c", align: "center", width: "104px", render: (c) => sample ? kbCell(c.n) : `<span class="dot-o"></span>` },
+      ],
+      rows: list,
+      variant: "fill",
+      testId: "novel-chapters-table",
+      keep: "ch",
+      rowTestId: "novel-chapter-row",
+      rowClass: (c) => ({ "is-current": R().ch === c.n && sample }),
+      rowAttrs: (c) => `data-act="ch-open" data-n="${c.n}"`,
+      emptyHTML: U.empty("Kh\u00f4ng c\u00f3 ch\u01b0\u01a1ng n\u00e0o kh\u1edbp", "Th\u1eed t\u1eeb kh\u00f3a kh\u00e1c."),
+    });
     return `<div class="nv">
       ${U.bar(U.novelTitle(), `<button class="btn btn-sm" data-act="nx-open" data-k="translation" data-id="${novel.id}">${ic("lang")}Translation</button>
         <button class="btn btn-sm" data-act="nx-open" data-k="knowledge" data-id="${novel.id}">${ic("graph")}Knowledgebase</button>
@@ -203,9 +198,7 @@
       <div class="tl-sub"><label class="search"><span class="sr-only">Tìm chương</span><input id="ch-q" class="input" type="search" value="${esc(q.q)}" placeholder="Tìm chương…" data-on="ch-q"></label>
         <span class="t-sm t-mute">${list.length}/${all.length} chương</span><span class="spacer"></span>
         <span class="legend-dots">${frac("lang", pg.tr, pg.total, "Chương đã dịch")}${frac("graph", pg.kb, pg.total, "Chương đã phân tích")}</span></div>
-      <div class="nv-body"><div class="nv-scroll" data-keep="ch">
-        ${list.length ? `<table class="table"><thead><tr><th>#</th><th>Chương</th><th class="num">Số từ</th><th class="cen">Dịch</th><th class="cen">Tri thức</th></tr></thead><tbody>${rows}</tbody></table>`
-    : U.empty("Không có chương nào khớp", "Thử từ khóa khác.")}</div></div>
+      <div class="nv-body is-col" data-testid="novel-chapters-body">${tableMarkup}</div>
     </div>`;
   }
 
@@ -339,23 +332,24 @@
     return novelPanel(novel, false);
   }
 
-  /** Đầu Inspector của một novel: bìa (đổi / xóa ảnh) bên trái, thông tin tóm tắt và nút Mở bên phải. */
   function novelPanel(novel, withOpen) {
     const has = !!novel.coverImg;
-    return `<section class="ins-hero">
-        <div class="ins-hero-cv">${cover(novel, "cover-lg")}</div>
+    const coverActions = `<span class="cover-actions">
+      <button type="button" class="cover-action" data-act="nv-cover-pick" data-tip="${has ? "Đổi ảnh bìa" : "Chọn ảnh bìa"}" aria-label="${has ? "Đổi ảnh bìa" : "Chọn ảnh bìa"}">${ic("image")}</button><input type="file" accept="image/*" hidden data-change="nv-cover" data-id="${novel.id}">
+      <button class="cover-action" data-act="nv-cover-del" data-id="${novel.id}" data-tip="Xóa ảnh bìa" aria-label="Xóa ảnh bìa" ${has ? "" : "disabled"}>${ic("x")}</button>
+    </span>`;
+    return `<section class="ins-panel-actions">
+        <button class="btn btn-sm btn-danger" data-act="nm-del" data-id="${novel.id}" data-tip="Xóa novel" aria-label="Xóa novel">${ic("trash")}Xóa</button>
+        ${withOpen ? `<button class="btn btn-sm btn-primary" data-act="nm-open" data-id="${novel.id}">${ic("book")}Mở</button>` : ""}
+      </section>
+      <section class="ins-hero">
+        <div class="ins-hero-cv">${cover(novel, "cover-lg", coverActions)}</div>
         <div class="ins-hero-b">
           <div class="ins-hero-t">${esc(U.nameOf(novel))}</div>
           ${U.nameOf(novel) !== novel.title ? `<div class="t-sm t-mute ins-orig" title="Tên gốc">${esc(novel.title)}</div>` : ""}
           <div class="t-sm t-mute">${esc(novel.author)}</div>
           <div class="ins-hero-m"><span class="badge">${esc(novel.lang)}</span><span class="t-sm t-mute">${fmt(novel.chapters)} chương · ${fmt(novel.words)} từ</span></div>
           <div class="nm-fr">${fracs(novel)}</div>
-          <div class="ins-hero-act">
-            <label class="btn btn-sm btn-icon" data-tip="${has ? "Đổi ảnh bìa" : "Chọn ảnh bìa"}" aria-label="${has ? "Đổi ảnh bìa" : "Chọn ảnh bìa"}">${ic("image")}<input type="file" accept="image/*" hidden data-change="nv-cover" data-id="${novel.id}"></label>
-            <button class="btn btn-sm btn-icon" data-act="nv-cover-del" data-id="${novel.id}" data-tip="Xóa ảnh bìa" aria-label="Xóa ảnh bìa" ${has ? "" : "disabled"}>${ic("x")}</button>
-            <button class="btn btn-sm btn-danger" data-act="nm-del" data-id="${novel.id}" data-tip="Xóa novel" aria-label="Xóa novel">${ic("trash")}Xóa</button>
-            ${withOpen ? `<button class="btn btn-sm btn-primary" data-act="nm-open" data-id="${novel.id}">${ic("book")}Mở</button>` : ""}
-          </div>
         </div>
       </section>
       ${infoForm(novel)}`;
@@ -422,38 +416,7 @@
       else U.openNovelTab(k, id);
     },
     "nm-open": (el) => openNovel(el.dataset.id, "chapters"),
-    "nm-sel": (el, e) => {
-      const id = el.dataset.id;
-      const s = NM();
-      if (e?.shiftKey && s.anchor && U.novelById(s.anchor)) {
-        const order = filtered().map((n) => n.id);
-        const a = order.indexOf(s.anchor);
-        const b = order.indexOf(id);
-        if (a >= 0 && b >= 0) s.sel = order.slice(Math.min(a, b), Math.max(a, b) + 1);
-      } else if (e?.ctrlKey || e?.metaKey) {
-        s.sel = s.sel.includes(id) ? s.sel.filter((x) => x !== id) : [...s.sel, id];
-        s.anchor = id;
-      } else {
-        s.sel = [id];
-        s.anchor = id;
-      }
-      applySel();
-    },
-    "nm-tog": (el, e) => {
-      e?.stopPropagation();
-      const s = NM();
-      const id = el.dataset.id;
-      s.sel = s.sel.includes(id) ? s.sel.filter((x) => x !== id) : [...s.sel, id];
-      s.anchor = id;
-      applySel();
-    },
-    "nm-sel-all": () => {
-      const s = NM();
-      const ids = filtered().map((n) => n.id);
-      s.sel = ids.every((id) => s.sel.includes(id)) ? s.sel.filter((id) => !ids.includes(id)) : [...new Set([...s.sel, ...ids])];
-      applySel();
-    },
-    "nm-sel-clear": () => { NM().sel = []; applySel(); },
+    "nm-sel": (el) => { NM().selected = el.dataset.id; applySel(); },
     "nm-del": (el) => openDelete(el.dataset.id ? [el.dataset.id] : selIds()),
     "nm-del-confirm": () => {
       const ids = new Set(pendingDel);
@@ -468,7 +431,7 @@
         A.S.collapsed.delete(`novel.${id}`);
         delete (R().scr || {})[id];
       });
-      NM().sel = NM().sel.filter((id) => !ids.has(id));
+      if (ids.has(NM().selected)) NM().selected = null;
       if (!U.novelById(N().reader.novel)) N().reader.novel = N().novels[0]?.id || "";
       pendingDel = [];
       A.closeModal();
@@ -495,6 +458,7 @@
       A.renderExplorer();
       A.toast("Đã xóa ảnh bìa, dùng lại bìa mặc định.");
     },
+    "nv-cover-pick": (el) => el.parentElement.querySelector('input[type="file"]')?.click(),
     "nv-tag-add": (el) => {
       const n = novelOf(el);
       const ok = addTag(n, el.value);

@@ -248,7 +248,7 @@ export class NovelPanel {
   }
 
   private buildActiveId(): number | null {
-    return this.novelId() ?? this.novels.selectedIds()[0] ?? null;
+    return this.novelId() ?? this.novels.selectedId();
   }
 
   private buildNovel(): NovelSummary | null {

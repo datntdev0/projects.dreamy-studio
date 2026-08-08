@@ -4,7 +4,7 @@ import { Breadcrumbs, BreadcrumbItem } from "../components/breadcrumbs";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Chip } from "../components/chip";
-import { Datatable, DatatableColumn, DatatableRow } from "../components/datatable";
+import { Datatable, DatatableCell, DatatableColumn, DatatableRow } from "../components/datatable";
 import { Dialog } from "../components/dialog";
 import { Form, FormOption } from "../components/form";
 import { Icon } from "../components/icon";
@@ -15,7 +15,7 @@ import { Tooltip } from "../components/tooltip";
 @Component({
   selector: "app-components-page",
   standalone: true,
-  imports: [Icon, Button, Form, Segments, Chip, Card, Badge, Toast, Tooltip, Breadcrumbs, Datatable, Dialog],
+  imports: [Icon, Button, Form, Segments, Chip, Card, Badge, Toast, Tooltip, Breadcrumbs, Datatable, DatatableCell, Dialog],
   templateUrl: "./components.page.html",
 })
 export class ComponentsPage {
@@ -60,6 +60,10 @@ export class ComponentsPage {
     { name: "Narration.wav", type: "Audio", status: "Đang tạo", size: "48 MB" },
     { name: "Cover.png", type: "Image", status: "Sẵn sàng", size: "2.4 MB" },
   ];
+
+  valueOf(row: object, key: string): string {
+    return String(Reflect.get(row, key) ?? "");
+  }
 
   openDialog(size: "default" | "large"): void {
     this.dialogSize = size;

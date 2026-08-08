@@ -86,6 +86,11 @@ button.menu-row { width: 100%; border: 0; background: transparent; font: 400 13p
   --exc: var(--ex-w, 264px); --exr: 1px; --inc: var(--in-w, 320px); --inr: 1px;
   display: grid; grid-template-columns: 44px var(--exc) var(--exr) minmax(0, 1fr) var(--inr) var(--inc); min-height: 0;
 }
+.resizer-v { position: relative; z-index: 3; cursor: col-resize; touch-action: none; }
+.resizer-v::after { content: ""; position: absolute; inset: 0 -3px; }
+.resizer-v:hover, .resizer-v:focus-visible, .resizer-h:hover, .resizer-h:focus-visible { background: var(--primary); outline: none; }
+.resizer-v:active, .resizer-h:active, .app.is-resizing-panels .resizer-v, .app.is-resizing-panels .resizer-h { background: var(--primary); }
+.app.is-resizing-panels { user-select: none; }
 .shell.no-explorer { --exc: 0px; --exr: 0px; }
 .shell.no-inspector { --inc: 0px; --inr: 0px; }
 .no-explorer .explorer, .no-explorer .divider-explorer,
@@ -97,6 +102,7 @@ button.menu-row { width: 100%; border: 0; background: transparent; font: 400 13p
 .divider-inspector { grid-column: 5; }
 .inspector { grid-column: 6; }
 .divider { background: var(--hairline); }
+.divider-explorer, .divider-inspector { height: auto; align-self: stretch; }
 
 /* activity rail */
 .rail { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--sp-sm) 0; background: var(--canvas-card); border-right: 1px solid var(--hairline); }
@@ -181,8 +187,8 @@ button.menu-row { width: 100%; border: 0; background: transparent; font: 400 13p
 
 /* bottom panel */
 .bottom { flex: none; height: var(--bt-h, 200px); border-top: 1px solid var(--hairline); background: var(--canvas-card); display: flex; flex-direction: column; position: relative; }
-.resizer-h { position: absolute; left: 0; right: 0; top: -3px; height: 5px; cursor: row-resize; z-index: 4; }
-.resizer-h:hover { background: var(--primary); }
+.resizer-h { position: absolute; left: 0; right: 0; top: -1px; height: 1px; cursor: row-resize; z-index: 4; touch-action: none; }
+.resizer-h::after { content: ""; position: absolute; inset: -3px 0; }
 .bottom-body { flex: 1; overflow: auto; min-height: 0; }
 .log { font: 400 12px/18px var(--font-mono); padding: var(--sp-xs) 0; }
 .log-row { display: flex; align-items: baseline; gap: var(--sp-md); padding: 1px var(--sp-md); }

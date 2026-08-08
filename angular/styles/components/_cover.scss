@@ -1,7 +1,14 @@
-.cover { display: inline-block; width: 28px; height: auto; aspect-ratio: 3 / 4; flex: none; border-radius: var(--r-xs); border: 1px solid var(--hairline-strong); background-size: cover; }
+.cover { position: relative; display: inline-block; width: 28px; height: auto; aspect-ratio: 3 / 4; flex: none; overflow: hidden; border-radius: var(--r-xs); border: 1px solid var(--hairline-strong); background-size: cover; }
 .cover-lg { width: 96px; height: auto; border-radius: var(--r-md); }
 .cover-xs { width: 14px; height: auto; border-radius: 2px; }
 .cover-md { width: 44px; height: auto; border-radius: var(--r-sm); }
+.cover-actions { position: absolute; inset: auto 0 0; display: flex; gap: 4px; padding: 18px 4px 4px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.64)); opacity: 0; transition: opacity 120ms ease; }
+.cover:hover .cover-actions, .cover:focus-within .cover-actions { opacity: 1; }
+.cover-action { display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: var(--r-xs); background: rgba(0, 0, 0, 0.5); color: #fff; cursor: pointer; }
+.cover-action:hover { background: rgba(0, 0, 0, 0.76); }
+.cover-action:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.cover-action:disabled { opacity: 0.5; cursor: default; }
+.cover-action .ic { width: 14px; height: 14px; }
 .frac { display: inline-flex; align-items: center; gap: 4px; font: 400 12px/1 var(--font-mono); color: var(--mute); white-space: nowrap; }
 .frac .ic { width: 13px; height: 13px; }
 .frac b { font-weight: 500; color: var(--ink); }

@@ -18,16 +18,11 @@
     </span>
   </section>
 }
-<section class="ins-sec" data-testid="novel-library-add">
-  <span class="eyebrow">{{ "novel.library.add" | t }}</span>
-  <button class="btn btn-block" type="button" data-testid="novel-library-create" (click)="openCreate()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus"/></svg>{{ "novel.library.create" | t }}</button>
-  <button class="btn btn-block" type="button" data-testid="novel-library-import" (click)="openImport()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload"/></svg>{{ "novel.library.import" | t }}</button>
-</section>
 @if (novels.novels().length) {
   <section class="ins-sec" data-testid="novel-library-recent">
     <span class="eyebrow">{{ "novel.library.recent" | t }}</span>
     @for (novel of novels.recent(); track novel.id) {
-      <button type="button" class="nm-recent" data-testid="novel-library-recent-item" (click)="select($event, novel)"><app-novel-cover size="xs" [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span><span class="mono t-mute">{{ dayOf(novel) }}</span></button>
+      <button type="button" class="nm-recent" data-testid="novel-library-recent-item" (click)="select(novel)"><app-novel-cover size="xs" [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span><span class="mono t-mute">{{ dayOf(novel) }}</span></button>
     }
   </section>
 }

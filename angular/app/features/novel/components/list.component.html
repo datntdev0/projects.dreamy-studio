@@ -3,15 +3,6 @@
     <div class="nv-bar-l" data-testid="novel-list-bar-left">
       <label class="search"><span class="sr-only">{{ "novel.list.search.label" | t }}</span><input id="nm-q" class="input" type="search" [value]="novels.query()" [attr.placeholder]="'novel.list.search.placeholder' | t" data-testid="novel-list-search" (input)="onQuery($event)"></label>
       <span class="t-sm t-mute" data-testid="novel-list-count">{{ "novel.count" | t: { count: novels.visible().length } }}</span>
-      <span id="nm-selbar" data-testid="novel-list-selbar">
-        @if (novels.visible().length) {
-          @if (novels.selectedIds().length; as selected) {
-            <span class="nm-selbar" data-testid="novel-list-selection"><b>{{ "novel.list.selected" | t: { count: selected } }}</b><button class="btn btn-sm btn-danger" type="button" data-testid="novel-list-delete" (click)="deleteSelected()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-trash"/></svg>{{ "novel.list.delete" | t }}</button><button class="btn btn-sm btn-ghost" type="button" data-testid="novel-list-clear-selection" (click)="novels.clearSelection()">{{ "novel.list.clearSelection" | t }}</button></span>
-          } @else {
-            <button class="btn btn-sm btn-ghost" type="button" data-testid="novel-list-select-all" (click)="novels.toggleAllVisible()">{{ "novel.list.selectAll" | t }}</button>
-          }
-        }
-      </span>
       @if (novels.filterActive()) {
         <span class="nm-chips" data-testid="novel-list-chips">
           @for (tag of novels.filters().tags; track tag) {
@@ -35,7 +26,7 @@
     </div>
   </div>
   <div class="nv-body" data-testid="novel-list-body">
-    <div class="nv-scroll" [class.has-sel]="novels.selectedIds().length > 0" data-testid="novel-list-scroll">
+    <div class="nv-scroll" [class.table-view]="novels.view() === 'list' && novels.visible().length > 0" data-testid="novel-list-scroll">
       @if (novels.error(); as failure) {
         <div class="empty" data-testid="novel-list-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "novel.error.loadFailed" | t: { detail: failure.detail } }}</p></div></div>
       } @else if (novels.visible().length === 0) {
@@ -47,9 +38,8 @@
       } @else if (novels.view() === "grid") {
         <div class="nm-grid" data-testid="novel-list-grid">
           @for (novel of novels.visible(); track novel.id) {
-            <div class="nm-card is-clickable" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect($event, novel.id)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
+            <div class="nm-card is-clickable" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect(novel.id)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
               <div class="nm-cover" [class.has-img]="hasImage(novel)" [style.background]="backgroundOf(novel)">
-                <input type="checkbox" class="nm-chk" [checked]="isSelected(novel.id)" [attr.aria-label]="'novel.list.check' | t: { name: nameOf(novel) }" data-testid="novel-list-check" (click)="onToggle($event, novel.id)">
                 <span class="badge nm-lang">{{ novel.lang }}</span>
                 @if (!hasImage(novel)) {
                   <span class="nm-cover-t">{{ novel.title }}</span><span class="nm-cover-a">{{ authorOf(novel) }}</span>
@@ -60,34 +50,18 @@
           }
         </div>
       } @else {
-        <table class="table" data-testid="novel-list-table">
-          <thead data-testid="novel-list-table-head">
-            <tr>
-              <th class="chk"><input type="checkbox" class="nm-chk" [checked]="novels.allVisibleSelected()" [attr.aria-label]="'novel.list.selectAll' | t" data-testid="novel-list-check-all" (click)="novels.toggleAllVisible()"></th>
-              <th>{{ "novel.list.col.novel" | t }}</th>
-              <th>{{ "novel.list.col.source" | t }}</th>
-              <th class="num">{{ "novel.list.col.chapters" | t }}</th>
-              <th class="num">{{ "novel.list.col.words" | t }}</th>
-              <th class="cen">{{ "novel.list.col.translation" | t }}</th>
-              <th class="cen">{{ "novel.list.col.knowledge" | t }}</th>
-              <th>{{ "novel.list.col.updated" | t }}</th>
-            </tr>
-          </thead>
-          <tbody data-testid="novel-list-table-body">
-            @for (novel of novels.visible(); track novel.id) {
-              <tr class="is-clickable" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.data-id]="novel.id" data-testid="novel-list-row" (click)="onSelect($event, novel.id)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
-                <td class="chk"><input type="checkbox" class="nm-chk" [checked]="isSelected(novel.id)" [attr.aria-label]="'novel.list.check' | t: { name: nameOf(novel) }" data-testid="novel-list-check" (click)="onToggle($event, novel.id)"></td>
-                <td><div class="nm-title"><app-novel-cover [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><div><div class="t-ink">{{ nameOf(novel) }}</div><div class="t-sm t-mute">{{ subtitleOf(novel) }}</div></div></div></td>
-                <td><span class="badge">{{ novel.lang }}</span></td>
-                <td class="num">{{ fmt(novel.chapterCount) }}</td>
-                <td class="num">{{ fmt(novel.wordCount) }}</td>
-                <td class="cen"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /></td>
-                <td class="cen"><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></td>
-                <td class="mono t-mute">{{ stampOf(novel) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="720px" variant="fill" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
+          <ng-template dsCell="title" let-row>
+            @let novel = novelOf(row);
+            <div class="nm-title"><app-novel-cover [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><div><div class="t-ink">{{ nameOf(novel) }}</div><div class="t-sm t-mute">{{ subtitleOf(novel) }}</div></div></div>
+          </ng-template>
+          <ng-template dsCell="source" let-row><span class="badge">{{ novelOf(row).lang }}</span></ng-template>
+          <ng-template dsCell="chapters" let-row>{{ fmt(novelOf(row).chapterCount) }}</ng-template>
+          <ng-template dsCell="words" let-row>{{ fmt(novelOf(row).wordCount) }}</ng-template>
+          <ng-template dsCell="translation" let-row><app-novel-progress-frac icon="lang" [done]="novelOf(row).translatedCount" [total]="novelOf(row).chapterCount" [label]="'novel.frac.translated' | t" /></ng-template>
+          <ng-template dsCell="knowledge" let-row><app-novel-progress-frac icon="graph" [done]="novelOf(row).analyzedCount" [total]="novelOf(row).chapterCount" [label]="'novel.frac.analyzed' | t" /></ng-template>
+          <ng-template dsCell="updated" let-row><span class="mono t-mute">{{ stampOf(novelOf(row)) }}</span></ng-template>
+        </ds-datatable>
       }
     </div>
   </div>

@@ -1,4 +1,4 @@
-<div class="divider divider-inspector" aria-hidden="true" data-testid="inspector-divider"></div>
+<div class="divider resizer-v divider-inspector" role="separator" aria-orientation="vertical" [attr.aria-label]="'main.panel.resize.inspector' | t" tabindex="0" [attr.aria-valuenow]="layout.inspectorSize()" [attr.aria-valuemin]="layout.panelLimits.inspector.min" [attr.aria-valuemax]="layout.panelLimits.inspector.max" data-testid="inspector-divider" (pointerdown)="layout.beginResize('inspector', $event)" (keydown)="layout.handleResizeKey('inspector', $event)" (dblclick)="layout.resetSize('inspector')"></div>
 <aside class="inspector" data-testid="inspector">
   <header class="ins-head" data-testid="inspector-head">
     @for (tab of tabs; track tab.id) {
@@ -26,12 +26,10 @@
       @switch (editorTabs.active().kind) {
         @case ("novels") {
           <div data-testid="inspector-novels-host">
-            @if (novels.selectedIds().length === 0) {
+            @if (novels.selectedId() === null) {
               <app-novel-library-panel />
-            } @else if (novels.selectedIds().length > 1) {
-              <app-novel-multi-panel />
             } @else {
-              <app-novel-panel [novelId]="novels.selectedIds()[0]" [showOpen]="true" />
+              <app-novel-panel [novelId]="novels.selectedId()!" [showOpen]="true" />
             }
           </div>
         }

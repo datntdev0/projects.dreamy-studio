@@ -1,4 +1,4 @@
-import { Component, effect, inject } from "@angular/core";
+import { Component, HostListener, effect, inject } from "@angular/core";
 import { Title } from "@angular/platform-browser";
 import { Toast } from "../../../components/toast";
 import { Editor } from "../../../layout/editor/editor";
@@ -38,6 +38,21 @@ export class MainPage {
 
   dismissSwitchNotice(): void {
     this.workspaceService.switchNotice.set(null);
+  }
+
+  @HostListener("window:pointermove", ["$event"])
+  resizePanels(event: PointerEvent): void {
+    this.layout.resizeTo(event);
+  }
+
+  @HostListener("window:pointerup")
+  finishPanelResize(): void {
+    this.layout.endResize();
+  }
+
+  @HostListener("window:pointercancel")
+  cancelPanelResize(): void {
+    this.layout.endResize();
   }
 
   private syncTitle(): void {

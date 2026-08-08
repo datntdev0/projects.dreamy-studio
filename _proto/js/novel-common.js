@@ -34,7 +34,7 @@ window.NVU = (function () {
     : { tr: 0, kb: 0, total: n.chapters });
   /** Nền bìa: ảnh người dùng chọn (`coverImg`) hoặc gradient sinh sẵn. */
   const coverBg = (n) => (n.coverImg ? `url(${n.coverImg}) center / cover no-repeat` : `linear-gradient(160deg,${n.cover[0]},${n.cover[1]} 55%,${n.cover[2]})`);
-  const cover = (n, cls = "") => `<span class="cover ${cls}" style="background:${esc(coverBg(n))}"></span>`;
+  const cover = (n, cls = "", actions = "") => `<span class="cover ${cls}" style="background:${esc(coverBg(n))}">${actions}</span>`;
   /** `2/12` kèm icon, dùng thay cho chữ dài ở danh sách, lưới và bảng chương. */
   const frac = (icon, a, b, title) => `<span class="frac ${a >= b && b ? "is-full" : a ? "is-part" : ""}" title="${esc(title)}">${ic(icon)}<b>${a}</b>/${b}</span>`;
 
@@ -45,6 +45,51 @@ window.NVU = (function () {
   const options = (list, currentValue) => list.map(([v, label, disabled]) =>
     `<option value="${esc(v)}" ${String(v) === String(currentValue) ? "selected" : ""} ${disabled ? "disabled" : ""}>${esc(label)}</option>`).join("");
   const bar = (left, right = "") => `<div class="nv-bar"><div class="nv-bar-l">${left}</div><span class="spacer"></span><div class="nv-bar-r">${right}</div></div>`;
+  const datatable = (options) => {
+    const columns = options.columns || [];
+    const rows = options.rows || [];
+    let colgroup = "<colgroup>";
+    let headerCells = "";
+    for (const column of columns) {
+      colgroup += `<col${column.width ? ` style="width:${esc(column.width)}"` : ""}>`;
+      const align = column.align === "right" ? "num" : column.align === "center" ? "cen" : "";
+      headerCells += `<th scope="col" class="${align}">${esc(column.label)}</th>`;
+    }
+    colgroup += "</colgroup>";
+    const minWidth = ` style="min-width:${esc(options.minWidth || "0")}"`;
+    const head = `<div class="table-head ds-datatable-head" data-testid="datatable-head"><div class="ds-datatable-head-inner"><table class="table ds-datatable-table"${minWidth}>${colgroup}<thead><tr>${headerCells}</tr></thead></table></div></div>`;
+    let bodyRows = "";
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowClasses = options.rowClass ? options.rowClass(row) : {};
+      let classes = "";
+      for (const key of Object.keys(rowClasses)) {
+        if (rowClasses[key]) classes += `${classes ? " " : ""}${key}`;
+      }
+      const attrs = options.rowAttrs ? options.rowAttrs(row) : "";
+      let cells = "";
+      for (const column of columns) {
+        const value = column.render ? column.render(row) : esc(row[column.key] ?? "");
+        let cellClasses = column.align === "right" ? "num" : column.align === "center" ? "cen" : "";
+        if (column.ellipsis) cellClasses += `${cellClasses ? " " : ""}cell-ellipsis`;
+        cells += `<td${cellClasses ? ` class="${cellClasses}"` : ""}>${value}</td>`;
+      }
+      bodyRows += `<tr tabindex="0" data-testid="${esc(options.rowTestId || "datatable-row")}" data-datatable-index="${index}" class="${classes}" ${attrs}>${cells}</tr>`;
+    }
+    if (!rows.length) bodyRows = `<tr><td class="empty-cell" colspan="${columns.length}">${options.emptyHTML || esc(options.emptyMessage || "No data")}</td></tr>`;
+    const body = `<div class="table-body ds-datatable-body" data-testid="datatable-body" data-datatable-scroll data-keep="${esc(options.keep || "")}"><table class="table ds-datatable-table"${minWidth}>${colgroup}<tbody>${bodyRows}</tbody></table></div>`;
+    const hostTestId = esc(options.testId || "datatable-host");
+    const variant = options.variant || "card";
+    return `<div class="ds-datatable-host ${variant === "fill" ? "is-fill" : ""}" data-testid="${hostTestId}"><div class="table-wrap ds-datatable ${variant}" data-testid="datatable">${head}${body}</div></div>`;
+  };
+
+  document.addEventListener("scroll", (event) => {
+    const body = event.target;
+    if (body instanceof HTMLElement && body.matches("[data-datatable-scroll]")) {
+      const header = body.parentElement?.querySelector(".ds-datatable-head");
+      if (header instanceof HTMLElement) header.scrollLeft = body.scrollLeft;
+    }
+  }, true);
   const empty = (title, text, cta = "") => `<div class="empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">${title}</h3><p class="t-sm t-mute">${text}</p>${cta}</div></div>`;
   const noSample = () => empty("Chưa có nội dung mẫu", "Prototype chỉ có nội dung chương, bản dịch và tri thức cho “The Lantern Keeper of Harrowmere”.", novelById(SAMPLE) ? `<button class="btn btn-primary" data-act="nv-sample">Mở novel mẫu</button>` : "");
   const insSec = (title, body) => `<section class="ins-sec"><span class="eyebrow">${esc(title)}</span>${body}</section>`;
@@ -183,7 +228,7 @@ window.NVU = (function () {
   };
 
   const NVU = {
-    SAMPLE, N, ui, fmt, chapter, novelById, current, bind, hasText, findPara, paraNo, refLabel, ref, seg, options, bar, empty, noSample, insSec, kv, novelTitle,
+    SAMPLE, N, ui, fmt, chapter, novelById, current, bind, hasText, findPara, paraNo, refLabel, ref, seg, options, bar, datatable, empty, noSample, insSec, kv, novelTitle,
     nameOf, chaptersFor, progress, analyzedCount, cover, coverBg, frac, rangeText, chapterJump, nextNovelId, tagsOf, allTags, normTag, filters, filterActive, passes, tagChips, refreshTabs,
     certBadge, CERT, estimate, money, provider, providerSelect, runningTask, taskRef, trChapter, trParaList, trStatus, openWarnings, staleItems,
     addWarning, applySourceEdit, inspectorNovel, openNovelTab,

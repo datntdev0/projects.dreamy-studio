@@ -2,6 +2,7 @@ import { Component, HostListener, effect, inject } from "@angular/core";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { I18nService } from "../../../core/i18n/i18n.service";
 import { TabsService } from "../../../../layout/tabs.service";
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "../../../../components/datatable";
 import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelReaderService } from "../novel.reader.service";
@@ -10,7 +11,7 @@ import { displayName, formatCount, formatStamp, hasCustomName } from "../novel.r
 import { NovelCover, coverBackground, coverColorsFor } from "./cover.component";
 import { NovelProgressFrac } from "./progress-frac.component";
 
-const INTERACTIVE_SELECTOR = "input,button";
+const INTERACTIVE_SELECTOR = "button";
 const FIELD_SELECTOR = "input,textarea,select";
 
 function isInside(target: EventTarget | null, selector: string): boolean {
@@ -20,7 +21,7 @@ function isInside(target: EventTarget | null, selector: string): boolean {
 @Component({
   selector: "app-novel-list",
   standalone: true,
-  imports: [I18nPipe, NovelCover, NovelProgressFrac],
+  imports: [Datatable, DatatableCell, I18nPipe, NovelCover, NovelProgressFrac],
   templateUrl: "./list.component.html",
 })
 export class NovelList {
@@ -30,6 +31,22 @@ export class NovelList {
   private readonly dialogs = inject(NovelDialogsService);
 
   readonly novels = inject(NovelService);
+
+  readonly tableRowClass = (row: object): Record<string, boolean> => ({
+    "is-selected": this.novels.selectedId() === this.novelOf(row).id,
+  });
+
+  get tableColumns(): DatatableColumn[] {
+    return [
+      { key: "title", label: this.i18n.translate("novel.list.col.novel"), ellipsis: true },
+      { key: "source", label: this.i18n.translate("novel.list.col.source"), width: "64px" },
+      { key: "chapters", label: this.i18n.translate("novel.list.col.chapters"), align: "right", width: "80px" },
+      { key: "words", label: this.i18n.translate("novel.list.col.words"), align: "right", width: "88px" },
+      { key: "translation", label: this.i18n.translate("novel.list.col.translation"), align: "center", width: "96px" },
+      { key: "knowledge", label: this.i18n.translate("novel.list.col.knowledge"), align: "center", width: "96px" },
+      { key: "updated", label: this.i18n.translate("novel.list.col.updated"), width: "152px", ellipsis: true },
+    ];
+  }
 
   constructor() {
     effect(this.loadCovers.bind(this));
@@ -73,7 +90,7 @@ export class NovelList {
   }
 
   isSelected(id: number): boolean {
-    return this.novels.selectedSet().has(id);
+    return this.novels.selectedId() === id;
   }
 
   isViewActive(mode: NovelViewMode): boolean {
@@ -88,13 +105,20 @@ export class NovelList {
     this.novels.setQuery((event.target as HTMLInputElement).value);
   }
 
-  onSelect(event: MouseEvent, id: number): void {
-    this.novels.select(id, event);
+  onSelect(id: number): void {
+    this.novels.select(id);
   }
 
-  onToggle(event: Event, id: number): void {
-    event.stopPropagation();
-    this.novels.toggleSelected(id);
+  novelOf(row: object): NovelSummary {
+    return row as NovelSummary;
+  }
+
+  onTableDoubleClick(event: DatatableRowEvent): void {
+    this.onDoubleClick(event.event as MouseEvent, this.novelOf(event.row));
+  }
+
+  onTableEnter(event: DatatableRowEvent): void {
+    this.onEnter(event.event, this.novelOf(event.row));
   }
 
   onDoubleClick(event: MouseEvent, novel: NovelSummary): void {
@@ -122,10 +146,6 @@ export class NovelList {
     this.novels.toggleTagFilter(tag);
   }
 
-  deleteSelected(): void {
-    this.dialogs.openDelete(this.novels.selectedIds());
-  }
-
   openCreate(): void {
     this.dialogs.openCreate();
   }
@@ -139,10 +159,11 @@ export class NovelList {
     if (event.key !== "Delete" || isInside(event.target, FIELD_SELECTOR)) {
       return;
     }
-    if (this.isModalOpen() || this.novels.selectedIds().length === 0) {
+    const id = this.novels.selectedId();
+    if (this.isModalOpen() || id === null) {
       return;
     }
-    this.deleteSelected();
+    this.dialogs.openDelete([id]);
   }
 
   private isModalOpen(): boolean {

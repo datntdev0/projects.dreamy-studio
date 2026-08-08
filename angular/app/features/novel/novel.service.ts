@@ -14,13 +14,10 @@ import { NovelSummary } from "./novel.models";
 import { NovelTotals } from "./novel.models";
 import { NovelViewMode } from "./novel.models";
 import { PackageSummary } from "./novel.models";
-import { SelectEvent } from "./novel.models";
-import { SelectionState } from "./novel.models";
 import { TagAddResult } from "./novel.models";
 import { TagCount } from "./novel.models";
 import { RECENT_LIMIT } from "./novel.rules";
 import { checkTag } from "./novel.rules";
-import { clickSelection } from "./novel.rules";
 import { compareNewestFirst } from "./novel.rules";
 import { filterNovels } from "./novel.rules";
 import { isDuplicateTitle } from "./novel.rules";
@@ -28,19 +25,14 @@ import { langCounts } from "./novel.rules";
 import { normTag } from "./novel.rules";
 import { novelTotals } from "./novel.rules";
 import { pruneLangs } from "./novel.rules";
-import { pruneSelection } from "./novel.rules";
 import { pruneTags } from "./novel.rules";
 import { recentNovels } from "./novel.rules";
 import { tagCounts } from "./novel.rules";
 import { toNovelError } from "./novel.rules";
-import { toggleAllSelection } from "./novel.rules";
-import { toggleSelection } from "./novel.rules";
 import { toggled } from "./novel.rules";
 import { withoutTag } from "./novel.rules";
 
 const VIEW_STORAGE_KEY = "ds.nm.view";
-
-const EMPTY_SELECTION: SelectionState = { ids: [], anchor: null };
 
 function readViewMode(): NovelViewMode {
   try {
@@ -57,10 +49,6 @@ function storeViewMode(mode: NovelViewMode): void {
   } catch {
     return;
   }
-}
-
-function idOf(novel: NovelSummary): number {
-  return novel.id;
 }
 
 function coverKey(novel: NovelSummary): string {
@@ -117,7 +105,7 @@ export class NovelService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly workspace = inject(WorkspaceService);
   private readonly items = signal<NovelSummary[]>([]);
-  private readonly selection = signal<SelectionState>(EMPTY_SELECTION);
+  private readonly selectedNovelId = signal<number | null>(null);
   private readonly rawTags = signal<string[]>([]);
   private readonly rawLangs = signal<NovelLang[]>([]);
   private readonly covers = signal<Record<number, CoverEntry>>({});
@@ -141,11 +129,7 @@ export class NovelService {
   readonly filters = computed(this.buildFilters.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
-  readonly visibleIds = computed(this.buildVisibleIds.bind(this));
-  readonly selectedIds = computed(this.buildSelectedIds.bind(this));
-  readonly selectedNovels = computed(this.buildSelectedNovels.bind(this));
-  readonly selectedSet = computed(this.buildSelectedSet.bind(this));
-  readonly allVisibleSelected = computed(this.buildAllVisibleSelected.bind(this));
+  readonly selectedId = computed(this.buildSelectedId.bind(this));
   readonly totals = computed(this.buildTotals.bind(this));
   readonly recent = computed(this.buildRecent.bind(this));
   readonly isEmpty = computed(this.buildIsEmpty.bind(this));
@@ -347,29 +331,14 @@ export class NovelService {
     this.clearFilters();
   }
 
-  select(id: number, event?: SelectEvent): void {
-    const known = new Set(this.byId().keys());
-    this.selection.set(
-      clickSelection(this.selection(), id, event, this.visibleIds(), known),
-    );
-  }
-
-  toggleSelected(id: number): void {
-    this.selection.set(toggleSelection(this.selection(), id));
-  }
-
-  toggleAllVisible(): void {
-    this.selection.set(toggleAllSelection(this.selection(), this.visibleIds()));
-  }
-
-  clearSelection(): void {
-    this.selection.set({ ids: [], anchor: this.selection().anchor });
+  select(id: number): void {
+    this.selectedNovelId.set(id);
   }
 
   reset(): void {
     this.epoch += 1;
     this.items.set([]);
-    this.selection.set(EMPTY_SELECTION);
+    this.selectedNovelId.set(null);
     this.rawTags.set([]);
     this.rawLangs.set([]);
     this.covers.set({});
@@ -431,7 +400,9 @@ export class NovelService {
     this.items.set(withoutIds(this.items(), gone));
     this.covers.set(omitKeys(this.covers(), gone));
     this.chapterCache.set(omitKeys(this.chapterCache(), gone));
-    this.selection.set(pruneSelection(this.selection(), new Set(this.byId().keys())));
+    if (!this.byId().has(this.selectedNovelId() ?? -1)) {
+      this.selectedNovelId.set(null);
+    }
   }
 
   private buildIndex(): Map<number, NovelSummary> {
@@ -470,49 +441,9 @@ export class NovelService {
     return filterNovels(this.items(), this.filters(), this.query());
   }
 
-  private buildVisibleIds(): number[] {
-    return this.visible().map(idOf);
-  }
-
-  private buildSelectedIds(): number[] {
-    const known = this.byId();
-    const out: number[] = [];
-    for (const id of this.selection().ids) {
-      if (known.has(id)) {
-        out.push(id);
-      }
-    }
-    return out;
-  }
-
-  private buildSelectedNovels(): NovelSummary[] {
-    const known = this.byId();
-    const out: NovelSummary[] = [];
-    for (const id of this.selectedIds()) {
-      const novel = known.get(id);
-      if (novel) {
-        out.push(novel);
-      }
-    }
-    return out;
-  }
-
-  private buildSelectedSet(): Set<number> {
-    return new Set(this.selectedIds());
-  }
-
-  private buildAllVisibleSelected(): boolean {
-    const selected = this.selectedSet();
-    const visible = this.visibleIds();
-    if (selected.size === 0) {
-      return false;
-    }
-    for (const id of visible) {
-      if (!selected.has(id)) {
-        return false;
-      }
-    }
-    return true;
+  private buildSelectedId(): number | null {
+    const id = this.selectedNovelId();
+    return id !== null && this.byId().has(id) ? id : null;
   }
 
   private buildTotals(): NovelTotals {

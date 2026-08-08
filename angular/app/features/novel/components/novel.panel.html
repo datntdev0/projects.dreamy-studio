@@ -1,6 +1,18 @@
 @if (novel(); as n) {
+  <section class="ins-panel-actions" data-testid="novel-panel-actions">
+    <button type="button" class="btn btn-sm btn-danger" [attr.data-tip]="'novel.panel.deleteTip' | t" [attr.aria-label]="'novel.panel.deleteTip' | t" data-testid="novel-panel-delete" (click)="requestDelete(n)"><ds-icon name="trash" [size]="15" />{{ "novel.panel.delete" | t }}</button>
+    @if (showOpen()) {
+      <button type="button" class="btn btn-sm btn-primary" data-testid="novel-panel-open" (click)="openNovel(n)"><ds-icon name="book" [size]="15" />{{ "novel.panel.open" | t }}</button>
+    }
+  </section>
   <section class="ins-hero" data-testid="novel-panel-hero">
-    <div class="ins-hero-cv" data-testid="novel-panel-cover"><app-novel-cover size="lg" [colors]="colorsOf(n)" [image]="imageOf(n)" /></div>
+    <div class="ins-hero-cv" data-testid="novel-panel-cover"><app-novel-cover size="lg" [colors]="colorsOf(n)" [image]="imageOf(n)">
+      <span class="cover-actions" data-testid="novel-panel-cover-actions">
+        <button type="button" class="cover-action" [attr.data-tip]="coverKey() | t" [attr.aria-label]="coverKey() | t" data-testid="novel-panel-cover-pick" (click)="coverInput.click()"><ds-icon name="image" [size]="15" /></button>
+        <input #coverInput type="file" accept="image/jpeg,image/png" hidden data-testid="novel-panel-cover-input" (change)="onCoverFile(n, $event)" />
+        <button type="button" class="cover-action" [attr.data-tip]="'novel.panel.coverRemove' | t" [attr.aria-label]="'novel.panel.coverRemove' | t" [disabled]="!hasCover()" data-testid="novel-panel-cover-remove" (click)="clearCover(n)"><ds-icon name="x" [size]="15" /></button>
+      </span>
+    </app-novel-cover></div>
     <div class="ins-hero-b" data-testid="novel-panel-hero-body">
       <div class="ins-hero-t" data-testid="novel-panel-name">{{ nameOf(n) }}</div>
       @if (hasOriginal(n)) {
@@ -11,14 +23,6 @@
       <div class="nm-fr" data-testid="novel-panel-progress">
         <app-novel-progress-frac icon="lang" [done]="n.translatedCount" [total]="n.chapterCount" [label]="'novel.frac.translated' | t" />
         <app-novel-progress-frac icon="graph" [done]="n.analyzedCount" [total]="n.chapterCount" [label]="'novel.frac.analyzed' | t" />
-      </div>
-      <div class="ins-hero-act" data-testid="novel-panel-actions">
-        <label class="btn btn-sm btn-icon" [attr.data-tip]="coverKey() | t" [attr.aria-label]="coverKey() | t" data-testid="novel-panel-cover-pick"><ds-icon name="image" [size]="15" /><input type="file" accept="image/jpeg,image/png" hidden data-testid="novel-panel-cover-input" (change)="onCoverFile(n, $event)" /></label>
-        <button type="button" class="btn btn-sm btn-icon" [attr.data-tip]="'novel.panel.coverRemove' | t" [attr.aria-label]="'novel.panel.coverRemove' | t" [disabled]="!hasCover()" data-testid="novel-panel-cover-remove" (click)="clearCover(n)"><ds-icon name="x" [size]="15" /></button>
-        <button type="button" class="btn btn-sm btn-danger" [attr.data-tip]="'novel.panel.deleteTip' | t" [attr.aria-label]="'novel.panel.deleteTip' | t" data-testid="novel-panel-delete" (click)="requestDelete(n)"><ds-icon name="trash" [size]="15" />{{ "novel.panel.delete" | t }}</button>
-        @if (showOpen()) {
-          <button type="button" class="btn btn-sm btn-primary" data-testid="novel-panel-open" (click)="openNovel(n)"><ds-icon name="book" [size]="15" />{{ "novel.panel.open" | t }}</button>
-        }
       </div>
     </div>
   </section>

@@ -1,6 +1,6 @@
-<div class="app" data-testid="main-page">
+<div class="app" [class.is-resizing-panels]="layout.resizing()" data-testid="main-page">
   <app-titlebar />
-  <div class="shell" [class.no-explorer]="!layout.explorerOpen()" [class.no-inspector]="!layout.inspectorOpen()" data-testid="main-shell">
+  <div class="shell" [style.--ex-w.px]="layout.explorerSize()" [style.--in-w.px]="layout.inspectorSize()" [class.no-explorer]="!layout.explorerOpen()" [class.no-inspector]="!layout.inspectorOpen()" data-testid="main-shell">
     <app-railbar />
     <app-explorer />
     <app-editor />

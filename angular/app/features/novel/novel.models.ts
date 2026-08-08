@@ -125,17 +125,6 @@ export interface NovelTotals {
   analyzed: number;
 }
 
-export interface SelectionState {
-  ids: number[];
-  anchor: number | null;
-}
-
-export interface SelectEvent {
-  shiftKey: boolean;
-  ctrlKey: boolean;
-  metaKey: boolean;
-}
-
 export type TagCheck = "ok" | "empty" | "duplicate" | "limit";
 
 export type TagAddResult = "added" | "empty" | "duplicate" | "limit" | "missing";

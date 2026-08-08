@@ -16,64 +16,29 @@
       <span class="legend-dots" data-testid="novel-chapters-legend"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></span>
     </div>
     <div class="nv-body" data-testid="novel-chapters-body">
-      <div class="nv-scroll" data-testid="novel-chapters-scroll">
-        @if (rows().length) {
-          <table class="table" data-testid="novel-chapters-table">
-            <thead data-testid="novel-chapters-head">
-              <tr>
-                <th>{{ "novel.chapters.col.number" | t }}</th>
-                <th>{{ "novel.chapters.col.title" | t }}</th>
-                <th class="num">{{ "novel.chapters.col.words" | t }}</th>
-                <th class="cen">{{ "novel.chapters.col.translation" | t }}</th>
-                <th class="cen">{{ "novel.chapters.col.knowledge" | t }}</th>
-              </tr>
-            </thead>
-            <tbody data-testid="novel-chapters-rows">
-              @for (row of rows(); track row.id) {
-                <tr tabindex="0" data-act="ch-open" data-testid="novel-chapter-row" [class.is-current]="resumeSeq() === row.seq" [attr.data-n]="row.seq" (click)="open(row.seq)" (keydown.enter)="open(row.seq)">
-                  <td class="mono t-mute">{{ numberOf(row) }}</td>
-                  <td class="t-ink">{{ row.title }}</td>
-                  <td class="num">{{ count(row.wordCount) }}</td>
-                  <td class="cen">
-                    @switch (row.translationStatus) {
-                      @case ("draft") {
-                        <span class="dot dot-success" [attr.title]="'novel.chapters.translation.draft' | t"></span>
-                      }
-                      @case ("review") {
-                        <span class="dot dot-warning" [attr.title]="'novel.chapters.translation.review' | t"></span>
-                      }
-                      @case ("running") {
-                        <span class="dot dot-running" [attr.title]="'novel.chapters.translation.running' | t"></span>
-                      }
-                      @default {
-                        <span class="dot-o" [attr.title]="'novel.chapters.translation.none' | t"></span>
-                      }
-                    }
-                  </td>
-                  <td class="cen">
-                    @switch (row.analysisStatus) {
-                      @case ("done") {
-                        <span class="dot dot-info" [attr.title]="'novel.chapters.analysis.done' | t"></span>
-                      }
-                      @case ("stale") {
-                        <span class="dot dot-warning" [attr.title]="'novel.chapters.analysis.stale' | t"></span>
-                      }
-                      @case ("running") {
-                        <span class="dot dot-running" [attr.title]="'novel.chapters.analysis.running' | t"></span>
-                      }
-                      @default {
-                        <span class="dot-o" [attr.title]="'novel.chapters.analysis.none' | t"></span>
-                      }
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        } @else {
+      <ds-datatable [columns]="tableColumns" [rows]="rows()" trackKey="id" variant="fill" rowTestId="novel-chapter-row" [rowClass]="tableRowClass" data-testid="novel-chapters-table" (rowClick)="open(chapterOf($event.row).seq)" (rowEnter)="onTableEnter($event)">
+        <ng-template dsCell="seq" let-row><span class="mono t-mute">{{ numberOf(chapterOf(row)) }}</span></ng-template>
+        <ng-template dsCell="wordCount" let-row>{{ count(chapterOf(row).wordCount) }}</ng-template>
+        <ng-template dsCell="translationStatus" let-row>
+          @switch (chapterOf(row).translationStatus) {
+            @case ("draft") { <span class="dot dot-success" [attr.title]="'novel.chapters.translation.draft' | t"></span> }
+            @case ("review") { <span class="dot dot-warning" [attr.title]="'novel.chapters.translation.review' | t"></span> }
+            @case ("running") { <span class="dot dot-running" [attr.title]="'novel.chapters.translation.running' | t"></span> }
+            @default { <span class="dot-o" [attr.title]="'novel.chapters.translation.none' | t"></span> }
+          }
+        </ng-template>
+        <ng-template dsCell="analysisStatus" let-row>
+          @switch (chapterOf(row).analysisStatus) {
+            @case ("done") { <span class="dot dot-info" [attr.title]="'novel.chapters.analysis.done' | t"></span> }
+            @case ("stale") { <span class="dot dot-warning" [attr.title]="'novel.chapters.analysis.stale' | t"></span> }
+            @case ("running") { <span class="dot dot-running" [attr.title]="'novel.chapters.analysis.running' | t"></span> }
+            @default { <span class="dot-o" [attr.title]="'novel.chapters.analysis.none' | t"></span> }
+          }
+        </ng-template>
+        <ng-template dsEmpty>
           <div class="empty" data-testid="novel-chapters-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-chapters-empty-title">{{ "novel.chapters.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-chapters-empty-description">{{ "novel.chapters.empty.description" | t }}</p></div></div>
-        }
-      </div>
+        </ng-template>
+      </ds-datatable>
     </div>
   </div>
 }

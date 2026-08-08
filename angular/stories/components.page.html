@@ -116,7 +116,12 @@
   <section>
     <div class="section-head"><h2>Datatable</h2><code>ds-datatable</code></div>
     <div class="demo grid">
-      <ds-datatable [columns]="columns" [rows]="rows" [selectedIndex]="selectedRow" (rowSelected)="selectedRow = $event" />
+      <ds-datatable [columns]="columns" [rows]="rows" [selectedIndex]="selectedRow" (rowSelected)="selectedRow = $event">
+        <ng-template dsCell="name" let-row><strong data-testid="components-datatable-name">{{ valueOf(row, "name") }}</strong></ng-template>
+      </ds-datatable>
+      <ds-datatable [columns]="columns" [rows]="rows" variant="fill" minWidth="560px" style="height: 220px">
+        <ng-template dsCell="name" let-row><strong data-testid="components-datatable-name-fill">{{ valueOf(row, "name") }}</strong></ng-template>
+      </ds-datatable>
       <div class="note">Hàng đang chọn: {{ selectedRow + 1 }}</div>
       <ds-datatable [columns]="columns" [rows]="[]" emptyMessage="Chưa có tài nguyên nào" />
     </div>

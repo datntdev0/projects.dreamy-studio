@@ -87,9 +87,9 @@
 .edcol { grid-column: 4; }
 [data-resize="inspector"] { grid-column: 5; }
 .inspector { grid-column: 6; }
-.resizer { background: var(--hairline); cursor: col-resize; position: relative; z-index: 3; }
+.resizer { background: var(--hairline); cursor: col-resize; position: relative; z-index: 3; touch-action: none; }
 .resizer::after { content: ""; position: absolute; inset: 0 -3px; }
-.resizer:hover { background: var(--primary); }
+.resizer:hover, .resizer:focus-visible, .resizer:active, body.is-resizing .resizer { background: var(--primary); outline: none; }
 body.is-resizing { user-select: none; cursor: col-resize; }
 
 /* activity rail */
@@ -174,8 +174,9 @@ body.is-resizing { user-select: none; cursor: col-resize; }
 
 /* bottom panel */
 .bottom { flex: none; height: var(--bt-h, 200px); border-top: 1px solid var(--hairline); background: var(--canvas-card); display: flex; flex-direction: column; position: relative; }
-.resizer-h { position: absolute; left: 0; right: 0; top: -3px; height: 5px; cursor: row-resize; z-index: 4; }
-.resizer-h:hover { background: var(--primary); }
+.resizer-h { position: absolute; left: 0; right: 0; top: -1px; height: 1px; cursor: row-resize; z-index: 4; touch-action: none; }
+.resizer-h::after { content: ""; position: absolute; inset: -3px 0; }
+.resizer-h:hover, .resizer-h:focus-visible, .resizer-h:active, body.is-resizing .resizer-h { background: var(--primary); outline: none; }
 .bottom-head { height: 28px; flex: none; display: flex; align-items: center; gap: var(--sp-xs); padding: 0 var(--sp-xs) 0 var(--sp-sm); border-bottom: 1px solid var(--hairline); }
 .bottom-body { flex: 1; overflow: auto; min-height: 0; }
 .log { font: 400 12px/18px var(--font-mono); padding: var(--sp-xs) 0; }

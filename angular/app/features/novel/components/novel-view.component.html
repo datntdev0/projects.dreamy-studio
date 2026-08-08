@@ -1,0 +1,7 @@
+@if (reader.screenOf(novelId()) === "reading") {
+  @if (reader.novelId() === novelId()) {
+    <app-novel-reader [novelId]="novelId()" />
+  }
+} @else {
+  <app-novel-chapters [novelId]="novelId()" />
+}

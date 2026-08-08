@@ -1,0 +1,59 @@
+<div class="nv" data-testid="novel-reader">
+  <div class="nv-bar" data-testid="novel-reader-bar">
+    <div class="nv-bar-l" data-testid="novel-reader-bar-left">
+      <button type="button" class="btn btn-sm" data-testid="novel-reader-back" (click)="back()"><ds-icon name="arrow-left" [size]="16" />{{ "novel.reader.back" | t }}</button>
+      <span class="bar-sep"></span>
+      <button type="button" class="btn btn-icon btn-sm" data-testid="novel-reader-prev" [disabled]="!reader.hasPrev()" [attr.aria-label]="'novel.reader.prev' | t" [attr.data-tip]="'novel.reader.prev' | t" (click)="prev()"><ds-icon name="chev-l" [size]="17" /></button>
+      <select class="select ch-select" data-testid="novel-reader-jump" [attr.aria-label]="'novel.reader.jump' | t" (change)="onJump($event)">
+        @for (chapter of reader.chapters(); track chapter.id) {
+          <option [value]="chapter.seq" [selected]="chapter.seq === reader.seq()">{{ "novel.reader.jumpOption" | t: { n: chapter.seq, title: chapter.title } }}</option>
+        }
+      </select>
+      <button type="button" class="btn btn-icon btn-sm" data-testid="novel-reader-next" [disabled]="!reader.hasNext()" [attr.aria-label]="'novel.reader.next' | t" [attr.data-tip]="'novel.reader.next' | t" (click)="next()"><ds-icon name="chev-r" [size]="17" /></button>
+    </div>
+    <span class="spacer"></span>
+    <div class="nv-bar-r" data-testid="novel-reader-bar-right">
+      <div class="seg" role="group" data-testid="novel-reader-mode">
+        @for (mode of modes; track mode) {
+          <button type="button" [class.is-active]="reader.mode() === mode" [attr.aria-pressed]="reader.mode() === mode" [attr.data-testid]="'novel-reader-mode-' + mode" (click)="setMode(mode)">{{ modeKey(mode) | t }}</button>
+        }
+      </div>
+    </div>
+  </div>
+  <div class="nv-body" data-testid="novel-reader-body">
+    <article #page class="rd-page" data-testid="novel-reader-page" [class.no-nums]="!reader.prefs().nums" [class.is-justify]="reader.prefs().justify" [attr.data-paper]="reader.prefs().paper" [attr.style]="reader.pageStyle()">
+      <div class="rd-col" data-testid="novel-reader-column">
+        <span class="eyebrow" data-testid="novel-reader-eyebrow">{{ "novel.reader.eyebrow" | t: { n: reader.seq(), total: reader.total() } }}</span>
+        @if (reader.current(); as chapter) {
+          <h1 class="rd-h" data-testid="novel-reader-title">{{ chapter.title }}</h1>
+          <div class="t-sm rd-meta" data-testid="novel-reader-meta">{{ "novel.reader.meta" | t: { words: count(chapter.wordCount), lang: langName() } }}</div>
+        }
+        @if (reader.error(); as error) {
+          <div class="empty" data-testid="novel-reader-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "novel.reader.loadFailed" | t: { detail: error.detail } }}</p></div></div>
+        } @else {
+          @for (paragraph of reader.paragraphs(); track paragraph.n) {
+            @if (reader.editing() === paragraph.n) {
+              <div class="rd-edit" data-testid="novel-reader-edit" [attr.id]="'rp-' + paragraph.n">
+                <textarea #editor class="textarea" rows="5" data-testid="novel-reader-textarea" [value]="paragraph.text"></textarea>
+                <div class="rd-edit-foot">
+                  <span class="spacer"></span>
+                  <button type="button" class="btn btn-sm" data-testid="novel-reader-cancel" (click)="cancel()">{{ "novel.reader.cancel" | t }}</button>
+                  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-reader-save" [disabled]="reader.saving()" (click)="save(editor.value)">{{ "novel.reader.save" | t }}</button>
+                </div>
+              </div>
+            } @else {
+              <p class="rd-para" data-testid="novel-reader-para" [class.is-editable]="reader.canEdit()" [class.is-flash]="flash() === paragraph.n" [attr.id]="'rp-' + paragraph.n" [attr.tabindex]="reader.canEdit() ? 0 : null" (click)="edit(paragraph.n)" (keydown.enter)="edit(paragraph.n)"><span class="rd-no">{{ paragraph.n }}</span><span class="rd-tx">{{ paragraph.text }}</span></p>
+            }
+          }
+        }
+        <div class="rd-end" data-testid="novel-reader-end">
+          @if (reader.nextChapter(); as following) {
+            <button type="button" class="btn btn-sm" data-testid="novel-reader-next-link" (click)="next()">{{ "novel.reader.nextLink" | t: { title: following.title } }}<ds-icon name="chev-r" [size]="16" /></button>
+          } @else {
+            <span class="t-sm">{{ "novel.reader.lastChapter" | t }}</span>
+          }
+        </div>
+      </div>
+    </article>
+  </div>
+</div>

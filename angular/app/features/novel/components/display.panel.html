@@ -1,0 +1,53 @@
+<section class="ins-sec" data-testid="novel-display-panel">
+  <div class="ins-h"><span class="eyebrow">{{ "novel.display.title" | t }}</span><span class="spacer"></span><button type="button" class="btn btn-sm btn-ghost" data-testid="novel-display-reset" (click)="reset()">{{ "novel.display.reset" | t }}</button></div>
+  <div class="field" data-testid="novel-display-field-font">
+    <label>{{ "novel.display.font" | t }}</label>
+    <div class="seg" role="group" data-testid="novel-display-font">
+      @for (option of fonts; track option.value) {
+        <button type="button" [class.is-active]="prefs().font === option.value" [attr.aria-pressed]="prefs().font === option.value" [attr.data-testid]="'novel-display-font-' + option.value" (click)="setFont(option.value)">{{ option.label | t }}</button>
+      }
+    </div>
+  </div>
+  <div class="field" data-testid="novel-display-field-size">
+    <label>{{ "novel.display.size" | t }} <span class="mono t-mute" data-testid="novel-display-size-value">{{ "novel.display.sizeValue" | t: { size: prefs().size } }}</span></label>
+    <input type="range" class="range" data-testid="novel-display-size" [attr.min]="sizeRange.min" [attr.max]="sizeRange.max" [attr.step]="sizeRange.step" [value]="prefs().size" [attr.aria-label]="'novel.display.size' | t" (input)="onSize($event)">
+  </div>
+  <div class="field" data-testid="novel-display-field-lh">
+    <label>{{ "novel.display.lh" | t }}</label>
+    <div class="seg" role="group" data-testid="novel-display-lh">
+      @for (option of lineHeights; track option.value) {
+        <button type="button" [class.is-active]="prefs().lh === option.value" [attr.aria-pressed]="prefs().lh === option.value" [attr.data-testid]="'novel-display-lh-' + option.value" (click)="setLineHeight(option.value)">{{ option.label | t }}</button>
+      }
+    </div>
+  </div>
+  <div class="field" data-testid="novel-display-field-width">
+    <label>{{ "novel.display.width" | t }}</label>
+    <div class="seg" role="group" data-testid="novel-display-width">
+      @for (option of widths; track option.value) {
+        <button type="button" [class.is-active]="prefs().width === option.value" [attr.aria-pressed]="prefs().width === option.value" [attr.data-testid]="'novel-display-width-' + option.value" (click)="setWidth(option.value)">{{ option.label | t }}</button>
+      }
+    </div>
+  </div>
+  <div class="field" data-testid="novel-display-field-paper">
+    <label>{{ "novel.display.paper" | t }}</label>
+    <div class="seg" role="group" data-testid="novel-display-paper">
+      @for (option of papers; track option.value) {
+        <button type="button" [class.is-active]="prefs().paper === option.value" [attr.aria-pressed]="prefs().paper === option.value" [attr.data-testid]="'novel-display-paper-' + option.value" (click)="setPaper(option.value)">{{ option.label | t }}</button>
+      }
+    </div>
+  </div>
+  <label class="check"><input type="checkbox" data-testid="novel-display-nums" [checked]="prefs().nums" (change)="onNums($event)"><span>{{ "novel.display.nums" | t }}</span></label>
+  <label class="check"><input type="checkbox" data-testid="novel-display-justify" [checked]="prefs().justify" (change)="onJustify($event)"><span>{{ "novel.display.justify" | t }}</span></label>
+</section>
+@if (reader.current(); as chapter) {
+  <section class="ins-sec" data-testid="novel-chapter-info">
+    <span class="eyebrow" data-testid="novel-chapter-info-title">{{ "novel.reader.info.title" | t: { n: chapter.seq } }}</span>
+    <dl class="kv" data-testid="novel-chapter-info-kv">
+      <dt>{{ "novel.reader.info.chapterTitle" | t }}</dt><dd data-testid="novel-chapter-info-name">{{ chapter.title }}</dd>
+      <dt>{{ "novel.reader.info.words" | t }}</dt><dd data-testid="novel-chapter-info-words">{{ count(chapter.wordCount) }}</dd>
+      <dt>{{ "novel.reader.info.paragraphs" | t }}</dt><dd data-testid="novel-chapter-info-paragraphs">{{ reader.paragraphs().length }}</dd>
+      <dt>{{ "novel.reader.info.translation" | t }}</dt><dd><span class="badge" [class.badge-success]="chapter.translationStatus !== 'none'" data-testid="novel-chapter-info-translation">{{ (chapter.translationStatus === "none" ? "novel.reader.info.none" : "novel.reader.info.draft") | t }}</span></dd>
+      <dt>{{ "novel.reader.info.knowledge" | t }}</dt><dd><span class="badge" [class.badge-success]="chapter.analysisStatus === 'done'" data-testid="novel-chapter-info-knowledge">{{ (chapter.analysisStatus === "done" ? "novel.reader.info.analyzed" : "novel.reader.info.none") | t }}</span></dd>
+    </dl>
+  </section>
+}

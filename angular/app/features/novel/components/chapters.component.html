@@ -1,0 +1,79 @@
+@if (novel(); as novel) {
+  <div class="nv" data-testid="novel-chapters">
+    <div class="nv-bar" data-testid="novel-chapters-bar">
+      <div class="nv-bar-l" data-testid="novel-chapters-bar-left">
+        <span class="nv-ttl" data-testid="novel-chapters-title"><app-novel-cover size="xs" [colors]="colors()" [image]="cover()" /><span class="t-ink">{{ nameOf(novel) }}</span><span class="badge">{{ novel.lang }}</span></span>
+      </div>
+      <span class="spacer"></span>
+      <div class="nv-bar-r" data-testid="novel-chapters-bar-right">
+        <button type="button" class="btn btn-sm btn-primary" data-testid="novel-chapters-read" (click)="read()"><ds-icon name="book" [size]="16" />{{ (resumeSeq() > 1 ? "novel.chapters.continue" : "novel.chapters.read") | t }}</button>
+      </div>
+    </div>
+    <div class="tl-sub" data-testid="novel-chapters-sub">
+      <label class="search"><span class="sr-only">{{ "novel.chapters.search.label" | t }}</span><input class="input" type="search" data-testid="novel-chapters-search" [value]="query()" [attr.placeholder]="'novel.chapters.search.placeholder' | t" (input)="onQuery($event)"></label>
+      <span class="t-sm t-mute" data-testid="novel-chapters-count">{{ "novel.chapters.count" | t: { shown: rows().length, total: all().length } }}</span>
+      <span class="spacer"></span>
+      <span class="legend-dots" data-testid="novel-chapters-legend"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></span>
+    </div>
+    <div class="nv-body" data-testid="novel-chapters-body">
+      <div class="nv-scroll" data-testid="novel-chapters-scroll">
+        @if (rows().length) {
+          <table class="table" data-testid="novel-chapters-table">
+            <thead data-testid="novel-chapters-head">
+              <tr>
+                <th>{{ "novel.chapters.col.number" | t }}</th>
+                <th>{{ "novel.chapters.col.title" | t }}</th>
+                <th class="num">{{ "novel.chapters.col.words" | t }}</th>
+                <th class="cen">{{ "novel.chapters.col.translation" | t }}</th>
+                <th class="cen">{{ "novel.chapters.col.knowledge" | t }}</th>
+              </tr>
+            </thead>
+            <tbody data-testid="novel-chapters-rows">
+              @for (row of rows(); track row.id) {
+                <tr tabindex="0" data-act="ch-open" data-testid="novel-chapter-row" [class.is-current]="resumeSeq() === row.seq" [attr.data-n]="row.seq" (click)="open(row.seq)" (keydown.enter)="open(row.seq)">
+                  <td class="mono t-mute">{{ numberOf(row) }}</td>
+                  <td class="t-ink">{{ row.title }}</td>
+                  <td class="num">{{ count(row.wordCount) }}</td>
+                  <td class="cen">
+                    @switch (row.translationStatus) {
+                      @case ("draft") {
+                        <span class="dot dot-success" [attr.title]="'novel.chapters.translation.draft' | t"></span>
+                      }
+                      @case ("review") {
+                        <span class="dot dot-warning" [attr.title]="'novel.chapters.translation.review' | t"></span>
+                      }
+                      @case ("running") {
+                        <span class="dot dot-running" [attr.title]="'novel.chapters.translation.running' | t"></span>
+                      }
+                      @default {
+                        <span class="dot-o" [attr.title]="'novel.chapters.translation.none' | t"></span>
+                      }
+                    }
+                  </td>
+                  <td class="cen">
+                    @switch (row.analysisStatus) {
+                      @case ("done") {
+                        <span class="dot dot-info" [attr.title]="'novel.chapters.analysis.done' | t"></span>
+                      }
+                      @case ("stale") {
+                        <span class="dot dot-warning" [attr.title]="'novel.chapters.analysis.stale' | t"></span>
+                      }
+                      @case ("running") {
+                        <span class="dot dot-running" [attr.title]="'novel.chapters.analysis.running' | t"></span>
+                      }
+                      @default {
+                        <span class="dot-o" [attr.title]="'novel.chapters.analysis.none' | t"></span>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <div class="empty" data-testid="novel-chapters-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-chapters-empty-title">{{ "novel.chapters.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-chapters-empty-description">{{ "novel.chapters.empty.description" | t }}</p></div></div>
+        }
+      </div>
+    </div>
+  </div>
+}

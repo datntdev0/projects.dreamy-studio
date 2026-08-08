@@ -1,0 +1,79 @@
+@if (open()) {
+  <ds-dialog size="large" [title]="'novel.import.title' | t" [eyebrow]="'novel.cap' | t" [closeLabel]="'switch.close' | t" data-testid="novel-import" (closed)="cancel()">
+    <ol class="imw-steps" [attr.aria-label]="'novel.import.steps.label' | t" data-testid="novel-import-steps">
+      @for (item of steps; track item.n) {
+        <li class="imw-step" [class]="stepClass(item.n)" [attr.aria-current]="item.n === step() ? 'step' : null" [attr.data-testid]="'novel-import-step-' + item.n"><span class="imw-n">@if (item.n < step()) { <ds-icon name="check" [size]="13" /> } @else { {{ item.n }} }</span><span class="imw-l">{{ item.key | t }}</span></li>
+      }
+    </ol>
+    @if (step() === 1) {
+      <div class="imw-drop" [class.has-file]="path()" [class.is-over]="over()" role="group" [attr.aria-label]="'novel.import.drop.label' | t" data-testid="novel-import-drop">
+        @if (path(); as picked) {
+          <div class="imw-file" data-testid="novel-import-file"><ds-icon name="package" [size]="22" /><div class="imw-file-t" data-testid="novel-import-file-info"><div class="t-ink imw-file-n" [attr.title]="picked" data-testid="novel-import-file-name">{{ fileName() }}</div></div>
+            <ds-button variant="ghost" size="small" data-testid="novel-import-clear" (pressed)="clearFile()"><ds-icon name="x" [size]="16" />{{ "novel.import.file.clear" | t }}</ds-button></div>
+        } @else {
+          <ds-icon class="imw-up" name="upload" [size]="30" /><div class="imw-drop-t">{{ "novel.import.drop.title" | t }}</div><div class="t-sm t-mute">{{ "novel.import.drop.or" | t }}</div>
+          <ds-button data-testid="novel-import-pick" (pressed)="pick()">{{ "novel.import.drop.pick" | t }}</ds-button>
+          <div class="t-sm t-mute">{{ "novel.import.drop.accept" | t }}</div>
+        }
+      </div>
+      <div class="field" data-testid="novel-import-tree"><span class="eyebrow">{{ "novel.import.tree.title" | t }}</span><pre class="tree-block" data-testid="novel-import-tree-block">{{ "novel.import.tree.block" | t }}</pre></div>
+    } @else if (step() === 2) {
+      <div class="field" data-testid="novel-import-progress"><span class="eyebrow">{{ "novel.import.check.eyebrow" | t }} <span class="path">{{ fileName() }}</span></span>
+        <div class="progress" aria-hidden="true" data-testid="novel-import-progress-bar"><i [style.width.%]="percent()"></i></div></div>
+      <div class="ld-steps imw-checks" role="status" aria-live="polite" data-testid="novel-import-checks">
+        @for (item of checks(); track item.step) {
+          <div class="ld-step" [class.is-running]="item.status === 'running'" [class.is-done]="item.status === 'ok'" [class.is-warn]="item.status === 'warn'" [class.is-error]="item.status === 'fail'" [attr.data-testid]="'novel-import-check-' + item.step">
+            @switch (item.status) {
+              @case ("ok") { <ds-icon name="check" [size]="15" /> }
+              @case ("warn") { <ds-icon name="alert" [size]="15" /> }
+              @case ("fail") { <ds-icon name="x" [size]="15" /> }
+              @default { <span class="dot dot-running"></span> }
+            }
+            <span>{{ checkKey(item.step) | t }}</span>@if (item.step === "cover" && item.status === "warn") { <span class="ld-detail">{{ "novel.import.check.coverMissing" | t }}</span> }
+          </div>
+        }
+      </div>
+      @if (state() === "ok") {
+        <div class="imw-result is-ok" data-testid="novel-import-result-ok"><ds-icon name="check" [size]="20" /><div><b>{{ "novel.import.result.ok" | t }}</b>
+          <div class="t-sm">{{ okDetail() }}</div></div></div>
+      } @else if (state() === "fail") {
+        <div class="imw-result is-bad" data-testid="novel-import-result-bad"><ds-icon name="x" [size]="20" /><div><b>{{ "novel.import.result.bad" | t }}</b><div class="t-sm" data-testid="novel-import-error">{{ error() }}</div></div></div>
+      }
+    } @else {
+      <div class="imw-form" data-testid="novel-import-form">
+        <div class="imw-pv" data-testid="novel-import-preview"><app-novel-cover [colors]="previewColors()" size="lg" />
+          <dl class="kv" data-testid="novel-import-stats"><dt>{{ "novel.import.preview.chapters" | t }}</dt><dd>{{ info()?.chapterCount }}</dd><dt>{{ "novel.import.preview.words" | t }}</dt><dd>{{ wordsText() }}</dd></dl></div>
+        <div class="imw-fields" data-testid="novel-import-fields">
+          <div class="field"><label for="imw-display">{{ "novel.form.name" | t }}</label><input #displayInput id="imw-display" class="input" [value]="form().name" [placeholder]="'novel.form.namePlaceholder' | t" autocomplete="off" data-testid="novel-import-display" (input)="setField('name', $event)"></div>
+          <div class="field"><label for="imw-title">{{ "novel.form.title" | t }}</label><input #titleInput id="imw-title" class="input" [class.is-invalid]="titleInvalid()" [value]="form().title" autocomplete="off" data-testid="novel-import-title" (input)="setField('title', $event)">
+            @if (titleInvalid()) { <p class="field-err" id="imw-err" data-testid="novel-import-title-error">{{ "novel.form.titleRequired" | t }}</p> }
+            @if (duplicate()) { <p class="field-err imw-dup" id="imw-dup" data-testid="novel-import-duplicate">{{ "novel.form.duplicateTitle" | t }}</p> }</div>
+          <div class="form-2"><div class="field"><label for="imw-author">{{ "novel.form.author" | t }}</label><input id="imw-author" class="input" [value]="form().author" autocomplete="off" data-testid="novel-import-author" (input)="setField('author', $event)"></div>
+            <div class="field"><label for="imw-lang">{{ "novel.form.lang" | t }}</label><select id="imw-lang" class="select" data-testid="novel-import-lang" (change)="setField('lang', $event)">@for (option of langOptions; track option.value) { <option [value]="option.value" [selected]="option.value === form().lang">{{ option.key | t }}</option> }</select></div></div>
+          <div class="field"><label for="imw-desc">{{ "novel.form.description" | t }}</label><textarea id="imw-desc" class="textarea" rows="3" [value]="form().description" data-testid="novel-import-description" (input)="setField('description', $event)"></textarea></div>
+          <div class="field"><label for="imw-tags">{{ "novel.form.tags" | t }}</label><input id="imw-tags" class="input" [value]="form().tags" [placeholder]="'novel.form.tagsPlaceholder' | t" autocomplete="off" data-testid="novel-import-tags" (input)="setField('tags', $event)">
+            <span class="field-hint">{{ "novel.import.preview.tagsHint" | t }}</span></div>
+        </div>
+      </div>
+      @if (importError()) {
+        <div class="imw-result is-bad" role="alert" data-testid="novel-import-failed"><ds-icon name="x" [size]="20" /><div><div class="t-sm">{{ importError() }}</div></div></div>
+      }
+    }
+    <ng-container ngProjectAs="[dialogFoot]">
+      @if (step() === 1) {
+        <ds-button data-testid="novel-import-cancel" (pressed)="cancel()">{{ "common.cancel" | t }}</ds-button>
+        <ds-button variant="primary" [disabled]="!path()" data-testid="novel-import-check" (pressed)="check()">{{ "novel.import.check.action" | t }}</ds-button>
+      } @else if (step() === 2) {
+        <ds-button data-testid="novel-import-cancel" (pressed)="cancel()">{{ "common.cancel" | t }}</ds-button>
+        <span class="spacer"></span>
+        <ds-button [disabled]="state() === 'running'" data-testid="novel-import-back" (pressed)="backToFile()">{{ "novel.import.check.again" | t }}</ds-button>
+        <ds-button variant="primary" [disabled]="state() !== 'ok'" data-testid="novel-import-next" (pressed)="next()">{{ "novel.import.check.next" | t }}</ds-button>
+      } @else {
+        <ds-button [disabled]="importing()" data-testid="novel-import-cancel" (pressed)="cancel()">{{ "common.cancel" | t }}</ds-button>
+        <span class="spacer"></span>
+        <ds-button [disabled]="importing()" data-testid="novel-import-back" (pressed)="backToCheck()">{{ "novel.import.check.back" | t }}</ds-button>
+        <ds-button variant="primary" [disabled]="importing()" data-testid="novel-import-submit" (pressed)="submit()">{{ "novel.import.check.submit" | t }}</ds-button>
+      }
+    </ng-container>
+  </ds-dialog>
+}

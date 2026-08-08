@@ -32,11 +32,25 @@
 .ws-row.is-error { cursor: default; background: var(--danger-soft); }
 .ws-row.is-error:hover { background: var(--danger-soft); }
 .ws-row.is-error > .ic, .ws-err { color: var(--danger); }
+.ws-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.ws-name .badge { flex: none; }
 .ws-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .ws-name { color: var(--ink); font-size: 14px; display: flex; align-items: center; gap: var(--sp-sm); }
 .ws-first { margin: auto; display: grid; justify-items: center; text-align: center; gap: var(--sp-sm); max-width: 420px; }
 .ws-first pre { text-align: left; margin: var(--sp-sm) 0 0; }
 .tree-block { font: 400 12px/18px var(--font-mono); color: var(--body); background: var(--canvas-soft); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: var(--sp-sm) var(--sp-md); white-space: pre; overflow: auto; }
+
+/* splash tools, switch overlay */
+.sp-tools { position: absolute; top: var(--sp-xl); right: var(--sp-xl); display: flex; align-items: center; gap: var(--sp-md); }
+.sp-right > .ld-warn { margin-bottom: var(--sp-md); }
+.switch-note { margin: 0; }
+.ld-overlay {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--sp-xl); overflow: auto;
+  background:
+    radial-gradient(900px 520px at 12% -5%, var(--primary-soft), transparent 65%),
+    radial-gradient(700px 420px at 100% 105%, var(--secondary-soft), transparent 65%),
+    var(--canvas);
+}
 
 /* loading splash */
 .ld { width: min(520px, 100%); display: grid; gap: var(--sp-lg); justify-items: center; text-align: center; }
@@ -50,10 +64,8 @@
 .ld-step .dot { margin: 0 4px; }
 .ld-step.is-running { color: var(--ink); }
 .ld-step.is-done .ic { color: var(--success); }
-.ld-step.is-warn { color: var(--body); }
-.ld-step.is-warn .ic { color: var(--warning); }
 .ld-step.is-error { color: var(--danger); }
-.ld-step .ld-detail { margin-left: auto; font-size: 11px; color: var(--mute); }
+.ld-step.is-error .ic { color: var(--danger); }
 .ld-warn { width: 100%; text-align: left; display: flex; gap: var(--sp-sm); padding: var(--sp-sm) var(--sp-md); border-radius: var(--r-sm); background: var(--warning-soft); color: var(--body); font-size: 12.5px; line-height: 17px; }
 .ld-warn .ic { color: var(--warning); width: 15px; height: 15px; margin-top: 1px; }
 .ld-warn.is-error { background: var(--danger-soft); }
@@ -208,3 +220,17 @@ button.sb-item:hover { background: var(--canvas-soft); color: var(--body); }
   .sp-left { border-right: 0; border-bottom: 1px solid var(--hairline); }
   .home-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------------- shared: segments, toasts ---------------- */
+.seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--r-sm); overflow: hidden; flex: none; }
+.seg > button { height: 22px; padding: 0 var(--sp-md); border: 0; background: transparent; color: var(--mute); font: 500 12.5px/1 var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-xs); }
+.seg > button + button { border-left: 1px solid var(--hairline); }
+.seg > button:hover { color: var(--body); }
+.seg > button.is-active { background: var(--primary-soft); color: var(--primary-text); }
+.toast-stack { position: fixed; right: var(--sp-lg); bottom: 32px; display: grid; gap: var(--sp-sm); z-index: 100; }
+.toast { display: flex; align-items: center; gap: var(--sp-md); min-width: 240px; max-width: 380px; background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--r-md); box-shadow: var(--shadow-float); padding: var(--sp-md) var(--sp-lg); font-size: 13px; color: var(--body); }
+.toast .dot-info { background: var(--info); }
+.toast .toast-x { margin-left: auto; flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--mute); cursor: pointer; }
+.toast .toast-x:hover { background: var(--canvas-soft); color: var(--ink); }
+.toast .toast-x .ic { width: 14px; height: 14px; }
+.toast.is-sticky { max-width: 460px; }

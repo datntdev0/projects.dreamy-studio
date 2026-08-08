@@ -222,29 +222,14 @@ window.DS = (function () {
     { id: "tts", label: "Kiểm tra local TTS backend", detail: "FastAPI backend & mô hình", result: "warn", note: "Chưa cài mô hình TTS. Có thể cài sau trong Settings." },
   ];
 
-  /** Loading steps of REQ-01-001. `{mode}` is "new" (no workspace.dreamydb yet) or "open". */
-  const APP_DIR = "%LOCALAPPDATA%\\DreamyStudio\\";
-  const LOAD_STEPS = {
-    check: { id: "check", label: "Kiểm tra thư mục workspace", detail: "Quyền đọc / ghi" },
-    wsdb: { new: { id: "wsdb", label: "Khởi tạo workspace.dreamydb", detail: "Trong thư mục workspace" }, open: { id: "wsdb", label: "Nâng cấp workspace.dreamydb nếu cần", detail: "Trong thư mục workspace" } },
-    appdb: { id: "appdb", label: "Khởi tạo hoặc nâng cấp application.dreamydb", detail: APP_DIR },
-    logs: { id: "logs", label: "Chuẩn bị nhật ký ứng dụng theo ngày", detail: `${APP_DIR}logs\\` },
-  };
-
-  /** Fake folders shown in the mock system folder picker. `kind` decides what happens after picking. */
-  const DISK_FOLDERS = [
-    { path: "D:\\DreamyWorkspace", kind: "workspace", note: "Đã là workspace" },
-    { path: "E:\\Archive\\Dreamy-2025", kind: "workspace", note: "Đã là workspace" },
-    { path: "D:\\Studio\\NewWorkspace", kind: "empty", note: "Thư mục rỗng" },
-    { path: "D:\\Documents\\Novels", kind: "files", note: "Có 12 tệp, chưa là workspace" },
-    { path: "C:\\Program Files\\Locked", kind: "locked", note: "Không có quyền ghi" },
-  ];
-
   const seedWorkspaces = [
     { path: "D:\\DreamyWorkspace", name: "DreamyWorkspace", lastOpened: "2026-11-09 21:12", projects: 6, size: "48.2 GB" },
     { path: "E:\\Archive\\Dreamy-2025", name: "Dreamy-2025", lastOpened: "2026-09-18 21:40", projects: 14, size: "212.7 GB" },
-    { path: "F:\\USB\\dreamy-test", name: "dreamy-test", lastOpened: "2026-07-02 10:03", projects: 1, size: "—", missing: true, error: "Thư mục không còn tồn tại hoặc ổ đĩa chưa được gắn." },
+    { path: "C:\\Program Files\\Locked", name: "Locked", lastOpened: "2026-08-21 09:30", projects: 0, size: "1.2 MB", fail: { step: "workspace", code: "folder_not_writable", detail: "Access is denied. (os error 5)" } },
+    { path: "F:\\USB\\dreamy-test", name: "dreamy-test", lastOpened: "2026-07-02 10:03", projects: 1, size: "—", status: "not_found", reason: "missing" },
+    { path: "D:\\Documents\\novels.txt", name: "novels.txt", lastOpened: "2026-06-11 18:45", projects: 0, size: "—", status: "not_found", reason: "not_a_directory" },
+    { path: "E:\\Private\\Dreamy", name: "Dreamy", lastOpened: "2026-05-27 14:20", projects: 2, size: "—", status: "not_found", reason: "no_access" },
   ];
 
-  return { version: "0.1.0-dev", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, LOAD_STEPS, DISK_FOLDERS, seedWorkspaces };
+  return { version: "0.1.0-dev", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, seedWorkspaces };
 })();

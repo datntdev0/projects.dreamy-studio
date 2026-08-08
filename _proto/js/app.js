@@ -1,6 +1,6 @@
 /*
  * Dreamy Studio prototype.
- *  - Splash: welcome (open workspace via folder picker) → loading (init workspace + start app) → main layout.
+ *  - Splash lives in 0.splash.html; this page needs an open workspace (js/workspace.js) or goes back to it.
  *  - Main layout: title bar, activity rail, explorer, editor tabs, inspector / assistant, pipelines panel, status bar.
  *  - Functional screens are "coming soon": each lists the requirements it will cover.
  * Everything is mock; no backend. Open index.html directly in a browser.
@@ -49,8 +49,6 @@
   Object.entries(D.NAV).forEach(([rail, r]) =>
     r.sections.forEach((s) => s.items.forEach((i) => { ITEMS[i.id] = { ...i, rail, section: s.title }; })));
 
-  const FIRST_RUN = /[?&]first-run\b/.test(location.search);
-
   const VIEWS = {};
   const EXPLORER_EXTRA = {};
   const EXPLORER_HEAD = {};
@@ -58,12 +56,7 @@
 
   /* ---------------- state ---------------- */
   const S = {
-    screen: "splash", // "splash" | "app"
-    loading: null, // { ws, steps, pct } while the loading splash is shown
-    token: 0, // bumped to cancel an in-flight loading run
-    notice: null, // error shown on the welcome splash after a failed start
-    relocate: null, // index of the NOT FOUND entry being re-located via the folder picker
-    recent: FIRST_RUN ? [] : store.get("recent", D.seedWorkspaces),
+    screen: "app",
     workspace: null,
     rail: "projects",
     explorerOpen: true,
@@ -81,7 +74,6 @@
     settingsTab: "general",
     onOk: null,
   };
-  const saveRecent = () => store.set("recent", S.recent);
 
   function setPanelSize(panel, size, handle = null) {
     const limits = PANEL_LIMITS[panel];
@@ -96,155 +88,9 @@
     store.set("layout.panelSizes", S.panelSizes);
   }
 
-  /* ---------------- screens ---------------- */
-  function showScreen(name) {
-    S.screen = name;
-    $("#splash").hidden = name !== "splash";
-    $("#app").hidden = name !== "app";
-  }
-
-  /* ---- splash: welcome (REQ-01-001) ---- */
-  function renderWelcome() {
-    S.loading = null;
-    showScreen("splash");
-    document.title = "Dreamy Studio";
-    const rows = S.recent.map((w, i) => w.missing
-      ? `<div class="ws-row is-error">
-          ${ic("alert")}
-          <div class="ws-main">
-            <div class="ws-name"><span class="path">${esc(w.path)}</span><span class="badge badge-danger">NOT FOUND</span></div>
-            <div class="t-sm ws-err">${esc(w.error)}</div>
-          </div>
-          <button class="btn btn-sm" data-act="pick-folder" data-i="${i}">Tìm lại…</button>
-          <button class="btn btn-sm btn-ghost" data-act="remove-recent" data-i="${i}">Bỏ khỏi danh sách</button>
-        </div>`
-      : `<div class="ws-row" tabindex="0" data-act="open-recent" data-i="${i}">
-          ${ic("hdd")}
-          <div class="ws-main">
-            <div class="ws-name">${esc(w.name)}${i === 0 ? `<span class="badge badge-primary">LAST USED</span>` : ""}</div>
-            <div class="path t-mute">${esc(w.path)}</div>
-            <div class="t-sm t-mute">${w.projects} project · ${esc(w.size)} · mở lần cuối <span class="mono">${esc(w.lastOpened)}</span></div>
-          </div>
-          <button class="btn btn-sm" tabindex="-1">Mở</button>
-        </div>`).join("");
-
-    const right = S.recent.length
-      ? `<div class="sp-head"><span class="eyebrow">Workspace gần đây</span><span class="badge">${S.recent.length}</span></div>
-         <div class="ws-list">${rows}</div>`
-      : `<div class="ws-first">
-          <div class="illus"></div>
-          <h2 class="t-display-xs">Chưa có workspace nào</h2>
-          <p class="t-sm t-mute">Workspace là một thư mục bình thường trên máy tính do bạn chọn. Dreamy Studio lưu toàn bộ novel, project và thư viện của bạn bên trong đó.</p>
-          <p class="t-sm t-mute">Nếu thư mục chưa phải workspace, Dreamy Studio sẽ khởi tạo tại đó bằng tệp <span class="mono">workspace.dreamydb</span> và giữ nguyên các tệp sẵn có.</p>
-        </div>`;
-    const notice = S.notice ? `<div class="ld-warn is-error" role="alert">${ic("alert")}<span>${esc(S.notice)}</span></div>` : "";
-
-    $("#splash").innerHTML = `
-      <div class="sp-card">
-        <div class="sp-left">
-          <img class="logo" src="assets/dreamy-studio-mark.svg" alt="Dreamy Studio">
-          <h1 class="t-display-sm">Dreamy Studio</h1>
-          <p class="mono t-mute">V${esc(D.version)}</p>
-          <p class="t-sm">Biến tác phẩm văn học thành audiobook, hình ảnh và video, ngay trên máy tính của bạn.</p>
-          <div class="sp-actions">
-            <button class="btn btn-primary" data-act="pick-folder" data-testid="sp-open-workspace">${ic("folder-open")}Mở workspace…</button>
-          </div>
-          <span class="spacer"></span>
-          <div class="sp-note">${ic("lock")}<span>Nội dung dự án chỉ được lưu trên máy tính của bạn.</span></div>
-        </div>
-        <div class="sp-right">${notice}${right}</div>
-      </div>`;
-  }
-
-  /* ---- splash: loading (REQ-01-001) ---- */
-  function renderLoading() {
-    const L = S.loading;
-    const stepIcon = (st) => ({
-      done: ic("check"),
-      warn: ic("alert"),
-      error: ic("x"),
-      running: `<span class="dot dot-running"></span>`,
-      pending: `<span class="dot"></span>`,
-    }[st]);
-    const warns = L.steps.filter((s) => (s.state === "warn" || s.state === "error") && s.note);
-    $("#splash").innerHTML = `
-      <div class="ld" role="status" aria-live="polite">
-        <img class="ld-logo" src="assets/dreamy-studio-mark.svg" alt="">
-        <div>
-          <span class="eyebrow">${L.created ? "Đang khởi tạo workspace" : "Đang mở workspace"}</span>
-          <h2 class="t-display-xs">${esc(L.ws.name)}</h2>
-          <div class="path ld-path t-mute">${esc(L.ws.path)}</div>
-        </div>
-        <div class="progress" aria-hidden="true"><i style="width:${L.pct}%"></i></div>
-        <div class="ld-steps">
-          ${L.steps.map((s) => `<div class="ld-step is-${s.state}">${stepIcon(s.state)}<span>${esc(s.label)}</span><span class="ld-detail mono">${esc(s.detail)}</span></div>`).join("")}
-        </div>
-        ${warns.map((s) => `<div class="ld-warn ${s.state === "error" ? "is-error" : ""}">${ic("alert")}<span>${esc(s.note)}</span></div>`).join("")}
-        <button class="btn btn-ghost btn-sm" data-act="cancel-loading">Hủy</button>
-      </div>`;
-  }
-
-  /** Where a picked folder stands on the (mock) disk. Unknown folders count as empty. */
-  function folderKind(path) {
-    const key = path.toLowerCase();
-    const disk = D.DISK_FOLDERS.find((f) => f.path.toLowerCase() === key);
-    if (disk) return disk.kind;
-    return S.recent.some((w) => !w.missing && w.path.toLowerCase() === key) ? "workspace" : "empty";
-  }
-
-  /** `relocate`: index of a NOT FOUND entry that this pick should replace. */
-  async function startWorkspace(ws, { relocate = null } = {}) {
-    const token = ++S.token;
-    closeModal();
-    S.notice = null;
-    const kind = folderKind(ws.path);
-    const created = kind !== "workspace";
-    const L = D.LOAD_STEPS;
-    const steps = [
-      { ...L.check, fail: kind === "locked" ? "Không có quyền ghi vào thư mục này. Hãy chọn thư mục khác." : "" },
-      { ...L.wsdb[created ? "new" : "open"] },
-      { ...L.appdb },
-      { ...L.logs },
-    ].map((s) => ({ ...s, state: "pending" }));
-    S.loading = { ws, created, steps, pct: 0 };
-    S.log = [];
-    showScreen("splash");
-    renderLoading();
-    log("info", "workspace", `${created ? "Initializing" : "Opening"} ${ws.path}`);
-
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-      step.state = "running";
-      renderLoading();
-      await sleep(240 + Math.random() * 220);
-      if (token !== S.token) return;
-      if (step.fail) {
-        step.state = "error";
-        step.note = `${step.label}: ${step.fail}`;
-        log("err", step.id, step.note);
-        renderLoading();
-        await sleep(1600);
-        if (token !== S.token) return;
-        S.notice = step.note;
-        return renderWelcome();
-      }
-      step.state = "done";
-      S.loading.pct = Math.round(((i + 1) / steps.length) * 100);
-      log("ok", step.id, step.label);
-      renderLoading();
-    }
-    await sleep(500);
-    if (token !== S.token) return;
-    if (relocate !== null) S.recent = S.recent.filter((_, i) => i !== relocate);
-    enterShell(ws);
-  }
-
-  function enterShell(ws) {
-    const entry = { path: ws.path, name: ws.name, projects: ws.projects ?? 0, size: ws.size ?? "0 B", lastOpened: stamp() };
-    S.recent = [entry, ...S.recent.filter((w) => w.path.toLowerCase() !== ws.path.toLowerCase())];
-    saveRecent();
+  function enterShell(entry) {
     S.workspace = entry;
-    S.loading = null;
+    S.log = [];
     S.tabs = ["home"];
     S.active = "home";
     S.scroll = {};
@@ -260,7 +106,6 @@
     S.rail = "projects";
     S.rightTab = "inspector";
     document.title = `${entry.name} — Dreamy Studio`;
-    showScreen("app");
     renderShell();
   }
 
@@ -273,7 +118,10 @@
     $("#shell").style.setProperty("--ex-w", `${S.panelSizes.explorer}px`);
     $("#shell").style.setProperty("--in-w", `${S.panelSizes.inspector}px`);
     $("#edcol").style.setProperty("--bt-h", `${S.panelSizes.bottom}px`);
-    $("#tb-ws").innerHTML = `${ic("hdd")}<span class="name">${esc(S.workspace.name)}</span>${ic("chev-d")}`;
+    const chip = $("#tb-ws");
+    chip.title = S.workspace.path;
+    chip.setAttribute("data-testid", "main-workspace");
+    chip.innerHTML = `${ic("hdd")}<span class="name" data-testid="main-workspace-name">${esc(S.workspace.name)}</span>`;
     renderRail();
     renderExplorer();
     renderTabs();
@@ -484,7 +332,7 @@
     const theme = document.documentElement.getAttribute("data-theme");
     const tts = D.STARTUP_STEPS.find((s) => s.id === "tts");
     $("#statusbar").innerHTML = `
-      <button class="sb-item" data-act="switch-workspace" data-tip-t="Đổi workspace">${ic("hdd")}<span class="path">${esc(S.workspace.path)}</span></button>
+      <span class="sb-item" title="${esc(S.workspace.path)}" data-testid="statusbar-workspace">${ic("hdd")}<span class="path">${esc(S.workspace.path)}</span></span>
       <span class="spacer"></span>
       ${pipelineStatus()}
       ${tts.result === "warn" ? `<button class="sb-item sb-warn" data-act="settings" data-v="tts" data-tip-t="Local TTS chưa sẵn sàng"><span class="dot dot-warning"></span><span class="mono">LOCAL TTS · ${window.LB?.tts && !window.LB.tts.backendOk() ? "BACKEND STOPPED" : "NOT INSTALLED"}</span></button>` : ""}
@@ -504,46 +352,26 @@
 
   /** Switch workspace dialog (REQ-01-002). */
   function openSwitchDialog() {
-    const rows = S.recent.map((w, i) => {
-      const cur = S.workspace && w.path === S.workspace.path;
-      if (w.missing) {
-        return `<div class="ws-row is-error">${ic("alert")}<div class="ws-main"><div class="ws-name"><span class="path">${esc(w.path)}</span><span class="badge badge-danger">NOT FOUND</span></div><div class="t-sm ws-err">${esc(w.error)}</div></div></div>`;
-      }
-      return `<div class="ws-row ${cur ? "is-current" : ""}" ${cur ? "" : `tabindex="0" data-act="open-recent" data-i="${i}"`}>
-        ${ic("hdd")}<div class="ws-main"><div class="ws-name">${esc(w.name)}${cur ? `<span class="badge badge-primary">ĐANG MỞ</span>` : ""}</div><div class="path t-mute">${esc(w.path)}</div></div>
-        ${cur ? "" : `<button class="btn btn-sm" tabindex="-1">Mở</button>`}</div>`;
-    }).join("");
     modal({
-      title: "Đổi workspace", eyebrow: "Workspace", cls: "modal-lg",
-      body: `<p class="t-sm t-mute">Các tab đang mở sẽ được đóng và ứng dụng khởi động lại với workspace mới. Nội dung của workspace hiện tại vẫn được giữ nguyên trong thư mục của nó.</p>
-        <div class="ws-list">${rows}</div>`,
-      foot: `<button class="btn" data-act="pick-folder">${ic("folder-open")}Mở thư mục khác…</button><span class="spacer"></span><button class="btn btn-ghost" data-act="close-modal">Đóng</button>`,
+      title: "Đổi workspace", eyebrow: "Workspace", cls: "modal-lg", testid: "switch-dialog",
+      body: `<p class="t-sm t-mute switch-note" data-testid="switch-dialog-note">Workspace đang mở vẫn được giữ cho đến khi workspace mới sẵn sàng. Nếu việc mở thất bại hoặc bị hủy, bạn quay lại đúng màn hình đang làm việc.</p>
+        ${WS.rowsHtml(WS.list())}`,
+      foot: `<button class="btn btn-ghost" data-testid="switch-close" data-act="close-modal">Đóng</button><button class="btn btn-primary" data-testid="switch-open-folder" data-act="pick-folder">${ic("folder-open")}Mở thư mục khác…</button>`,
     });
+    WS.hydrateSizes($("#layer"));
   }
 
-  const ABS_PATH = /^[A-Za-z]:\\/;
-  const baseName = (p) => p.replace(/\\+$/, "").split("\\").pop() || p;
-
-  /** Mock of the operating system's "select folder" dialog (REQ-01-001). Picking a folder starts loading at once. */
-  function openFolderPicker() {
-    const rows = D.DISK_FOLDERS.map((f) => `<div class="ws-row" tabindex="0" data-act="pick-row" data-path="${esc(f.path)}">
-        ${ic("folder-open")}<div class="ws-main"><div class="path">${esc(f.path)}</div><div class="t-sm t-mute">${esc(f.note)}</div></div></div>`).join("");
-    modal({
-      title: "Chọn thư mục", eyebrow: "Hệ điều hành", cls: "modal-lg", testid: "folder-picker",
-      body: `<p class="t-sm t-mute">Hộp thoại chọn thư mục của hệ điều hành (mô phỏng). Chọn một thư mục làm workspace.</p>
-        <div class="ws-list">${rows}</div>
-        <div class="field"><label for="p-path">Thư mục</label><input id="p-path" class="input" placeholder="D:\\DreamyWorkspace" autocomplete="off"></div>
-        <p class="field-err" id="p-err" hidden></p>`,
-      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-act="pick-submit">Chọn thư mục</button>`,
+  const hideOverlay = () => { const o = $("#ld-overlay"); o.hidden = true; o.innerHTML = ""; };
+  function switchTo(entry) {
+    const overlay = $("#ld-overlay");
+    overlay.hidden = false;
+    WS.start(entry, {
+      mount: overlay,
+      onReady: (opened) => { hideOverlay(); enterShell(opened); },
+      onFail: (message) => { hideOverlay(); WS.toast(message, "danger", { sticky: true }); },
+      onCancel: hideOverlay,
     });
   }
-
-  const showErr = (id, input, msg) => {
-    const e = $(id);
-    e.textContent = msg;
-    e.hidden = !msg;
-    $(input)?.classList.toggle("is-invalid", !!msg);
-  };
 
   const SETTINGS_VIEWS = {};
   function openSettings(tab) {
@@ -595,6 +423,7 @@
     el.style.left = `${Math.min(r.left, innerWidth - el.offsetWidth - 8)}px`;
     el.style.top = `${r.bottom + 2}px`;
   }
+  const LANGUAGE_NAMES = { vi: "Tiếng Việt", en: "English" };
   const MENUS = {
     file: () => [
       { label: "Mở workspace…", icon: "folder-open", act: "pick-folder" },
@@ -609,6 +438,7 @@
       { label: "Pipelines", icon: "panel-bottom", act: "toggle-bottom", kbd: "Ctrl J" },
       "-",
       { label: "Đổi theme sáng / tối", icon: "sun", act: "theme" },
+      { label: "Đổi ngôn ngữ", icon: "lang", act: "language", kbd: LANGUAGE_NAMES[store.get("lang", "vi")] },
     ],
     help: () => [{ label: "Giới thiệu Dreamy Studio", icon: "info", act: "about" }],
   };
@@ -638,43 +468,16 @@
   const ACT = {
     scrim: (el, e) => { if (e.target === el) closeModal(); },
     "close-modal": closeModal,
-    "pick-folder": (el) => {
-      S.relocate = el?.dataset?.i === undefined ? null : +el.dataset.i;
-      openFolderPicker();
-    },
-    "pick-row": (el) => {
-      const input = $("#p-path");
-      input.value = el.dataset.path;
-      showErr("#p-err", "#p-path", "");
-      input.focus();
-    },
+    "pick-folder": () => WS.pickFolder(),
+    "relocate-recent": () => WS.pickFolder(),
     "switch-workspace": openSwitchDialog,
     "open-recent": (el) => {
-      const w = S.recent[+el.dataset.i];
-      if (w && !w.missing) startWorkspace(w);
+      closeModal();
+      const entry = WS.list().find((w) => !w.isCurrent && w.status === "ok" && w.path === el.dataset.path);
+      if (entry) switchTo(entry);
     },
-    "remove-recent": (el) => {
-      S.recent.splice(+el.dataset.i, 1);
-      saveRecent();
-      renderWelcome();
-    },
-    "pick-submit": () => {
-      const path = $("#p-path").value.trim().replace(/\\+$/, "");
-      let err = "";
-      if (!path) err = "Chọn một thư mục.";
-      else if (!ABS_PATH.test(path)) err = "Đường dẫn phải là đường dẫn đầy đủ, ví dụ D:\\DreamyWorkspace.";
-      showErr("#p-err", "#p-path", err);
-      if (err) return;
-      const idx = S.recent.findIndex((w) => w.path.toLowerCase() === path.toLowerCase());
-      if (idx >= 0) {
-        const known = S.recent[idx];
-        known.missing = false; // a re-selected folder counts as found
-        delete known.error;
-        return startWorkspace(known, { relocate: S.relocate === idx ? null : S.relocate });
-      }
-      startWorkspace({ path, name: baseName(path), projects: 0, size: "—" }, { relocate: S.relocate });
-    },
-    "cancel-loading": () => { S.token++; renderWelcome(); },
+    "remove-recent": (el) => { WS.remove(el.dataset.path); openSwitchDialog(); },
+    "cancel-loading": () => WS.cancel(),
 
     rail: (el) => {
       const v = el.dataset.v;
@@ -705,6 +508,7 @@
     settings: (el) => openSettings(el?.dataset?.v),
     "settings-tab": (el) => openSettings(el.dataset.v),
     about: openAbout,
+    language: () => store.set("lang", store.get("lang", "vi") === "vi" ? "en" : "vi"),
     theme: () => applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light"),
     "app-menu": (el) => openMenu(el, MENUS[el.dataset.v]()),
   };
@@ -743,6 +547,7 @@
       }
       if (e.target.matches("[data-act][tabindex]")) { e.target.click(); return; }
     }
+    if (e.key === " " && e.target.matches("[role=button][data-act][tabindex]")) { e.preventDefault(); e.target.click(); return; }
     if (!e.ctrlKey || S.screen !== "app") return;
     const k = e.key.toLowerCase();
     if (k === "b" && e.altKey) { e.preventDefault(); ACT["toggle-inspector"](); }
@@ -814,16 +619,7 @@
     setPanelSize(which, S.panelSizes[which] + delta, handle);
   });
 
-  function toast(msg, kind = "success") {
-    let box = $("#toasts");
-    if (!box) { box = document.createElement("div"); box.id = "toasts"; box.className = "toast-stack"; document.body.appendChild(box); }
-    const el = document.createElement("div");
-    el.className = "toast";
-    el.setAttribute("role", "status");
-    el.innerHTML = `<span class="dot dot-${kind}"></span><span>${esc(msg)}</span>`;
-    box.appendChild(el);
-    setTimeout(() => el.remove(), 3800);
-  }
+  const toast = WS.toast;
 
   const PL = { list: [], seq: 1, concurrency: 2, timer: null };
   const avgProgress = (ps) => Math.round(ps.reduce((a, p) => a + p.progress, 0) / (ps.length || 1));
@@ -913,5 +709,8 @@
     $, $$, esc, ic, stamp, store, modal, closeModal, openMenu, toast, openTab, closeTab, rerender, renderInspector, renderExplorer, renderStatus, log, startPipeline, cancelPipeline,
   };
 
-  renderWelcome();
+  document.addEventListener("DOMContentLoaded", () => {
+    const workspace = WS.requireCurrent();
+    if (workspace) enterShell(workspace);
+  });
 })();

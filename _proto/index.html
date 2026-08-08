@@ -112,11 +112,8 @@
     </defs>
   </svg>
 
-  <!-- Splash: welcome (create / open workspace) and loading (startup checks) -->
-  <div id="splash" class="splash"></div>
-
   <!-- Main layout -->
-  <div id="app" class="app" hidden>
+  <div id="app" class="app">
     <header class="titlebar">
       <img class="tb-logo" src="assets/dreamy-studio-mark.svg" alt="">
       <span class="tb-name">Dreamy Studio</span>
@@ -152,9 +149,11 @@
     <footer class="statusbar" id="statusbar"></footer>
   </div>
 
+  <div id="ld-overlay" class="ld-overlay" hidden data-testid="switch-loading-overlay"></div>
   <div id="layer"></div>
 
   <script src="js/data.js"></script>
+  <script src="js/workspace.js"></script>
   <script src="js/novel-data.js"></script>
   <script src="js/app.js"></script>
   <script src="js/novel-common.js"></script>

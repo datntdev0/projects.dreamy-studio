@@ -3,17 +3,7 @@
   <div class="shell" [class.no-explorer]="!layout.explorerOpen()" [class.no-inspector]="!layout.inspectorOpen()" data-testid="main-shell">
     <app-railbar />
     <app-explorer />
-    <app-editor>
-      @if (workspace(); as ws) {
-        <section class="home" data-testid="home-panel">
-          <div class="home-head">
-            <span class="eyebrow" data-testid="home-eyebrow">Workspace</span>
-            <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
-            <span class="path t-mute" data-testid="home-workspace-path">{{ ws.path }}</span>
-          </div>
-        </section>
-      }
-    </app-editor>
+    <app-editor />
     <app-inspector />
   </div>
   <app-statusbar />
@@ -21,4 +11,8 @@
     <ds-toast class="main-notice" tone="danger" [message]="message" data-testid="main-switch-notice" (dismissed)="dismissSwitchNotice()" />
   }
   <app-switch-workspace-dialog />
+  <app-novel-create-dialog />
+  <app-novel-delete-dialog />
+  <app-novel-import-dialog />
+  <app-toast-host />
 </div>

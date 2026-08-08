@@ -23,7 +23,33 @@
         </div>
       </div>
     } @else {
-      <div class="ins-empty" data-testid="inspector-empty"><p>{{ "main.inspector.empty" | t }}</p></div>
+      @switch (editorTabs.active().kind) {
+        @case ("novels") {
+          <div data-testid="inspector-novels-host">
+            @if (novels.selectedIds().length === 0) {
+              <app-novel-library-panel />
+            } @else if (novels.selectedIds().length > 1) {
+              <app-novel-multi-panel />
+            } @else {
+              <app-novel-panel [novelId]="novels.selectedIds()[0]" [showOpen]="true" />
+            }
+          </div>
+        }
+        @case ("novel") {
+          <div [attr.data-novel-id]="editorTabs.active().novelId" data-testid="inspector-novel-host">
+            @if (editorTabs.active().novelId; as novelId) {
+              @if (reader.screenOf(novelId) === "reading") {
+                <app-novel-display-panel />
+              } @else {
+                <app-novel-panel [novelId]="novelId" />
+              }
+            }
+          </div>
+        }
+        @default {
+          <div class="ins-empty" data-testid="inspector-empty"><p>{{ "main.inspector.empty" | t }}</p></div>
+        }
+      }
     }
   </div>
 </aside>

@@ -1,10 +1,19 @@
 <main class="edcol" data-testid="editor">
   <div class="tabbar" role="tablist" data-testid="editor-tabbar">
     <div class="etabs">
-      <div class="etab is-active is-fixed" role="tab" aria-selected="true" [attr.title]="'main.editor.home' | t" data-testid="editor-tab-home">
-        <img src="/assets/dreamy-studio-mark.svg" alt="" />
-        <span class="etab-label">{{ "main.editor.home" | t }}</span>
-      </div>
+      @for (tab of tabs.tabs(); track tab.id) {
+        <div class="etab" [class.is-active]="tabs.isActive(tab.id)" [class.is-fixed]="!tab.closable" role="tab" tabindex="0" [attr.aria-selected]="tabs.isActive(tab.id)" [attr.title]="tabLabel(tab)" [attr.data-tab-id]="tab.id" [attr.data-testid]="'editor-tab-' + tab.kind" (click)="activate(tab.id)" (keydown.enter)="activate(tab.id)">
+          @if (tab.icon) {
+            <ds-icon [name]="tab.icon" [size]="15" />
+          } @else {
+            <img src="/assets/dreamy-studio-mark.svg" alt="" />
+          }
+          <span class="etab-label">{{ tabLabel(tab) }}</span>
+          @if (tab.closable) {
+            <button type="button" class="etab-close" [attr.aria-label]="'tabs.close' | t" [attr.data-tip]="'tabs.closeTip' | t" data-testid="editor-tab-close" (click)="closeTab($event, tab.id)"><ds-icon name="x" [size]="13" /></button>
+          }
+        </div>
+      }
     </div>
   </div>
   <div class="crumbs" data-testid="editor-crumbs">
@@ -12,9 +21,39 @@
       <span data-testid="editor-crumbs-workspace">{{ ws.name }}</span>
       <ds-icon name="chev-r" [size]="13" />
     }
-    <span data-testid="editor-crumbs-current">{{ "main.editor.home" | t }}</span>
+    @if (crumbSection(); as section) {
+      <span data-testid="editor-crumbs-section">{{ section }}</span>
+      <ds-icon name="chev-r" [size]="13" />
+    }
+    <span data-testid="editor-crumbs-current">{{ crumbCurrent() }}</span>
   </div>
-  <section class="editor" data-testid="editor-body"><ng-content /></section>
+  <section class="editor" [class.is-fill]="tabs.active().kind !== 'home'" data-testid="editor-body">
+    @switch (tabs.active().kind) {
+      @case ("novels") {
+        <div class="nv-host" data-testid="editor-novels-host">
+          <app-novel-list />
+        </div>
+      }
+      @case ("novel") {
+        <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-novel-host">
+          @if (tabs.active().novelId; as novelId) {
+            <app-novel-view [novelId]="novelId" data-testid="novel-view" />
+          }
+        </div>
+      }
+      @default {
+        @if (workspace(); as ws) {
+          <section class="home" data-testid="home-panel">
+            <div class="home-head">
+              <span class="eyebrow" data-testid="home-eyebrow">Workspace</span>
+              <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
+              <span class="path t-mute" data-testid="home-workspace-path">{{ ws.path }}</span>
+            </div>
+          </section>
+        }
+      }
+    }
+  </section>
   @if (layout.bottomOpen()) {
     <app-bottom />
   }

@@ -89,6 +89,11 @@ export interface PackageSummary {
   hasCover: boolean;
 }
 
+export interface ExportSummary {
+  path: string;
+  chapterCount: number;
+}
+
 export interface NovelError {
   code: string;
   detail: string;

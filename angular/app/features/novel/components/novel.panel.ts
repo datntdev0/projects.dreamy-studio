@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input } from "@angular/core";
+import { Component, computed, effect, inject, input, signal } from "@angular/core";
 import { Icon } from "../../../../components/icon";
 import { TabsService } from "../../../../layout/tabs.service";
 import { I18nKey } from "../../../core/i18n/i18n.models";
@@ -17,7 +17,9 @@ import { NovelSummary } from "../novel.models";
 import { MAX_TAGS } from "../novel.rules";
 import { NOVEL_LANGS } from "../novel.rules";
 import { displayName } from "../novel.rules";
+import { exportFileName } from "../novel.rules";
 import { fieldPatch } from "../novel.rules";
+import { fileNameOf } from "../novel.rules";
 import { formatCount } from "../novel.rules";
 import { formatStamp } from "../novel.rules";
 import { hasCustomName } from "../novel.rules";
@@ -63,6 +65,7 @@ export class NovelPanel {
 
   readonly novelId = input<number | null>(null);
   readonly showOpen = input(false);
+  readonly exporting = signal(false);
 
   readonly activeId = computed(this.buildActiveId.bind(this));
   readonly novel = computed(this.buildNovel.bind(this));
@@ -125,6 +128,34 @@ export class NovelPanel {
 
   requestDelete(novel: NovelSummary): void {
     this.dialogs.openDelete([novel.id]);
+  }
+
+  exportTipKey(novel: NovelSummary): I18nKey {
+    return novel.chapterCount === 0 ? "novel.panel.exportEmptyTip" : "novel.panel.exportTip";
+  }
+
+  async exportNovel(novel: NovelSummary): Promise<void> {
+    if (this.exporting() || novel.chapterCount === 0) {
+      return;
+    }
+    this.exporting.set(true);
+    try {
+      await this.saveExport(novel);
+    } catch (cause) {
+      this.fail(cause);
+    } finally {
+      this.exporting.set(false);
+    }
+  }
+
+  private async saveExport(novel: NovelSummary): Promise<void> {
+    const path = await this.novels.packageSavePick(exportFileName(novel));
+    if (path === null) {
+      return;
+    }
+    const result = await this.novels.packageExport(novel.id, path);
+    const file = fileNameOf(result.path);
+    this.toasts.show(this.i18n.translate("novel.toast.exported", { title: displayName(novel), file }));
   }
 
   async onField(novel: NovelSummary, field: NovelField, event: Event): Promise<void> {

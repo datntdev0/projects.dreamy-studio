@@ -1,5 +1,6 @@
 use crate::commands::workspace::picked_path;
 use crate::features::novel::models::ChapterRow;
+use crate::features::novel::models::ExportSummary;
 use crate::features::novel::models::InspectEvent;
 use crate::features::novel::models::InspectSink;
 use crate::features::novel::models::NovelError;
@@ -10,6 +11,7 @@ use crate::features::novel::models::NovelResult;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::PackageSummary;
 use crate::features::novel::models::ParagraphRow;
+use crate::features::novel::package::EXPORT_EXTENSION;
 use crate::features::novel::package::PACKAGE_EXTENSIONS;
 use crate::features::novel::package::inspect_path;
 use crate::features::novel::service::NovelService;
@@ -150,6 +152,25 @@ pub fn import_package(
     meta: NovelInput,
 ) -> NovelResult<NovelSummary> {
     service.open(session)?.import_package(Path::new(path), meta)
+}
+
+pub fn export_package(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    id: i64,
+    path: &str,
+) -> NovelResult<ExportSummary> {
+    service.open(session)?.export_package(id, Path::new(path))
+}
+
+fn pick_export_path(app: &AppHandle, file_name: String) -> Option<String> {
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter(PICKER_LABEL, &[EXPORT_EXTENSION])
+        .set_file_name(file_name)
+        .blocking_save_file();
+    picked_path(picked)
 }
 
 fn pick_package(app: &AppHandle) -> Option<String> {
@@ -296,6 +317,24 @@ pub async fn novel_package_import(
 ) -> NovelResult<NovelSummary> {
     run_blocking(app, move |service, session| {
         import_package(service, session, &path, meta)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn novel_package_save_pick(app: AppHandle, file_name: String) -> Option<String> {
+    let task = spawn_blocking(move || pick_export_path(&app, file_name));
+    task.await.unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn novel_package_export(
+    app: AppHandle,
+    id: i64,
+    path: String,
+) -> NovelResult<ExportSummary> {
+    run_blocking(app, move |service, session| {
+        export_package(service, session, id, &path)
     })
     .await
 }
@@ -585,6 +624,53 @@ mod tests {
             assert!(value.get(key).is_some(), "{key}");
         }
         assert_eq!(serde_json::to_value(&paragraphs[0]).unwrap()["n"], 1);
+    }
+
+    #[test]
+    fn export_serializes_the_camel_case_contract_and_reimports() {
+        let fixture = entered_fixture();
+        let path = package_file(&fixture, 2);
+        let imported = import_package(
+            &fixture.service,
+            &fixture.session,
+            path.to_str().unwrap(),
+            input("Imported"),
+        )
+        .unwrap();
+        let dest = fixture.dir.path().join("exported");
+
+        let summary = export_package(
+            &fixture.service,
+            &fixture.session,
+            imported.id,
+            dest.to_str().unwrap(),
+        )
+        .unwrap();
+
+        let value = serde_json::to_value(&summary).unwrap();
+        assert_eq!(value["chapterCount"], 2);
+        assert!(value["path"].as_str().unwrap().ends_with("exported.dsnovel"));
+        let again = import_package(
+            &fixture.service,
+            &fixture.session,
+            value["path"].as_str().unwrap(),
+            input("Again"),
+        )
+        .unwrap();
+        assert_eq!(again.chapter_count, 2);
+    }
+
+    #[test]
+    fn export_without_a_workspace_is_a_typed_error() {
+        let error = export_package(
+            &NovelService::new(),
+            &WorkspaceSession::new(),
+            1,
+            "x.dsnovel",
+        )
+        .unwrap_err();
+
+        assert_eq!(error.code, NovelErrorCode::NoWorkspace);
     }
 
     #[test]

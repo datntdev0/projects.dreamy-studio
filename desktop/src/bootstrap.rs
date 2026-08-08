@@ -39,6 +39,8 @@ pub fn run() {
             commands::novel::novel_package_pick,
             commands::novel::novel_package_inspect,
             commands::novel::novel_package_import,
+            commands::novel::novel_package_save_pick,
+            commands::novel::novel_package_export,
         ])
         .setup(setup)
         .build(tauri::generate_context!())

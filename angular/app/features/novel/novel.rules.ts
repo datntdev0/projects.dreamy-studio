@@ -419,6 +419,16 @@ export function fileNameOf(path: string): string {
   return last ? last : path;
 }
 
+const EXPORT_FILE_FALLBACK = "novel";
+const EXPORT_FILE_EXTENSION = ".dsnovel";
+const EXPORT_ILLEGAL_CHARS = /[<>:"/\\|?*\u0000-\u001f]/g;
+
+export function exportFileName(novel: NovelSummary): string {
+  const cleaned = displayName(novel).replace(EXPORT_ILLEGAL_CHARS, " ").replace(/\s+/g, " ").trim();
+  const stem = cleaned.replace(/[. ]+$/, "");
+  return `${stem || EXPORT_FILE_FALLBACK}${EXPORT_FILE_EXTENSION}`;
+}
+
 export function formatCount(value: number): string {
   return Number(value).toLocaleString("en-US");
 }

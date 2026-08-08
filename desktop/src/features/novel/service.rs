@@ -2,6 +2,7 @@ use crate::features::novel::files::COVER_MAX_BYTES;
 use crate::features::novel::files::CoverKind;
 use crate::features::novel::files::NovelFiles;
 use crate::features::novel::models::ChapterRow;
+use crate::features::novel::models::ExportSummary;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::models::NovelErrorCode;
 use crate::features::novel::models::NovelInput;
@@ -13,6 +14,8 @@ use crate::features::novel::models::ParagraphRow;
 use crate::features::novel::package::PackageReader;
 use crate::features::novel::package::ValidatedPackage;
 use crate::features::novel::package::inspect_path;
+use crate::features::novel::package::package_destination;
+use crate::features::novel::package::write_package;
 use crate::features::novel::repository::NewChapter;
 use crate::features::novel::repository::NewNovel;
 use crate::features::novel::repository::NovelRepository;
@@ -477,6 +480,23 @@ impl NovelWorkspace {
                 Err(error)
             }
         }
+    }
+
+    pub fn export_package(&self, id: i64, dest: &Path) -> NovelResult<ExportSummary> {
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        let novel = require_novel(&repo, id)?;
+        let chapters = repo.list_chapters(id)?;
+        if chapters.is_empty() {
+            return Err(NovelError::invalid("the novel has no chapters to export"));
+        }
+        let dest = package_destination(dest);
+        write_package(&self.files(), &novel, &chapters, &dest)?;
+        Ok(ExportSummary {
+            path: dest.to_string_lossy().into_owned(),
+            chapter_count: chapters.len(),
+        })
     }
 
     fn finish_import(&self, tx: rusqlite::Transaction, id: i64) -> NovelResult<NovelSummary> {
@@ -1158,6 +1178,99 @@ mod tests {
 
         assert_eq!(error.code, NovelErrorCode::PackageChapters);
         assert!(fixture.workspace.list().unwrap().is_empty());
+    }
+
+    #[test]
+    fn export_round_trips_through_import() {
+        let fixture = fixture();
+        let book = imported(&fixture, 3);
+        fixture
+            .workspace
+            .paragraph_update(
+                book.id,
+                &fixture.workspace.chapters(book.id).unwrap()[1].id,
+                1,
+                "edited line",
+            )
+            .unwrap();
+        let dest = fixture.dir.path().join("out").join("Exported");
+        fs::create_dir(dest.parent().unwrap()).unwrap();
+
+        let summary = fixture.workspace.export_package(book.id, &dest).unwrap();
+
+        let written = fixture.dir.path().join("out").join("Exported.dsnovel");
+        assert_eq!(summary.chapter_count, 3);
+        assert_eq!(PathBuf::from(&summary.path), written);
+        assert!(!fixture.dir.path().join("out").join("Exported.dsnovel.part").exists());
+        let mut meta = input("Copy");
+        meta.lang = "zh".to_string();
+        let copy = fixture.workspace.import_package(&written, meta).unwrap();
+        assert_eq!(copy.chapter_count, 3);
+        let original = fixture.workspace.list().unwrap().remove(0);
+        assert_eq!(original.id, book.id);
+        assert_eq!(copy.word_count, original.word_count);
+        let source = fixture.workspace.chapters(book.id).unwrap();
+        let target = fixture.workspace.chapters(copy.id).unwrap();
+        for (before, after) in source.iter().zip(&target) {
+            assert_eq!(before.title, after.title);
+            let old = fixture.workspace.chapter_read(book.id, &before.id).unwrap();
+            let new = fixture.workspace.chapter_read(copy.id, &after.id).unwrap();
+            assert_eq!(old, new);
+        }
+        assert_eq!(
+            fixture.workspace.cover_get(copy.id).unwrap(),
+            fixture.workspace.cover_get(book.id).unwrap()
+        );
+    }
+
+    #[test]
+    fn export_without_chapters_or_novel_is_rejected() {
+        let fixture = fixture();
+        let empty = fixture.workspace.create(input("Empty")).unwrap();
+        let dest = fixture.dir.path().join("empty.dsnovel");
+
+        let none = fixture.workspace.export_package(empty.id, &dest).unwrap_err();
+        let missing = fixture.workspace.export_package(404, &dest).unwrap_err();
+
+        assert_eq!(none.code, NovelErrorCode::InvalidInput);
+        assert_eq!(missing.code, NovelErrorCode::NotFound);
+        assert!(!dest.exists());
+    }
+
+    #[test]
+    fn failed_export_leaves_no_partial_file() {
+        let fixture = fixture();
+        let book = imported(&fixture, 2);
+        let chapters = fixture.workspace.chapters(book.id).unwrap();
+        fs::remove_file(
+            fixture
+                .dir
+                .path()
+                .join("novels")
+                .join(book.id.to_string())
+                .join(format!("chapter_{}.txt", chapters[1].id)),
+        )
+        .unwrap();
+        let dest = fixture.dir.path().join("broken.dsnovel");
+
+        let error = fixture.workspace.export_package(book.id, &dest).unwrap_err();
+
+        assert_eq!(error.code, NovelErrorCode::ChapterFileMissing);
+        assert!(!dest.exists());
+        assert!(!fixture.dir.path().join("broken.dsnovel.part").exists());
+    }
+
+    #[test]
+    fn export_replaces_an_existing_file() {
+        let fixture = fixture();
+        let book = imported(&fixture, 1);
+        let dest = fixture.dir.path().join("again.dsnovel");
+        fs::write(&dest, b"old").unwrap();
+
+        fixture.workspace.export_package(book.id, &dest).unwrap();
+
+        assert!(fs::metadata(&dest).unwrap().len() > 3);
+        assert!(fixture.workspace.import_package(&dest, input("Back")).is_ok());
     }
 
     #[test]

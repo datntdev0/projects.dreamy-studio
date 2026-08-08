@@ -1,5 +1,7 @@
 use crate::features::novel::files::COVER_MAX_BYTES;
 use crate::features::novel::files::CoverKind;
+use crate::features::novel::files::NovelFiles;
+use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::InspectEvent;
 use crate::features::novel::models::InspectSink;
 use crate::features::novel::models::InspectStatus;
@@ -8,14 +10,23 @@ use crate::features::novel::models::NovelError;
 use crate::features::novel::models::NovelErrorCode;
 use crate::features::novel::models::NovelResult;
 use crate::features::novel::models::PackageSummary;
+use crate::features::novel::repository::NovelRow;
 use crate::features::novel::service::normalize_chapter_text;
 use crate::features::novel::service::word_count;
 use serde::Deserialize;
+use serde::Serialize;
+use std::ffi::OsString;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::Seek;
+use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
+use zip::CompressionMethod;
 use zip::ZipArchive;
+use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 pub const MAX_CHAPTERS: usize = 10_000;
 pub const MAX_ENTRY_BYTES: u64 = 5 * 1024 * 1024;
@@ -24,7 +35,10 @@ pub const FORMAT_VERSION: u32 = 1;
 pub const MANIFEST_ENTRY: &str = "manifest.json";
 pub const CHAPTERS_PREFIX: &str = "chapters/";
 pub const PACKAGE_EXTENSIONS: [&str; 2] = ["dsnovel", "zip"];
+pub const EXPORT_EXTENSION: &str = "dsnovel";
 
+const MIN_NUMBER_WIDTH: usize = 3;
+const PART_SUFFIX: &str = ".part";
 const CHAPTER_EXTENSIONS: [&str; 2] = ["txt", "md"];
 const PACKAGE_LANGS: [(&str, &str); 5] = [
     ("en", "EN"),
@@ -534,6 +548,138 @@ fn inspect_cover<R: Read + Seek>(
     })
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportManifest {
+    format_version: u32,
+    title: String,
+    author: String,
+    lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cover: Option<String>,
+    chapters: Vec<ExportChapter>,
+}
+
+#[derive(Debug, Serialize)]
+struct ExportChapter {
+    file: String,
+    title: String,
+}
+
+pub fn package_destination(path: &Path) -> PathBuf {
+    if has_package_extension(path) {
+        return path.to_path_buf();
+    }
+    let mut name = OsString::from(path.as_os_str());
+    name.push(format!(".{EXPORT_EXTENSION}"));
+    PathBuf::from(name)
+}
+
+pub fn write_package(
+    files: &NovelFiles,
+    novel: &NovelRow,
+    chapters: &[ChapterRow],
+    dest: &Path,
+) -> NovelResult<()> {
+    let part = part_path(dest);
+    let written = write_entries(files, novel, chapters, &part);
+    if written.is_err() {
+        let _ = fs::remove_file(&part);
+        return written;
+    }
+    let renamed = fs::rename(&part, dest).map_err(NovelError::from);
+    if renamed.is_err() {
+        let _ = fs::remove_file(&part);
+    }
+    renamed
+}
+
+fn part_path(dest: &Path) -> PathBuf {
+    let mut name = OsString::from(dest.as_os_str());
+    name.push(PART_SUFFIX);
+    PathBuf::from(name)
+}
+
+fn write_entries(
+    files: &NovelFiles,
+    novel: &NovelRow,
+    chapters: &[ChapterRow],
+    path: &Path,
+) -> NovelResult<()> {
+    let cover = files.read_cover(novel.id)?;
+    let names = chapter_names(chapters.len());
+    let manifest = build_manifest(novel, chapters, &names, cover.as_ref().map(|c| c.0));
+    let manifest_bytes = serde_json::to_vec_pretty(&manifest).map_err(manifest_failure)?;
+    let mut writer = ZipWriter::new(File::create(path)?);
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+    add_entry(&mut writer, options, MANIFEST_ENTRY, &manifest_bytes)?;
+    if let Some((kind, bytes)) = &cover {
+        add_entry(&mut writer, options, &cover_entry(*kind), bytes)?;
+    }
+    for (chapter, name) in chapters.iter().zip(&names) {
+        let text = files.read_chapter(novel.id, &chapter.id)?;
+        add_entry(&mut writer, options, name, text.as_bytes())?;
+    }
+    writer.finish().map_err(zip_failure)?;
+    Ok(())
+}
+
+fn build_manifest(
+    novel: &NovelRow,
+    chapters: &[ChapterRow],
+    names: &[String],
+    cover: Option<CoverKind>,
+) -> ExportManifest {
+    let mut entries = Vec::with_capacity(chapters.len());
+    for (chapter, name) in chapters.iter().zip(names) {
+        entries.push(ExportChapter {
+            file: name.clone(),
+            title: chapter.title.clone(),
+        });
+    }
+    ExportManifest {
+        format_version: FORMAT_VERSION,
+        title: novel.title.clone(),
+        author: novel.author.clone(),
+        lang: novel.lang.to_lowercase(),
+        cover: cover.map(cover_entry),
+        chapters: entries,
+    }
+}
+
+fn chapter_names(count: usize) -> Vec<String> {
+    let width = count.to_string().len().max(MIN_NUMBER_WIDTH);
+    (1..=count)
+        .map(|number| format!("{CHAPTERS_PREFIX}{number:0width$}.txt"))
+        .collect()
+}
+
+fn cover_entry(kind: CoverKind) -> String {
+    format!("cover.{}", kind.extension())
+}
+
+fn add_entry(
+    writer: &mut ZipWriter<File>,
+    options: SimpleFileOptions,
+    name: &str,
+    bytes: &[u8],
+) -> NovelResult<()> {
+    writer.start_file(name, options).map_err(zip_failure)?;
+    writer.write_all(bytes)?;
+    Ok(())
+}
+
+fn zip_failure(error: zip::result::ZipError) -> NovelError {
+    NovelError::new(NovelErrorCode::Io, format!("cannot write package: {error}"))
+}
+
+fn manifest_failure(error: serde_json::Error) -> NovelError {
+    NovelError::new(
+        NovelErrorCode::Io,
+        format!("cannot write manifest: {error}"),
+    )
+}
+
 #[cfg(test)]
 pub mod fixtures {
     use std::io::Cursor;
@@ -925,5 +1071,32 @@ mod tests {
         }
         assert!(map_lang("fr").is_err());
         assert!(map_lang("").is_err());
+    }
+
+    #[test]
+    fn appends_the_package_extension_only_when_missing() {
+        assert_eq!(
+            package_destination(Path::new("out/Book v1.2")),
+            PathBuf::from("out/Book v1.2.dsnovel")
+        );
+        assert_eq!(
+            package_destination(Path::new("out/Book.DSNOVEL")),
+            PathBuf::from("out/Book.DSNOVEL")
+        );
+        assert_eq!(
+            package_destination(Path::new("out/Book.zip")),
+            PathBuf::from("out/Book.zip")
+        );
+    }
+
+    #[test]
+    fn numbers_chapter_files_with_a_stable_width() {
+        assert_eq!(
+            chapter_names(2),
+            vec!["chapters/001.txt", "chapters/002.txt"]
+        );
+        let many = chapter_names(10_000);
+        assert_eq!(many[0], "chapters/00001.txt");
+        assert_eq!(many[9_999], "chapters/10000.txt");
     }
 }

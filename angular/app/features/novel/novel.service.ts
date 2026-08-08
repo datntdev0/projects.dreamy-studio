@@ -3,6 +3,7 @@ import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ChapterRow } from "./novel.models";
 import { CoverEntry } from "./novel.models";
+import { ExportSummary } from "./novel.models";
 import { InspectEvent } from "./novel.models";
 import { NovelError } from "./novel.models";
 import { NovelFilters } from "./novel.models";
@@ -294,6 +295,14 @@ export class NovelService {
     });
     this.items.set([created, ...this.items()]);
     return created;
+  }
+
+  packageSavePick(fileName: string): Promise<string | null> {
+    return this.ipc.invoke<string | null>("novel_package_save_pick", { fileName });
+  }
+
+  packageExport(id: number, path: string): Promise<ExportSummary> {
+    return this.ipc.invoke<ExportSummary>("novel_package_export", { id, path });
   }
 
   setView(mode: NovelViewMode): void {

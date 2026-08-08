@@ -1,5 +1,6 @@
 @if (novel(); as n) {
   <section class="ins-panel-actions" data-testid="novel-panel-actions">
+    <button type="button" class="btn btn-sm" [attr.data-tip]="exportTipKey(n) | t" [attr.aria-label]="exportTipKey(n) | t" [disabled]="exporting() || n.chapterCount === 0" data-testid="novel-panel-export" (click)="exportNovel(n)"><ds-icon name="download" [size]="15" />{{ "novel.panel.export" | t }}</button>
     <button type="button" class="btn btn-sm btn-danger" [attr.data-tip]="'novel.panel.deleteTip' | t" [attr.aria-label]="'novel.panel.deleteTip' | t" data-testid="novel-panel-delete" (click)="requestDelete(n)"><ds-icon name="trash" [size]="15" />{{ "novel.panel.delete" | t }}</button>
     @if (showOpen()) {
       <button type="button" class="btn btn-sm btn-primary" data-testid="novel-panel-open" (click)="openNovel(n)"><ds-icon name="book" [size]="15" />{{ "novel.panel.open" | t }}</button>

@@ -7,6 +7,9 @@ import { NovelPanel } from "../../app/features/novel/components/novel.panel";
 import { NovelLibraryPanel } from "../../app/features/novel/components/library.panel";
 import { NovelReaderService } from "../../app/features/novel/novel.reader.service";
 import { NovelService } from "../../app/features/novel/novel.service";
+import { ProjectLibraryPanel } from "../../app/features/project/components/library.panel";
+import { ProjectPanel } from "../../app/features/project/components/project.panel";
+import { ProjectService } from "../../app/features/project/project.service";
 import { LayoutService } from "../layout.service";
 import { RIGHT_TABS } from "../layout.models";
 import { TabsService } from "../tabs.service";
@@ -14,13 +17,14 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-inspector",
   standalone: true,
-  imports: [Button, Icon, I18nPipe, NovelLibraryPanel, NovelPanel, NovelDisplayPanel],
+  imports: [Button, Icon, I18nPipe, NovelLibraryPanel, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel],
   templateUrl: "./inspector.html",
 })
 export class Inspector {
   readonly layout = inject(LayoutService);
   readonly editorTabs = inject(TabsService);
   readonly novels = inject(NovelService);
+  readonly projects = inject(ProjectService);
   readonly reader = inject(NovelReaderService);
   readonly tabs = RIGHT_TABS;
 }

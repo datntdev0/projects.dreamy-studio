@@ -5,7 +5,11 @@
     <ds-button size="small" [iconOnly]="true" [label]="'main.explorer.collapse' | t" [attr.title]="'main.explorer.collapse' | t" data-testid="explorer-collapse" (pressed)="layout.toggleExplorer()"><ds-icon name="chev-l" [size]="17" /></ds-button>
   </header>
   <div class="pane-body" data-testid="explorer-body">
-    @if (layout.rail() === "novels") {
+    @if (layout.rail() === "projects") {
+      <div data-testid="explorer-projects-host">
+        <app-project-explorer />
+      </div>
+    } @else if (layout.rail() === "novels") {
       <div data-testid="explorer-novels-host">
         <app-novel-explorer />
       </div>

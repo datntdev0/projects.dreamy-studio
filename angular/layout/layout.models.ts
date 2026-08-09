@@ -6,7 +6,7 @@ export type PanelId = "explorer" | "inspector" | "bottom";
 
 export type RightTabId = "inspector" | "assistant";
 
-export type EditorTabKind = "home" | "novels" | "novel";
+export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project";
 
 export interface RailItem {
   id: RailId;
@@ -26,6 +26,7 @@ export interface EditorTab {
   labelKey: I18nKey | null;
   title: string;
   novelId: number | null;
+  projectId: number | null;
   rail: RailId | null;
   closable: boolean;
 }
@@ -34,6 +35,8 @@ export const HOME_TAB_ID = "home";
 
 export const NOVELS_TAB_ID = "novels";
 
+export const PROJECTS_TAB_ID = "projects";
+
 export const HOME_TAB: EditorTab = {
   id: HOME_TAB_ID,
   kind: "home",
@@ -41,6 +44,7 @@ export const HOME_TAB: EditorTab = {
   labelKey: "main.editor.home",
   title: "",
   novelId: null,
+  projectId: null,
   rail: null,
   closable: false,
 };
@@ -52,7 +56,20 @@ export const NOVELS_TAB: EditorTab = {
   labelKey: "tabs.novels.title",
   title: "",
   novelId: null,
+  projectId: null,
   rail: "novels",
+  closable: true,
+};
+
+export const PROJECTS_TAB: EditorTab = {
+  id: PROJECTS_TAB_ID,
+  kind: "projects",
+  icon: "folder",
+  labelKey: "tabs.projects.title",
+  title: "",
+  novelId: null,
+  projectId: null,
+  rail: "projects",
   closable: true,
 };
 
@@ -80,7 +97,26 @@ export function novelTab(novelId: number, title: string): EditorTab {
     labelKey: null,
     title,
     novelId,
+    projectId: null,
     rail: "novels",
+    closable: true,
+  };
+}
+
+export function projectTabId(id: number): string {
+  return `project:${id}`;
+}
+
+export function projectTab(id: number, title: string, icon = "folder"): EditorTab {
+  return {
+    id: projectTabId(id),
+    kind: "project",
+    icon,
+    labelKey: null,
+    title,
+    novelId: null,
+    projectId: id,
+    rail: "projects",
     closable: true,
   };
 }

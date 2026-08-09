@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from "@angular/core";
 import { WorkspaceService } from "../app/features/workspace/workspace.service";
-import { EditorTab, HOME_TAB, HOME_TAB_ID, NOVELS_TAB, novelTab, novelTabId } from "./layout.models";
+import { EditorTab, HOME_TAB, HOME_TAB_ID, NOVELS_TAB, PROJECTS_TAB, novelTab, novelTabId, projectTab, projectTabId } from "./layout.models";
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -36,6 +36,20 @@ export class TabsService {
     this.open(NOVELS_TAB);
   }
 
+  openProjects(): void {
+    this.open(PROJECTS_TAB);
+  }
+
+  openProject(id: number, title: string, icon = "folder"): void {
+    const tabId = projectTabId(id);
+    if (indexOfTab(this.tabs(), tabId) >= 0) {
+      this.renameProject(id, title);
+      this.activate(tabId);
+      return;
+    }
+    this.open(projectTab(id, title, icon));
+  }
+
   openNovel(novelId: number, title: string): void {
     const id = novelTabId(novelId);
     if (indexOfTab(this.tabs(), id) >= 0) {
@@ -49,6 +63,16 @@ export class TabsService {
   renameNovel(novelId: number, title: string): void {
     const tabs = [...this.tabs()];
     const index = indexOfTab(tabs, novelTabId(novelId));
+    if (index < 0) {
+      return;
+    }
+    tabs[index] = { ...tabs[index], title };
+    this.tabs.set(tabs);
+  }
+
+  renameProject(id: number, title: string): void {
+    const tabs = [...this.tabs()];
+    const index = indexOfTab(tabs, projectTabId(id));
     if (index < 0) {
       return;
     }
@@ -83,6 +107,16 @@ export class TabsService {
   closeNovels(novelIds: number[]): void {
     for (const novelId of novelIds) {
       this.closeNovel(novelId);
+    }
+  }
+
+  closeProject(id: number): void {
+    this.close(projectTabId(id));
+  }
+
+  closeProjects(ids: number[]): void {
+    for (const id of ids) {
+      this.closeProject(id);
     }
   }
 

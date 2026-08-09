@@ -24,6 +24,22 @@
       </div>
     } @else {
       @switch (editorTabs.active().kind) {
+        @case ("projects") {
+          <div data-testid="inspector-projects-host">
+            @if (projects.selectedId() === null) {
+              <app-project-library-panel />
+            } @else {
+              <app-project-panel [projectId]="projects.selectedId()!" [showOpen]="true" />
+            }
+          </div>
+        }
+        @case ("project") {
+          <div [attr.data-project-id]="editorTabs.active().projectId" data-testid="inspector-project-host">
+            @if (editorTabs.active().projectId; as projectId) {
+              <app-project-panel [projectId]="projectId" />
+            }
+          </div>
+        }
         @case ("novels") {
           <div data-testid="inspector-novels-host">
             @if (novels.selectedId() === null) {

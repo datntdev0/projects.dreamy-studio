@@ -157,6 +157,9 @@ export class LayoutService {
   }
 
   private openRailView(id: RailId): void {
+    if (id === "projects") {
+      this.tabs.openProjects();
+    }
     if (id === "novels") {
       this.tabs.openNovels();
     }

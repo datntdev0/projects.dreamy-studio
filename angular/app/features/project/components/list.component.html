@@ -1,0 +1,94 @@
+<div class="nv" data-testid="project-list">
+  <div class="nv-bar" data-testid="project-list-toolbar">
+    <div class="nv-bar-l" data-testid="project-list-toolbar-left">
+      <label class="search"><span class="sr-only">{{ "project.catalog.search" | t }}</span><input class="input" type="search" [value]="projects.query()" [attr.placeholder]="'project.catalog.search' | t" data-testid="project-list-search" (input)="onQuery($event)" /></label>
+      <span class="t-sm t-mute" data-testid="project-list-count">{{ (projects.visible().length === 1 ? "project.count.one" : "project.count.other") | t: { count: projects.visible().length } }}</span>
+      @if (projects.visible().length > 0) {
+        @if (projects.selectedIds().length > 0) {
+          <span class="nm-selbar" data-testid="project-list-selection-bar">
+            <b data-testid="project-list-selection-count">{{ "project.catalog.selected" | t: { count: projects.selectedIds().length } }}</b>
+            <button type="button" class="btn btn-sm" data-testid="project-list-archive-selected" (click)="archiveSelected()"><ds-icon name="archive" [size]="16" />{{ archiveLabel() | t }}</button>
+            <button type="button" class="btn btn-sm btn-danger" data-testid="project-list-delete-selected" (click)="deleteSelected()"><ds-icon name="trash" [size]="16" />{{ "project.action.delete" | t }}</button>
+            <button type="button" class="btn btn-sm btn-ghost" data-testid="project-list-clear-selection" (click)="clearSelection()">{{ "project.catalog.clearSelection" | t }}</button>
+          </span>
+        } @else {
+          <button type="button" class="btn btn-sm btn-ghost" data-testid="project-list-select-all" (click)="selectAll()">{{ "project.catalog.selectAll" | t }}</button>
+        }
+      }
+      @if (projects.filterActive()) {
+        <span class="nm-chips" data-testid="project-list-chips">
+          @for (template of projects.filters().templates; track template) {
+            <span class="tag" data-testid="project-list-chip-template">{{ templateKey(template) | t }}<button type="button" class="tag-x" [attr.aria-label]="'project.catalog.filter.remove' | t: { label: (templateKey(template) | t) }" data-testid="project-list-chip-remove" (click)="toggleTemplate(template)"><ds-icon name="x" [size]="18" /></button></span>
+          }
+          @for (status of projects.filters().status; track status) {
+            <span class="tag" data-testid="project-list-chip-status">{{ statusKey(status) | t }}<button type="button" class="tag-x" [attr.aria-label]="'project.catalog.filter.remove' | t: { label: (statusKey(status) | t) }" data-testid="project-list-chip-remove" (click)="toggleStatus(status)"><ds-icon name="x" [size]="18" /></button></span>
+          }
+          <button type="button" class="btn btn-sm btn-ghost" data-testid="project-list-clear-filters" (click)="clearFilters()">{{ "project.catalog.clearFilters" | t }}</button>
+        </span>
+      }
+    </div>
+    <span class="spacer"></span>
+    <div class="nv-bar-r" data-testid="project-list-toolbar-right">
+      <select class="select" [value]="projects.sort()" [attr.aria-label]="'project.catalog.sort' | t" data-testid="project-list-sort" (change)="onSort($event)">
+        <option value="updated" [selected]="projects.sort() === 'updated'">{{ "project.catalog.sort.updated" | t }}</option>
+        <option value="name" [selected]="projects.sort() === 'name'">{{ "project.catalog.sort.name" | t }}</option>
+      </select>
+      <div class="seg" role="group" [attr.aria-label]="'project.catalog.view' | t" data-testid="project-list-view">
+        <button type="button" [class.is-active]="isViewActive('grid')" [attr.data-tip]="'project.catalog.view.grid' | t" [attr.aria-label]="'project.catalog.view.grid' | t" [attr.aria-pressed]="isViewActive('grid')" data-testid="project-list-view-grid" (click)="setView('grid')"><ds-icon name="frames" [size]="14" /></button>
+        <button type="button" [class.is-active]="isViewActive('list')" [attr.data-tip]="'project.catalog.view.list' | t" [attr.aria-label]="'project.catalog.view.list' | t" [attr.aria-pressed]="isViewActive('list')" data-testid="project-list-view-list" (click)="setView('list')"><ds-icon name="list" [size]="14" /></button>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" data-testid="project-list-create" (click)="openCreate()"><ds-icon name="plus" [size]="16" />{{ "project.action.create" | t }}</button>
+    </div>
+  </div>
+  <div class="nv-body" data-testid="project-list-body">
+    <div class="nv-scroll" [class.has-sel]="projects.selectedIds().length > 0" data-testid="project-list-scroll">
+      @if (projects.error(); as failure) {
+        <div class="empty" data-testid="project-list-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "project.error.generic" | t: { detail: failure.detail } }}</p></div></div>
+      } @else if (projects.visible().length === 0) {
+        @if (projects.isEmpty()) {
+          <div class="empty" data-testid="project-list-empty-none"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "project.catalog.empty.title" | t }}</h3><p class="t-sm t-mute">{{ "project.catalog.empty.description" | t }}</p><div class="empty-act"><button type="button" class="btn btn-primary" data-testid="project-list-empty-create" (click)="openCreate()"><ds-icon name="plus" [size]="16" />{{ "project.action.create" | t }}</button></div></div></div>
+        } @else if (projects.loaded()) {
+          <div class="empty" data-testid="project-list-empty-nomatch"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "project.catalog.noMatch.title" | t }}</h3><p class="t-sm t-mute">{{ "project.catalog.noMatch.description" | t }}</p><button type="button" class="btn" data-testid="project-list-empty-clear" (click)="clearFilters()">{{ "project.catalog.clearFilters" | t }}</button></div></div>
+        }
+      } @else if (projects.view() === "grid") {
+        <div class="pj-grid" data-testid="project-list-grid">
+          @for (project of projects.visible(); track project.id) {
+            <div class="pj-card" [class.is-selected]="isSelected(project.id)" [class.is-archived]="project.archived" tabindex="0" [attr.title]="project.name" [attr.data-project-id]="project.id" data-testid="project-list-card" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)">
+              <div class="pj-thumb" [style.background]="labels.thumbOf(project)">
+                <input type="checkbox" class="nm-chk" [checked]="isSelected(project.id)" [attr.aria-label]="'project.catalog.select' | t: { name: project.name }" data-testid="project-list-select" (click)="$event.stopPropagation()" (change)="toggleSelection(project.id)" />
+                <span class="badge pj-tpl"><ds-icon [name]="labels.iconOf(project.template)" [size]="11" />{{ labels.templateKey(project.template) | t }}</span>
+              </div>
+              <div class="pj-card-b">
+                <div class="pj-card-t"><span class="t-ink pj-card-n">{{ project.name }}</span><span class="badge" [class.badge-running]="!project.archived">{{ labels.statusKey(project) | t }}</span></div>
+                <div class="t-sm t-mute ellip">{{ labels.sourceLine(project) }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <table class="table" data-testid="project-list-table">
+          <thead>
+            <tr>
+              <th class="chk"><input type="checkbox" class="nm-chk" [checked]="allSelected()" [attr.aria-label]="'project.catalog.selectAll' | t" data-testid="project-list-select-page" (change)="selectAll()" /></th>
+              <th>{{ "project.catalog.column.project" | t }}</th>
+              <th>{{ "project.catalog.column.template" | t }}</th>
+              <th>{{ "project.catalog.column.status" | t }}</th>
+              <th>{{ "project.catalog.column.updated" | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (project of projects.visible(); track project.id) {
+              <tr [class.is-selected]="isSelected(project.id)" [class.is-muted]="project.archived" tabindex="0" [attr.data-project-id]="project.id" data-testid="project-list-row" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)">
+                <td class="chk"><input type="checkbox" class="nm-chk" [checked]="isSelected(project.id)" [attr.aria-label]="'project.catalog.select' | t: { name: project.name }" data-testid="project-list-select" (click)="$event.stopPropagation()" (change)="toggleSelection(project.id)" /></td>
+                <td><div class="nm-title"><span class="pj-th" [style.background]="labels.thumbOf(project)"></span><div><div class="t-ink">{{ project.name }}</div><div class="t-sm t-mute ellip">{{ labels.sourceLine(project) }}</div></div></div></td>
+                <td><span class="type-tag"><ds-icon [name]="labels.iconOf(project.template)" [size]="13" />{{ labels.templateKey(project.template) | t }}</span></td>
+                <td><span class="badge" [class.badge-running]="!project.archived">{{ labels.statusKey(project) | t }}</span></td>
+                <td class="mono t-mute">{{ labels.dateOf(project.updatedAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>

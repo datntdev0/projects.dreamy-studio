@@ -1,0 +1,22 @@
+<div class="pj-tree" role="group" [attr.aria-label]="'project.tree.directory' | t" [style.--pj-depth]="depth()" data-testid="project-tree">
+  @for (entry of entries(); track entry.name) {
+    <div class="pj-tree-node">
+      <div class="tree-row pj-tree-row" [class.is-dir]="entry.kind === 'dir'" [style.padding-left.px]="indent() + depth() * 14" role="treeitem" tabindex="0" [attr.aria-level]="depth() + 1" [attr.aria-expanded]="entry.kind === 'dir' ? projects.isExpanded(keyFor(entry)) : null" [attr.title]="entry.name" data-testid="project-tree-entry" (click)="toggle(entry)" (keydown)="onKeydown(entry, $event)">
+        @if (entry.kind === "dir") {
+          <ds-icon [name]="projects.isExpanded(keyFor(entry)) ? 'chev-d' : 'chev-r'" [size]="14" />
+          <ds-icon [name]="projects.isExpanded(keyFor(entry)) ? 'folder-open' : 'folder'" [size]="15" />
+        } @else {
+          <span class="pj-tree-indent"></span>
+          <ds-icon name="file-code" [size]="15" />
+        }
+        <span class="tree-label">{{ entry.name }}</span>
+        @if (entry.kind === "file") {
+          <span class="pj-tree-size mono">{{ sizeLabel(entry) }}</span>
+        }
+      </div>
+      @if (entry.kind === "dir" && projects.isExpanded(keyFor(entry))) {
+        <app-project-tree [projectId]="projectId()" [path]="childPath(entry)" [depth]="depth() + 1" [indent]="indent()" />
+      }
+    </div>
+  }
+</div>

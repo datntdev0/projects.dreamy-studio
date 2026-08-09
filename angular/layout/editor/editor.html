@@ -29,6 +29,18 @@
   </div>
   <section class="editor" [class.is-fill]="tabs.active().kind !== 'home'" data-testid="editor-body">
     @switch (tabs.active().kind) {
+      @case ("projects") {
+        <div class="nv-host" data-testid="editor-projects-host">
+          <app-project-list />
+        </div>
+      }
+      @case ("project") {
+        <div class="nv-host" [attr.data-project-id]="tabs.active().projectId" data-testid="editor-project-host">
+          @if (tabs.active().projectId; as projectId) {
+            <app-project-view [projectId]="projectId" data-testid="project-view" />
+          }
+        </div>
+      }
       @case ("novels") {
         <div class="nv-host" data-testid="editor-novels-host">
           <app-novel-list />

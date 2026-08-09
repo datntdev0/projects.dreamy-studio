@@ -5,6 +5,8 @@ import { I18nService } from "../../app/core/i18n/i18n.service";
 import { NovelView } from "../../app/features/novel/components/novel-view.component";
 import { WorkspaceService } from "../../app/features/workspace/workspace.service";
 import { NovelList } from "../../app/features/novel/components/list.component";
+import { ProjectList } from "../../app/features/project/components/list.component";
+import { ProjectView } from "../../app/features/project/components/project-view.component";
 import { Bottom } from "../bottom/bottom";
 import { LayoutService } from "../layout.service";
 import { EditorTab } from "../layout.models";
@@ -13,7 +15,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList],
+  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList, ProjectList, ProjectView],
   templateUrl: "./editor.html",
 })
 export class Editor {
@@ -51,11 +53,17 @@ export class Editor {
     if (tab.kind === "novels") {
       return this.i18n.translate("main.rail.novels");
     }
+    if (tab.kind === "projects" || tab.kind === "project") {
+      return this.i18n.translate("main.rail.projects");
+    }
     return tab.kind === "novel" ? tab.title : null;
   }
 
   private currentOf(): string {
     const tab = this.tabs.active();
+    if (tab.kind === "project") {
+      return tab.title;
+    }
     return tab.kind === "novel" ? this.i18n.translate("tabs.novel.title") : this.tabLabel(tab);
   }
 }

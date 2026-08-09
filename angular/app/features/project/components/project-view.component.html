@@ -1,0 +1,63 @@
+<div class="nv pj-view" data-testid="project-view">
+  @if (missing()) {
+    <div class="empty" data-testid="project-view-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "project.view.missing" | t }}</h3><button type="button" class="btn" data-testid="project-view-back" (click)="backToCatalog()">{{ "project.view.back" | t }}</button></div></div>
+  } @else if (project(); as project) {
+    <div class="nv-bar" data-testid="project-view-header">
+      <div class="nv-bar-l" data-testid="project-view-heading">
+        <span class="nv-ttl"><ds-icon [name]="labels.iconOf(project.template)" [size]="18" /><span class="t-ink" data-testid="project-view-title">{{ project.name }}</span><span class="badge" [class.badge-running]="!project.archived" data-testid="project-view-status">{{ labels.statusKey(project) | t }}</span></span>
+        <div class="seg" role="group" [attr.aria-label]="'project.view.tabs' | t" data-testid="project-view-tabs">
+          <button type="button" [class.is-active]="tab() === 'files'" [attr.aria-pressed]="tab() === 'files'" data-testid="project-view-tab-files" (click)="setTab('files')">{{ "project.view.files" | t }}</button>
+          <button type="button" [class.is-active]="tab() === 'settings'" [attr.aria-pressed]="tab() === 'settings'" data-testid="project-view-tab-settings" (click)="setTab('settings')">{{ "project.view.settings" | t }}</button>
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <div class="nv-bar-r" data-testid="project-view-actions">
+        <button type="button" class="btn btn-sm" data-testid="project-view-open-folder" (click)="openFolder()"><ds-icon name="folder-open" [size]="16" />{{ "project.action.openFolder" | t }}</button>
+      </div>
+    </div>
+    @if (tab() === "files") {
+      <div class="nv-body" data-testid="project-view-files">
+        <div class="nv-scroll" data-testid="project-view-files-scroll">
+          <div class="pw">
+            <section class="pw-box" data-testid="project-view-files-box">
+              <header class="pw-col-h"><span class="eyebrow">{{ "project.view.filesTitle" | t }}</span><button type="button" class="btn btn-sm btn-ghost" [attr.aria-label]="'project.view.refresh' | t" data-testid="project-view-refresh" (click)="refreshTree()"><ds-icon name="refresh" [size]="16" />{{ "project.view.refresh" | t }}</button></header>
+              <div class="tree-row pj-view-root" data-testid="project-view-folder-label"><ds-icon name="folder-open" [size]="16" /><span class="tree-label path">{{ labels.pathOf(project) }}</span></div>
+              <div role="tree" data-testid="project-view-tree"><app-project-tree [projectId]="project.id" path="" [depth]="0" [indent]="24" /></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="nv-scroll pw-set" data-testid="project-view-settings">
+        <div class="pw-set-in">
+          <section class="pw-card" data-testid="project-view-info">
+            <h3 class="t-display-xs">{{ "project.view.details" | t }}</h3>
+            <div class="field" data-testid="project-view-name-field"><label for="pj-view-name">{{ "project.view.name" | t }}</label><input id="pj-view-name" class="input" [value]="project.name" autocomplete="off" data-testid="project-view-name" (blur)="saveName($event)" (keydown)="onNameKeydown($event)" /></div>
+            <div class="field" data-testid="project-view-description-field"><label for="pj-view-description">{{ "project.view.description" | t }}</label><textarea id="pj-view-description" class="textarea" rows="3" [value]="project.description" data-testid="project-view-description" (blur)="saveDescription($event)"></textarea></div>
+            <div class="field" data-testid="project-view-folder-field"><label>{{ "project.view.folder" | t }}</label><div class="preview-path path" data-testid="project-view-folder">{{ labels.pathOf(project) }}</div><span class="field-hint">{{ "project.view.folderHint" | t }}</span></div>
+          </section>
+          <section class="pw-card" data-testid="project-view-source">
+            <h3 class="t-display-xs">{{ "project.view.sourceTitle" | t }}</h3>
+            <dl class="kv" data-testid="project-view-source-list">
+              <dt>{{ "project.view.novel" | t }}</dt><dd>{{ labels.novelNameOf(project) }}</dd>
+              <dt>{{ "project.view.version" | t }}</dt><dd>{{ labels.versionOf(project) }}</dd>
+              <dt>{{ "project.view.range" | t }}</dt><dd>{{ labels.rangeOf(project) || "—" }}</dd>
+            </dl>
+            <p class="t-sm t-mute">{{ "project.view.sourceNote" | t }}</p>
+          </section>
+          <section class="pw-card pw-danger" data-testid="project-view-danger">
+            <h3 class="t-display-xs">{{ "project.view.dangerTitle" | t }}</h3>
+            <div class="pw-danger-r" data-testid="project-view-archive-row">
+              <div><div class="t-ink">{{ (project.archived ? "project.view.unarchiveTitle" : "project.view.archiveTitle") | t }}</div><div class="t-sm t-mute">{{ (project.archived ? "project.view.unarchiveDescription" : "project.view.archiveDescription") | t }}</div></div>
+              <button type="button" class="btn" data-testid="project-view-archive" (click)="toggleArchived(project)"><ds-icon name="archive" [size]="16" />{{ (project.archived ? "project.action.unarchive" : "project.action.archive") | t }}</button>
+            </div>
+            <div class="pw-danger-r" data-testid="project-view-danger-row">
+              <div><div class="t-ink">{{ "project.view.deleteTitle" | t }}</div><div class="t-sm t-mute">{{ "project.view.deleteDescription" | t }}</div></div>
+              <button type="button" class="btn btn-danger" data-testid="project-view-delete" (click)="requestDelete(project)"><ds-icon name="trash" [size]="16" />{{ "project.view.deleteButton" | t }}</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    }
+  }
+</div>

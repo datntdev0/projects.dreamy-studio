@@ -1,0 +1,16 @@
+app-project-view { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; }
+.pj-view { flex: 1; min-height: 0; }
+.pw { max-width: 1240px; margin: 0 auto; padding: var(--sp-xl); display: grid; gap: var(--sp-xl); }
+.pw-box { display: grid; gap: var(--sp-sm); min-width: 0; padding: var(--sp-md) var(--sp-lg); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
+.pw-col-h { display: flex; align-items: center; justify-content: space-between; min-height: 20px; }
+.pw-card { display: grid; gap: var(--sp-md); padding: var(--sp-lg); background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--r-md); align-content: start; }
+.pw-card .field > label { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-sm); }
+.pw-card .field > .select { width: 100%; }
+.pw-set { padding: var(--sp-xl); }
+.pw-set-in { max-width: 760px; margin: 0 auto; display: grid; gap: var(--sp-lg); }
+.pw-danger { border-color: var(--danger-soft); }
+.pw-danger-r { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-sm) 0; }
+.pw-danger-r + .pw-danger-r { border-top: 1px solid var(--hairline); }
+.pj-view-root { cursor: default; }
+.pj-view-root:hover { background: transparent; }
+.pj-view-root .tree-label { overflow: hidden; text-overflow: ellipsis; text-transform: none; }

@@ -11,11 +11,12 @@ import { ProjectLabels } from "../project.labels";
 import { ProjectSummary, ProjectTemplate } from "../project.models";
 import { toProjectError } from "../project.rules";
 import { ProjectService } from "../project.service";
+import { ProjectThumb } from "./thumb.component";
 
 @Component({
   selector: "app-project-delete-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe],
+  imports: [Button, Dialog, Icon, I18nPipe, ProjectThumb],
   templateUrl: "./delete.dialog.html",
   host: { "data-testid": "project-delete-dialog" },
 })

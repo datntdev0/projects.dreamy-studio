@@ -5,7 +5,6 @@ import { NovelService } from "../novel/novel.service";
 import { displayName, formatMonthDay, formatStamp } from "../novel/novel.rules";
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "./project.models";
 import { templateIcon } from "./project.rules";
-import { thumbBackground } from "./project.thumb";
 
 @Injectable({ providedIn: "root" })
 export class ProjectLabels {
@@ -60,10 +59,6 @@ export class ProjectLabels {
 
   dateOf(value: string): string {
     return formatStamp(value).slice(0, 10);
-  }
-
-  thumbOf(project: ProjectSummary): string {
-    return thumbBackground(project.name);
   }
 
   iconOf(template: ProjectTemplateId): string {

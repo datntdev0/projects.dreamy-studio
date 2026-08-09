@@ -26,7 +26,7 @@ import { hasCustomName } from "../novel.rules";
 import { normTag } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
 import { NovelService } from "../novel.service";
-import { NovelCover, coverColorsFor } from "./cover.component";
+import { Cover } from "../../../../components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 type EditableElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -52,7 +52,7 @@ function fieldOf(patch: NovelPatch): NovelField {
 @Component({
   selector: "app-novel-panel",
   standalone: true,
-  imports: [Icon, I18nPipe, NovelCover, NovelProgressFrac],
+  imports: [Icon, I18nPipe, Cover, NovelProgressFrac],
   templateUrl: "./novel.panel.html",
   host: { "data-testid": "novel-panel" },
 })
@@ -88,10 +88,6 @@ export class NovelPanel {
 
   authorOf(novel: NovelSummary): string {
     return novel.author.trim() || this.i18n.translate("novel.author.unknown");
-  }
-
-  colorsOf(novel: NovelSummary): string[] {
-    return coverColorsFor(novel.id);
   }
 
   imageOf(novel: NovelSummary): string {

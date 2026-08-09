@@ -85,6 +85,16 @@ function withoutSelected(ids: number[], removed: Set<number>): number[] {
   return next;
 }
 
+function withoutCovers(covers: Record<number, string | null>, removed: Set<number>): Record<number, string | null> {
+  const next: Record<number, string | null> = {};
+  for (const key of Object.keys(covers)) {
+    if (!removed.has(Number(key))) {
+      next[Number(key)] = covers[Number(key)];
+    }
+  }
+  return next;
+}
+
 function matchesName(project: ProjectSummary, needle: string, exceptId: number | undefined): boolean {
   return project.id !== exceptId && project.name.trim().toLocaleLowerCase() === needle;
 }
@@ -129,6 +139,8 @@ export class ProjectService {
   private readonly loadedDirectories = signal<Record<string, true>>({});
   private readonly pendingDirectories = new Map<string, Promise<DirEntry[]>>();
   private readonly expanded = signal<string[]>([]);
+  private readonly covers = signal<Record<number, string | null>>({});
+  private readonly pendingCovers = new Set<number>();
   private epoch = 0;
   private treeEpoch = 0;
   private workspacePath: string | null | undefined = undefined;
@@ -211,8 +223,35 @@ export class ProjectService {
     const removed = new Set(ids);
     this.items.set(withoutProjects(this.items(), removed));
     this.selected.set(withoutSelected(this.selected(), removed));
+    this.covers.set(withoutCovers(this.covers(), removed));
     this.refreshTreeForIds(ids);
     return count;
+  }
+
+  coverUrl(id: number): string | null {
+    return this.covers()[id] ?? null;
+  }
+
+  ensureCover(id: number): void {
+    if (this.covers()[id] !== undefined || this.pendingCovers.has(id)) {
+      return;
+    }
+    this.pendingCovers.add(id);
+    void this.fetchCover(id);
+  }
+
+  async setCover(id: number, dataUrl: string): Promise<ProjectSummary> {
+    const next = await this.ipc.invoke<ProjectSummary>("project_cover_set", { id, dataUrl });
+    this.items.set(replaceProject(this.items(), id, next));
+    this.covers.set({ ...this.covers(), [id]: dataUrl });
+    return next;
+  }
+
+  async clearCover(id: number): Promise<ProjectSummary> {
+    const next = await this.ipc.invoke<ProjectSummary>("project_cover_clear", { id });
+    this.items.set(replaceProject(this.items(), id, next));
+    this.covers.set({ ...this.covers(), [id]: null });
+    return next;
   }
 
   async open(id: number): Promise<ProjectSummary> {
@@ -342,11 +381,27 @@ export class ProjectService {
     this.loadedDirectories.set({});
     this.pendingDirectories.clear();
     this.expanded.set([]);
+    this.covers.set({});
+    this.pendingCovers.clear();
     this.query.set("");
     this.sort.set("updated");
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
+  }
+
+  private async fetchCover(id: number): Promise<void> {
+    const epoch = this.epoch;
+    let url: string | null = null;
+    try {
+      url = await this.ipc.invoke<string | null>("project_cover_get", { id });
+    } catch {
+      url = null;
+    }
+    this.pendingCovers.delete(id);
+    if (epoch === this.epoch) {
+      this.covers.set({ ...this.covers(), [id]: url });
+    }
   }
 
   private async fetchDirectory(projectId: number, path: string, key: string, treeEpoch: number): Promise<DirEntry[]> {

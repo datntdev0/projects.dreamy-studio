@@ -10,14 +10,13 @@ import { NovelService } from "../novel.service";
 import { displayName } from "../novel.rules";
 import { filterChapters } from "../novel.rules";
 import { formatCount } from "../novel.rules";
-import { NovelCover } from "./cover.component";
-import { coverColorsFor } from "./cover.component";
+import { Cover } from "../../../../components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 @Component({
   selector: "app-novel-chapters",
   standalone: true,
-  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, NovelCover, NovelProgressFrac],
+  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelProgressFrac],
   templateUrl: "./chapters.component.html",
 })
 export class NovelChapters {
@@ -34,7 +33,6 @@ export class NovelChapters {
   readonly rows = computed(this.buildRows.bind(this));
   readonly resumeSeq = computed(this.buildResumeSeq.bind(this));
   readonly cover = computed(this.buildCover.bind(this));
-  readonly colors = computed(this.buildColors.bind(this));
   readonly tableRowClass = (row: object): Record<string, boolean> => ({
     "is-current": this.resumeSeq() === this.chapterOf(row).seq,
   });
@@ -100,10 +98,6 @@ export class NovelChapters {
   private buildCover(): string {
     const novel = this.novel();
     return novel ? (this.novels.coverUrl(novel) ?? "") : "";
-  }
-
-  private buildColors(): string[] {
-    return coverColorsFor(this.novelId());
   }
 
   private syncCover(): void {

@@ -24,8 +24,7 @@ import { toNovelError } from "../novel.rules";
 import { toNovelInput } from "../novel.rules";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelService } from "../novel.service";
-import { NovelCover } from "./cover.component";
-import { coverColorsFor } from "./cover.component";
+import { Cover } from "../../../../components/cover";
 
 type ImportStep = 1 | 2 | 3;
 
@@ -89,7 +88,7 @@ function langOption(value: NovelLang): LangOption {
 @Component({
   selector: "app-novel-import-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe, NovelCover],
+  imports: [Button, Dialog, Icon, I18nPipe, Cover],
   templateUrl: "./import.dialog.html",
   host: { "data-testid": "novel-import-dialog" },
 })
@@ -128,7 +127,6 @@ export class NovelImportDialog {
   readonly okDetail = computed(this.buildOkDetail.bind(this));
   readonly wordsText = computed(this.buildWordsText.bind(this));
   readonly duplicate = computed(this.buildDuplicate.bind(this));
-  readonly previewColors = computed(this.buildPreviewColors.bind(this));
 
   constructor() {
     effect(this.syncOpen.bind(this));
@@ -417,9 +415,5 @@ export class NovelImportDialog {
 
   private buildDuplicate(): boolean {
     return this.novels.isDuplicateTitle(this.form().title);
-  }
-
-  private buildPreviewColors(): string[] {
-    return coverColorsFor(this.novels.novels().length);
   }
 }

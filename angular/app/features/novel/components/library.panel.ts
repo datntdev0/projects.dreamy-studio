@@ -3,13 +3,13 @@ import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { NovelSummary } from "../novel.models";
 import { NovelService } from "../novel.service";
 import { displayName, formatCount, formatMonthDay } from "../novel.rules";
-import { NovelCover, coverColorsFor } from "./cover.component";
+import { Cover } from "../../../../components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 @Component({
   selector: "app-novel-library-panel",
   standalone: true,
-  imports: [I18nPipe, NovelCover, NovelProgressFrac],
+  imports: [I18nPipe, Cover, NovelProgressFrac],
   templateUrl: "./library.panel.html",
 })
 export class NovelLibraryPanel {
@@ -29,10 +29,6 @@ export class NovelLibraryPanel {
 
   dayOf(novel: NovelSummary): string {
     return formatMonthDay(novel.updatedAt);
-  }
-
-  colorsOf(novel: NovelSummary): string[] {
-    return coverColorsFor(novel.id);
   }
 
   imageOf(novel: NovelSummary): string {

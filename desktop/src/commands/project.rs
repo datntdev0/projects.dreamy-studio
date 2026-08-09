@@ -70,6 +70,31 @@ pub fn list_project_dir(
     service.open(session)?.dir_list(id, path)
 }
 
+pub fn get_project_cover(
+    service: &ProjectService,
+    session: &WorkspaceSession,
+    id: i64,
+) -> ProjectResult<Option<String>> {
+    service.open(session)?.cover_get(id)
+}
+
+pub fn set_project_cover(
+    service: &ProjectService,
+    session: &WorkspaceSession,
+    id: i64,
+    data_url: &str,
+) -> ProjectResult<ProjectSummary> {
+    service.open(session)?.cover_set(id, data_url)
+}
+
+pub fn clear_project_cover(
+    service: &ProjectService,
+    session: &WorkspaceSession,
+    id: i64,
+) -> ProjectResult<ProjectSummary> {
+    service.open(session)?.cover_clear(id)
+}
+
 fn task_failure(error: tauri::Error) -> ProjectError {
     ProjectError::new(ProjectErrorCode::Task, error.to_string())
 }
@@ -152,9 +177,37 @@ pub async fn project_dir_list(
 }
 
 #[tauri::command]
+pub async fn project_cover_get(app: AppHandle, id: i64) -> ProjectResult<Option<String>> {
+    run_blocking(app, move |service, session| {
+        get_project_cover(service, session, id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn project_cover_set(
+    app: AppHandle,
+    id: i64,
+    data_url: String,
+) -> ProjectResult<ProjectSummary> {
+    run_blocking(app, move |service, session| {
+        set_project_cover(service, session, id, &data_url)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn project_cover_clear(app: AppHandle, id: i64) -> ProjectResult<ProjectSummary> {
+    run_blocking(app, move |service, session| {
+        clear_project_cover(service, session, id)
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn project_folder_open(app: AppHandle, id: i64) -> ProjectResult<()> {
     let path = run_blocking(app.clone(), move |service, session| {
-        Ok(service.open(session)?.folder_path(id)?)
+        service.open(session)?.folder_path(id)
     })
     .await?;
     app.opener()

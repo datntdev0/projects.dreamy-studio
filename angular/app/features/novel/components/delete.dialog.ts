@@ -13,13 +13,13 @@ import { formatCount } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
-import { NovelCover, coverColorsFor } from "./cover.component";
+import { Cover } from "../../../../components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 @Component({
   selector: "app-novel-delete-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe, NovelCover, NovelProgressFrac],
+  imports: [Button, Dialog, Icon, I18nPipe, Cover, NovelProgressFrac],
   templateUrl: "./delete.dialog.html",
   host: { "data-testid": "novel-delete-dialog" },
 })
@@ -55,10 +55,6 @@ export class NovelDeleteDialog {
 
   chaptersOf(novel: NovelSummary): string {
     return formatCount(novel.chapterCount);
-  }
-
-  colorsOf(novel: NovelSummary): string[] {
-    return coverColorsFor(novel.id);
   }
 
   imageOf(novel: NovelSummary): string {

@@ -8,7 +8,8 @@ import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
 import { displayName, formatCount, formatStamp, hasCustomName } from "../novel.rules";
-import { NovelCover, coverBackground, coverColorsFor } from "./cover.component";
+import { Cover, coverBackground } from "../../../../components/cover";
+import { Icon } from "../../../../components/icon";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 const INTERACTIVE_SELECTOR = "button";
@@ -21,7 +22,7 @@ function isInside(target: EventTarget | null, selector: string): boolean {
 @Component({
   selector: "app-novel-list",
   standalone: true,
-  imports: [Datatable, DatatableCell, I18nPipe, NovelCover, NovelProgressFrac],
+  imports: [Datatable, DatatableCell, Icon, I18nPipe, Cover, NovelProgressFrac],
   templateUrl: "./list.component.html",
 })
 export class NovelList {
@@ -73,10 +74,6 @@ export class NovelList {
     return formatStamp(novel.updatedAt);
   }
 
-  colorsOf(novel: NovelSummary): string[] {
-    return coverColorsFor(novel.id);
-  }
-
   imageOf(novel: NovelSummary): string {
     return this.novels.coverUrl(novel) ?? "";
   }
@@ -86,7 +83,7 @@ export class NovelList {
   }
 
   backgroundOf(novel: NovelSummary): string {
-    return coverBackground(this.colorsOf(novel), this.imageOf(novel));
+    return coverBackground(this.imageOf(novel));
   }
 
   isSelected(id: number): boolean {

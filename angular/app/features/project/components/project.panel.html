@@ -1,7 +1,13 @@
 <section class="pj-project-panel" data-testid="project-panel">
   @if (project(); as item) {
     <section class="ins-sec pj-ins-top" data-testid="project-panel-summary">
-      <div class="pj-ins-thumb" [style.background]="labels.thumbOf(item)" data-testid="project-panel-thumb"></div>
+      <app-project-thumb kind="hero" [project]="item" data-testid="project-panel-thumb">
+        <span class="cover-actions" data-testid="project-panel-cover-actions">
+          <button type="button" class="cover-action" [attr.data-tip]="coverKey() | t" [attr.aria-label]="coverKey() | t" data-testid="project-panel-cover-pick" (click)="coverInput.click()"><ds-icon name="image" [size]="15" /></button>
+          <input #coverInput type="file" accept="image/jpeg,image/png" hidden data-testid="project-panel-cover-input" (change)="onCoverFile(item, $event)" />
+          <button type="button" class="cover-action" [attr.data-tip]="'project.panel.coverRemove' | t" [attr.aria-label]="'project.panel.coverRemove' | t" [disabled]="!hasCover()" data-testid="project-panel-cover-remove" (click)="clearCover(item)"><ds-icon name="x" [size]="15" /></button>
+        </span>
+      </app-project-thumb>
       <div class="ins-hero-t" data-testid="project-panel-name">{{ item.name }}</div>
       <div class="ins-hero-m" data-testid="project-panel-badges"><span class="badge" [class.badge-running]="!item.archived">{{ labels.statusKey(item) | t }}</span><span class="type-tag"><ds-icon [name]="labels.iconOf(item.template)" [size]="13" />{{ labels.templateKey(item.template) | t }}</span></div>
       @if (item.description) {

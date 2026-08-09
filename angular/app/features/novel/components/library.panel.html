@@ -22,7 +22,7 @@
   <section class="ins-sec" data-testid="novel-library-recent">
     <span class="eyebrow">{{ "novel.library.recent" | t }}</span>
     @for (novel of novels.recent(); track novel.id) {
-      <button type="button" class="nm-recent" data-testid="novel-library-recent-item" (click)="select(novel)"><app-novel-cover size="xs" [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span><span class="mono t-mute">{{ dayOf(novel) }}</span></button>
+      <button type="button" class="nm-recent" data-testid="novel-library-recent-item" (click)="select(novel)"><ds-cover size="xs" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span><span class="mono t-mute">{{ dayOf(novel) }}</span></button>
     }
   </section>
 }

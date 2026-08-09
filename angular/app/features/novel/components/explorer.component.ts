@@ -6,12 +6,12 @@ import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
 import { displayName, passesFilters } from "../novel.rules";
-import { NovelCover, coverColorsFor } from "./cover.component";
+import { Cover } from "../../../../components/cover";
 
 @Component({
   selector: "app-novel-explorer",
   standalone: true,
-  imports: [I18nPipe, NovelCover],
+  imports: [I18nPipe, Cover],
   templateUrl: "./explorer.component.html",
 })
 export class NovelExplorer {
@@ -28,10 +28,6 @@ export class NovelExplorer {
 
   nameOf(novel: NovelSummary): string {
     return displayName(novel);
-  }
-
-  colorsOf(novel: NovelSummary): string[] {
-    return coverColorsFor(novel.id);
   }
 
   imageOf(novel: NovelSummary): string {

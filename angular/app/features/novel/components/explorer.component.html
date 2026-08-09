@@ -11,7 +11,7 @@
       <div class="nx-sep"></div>
       @for (novel of shown(); track novel.id) {
         <div class="nx-group" [attr.data-id]="novel.id" data-testid="novel-explorer-group">
-          <div class="tree-row nx-novel" tabindex="0" role="treeitem" [attr.aria-expanded]="isOpen(novel)" data-testid="novel-explorer-novel" (click)="toggleGroup(novel)" (keydown.enter)="toggleGroup(novel)"><svg class="ic" aria-hidden="true"><use [attr.href]="isOpen(novel) ? '/assets/icons.svg#i-chev-d' : '/assets/icons.svg#i-chev-r'"/></svg><app-novel-cover size="xs" [colors]="colorsOf(novel)" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span></div>
+          <div class="tree-row nx-novel" tabindex="0" role="treeitem" [attr.aria-expanded]="isOpen(novel)" data-testid="novel-explorer-novel" (click)="toggleGroup(novel)" (keydown.enter)="toggleGroup(novel)"><svg class="ic" aria-hidden="true"><use [attr.href]="isOpen(novel) ? '/assets/icons.svg#i-chev-d' : '/assets/icons.svg#i-chev-r'"/></svg><ds-cover size="xs" [image]="imageOf(novel)" /><span class="tree-label">{{ nameOf(novel) }}</span></div>
           @if (isOpen(novel)) {
             <div class="tree-row nx-child" [class.is-selected]="isChaptersActive(novel)" tabindex="0" role="treeitem" data-testid="novel-explorer-chapters" (click)="openNovel(novel)" (keydown.enter)="openNovel(novel)"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-book"/></svg><span class="tree-label">{{ "novel.explorer.chapters" | t }}</span><span class="nx-n mono">{{ novel.chapterCount }}</span></div>
           }

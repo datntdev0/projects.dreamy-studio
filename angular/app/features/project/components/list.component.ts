@@ -10,6 +10,7 @@ import { ProjectTemplateId } from "../project.models";
 import { ProjectViewMode } from "../project.models";
 import { ProjectLabels } from "../project.labels";
 import { ProjectService } from "../project.service";
+import { ProjectThumb } from "./thumb.component";
 
 const FIELD_SELECTOR = "input,textarea,select";
 
@@ -37,7 +38,7 @@ function idsOf(projects: ProjectSummary[]): number[] {
 @Component({
   selector: "app-project-list",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, I18nPipe, ProjectThumb],
   templateUrl: "./list.component.html",
 })
 export class ProjectList {

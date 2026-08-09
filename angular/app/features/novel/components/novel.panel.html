@@ -7,13 +7,13 @@
     }
   </section>
   <section class="ins-hero" data-testid="novel-panel-hero">
-    <div class="ins-hero-cv" data-testid="novel-panel-cover"><app-novel-cover size="lg" [colors]="colorsOf(n)" [image]="imageOf(n)">
+    <div class="ins-hero-cv" data-testid="novel-panel-cover"><ds-cover size="lg" [image]="imageOf(n)">
       <span class="cover-actions" data-testid="novel-panel-cover-actions">
         <button type="button" class="cover-action" [attr.data-tip]="coverKey() | t" [attr.aria-label]="coverKey() | t" data-testid="novel-panel-cover-pick" (click)="coverInput.click()"><ds-icon name="image" [size]="15" /></button>
         <input #coverInput type="file" accept="image/jpeg,image/png" hidden data-testid="novel-panel-cover-input" (change)="onCoverFile(n, $event)" />
         <button type="button" class="cover-action" [attr.data-tip]="'novel.panel.coverRemove' | t" [attr.aria-label]="'novel.panel.coverRemove' | t" [disabled]="!hasCover()" data-testid="novel-panel-cover-remove" (click)="clearCover(n)"><ds-icon name="x" [size]="15" /></button>
       </span>
-    </app-novel-cover></div>
+    </ds-cover></div>
     <div class="ins-hero-b" data-testid="novel-panel-hero-body">
       <div class="ins-hero-t" data-testid="novel-panel-name">{{ nameOf(n) }}</div>
       @if (hasOriginal(n)) {

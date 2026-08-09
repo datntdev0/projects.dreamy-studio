@@ -1,3 +1,7 @@
+use crate::features::novel::files::CoverKind;
+use crate::features::novel::models::NovelErrorCode;
+use crate::features::novel::service::cover_data_url;
+use crate::features::novel::service::parse_cover_data_url;
 use crate::features::project::files::PROJECTS_DIR;
 use crate::features::project::files::ProjectFiles;
 use crate::features::project::files::slug;
@@ -32,6 +36,16 @@ fn lock(mutex: &Mutex<()>) -> MutexGuard<'_, ()> {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     }
+}
+
+fn parse_cover(data_url: &str) -> ProjectResult<(CoverKind, Vec<u8>)> {
+    parse_cover_data_url(data_url).map_err(|error| {
+        let code = match error.code {
+            NovelErrorCode::CoverTooLarge => ProjectErrorCode::CoverTooLarge,
+            _ => ProjectErrorCode::CoverInvalid,
+        };
+        ProjectError::new(code, error.detail)
+    })
 }
 
 fn clean_name(name: &str) -> ProjectResult<String> {
@@ -218,6 +232,7 @@ impl ProjectWorkspace {
         let repo = ProjectRepository::new(&tx);
         let mut folders = Vec::new();
         let mut removed = 0;
+        let mut gone = Vec::new();
         for id in ids
             .iter()
             .copied()
@@ -226,11 +241,15 @@ impl ProjectWorkspace {
             if let Some(project) = repo.find_project(id)? {
                 folders.push(project.folder);
                 removed += usize::from(repo.delete(id)?);
+                gone.push(id);
             }
         }
         tx.commit()?;
         for folder in folders {
             self.files().remove_dir(&folder)?;
+        }
+        for id in gone {
+            self.files().clear_cover(id)?;
         }
         Ok(removed)
     }
@@ -247,6 +266,34 @@ impl ProjectWorkspace {
             .ok_or_else(|| ProjectError::not_found(format!("project {id} does not exist")))?;
         tx.commit()?;
         Ok(summary)
+    }
+
+    pub fn cover_get(&self, id: i64) -> ProjectResult<Option<String>> {
+        let db = self.database()?;
+        require_project(&ProjectRepository::new(db.connection()), id)?;
+        let cover = self.files().read_cover(id)?;
+        Ok(cover.map(|(kind, bytes)| cover_data_url(kind, &bytes)))
+    }
+
+    pub fn cover_set(&self, id: i64, data_url: &str) -> ProjectResult<ProjectSummary> {
+        let (kind, bytes) = parse_cover(data_url)?;
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = ProjectRepository::new(db.connection());
+        let row = require_project(&repo, id)?;
+        self.files().write_cover(id, kind, &bytes)?;
+        repo.update(&row, &now_text())?;
+        require_summary(&repo, id)
+    }
+
+    pub fn cover_clear(&self, id: i64) -> ProjectResult<ProjectSummary> {
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = ProjectRepository::new(db.connection());
+        let row = require_project(&repo, id)?;
+        self.files().clear_cover(id)?;
+        repo.update(&row, &now_text())?;
+        require_summary(&repo, id)
     }
 
     pub fn dir_list(
@@ -313,6 +360,11 @@ fn unique_folder(
         }
         suffix += 1;
     }
+}
+
+fn require_summary(repo: &ProjectRepository, id: i64) -> ProjectResult<ProjectSummary> {
+    repo.find_summary(id)?
+        .ok_or_else(|| ProjectError::not_found(format!("project {id} does not exist")))
 }
 
 fn require_project(repo: &ProjectRepository, id: i64) -> ProjectResult<ProjectRow> {
@@ -449,6 +501,37 @@ mod tests {
             service.create(nonexistent).unwrap_err().code,
             ProjectErrorCode::NovelNotFound
         );
+    }
+
+    #[test]
+    fn cover_is_stored_outside_the_project_folder_and_removed_with_the_project() {
+        let (dir, service) = workspace();
+        let project = service.create(input("Covered")).unwrap();
+        assert_eq!(service.cover_get(project.id).unwrap(), None);
+        let cover = "data:image/png;base64,iVBORw0KGgo=";
+        let updated = service.cover_set(project.id, cover).unwrap();
+        assert!(updated.updated_at >= project.updated_at);
+        assert_eq!(
+            service.cover_get(project.id).unwrap().as_deref(),
+            Some(cover)
+        );
+        assert!(service.dir_list(project.id, "").unwrap().is_empty());
+        assert_eq!(
+            service
+                .cover_set(project.id, "data:image/gif;base64,AAAA")
+                .unwrap_err()
+                .code,
+            ProjectErrorCode::CoverInvalid
+        );
+        service.cover_clear(project.id).unwrap();
+        assert_eq!(service.cover_get(project.id).unwrap(), None);
+        service.cover_set(project.id, cover).unwrap();
+        service.delete(&[project.id]).unwrap();
+        let leftover = dir
+            .path()
+            .join("project-covers")
+            .join(format!("{}.png", project.id));
+        assert!(!leftover.exists());
     }
 
     #[test]

@@ -1,0 +1,6 @@
+<span [class.pj-th]="kind() === 'th'" [class.is-xs]="kind() === 'th' && size() === 'xs'" [class.is-md]="kind() === 'th' && size() === 'md'" [class.pj-thumb]="kind() === 'card'" [class.pj-ins-thumb]="kind() === 'hero'" [class.is-empty]="!image()" [style.background]="background()" data-testid="project-thumb">
+  @if (!image()) {
+    <ds-icon class="cover-ph" name="image" [size]="placeholderSize()" />
+  }
+  <ng-content></ng-content>
+</span>

@@ -8,6 +8,7 @@ import { ProjectLabels } from "../project.labels";
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "../project.models";
 import { ProjectService } from "../project.service";
 import { ProjectTree } from "./tree.component";
+import { ProjectThumb } from "./thumb.component";
 
 function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
   return Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
@@ -16,7 +17,7 @@ function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
 @Component({
   selector: "app-project-explorer",
   standalone: true,
-  imports: [Icon, I18nPipe, ProjectTree],
+  imports: [Icon, I18nPipe, ProjectTree, ProjectThumb],
   templateUrl: "./explorer.component.html",
 })
 export class ProjectExplorer {

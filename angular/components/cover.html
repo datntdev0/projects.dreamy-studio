@@ -1,0 +1,6 @@
+<span class="cover" data-testid="cover" [class.cover-xs]="size === 'xs'" [class.cover-md]="size === 'md'" [class.cover-lg]="size === 'lg'" [class.is-empty]="!image" [style.background]="background">
+  @if (!image && placeholderSize > 0) {
+    <ds-icon class="cover-ph" name="image" [size]="placeholderSize" />
+  }
+  <ng-content></ng-content>
+</span>

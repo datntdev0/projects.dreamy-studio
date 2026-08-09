@@ -6,15 +6,12 @@
   </header>
 
   <section data-testid="novel-page-cover">
-    <div class="section-head"><h2>Cover</h2><code>app-novel-cover</code></div>
+    <div class="section-head"><h2>Cover</h2><code>ds-cover</code></div>
     <div class="demo row">
       @for (size of sizes; track size) {
-        <div class="cell"><app-novel-cover [colors]="palettes[0]" [size]="size" /><span class="note">{{ sizeLabel(size) }}</span></div>
+        <div class="cell"><ds-cover [size]="size" /><span class="note">{{ sizeLabel(size) }}</span></div>
       }
-      @for (palette of palettes; track $index) {
-        <div class="cell"><app-novel-cover [colors]="palette" size="lg" /><span class="note">palette {{ $index + 1 }}</span></div>
-      }
-      <div class="cell"><app-novel-cover [image]="image" size="lg" /><span class="note">image</span></div>
+      <div class="cell"><ds-cover [image]="image" size="lg" /><span class="note">image</span></div>
     </div>
   </section>
 
@@ -63,7 +60,7 @@
       <ds-datatable [columns]="tableColumns" [rows]="tableRows" trackKey="id" minWidth="720px" variant="card" data-testid="novel-page-table-datatable">
         <ng-template dsCell="title" let-row>
           @let novel = novelSample(row);
-          <div class="nm-title" data-testid="novel-page-table-title"><app-novel-cover [colors]="novel.colors" data-testid="novel-page-table-cover" /><div><div class="t-ink">{{ novel.title }}</div><div class="t-sm t-mute">{{ novel.author }}</div></div></div>
+          <div class="nm-title" data-testid="novel-page-table-title"><ds-cover data-testid="novel-page-table-cover" /><div><div class="t-ink">{{ novel.title }}</div><div class="t-sm t-mute">{{ novel.author }}</div></div></div>
         </ng-template>
         <ng-template dsCell="lang" let-row><ds-badge data-testid="novel-page-table-source">{{ novelSample(row).lang }}</ds-badge></ng-template>
         <ng-template dsCell="translated" let-row><app-novel-progress-frac icon="lang" [done]="novelSample(row).translated" [total]="novelSample(row).total" label="Chapters translated" data-testid="novel-page-table-translation" /></ng-template>

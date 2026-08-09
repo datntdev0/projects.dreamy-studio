@@ -48,6 +48,9 @@ pub fn run() {
             commands::project::project_delete,
             commands::project::project_open,
             commands::project::project_dir_list,
+            commands::project::project_cover_get,
+            commands::project::project_cover_set,
+            commands::project::project_cover_clear,
             commands::project::project_folder_open,
         ])
         .setup(setup)

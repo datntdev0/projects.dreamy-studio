@@ -3,7 +3,7 @@
     <div class="del-list" data-testid="novel-delete-list">
       @for (novel of rows(); track novel.id) {
         <div class="del-row" data-testid="novel-delete-row">
-          <app-novel-cover size="md" [colors]="colorsOf(novel)" [image]="imageOf(novel)" />
+          <ds-cover size="md" [image]="imageOf(novel)" />
           <div data-testid="novel-delete-info">
             <div class="t-ink" data-testid="novel-delete-name">{{ nameOf(novel) }}</div>
             <div class="t-sm t-mute" data-testid="novel-delete-meta">{{ "novel.delete.meta" | t: { author: authorOf(novel), chapters: chaptersOf(novel) } }}</div>

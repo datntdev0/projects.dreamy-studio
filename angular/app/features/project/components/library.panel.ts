@@ -7,6 +7,7 @@ import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectSummary } from "../project.models";
 import { ProjectService } from "../project.service";
+import { ProjectThumb } from "./thumb.component";
 
 function allArchived(projects: ProjectSummary[]): boolean {
   for (const project of projects) {
@@ -28,7 +29,7 @@ function idsOf(projects: ProjectSummary[]): number[] {
 @Component({
   selector: "app-project-library-panel",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, I18nPipe, ProjectThumb],
   templateUrl: "./library.panel.html",
 })
 export class ProjectLibraryPanel {

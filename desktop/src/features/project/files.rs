@@ -1,3 +1,4 @@
+use crate::features::novel::files::CoverKind;
 use crate::features::project::models::DirEntry;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
@@ -9,6 +10,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 pub const PROJECTS_DIR: &str = "projects";
+const COVERS_DIR: &str = "project-covers";
 
 #[derive(Debug, Clone)]
 pub struct ProjectFiles {
@@ -39,6 +41,41 @@ impl ProjectFiles {
             Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
             Err(error) => Err(error.into()),
         }
+    }
+
+    pub fn write_cover(&self, id: i64, kind: CoverKind, bytes: &[u8]) -> ProjectResult<()> {
+        fs::create_dir_all(self.root.join(COVERS_DIR))?;
+        fs::write(self.cover_path(id, kind), bytes)?;
+        for other in CoverKind::ALL {
+            if other != kind {
+                remove_file_quietly(&self.cover_path(id, other))?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn read_cover(&self, id: i64) -> ProjectResult<Option<(CoverKind, Vec<u8>)>> {
+        for kind in CoverKind::ALL {
+            match fs::read(self.cover_path(id, kind)) {
+                Ok(bytes) => return Ok(Some((kind, bytes))),
+                Err(error) if error.kind() == ErrorKind::NotFound => continue,
+                Err(error) => return Err(error.into()),
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn clear_cover(&self, id: i64) -> ProjectResult<()> {
+        for kind in CoverKind::ALL {
+            remove_file_quietly(&self.cover_path(id, kind))?;
+        }
+        Ok(())
+    }
+
+    fn cover_path(&self, id: i64, kind: CoverKind) -> PathBuf {
+        self.root
+            .join(COVERS_DIR)
+            .join(format!("{id}.{}", kind.extension()))
     }
 
     pub fn list(&self, folder: &str, relative: &str) -> ProjectResult<Vec<DirEntry>> {
@@ -100,6 +137,14 @@ impl ProjectFiles {
             return Err(path_error("path is not a directory"));
         }
         read_entries(&canonical_target)
+    }
+}
+
+fn remove_file_quietly(path: &Path) -> ProjectResult<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error.into()),
     }
 }
 

@@ -3,7 +3,7 @@
     <section class="ins-sec" data-testid="project-library-selection">
       <span class="eyebrow">{{ "project.panel.selection" | t: { count: projects.selectedIds().length } }}</span>
       @for (project of selectedProjects(); track project.id) {
-        <button type="button" class="nm-recent" [attr.aria-label]="'project.panel.deselect' | t: { name: project.name }" data-testid="project-library-selection-item" (click)="deselect(project)"><span class="pj-th is-xs" [style.background]="labels.thumbOf(project)"></span><span class="tree-label">{{ project.name }}</span><ds-icon name="x" [size]="16" /></button>
+        <button type="button" class="nm-recent" [attr.aria-label]="'project.panel.deselect' | t: { name: project.name }" data-testid="project-library-selection-item" (click)="deselect(project)"><app-project-thumb size="xs" [project]="project" /><span class="tree-label">{{ project.name }}</span><ds-icon name="x" [size]="16" /></button>
       }
     </section>
     <section class="ins-sec ins-actions" data-testid="project-library-selection-actions">
@@ -24,7 +24,7 @@
       <section class="ins-sec" data-testid="project-library-recent">
         <span class="eyebrow">{{ "project.panel.recent" | t }}</span>
         @for (project of projects.recent(); track project.id) {
-          <button type="button" class="nm-recent" [attr.title]="project.folder" data-testid="project-library-recent-item" (click)="open(project)"><span class="pj-th is-xs" [style.background]="labels.thumbOf(project)"></span><span class="tree-label">{{ project.name }}</span><span class="mono t-mute">{{ labels.dayOf(project.openedAt) }}</span></button>
+          <button type="button" class="nm-recent" [attr.title]="project.folder" data-testid="project-library-recent-item" (click)="open(project)"><app-project-thumb size="xs" [project]="project" /><span class="tree-label">{{ project.name }}</span><span class="mono t-mute">{{ labels.dayOf(project.openedAt) }}</span></button>
         }
       </section>
     }

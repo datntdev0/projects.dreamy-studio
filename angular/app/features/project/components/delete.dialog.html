@@ -3,7 +3,7 @@
     <div class="del-list" data-testid="project-delete-list">
       @for (project of rows().slice(0, 8); track project.id) {
         <div class="del-row" data-testid="project-delete-row">
-          <span class="pj-th is-md" [style.background]="labels.thumbOf(project)"></span>
+          <app-project-thumb size="md" [project]="project" />
           <div data-testid="project-delete-info">
             <div class="t-ink" data-testid="project-delete-name">{{ project.name }}</div>
             <div class="t-sm t-mute" data-testid="project-delete-meta">{{ templateLabelKey(project) | t }} · <span class="path">{{ labels.pathOf(project) }}</span></div>

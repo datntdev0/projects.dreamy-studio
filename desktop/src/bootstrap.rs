@@ -41,6 +41,14 @@ pub fn run() {
             commands::novel::novel_package_import,
             commands::novel::novel_package_save_pick,
             commands::novel::novel_package_export,
+            commands::project::project_list,
+            commands::project::project_create,
+            commands::project::project_update,
+            commands::project::project_archive,
+            commands::project::project_delete,
+            commands::project::project_open,
+            commands::project::project_dir_list,
+            commands::project::project_folder_open,
         ])
         .setup(setup)
         .build(tauri::generate_context!())
@@ -73,6 +81,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(service);
     app.manage(loader);
     app.manage(NovelService::new());
+    app.manage(crate::features::project::service::ProjectService::new());
 }
 
 fn log_startup(app: &App, container: &AppContainer) {

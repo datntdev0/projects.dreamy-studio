@@ -1,0 +1,13 @@
+app-project-create-dialog .dialog-heading, app-project-delete-dialog .dialog-heading { display: flex; align-items: center; gap: var(--sp-sm); }
+.pjc { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: var(--sp-xl); align-items: start; }
+.pjc-l { display: grid; gap: var(--sp-sm); }
+.pjc-r { display: grid; gap: var(--sp-lg); min-width: 0; }
+.pjc-t { display: flex; align-items: center; gap: var(--sp-sm); }
+.pjc-t .ic { width: 16px; height: 16px; color: var(--primary-text); }
+.pjc-range { display: flex; align-items: center; gap: var(--sp-xl); flex-wrap: wrap; }
+.pjc-rg { display: inline-flex; align-items: center; gap: var(--sp-sm); font-size: 13px; }
+.pjc-rg.is-off { opacity: 0.5; }
+.pjc-rg .input { width: 72px; }
+.select.is-invalid { border-color: var(--danger); }
+.modal-body .field > .select { width: 100%; }
+@media (max-width: 820px) { .pjc { grid-template-columns: 1fr; } }

@@ -23,7 +23,7 @@ function focusableIn(root: HTMLElement): HTMLElement[] {
 export class Dialog implements AfterViewInit, OnDestroy {
   @Input() title = "";
   @Input() eyebrow = "";
-  @Input() size: "default" | "large" = "default";
+  @Input() size: "default" | "large" | "xl" = "default";
   @Input() closeLabel = "Close";
   @Output() closed = new EventEmitter<void>();
   @ViewChild("panel", { static: true }) panel!: ElementRef<HTMLElement>;

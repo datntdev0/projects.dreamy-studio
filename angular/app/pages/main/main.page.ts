@@ -12,6 +12,8 @@ import { ToastHost } from "../../core/toast/toast-host.component";
 import { NovelCreateDialog } from "../../features/novel/components/create.dialog";
 import { NovelDeleteDialog } from "../../features/novel/components/delete.dialog";
 import { NovelImportDialog } from "../../features/novel/components/import.dialog";
+import { ProjectCreateDialog } from "../../features/project/components/create.dialog";
+import { ProjectDeleteDialog } from "../../features/project/components/delete.dialog";
 import { SwitchWorkspaceDialog } from "../../features/workspace/components/switch.dialog";
 import { WorkspaceService } from "../../features/workspace/workspace.service";
 import { CurrentWorkspace } from "../../features/workspace/workspace.models";
@@ -21,7 +23,7 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelImportDialog],
+  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {

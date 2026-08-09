@@ -93,14 +93,14 @@ fn count_workspace_projects(workspace_dir: &Path) -> u64 {
 
 fn count_projects(conn: &Connection) -> rusqlite::Result<u64> {
     let exists: bool = conn.query_row(
-        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'projects')",
+        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ws_projects')",
         [],
         first_bool,
     )?;
     if !exists {
         return Ok(0);
     }
-    let count: i64 = conn.query_row("SELECT COUNT(*) FROM projects", [], first_int)?;
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM ws_projects", [], first_int)?;
     Ok(u64::try_from(count).unwrap_or(0))
 }
 
@@ -149,10 +149,10 @@ mod tests {
         conn.execute_batch("CREATE TABLE other (id INTEGER);")
             .unwrap();
         if with_projects {
-            conn.execute_batch("CREATE TABLE projects (id INTEGER PRIMARY KEY);")
+            conn.execute_batch("CREATE TABLE ws_projects (id INTEGER PRIMARY KEY);")
                 .unwrap();
             for _ in 0..rows {
-                conn.execute("INSERT INTO projects DEFAULT VALUES", [])
+                conn.execute("INSERT INTO ws_projects DEFAULT VALUES", [])
                     .unwrap();
             }
         }

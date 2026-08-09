@@ -178,10 +178,10 @@ mod tests {
 
     fn make_projects(folder: &Path, rows: u32) {
         let conn = Connection::open(folder.join(WORKSPACE_DB_FILE)).unwrap();
-        conn.execute_batch("CREATE TABLE projects (id INTEGER PRIMARY KEY);")
+        conn.execute_batch("CREATE TABLE ws_projects (id INTEGER PRIMARY KEY);")
             .unwrap();
         for _ in 0..rows {
-            conn.execute("INSERT INTO projects DEFAULT VALUES", [])
+            conn.execute("INSERT INTO ws_projects DEFAULT VALUES", [])
                 .unwrap();
         }
     }

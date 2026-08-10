@@ -84,6 +84,7 @@ pub struct PackageSummary {
     pub chapter_count: usize,
     pub word_count: i64,
     pub has_cover: bool,
+    pub cover: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

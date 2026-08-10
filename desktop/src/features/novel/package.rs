@@ -98,6 +98,7 @@ impl ValidatedPackage {
             chapter_count: self.chapters.len(),
             word_count: self.chapters.iter().map(|chapter| chapter.word_count).sum(),
             has_cover: self.cover.is_some(),
+            cover: None,
         }
     }
 }

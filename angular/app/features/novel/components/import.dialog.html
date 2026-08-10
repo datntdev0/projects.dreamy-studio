@@ -41,7 +41,7 @@
       }
     } @else {
       <div class="imw-form" data-testid="novel-import-form">
-        <div class="imw-pv" data-testid="novel-import-preview"><ds-cover size="lg" />
+        <div class="imw-pv" data-testid="novel-import-preview"><ds-cover size="lg" [image]="info()?.cover ?? ''" />
           <dl class="kv" data-testid="novel-import-stats"><dt>{{ "novel.import.preview.chapters" | t }}</dt><dd>{{ info()?.chapterCount }}</dd><dt>{{ "novel.import.preview.words" | t }}</dt><dd>{{ wordsText() }}</dd></dl></div>
         <div class="imw-fields" data-testid="novel-import-fields">
           <div class="field"><label for="imw-display">{{ "novel.form.name" | t }}</label><input #displayInput id="imw-display" class="input" [value]="form().name" [placeholder]="'novel.form.namePlaceholder' | t" autocomplete="off" data-testid="novel-import-display" (input)="setField('name', $event)"></div>

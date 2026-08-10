@@ -15,6 +15,7 @@ use crate::features::novel::package::EXPORT_EXTENSION;
 use crate::features::novel::package::PACKAGE_EXTENSIONS;
 use crate::features::novel::package::inspect_path;
 use crate::features::novel::service::NovelService;
+use crate::features::novel::service::cover_data_url;
 use crate::features::workspace::session::WorkspaceSession;
 use std::path::Path;
 use tauri::AppHandle;
@@ -141,8 +142,14 @@ pub fn update_paragraph(
 }
 
 pub fn inspect_package(path: &str, sink: &dyn InspectSink) -> NovelResult<PackageSummary> {
-    let (_, package) = inspect_path(Path::new(path), sink)?;
-    Ok(package.summary())
+    let (mut reader, package) = inspect_path(Path::new(path), sink)?;
+    let mut summary = package.summary();
+    if let Some(cover) = &package.cover
+        && let Ok(bytes) = reader.read_cover(cover)
+    {
+        summary.cover = Some(cover_data_url(cover.kind, &bytes));
+    }
+    Ok(summary)
 }
 
 pub fn import_package(
@@ -430,6 +437,7 @@ mod tests {
         let summary = inspect_package(path.to_str().unwrap(), &sink).unwrap();
 
         assert_eq!(summary.chapter_count, 2);
+        assert!(summary.cover.as_deref().is_some_and(|url| url.starts_with("data:image/jpeg;base64,")));
         let events = target.events.lock().unwrap();
         assert_eq!(events[0].step, InspectStep::Format);
         assert_eq!(events[0].status, InspectStatus::Running);

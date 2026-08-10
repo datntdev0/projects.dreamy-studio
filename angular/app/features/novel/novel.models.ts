@@ -87,6 +87,7 @@ export interface PackageSummary {
   chapterCount: number;
   wordCount: number;
   hasCover: boolean;
+  cover: string | null;
 }
 
 export interface ExportSummary {

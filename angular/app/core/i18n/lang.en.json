@@ -429,5 +429,14 @@
   "novel.toast.imageUnreadable": "The image could not be read.",
   "novel.toast.tagExists": "Tag “{tag}” already exists.",
   "novel.toast.tagLimit": "At most {count} tags per novel.",
-  "novel.dialog.close": "Close (Esc)"
+  "novel.dialog.close": "Close (Esc)",
+  "library.kind.image": "Images",
+  "library.kind.sound": "Sounds",
+  "library.kind.video": "Videos",
+  "library.kind.prompt": "Prompts",
+  "library.error.collectionExists": "A collection with this name already exists.",
+  "library.error.invalidInput": "Enter a valid collection name and description.",
+  "library.error.tagExists": "That tag already exists. Choose merge to combine them.",
+  "library.error.invalidTag": "Enter a valid tag name.",
+  "library.error.generic": "The operation could not be completed."
 }

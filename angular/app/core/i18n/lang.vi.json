@@ -429,5 +429,14 @@
   "novel.toast.imageUnreadable": "Không đọc được ảnh.",
   "novel.toast.tagExists": "Tag “{tag}” đã có.",
   "novel.toast.tagLimit": "Tối đa {count} tag cho mỗi novel.",
-  "novel.dialog.close": "Đóng (Esc)"
+  "novel.dialog.close": "Đóng (Esc)",
+  "library.kind.image": "Images",
+  "library.kind.sound": "Sounds",
+  "library.kind.video": "Videos",
+  "library.kind.prompt": "Prompts",
+  "library.error.collectionExists": "Đã có collection trùng tên này.",
+  "library.error.invalidInput": "Hãy nhập tên và mô tả collection hợp lệ.",
+  "library.error.tagExists": "Tag này đã tồn tại. Hãy chọn gộp để kết hợp.",
+  "library.error.invalidTag": "Hãy nhập tên tag hợp lệ.",
+  "library.error.generic": "Không thể hoàn tất thao tác."
 }

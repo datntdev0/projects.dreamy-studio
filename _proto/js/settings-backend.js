@@ -2,7 +2,6 @@
   const A = window.DSApp;
   const LB = window.LB;
   const { esc, ic } = A;
-  const CAP = window.DS.CAP["12"];
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const RT = {
@@ -154,7 +153,7 @@
     const st = { running: badge("badge-success", "ĐANG CHẠY"), starting: badge("badge-running", "ĐANG KHỞI ĐỘNG"), stopped: badge("badge-warning", "ĐÃ DỪNG") }[b.status];
     const lines = b.log.slice(-8);
     return `<div class="tts">
-      <header class="tts-head"><div><span class="eyebrow">${esc(CAP)}</span><h3 class="t-display-xs">Python backend</h3></div></header>
+      <header class="tts-head"><div><h3 class="t-display-xs">Python backend</h3></div></header>
       <p class="t-sm t-mute">Ứng dụng khởi động một Python backend (FastAPI) cùng lúc mở workspace, chỉ lắng nghe trên <span class="path">127.0.0.1</span>. Mọi mô hình chạy local, dù là giọng nói hay loại khác, đều chạy trên backend này.</p>
       <section class="tts-card">
         <header class="tts-card-h"><span class="eyebrow">Trạng thái</span>${st}<span class="spacer"></span>

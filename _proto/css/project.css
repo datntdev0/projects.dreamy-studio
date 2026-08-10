@@ -12,8 +12,6 @@
 .pj-card.is-selected { background: var(--primary-soft); border-color: var(--primary); }
 .pj-card.is-archived { opacity: 0.6; }
 .pj-thumb { position: relative; aspect-ratio: 16 / 10; border-radius: var(--r-md); border: 1px solid var(--hairline-strong); overflow: hidden; background-size: cover; }
-.pj-thumb .nm-chk { position: absolute; top: var(--sp-sm); left: var(--sp-sm); z-index: 2; width: 16px; height: 16px; opacity: 0; }
-.pj-card:hover .nm-chk, .pj-card:focus-visible .nm-chk, .has-sel .pj-thumb .nm-chk, .pj-thumb .nm-chk:checked { opacity: 1; }
 .pj-tpl, .pj-outs { position: absolute; right: var(--sp-sm); background: rgba(10, 10, 10, 0.62); color: #fff; }
 .pj-tpl { top: var(--sp-sm); }
 .pj-outs { bottom: var(--sp-sm); }

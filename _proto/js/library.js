@@ -498,8 +498,7 @@
     const unf = counts((x) => !x.cols.length);
     return `${insSec("Phân loại tài nguyên", kv([["Collection", st().collections.length], ["Tag", st().tagList.length], ["Tài nguyên", st().assets.length], ["Chưa phân loại", Object.values(unf).reduce((a, b) => a + b, 0)]]))}
       <section class="ins-sec"><span class="eyebrow">Chưa thuộc collection nào</span>${cntRow(unf)}</section>
-      <section class="ins-sec"><span class="eyebrow">Cách phân loại</span><p class="t-sm t-mute">Collection gom tài nguyên theo chủ đề và có thể chứa mọi loại. Tag là nhãn tự do, dùng chung cho cả bốn loại, để lọc nhanh trong từng màn hình.</p>
-        <button class="btn btn-block" data-act="ct-new-col">${ic("plus")}Tạo collection</button></section>`;
+      <section class="ins-sec"><span class="eyebrow">Cách phân loại</span><p class="t-sm t-mute">Collection gom tài nguyên theo chủ đề và có thể chứa mọi loại. Tag là nhãn tự do, dùng chung cho cả bốn loại, để lọc nhanh trong từng màn hình.</p></section>`;
   }
 
   function openNewCollection(assign = []) {

@@ -4,7 +4,6 @@
   const { esc, ic } = A;
   const MB = LB.MB;
   const GB = LB.GB;
-  const CAP = window.DS.CAP["12"];
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const CATALOG = [
@@ -192,7 +191,7 @@
   function render() {
     const readyN = LB.tts.count();
     return `<div class="tts">
-      <header class="tts-head"><div><span class="eyebrow">${esc(CAP)}</span><h3 class="t-display-xs">Local TTS models</h3></div></header>
+      <header class="tts-head"><div><h3 class="t-display-xs">Local TTS models</h3></div></header>
       <p class="t-sm t-mute">Mô hình chạy trên Python backend của máy này. Mỗi mô hình tải một lần từ Hugging Face, sau đó đọc và clone giọng offline, không gửi dữ liệu ra ngoài.</p>
       ${envCard()}
       <section class="tts-list">

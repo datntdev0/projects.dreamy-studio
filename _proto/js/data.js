@@ -205,9 +205,9 @@ window.DS = (function () {
 
   const SETTINGS = [
     { id: "general", title: "General", icon: "settings", reqs: [["REQ-12-001", "Dialog chung để cài đặt và cấu hình các chức năng của phần mềm - cơ bản"]] },
-    { id: "cli", title: "CLI providers", icon: "terminal", reqs: [["REQ-12-002", "Cấu hình sử dụng các CLI providers đã cài ở máy tính đang chạy"]] },
-    { id: "pipeline", title: "Pipeline executor", icon: "activity", reqs: [["REQ-12-003", "Pipeline executor với cấu hình concurrency cho pipeline và tasks được chạy"]] },
+    { id: "llm", title: "LLM providers", icon: "nodes", reqs: [["REQ-12-002", "Cấu hình sử dụng các LLM providers: CLI đã cài trên máy hoặc dịch vụ cloud"]] },
     { id: "backend", title: "Python backend", icon: "server", reqs: [["REQ-12-004", "Tải xuống và cài đặt mô hình TTS chạy trên python local backend"]] },
+    { id: "analysis", title: "Analysis providers", icon: "spark", reqs: [["REQ-12-006", "Cấu hình provider dùng cho dịch và phân tích tri thức"]] },
     { id: "tts", title: "Local TTS models", icon: "cpu", reqs: [["REQ-12-004", "Tải xuống và cài đặt mô hình TTS chạy trên python local backend"]] },
     { id: "speech", title: "Speech providers", icon: "cloud", reqs: [["REQ-12-005", "Cấu hình sử dụng các speech providers từ cloud services"]] },
   ];

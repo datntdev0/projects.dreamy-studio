@@ -1,0 +1,16 @@
+.an-card { min-width: 0; }
+.an-card .tts-card-h { flex-wrap: wrap; }
+.an-card .tts-card-h > .ic { width: 16px; height: 16px; color: var(--mute); }
+.an-name { font-size: 15px; }
+.an-card .field { min-width: 0; align-content: start; }
+.an-card .select { width: 100%; min-width: 0; }
+.an-card .spc-foot { flex-wrap: wrap; }
+.an-card .spc-msg { overflow-wrap: anywhere; }
+.an-warning > .ic { color: var(--warning); }
+.an-pending { flex-wrap: wrap; }
+.an-pending > .ic { width: 15px; height: 15px; }
+.an-pending .btn { align-self: center; }
+@media (max-width: 760px) {
+  .an-card .form-2 { grid-template-columns: minmax(0, 1fr); }
+  .an-card .spc-msg { flex-basis: 100%; }
+}

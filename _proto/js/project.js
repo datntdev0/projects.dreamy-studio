@@ -9,13 +9,13 @@
   const fmtB = (b) => (b ? LB.bytes(b) : "0 B");
   const st = () => PJ.state;
   const byId = (id) => st().projects.find((p) => p.id === id);
-  const ui = (key) => (PJ.ui[key] ||= { q: "", sel: [], anchor: null, sort: "updated", tab: "overview", res: "all" });
+  const ui = (key) => (PJ.ui[key] ||= { q: "", sel: [], sort: "updated", tab: "overview", res: "all" });
   const catalog = () => ui("catalog");
   const view = () => A.store.get("pj.view", "grid");
   const tpl = (p) => PJ.TEMPLATES[p.template];
   const novelOf = (p) => (p.novel ? U.novelById(p.novel) : null);
   const bgOf = (p) => LB.bgFor(p.name);
-  const selIds = () => catalog().sel.filter(byId);
+  const selIds = () => catalog().sel.filter(byId).slice(-1);
   const wsId = (tabId) => String(tabId).split(":")[1];
   const refresh = () => { A.renderExplorer(); A.rerender(); };
   const opts = U.options;
@@ -54,10 +54,6 @@
   }
   const filtActive = () => PJ.filt.types.length > 0 || PJ.filt.status.length > 0;
 
-  const selBar = (n) => (n
-    ? `<span class="nm-selbar" data-testid="pj-selbar"><b>Đã chọn ${n}</b><button class="btn btn-sm" data-act="pj-archive">${ic("archive")}Lưu trữ</button><button class="btn btn-sm btn-danger" data-act="pj-del">${ic("trash")}Xóa</button><button class="btn btn-sm btn-ghost" data-act="pj-sel-clear">Bỏ chọn</button></span>`
-    : `<button class="btn btn-sm btn-ghost" data-act="pj-sel-all">Chọn tất cả</button>`);
-
   function chips() {
     if (!filtActive()) return "";
     const f = PJ.filt;
@@ -69,7 +65,6 @@
     const u = catalog();
     const list = items();
     const sel = new Set(selIds());
-    const chk = (p) => `<input type="checkbox" class="nm-chk" data-act="pj-tog" data-id="${p.id}" ${sel.has(p.id) ? "checked" : ""} aria-label="Chọn ${esc(p.name)}">`;
     let body;
     if (!list.length) {
       body = st().projects.length
@@ -77,29 +72,27 @@
         : U.empty("Chưa có project nào", "Project là nơi bạn sản xuất một sản phẩm từ tác phẩm: kịch bản, audio, hình ảnh và video. Bắt đầu từ một template.", `<div class="empty-act"><button class="btn btn-primary" data-act="pj-new">${ic("plus")}Tạo project</button></div>`);
     } else if (view() === "grid") {
       body = `<div class="pj-grid" data-testid="pj-grid">${list.map((p) => `<div data-testid="pj-card-${p.id}" class="pj-card ${sel.has(p.id) ? "is-selected" : ""} ${p.archived ? "is-archived" : ""}" tabindex="0" data-act="pj-sel" data-id="${p.id}" data-pj-open="${p.id}" title="${esc(p.name)}">
-          <div class="pj-thumb" style="background:${esc(bgOf(p))}">${chk(p)}<span class="badge pj-tpl">${ic(tpl(p).icon)}${esc(tpl(p).label)}</span>${modDots(p)}
+          <div class="pj-thumb" style="background:${esc(bgOf(p))}"><span class="badge pj-tpl">${ic(tpl(p).icon)}${esc(tpl(p).label)}</span>${modDots(p)}
             ${p.outputs.length ? `<span class="badge pj-outs" title="Video thành phẩm">${ic("film")}${p.outputs.length}</span>` : ""}</div>
           <div class="pj-card-b"><div class="pj-card-t"><span class="t-ink pj-card-n">${esc(p.name)}</span>${statusBadge(p)}</div>
             <div class="t-sm t-mute ellip">${esc(srcLabel(p))}${p.range ? ` · ${rangeLabel(p)}` : ""}</div>${progress(p)}</div></div>`).join("")}</div>`;
     } else {
       const rows = list.map((p) => `<tr data-testid="pj-row-${p.id}" class="${sel.has(p.id) ? "is-selected" : ""} ${p.archived ? "is-muted" : ""}" tabindex="0" data-act="pj-sel" data-id="${p.id}" data-pj-open="${p.id}">
-        <td class="chk">${chk(p)}</td>
         <td><div class="nm-title"><span class="pj-th" style="background:${esc(bgOf(p))}"></span><div><div class="t-ink">${esc(p.name)}</div><div class="t-sm t-mute ellip">${esc(srcLabel(p))}${p.range ? ` · ${rangeLabel(p)}` : ""}</div></div></div></td>
         <td><span class="type-tag">${ic(tpl(p).icon)}${esc(tpl(p).label)}</span></td>
         <td>${modDots(p)}</td><td class="pj-pgc">${progress(p)}</td><td>${statusBadge(p)}</td>
         <td class="mono t-mute">${esc(p.updated.slice(0, 10))}</td></tr>`).join("");
-      const all = list.every((p) => sel.has(p.id));
-      body = `<table class="table" data-testid="pj-table"><thead><tr><th class="chk"><input type="checkbox" class="nm-chk" data-act="pj-sel-all" ${all ? "checked" : ""} aria-label="Chọn tất cả"></th><th>Project</th><th>Loại</th><th>Modules</th><th>Tiến độ</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead><tbody>${rows}</tbody></table>`;
+      body = `<table class="table" data-testid="pj-table"><thead><tr><th>Project</th><th>Loại</th><th>Modules</th><th>Tiến độ</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
     return `<div class="nv">
       ${U.bar(
         `<label class="search"><span class="sr-only">Tìm project</span><input id="pj-q" data-testid="pj-search" class="input" type="search" value="${esc(u.q)}" placeholder="Tìm theo tên hoặc nguồn…" data-on="pj-q"></label>
-         <span class="t-sm t-mute">${list.length} project</span><span id="pj-selbar">${list.length ? selBar(sel.size) : ""}</span>${chips()}`,
+         <span class="t-sm t-mute">${list.length} project</span>${chips()}`,
         `<select class="select" data-testid="pj-sort" data-change="pj-sort" aria-label="Sắp xếp">${opts([["updated", "Cập nhật gần nhất"], ["name", "Tên A–Z"], ["progress", "Tiến độ"]], u.sort)}</select>
          ${U.seg("pj-view", [["grid", ic("frames"), "Dạng lưới"], ["list", ic("list"), "Dạng danh sách"]], view(), "", "pj-view")}
          <button class="btn btn-sm btn-primary" data-testid="pj-create-btn" data-act="pj-new">${ic("plus")}Tạo project</button>`,
       )}
-      <div class="nv-body"><div class="nv-scroll ${sel.size ? "has-sel" : ""}" data-keep="pj">${body}</div></div>
+      <div class="nv-body"><div class="nv-scroll" data-keep="pj">${body}</div></div>
     </div>`;
   }
 
@@ -108,15 +101,7 @@
     A.$$("#editor [data-pj-open]").forEach((el) => {
       const on = ids.has(el.dataset.pjOpen);
       el.classList.toggle("is-selected", on);
-      const c = el.querySelector('input[data-act="pj-tog"]');
-      if (c) c.checked = on;
     });
-    const list = items();
-    const all = A.$('#editor input[data-act="pj-sel-all"]');
-    if (all) all.checked = ids.size > 0 && list.every((p) => ids.has(p.id));
-    const sb = A.$("#pj-selbar");
-    if (sb) sb.innerHTML = list.length ? selBar(ids.size) : "";
-    A.$("#editor .nv-scroll")?.classList.toggle("has-sel", ids.size > 0);
     A.renderInspector();
   }
 
@@ -144,27 +129,17 @@
         <button class="btn" data-testid="pj-archive-btn" data-act="pj-archive" data-id="${p.id}">${ic("archive")}${p.archived ? "Khôi phục" : "Lưu trữ"}</button><button class="btn btn-danger" data-testid="pj-delete-btn" data-act="pj-del" data-id="${p.id}">${ic("trash")}Xóa</button></section>`;
   }
 
-  function multiPanel(list) {
-    const size = list.reduce((a, p) => a + PJ.sizeOf(p), 0);
-    return `<section class="ins-sec"><span class="eyebrow">Đã chọn ${list.length} project</span>
-        ${list.map((p) => `<button type="button" class="nm-recent" data-act="pj-tog" data-id="${p.id}" aria-label="Bỏ chọn ${esc(p.name)}"><span class="pj-th is-xs" style="background:${esc(bgOf(p))}"></span><span class="tree-label">${esc(p.name)}</span>${ic("x")}</button>`).join("")}
-        ${U.kv([["Tổng dung lượng", fmtB(size)]])}</section>
-      <section class="ins-sec ins-actions"><button class="btn" data-act="pj-archive">${ic("archive")}Lưu trữ</button><button class="btn btn-danger" data-act="pj-del">${ic("trash")}Xóa ${list.length}</button><button class="btn btn-ghost" data-act="pj-sel-clear">Bỏ chọn</button></section>`;
-  }
-
   function catalogPanel() {
     const all = st().projects;
     const by = (s) => all.filter((p) => PJ.statusOf(p) === s).length;
     const recent = [...all].filter((p) => !p.archived).sort((a, b) => b.opened.localeCompare(a.opened)).slice(0, 4);
     return `${U.insSec("Danh mục project", U.kv([["Project", all.length], ["Đang làm", by("active")], ["Hoàn tất", by("done")], ["Mới tạo", by("new")], ["Lưu trữ", by("archived")], ["Dung lượng", fmtB(all.reduce((a, p) => a + PJ.sizeOf(p), 0))]]))}
-      <section class="ins-sec"><span class="eyebrow">Tạo project</span><button class="btn btn-block btn-primary" data-act="pj-new">${ic("plus")}Từ template…</button>
-        <span class="field-hint">Chọn template để bật sẵn các module cần thiết. Có thể thêm hoặc bớt module sau.</span></section>
       ${recent.length ? `<section class="ins-sec"><span class="eyebrow">Mở gần đây</span>${recent.map((p) => `<button type="button" class="nm-recent" data-act="pj-open" data-id="${p.id}"><span class="pj-th is-xs" style="background:${esc(bgOf(p))}"></span><span class="tree-label">${esc(p.name)}</span><span class="mono t-mute">${esc(p.opened.slice(5, 10))}</span></button>`).join("")}</section>` : ""}`;
   }
   function catalogInspector() {
     const list = selIds().map(byId);
     if (list.length === 1) return projectPanel(list[0], false);
-    return list.length > 1 ? multiPanel(list) : catalogPanel();
+    return catalogPanel();
   }
 
   const wsTabs = [["overview", "Tổng quan"], ["resources", "Tài nguyên"], ["settings", "Cài đặt"]];
@@ -355,34 +330,10 @@
     "pj-ws-tab": (el) => { const id = wsId(A.S.active); ui(id).tab = el.dataset.v; A.rerender(); },
     "pj-res-kind": (el) => { ui(wsId(A.S.active)).res = el.dataset.v; A.rerender(); },
     "pj-view": (el) => { A.store.set("pj.view", el.dataset.v); A.rerender(); },
-    "pj-sel": (el, e) => {
-      const u = catalog();
-      const tid = el.dataset.id;
-      if (e?.shiftKey && u.anchor && byId(u.anchor)) {
-        const order = items().map((p) => p.id);
-        const a = order.indexOf(u.anchor);
-        const b = order.indexOf(tid);
-        if (a >= 0 && b >= 0) u.sel = order.slice(Math.min(a, b), Math.max(a, b) + 1);
-      } else if (e?.ctrlKey || e?.metaKey) {
-        u.sel = u.sel.includes(tid) ? u.sel.filter((x) => x !== tid) : [...u.sel, tid];
-        u.anchor = tid;
-      } else { u.sel = [tid]; u.anchor = tid; }
+    "pj-sel": (el) => {
+      catalog().sel = [el.dataset.id];
       applySel();
     },
-    "pj-tog": (el, e) => {
-      e?.stopPropagation();
-      const u = catalog();
-      u.sel = u.sel.includes(el.dataset.id) ? u.sel.filter((x) => x !== el.dataset.id) : [...u.sel, el.dataset.id];
-      u.anchor = el.dataset.id;
-      applySel();
-    },
-    "pj-sel-all": () => {
-      const u = catalog();
-      const ids = items().map((p) => p.id);
-      u.sel = ids.every((i) => u.sel.includes(i)) ? u.sel.filter((i) => !ids.includes(i)) : [...new Set([...u.sel, ...ids])];
-      applySel();
-    },
-    "pj-sel-clear": () => { catalog().sel = []; applySel(); },
     "pj-ftype": (el) => { toggle(PJ.filt.types, el.dataset.v); refresh(); },
     "pj-fstatus": (el) => { toggle(PJ.filt.status, el.dataset.v); refresh(); },
     "pj-fclear": () => { PJ.filt.types = []; PJ.filt.status = []; refresh(); },

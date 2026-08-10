@@ -105,7 +105,7 @@
   "project.error.empty": "Enter a project name.",
   "project.catalog.search": "Search by name or description…",
   "project.catalog.sort": "Sort",
-  "project.catalog.sort.updated": "Recently updated",
+  "project.catalog.sort.updated": "Recently",
   "project.catalog.sort.name": "Name",
   "project.catalog.view": "Catalog view",
   "project.catalog.view.grid": "Grid view",

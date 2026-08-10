@@ -105,7 +105,7 @@
   "project.error.empty": "Nhập tên project.",
   "project.catalog.search": "Tìm theo tên hoặc mô tả…",
   "project.catalog.sort": "Sắp xếp",
-  "project.catalog.sort.updated": "Cập nhật gần nhất",
+  "project.catalog.sort.updated": "Gần nhất",
   "project.catalog.sort.name": "Tên",
   "project.catalog.view": "Giao diện danh sách",
   "project.catalog.view.grid": "Dạng lưới",

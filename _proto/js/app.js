@@ -314,8 +314,7 @@
       ? `<div class="pl-list">${PL.list.map(plRow).join("")}</div>`
       : S.bottomTab === "pipelines"
       ? `<div class="empty"><div class="empty-inner"><h3 class="t-display-xs">Chưa có pipeline nào chạy</h3>
-          <p class="t-sm t-mute">Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây. Số pipeline và task chạy song song được cấu hình trong Settings.</p>
-          <button class="btn btn-sm" data-act="settings" data-v="pipeline">${ic("settings")}Pipeline executor</button></div></div>`
+          <p class="t-sm t-mute">Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây.</p></div></div>`
       : `<div class="log">${S.log.map(([t, lv, src, msg]) => `<div class="log-row log-${lv}"><span class="t-mute">${t}</span><span class="log-lv">${lv}</span><span class="t-mute">${esc(src)}</span><span>${esc(msg)}</span></div>`).join("")}</div>`;
     el.innerHTML = `<div class="resizer-h" data-resize="bottom" role="separator" aria-orientation="horizontal" aria-label="Điều chỉnh kích thước bảng dưới" aria-valuenow="${S.panelSizes.bottom}" aria-valuemin="${PANEL_LIMITS.bottom.min}" aria-valuemax="${PANEL_LIMITS.bottom.max}" tabindex="0"></div>
       <header class="bottom-head">${tab("pipelines", `Pipelines${PL.list.length ? ` <span class="count">${nRun ? nRun + " chạy / " : ""}${PL.list.length}</span>` : ""}`)}${tab("output", "Output")}<span class="spacer"></span>
@@ -379,13 +378,13 @@
     const cur = D.SETTINGS.find((s) => s.id === S.settingsTab);
     const view = SETTINGS_VIEWS[cur.id];
     modal({
-      title: "Settings", eyebrow: D.CAP["12"], cls: view?.cls || "modal-lg",
+      title: "Settings", eyebrow: "Configuration", cls: view?.cls || "modal-lg",
       body: `<div class="settings ${view ? "has-view" : ""}">
         <nav class="settings-nav" aria-label="Settings sections">${D.SETTINGS.map((s) =>
           `<div class="tree-row ${s.id === cur.id ? "is-selected" : ""}" tabindex="0" data-act="settings-tab" data-v="${s.id}">${ic(s.icon)}<span class="tree-label">${esc(s.title)}</span></div>`).join("")}</nav>
         ${view ? `<div class="settings-pane">${view.render()}</div>` : `<div style="display:grid;gap:12px;align-content:start">
           <div class="cs-title"><h3 class="t-display-xs">${esc(cur.title)}</h3><span class="badge badge-info">COMING SOON</span></div>
-          ${reqList(cur.reqs)}
+          <div class="req-list">${cur.reqs.map(([, text]) => `<div class="req-row" style="grid-template-columns:minmax(0,1fr)"><span>${esc(text)}</span></div>`).join("")}</div>
         </div>`}</div>`,
       foot: `<button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
     });

@@ -1,0 +1,16 @@
+.gn-rows { min-width: 0; }
+.gn-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-lg); align-items: center; padding: var(--sp-md) 0; }
+.gn-row + .gn-row { border-top: 1px solid var(--hairline); }
+.gn-row .field > .t-ink { color: var(--ink); font-weight: 400; }
+.gn-seg .ic { width: 14px; height: 14px; }
+.gn-path-label { font: 500 13px/18px var(--font); color: var(--body); }
+.gn-footer { display: flex; align-items: center; gap: var(--sp-lg); }
+.gn-footer > .spc-note { flex: 1; min-width: 0; }
+.gn-footer > .btn { flex: none; }
+.gn-storage-head { flex-wrap: wrap; }
+@media (max-width: 680px) {
+  .gn-row { grid-template-columns: minmax(0, 1fr); }
+  .gn-row > .seg { justify-self: start; }
+  .gn-footer { flex-wrap: wrap; }
+  .gn-footer > .spc-note { flex-basis: 100%; }
+}

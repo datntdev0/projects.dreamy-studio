@@ -2,7 +2,6 @@
   const A = window.DSApp;
   const LB = window.LB;
   const { esc, ic } = A;
-  const CAP = window.DS.CAP["12"];
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const PROVIDERS = [
@@ -85,7 +84,7 @@
 
   function render() {
     return `<div class="tts">
-      <header class="tts-head"><div><span class="eyebrow">${esc(CAP)}</span><h3 class="t-display-xs">Speech providers</h3></div></header>
+      <header class="tts-head"><div><h3 class="t-display-xs">Speech providers</h3></div></header>
       <p class="t-sm t-mute">Kết nối các dịch vụ giọng nói cloud để đọc và clone giọng khi không dùng mô hình Local. ${LB.speech.count()} / ${PROVIDERS.length} provider đang kết nối.</p>
       <div class="spc-note">${ic("lock")}<span>API key chỉ lưu trên máy này, không nằm trong workspace và không đi cùng project khi xuất. Khi dùng provider, văn bản cần đọc (và mẫu giọng khi clone) được gửi tới chính provider đó; chi phí do provider tính trực tiếp trên tài khoản của bạn.</span></div>
       <section class="tts-list">${PROVIDERS.map(card).join("")}</section>

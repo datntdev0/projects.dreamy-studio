@@ -33,6 +33,7 @@ __pycache__/
 *.launch
 .settings/
 *.sublime-workspace
+.claude/
 
 # Visual Studio Code
 .vscode/*
@@ -45,6 +46,7 @@ __pycache__/
 # Miscellaneous
 /.angular/cache
 .sass-cache/
+.playwright-cli/
 /connect.lock
 /coverage
 /libpeerconnection.log

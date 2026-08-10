@@ -52,6 +52,15 @@ pub fn run() {
             commands::project::project_cover_set,
             commands::project::project_cover_clear,
             commands::project::project_folder_open,
+            commands::library::library_summary,
+            commands::library::library_collection_list,
+            commands::library::library_collection_create,
+            commands::library::library_collection_update,
+            commands::library::library_collection_delete,
+            commands::library::library_tag_list,
+            commands::library::library_tag_rename,
+            commands::library::library_tag_merge,
+            commands::library::library_tag_delete,
         ])
         .setup(setup)
         .build(tauri::generate_context!())
@@ -85,6 +94,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(loader);
     app.manage(NovelService::new());
     app.manage(crate::features::project::service::ProjectService::new());
+    app.manage(crate::features::library::service::LibraryService::new());
 }
 
 fn log_startup(app: &App, container: &AppContainer) {

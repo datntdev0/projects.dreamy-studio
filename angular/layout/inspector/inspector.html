@@ -60,6 +60,18 @@
             }
           </div>
         }
+        @case ("collections") {
+          <div data-testid="inspector-collections-host">
+            @if (library.taxonomySelection(); as selection) {
+              @if (selection.kind === "col") { <app-library-collection-panel [collectionId]="+selection.id" [showOpen]="true" /> } @else { <app-library-tag-panel [tag]="'' + selection.id" /> }
+            } @else { <app-library-taxonomy-panel /> }
+          </div>
+        }
+        @case ("collection") {
+          <div data-testid="inspector-collection-host">
+            @if (editorTabs.active().collectionId; as collectionId) { <app-library-collection-panel [collectionId]="collectionId" /> }
+          </div>
+        }
         @default {
           <div class="ins-empty" data-testid="inspector-empty"><p>{{ "main.inspector.empty" | t }}</p></div>
         }

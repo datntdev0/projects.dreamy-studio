@@ -163,6 +163,7 @@ export class LayoutService {
     if (id === "novels") {
       this.tabs.openNovels();
     }
+    if (id === "library") this.tabs.openCollections();
   }
 
   private syncRailWithActiveTab(): void {

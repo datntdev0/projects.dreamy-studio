@@ -53,6 +53,14 @@
           }
         </div>
       }
+      @case ("collections") {
+        <div class="nv-host" data-testid="editor-collections-host"><app-library-collections /></div>
+      }
+      @case ("collection") {
+        <div class="nv-host" [attr.data-collection-id]="tabs.active().collectionId" data-testid="editor-collection-host">
+          @if (tabs.active().collectionId !== null) { <app-library-collection [collectionId]="tabs.active().collectionId!" data-testid="library-collection" /> }
+        </div>
+      }
       @default {
         @if (workspace(); as ws) {
           <section class="home" data-testid="home-panel">

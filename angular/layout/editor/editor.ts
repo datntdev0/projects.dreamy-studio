@@ -7,6 +7,8 @@ import { WorkspaceService } from "../../app/features/workspace/workspace.service
 import { NovelList } from "../../app/features/novel/components/list.component";
 import { ProjectList } from "../../app/features/project/components/list.component";
 import { ProjectView } from "../../app/features/project/components/project-view.component";
+import { LibraryCollections } from "../../app/features/library/components/collections.component";
+import { LibraryCollectionView } from "../../app/features/library/components/collection.component";
 import { Bottom } from "../bottom/bottom";
 import { LayoutService } from "../layout.service";
 import { EditorTab } from "../layout.models";
@@ -15,7 +17,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList, ProjectList, ProjectView],
+  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView],
   templateUrl: "./editor.html",
 })
 export class Editor {
@@ -56,12 +58,18 @@ export class Editor {
     if (tab.kind === "projects" || tab.kind === "project") {
       return this.i18n.translate("main.rail.projects");
     }
+    if (tab.kind === "collections") {
+      return this.i18n.translate("library.explorer.organize");
+    }
+    if (tab.kind === "collection") {
+      return this.i18n.translate("library.collections");
+    }
     return tab.kind === "novel" ? tab.title : null;
   }
 
   private currentOf(): string {
     const tab = this.tabs.active();
-    if (tab.kind === "project") {
+    if (tab.kind === "project" || tab.kind === "collection") {
       return tab.title;
     }
     return tab.kind === "novel" ? this.i18n.translate("tabs.novel.title") : this.tabLabel(tab);

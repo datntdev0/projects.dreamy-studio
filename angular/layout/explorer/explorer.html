@@ -13,6 +13,8 @@
       <div data-testid="explorer-novels-host">
         <app-novel-explorer />
       </div>
+    } @else if (layout.rail() === "library") {
+      <div data-testid="explorer-library-host"><app-library-explorer /></div>
     } @else {
       <div class="empty" data-testid="explorer-empty">
         <div class="empty-inner">

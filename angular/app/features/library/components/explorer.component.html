@@ -1,0 +1,13 @@
+<section class="ex-sec" data-testid="library-explorer-content">
+  <header class="ex-sec-head" tabindex="0" data-testid="library-explorer-section" (click)="toggle()" (keydown.enter)="toggle()"><ds-icon [name]="open() ? 'chev-d' : 'chev-r'" [size]="14" /><span>{{ "library.explorer.organize" | t }}</span></header>
+  @if (open()) {
+    <div class="ex-sec-body" role="tree" data-testid="library-explorer-tree">
+      <div class="tree-row" [class.is-selected]="tabs.isActive('collections')" role="treeitem" tabindex="0" data-testid="library-explorer-taxonomy" (click)="openCollections()" (keydown.enter)="openCollections()"><ds-icon name="tag" [size]="16" /><span class="tree-label">{{ "library.explorer.collectionsTags" | t }}</span></div>
+      <div class="nx-sep" data-testid="library-explorer-separator"></div>
+      @for (collection of library.collections(); track collection.id) {
+        <div class="tree-row nx-child lb-xcol" [class.is-selected]="isActive(collection.id)" role="treeitem" tabindex="0" [attr.data-testid]="'library-explorer-collection-' + collection.id" (click)="openCollection(collection.id, collection.name)" (keydown.enter)="openCollection(collection.id, collection.name)"><ds-icon name="folder" [size]="16" /><span class="tree-label">{{ collection.name }}</span><span class="nx-n mono">{{ count(collection.counts) }}</span></div>
+      } @empty { <div class="nx-empty" data-testid="library-explorer-empty">{{ "library.explorer.empty" | t }}</div> }
+      <div class="tree-row nx-child lb-xnew" role="button" tabindex="0" data-testid="library-explorer-create" (click)="createCollection()" (keydown.enter)="createCollection()"><ds-icon name="plus" [size]="16" /><span class="tree-label">{{ "library.explorer.createCollection" | t }}</span></div>
+    </div>
+  }
+</section>

@@ -24,6 +24,9 @@ use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
+pub use crate::shared::tags::MAX_TAGS;
+pub use crate::shared::tags::normalize_tag;
+use crate::shared::tags::normalize_tags as normalize_shared_tags;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use chrono::Utc;
@@ -36,8 +39,6 @@ use std::sync::Mutex;
 use std::sync::MutexGuard;
 use uuid::Uuid;
 
-pub const MAX_TAGS: usize = 12;
-pub const MAX_TAG_CHARS: usize = 24;
 pub const LANGS: [&str; 5] = ["EN", "VI", "ZH", "JA", "KO"];
 
 const ORIGIN_CREATED: &str = "created";
@@ -45,27 +46,13 @@ const ORIGIN_IMPORTED: &str = "imported";
 const BASE64_RATIO_NUM: usize = 4;
 const BASE64_RATIO_DEN: usize = 3;
 
-pub fn normalize_tag(raw: &str) -> String {
-    let lowered = raw.to_lowercase().replace([',', '#'], " ");
-    let joined = lowered.split_whitespace().collect::<Vec<_>>().join("-");
-    joined.chars().take(MAX_TAG_CHARS).collect()
-}
-
 pub fn normalize_tags(raw: &[String]) -> NovelResult<Vec<String>> {
-    let mut tags: Vec<String> = Vec::new();
-    for item in raw {
-        let tag = normalize_tag(item);
-        if !tag.is_empty() && !tags.contains(&tag) {
-            tags.push(tag);
-        }
-    }
-    if tags.len() > MAX_TAGS {
-        return Err(NovelError::new(
+    normalize_shared_tags(raw).map_err(|_| {
+        NovelError::new(
             NovelErrorCode::TagLimit,
             format!("a novel can have at most {MAX_TAGS} tags"),
-        ));
-    }
-    Ok(tags)
+        )
+    })
 }
 
 pub fn normalize_lang(raw: &str) -> NovelResult<String> {

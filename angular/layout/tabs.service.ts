@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from "@angular/core";
 import { WorkspaceService } from "../app/features/workspace/workspace.service";
-import { EditorTab, HOME_TAB, HOME_TAB_ID, NOVELS_TAB, PROJECTS_TAB, novelTab, novelTabId, projectTab, projectTabId } from "./layout.models";
+import { COLLECTIONS_TAB, EditorTab, HOME_TAB, HOME_TAB_ID, NOVELS_TAB, PROJECTS_TAB, collectionTab, collectionTabId, novelTab, novelTabId, projectTab, projectTabId } from "./layout.models";
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -39,6 +39,24 @@ export class TabsService {
   openProjects(): void {
     this.open(PROJECTS_TAB);
   }
+
+  openCollections(): void { this.open(COLLECTIONS_TAB); }
+
+  openCollection(id: number, name: string): void {
+    const tabId = collectionTabId(id);
+    if (indexOfTab(this.tabs(), tabId) >= 0) { this.renameCollection(id, name); this.activate(tabId); return; }
+    this.open(collectionTab(id, name));
+  }
+
+  renameCollection(id: number, name: string): void {
+    const tabs = [...this.tabs()];
+    const index = indexOfTab(tabs, collectionTabId(id));
+    if (index < 0) return;
+    tabs[index] = { ...tabs[index], title: name };
+    this.tabs.set(tabs);
+  }
+
+  closeCollection(id: number): void { this.close(collectionTabId(id)); }
 
   openProject(id: number, title: string, icon = "folder"): void {
     const tabId = projectTabId(id);

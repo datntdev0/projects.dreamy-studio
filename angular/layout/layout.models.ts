@@ -6,7 +6,7 @@ export type PanelId = "explorer" | "inspector" | "bottom";
 
 export type RightTabId = "inspector" | "assistant";
 
-export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project";
+export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project" | "collections" | "collection";
 
 export interface RailItem {
   id: RailId;
@@ -27,6 +27,7 @@ export interface EditorTab {
   title: string;
   novelId: number | null;
   projectId: number | null;
+  collectionId: number | null;
   rail: RailId | null;
   closable: boolean;
 }
@@ -37,6 +38,8 @@ export const NOVELS_TAB_ID = "novels";
 
 export const PROJECTS_TAB_ID = "projects";
 
+export const COLLECTIONS_TAB_ID = "collections";
+
 export const HOME_TAB: EditorTab = {
   id: HOME_TAB_ID,
   kind: "home",
@@ -45,6 +48,7 @@ export const HOME_TAB: EditorTab = {
   title: "",
   novelId: null,
   projectId: null,
+  collectionId: null,
   rail: null,
   closable: false,
 };
@@ -57,6 +61,7 @@ export const NOVELS_TAB: EditorTab = {
   title: "",
   novelId: null,
   projectId: null,
+  collectionId: null,
   rail: "novels",
   closable: true,
 };
@@ -69,6 +74,7 @@ export const PROJECTS_TAB: EditorTab = {
   title: "",
   novelId: null,
   projectId: null,
+  collectionId: null,
   rail: "projects",
   closable: true,
 };
@@ -98,6 +104,7 @@ export function novelTab(novelId: number, title: string): EditorTab {
     title,
     novelId,
     projectId: null,
+    collectionId: null,
     rail: "novels",
     closable: true,
   };
@@ -116,7 +123,14 @@ export function projectTab(id: number, title: string, icon = "folder"): EditorTa
     title,
     novelId: null,
     projectId: id,
+    collectionId: null,
     rail: "projects",
     closable: true,
   };
 }
+
+export const COLLECTIONS_TAB: EditorTab = { id: COLLECTIONS_TAB_ID, kind: "collections", icon: "tag", labelKey: "tabs.collections.title", title: "", novelId: null, projectId: null, collectionId: null, rail: "library", closable: true };
+
+export function collectionTabId(id: number): string { return `collection:${id}`; }
+
+export function collectionTab(id: number, title: string): EditorTab { return { id: collectionTabId(id), kind: "collection", icon: "folder", labelKey: null, title, novelId: null, projectId: null, collectionId: id, rail: "library", closable: true }; }

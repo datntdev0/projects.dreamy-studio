@@ -1,0 +1,7 @@
+@if (open()) {
+  <ds-dialog [title]="'library.create.title' | t" [eyebrow]="'library.cap' | t" [closeLabel]="'library.create.close' | t" data-testid="library-collection-dialog-panel" (closed)="close()">
+    <div class="field" data-testid="library-collection-dialog-name-field"><label for="library-collection-name">{{ "library.create.name" | t }}</label><input id="library-collection-name" class="input" maxlength="80" [value]="name()" [class.is-invalid]="!!errorKey()" [attr.placeholder]="'library.create.namePlaceholder' | t" data-testid="library-collection-dialog-name" (input)="onName($event)" />@if (errorKey(); as error) { <p class="field-err" data-testid="library-collection-dialog-error">{{ error | t }}</p> }</div>
+    <div class="field" data-testid="library-collection-dialog-description-field"><label for="library-collection-description">{{ "library.create.description" | t }}</label><textarea id="library-collection-description" class="textarea" rows="3" maxlength="500" [value]="description()" [attr.placeholder]="'library.create.descriptionPlaceholder' | t" data-testid="library-collection-dialog-description" (input)="onDescription($event)"></textarea></div>
+    <ds-button dialogFoot data-testid="library-collection-dialog-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button><ds-button dialogFoot variant="primary" [disabled]="busy()" data-testid="library-collection-dialog-submit" (pressed)="submit()">{{ "library.create.submit" | t }}</ds-button>
+  </ds-dialog>
+}

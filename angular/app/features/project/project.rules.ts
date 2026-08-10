@@ -7,25 +7,11 @@ import { ProjectSummary } from "./project.models";
 import { ProjectTemplate } from "./project.models";
 import { ProjectTemplateId } from "./project.models";
 
-export const PROJECT_NAME_MAX = 60;
-
-export const FORBIDDEN_NAME_CHARS = /[<>:"/\\|?*]/;
-
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   { id: "audiobook", icon: "mic", labelKey: "project.template.audiobook", blurbKey: "project.template.audiobook.blurb" },
   { id: "filmseries", icon: "film", labelKey: "project.template.filmseries", blurbKey: "project.template.filmseries.blurb" },
   { id: "blank", icon: "folder", labelKey: "project.template.blank", blurbKey: "project.template.blank.blurb" },
 ];
-
-function isDuplicateName(project: ProjectSummary, needle: string, exceptId: number | undefined): boolean {
-  return project.id !== exceptId && project.name.trim().toLocaleLowerCase() === needle;
-}
-
-function folderName(folder: string): string {
-  const normalized = folder.replace(/\\/g, "/");
-  const parts = normalized.split("/");
-  return (parts[parts.length - 1] ?? "").toLowerCase();
-}
 
 function matchesProject(project: ProjectSummary, filters: ProjectFilters, needle: string): boolean {
   const templateOk = filters.templates.length === 0 || filters.templates.includes(project.template);
@@ -46,44 +32,8 @@ function compareDirectoryEntries(a: DirEntry, b: DirEntry): number {
   return Number(b.kind === "dir") - Number(a.kind === "dir") || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
-export function validateProjectName(name: string, projects: ProjectSummary[], exceptId?: number): "empty" | "tooLong" | "forbidden" | "duplicate" | null {
-  const value = name.trim();
-  if (!value) {
-    return "empty";
-  }
-  if (value.length > PROJECT_NAME_MAX) {
-    return "tooLong";
-  }
-  if (FORBIDDEN_NAME_CHARS.test(value)) {
-    return "forbidden";
-  }
-  const needle = value.toLocaleLowerCase();
-  for (const project of projects) {
-    if (isDuplicateName(project, needle, exceptId)) {
-      return "duplicate";
-    }
-  }
-  return null;
-}
-
-export function slugOf(name: string): string {
-  return name.replace(/[Đđ]/g, "d").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "project";
-}
-
-export function folderPreview(name: string, existingFolders: string[]): string {
-  const base = slugOf(name);
-  const folders = new Set<string>();
-  for (const folder of existingFolders) {
-    folders.add(folderName(folder));
-  }
-  if (!folders.has(base.toLowerCase())) {
-    return `projects/${base}`;
-  }
-  let suffix = 2;
-  while (folders.has(`${base}-${suffix}`.toLowerCase())) {
-    suffix += 1;
-  }
-  return `projects/${base}-${suffix}`;
+export function validateProjectName(name: string): "empty" | null {
+  return name.trim() ? null : "empty";
 }
 
 export function toggled<T>(values: T[], value: T): T[] {

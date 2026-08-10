@@ -10,7 +10,7 @@ import { I18nKey } from "../../../core/i18n/i18n.models";
 import { NovelService } from "../../novel/novel.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectInput, ProjectTemplateId } from "../project.models";
-import { PROJECT_TEMPLATES, folderPreview, toProjectError, validateProjectName, validateRange } from "../project.rules";
+import { PROJECT_TEMPLATES, toProjectError, validateProjectName, validateRange } from "../project.rules";
 import { ProjectService } from "../project.service";
 
 interface CreateForm {
@@ -47,7 +47,6 @@ export class ProjectCreateDialog {
   readonly rangeError = signal<I18nKey | null>(null);
   readonly formError = signal("");
   readonly templates = PROJECT_TEMPLATES;
-  readonly folderPath = computed(this.buildFolderPath.bind(this));
   readonly selectedNovel = computed(this.buildSelectedNovel.bind(this));
 
   constructor() {
@@ -125,8 +124,8 @@ export class ProjectCreateDialog {
   }
 
   private validateName(): boolean {
-    const error = validateProjectName(this.form().name, this.projects.projects());
-    this.nameError.set(error ? `project.error.${error}` as I18nKey : null);
+    const error = validateProjectName(this.form().name);
+    this.nameError.set(error ? "project.error.empty" : null);
     return error === null;
   }
 
@@ -143,14 +142,6 @@ export class ProjectCreateDialog {
     };
   }
 
-  private buildFolderPath(): string {
-    const folders: string[] = [];
-    for (const project of this.projects.projects()) {
-      folders.push(project.folder);
-    }
-    return `${folderPreview(this.form().name || "project", folders).replace(/\//g, "\\")}\\`;
-  }
-
   private buildSelectedNovel() {
     const id = this.form().novelId;
     return id === null ? undefined : this.novels.novelById(id);
@@ -158,10 +149,6 @@ export class ProjectCreateDialog {
 
   private applyBackendError(cause: unknown): void {
     const code = toProjectError(cause).code;
-    if (code === "name_taken") {
-      this.nameError.set("project.error.duplicate");
-      return;
-    }
     if (code === "range_invalid") {
       this.rangeError.set("project.create.rangeInvalid");
       return;

@@ -52,7 +52,7 @@ export class ProjectExplorer {
   }
 
   isSelected(project: ProjectSummary): boolean {
-    return this.projects.selectedIds().includes(project.id);
+    return this.projects.selectedId() === project.id;
   }
 
   isActive(project: ProjectSummary): boolean {

@@ -26,10 +26,6 @@ impl ProjectFiles {
         self.root.join(folder)
     }
 
-    pub fn folder_taken(&self, folder: &str) -> bool {
-        self.project_dir(folder).exists()
-    }
-
     pub fn create_dir(&self, folder: &str) -> ProjectResult<()> {
         fs::create_dir_all(self.project_dir(folder))?;
         Ok(())
@@ -174,96 +170,4 @@ fn read_entries(path: &Path) -> ProjectResult<Vec<DirEntry>> {
 
 fn path_error(detail: &str) -> ProjectError {
     ProjectError::new(ProjectErrorCode::PathInvalid, detail)
-}
-
-pub fn slug(name: &str) -> String {
-    let mut slug = String::new();
-    let mut dash = false;
-    for character in name.chars() {
-        let normalized = decompose(character);
-        for c in normalized.chars() {
-            if c.is_ascii_alphanumeric() {
-                slug.push(c.to_ascii_lowercase());
-                dash = false;
-            } else if !dash && !slug.is_empty() {
-                slug.push('-');
-                dash = true;
-            }
-        }
-    }
-    while slug.ends_with('-') {
-        slug.pop();
-    }
-    if slug.is_empty() {
-        "project".to_string()
-    } else {
-        slug
-    }
-}
-
-const VIETNAMESE: [(char, &str); 5] = [
-    ('a', "àáạảãâầấậẩẫăằắặẳẵ"),
-    ('e', "èéẹẻẽêềếệểễ"),
-    ('i', "ìíịỉĩ"),
-    ('o', "òóọỏõôồốộổỗơờớợởỡ"),
-    ('u', "ùúụủũưừứựửữ"),
-];
-
-const COMBINING_MARKS: std::ops::RangeInclusive<char> = '\u{0300}'..='\u{036F}';
-
-fn decompose(character: char) -> String {
-    let lower = character.to_lowercase().next().unwrap_or(character);
-    if COMBINING_MARKS.contains(&lower) {
-        return String::new();
-    }
-    if let Some(base) = vietnamese_base(lower) {
-        return base.to_string();
-    }
-    match lower {
-        'ä' | 'ǟ' | 'ǎ' | 'å' | 'ā' | 'ą' => "a".to_string(),
-        'ç' | 'ć' | 'č' => "c".to_string(),
-        'ð' | 'ď' | 'đ' => "d".to_string(),
-        'ë' | 'ē' | 'ė' | 'ę' | 'ě' => "e".to_string(),
-        'ï' | 'ī' => "i".to_string(),
-        'ñ' | 'ń' => "n".to_string(),
-        'ö' | 'ø' | 'ō' => "o".to_string(),
-        'ü' | 'ū' => "u".to_string(),
-        'ý' | 'ỳ' | 'ỵ' | 'ỷ' | 'ỹ' | 'ÿ' => "y".to_string(),
-        'š' => "s".to_string(),
-        'ž' => "z".to_string(),
-        'æ' => "ae".to_string(),
-        'œ' => "oe".to_string(),
-        'þ' => "th".to_string(),
-        'ß' => "ss".to_string(),
-        other => other.to_string(),
-    }
-}
-
-fn vietnamese_base(character: char) -> Option<char> {
-    for (base, group) in VIETNAMESE {
-        if group.contains(character) {
-            return Some(base);
-        }
-    }
-    None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn slug_strips_vietnamese_diacritics() {
-        assert_eq!(slug("Gió Muộn — Audiobook"), "gio-muon-audiobook");
-        assert_eq!(slug("Đường về Ánh Sáng"), "duong-ve-anh-sang");
-        assert_eq!(slug("Tro Dưới Biển"), "tro-duoi-bien");
-    }
-
-    #[test]
-    fn slug_ignores_combining_marks_and_falls_back() {
-        assert_eq!(slug("Ca\u{0302}u chuye\u{0323}n"), "cau-chuyen");
-        assert_eq!(slug("日本語"), "project");
-        assert_eq!(slug("  --  "), "project");
-        assert_eq!(slug("Harrowmere: Part 1"), "harrowmere-part-1");
-    }
 }

@@ -4,7 +4,7 @@ use rusqlite::OptionalExtension;
 use rusqlite::Row;
 use rusqlite::params;
 
-const SUMMARY: &str = "SELECT p.id, p.name, p.folder, p.template, p.description, p.novel_id, \
+const SUMMARY: &str = "SELECT p.id, p.name, 'projects/' || p.id, p.template, p.description, p.novel_id, \
     CASE WHEN p.novel_id IS NOT NULL AND n.id IS NULL THEN 1 ELSE 0 END, p.src_kind, p.src_lang, \
     p.range_from, p.range_to, p.archived, p.created_at, p.updated_at, p.opened_at \
     FROM ws_projects p LEFT JOIN ws_novels n ON n.id = p.novel_id";
@@ -21,7 +21,6 @@ pub struct ProjectRow {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewProject<'a> {
     pub name: &'a str,
-    pub folder: &'a str,
     pub template: &'a str,
     pub description: &'a str,
     pub novel_id: Option<i64>,
@@ -55,7 +54,7 @@ impl<'a> ProjectRepository<'a> {
     pub fn find_project(&self, id: i64) -> rusqlite::Result<Option<ProjectRow>> {
         self.conn
             .query_row(
-                "SELECT id, name, folder, template, description FROM ws_projects WHERE id = ?1",
+                "SELECT id, name, 'projects/' || id, template, description FROM ws_projects WHERE id = ?1",
                 [id],
                 |row| {
                     Ok(ProjectRow {
@@ -80,8 +79,8 @@ impl<'a> ProjectRepository<'a> {
 
     pub fn insert(&self, project: &NewProject) -> rusqlite::Result<i64> {
         self.conn.execute(
-            "INSERT INTO ws_projects (name, folder, template, description, novel_id, src_kind, src_lang, range_from, range_to, created_at, updated_at, opened_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, ?10)",
-            params![project.name, project.folder, project.template, project.description, project.novel_id, project.src_kind, project.src_lang, project.range_from, project.range_to, project.now],
+            "INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, created_at, updated_at, opened_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9, ?9)",
+            params![project.name, project.template, project.description, project.novel_id, project.src_kind, project.src_lang, project.range_from, project.range_to, project.now],
         )?;
         Ok(self.conn.last_insert_rowid())
     }

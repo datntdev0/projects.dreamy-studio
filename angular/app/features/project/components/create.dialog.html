@@ -15,11 +15,10 @@
       <div class="pjc-r">
         <div class="field" data-testid="project-create-name-field">
           <label for="pj-create-name">{{ "project.create.name" | t }}</label>
-          <input #nameInput id="pj-create-name" class="input" [class.is-invalid]="!!nameError()" [placeholder]="'project.create.namePlaceholder' | t" [value]="form().name" autocomplete="off" aria-describedby="pj-create-name-error pj-create-folder" data-testid="project-create-name-input" (input)="onName($event)" />
+          <input #nameInput id="pj-create-name" class="input" [class.is-invalid]="!!nameError()" [placeholder]="'project.create.namePlaceholder' | t" [value]="form().name" autocomplete="off" aria-describedby="pj-create-name-error" data-testid="project-create-name-input" (input)="onName($event)" />
           @if (nameError(); as error) {
             <p class="field-err" id="pj-create-name-error" data-testid="project-create-name-error">{{ error | t }}</p>
           }
-          <span class="field-hint" id="pj-create-folder">{{ "project.create.folder" | t }} <span class="path">{{ folderPath() }}</span></span>
         </div>
         <div class="form-2" data-testid="project-create-source-row">
           <div class="field" data-testid="project-create-novel-field">

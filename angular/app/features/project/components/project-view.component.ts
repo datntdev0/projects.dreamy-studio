@@ -1,6 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from "@angular/core";
 import { Icon } from "../../../../components/icon";
-import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { I18nService } from "../../../core/i18n/i18n.service";
 import { ToastService } from "../../../core/toast/toast.service";
@@ -15,14 +14,6 @@ import { ProjectTree } from "./tree.component";
 
 type ProjectViewTab = "files" | "settings";
 type EditableElement = HTMLInputElement | HTMLTextAreaElement;
-type NameIssue = "empty" | "tooLong" | "forbidden" | "duplicate";
-
-const NAME_ERROR_KEYS: Record<NameIssue, I18nKey> = {
-  empty: "project.error.empty",
-  tooLong: "project.error.tooLong",
-  forbidden: "project.error.forbidden",
-  duplicate: "project.error.duplicate",
-};
 
 @Component({
   selector: "app-project-view",
@@ -46,10 +37,6 @@ export class ProjectView {
 
   constructor() {
     effect(this.syncProject.bind(this));
-  }
-
-  nameKey(issue: NameIssue): I18nKey {
-    return NAME_ERROR_KEYS[issue];
   }
 
   setTab(tab: ProjectViewTab): void {
@@ -79,10 +66,10 @@ export class ProjectView {
       return;
     }
     const name = element.value.trim();
-    const issue = validateProjectName(name, this.projects.projects(), project.id);
+    const issue = validateProjectName(name);
     if (issue !== null) {
       element.value = project.name;
-      this.toasts.show(this.i18n.translate(this.nameKey(issue)), "warning");
+      this.toasts.show(this.i18n.translate("project.error.empty"), "warning");
       return;
     }
     if (name === project.name) {

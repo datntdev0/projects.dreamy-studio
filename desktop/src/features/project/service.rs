@@ -4,7 +4,6 @@ use crate::features::novel::service::cover_data_url;
 use crate::features::novel::service::parse_cover_data_url;
 use crate::features::project::files::PROJECTS_DIR;
 use crate::features::project::files::ProjectFiles;
-use crate::features::project::files::slug;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
 use crate::features::project::models::ProjectInput;
@@ -50,13 +49,8 @@ fn parse_cover(data_url: &str) -> ProjectResult<(CoverKind, Vec<u8>)> {
 
 fn clean_name(name: &str) -> ProjectResult<String> {
     let name = name.trim();
-    if name.is_empty()
-        || name.chars().count() > 60
-        || name.chars().any(|c| "<>:\"/\\|?*".contains(c))
-    {
-        return Err(ProjectError::invalid(
-            "name must be 1-60 characters and contain no forbidden characters",
-        ));
+    if name.is_empty() {
+        return Err(ProjectError::invalid("name must not be empty"));
     }
     Ok(name.to_string())
 }
@@ -135,7 +129,6 @@ impl ProjectWorkspace {
             .connection_mut()
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let repo = ProjectRepository::new(&tx);
-        ensure_name_available(&repo, &name, None)?;
         let src_lang = match input.novel_id {
             Some(id) => {
                 let (lang, count) = repo.novel(id)?.ok_or_else(|| {
@@ -157,11 +150,9 @@ impl ProjectWorkspace {
             None => None,
         };
         let files = self.files();
-        let folder = unique_folder(&repo, &files, &name)?;
         let now = now_text();
         let id = repo.insert(&NewProject {
             name: &name,
-            folder: &folder,
             template: &input.template,
             description: &description,
             novel_id: input.novel_id,
@@ -171,6 +162,7 @@ impl ProjectWorkspace {
             range_to: input.range_to,
             now: &now,
         })?;
+        let folder = format!("{PROJECTS_DIR}/{id}");
         if let Err(error) = files.create_dir(&folder) {
             drop(tx);
             return Err(error);
@@ -196,7 +188,6 @@ impl ProjectWorkspace {
         let repo = ProjectRepository::new(&tx);
         let mut row = require_project(&repo, id)?;
         if let Some(name) = name {
-            ensure_name_available(&repo, &name, Some(id))?;
             row.name = name;
         }
         if let Some(description) = description {
@@ -323,45 +314,6 @@ impl ProjectWorkspace {
     }
 }
 
-fn ensure_name_available(
-    repo: &ProjectRepository,
-    name: &str,
-    except: Option<i64>,
-) -> ProjectResult<()> {
-    let duplicate = repo.list()?.iter().any(|project| {
-        project.name.to_lowercase() == name.to_lowercase() && Some(project.id) != except
-    });
-    if duplicate {
-        return Err(ProjectError::new(
-            ProjectErrorCode::NameTaken,
-            "a project already uses that name",
-        ));
-    }
-    Ok(())
-}
-
-fn unique_folder(
-    repo: &ProjectRepository,
-    files: &ProjectFiles,
-    name: &str,
-) -> ProjectResult<String> {
-    let rows = repo.list()?;
-    let base = slug(name);
-    let mut suffix = 1;
-    loop {
-        let leaf = if suffix == 1 {
-            base.clone()
-        } else {
-            format!("{base}-{suffix}")
-        };
-        let folder = format!("{PROJECTS_DIR}/{leaf}");
-        if !rows.iter().any(|row| row.folder == folder) && !files.folder_taken(&folder) {
-            return Ok(folder);
-        }
-        suffix += 1;
-    }
-}
-
 fn require_summary(repo: &ProjectRepository, id: i64) -> ProjectResult<ProjectSummary> {
     repo.find_summary(id)?
         .ok_or_else(|| ProjectError::not_found(format!("project {id} does not exist")))
@@ -423,7 +375,7 @@ mod tests {
     }
 
     #[test]
-    fn validates_name_template_and_case_insensitive_uniqueness() {
+    fn accepts_free_text_names_and_rejects_blank_ones() {
         let (_dir, service) = workspace();
         assert_eq!(
             service.create(input("  ")).unwrap_err().code,
@@ -435,21 +387,27 @@ mod tests {
             service.create(unsupported).unwrap_err().code,
             ProjectErrorCode::InvalidInput
         );
-        service.create(input("Name")).unwrap();
-        assert_eq!(
-            service.create(input("name")).unwrap_err().code,
-            ProjectErrorCode::NameTaken
-        );
+        let first = service
+            .create(input("Tập 1: \"Mở đầu\" / <draft>?"))
+            .unwrap();
+        let second = service
+            .create(input("Tập 1: \"Mở đầu\" / <draft>?"))
+            .unwrap();
+        assert_eq!(first.name, "Tập 1: \"Mở đầu\" / <draft>?");
+        assert_eq!(second.name, first.name);
+        assert_ne!(first.id, second.id);
     }
 
     #[test]
-    fn creates_project_folder_and_suffixes_existing_folder() {
+    fn creates_the_project_folder_named_after_the_incremental_id() {
         let (dir, service) = workspace();
-        std::fs::create_dir_all(dir.path().join("projects/my-project")).unwrap();
-        let project = service.create(input("My Project")).unwrap();
-        assert_eq!(project.folder, "projects/my-project-2");
-        assert!(dir.path().join(&project.folder).is_dir());
-        assert_eq!(service.list().unwrap(), vec![project]);
+        let first = service.create(input("My Project")).unwrap();
+        let second = service.create(input("My Project")).unwrap();
+        assert_eq!(first.folder, format!("projects/{}", first.id));
+        assert_eq!(second.id, first.id + 1);
+        assert!(dir.path().join(&first.folder).is_dir());
+        assert!(dir.path().join(&second.folder).is_dir());
+        assert_eq!(service.list().unwrap(), vec![first, second]);
     }
 
     #[test]

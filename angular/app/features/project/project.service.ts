@@ -75,16 +75,6 @@ function withoutProjects(projects: ProjectSummary[], ids: Set<number>): ProjectS
   return rows;
 }
 
-function withoutSelected(ids: number[], removed: Set<number>): number[] {
-  const next: number[] = [];
-  for (const id of ids) {
-    if (!removed.has(id)) {
-      next.push(id);
-    }
-  }
-  return next;
-}
-
 function withoutCovers(covers: Record<number, string | null>, removed: Set<number>): Record<number, string | null> {
   const next: Record<number, string | null> = {};
   for (const key of Object.keys(covers)) {
@@ -132,7 +122,7 @@ export class ProjectService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly workspace = inject(WorkspaceService);
   private readonly items = signal<ProjectSummary[]>([]);
-  private readonly selected = signal<number[]>([]);
+  private readonly selected = signal<number | null>(null);
   private readonly rawTemplates = signal<ProjectTemplateId[]>([]);
   private readonly rawStatuses = signal<ProjectStatus[]>([]);
   private readonly directoryCache = signal<Record<string, DirEntry[]>>({});
@@ -155,7 +145,6 @@ export class ProjectService {
   readonly filters = computed(this.buildFilters.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
-  readonly selectedIds = this.selected.asReadonly();
   readonly selectedId = computed(this.buildSelectedId.bind(this));
   readonly totals = computed(this.buildTotals.bind(this));
   readonly recent = computed(this.buildRecent.bind(this));
@@ -222,7 +211,7 @@ export class ProjectService {
     const count = await this.ipc.invoke<number>("project_delete", { ids });
     const removed = new Set(ids);
     this.items.set(withoutProjects(this.items(), removed));
-    this.selected.set(withoutSelected(this.selected(), removed));
+    this.selected.set(this.selectionAfterRemoval(removed));
     this.covers.set(withoutCovers(this.covers(), removed));
     this.refreshTreeForIds(ids);
     return count;
@@ -308,20 +297,12 @@ export class ProjectService {
     this.clearFilters();
   }
 
-  toggleSelect(id: number): void {
-    this.selected.set(toggled(this.selected(), id));
-  }
-
   selectOnly(id: number): void {
-    this.selected.set([id]);
-  }
-
-  selectAll(): void {
-    this.selected.set(this.visible().map(idOf));
+    this.selected.set(id);
   }
 
   clearSelection(): void {
-    this.selected.set([]);
+    this.selected.set(null);
   }
 
   toggleExpanded(key: string): void {
@@ -374,7 +355,7 @@ export class ProjectService {
     this.epoch += 1;
     this.treeEpoch += 1;
     this.items.set([]);
-    this.selected.set([]);
+    this.selected.set(null);
     this.rawTemplates.set([]);
     this.rawStatuses.set([]);
     this.directoryCache.set({});
@@ -453,11 +434,15 @@ export class ProjectService {
   }
 
   private pruneSelection(): void {
-    const known = new Set<number>();
-    for (const project of this.items()) {
-      known.add(project.id);
+    const id = this.selected();
+    if (id !== null && !this.projectById(id)) {
+      this.selected.set(null);
     }
-    this.selected.set(this.selected().filter(known.has.bind(known)));
+  }
+
+  private selectionAfterRemoval(removed: Set<number>): number | null {
+    const id = this.selected();
+    return id !== null && removed.has(id) ? null : id;
   }
 
   private buildFilters(): ProjectFilters {
@@ -482,8 +467,8 @@ export class ProjectService {
   }
 
   private buildSelectedId(): number | null {
-    const ids = this.selected();
-    return ids.length === 1 && this.projectById(ids[0]) ? ids[0] : null;
+    const id = this.selected();
+    return id !== null && this.projectById(id) ? id : null;
   }
 
   private buildTotals(): ProjectTotals {

@@ -8,7 +8,6 @@ use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
 use crate::features::library::service::LibraryService;
 use crate::features::workspace::session::WorkspaceSession;
-use serde_json::json;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::async_runtime::spawn_blocking;
@@ -183,6 +182,7 @@ pub async fn library_tag_delete(app: AppHandle, tag: String) -> LibraryResult<i6
 mod tests {
     use super::*;
     use crate::features::library::models::KindCounts;
+    use serde_json::json;
 
     #[test]
     fn library_payloads_serialize_as_camel_case() {

@@ -1,5 +1,4 @@
 use crate::features::library::collections;
-use crate::features::library::collections::AssetTable;
 use crate::features::library::models::CollectionInput;
 use crate::features::library::models::CollectionPatch;
 use crate::features::library::models::LibraryCollection;
@@ -120,6 +119,7 @@ impl LibraryWorkspace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::features::library::collections::AssetTable;
     use crate::features::library::models::LibraryKind;
     use crate::infra::storage::migrator::Migrator;
     use crate::infra::storage::migrator::workspace_scripts;

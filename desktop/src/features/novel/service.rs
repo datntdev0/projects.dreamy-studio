@@ -25,7 +25,6 @@ use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
 pub use crate::shared::tags::MAX_TAGS;
-pub use crate::shared::tags::normalize_tag;
 use crate::shared::tags::normalize_tags as normalize_shared_tags;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
@@ -584,6 +583,7 @@ mod tests {
     use crate::features::novel::package::fixtures::zip_bytes;
     use crate::infra::storage::migrator::Migrator;
     use crate::infra::storage::migrator::workspace_scripts;
+    use crate::shared::tags::normalize_tag;
     use std::fs;
     use std::sync::atomic::AtomicBool;
     use tempfile::TempDir;

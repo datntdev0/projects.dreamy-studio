@@ -1,14 +1,13 @@
 import { Component, inject, signal } from "@angular/core";
 import { Button } from "../../../../components/button";
 import { Dialog } from "../../../../components/dialog";
-import { Icon } from "../../../../components/icon";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { I18nKey } from "../../../core/i18n/i18n.models";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { libraryErrorKey } from "../library.rules";
 
-@Component({ selector: "app-library-collection-dialog", standalone: true, imports: [Button, Dialog, Icon, I18nPipe], templateUrl: "./collection.dialog.html", host: { "data-testid": "library-collection-dialog" } })
+@Component({ selector: "app-library-collection-dialog", standalone: true, imports: [Button, Dialog, I18nPipe], templateUrl: "./collection.dialog.html", host: { "data-testid": "library-collection-dialog" } })
 export class LibraryCollectionDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly library = inject(LibraryService);

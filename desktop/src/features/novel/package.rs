@@ -782,7 +782,7 @@ mod tests {
         assert_eq!(summary.author, "Someone");
         assert_eq!(summary.lang, "ZH");
         assert_eq!(summary.chapter_count, 3);
-        assert_eq!(summary.word_count, 3 * (4 + 3 + 3 + 0 + 0));
+        assert_eq!(summary.word_count, 3 * (4 + 3 + 3));
         assert!(summary.has_cover);
         assert_eq!(package.chapters[1].title, "Chapter 2");
     }

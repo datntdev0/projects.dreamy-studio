@@ -7,7 +7,6 @@
       @for (collection of library.collections(); track collection.id) {
         <div class="tree-row nx-child lb-xcol" [class.is-selected]="isActive(collection.id)" role="treeitem" tabindex="0" [attr.data-testid]="'library-explorer-collection-' + collection.id" (click)="openCollection(collection.id, collection.name)" (keydown.enter)="openCollection(collection.id, collection.name)"><ds-icon name="folder" [size]="16" /><span class="tree-label">{{ collection.name }}</span><span class="nx-n mono">{{ count(collection.counts) }}</span></div>
       } @empty { <div class="nx-empty" data-testid="library-explorer-empty">{{ "library.explorer.empty" | t }}</div> }
-      <div class="tree-row nx-child lb-xnew" role="button" tabindex="0" data-testid="library-explorer-create" (click)="createCollection()" (keydown.enter)="createCollection()"><ds-icon name="plus" [size]="16" /><span class="tree-label">{{ "library.explorer.createCollection" | t }}</span></div>
     </div>
   }
 </section>

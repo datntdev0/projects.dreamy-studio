@@ -18,9 +18,8 @@
   const rid = (s) => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36).padEnd(8, "x").slice(0, 8); };
 
   function rightsRows(p) {
-    const used = LB.state.assets.filter((x) => x.used.some((o) => o.name === p.name));
     const nv = window.NVU.novelById(p.novel);
-    const rows = used.map((x) => ({ name: x.name, kind: LB.TYPES[x.type].label, rights: LB.RIGHTS[x.rights], warn: x.rights === "other" }));
+    const rows = [];
     if (nv) rows.unshift({ name: window.NVU.nameOf(nv), kind: "Văn bản gốc", rights: `Tác giả: ${nv.author} · do bạn xác nhận`, warn: false });
     return rows;
   }

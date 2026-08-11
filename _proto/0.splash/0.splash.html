@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dreamy Studio</title>
-  <link rel="icon" href="assets/dreamy-studio-mark.svg">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/app.css">
+  <link rel="icon" href="../shared/assets/dreamy-studio-mark.svg">
+  <link rel="stylesheet" href="../shared/css/tokens.css">
+  <link rel="stylesheet" href="../shared/css/app.css">
   <script>
     // apply the saved theme before first paint (no flash)
     try { var t = JSON.parse(localStorage.getItem("ds.theme")); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
   </script>
 </head>
-<body>
+<body data-main-page="../index.html" data-shared-root="../shared">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" data-testid="splash-sprite">
     <defs>
       <symbol id="i-hdd" viewBox="0 0 24 24"><path d="M22 12H2M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/><path d="M6 16h.01M10 16h.01"/></symbol>
@@ -37,7 +37,7 @@
 
     <div id="sp-welcome" class="sp-card" data-testid="splash-card">
       <div class="sp-left" data-testid="splash-intro">
-        <img class="logo" src="assets/dreamy-studio-mark.svg" alt="Dreamy Studio" data-testid="splash-logo">
+        <img class="logo" src="../shared/assets/dreamy-studio-mark.svg" alt="Dreamy Studio" data-testid="splash-logo">
         <h1 class="t-display-sm" data-testid="splash-name">Dreamy Studio</h1>
         <p class="mono t-mute" data-testid="splash-version">V<span id="sp-version" data-testid="splash-version-value"></span></p>
         <p class="t-sm" data-testid="splash-tagline">Biến tác phẩm văn học thành audiobook, hình ảnh và video, ngay trên máy tính của bạn.</p>
@@ -65,8 +65,8 @@
     <div id="sp-loading" hidden data-testid="loading-page"></div>
   </div>
 
-  <script src="js/data.js"></script>
-  <script src="js/workspace.js"></script>
+  <script src="../shared/js/data.js"></script>
+  <script src="../shared/js/workspace.js"></script>
   <script src="js/splash.js"></script>
 </body>
 </html>

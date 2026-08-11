@@ -81,7 +81,7 @@ window.LB = (function () {
     };
     const seq = { image: 0, sound: 0, video: 0, prompt: 0, col: 0, voice: 0 };
     const nid = (type) => `${TYPES[type].id}-${String(++seq[type]).padStart(4, "0")}`;
-    const a = (type, name, o) => ({ id: nid(type), type, name, tags: [], cols: [], rights: "own", origin: "Tải lên từ máy", used: [], seed: name, ...o });
+    const a = (type, name, o) => ({ id: nid(type), type, name, tags: [], collectionId: null, rights: "own", origin: "Tải lên từ máy", seed: name, ...o });
     const img = (name, w, h, size, o) => a("image", name, { size, meta: { w, h }, bg: bgFor(name), ...o });
     const snd = (name, d, size, o) => a("sound", name, { size, meta: { dur: d, rate: "44.1 kHz", ch: "Stereo" }, ...o });
     const vid = (name, d, w, h, fps, size, o) => a("video", name, { size, meta: { dur: d, w, h, fps }, bg: bgFor(name), ...o });
@@ -96,46 +96,46 @@ window.LB = (function () {
     seq.col = collections.length;
 
     const assets = [
-      img("harrowmere-harbor-dusk.png", 1920, 1080, 3.4 * MB, { tags: ["harbor", "dusk", "background"], cols: ["COL-01"], added: day(1, "21:03"), used: ["Harrowmere — Audiobook"] }),
-      img("lantern-room-interior.jpg", 1536, 1024, 1.2 * MB, { tags: ["lantern", "interior"], cols: ["COL-01"], added: day(1, "20:41") }),
-      img("keeper-portrait-ref.png", 1024, 1280, 2.1 * MB, { tags: ["character", "reference"], cols: ["COL-04"], added: day(2, "18:22"), used: ["Harrowmere — Audiobook"] }),
-      img("maro-quill-ref.webp", 1024, 1280, 640 * 1024, { tags: ["character", "reference"], cols: ["COL-04"], added: day(2, "18:25") }),
-      img("drowned-bell-tower.png", 1792, 1024, 2.9 * MB, { tags: ["night", "ruins", "background"], cols: ["COL-01"], added: day(3, "22:10") }),
+      img("harrowmere-harbor-dusk.png", 1920, 1080, 3.4 * MB, { tags: ["harbor", "dusk", "background"], collectionId: "COL-01", added: day(1, "21:03") }),
+      img("lantern-room-interior.jpg", 1536, 1024, 1.2 * MB, { tags: ["lantern", "interior"], collectionId: "COL-01", added: day(1, "20:41") }),
+      img("keeper-portrait-ref.png", 1024, 1280, 2.1 * MB, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:22") }),
+      img("maro-quill-ref.webp", 1024, 1280, 640 * 1024, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:25") }),
+      img("drowned-bell-tower.png", 1792, 1024, 2.9 * MB, { tags: ["night", "ruins", "background"], collectionId: "COL-01", added: day(3, "22:10") }),
       img("sea-fog-texture.jpg", 2048, 2048, 4.8 * MB, { tags: ["texture", "fog"], added: day(4, "09:40"), rights: "free", origin: "Tải lên từ máy" }),
-      img("channel-logo-square.png", 1024, 1024, 310 * 1024, { tags: ["logo", "brand"], cols: ["COL-03"], added: day(12, "10:00"), used: ["Kênh — Intro", "Harrowmere — Audiobook"] }),
-      img("thumbnail-template-01.png", 1280, 720, 880 * 1024, { tags: ["thumbnail", "template", "brand"], cols: ["COL-03"], added: day(12, "10:06") }),
-      img("tide-chart-parchment.jpg", 1600, 1200, 1.7 * MB, { tags: ["prop", "map"], cols: ["COL-01"], added: day(5, "14:30"), rights: "licensed" }),
-      img("council-hall.webp", 1920, 1080, 980 * 1024, { tags: ["interior", "council", "background"], cols: ["COL-01"], added: day(6, "19:48") }),
-      img("moonlit-pier.png", 1920, 1080, 3.1 * MB, { tags: ["harbor", "night", "background"], cols: ["COL-01"], added: day(7, "23:15") }),
+      img("channel-logo-square.png", 1024, 1024, 310 * 1024, { tags: ["logo", "brand"], collectionId: "COL-03", added: day(12, "10:00") }),
+      img("thumbnail-template-01.png", 1280, 720, 880 * 1024, { tags: ["thumbnail", "template", "brand"], collectionId: "COL-03", added: day(12, "10:06") }),
+      img("tide-chart-parchment.jpg", 1600, 1200, 1.7 * MB, { tags: ["prop", "map"], collectionId: "COL-01", added: day(5, "14:30"), rights: "licensed" }),
+      img("council-hall.webp", 1920, 1080, 980 * 1024, { tags: ["interior", "council", "background"], collectionId: "COL-01", added: day(6, "19:48") }),
+      img("moonlit-pier.png", 1920, 1080, 3.1 * MB, { tags: ["harbor", "night", "background"], collectionId: "COL-01", added: day(7, "23:15") }),
       img("lamp-closeup.jpg", 1200, 1200, 760 * 1024, { tags: ["lantern", "prop"], added: day(8, "16:02") }),
-      img("sunrise-gradient-bg.png", 1920, 1080, 420 * 1024, { tags: ["background", "gradient"], cols: ["COL-03"], added: day(14, "11:20") }),
+      img("sunrise-gradient-bg.png", 1920, 1080, 420 * 1024, { tags: ["background", "gradient"], collectionId: "COL-03", added: day(14, "11:20") }),
       img("gull-silhouette.png", 800, 600, 190 * 1024, { tags: ["prop", "bird"], added: day(15, "08:45") }),
 
-      snd("harbor-ambience-loop.wav", 200, 35.3 * MB, { tags: ["ambience", "harbor", "loop"], cols: ["COL-02", "COL-01"], added: day(1, "19:30"), used: ["Harrowmere — Audiobook"] }),
-      snd("waves-lapping.mp3", 105, 2.4 * MB, { tags: ["ambience", "sea"], cols: ["COL-02"], added: day(3, "17:05"), rights: "free" }),
-      snd("bell-toll-distant.wav", 12, 2.1 * MB, { tags: ["sfx", "bell"], cols: ["COL-02", "COL-01"], added: day(3, "17:12") }),
-      snd("wind-howl-night.mp3", 150, 3.4 * MB, { tags: ["ambience", "night", "wind"], cols: ["COL-02"], added: day(5, "21:00") }),
-      snd("theme-lantern-keeper.mp3", 185, 4.2 * MB, { tags: ["music", "theme"], cols: ["COL-03"], added: day(10, "13:10"), rights: "licensed", used: ["Kênh — Intro"] }),
-      snd("narrator-sample-warm.wav", 42, 7.1 * MB, { tags: ["voice-ref"], cols: ["COL-04"], added: day(9, "20:20") }),
-      snd("page-turn.wav", 2, 380 * 1024, { tags: ["sfx", "book"], cols: ["COL-02"], added: day(11, "12:00") }),
-      snd("intro-sting.mp3", 6, 210 * 1024, { tags: ["sfx", "brand"], cols: ["COL-03"], added: day(12, "10:15"), used: ["Kênh — Intro"] }),
+      snd("harbor-ambience-loop.wav", 200, 35.3 * MB, { tags: ["ambience", "harbor", "loop"], collectionId: "COL-02", added: day(1, "19:30") }),
+      snd("waves-lapping.mp3", 105, 2.4 * MB, { tags: ["ambience", "sea"], collectionId: "COL-02", added: day(3, "17:05"), rights: "free" }),
+      snd("bell-toll-distant.wav", 12, 2.1 * MB, { tags: ["sfx", "bell"], collectionId: "COL-02", added: day(3, "17:12") }),
+      snd("wind-howl-night.mp3", 150, 3.4 * MB, { tags: ["ambience", "night", "wind"], collectionId: "COL-02", added: day(5, "21:00") }),
+      snd("theme-lantern-keeper.mp3", 185, 4.2 * MB, { tags: ["music", "theme"], collectionId: "COL-03", added: day(10, "13:10"), rights: "licensed" }),
+      snd("narrator-sample-warm.wav", 42, 7.1 * MB, { tags: ["voice-ref"], collectionId: "COL-04", added: day(9, "20:20") }),
+      snd("page-turn.wav", 2, 380 * 1024, { tags: ["sfx", "book"], collectionId: "COL-02", added: day(11, "12:00") }),
+      snd("intro-sting.mp3", 6, 210 * 1024, { tags: ["sfx", "brand"], collectionId: "COL-03", added: day(12, "10:15") }),
 
-      vid("channel-intro-v2.mp4", 8, 1920, 1080, 24, 18.4 * MB, { tags: ["intro", "brand"], cols: ["COL-03"], added: day(12, "10:30"), used: ["Kênh — Intro"] }),
-      vid("fog-loop-bg.mp4", 30, 1920, 1080, 30, 46 * MB, { tags: ["fog", "loop", "background"], cols: ["COL-01"], added: day(4, "15:40") }),
-      vid("lighthouse-beam-overlay.webm", 12, 1920, 1080, 30, 9.6 * MB, { tags: ["overlay", "lantern"], cols: ["COL-01"], added: day(6, "10:11") }),
-      vid("outro-endcard.mp4", 15, 1920, 1080, 24, 12.2 * MB, { tags: ["outro", "brand"], cols: ["COL-03"], added: day(12, "10:42") }),
+      vid("channel-intro-v2.mp4", 8, 1920, 1080, 24, 18.4 * MB, { tags: ["intro", "brand"], collectionId: "COL-03", added: day(12, "10:30") }),
+      vid("fog-loop-bg.mp4", 30, 1920, 1080, 30, 46 * MB, { tags: ["fog", "loop", "background"], collectionId: "COL-01", added: day(4, "15:40") }),
+      vid("lighthouse-beam-overlay.webm", 12, 1920, 1080, 30, 9.6 * MB, { tags: ["overlay", "lantern"], collectionId: "COL-01", added: day(6, "10:11") }),
+      vid("outro-endcard.mp4", 15, 1920, 1080, 24, 12.2 * MB, { tags: ["outro", "brand"], collectionId: "COL-03", added: day(12, "10:42") }),
       vid("waves-closeup.mov", 20, 3840, 2160, 60, 214 * MB, { tags: ["sea", "background"], added: day(13, "07:30"), rights: "licensed" }),
 
-      prm("Harbor at dusk — cảnh rộng", "image", "Wide establishing shot of {{location}} at dusk, low fog over still water, a single lantern glowing on the pier, painterly {{style}}, muted teal and amber palette, cinematic composition, no text.", { tags: ["harbor", "background"], cols: ["COL-01"], added: day(2, "21:10") }),
-      prm("Chân dung nhân vật (reference sheet)", "image", "Character reference sheet of {{character}}: front, side and three-quarter views, neutral expression, plain background, consistent costume details, {{style}}.", { tags: ["character", "reference"], cols: ["COL-04"], added: day(2, "18:10"), used: ["Harrowmere — Audiobook"] }),
-      prm("Tia sáng hải đăng (overlay)", "video", "Slow rotating lighthouse beam sweeping through thick fog, volumetric light, seamless loop, 10 seconds, {{mood}} mood.", { tags: ["lantern", "overlay"], cols: ["COL-01"], added: day(6, "10:00") }),
-      prm("Mở đầu chương — giọng dẫn", "voice", "Giọng dẫn chuyện trầm ấm, nhịp chậm. Nghỉ 0,6 giây sau tiêu đề chương, nhấn nhẹ ở tên riêng, không đọc số đoạn.", { tags: ["narration"], cols: ["COL-04"], added: day(9, "20:30") }),
+      prm("Harbor at dusk — cảnh rộng", "image", "Wide establishing shot of {{location}} at dusk, low fog over still water, a single lantern glowing on the pier, painterly {{style}}, muted teal and amber palette, cinematic composition, no text.", { tags: ["harbor", "background"], collectionId: "COL-01", added: day(2, "21:10") }),
+      prm("Chân dung nhân vật (reference sheet)", "image", "Character reference sheet of {{character}}: front, side and three-quarter views, neutral expression, plain background, consistent costume details, {{style}}.", { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:10") }),
+      prm("Tia sáng hải đăng (overlay)", "video", "Slow rotating lighthouse beam sweeping through thick fog, volumetric light, seamless loop, 10 seconds, {{mood}} mood.", { tags: ["lantern", "overlay"], collectionId: "COL-01", added: day(6, "10:00") }),
+      prm("Mở đầu chương — giọng dẫn", "voice", "Giọng dẫn chuyện trầm ấm, nhịp chậm. Nghỉ 0,6 giây sau tiêu đề chương, nhấn nhẹ ở tên riêng, không đọc số đoạn.", { tags: ["narration"], collectionId: "COL-04", added: day(9, "20:30") }),
       prm("Sóng biển — loop", "video", "Close-up of slow waves lapping against stone, overcast light, {{mood}} mood, seamless 8 second loop.", { tags: ["sea", "loop"], added: day(13, "07:10") }),
-      prm("Thumbnail kênh", "image", "YouTube thumbnail, {{subject}} in the foreground, dramatic rim light, large empty area on the left for title text, 16:9.", { tags: ["thumbnail", "brand"], cols: ["COL-03"], added: day(12, "10:50") }),
+      prm("Thumbnail kênh", "image", "YouTube thumbnail, {{subject}} in the foreground, dramatic rim light, large empty area on the left for title text, 16:9.", { tags: ["thumbnail", "brand"], collectionId: "COL-03", added: day(12, "10:50") }),
       prm("Tóm tắt chương (ngắn)", "general", "Tóm tắt chương {{chapter}} trong 3 câu, giữ nguyên tên riêng và không tiết lộ nội dung các chương sau.", { tags: ["summary"], added: day(8, "09:00") }),
       prm("Phong cách sơn dầu u tối", "image", "oil painting, heavy impasto, chiaroscuro, desaturated blues, warm lamplight accents", { tags: ["style"], added: day(16, "22:00") }),
     ];
-    assets.forEach((x) => { x.used = x.used.map((name) => ({ name })); if (x.type === "prompt") x.size = Math.max(x.size, 1); });
+    assets.forEach((x) => { if (x.type === "prompt") x.size = Math.max(x.size, 1); });
     seq.image = 14; seq.sound = 8; seq.video = 5; seq.prompt = 8;
 
     const voices = [

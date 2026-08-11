@@ -24,7 +24,7 @@
   const hasRatio = (type) => type === "image" || type === "video";
   const bgOf = (x) => (x.img ? `url(${x.img}) center / cover no-repeat` : x.bg);
   const ext = (x) => (x.type === "prompt" ? "" : LB.extOf(x.name).toUpperCase());
-  const colsOf = (x) => x.cols.map(colById).filter(Boolean);
+  const collectionOf = (x) => (x.collectionId ? colById(x.collectionId) : null);
   const count = (list, n) => `${list.length} ${n}`;
   const nextId = (type) => `${T[type].id}-${String(++st().seq[type]).padStart(4, "0")}`;
   const touch = (x) => { x.edited = A.stamp(); };
@@ -195,9 +195,9 @@
 
   function baseList(sc) {
     const u = ui(sc.id);
-    let l = st().assets.filter((x) => (sc.type ? x.type === sc.type : x.cols.includes(sc.col)));
+    let l = st().assets.filter((x) => (sc.type ? x.type === sc.type : x.collectionId === sc.col));
     const f = filt();
-    if (sc.type && f.col) l = l.filter((x) => (f.col === "none" ? !x.cols.length : x.cols.includes(f.col)));
+    if (sc.type && f.col) l = l.filter((x) => (f.col === "none" ? !x.collectionId : x.collectionId === f.col));
     return l;
   }
   function items(sc) {
@@ -214,7 +214,10 @@
     };
     return [...l].sort(sorters[u.sort] || sorters.new);
   }
-  const selIds = (id) => ui(id).sel.filter(byId);
+  const selectedId = (id) => {
+    const value = ui(id).sel;
+    return typeof value === "string" && byId(value) ? value : null;
+  };
   const emptyBox = (title, text, cta = "") => `<div class="empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">${title}</h3><p class="t-sm t-mute">${text}</p>${cta}</div></div>`;
   const seg = (act, list, cur) => `<div class="seg" role="group">${list.map(([v, label, tip]) => `<button type="button" class="${String(v) === String(cur) ? "is-active" : ""}" data-act="${act}" data-v="${esc(v)}" ${tip ? `data-tip="${esc(tip)}" aria-label="${esc(tip)}"` : ""} aria-pressed="${String(v) === String(cur)}">${label}</button>`).join("")}</div>`;
   const opts = (list, cur) => list.map(([v, label]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(label)}</option>`).join("");
@@ -222,19 +225,14 @@
   const kv = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
   const insSec = (title, body) => `<section class="ins-sec"><span class="eyebrow">${esc(title)}</span>${body}</section>`;
 
-  const selBar = (n) => (n
-    ? `<span class="nm-selbar"><b>Đã chọn ${n}</b><button class="btn btn-sm btn-danger" data-act="lb-del">${ic("trash")}Xóa</button><button class="btn btn-sm btn-ghost" data-act="lb-sel-clear">Bỏ chọn</button></span>`
-    : `<button class="btn btn-sm btn-ghost" data-act="lb-sel-all">Chọn tất cả</button>`);
-
   function browseView(id) {
     const sc = scope(id);
     const u = ui(id);
     if (sc.col && !colById(sc.col)) return emptyBox("Collection không còn tồn tại", "Collection này đã bị xóa. Tài nguyên bên trong vẫn còn trong thư viện.");
     const list = items(sc);
     const base = baseList(sc);
-    const sel = new Set(selIds(id));
+    const selected = selectedId(id);
     const type = sc.type ? T[sc.type] : null;
-    const chk = (x) => `<input type="checkbox" class="lb-chk" data-act="lb-tog" data-id="${x.id}" ${sel.has(x.id) ? "checked" : ""} aria-label="Chọn ${esc(x.name)}">`;
 
     const f = filt();
     const chip = (act, v, label) => `<span class="tag">${label}<button type="button" class="tag-x" data-act="${act}" data-v="${esc(v)}" aria-label="Bỏ lọc ${esc(label)}">${ic("x")}</button></span>`;
@@ -248,57 +246,39 @@
       body = filtered
         ? emptyBox("Không có tài nguyên nào khớp", "Thử từ khóa khác hoặc bỏ bộ lọc.", `<button class="btn" data-act="lb-clear-filter">Xóa bộ lọc</button>`)
         : sc.col
-          ? emptyBox("Collection này chưa có tài nguyên", "Chọn tài nguyên ở các màn hình Images, Sounds, Videos, Prompts rồi thêm vào collection, hoặc upload thẳng vào đây.", `<div class="empty-act"><button class="btn btn-primary" data-act="lb-upload-menu">${ic("upload")}Upload…</button></div>`)
+          ? emptyBox("Collection này chưa có tài nguyên", "Chọn tài nguyên ở các màn hình Images, Sounds, Videos, Prompts rồi chuyển chúng vào collection này, hoặc upload thẳng vào đây.", `<div class="empty-act"><button class="btn btn-primary" data-act="lb-upload-menu">${ic("upload")}Upload…</button></div>`)
           : emptyBox(`Chưa có ${type.noun} nào`, `Upload ${type.noun} vào thư viện chung để dùng lại trong mọi project. ${esc(type.hint)}.`, `<div class="empty-act"><button class="btn btn-primary" data-act="lb-upload" data-v="${type.key}">${ic("upload")}Upload ${type.noun}</button>${sc.type === "prompt" ? `<button class="btn" data-act="lb-upload" data-v="prompt" data-w="write">${ic("pen")}Viết prompt</button>` : ""}</div>`);
     } else if (view() === "grid") {
       const gp = hasRatio(sc.type) ? gridPref(sc.type) : null;
-      body = `<div class="lb-grid ${sc.type === "prompt" ? "is-wide" : ""}" ${gp ? `style="--lb-min:${gp.size}px;--lb-ar:${gp.ratio}"` : ""}>${list.map((x) => `<div class="lb-card ${sel.has(x.id) ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" data-lb-open="${x.id}" title="${esc(x.name)}">
-          ${media(x)}${chk(x)}
+      body = `<div class="lb-grid ${sc.type === "prompt" ? "is-wide" : ""}" ${gp ? `style="--lb-min:${gp.size}px;--lb-ar:${gp.ratio}"` : ""}>${list.map((x) => `<div class="lb-card ${selected === x.id ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" data-lb-open="${x.id}" title="${esc(x.name)}">
+          ${media(x)}
           <div class="lb-card-b"><div class="lb-name t-ink">${sc.col ? `<span class="lb-tic">${ic(T[x.type].icon)}</span>` : ""}<span class="lb-name-t">${esc(x.name)}</span></div>
           <div class="t-sm t-mute lb-sub">${esc(metaText(x))} · ${LB.bytes(x.size)}</div></div></div>`).join("")}</div>`;
     } else {
-      const rows = list.map((x) => `<tr class="${sel.has(x.id) ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" data-lb-open="${x.id}">
-        <td class="chk"><input type="checkbox" class="nm-chk" data-act="lb-tog" data-id="${x.id}" ${sel.has(x.id) ? "checked" : ""} aria-label="Chọn ${esc(x.name)}"></td>
+      const rows = list.map((x) => `<tr class="${selected === x.id ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" data-lb-open="${x.id}">
         <td><div class="nm-title">${x.type === "sound" ? playBtn(x, "is-sm") : x.type === "video" ? `<span class="lb-thv">${thumb(x)}${playBtn(x, "is-sm")}</span>` : thumb(x)}<div class="lb-rname"><div class="t-ink">${esc(x.name)}</div>${sc.col ? `<div class="t-sm t-mute">${typeBadge(x)}</div>` : ""}</div></div></td>
         <td class="mono t-mute">${esc(metaText(x))}</td><td class="num">${LB.bytes(x.size)}</td>
         <td>${tagsHtml(x, 2)}</td>
-        <td class="t-sm t-mute lb-cols">${colsOf(x).map((c) => esc(c.name)).join(", ") || "—"}</td>
+        <td class="t-sm t-mute lb-cols">${collectionOf(x) ? esc(collectionOf(x).name) : "—"}</td>
         <td class="mono t-mute">${esc((x.added || "").slice(0, 10))}</td></tr>`).join("");
-      const all = list.every((x) => sel.has(x.id));
-      body = `<table class="table"><thead><tr><th class="chk"><input type="checkbox" class="nm-chk" data-act="lb-sel-all" ${all ? "checked" : ""} aria-label="Chọn tất cả"></th><th>Tên</th><th>${sc.type === "image" ? "Kích thước" : sc.type === "prompt" ? "Độ dài" : "Thông số"}</th><th class="num">Dung lượng</th><th>Tags</th><th>Collection</th><th>Thêm lúc</th></tr></thead><tbody>${rows}</tbody></table>`;
+      body = `<table class="table"><thead><tr><th>Tên</th><th>${sc.type === "image" ? "Kích thước" : sc.type === "prompt" ? "Độ dài" : "Thông số"}</th><th class="num">Dung lượng</th><th>Tags</th><th>Collection</th><th>Thêm lúc</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     const title = sc.col ? `<span class="nv-ttl">${ic("folder")}<span class="t-ink">${esc(colById(sc.col).name)}</span></span>` : "";
     return `<div class="nv lb">
       ${bar(
         `${title}<label class="search"><span class="sr-only">Tìm tài nguyên</span><input id="lb-q" class="input" type="search" value="${esc(u.q)}" placeholder="${sc.type === "prompt" ? "Tìm theo tên, tag hoặc nội dung…" : "Tìm theo tên hoặc tag…"}" data-on="lb-q"></label>
-         <span class="t-sm t-mute" id="lb-count">${count(list, type ? type.noun : "tài nguyên")}${base.length !== list.length ? ` / ${base.length}` : ""}</span><span id="lb-selbar">${list.length ? selBar(sel.size) : ""}</span>${chips}`,
+         <span class="t-sm t-mute" id="lb-count">${count(list, type ? type.noun : "tài nguyên")}${base.length !== list.length ? ` / ${base.length}` : ""}</span>${chips}`,
         `${hasRatio(sc.type) && view() === "grid" ? `<span class="lb-size" data-tip="Kích thước xem trước">${ic("image")}<input type="range" class="range" min="110" max="360" step="10" value="${gridPref(sc.type).size}" data-on="lb-size" aria-label="Kích thước xem trước"></span>${seg("lb-ratio", RATIOS.map(([v, label]) => [v, ic(`ratio-${v.replace("/", "-")}`), `Tỉ lệ ${label}`]), gridPref(sc.type).ratio)}` : ""}<select class="select" data-change="lb-sort" aria-label="Sắp xếp">${opts([["new", "Mới nhất"], ["name", "Tên A–Z"], ["size", "Dung lượng"]], u.sort)}</select>
          ${seg("lb-view", [["grid", ic("frames"), "Dạng lưới"], ["list", ic("list"), "Dạng danh sách"]], view())}
          ${sc.type === "prompt" ? `<button class="btn btn-sm" data-act="lb-upload" data-v="prompt" data-w="write">${ic("pen")}Viết prompt</button>` : ""}
          ${type ? `<button class="btn btn-sm btn-primary" data-act="lb-upload" data-v="${type.key}">${ic("upload")}Upload</button>` : `<button class="btn btn-sm btn-primary" data-act="lb-upload-menu">${ic("upload")}Upload…</button>`}`,
       )}
-      <div class="nv-body lb-body"><div class="nv-scroll ${sel.size ? "has-sel" : ""}" data-keep="lb">${body}</div></div>
+      <div class="nv-body lb-body"><div class="nv-scroll ${selected ? "has-sel" : ""}" data-keep="lb">${body}</div></div>
     </div>`;
   }
 
-  function applySel() {
-    const id = A.S.active;
-    const ids = new Set(selIds(id));
-    A.$$("#editor [data-lb-open]").forEach((el) => {
-      const on = ids.has(el.dataset.lbOpen);
-      el.classList.toggle("is-selected", on);
-      const c = el.querySelector('input[data-act="lb-tog"]');
-      if (c) c.checked = on;
-    });
-    const list = items(scope(id));
-    const all = A.$('#editor input[data-act="lb-sel-all"]');
-    if (all) all.checked = ids.size > 0 && list.every((x) => ids.has(x.id));
-    const sb = A.$("#lb-selbar");
-    if (sb) sb.innerHTML = list.length ? selBar(ids.size) : "";
-    A.$("#editor .nv-scroll")?.classList.toggle("has-sel", ids.size > 0);
-    A.renderInspector();
-  }
+  function applySel() { A.rerender(); }
 
   const field = (label, id, control) => `<div class="field"><label for="${id}">${label}</label>${control}</div>`;
 
@@ -311,10 +291,8 @@
       <datalist id="lb-tag-sug">${sug.map((t) => `<option value="${esc(t)}"></option>`).join("")}</datalist></div>`;
   }
   function colEditor(x) {
-    const free = st().collections.filter((c) => !x.cols.includes(c.id));
     return `<div class="field"><label for="lb-col-add">Collection</label>
-      <div class="tags">${colsOf(x).map((c) => `<span class="tag lb-ctag">${ic("folder")}${esc(c.name)}<button type="button" class="tag-x" data-act="lb-col-del" data-id="${x.id}" data-c="${c.id}" aria-label="Gỡ khỏi ${esc(c.name)}">${ic("x")}</button></span>`).join("") || `<span class="t-sm t-mute">Chưa thuộc collection nào.</span>`}</div>
-      <select id="lb-col-add" class="select" data-change="lb-col-add"><option value="">Thêm vào collection…</option>${free.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}<option value="__new">＋ Collection mới…</option></select></div>`;
+      <select id="lb-col-add" class="select" data-change="lb-col-add"><option value="" ${x.collectionId ? "" : "selected"}>Chưa thuộc collection nào</option>${st().collections.map((c) => `<option value="${c.id}" ${x.collectionId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="__new">＋ Collection mới…</option></select></div>`;
   }
   function inspectorStage(x) {
     if (x.type === "sound") return `<div class="lb-ins-wave">${playBtn(x)}${scroller(x, 5)}${timeLabel(x)}</div>`;
@@ -339,18 +317,7 @@
       <section class="ins-sec ins-form">${tagEditor([x.id], x.tags)}${colEditor(x)}
         ${field("Quyền sử dụng", "lb-f-rights", `<select id="lb-f-rights" class="select" data-change="lb-edit" data-id="${x.id}" data-f="rights">${opts(Object.entries(LB.RIGHTS), x.rights)}</select><span class="field-hint">Bạn chịu trách nhiệm bảo đảm có quyền dùng tài nguyên này cho mục đích dự kiến.</span>`)}</section>
       ${insSec("Thông tin", kv(rows))}
-      ${insSec("Đang dùng trong", x.used.length ? `<div class="lb-used">${x.used.map((u) => `<div class="t-sm">${ic("folder")}<span>${esc(u.name)}</span></div>`).join("")}</div>` : `<span class="t-sm t-mute">Chưa project nào dùng tài nguyên này.</span>`)}
       <section class="ins-sec ins-actions">${x.type === "prompt" ? `<button class="btn" data-act="lb-copy" data-id="${x.id}">${ic("copy")}Sao chép</button>` : `<button class="btn" data-act="lb-open-preview" data-id="${x.id}">${ic(x.type === "image" ? "image" : "play")}Xem</button>`}<button class="btn btn-danger" data-act="lb-del" data-id="${x.id}">${ic("trash")}Xóa</button></section>`;
-  }
-  function multiPanel(list, sc) {
-    const total = list.reduce((a, x) => a + x.size, 0);
-    return `<section class="ins-sec"><span class="eyebrow">Đã chọn ${list.length} tài nguyên</span>
-        ${list.slice(0, 6).map((x) => `<button type="button" class="nm-recent" data-act="lb-tog" data-id="${x.id}" aria-label="Bỏ chọn ${esc(x.name)}">${thumb(x, "is-xs")}<span class="tree-label">${esc(x.name)}</span>${ic("x")}</button>`).join("")}
-        ${list.length > 6 ? `<span class="t-sm t-mute">và ${list.length - 6} mục khác</span>` : ""}
-        ${kv([["Tổng dung lượng", LB.bytes(total)]])}</section>
-      <section class="ins-sec ins-form"><span class="eyebrow">Áp dụng cho tất cả</span>${tagEditor(list.map((x) => x.id), [], true)}
-        <div class="field"><label for="lb-col-add">Collection</label><select id="lb-col-add" class="select" data-change="lb-col-add"><option value="">Thêm vào collection…</option>${st().collections.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}<option value="__new">＋ Collection mới…</option></select></div></section>
-      <section class="ins-sec ins-actions">${sc.col ? `<button class="btn" data-act="lb-unlink">${ic("x")}Gỡ khỏi collection</button>` : ""}<button class="btn btn-danger" data-act="lb-del">${ic("trash")}Xóa ${list.length}</button><button class="btn btn-ghost" data-act="lb-sel-clear">Bỏ chọn</button></section>`;
   }
   function typePanel(type) {
     const t = T[type];
@@ -358,17 +325,16 @@
     const tags = new Map();
     all.forEach((x) => x.tags.forEach((g) => tags.set(g, (tags.get(g) || 0) + 1)));
     const top = [...tags.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-    const cols = st().collections.map((c) => [c, all.filter((x) => x.cols.includes(c.id)).length]).filter(([, n]) => n);
-    return `${insSec(`Thư viện ${t.label.toLowerCase()}`, kv([[`Số ${t.noun}`, all.length], ["Dung lượng", LB.bytes(all.reduce((a, x) => a + x.size, 0))], ["Chưa phân loại", all.filter((x) => !x.cols.length).length], ["Định dạng", esc(t.exts.map((e) => `.${e}`).join(" "))], ["Giới hạn", LB.bytes(t.max)]]))}
+    const cols = st().collections.map((c) => [c, all.filter((x) => x.collectionId === c.id).length]).filter(([, n]) => n);
+    return `${insSec(`Thư viện ${t.label.toLowerCase()}`, kv([[`Số ${t.noun}`, all.length], ["Dung lượng", LB.bytes(all.reduce((a, x) => a + x.size, 0))], ["Chưa phân loại", all.filter((x) => !x.collectionId).length], ["Định dạng", esc(t.exts.map((e) => `.${e}`).join(" "))], ["Giới hạn", LB.bytes(t.max)]]))}
       <section class="ins-sec"><span class="eyebrow">Thêm ${t.noun}</span><button class="btn btn-block" data-act="lb-upload" data-v="${type}">${ic("upload")}Upload ${t.noun}…</button>${type === "prompt" ? `<button class="btn btn-block" data-act="lb-upload" data-v="prompt" data-w="write">${ic("pen")}Viết prompt mới</button>` : ""}<span class="field-hint">Có thể kéo thả file vào vùng danh sách.</span></section>
       ${top.length ? `<section class="ins-sec"><span class="eyebrow">Tags phổ biến</span><span class="tags">${top.map(([g, n]) => `<button type="button" class="tag lb-tagbtn" data-act="lb-ftag" data-v="${esc(g)}">${esc(g)} <span class="mono t-mute">${n}</span></button>`).join("")}</span></section>` : ""}
       ${cols.length ? `<section class="ins-sec"><span class="eyebrow">Collection</span>${cols.map(([c, n]) => `<button type="button" class="nm-recent" data-act="lb-open-col" data-id="${c.id}">${ic("folder")}<span class="tree-label">${esc(c.name)}</span><span class="mono t-mute">${n}</span></button>`).join("")}</section>` : ""}`;
   }
   function browseInspector(id) {
     const sc = scope(id);
-    const sel = selIds(id).map(byId);
-    if (sel.length === 1) return assetPanel(sel[0]);
-    if (sel.length > 1) return multiPanel(sel, sc);
+    const selected = selectedId(id);
+    if (selected) return assetPanel(byId(selected));
     return sc.col ? colPanel(colById(sc.col), false) : typePanel(sc.type);
   }
 
@@ -396,11 +362,9 @@
     if (!pendingDel.length) return;
     const list = pendingDel.map(byId);
     const one = list.length === 1;
-    const used = list.filter((x) => x.used.length);
     A.modal({
       title: one ? "Xóa tài nguyên" : `Xóa ${list.length} tài nguyên`, eyebrow: CAP,
       body: `<div class="del-list">${list.slice(0, 8).map((x) => `<div class="del-row">${thumb(x, "is-md")}<div><div class="t-ink">${esc(x.name)}</div><div class="t-sm t-mute">${esc(T[x.type].label)} · ${LB.bytes(x.size)}</div></div></div>`).join("")}${list.length > 8 ? `<span class="t-sm t-mute">và ${list.length - 8} mục khác</span>` : ""}</div>
-        ${used.length ? `<div class="ld-warn">${ic("alert")}<span>${used.length === 1 ? `“${esc(used[0].name)}” đang được dùng trong ${used[0].used.length} project (${esc(used[0].used.map((u) => u.name).join(", "))})` : `${used.length} tài nguyên đang được project sử dụng`}. Các project đó sẽ mất tham chiếu tới ${used.length === 1 ? "nó" : "chúng"}.</span></div>` : ""}
         <div class="ld-warn">${ic("alert")}<span>File sẽ bị xóa khỏi thư mục <span class="path">library\\</span> của workspace. Không thể hoàn tác.</span></div>`,
       foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-danger" data-act="lb-del-confirm">${ic("trash")}Xóa${one ? "" : ` ${list.length}`}</button>`,
     });
@@ -433,7 +397,7 @@
       body: `<div class="lbp"><div class="lbp-stage">${stage(x)}</div>
         <aside class="lbp-side">${kv([["Mã", `<span class="mono">${esc(x.id)}</span>`], ["Thông số", esc(metaText(x))], ["Dung lượng", LB.bytes(x.size)], ["Thêm lúc", `<span class="mono">${esc(x.added || "—")}</span>`], ["Quyền dùng", esc(LB.RIGHTS[x.rights])]])}
           ${x.tags.length ? `<div><span class="eyebrow">Tags</span><div class="tags lb-pt">${x.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></div>` : ""}
-          ${x.cols.length ? `<div><span class="eyebrow">Collection</span><div class="tags lb-pt">${colsOf(x).map((c) => `<span class="tag lb-ctag">${ic("folder")}${esc(c.name)}</span>`).join("")}</div></div>` : ""}</aside></div>`,
+          ${collectionOf(x) ? `<div><span class="eyebrow">Collection</span><div class="tags lb-pt"><span class="tag lb-ctag">${ic("folder")}${esc(collectionOf(x).name)}</span></div></div>` : ""}</aside></div>`,
       foot: `<button class="btn" data-act="lb-pv-prev" ${PV.i <= 0 ? "disabled" : ""}>${ic("chev-l")}Trước</button><button class="btn" data-act="lb-pv-next" ${PV.i >= n - 1 ? "disabled" : ""}>Sau${ic("chev-r")}</button><span class="spacer"></span><button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
     });
     player.paint();
@@ -451,10 +415,10 @@
     const cols = st().collections;
     const needle = (u.q || "").trim().toLowerCase();
     const tags = tagStats().filter((r) => !needle || r.t.includes(needle)).sort((a, b) => b.n - a.n || a.t.localeCompare(b.t));
-    const unfiled = st().assets.filter((x) => !x.cols.length).length;
+    const unfiled = st().assets.filter((x) => !x.collectionId).length;
     const colRows = cols.map((c) => `<tr tabindex="0" data-act="ct-sel" data-k="col" data-id="${c.id}" class="${sel?.k === "col" && sel.id === c.id ? "is-selected" : ""}">
         <td><div class="nm-title">${ic("folder")}<div><div class="t-ink">${esc(c.name)}</div><div class="t-sm t-mute lb-desc">${esc(c.desc || "Không có mô tả")}</div></div></div></td>
-        <td>${cntRow(counts((x) => x.cols.includes(c.id)))}</td>
+        <td>${cntRow(counts((x) => x.collectionId === c.id))}</td>
         <td class="row-actions"><button class="btn btn-sm btn-ghost" data-act="lb-open-col" data-id="${c.id}" data-tip="Mở collection">${ic("chev-r")}Mở</button></td></tr>`).join("");
     const tagRows = tags.map((r) => `<tr tabindex="0" data-act="ct-sel" data-k="tag" data-id="${esc(r.t)}" class="${sel?.k === "tag" && sel.id === r.t ? "is-selected" : ""}">
         <td><span class="tag">${esc(r.t)}</span></td><td>${cntRow(r.c)}</td><td class="num mono t-mute">${r.n}</td></tr>`).join("");
@@ -462,7 +426,7 @@
       ${bar(`<span class="nv-ttl">${ic("tag")}<span class="t-ink">Collections &amp; tags</span></span><span class="t-sm t-mute">${cols.length} collection · ${st().tagList.length} tag · ${unfiled} tài nguyên chưa phân loại</span>`,
         `<button class="btn btn-sm" data-act="ct-new-tag">${ic("plus")}Tag</button><button class="btn btn-sm btn-primary" data-act="ct-new-col">${ic("plus")}Collection</button>`)}
       <div class="nv-body lb-ct">
-        <section class="lb-ct-pane"><header class="lb-ct-h"><span class="eyebrow">Collections</span><span class="t-sm t-mute">Một tài nguyên có thể thuộc nhiều collection, thuộc mọi loại.</span></header>
+        <section class="lb-ct-pane"><header class="lb-ct-h"><span class="eyebrow">Collections</span><span class="t-sm t-mute">Mỗi tài nguyên thuộc tối đa một collection; collection có thể chứa mọi loại.</span></header>
           <div class="nv-scroll" data-keep="ct-col">${cols.length ? `<table class="table"><thead><tr><th>Collection</th><th>Tài nguyên</th><th></th></tr></thead><tbody>${colRows}</tbody></table>`
             : emptyBox("Chưa có collection nào", "Collection gom các tài nguyên thuộc cùng một chủ đề, ví dụ bối cảnh của một tác phẩm hoặc bộ nhận diện kênh.", `<button class="btn btn-primary" data-act="ct-new-col">${ic("plus")}Tạo collection</button>`)}</div></section>
         <section class="lb-ct-pane"><header class="lb-ct-h"><span class="eyebrow">Tags</span><label class="search"><span class="sr-only">Tìm tag</span><input id="ct-q" class="input" type="search" value="${esc(u.q || "")}" placeholder="Tìm tag…" data-on="ct-q"></label></header>
@@ -472,7 +436,7 @@
   }
 
   function colPanel(c, withOpen) {
-    const cn = counts((x) => x.cols.includes(c.id));
+    const cn = counts((x) => x.collectionId === c.id);
     const total = Object.values(cn).reduce((a, b) => a + b, 0);
     return `<section class="ins-sec ins-form"><span class="eyebrow">Collection</span>
         ${field("Tên", "ct-f-name", `<input id="ct-f-name" class="input" value="${esc(c.name)}" data-change="ct-col-edit" data-id="${c.id}" data-f="name" autocomplete="off">`)}
@@ -495,7 +459,7 @@
     const sel = CT().sel;
     if (sel?.k === "col" && colById(sel.id)) return colPanel(colById(sel.id), true);
     if (sel?.k === "tag" && st().tagList.includes(sel.id)) return tagPanel(sel.id);
-    const unf = counts((x) => !x.cols.length);
+    const unf = counts((x) => !x.collectionId);
     return `${insSec("Phân loại tài nguyên", kv([["Collection", st().collections.length], ["Tag", st().tagList.length], ["Tài nguyên", st().assets.length], ["Chưa phân loại", Object.values(unf).reduce((a, b) => a + b, 0)]]))}
       <section class="ins-sec"><span class="eyebrow">Chưa thuộc collection nào</span>${cntRow(unf)}</section>
       <section class="ins-sec"><span class="eyebrow">Cách phân loại</span><p class="t-sm t-mute">Collection gom tài nguyên theo chủ đề và có thể chứa mọi loại. Tag là nhãn tự do, dùng chung cho cả bốn loại, để lọc nhanh trong từng màn hình.</p></section>`;
@@ -506,7 +470,7 @@
       title: "Tạo collection", eyebrow: CAP,
       body: `<div class="field"><label for="nc-name">Tên collection</label><input id="nc-name" class="input" placeholder="Ví dụ: Bối cảnh chương 1–5" autocomplete="off"><p class="field-err" id="nc-err" hidden></p></div>
         <div class="field"><label for="nc-desc">Mô tả</label><textarea id="nc-desc" class="textarea" rows="3" placeholder="Tùy chọn"></textarea></div>
-        ${assign.length ? `<p class="t-sm t-mute">${assign.length} tài nguyên đang chọn sẽ được thêm vào collection này.</p>` : ""}`,
+        ${assign.length ? `<p class="t-sm t-mute">${assign.length} tài nguyên đang chọn sẽ được chuyển vào collection này.</p>` : ""}`,
       foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-act="ct-new-col-submit" data-ids="${esc(assign.join(","))}">Tạo collection</button>`,
     });
   }
@@ -522,7 +486,7 @@
     const c = colById(id);
     if (!c) return;
     pendingCol = id;
-    const n = st().assets.filter((x) => x.cols.includes(id)).length;
+    const n = st().assets.filter((x) => x.collectionId === id).length;
     A.modal({
       title: "Xóa collection", eyebrow: CAP,
       body: `<p>Xóa collection <b class="t-ink">${esc(c.name)}</b>?</p><div class="ld-warn">${ic("alert")}<span>${n ? `${n} tài nguyên bên trong sẽ được giữ lại trong thư viện, chỉ bị gỡ khỏi collection này.` : "Collection này đang trống."}</span></div>`,
@@ -556,7 +520,7 @@
     const f = filt();
     const cnt = (pred) => st().assets.filter(pred).length;
     const pill = (act, v, label, n, on) => `<button type="button" class="nf-pill ${on ? "is-on" : ""}" data-act="${act}" data-v="${esc(v)}" aria-pressed="${on}" title="${esc(label)} · ${n}"><span class="nf-t">${esc(label)}</span><span class="nf-n mono">${n}</span></button>`;
-    const colOpts = [["", `Tất cả collection (${st().assets.length})`], ["none", `Chưa phân loại (${cnt((x) => !x.cols.length)})`], ...st().collections.map((c) => [c.id, `${c.name} (${cnt((x) => x.cols.includes(c.id))})`])];
+    const colOpts = [["", `Tất cả collection (${st().assets.length})`], ["none", `Chưa phân loại (${cnt((x) => !x.collectionId)})`], ...st().collections.map((c) => [c.id, `${c.name} (${cnt((x) => x.collectionId === c.id)})`])];
     const tags = st().tagList.map((t) => [t, cnt((x) => x.tags.includes(t))]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     return `<div class="nf-label">Collection</div><div class="nf-sel"><select class="select" data-change="lb-fcol-sel" aria-label="Lọc theo collection">${opts(colOpts, f.col)}</select></div>
       <div class="nf-label">Tags</div><div class="nf-pills">${tags.map(([t, n]) => pill("lb-ftag", t, t, n, f.tags.includes(t))).join("") || `<span class="nx-empty">Chưa có tag</span>`}</div>
@@ -566,7 +530,7 @@
   A.EXPLORER_EXTRA.organize = () => {
     const active = A.S.active;
     const rows = st().collections.map((c) => {
-      const n = st().assets.filter((x) => x.cols.includes(c.id)).length;
+      const n = st().assets.filter((x) => x.collectionId === c.id).length;
       return `<div class="tree-row nx-child lb-xcol ${active === `collection:${c.id}` ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="lb-open-col" data-id="${c.id}">${ic("folder")}<span class="tree-label">${esc(c.name)}</span><span class="nx-n mono">${n}</span></div>`;
     }).join("");
     return `<div class="nx-sep"></div>${rows || `<div class="nx-empty">Chưa có collection nào</div>`}<div class="tree-row nx-child lb-xnew" tabindex="0" data-act="ct-new-col">${ic("plus")}<span class="tree-label">Tạo collection</span></div>`;
@@ -576,35 +540,12 @@
   const assign = (ids, fn) => { ids.map(byId).filter(Boolean).forEach((x) => { fn(x); touch(x); }); };
 
   Object.assign(A.ACT, {
-    "lb-sel": (el, e) => {
+    "lb-sel": (el) => {
       const id = A.S.active;
       const u = ui(id);
-      const tid = el.dataset.id;
-      if (e?.shiftKey && u.anchor && byId(u.anchor)) {
-        const order = items(scope(id)).map((x) => x.id);
-        const a = order.indexOf(u.anchor);
-        const b = order.indexOf(tid);
-        if (a >= 0 && b >= 0) u.sel = order.slice(Math.min(a, b), Math.max(a, b) + 1);
-      } else if (e?.ctrlKey || e?.metaKey) {
-        u.sel = u.sel.includes(tid) ? u.sel.filter((x) => x !== tid) : [...u.sel, tid];
-        u.anchor = tid;
-      } else { u.sel = [tid]; u.anchor = tid; }
+      u.sel = el.dataset.id;
       applySel();
     },
-    "lb-tog": (el, e) => {
-      stopEvt(e);
-      const u = ui(A.S.active);
-      u.sel = u.sel.includes(el.dataset.id) ? u.sel.filter((x) => x !== el.dataset.id) : [...u.sel, el.dataset.id];
-      u.anchor = el.dataset.id;
-      applySel();
-    },
-    "lb-sel-all": () => {
-      const u = ui(A.S.active);
-      const ids = items(scope(A.S.active)).map((x) => x.id);
-      u.sel = ids.every((i) => u.sel.includes(i)) ? u.sel.filter((i) => !ids.includes(i)) : [...new Set([...u.sel, ...ids])];
-      applySel();
-    },
-    "lb-sel-clear": () => { ui(A.S.active).sel = []; applySel(); },
     "lb-ratio": (el) => {
       const t = scope(A.S.active).type;
       A.store.set(`lb.grid.${t}`, { ...gridPref(t), ratio: el.dataset.v });
@@ -643,38 +584,30 @@
       if (!x) return;
       (navigator.clipboard?.writeText(x.text) || Promise.reject()).then(() => A.toast("Đã sao chép prompt."), () => A.toast("Không sao chép được. Hãy chọn và sao chép thủ công.", "warning"));
     },
-    "lb-del": (el) => openDelete(el.dataset.id ? [el.dataset.id] : selIds(A.S.active)),
+    "lb-del": (el) => openDelete(el.dataset.id ? [el.dataset.id] : [selectedId(A.S.active)].filter(Boolean)),
     "lb-del-confirm": () => {
       const ids = new Set(pendingDel);
       const n = ids.size;
       const first = byId(pendingDel[0])?.name;
       if (PL.id && ids.has(PL.id)) player.stop();
       st().assets = st().assets.filter((x) => !ids.has(x.id));
-      Object.values(LB.ui).forEach((u) => { u.sel = (u.sel || []).filter((i) => !ids.has(i)); });
+      Object.values(LB.ui).forEach((u) => { if (typeof u.sel === "string" && ids.has(u.sel)) u.sel = null; });
       pendingDel = [];
       A.closeModal();
       refresh();
       A.toast(n === 1 ? `Đã xóa “${first}”.` : `Đã xóa ${n} tài nguyên.`);
     },
     "lb-tag-del": (el) => { const x = byId(el.dataset.id); x.tags = x.tags.filter((t) => t !== el.dataset.t); touch(x); refresh(); },
-    "lb-col-del": (el) => { const x = byId(el.dataset.id); x.cols = x.cols.filter((c) => c !== el.dataset.c); touch(x); refresh(); },
-    "lb-unlink": () => {
-      const sc = scope(A.S.active);
-      const ids = selIds(A.S.active);
-      assign(ids, (x) => { x.cols = x.cols.filter((c) => c !== sc.col); });
-      ui(A.S.active).sel = [];
-      refresh();
-      A.toast(`Đã gỡ ${ids.length} tài nguyên khỏi collection.`);
-    },
+    "lb-col-del": (el) => { const x = byId(el.dataset.id); x.collectionId = null; touch(x); refresh(); },
     "lb-tag-add": (el) => {
-      const ids = selIds(A.S.active);
+      const ids = [selectedId(A.S.active)].filter(Boolean);
       const raw = el.value;
       el.value = "";
       if (!ids.length) return;
       const res = ids.map((i) => addTagTo(byId(i), raw));
-      if (ids.length === 1 && res[0] === "dup") A.toast(`Tag “${LB.normTag(raw)}” đã có.`, "warning");
-      else if (ids.length === 1 && res[0] === "max") A.toast(`Tối đa ${MAX_TAGS} tag cho mỗi tài nguyên.`, "warning");
-      else if (ids.length > 1 && res.includes("ok")) A.toast(`Đã thêm tag “${LB.normTag(raw)}” cho ${res.filter((r) => r === "ok").length} tài nguyên.`);
+      if (res[0] === "dup") A.toast(`Tag “${LB.normTag(raw)}” đã có.`, "warning");
+      else if (res[0] === "max") A.toast(`Tối đa ${MAX_TAGS} tag cho mỗi tài nguyên.`, "warning");
+      else if (res[0] === "ok") A.toast(`Đã thêm tag “${LB.normTag(raw)}”.`);
       ids.forEach((i) => touch(byId(i)));
       refresh();
       A.$("#lb-tag-in")?.focus();
@@ -693,16 +626,16 @@
       const id = `COL-${String(++st().seq.col).padStart(2, "0")}`;
       st().collections.push({ id, name, desc: A.$("#nc-desc").value.trim(), created: A.stamp() });
       const ids = (el.dataset.ids || "").split(",").filter(Boolean);
-      assign(ids, (x) => { if (!x.cols.includes(id)) x.cols.push(id); });
+      assign(ids, (x) => { x.collectionId = id; });
       A.closeModal();
       refresh();
-      A.toast(ids.length ? `Đã tạo “${name}” và thêm ${ids.length} tài nguyên.` : `Đã tạo collection “${name}”.`);
+      A.toast(ids.length ? `Đã tạo “${name}” và chuyển ${ids.length} tài nguyên vào đó.` : `Đã tạo collection “${name}”.`);
     },
     "ct-col-del": (el) => openDeleteCollection(el.dataset.id),
     "ct-col-del-confirm": () => {
       const id = pendingCol;
       const c = colById(id);
-      st().assets.forEach((x) => { x.cols = x.cols.filter((k) => k !== id); });
+      st().assets.forEach((x) => { if (x.collectionId === id) x.collectionId = null; });
       st().collections = st().collections.filter((k) => k.id !== id);
       if (A.S.tabs.includes(`collection:${id}`)) A.closeTab(`collection:${id}`);
       delete A.ITEMS[`collection:${id}`];
@@ -778,13 +711,15 @@
     },
     "lb-col-add": (el) => {
       const v = el.value;
-      const ids = selIds(A.S.active);
-      el.value = "";
-      if (!v || !ids.length) return;
-      if (v === "__new") { openNewCollection(ids); return; }
-      assign(ids, (x) => { if (!x.cols.includes(v)) x.cols.push(v); });
+      const id = selectedId(A.S.active);
+      if (!id) return;
+      if (!v) { const x = byId(id); x.collectionId = null; touch(x); refresh(); return; }
+      if (v === "__new") { openNewCollection([id]); return; }
+      const x = byId(id);
+      x.collectionId = v;
+      touch(x);
       refresh();
-      A.toast(`Đã thêm ${ids.length} tài nguyên vào “${colById(v).name}”.`);
+      A.toast(`Đã chuyển tài nguyên vào “${colById(v).name}”.`);
     },
     "lb-fcol-sel": (el) => { filt().col = el.value; refresh(); },
     "ct-q": (el) => { CT().q = el.value; A.rerender(); },
@@ -828,7 +763,8 @@
     }
     if (e.key === "Enter" && e.target.matches?.("[data-lb-open]")) { openPreview(e.target.dataset.lbOpen); return; }
     const sc = A.S.active in LB.TAB || String(A.S.active).startsWith("collection:");
-    if (e.key === "Delete" && sc && !e.target.matches?.("input,textarea,select") && !$modal() && selIds(A.S.active).length) openDelete(selIds(A.S.active));
+    const selected = selectedId(A.S.active);
+    if (e.key === "Delete" && sc && !e.target.matches?.("input,textarea,select") && !$modal() && selected) openDelete([selected]);
   });
   const $modal = () => A.$("#layer .modal");
 

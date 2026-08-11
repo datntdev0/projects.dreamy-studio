@@ -95,7 +95,7 @@
       foot: `<button class="btn" data-testid="cr-ca-cancel-btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-testid="cr-ca-ok-btn" data-act="cr-char-add-ok">${ic("plus")}Thêm</button>` });
   }
 
-  const UP = { tab: "file", files: [], pick: "", ack: false, save: true };
+  const UP = { tab: "file", files: [], pick: "", rights: "", save: true };
   const IMG = LB.TYPES.image;
   function checkFile(f) {
     const ext = LB.extOf(f.name);
@@ -113,20 +113,20 @@
       body = `<div class="lb-drop is-compact" data-testid="cr-up-drop"><div class="lb-drop-act"><label class="btn" data-testid="cr-up-pick-btn">${UP.files.length ? "Chọn ảnh khác…" : "Chọn ảnh…"}<input type="file" hidden accept="${IMG.exts.map((e) => `.${e}`).join(",")}" data-change="cr-up-file" data-testid="cr-up-input"></label></div><div class="t-sm t-mute">${esc(IMG.hint)}. Nên là một ảnh dài chứa đủ 4 góc: front, back, side, 3/4 nửa người.</div></div>
         <div class="cr-upl" data-testid="cr-up-list">${rows}</div>
         <label class="check" data-testid="cr-up-save"><input type="checkbox" data-testid="cr-up-save-input" data-change="cr-up-save" ${UP.save ? "checked" : ""}><span>Lưu cả vào thư viện Images (collection “Nhân vật”)</span></label>
-        <label class="check" data-testid="cr-up-ack"><input type="checkbox" data-testid="cr-up-ack-input" data-change="cr-up-ack" ${UP.ack ? "checked" : ""}><span>Tôi có quyền sử dụng ảnh này cho mục đích dự kiến. Dreamy Studio không xác minh quyền sử dụng của ảnh bạn tải lên.</span></label>`;
+        <div class="field" data-testid="cr-up-rights"><label for="cr-up-rights-select">Quyền sử dụng</label><select id="cr-up-rights-select" class="select" data-change="cr-up-rights" required><option value="" disabled ${UP.rights ? "" : "selected"}>Chọn quyền sử dụng…</option>${LB.api.opts(Object.entries(LB.RIGHTS), UP.rights)}</select></div>`;
     } else {
       const list = LB.state.assets.filter((a) => a.type === "image").sort((a, b) => Number(b.tags.includes("character")) - Number(a.tags.includes("character")));
       body = `<p class="t-sm t-mute">Chọn một ảnh trong thư viện làm design sheet. Ảnh có tag “character” được xếp lên đầu.</p>
         <div class="cr-lib" data-testid="cr-lib-grid">${list.map((a) => `<button type="button" class="cr-lib-i ${UP.pick === a.id ? "is-on" : ""}" data-testid="cr-lib-${a.id}" data-act="cr-up-pick" data-id="${a.id}" aria-pressed="${UP.pick === a.id}"><span class="cr-lib-th" style="background:${esc(a.bg)}"></span><span class="t-sm ellip">${esc(a.name)}</span></button>`).join("")}</div>`;
     }
-    const ready = UP.tab === "file" ? UP.ack && UP.files.some((f) => !f.err) : !!UP.pick;
+    const ready = UP.tab === "file" ? !!UP.rights && UP.files.some((f) => !f.err) : !!UP.pick;
     A.modal({ title: "Design sheet từ ảnh có sẵn", eyebrow: `Character · ${c.ch.name} · ${c.o.name}`, cls: "modal-lg", testid: "cr-up-modal",
       body: `${tabs}${body}`,
       foot: `<button class="btn" data-testid="cr-up-cancel-btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-testid="cr-up-ok-btn" data-act="cr-up-ok" ${ready ? "" : "disabled"}>${ic("check")}Dùng ảnh này</button>` });
   }
   function openUp(c, tab) {
     UP.files.forEach((f) => URL.revokeObjectURL(f.url));
-    Object.assign(UP, { tab: tab || "file", files: [], pick: "", ack: A.store.get("cr.ack", false), save: true });
+    Object.assign(UP, { tab: tab || "file", files: [], pick: "", rights: "", save: true });
     drawUp(c);
   }
 
@@ -140,9 +140,9 @@
     ["character", "reference"].forEach((t) => { if (!LB.state.tagList.includes(t)) LB.state.tagList.push(t); });
     LB.state.tagList.sort();
   };
-  const charCol = () => (LB.state.collections.some((q) => q.id === "COL-04") ? ["COL-04"] : []);
-  function addLibImage(name, meta, used) {
-    const x = { id: LB.api.nextId("image"), type: "image", name: LB.api.uniqueName("image", name), size: meta.size, tags: ["character", "reference"], cols: charCol(), rights: "own", origin: "Tạo trong Character", used: [{ name: used }], added: A.stamp(), seed: name, meta: { w: meta.w, h: meta.h }, bg: LB.bgFor(name) };
+  const charCol = () => (LB.state.collections.some((q) => q.id === "COL-04") ? "COL-04" : null);
+  function addLibImage(name, meta, rights = "own") {
+    const x = { id: LB.api.nextId("image"), type: "image", name: LB.api.uniqueName("image", name), size: meta.size, tags: ["character", "reference"], collectionId: charCol(), rights, origin: "Tạo trong Character", added: A.stamp(), seed: name, meta: { w: meta.w, h: meta.h }, bg: LB.bgFor(name) };
     LB.state.assets.push(x);
     addTags();
     return x;
@@ -254,7 +254,7 @@
       if (!c) return;
       const name = LB.api.uniqueName("prompt", `${c.ch.name} — ${c.o.name}`);
       const text = c.o.prompt.text;
-      LB.state.assets.push({ id: LB.api.nextId("prompt"), type: "prompt", name, kind: "image", text, size: new Blob([text]).size, tags: ["character", "reference"], cols: charCol(), rights: "own", origin: "Tạo trong app", used: [{ name: c.p.name }], added: A.stamp(), seed: name });
+      LB.state.assets.push({ id: LB.api.nextId("prompt"), type: "prompt", name, kind: "image", text, size: new Blob([text]).size, tags: ["character", "reference"], collectionId: charCol(), rights: "own", origin: "Tạo trong app", added: A.stamp(), seed: name });
       addTags();
       A.toast(`Đã lưu prompt “${name}” vào thư viện.`);
     },
@@ -282,16 +282,13 @@
       if (UP.tab === "lib") {
         if (!UP.pick) return;
         putSheet(o, { src: "lib", libId: UP.pick, at: A.stamp(), rev: Date.now(), ok: false });
-        const a = LB.state.assets.find((q) => q.id === UP.pick);
-        if (a && !a.used.some((u) => u.name === p.name)) a.used.push({ name: p.name });
       } else {
         const f = UP.files.find((q) => !q.err);
-        if (!UP.ack || !f) return;
-        A.store.set("cr.ack", true);
+        if (!UP.rights || !f) return;
         const slot = { src: "upload", url: f.url, name: f.name, size: f.size, at: A.stamp(), rev: Date.now(), ok: false };
         if (UP.save) {
           const [w, h] = await readSize(f.url);
-          slot.saved = addLibImage(f.name, { size: f.size, w, h }, p.name).id;
+          slot.saved = addLibImage(f.name, { size: f.size, w, h }, UP.rights).id;
         }
         putSheet(o, slot);
         UP.files = [];
@@ -337,6 +334,6 @@
       drawUp(c);
     },
     "cr-up-save": (el) => { UP.save = el.checked; },
-    "cr-up-ack": (el) => { const c = CRV.activeCtx(); if (!c) return; UP.ack = el.checked; drawUp(c); },
+    "cr-up-rights": (el) => { const c = CRV.activeCtx(); if (!c) return; UP.rights = el.value; drawUp(c); },
   });
 })();

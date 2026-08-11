@@ -1,14 +1,16 @@
 /*
  * Dreamy Studio prototype.
- *  - Splash lives in 0.splash.html; this page needs an open workspace (js/workspace.js) or goes back to it.
+ *  - Entry pages declare their splash route and initial view through data attributes/configuration.
  *  - Main layout: title bar, activity rail, explorer, editor tabs, inspector / assistant, pipelines panel, status bar.
  *  - Functional screens are "coming soon": each lists the requirements it will cover.
- * Everything is mock; no backend. Open index.html directly in a browser.
+ * Everything is mock; no backend.
  */
 (function () {
   "use strict";
 
   const D = window.DS;
+  const sharedRoot = document.body.dataset.sharedRoot || "shared";
+  const logoSrc = `${sharedRoot}/assets/dreamy-studio-mark.svg`;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -75,6 +77,8 @@
     onOk: null,
   };
 
+  const initialView = window.DS_INITIAL_VIEW || {};
+
   function setPanelSize(panel, size, handle = null) {
     const limits = PANEL_LIMITS[panel];
     const nextSize = Math.max(limits.min, Math.min(limits.max, size));
@@ -91,8 +95,10 @@
   function enterShell(entry) {
     S.workspace = entry;
     S.log = [];
-    S.tabs = ["home"];
-    S.active = "home";
+    const initialRail = D.NAV[initialView.rail] ? initialView.rail : "projects";
+    const initialActive = ITEMS[initialView.active] ? initialView.active : "home";
+    S.tabs = [initialActive];
+    S.active = initialActive;
     S.scroll = {};
     S.renderedFor = null;
     PL.list = [];
@@ -103,7 +109,7 @@
     window.CR?.reseed();
     window.AB?.reseed();
     window.DT?.reseed();
-    S.rail = "projects";
+    S.rail = initialRail;
     S.rightTab = "inspector";
     document.title = `${entry.name} — Dreamy Studio`;
     renderShell();
@@ -182,7 +188,7 @@
       const t = tabInfo(id);
       const on = id === S.active;
       return `<div class="etab ${on ? "is-active" : ""}" role="tab" aria-selected="${on}" tabindex="0" data-act="open" data-id="${id}" title="${esc(t.title)}">
-        ${t.logo ? `<img src="assets/dreamy-studio-mark.svg" alt="">` : ic(t.icon)}<span class="etab-label">${esc(t.title)}</span>
+        ${t.logo ? `<img src="${logoSrc}" alt="">` : ic(t.icon)}<span class="etab-label">${esc(t.title)}</span>
         <button class="etab-close" data-act="close-tab" data-id="${id}" aria-label="Đóng tab" data-tip="Đóng (Ctrl W)">${ic("x")}</button></div>`;
     }).join("")}</div>`;
     $(".etab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -401,7 +407,7 @@
   function openAbout() {
     modal({
       title: "Dreamy Studio", eyebrow: "Giới thiệu", cls: "",
-      body: `<div style="display:flex;gap:16px;align-items:center"><img src="assets/dreamy-studio-mark.svg" width="56" height="56" alt="">
+      body: `<div style="display:flex;gap:16px;align-items:center"><img src="${logoSrc}" width="56" height="56" alt="">
           <div><div class="t-ink">Phiên bản <span class="mono">${esc(D.version)}</span></div><div class="t-sm t-mute">Prototype giao diện — chưa có backend.</div></div></div>
         <p class="t-sm t-mute">Dreamy Studio cung cấp công cụ để người dùng tạo và phân phối nội dung từ tài nguyên do họ tự chọn. Người dùng chịu trách nhiệm bảo đảm mình có quyền sử dụng tài nguyên cho mục đích dự kiến và quyết định nội dung được gửi đến dịch vụ bên ngoài hoặc đăng lên tài khoản của mình.</p>`,
       foot: `<button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
@@ -709,7 +715,12 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
-    const workspace = WS.requireCurrent();
+    const standalone = document.body.dataset.standalone === "true";
+    const workspace = WS.current() || (standalone ? {
+      ...D.seedWorkspaces[0],
+      name: "Library prototype",
+      path: "Prototype / Library",
+    } : WS.requireCurrent());
     if (workspace) enterShell(workspace);
   });
 })();

@@ -197,7 +197,6 @@
     const all = PJ.resourcesOf(p);
     const kinds = [["all", "Tất cả"], ...Object.entries(PJ.KIND).map(([k, [label]]) => [k, label])];
     const list = u.res === "all" ? all : all.filter((r) => r.kind === u.res);
-    const used = LB.state.assets.filter((x) => x.used.some((o) => o.name === p.name));
     const rows = list.map((r) => `<tr data-testid="pj-res-${r.id}"><td><div class="nm-title"><span class="lb-th is-ic">${ic(PJ.KIND[r.kind][1])}</span><span class="t-ink">${esc(r.name)}</span></div></td>
         <td class="t-mute">${esc(PJ.KIND[r.kind][0])}</td><td><span class="badge ${PJ.RES_STATE[r.state][1]}">${esc(PJ.RES_STATE[r.state][0].toUpperCase())}</span></td>
         <td class="mono t-mute">${r.dur ? LB.dur(r.dur) : "—"}</td><td class="num">${fmtB(r.size)}</td><td class="mono t-mute">${esc(r.at.slice(0, 10))}</td>
@@ -206,7 +205,6 @@
       ? (list.length ? `<table class="table is-nw" data-testid="pj-res-table"><thead><tr><th>Tên</th><th>Loại</th><th>Trạng thái</th><th>Thời lượng</th><th class="num">Dung lượng</th><th>Cập nhật</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : U.empty("Không có tài nguyên loại này", "Chọn loại khác để xem."))
       : U.empty("Project chưa có tài nguyên nào", "Kịch bản, audio, hình ảnh và video do các module tạo ra sẽ nằm trong thư mục project và hiện ở đây.", `<div class="empty-act"><button class="btn" data-act="pj-ws-tab" data-v="overview">Về tổng quan</button></div>`);
     return `<div class="tl-sub" data-testid="pj-res-filter">${U.seg("pj-res-kind", kinds.map(([k, l]) => [k, `${l} <span class="count">${k === "all" ? all.length : all.filter((r) => r.kind === k).length}</span>`]), u.res)}<span class="t-sm t-mute">${fmtB(all.reduce((a, r) => a + r.size, 0))}</span></div>
-      ${used.length ? `<div class="pj-used" data-testid="pj-res-library-used"><span class="eyebrow">Tài nguyên thư viện đang dùng</span><span class="tags">${used.map((x) => `<span class="tag lb-ctag">${ic(LB.TYPES[x.type].icon)}${esc(x.name)}</span>`).join("")}</span></div>` : ""}
       <div class="nv-body"><div class="nv-scroll" data-keep="pj-res">${body}</div></div>`;
   }
 

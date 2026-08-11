@@ -1,0 +1,21 @@
+@if (ids().length) {
+  <ds-dialog [title]="titleKey() | t: { count: ids().length }" [eyebrow]="'library.cap' | t" [closeLabel]="'library.imageDelete.close' | t" data-testid="library-image-delete-dialog-panel" (closed)="close()">
+    <div class="del-list" data-testid="library-image-delete-dialog-list">
+      @for (item of previewItems(); track item.id) {
+        <div class="del-row" data-testid="library-image-delete-dialog-row">
+          <app-library-image-thumb [image]="item" data-testid="library-image-delete-dialog-thumb" />
+          <div data-testid="library-image-delete-dialog-item">
+            <div class="t-ink" data-testid="library-image-delete-dialog-name">{{ item.name }}</div>
+            <div class="t-sm t-mute" data-testid="library-image-delete-dialog-code">{{ code(item) }}</div>
+          </div>
+        </div>
+      }
+      @if (moreCount()) {
+        <span class="t-sm t-mute" data-testid="library-image-delete-dialog-more">{{ "library.imageDelete.more" | t: { count: moreCount() } }}</span>
+      }
+    </div>
+    <div class="ld-warn" role="alert" data-testid="library-image-delete-dialog-warning"><ds-icon name="alert" [size]="15" data-testid="library-image-delete-dialog-warning-icon" /><span data-testid="library-image-delete-dialog-warning-text">{{ "library.imageDelete.warning" | t }}</span></div>
+    <ds-button dialogFoot data-testid="library-image-delete-dialog-cancel" (pressed)="close()">{{ "library.imageDelete.cancel" | t }}</ds-button>
+    <ds-button dialogFoot variant="danger" [disabled]="busy()" data-testid="library-image-delete-dialog-confirm" (pressed)="confirm()"><ds-icon name="trash" [size]="16" data-testid="library-image-delete-dialog-confirm-icon" />{{ confirmKey() | t: { count: ids().length } }}</ds-button>
+  </ds-dialog>
+}

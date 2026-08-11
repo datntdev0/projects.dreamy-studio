@@ -1,0 +1,43 @@
+@if (open() && image(); as item) {
+  <ds-dialog size="xl" [title]="item.name" [eyebrow]="'library.preview.position' | t: { current: position().index + 1, total: position().total }" [closeLabel]="'library.preview.close' | t" data-testid="library-image-preview-dialog-panel" (closed)="close()">
+    <div class="lbp" data-testid="library-image-preview-content">
+      <div class="lbp-stage" data-testid="library-image-preview-stage">
+        @if (source(); as url) {
+          <img class="lbp-img" [src]="url" [alt]="item.name" data-testid="library-image-preview-image" />
+        } @else {
+          <div class="lbp-img is-art" role="img" [attr.aria-label]="item.name" data-testid="library-image-preview-loading"><ds-icon name="image" [size]="32" data-testid="library-image-preview-loading-icon" /></div>
+        }
+      </div>
+      <aside class="lbp-side" data-testid="library-image-preview-side">
+        <dl class="kv" data-testid="library-image-preview-info">
+          <dt data-testid="library-image-preview-code-label">{{ "library.image.info.code" | t }}</dt><dd class="mono" data-testid="library-image-preview-code">{{ code(item) }}</dd>
+          <dt data-testid="library-image-preview-format-label">{{ "library.image.info.format" | t }}</dt><dd data-testid="library-image-preview-format">{{ item.ext.toUpperCase() }}</dd>
+          <dt data-testid="library-image-preview-dimensions-label">{{ "library.image.info.dimensions" | t }}</dt><dd data-testid="library-image-preview-dimensions">{{ dimensions(item) }}</dd>
+          <dt data-testid="library-image-preview-size-label">{{ "library.image.info.size" | t }}</dt><dd data-testid="library-image-preview-size">{{ size(item) }}</dd>
+          <dt data-testid="library-image-preview-added-label">{{ "library.image.info.added" | t }}</dt><dd class="mono" data-testid="library-image-preview-added">{{ added(item) }}</dd>
+          <dt data-testid="library-image-preview-rights-label">{{ "library.image.info.rights" | t }}</dt><dd data-testid="library-image-preview-rights">{{ rightsKey(item.rights) | t }}</dd>
+        </dl>
+        <div data-testid="library-image-preview-tags-section">
+          <span class="eyebrow" data-testid="library-image-preview-tags-label">{{ "library.preview.tags" | t }}</span>
+          <div class="row-badges" data-testid="library-image-preview-tags">
+            @for (tag of item.tags; track tag) {
+              <span class="tag" data-testid="library-image-preview-tag">{{ tag }}</span>
+            }
+          </div>
+        </div>
+        <div data-testid="library-image-preview-collection-section">
+          <span class="eyebrow" data-testid="library-image-preview-collection-label">{{ "library.preview.collection" | t }}</span>
+          @if (hasCollection(item)) {
+            <span class="tag lb-ctag" data-testid="library-image-preview-collection">{{ collectionName(item) }}</span>
+          } @else {
+            <span class="t-sm t-mute" data-testid="library-image-preview-collection-none">{{ "library.image.field.collectionNone" | t }}</span>
+          }
+        </div>
+        <div class="row-actions" data-testid="library-image-preview-navigation">
+          <ds-button size="small" [disabled]="!hasPrevious()" data-testid="library-image-preview-previous" (pressed)="previous()"><ds-icon name="chev-l" [size]="14" data-testid="library-image-preview-previous-icon" />{{ "library.preview.previous" | t }}</ds-button>
+          <ds-button size="small" [disabled]="!hasNext()" data-testid="library-image-preview-next" (pressed)="next()">{{ "library.preview.next" | t }}<ds-icon name="chev-r" [size]="14" data-testid="library-image-preview-next-icon" /></ds-button>
+        </div>
+      </aside>
+    </div>
+  </ds-dialog>
+}

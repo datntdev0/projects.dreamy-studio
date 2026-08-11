@@ -1,0 +1,42 @@
+@if (open()) {
+  <ds-dialog size="large" [title]="'library.upload.title' | t" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
+    <div class="lb-drop" [class.is-compact]="items().length" [class.is-over]="over()" role="group" [attr.aria-label]="'library.upload.dropzone' | t" data-testid="library-upload-dialog-dropzone">
+      @if (!items().length) {
+        <ds-icon class="lb-drop-ic" name="upload" [size]="30" data-testid="library-upload-dialog-dropzone-icon" />
+        <div class="lb-drop-t" data-testid="library-upload-dialog-dropzone-title">{{ "library.upload.dropTitle" | t }}</div>
+        <div class="t-sm t-mute" data-testid="library-upload-dialog-dropzone-or">{{ "library.upload.or" | t }}</div>
+      }
+      <ds-button data-testid="library-upload-dialog-pick" (pressed)="pick()">{{ (items().length ? "library.upload.add" : "library.upload.pick") | t }}</ds-button>
+      <div class="t-sm t-mute" data-testid="library-upload-dialog-dropzone-hint">{{ "library.upload.hint" | t }}</div>
+    </div>
+    @if (items().length) {
+      <div class="lbu-queue" data-testid="library-upload-dialog-queue">
+        <table class="table" data-testid="library-upload-dialog-queue-table">
+          <tbody data-testid="library-upload-dialog-queue-body">
+            @for (item of items(); track item.path) {
+              <tr [class.is-muted]="item.check?.status === 'error'" data-testid="library-upload-dialog-queue-row">
+                <td data-testid="library-upload-dialog-queue-name"><div class="lbu-fn" data-testid="library-upload-dialog-file"><ds-icon name="image" [size]="18" data-testid="library-upload-dialog-file-icon" /><div class="lb-rname" data-testid="library-upload-dialog-file-details"><div class="t-ink lbu-name" [attr.title]="item.name" data-testid="library-upload-dialog-file-name">{{ item.name }}</div>@if (message(item)) { <div class="t-sm" [class.lbu-err]="item.check?.status === 'error' || item.run === 'error'" [class.t-mute]="item.check?.status !== 'error' && item.run !== 'error'" data-testid="library-upload-dialog-file-message">{{ message(item) }}</div> }</div></div></td>
+                <td class="num t-mute" data-testid="library-upload-dialog-queue-size">{{ formatSize(item.size) }}</td>
+                <td class="lbu-st" data-testid="library-upload-dialog-queue-status"><span class="badge" [class]="statusClass(item)" data-testid="library-upload-dialog-status-badge">{{ statusKey(item) | t }}</span></td>
+                <td class="row-actions" data-testid="library-upload-dialog-queue-actions">@if (!uploading()) { <ds-button variant="ghost" size="small" [label]="'library.upload.remove' | t: { name: item.name }" data-testid="library-upload-dialog-remove" (pressed)="remove(item.path)"><ds-icon name="x" [size]="16" data-testid="library-upload-dialog-remove-icon" /></ds-button> }</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    <div class="form-2" data-testid="library-upload-dialog-collection-fields">
+      <div class="field" data-testid="library-upload-dialog-collection-field"><label for="library-upload-collection" data-testid="library-upload-dialog-collection-label">{{ "library.upload.collection" | t }}</label><select id="library-upload-collection" class="select" [value]="collectionId() ?? ''" data-testid="library-upload-dialog-collection" (change)="setCollection($event)"><option value="" data-testid="library-upload-dialog-collection-none">{{ "library.upload.collectionNone" | t }}</option>@for (collection of library.collections(); track collection.id) { <option [value]="collection.id" data-testid="library-upload-dialog-collection-option">{{ collection.name }}</option> }</select></div>
+      <div class="field" data-testid="library-upload-dialog-new-collection-field"><label for="library-upload-new-collection" data-testid="library-upload-dialog-new-collection-label">{{ "library.upload.newCollection" | t }}</label><input id="library-upload-new-collection" class="input" [value]="newCollection()" [attr.placeholder]="'library.upload.newCollectionPlaceholder' | t" autocomplete="off" data-testid="library-upload-dialog-new-collection" (input)="setNewCollection($event)" /></div>
+    </div>
+    <div class="form-2" data-testid="library-upload-dialog-image-fields">
+      <div class="field" data-testid="library-upload-dialog-tags-field"><label for="library-upload-tags" data-testid="library-upload-dialog-tags-label">{{ "library.upload.tags" | t }}</label><input id="library-upload-tags" class="input" [value]="tags()" [attr.placeholder]="'library.upload.tagsPlaceholder' | t" autocomplete="off" list="library-upload-tag-suggestions" data-testid="library-upload-dialog-tags" (input)="setTags($event)" /><datalist id="library-upload-tag-suggestions" data-testid="library-upload-dialog-tag-suggestions">@for (tag of library.tags(); track tag.tag) { <option [value]="tag.tag" data-testid="library-upload-dialog-tag-suggestion"></option> }</datalist><span class="field-hint" data-testid="library-upload-dialog-tags-hint">{{ "library.upload.tagsHint" | t }}</span></div>
+      <div class="field" data-testid="library-upload-dialog-rights-field"><label for="library-upload-rights" data-testid="library-upload-dialog-rights-label">{{ "library.upload.rights" | t }}</label><select id="library-upload-rights" class="select" [value]="rights()" required data-testid="library-upload-dialog-rights" (change)="setRights($event)"><option value="" disabled data-testid="library-upload-dialog-rights-placeholder">{{ "library.upload.rightsPlaceholder" | t }}</option>@for (right of rightOptions; track right) { <option [value]="right" data-testid="library-upload-dialog-rights-option">{{ rightKey(right) | t }}</option> }</select><span class="field-hint" data-testid="library-upload-dialog-rights-hint">{{ "library.upload.rightsHint" | t }}</span></div>
+    </div>
+    <ng-container ngProjectAs="[dialogFoot]">
+      <ds-button [disabled]="uploading()" data-testid="library-upload-dialog-cancel" (pressed)="close()">{{ "library.upload.cancel" | t }}</ds-button>
+      <span class="spacer" data-testid="library-upload-dialog-spacer"></span>
+      <ds-button variant="primary" [disabled]="!canSubmit()" data-testid="library-upload-dialog-submit" (pressed)="submit()">@if (uploading()) { {{ "library.upload.submitting" | t }} } @else { {{ "library.upload.submit" | t: { count: validCount() } }} }</ds-button>
+    </ng-container>
+  </ds-dialog>
+}

@@ -1,7 +1,8 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { KindCounts, LibraryCollection, LibraryError, LibrarySummary, LibraryTag, TaxonomySelection } from "./library.models";
+import { TabsService } from "../../../layout/tabs.service";
+import { KindCounts, LibraryCollection, LibraryError, LibraryKind, LibrarySummary, LibraryTag, TaxonomySelection } from "./library.models";
 import { hasCollectionName, searchTags, sortTags, toLibraryError } from "./library.rules";
 
 const EMPTY_COUNTS: KindCounts = { image: 0, sound: 0, video: 0, prompt: 0 };
@@ -25,10 +26,23 @@ function withoutCollection(items: LibraryCollection[], id: number): LibraryColle
   return rows;
 }
 
+function increment(value: number): number {
+  return value + 1;
+}
+
+function withoutFilterTag(tag: string, item: string): boolean {
+  return item !== tag;
+}
+
+function isKnownTag(known: Set<string>, tag: string): boolean {
+  return known.has(tag);
+}
+
 @Injectable({ providedIn: "root" })
 export class LibraryService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly workspace = inject(WorkspaceService);
+  private readonly tabs = inject(TabsService);
   private readonly workspacePath = computed(this.currentPath.bind(this));
   private epoch = 0;
   readonly collections = signal<LibraryCollection[]>([]);
@@ -39,7 +53,11 @@ export class LibraryService {
   readonly error = signal<LibraryError | null>(null);
   readonly taxonomySelection = signal<TaxonomySelection | null>(null);
   readonly taxonomyQuery = signal("");
+  readonly revision = signal(0);
+  readonly filterCollection = signal<number | "none" | null>(null);
+  readonly filterTags = signal<string[]>([]);
   readonly visibleTags = computed(this.buildVisibleTags.bind(this));
+  readonly filtersActive = computed(this.buildFiltersActive.bind(this));
 
   constructor() { effect(this.syncWorkspace.bind(this)); }
 
@@ -54,7 +72,7 @@ export class LibraryService {
         this.ipc.invoke<LibraryTag[]>("library_tag_list"),
         this.ipc.invoke<LibrarySummary>("library_summary"),
       ]);
-      if (epoch === this.epoch) { this.collections.set(collections); this.tags.set(sortTags(tags)); this.summary.set(summary); this.loaded.set(true); this.pruneSelection(); }
+      if (epoch === this.epoch) { this.collections.set(collections); this.tags.set(sortTags(tags)); this.summary.set(summary); this.loaded.set(true); this.pruneSelection(); this.pruneFilters(); }
     } catch (cause) { if (epoch === this.epoch) this.error.set(toLibraryError(cause)); }
     finally { if (epoch === this.epoch) this.loading.set(false); }
   }
@@ -74,11 +92,13 @@ export class LibraryService {
     this.collections.set(withoutCollection(this.collections(), id));
     if (this.taxonomySelection()?.kind === "col" && this.taxonomySelection()?.id === id) this.taxonomySelection.set(null);
     await this.refreshSummary();
+    this.pruneFilters();
+    this.revision.update(increment);
     return count;
   }
-  async renameTag(from: string, to: string): Promise<LibraryTag> { const result = await this.ipc.invoke<LibraryTag>("library_tag_rename", { from, to }); await this.loadTags(); this.taxonomySelection.set({ kind: "tag", id: result.tag }); return result; }
-  async mergeTag(from: string, into: string): Promise<LibraryTag> { const result = await this.ipc.invoke<LibraryTag>("library_tag_merge", { from, into }); await this.loadTags(); this.taxonomySelection.set({ kind: "tag", id: result.tag }); return result; }
-  async deleteTag(tag: string): Promise<number> { const count = await this.ipc.invoke<number>("library_tag_delete", { tag }); await this.loadTags(); this.taxonomySelection.set(null); return count; }
+  async renameTag(from: string, to: string): Promise<LibraryTag> { const result = await this.ipc.invoke<LibraryTag>("library_tag_rename", { from, to }); await this.loadTags(); this.taxonomySelection.set({ kind: "tag", id: result.tag }); this.revision.update(increment); return result; }
+  async mergeTag(from: string, into: string): Promise<LibraryTag> { const result = await this.ipc.invoke<LibraryTag>("library_tag_merge", { from, into }); await this.loadTags(); this.taxonomySelection.set({ kind: "tag", id: result.tag }); this.revision.update(increment); return result; }
+  async deleteTag(tag: string): Promise<number> { const count = await this.ipc.invoke<number>("library_tag_delete", { tag }); await this.loadTags(); this.taxonomySelection.set(null); this.revision.update(increment); return count; }
   collectionById(id: number): LibraryCollection | undefined { return this.collections().find(this.hasId.bind(null, id)); }
   select(selection: TaxonomySelection | null): void { this.taxonomySelection.set(selection); }
   selectCollection(id: number): void { this.select({ kind: "col", id }); }
@@ -86,11 +106,19 @@ export class LibraryService {
   setTaxonomyQuery(query: string): void { this.taxonomyQuery.set(query); }
   isDuplicateCollection(name: string, exceptId?: number): boolean { return hasCollectionName(this.collections(), name, exceptId); }
   async refreshSummary(): Promise<void> { this.summary.set(await this.ipc.invoke<LibrarySummary>("library_summary")); }
-  reset(): void { this.epoch += 1; this.collections.set([]); this.tags.set([]); this.summary.set(EMPTY_SUMMARY); this.loaded.set(false); this.loading.set(false); this.error.set(null); this.taxonomySelection.set(null); this.taxonomyQuery.set(""); }
-  private async loadTags(): Promise<void> { this.tags.set(sortTags(await this.ipc.invoke<LibraryTag[]>("library_tag_list"))); await this.refreshSummary(); this.pruneSelection(); }
+  async refreshTaxonomy(): Promise<void> { await this.load(); }
+  toggleFilterTag(tag: string): void { this.filterTags.set(this.filterTags().includes(tag) ? this.filterTags().filter(withoutFilterTag.bind(null, tag)) : [...this.filterTags(), tag]); }
+  setFilterCollection(value: number | "none" | null): void { this.filterCollection.set(value); }
+  clearFilters(): void { this.filterCollection.set(null); this.filterTags.set([]); }
+  viewTag(kind: LibraryKind, tag: string): void { void kind; this.filterTags.set([tag]); this.tabs.openImages(); }
+  reset(): void { this.epoch += 1; this.collections.set([]); this.tags.set([]); this.summary.set(EMPTY_SUMMARY); this.loaded.set(false); this.loading.set(false); this.error.set(null); this.taxonomySelection.set(null); this.taxonomyQuery.set(""); this.clearFilters(); }
+  private async loadTags(): Promise<void> { this.tags.set(sortTags(await this.ipc.invoke<LibraryTag[]>("library_tag_list"))); await this.refreshSummary(); this.pruneSelection(); this.pruneFilters(); }
   private buildVisibleTags(): LibraryTag[] { return searchTags(this.tags(), this.taxonomyQuery()); }
   private hasId(id: number, collection: LibraryCollection): boolean { return collection.id === id; }
   private pruneSelection(): void { const selected = this.taxonomySelection(); if (!selected) return; const exists = selected.kind === "col" ? this.collections().some(this.hasId.bind(this, Number(selected.id))) : this.tags().some(this.hasTag.bind(null, String(selected.id))); if (!exists) this.taxonomySelection.set(null); }
+  private pruneFilters(): void { const collection = this.filterCollection(); if (typeof collection === "number" && !this.collections().some(this.hasId.bind(this, collection))) this.filterCollection.set(null); const known = new Set(this.tags().map(this.tagName)); this.filterTags.set(this.filterTags().filter(isKnownTag.bind(null, known))); }
+  private buildFiltersActive(): boolean { return this.filterCollection() !== null || this.filterTags().length > 0; }
+  private tagName(item: LibraryTag): string { return item.tag; }
   private hasTag(tag: string, item: LibraryTag): boolean { return item.tag === tag; }
   private currentPath(): string | null { return this.workspace.current()?.path ?? null; }
   private syncWorkspace(): void { const path = this.workspacePath(); untracked(this.applyWorkspace.bind(this, path)); }

@@ -13,4 +13,4 @@ export interface LibraryTag { tag: string; counts: KindCounts; }
 export interface LibrarySummary { assets: KindCounts; unfiled: KindCounts; }
 export interface TaxonomySelection { kind: "col" | "tag"; id: number | string; }
 export interface LibraryError { code: string; detail: string; }
-export type LibraryErrorCode = "no_workspace" | "invalid_input" | "collection_not_found" | "collection_exists" | "tag_exists" | "tag_not_found" | "invalid_tag" | "db" | "task" | "unknown";
+export type LibraryErrorCode = "no_workspace" | "invalid_input" | "collection_not_found" | "collection_exists" | "tag_exists" | "tag_not_found" | "invalid_tag" | "image_not_found" | "image_unsupported" | "image_too_large" | "image_unreadable" | "tag_limit" | "io" | "db" | "task" | "unknown";

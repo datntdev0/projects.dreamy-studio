@@ -1,0 +1,8 @@
+<span class="lb-media" data-testid="library-image-thumb">
+  @if (source(); as url) {
+    <img [src]="url" [alt]="image().name" />
+  } @else {
+    <ds-icon name="image" [size]="32" />
+  }
+  <span class="badge lb-ext">{{ image().ext }}</span>
+</span>

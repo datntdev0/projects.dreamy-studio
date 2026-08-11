@@ -11,9 +11,15 @@ export class LibraryExplorer {
   readonly library = inject(LibraryService);
   readonly tabs = inject(TabsService);
   readonly open = signal(true);
+  readonly filtersOpen = signal(true);
   toggle(): void { this.open.set(!this.open()); }
+  toggleFilters(): void { this.filtersOpen.set(!this.filtersOpen()); }
   isActive(id: number): boolean { return this.tabs.activeId() === collectionTabId(id); }
+  isImagesActive(): boolean { return this.tabs.isActive("images"); }
+  isTagOn(tag: string): boolean { return this.library.filterTags().includes(tag); }
   openCollections(): void { this.tabs.openCollections(); }
+  openImages(): void { this.tabs.openImages(); }
   openCollection(id: number, name: string): void { this.library.selectCollection(id); this.tabs.openCollection(id, name); }
+  setCollectionFilter(event: Event): void { const value = (event.target as HTMLSelectElement).value; this.library.setFilterCollection(value === "" ? null : value === "none" ? "none" : Number(value)); }
   count(counts: Parameters<typeof sumCounts>[0]): number { return sumCounts(counts); }
 }

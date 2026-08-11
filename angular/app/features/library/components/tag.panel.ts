@@ -23,6 +23,7 @@ export class LibraryTagPanel {
   }
   merge(event: Event): void { const target = (event.target as HTMLSelectElement).value; if (target) this.dialogs.openTagConfirmation({ kind: "merge", tag: this.tag(), target }); }
   delete(): void { this.dialogs.openTagConfirmation({ kind: "delete", tag: this.tag(), target: "" }); }
+  viewResources(kind: LibraryKind): void { this.library.viewTag(kind, this.tag()); }
   private matchesTag(row: LibraryTag): boolean { return row.tag === this.tag(); }
   private matchesOtherTag(next: string, old: string, row: LibraryTag): boolean { return row.tag === next && row.tag !== old; }
 }

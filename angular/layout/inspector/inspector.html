@@ -72,6 +72,15 @@
             @if (editorTabs.active().collectionId; as collectionId) { <app-library-collection-panel [collectionId]="collectionId" /> }
           </div>
         }
+        @case ("images") {
+          <div data-testid="inspector-images-host">
+            @if (images.selected()) {
+              <app-library-image-panel data-testid="inspector-image-panel" />
+            } @else {
+              <app-library-images-panel data-testid="inspector-images-panel" />
+            }
+          </div>
+        }
         @default {
           <div class="ins-empty" data-testid="inspector-empty"><p>{{ "main.inspector.empty" | t }}</p></div>
         }

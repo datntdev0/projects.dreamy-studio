@@ -13,7 +13,10 @@ import { ProjectService } from "../../app/features/project/project.service";
 import { LibraryService } from "../../app/features/library/library.service";
 import { LibraryTaxonomyPanel } from "../../app/features/library/components/taxonomy.panel";
 import { LibraryCollectionPanel } from "../../app/features/library/components/collection.panel";
+import { LibraryImagePanel } from "../../app/features/library/components/image.panel";
+import { LibraryImagesPanel } from "../../app/features/library/components/images.panel";
 import { LibraryTagPanel } from "../../app/features/library/components/tag.panel";
+import { LibraryImageService } from "../../app/features/library/library.images.service";
 import { LayoutService } from "../layout.service";
 import { RIGHT_TABS } from "../layout.models";
 import { TabsService } from "../tabs.service";
@@ -21,7 +24,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-inspector",
   standalone: true,
-  imports: [Button, Icon, I18nPipe, NovelLibraryPanel, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryTagPanel],
+  imports: [Button, Icon, I18nPipe, NovelLibraryPanel, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryImagesPanel, LibraryTagPanel],
   templateUrl: "./inspector.html",
 })
 export class Inspector {
@@ -30,6 +33,7 @@ export class Inspector {
   readonly novels = inject(NovelService);
   readonly projects = inject(ProjectService);
   readonly library = inject(LibraryService);
+  readonly images = inject(LibraryImageService);
   readonly reader = inject(NovelReaderService);
   readonly tabs = RIGHT_TABS;
 }

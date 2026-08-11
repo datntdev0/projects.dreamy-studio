@@ -61,6 +61,9 @@
           @if (tabs.active().collectionId !== null) { <app-library-collection [collectionId]="tabs.active().collectionId!" data-testid="library-collection" /> }
         </div>
       }
+      @case ("images") {
+        <div class="nv-host" data-testid="editor-images-host"><app-library-images data-testid="editor-images" /></div>
+      }
       @default {
         @if (workspace(); as ws) {
           <section class="home" data-testid="home-panel">

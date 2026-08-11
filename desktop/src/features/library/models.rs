@@ -3,6 +3,15 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
 
+fn deserialize_optional_collection_id<'de, D>(
+    deserializer: D,
+) -> Result<Option<Option<i64>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<i64>::deserialize(deserializer).map(Some)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LibraryKind {
@@ -85,6 +94,72 @@ pub struct LibrarySummary {
     pub unfiled: KindCounts,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImageRights {
+    Own,
+    Licensed,
+    Free,
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryImage {
+    pub id: i64,
+    pub name: String,
+    pub ext: String,
+    pub size: i64,
+    pub width: u32,
+    pub height: u32,
+    pub rights: ImageRights,
+    pub origin: String,
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageUploadInput {
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub rights: ImageRights,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImagePatch {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub rights: Option<ImageRights>,
+    #[serde(default, deserialize_with = "deserialize_optional_collection_id")]
+    pub collection_id: Option<Option<i64>>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageCheck {
+    pub path: String,
+    pub name: String,
+    pub size: i64,
+    pub status: ImageCheckStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImageCheckStatus {
+    Ok,
+    Warn,
+    Error,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LibraryErrorCode {
@@ -95,6 +170,12 @@ pub enum LibraryErrorCode {
     TagExists,
     TagNotFound,
     InvalidTag,
+    ImageNotFound,
+    ImageUnsupported,
+    ImageTooLarge,
+    ImageUnreadable,
+    TagLimit,
+    Io,
     Db,
     Task,
 }
@@ -109,6 +190,12 @@ impl LibraryErrorCode {
             Self::TagExists => "tag_exists",
             Self::TagNotFound => "tag_not_found",
             Self::InvalidTag => "invalid_tag",
+            Self::ImageNotFound => "image_not_found",
+            Self::ImageUnsupported => "image_unsupported",
+            Self::ImageTooLarge => "image_too_large",
+            Self::ImageUnreadable => "image_unreadable",
+            Self::TagLimit => "tag_limit",
+            Self::Io => "io",
             Self::Db => "db",
             Self::Task => "task",
         }
@@ -149,5 +236,11 @@ impl From<rusqlite::Error> for LibraryError {
 impl From<StorageError> for LibraryError {
     fn from(error: StorageError) -> Self {
         Self::new(LibraryErrorCode::Db, error.to_string())
+    }
+}
+
+impl From<std::io::Error> for LibraryError {
+    fn from(error: std::io::Error) -> Self {
+        Self::new(LibraryErrorCode::Io, error.to_string())
     }
 }

@@ -1,15 +1,29 @@
 use crate::features::library::collections;
+use crate::features::library::images;
+use crate::features::library::images::ImageFiles;
+use crate::features::library::images::ImageFormat;
+use crate::features::library::images::NewImage;
 use crate::features::library::models::CollectionInput;
 use crate::features::library::models::CollectionPatch;
+use crate::features::library::models::ImageCheck;
+use crate::features::library::models::ImageCheckStatus;
+use crate::features::library::models::ImagePatch;
+use crate::features::library::models::ImageUploadInput;
 use crate::features::library::models::LibraryCollection;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
+use crate::features::library::models::LibraryImage;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
+use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
+use chrono::Utc;
+use rusqlite::TransactionBehavior;
+use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -114,16 +128,241 @@ impl LibraryWorkspace {
         let _guard = self.lock();
         crate::features::library::tags::delete(&mut self.database()?, tag)
     }
+
+    pub fn image_inspect(&self, paths: &[String]) -> LibraryResult<Vec<ImageCheck>> {
+        let db = self.database()?;
+        paths
+            .iter()
+            .map(|path| inspect_image(db.connection(), path))
+            .collect()
+    }
+
+    pub fn image_upload(&self, path: &str, input: ImageUploadInput) -> LibraryResult<LibraryImage> {
+        let _guard = self.lock();
+        let source = Path::new(path);
+        let metadata = fs::metadata(source)?;
+        let size = metadata.len();
+        let format = image_format(source)?;
+        if size == 0 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::ImageUnreadable,
+                "image file is empty",
+            ));
+        }
+        if size > images::IMAGE_MAX_BYTES as u64 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::ImageTooLarge,
+                "image file exceeds 25 MiB",
+            ));
+        }
+        let bytes = fs::read(source)?;
+        let (width, height) = images::probe(&bytes, format)?;
+        let name = image_name(source)?;
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let name = images::unique_name(&tx, &name, None)?;
+        let image = NewImage {
+            name,
+            ext: format.extension().to_string(),
+            size: size as i64,
+            width,
+            height,
+            rights: input.rights,
+            collection_id: input.collection_id,
+            tags: input.tags,
+        };
+        let id = images::insert(&tx, &image, &format_timestamp(Utc::now()))?;
+        let files = ImageFiles::new(self.dir.clone());
+        if let Err(error) = files.write_original(id, format, &bytes) {
+            let _ = files.remove(id, format);
+            return Err(error);
+        }
+        if let Err(error) = files.write_thumb(id, format, &bytes) {
+            let _ = files.remove(id, format);
+            return Err(error);
+        }
+        if let Err(error) = tx.commit() {
+            let _ = files.remove(id, format);
+            return Err(error.into());
+        }
+        images::get(db.connection(), id)
+    }
+
+    pub fn image_list(&self) -> LibraryResult<Vec<LibraryImage>> {
+        images::list(self.database()?.connection())
+    }
+
+    pub fn image_update(&self, id: i64, patch: ImagePatch) -> LibraryResult<LibraryImage> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let image = images::update(&tx, id, &patch, &format_timestamp(Utc::now()))?;
+        tx.commit()?;
+        Ok(image)
+    }
+
+    pub fn image_delete(&self, ids: &[i64]) -> LibraryResult<usize> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let deleted = images::delete(&tx, ids)?;
+        tx.commit()?;
+        let files = ImageFiles::new(self.dir.clone());
+        for (id, ext) in &deleted {
+            if let Some(format) = ImageFormat::from_extension(ext) {
+                let _ = files.remove(*id, format);
+            }
+        }
+        Ok(deleted.len())
+    }
+
+    pub fn image_thumb(&self, id: i64) -> LibraryResult<String> {
+        let _guard = self.lock();
+        let image = images::get(self.database()?.connection(), id)?;
+        let format = image_format_from_extension(&image.ext)?;
+        let bytes = ImageFiles::new(self.dir.clone()).read_thumb(id, format)?;
+        Ok(images::data_url(thumb_mime(format), &bytes))
+    }
+
+    pub fn image_read(&self, id: i64) -> LibraryResult<String> {
+        let image = images::get(self.database()?.connection(), id)?;
+        let format = image_format_from_extension(&image.ext)?;
+        let bytes = ImageFiles::new(self.dir.clone()).read_original(id, format)?;
+        Ok(images::data_url(format.mime(), &bytes))
+    }
+}
+
+fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<ImageCheck> {
+    let source = Path::new(path);
+    let name = source
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(path)
+        .to_string();
+    let metadata = match fs::metadata(source) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(image_check(
+                path,
+                name,
+                0,
+                ImageCheckStatus::Error,
+                "not_found",
+            ));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let size = metadata.len() as i64;
+    if size == 0 {
+        return Ok(image_check(
+            path,
+            name,
+            size,
+            ImageCheckStatus::Error,
+            "empty",
+        ));
+    }
+    if image_format(source).is_err() {
+        return Ok(image_check(
+            path,
+            name,
+            size,
+            ImageCheckStatus::Error,
+            "unsupported",
+        ));
+    }
+    if metadata.len() > images::IMAGE_MAX_BYTES as u64 {
+        return Ok(image_check(
+            path,
+            name,
+            size,
+            ImageCheckStatus::Error,
+            "too_large",
+        ));
+    }
+    if images::unique_name(conn, &name, None)? != name {
+        return Ok(image_check(
+            path,
+            name,
+            size,
+            ImageCheckStatus::Warn,
+            "duplicate_name",
+        ));
+    }
+    Ok(image_check(path, name, size, ImageCheckStatus::Ok, ""))
+}
+
+fn image_check(
+    path: &str,
+    name: String,
+    size: i64,
+    status: ImageCheckStatus,
+    code: &str,
+) -> ImageCheck {
+    ImageCheck {
+        path: path.to_string(),
+        name,
+        size,
+        status,
+        code: (!code.is_empty()).then(|| code.to_string()),
+    }
+}
+
+fn image_format(path: &Path) -> LibraryResult<ImageFormat> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    image_format_from_extension(extension)
+}
+
+fn image_format_from_extension(extension: &str) -> LibraryResult<ImageFormat> {
+    ImageFormat::from_extension(extension).ok_or_else(|| {
+        LibraryError::new(
+            LibraryErrorCode::ImageUnsupported,
+            format!("unsupported image extension: {extension}"),
+        )
+    })
+}
+
+fn image_name(path: &Path) -> LibraryResult<String> {
+    path.file_name()
+        .and_then(|value| value.to_str())
+        .map(str::to_string)
+        .filter(|name| !name.is_empty())
+        .ok_or_else(|| {
+            LibraryError::new(
+                LibraryErrorCode::InvalidInput,
+                "image path has no file name",
+            )
+        })
+}
+
+fn thumb_mime(format: ImageFormat) -> &'static str {
+    if format == ImageFormat::Jpeg {
+        "image/jpeg"
+    } else {
+        "image/png"
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::features::library::collections::AssetTable;
+    use crate::features::library::models::ImageRights;
     use crate::features::library::models::LibraryKind;
     use crate::infra::storage::migrator::Migrator;
     use crate::infra::storage::migrator::workspace_scripts;
     use rusqlite::Connection;
+    use std::fs;
+    use std::io::Cursor;
     use std::sync::atomic::AtomicBool;
     use tempfile::TempDir;
 
@@ -161,6 +400,129 @@ mod tests {
             name: name.to_string(),
             description: String::new(),
         }
+    }
+
+    fn png_bytes() -> Vec<u8> {
+        let image = image::DynamicImage::new_rgb8(2, 1);
+        let mut bytes = Cursor::new(Vec::new());
+        image.write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+        bytes.into_inner()
+    }
+
+    fn image_input(collection_id: Option<i64>) -> ImageUploadInput {
+        ImageUploadInput {
+            collection_id,
+            tags: vec!["Example".to_string()],
+            rights: ImageRights::Own,
+        }
+    }
+
+    fn write_png(dir: &TempDir, name: &str) -> PathBuf {
+        let path = dir.path().join(name);
+        fs::write(&path, png_bytes()).unwrap();
+        path
+    }
+
+    #[test]
+    fn uploads_lists_and_renames_duplicate_images() {
+        let (dir, workspace) = fixture();
+        let path = write_png(&dir, "forest.png");
+        let first = workspace
+            .image_upload(path.to_str().unwrap(), image_input(None))
+            .unwrap();
+        let second = workspace
+            .image_upload(path.to_str().unwrap(), image_input(None))
+            .unwrap();
+        assert_eq!(first.name, "forest.png");
+        assert_eq!(second.name, "forest (2).png");
+        assert_eq!(workspace.image_list().unwrap().len(), 2);
+        assert!(
+            workspace
+                .image_thumb(first.id)
+                .unwrap()
+                .starts_with("data:image/png;base64,")
+        );
+        assert!(
+            workspace
+                .image_read(first.id)
+                .unwrap()
+                .starts_with("data:image/png;base64,")
+        );
+    }
+
+    #[test]
+    fn uploads_reject_unsupported_and_oversize_images() {
+        let (dir, workspace) = fixture();
+        let unsupported = dir.path().join("image.bmp");
+        fs::write(&unsupported, b"bitmap").unwrap();
+        assert_eq!(
+            workspace
+                .image_upload(unsupported.to_str().unwrap(), image_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::ImageUnsupported
+        );
+        let large = dir.path().join("large.png");
+        fs::write(&large, vec![0; images::IMAGE_MAX_BYTES + 1]).unwrap();
+        assert_eq!(
+            workspace
+                .image_upload(large.to_str().unwrap(), image_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::ImageTooLarge
+        );
+    }
+
+    #[test]
+    fn failed_upload_removes_its_row_and_files() {
+        let (dir, workspace) = fixture();
+        let path = write_png(&dir, "blocked.png");
+        fs::write(dir.path().join("library"), b"not a directory").unwrap();
+        assert_eq!(
+            workspace
+                .image_upload(path.to_str().unwrap(), image_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::Io
+        );
+        assert!(workspace.image_list().unwrap().is_empty());
+        assert!(!dir.path().join("library").join("images").exists());
+    }
+
+    #[test]
+    fn deleting_images_removes_workspace_files() {
+        let (dir, workspace) = fixture();
+        let path = write_png(&dir, "remove.png");
+        let image = workspace
+            .image_upload(path.to_str().unwrap(), image_input(None))
+            .unwrap();
+        let original = dir
+            .path()
+            .join("library")
+            .join("images")
+            .join(format!("{}.png", image.id));
+        assert!(original.exists());
+        assert_eq!(workspace.image_delete(&[image.id]).unwrap(), 1);
+        assert!(!original.exists());
+        assert!(workspace.image_list().unwrap().is_empty());
+    }
+
+    #[test]
+    fn image_counts_appear_in_summary_and_collections() {
+        let (dir, workspace) = fixture();
+        let collection = workspace.collection_create(collection("Images")).unwrap();
+        let filed = write_png(&dir, "filed.png");
+        let unfiled = write_png(&dir, "unfiled.png");
+        workspace
+            .image_upload(filed.to_str().unwrap(), image_input(Some(collection.id)))
+            .unwrap();
+        workspace
+            .image_upload(unfiled.to_str().unwrap(), image_input(None))
+            .unwrap();
+        let summary = workspace.summary().unwrap();
+        assert_eq!(summary.assets.image, 2);
+        assert_eq!(summary.unfiled.image, 1);
+        assert_eq!(workspace.collection_list().unwrap()[0].counts.image, 1);
     }
 
     #[test]
@@ -431,6 +793,15 @@ mod tests {
             db.connection()
                 .query_row(
                     "SELECT name FROM sqlite_master WHERE name = 'ws_library_collections'",
+                    [],
+                    |row| row.get::<_, String>(0)
+                )
+                .is_ok()
+        );
+        assert!(
+            db.connection()
+                .query_row(
+                    "SELECT name FROM sqlite_master WHERE name = 'ws_library_images'",
                     [],
                     |row| row.get::<_, String>(0)
                 )

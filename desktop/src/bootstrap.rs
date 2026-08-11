@@ -61,6 +61,14 @@ pub fn run() {
             commands::library::library_tag_rename,
             commands::library::library_tag_merge,
             commands::library::library_tag_delete,
+            commands::library::library_image_pick,
+            commands::library::library_image_inspect,
+            commands::library::library_image_upload,
+            commands::library::library_image_list,
+            commands::library::library_image_update,
+            commands::library::library_image_delete,
+            commands::library::library_image_thumb,
+            commands::library::library_image_read,
         ])
         .setup(setup)
         .build(tauri::generate_context!())

@@ -17,7 +17,10 @@ pub struct AssetTable {
     pub table: &'static str,
 }
 
-pub const ASSET_TABLES: &[AssetTable] = &[];
+pub const ASSET_TABLES: &[AssetTable] = &[AssetTable {
+    kind: LibraryKind::Image,
+    table: "ws_library_images",
+}];
 
 fn now_text() -> String {
     format_timestamp(Utc::now())

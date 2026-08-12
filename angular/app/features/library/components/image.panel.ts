@@ -21,10 +21,10 @@ import { LibraryImageThumb } from "./image-thumb.component";
 const MAX_TAGS = 12;
 
 const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
-  own: "library.image.rights.own",
-  licensed: "library.image.rights.licensed",
-  free: "library.image.rights.free",
-  other: "library.image.rights.other",
+  own: "library.rights.own",
+  licensed: "library.rights.licensed",
+  free: "library.rights.free",
+  other: "library.rights.other",
 };
 
 @Component({

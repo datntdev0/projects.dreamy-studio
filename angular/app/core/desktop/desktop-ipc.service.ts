@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { Channel, invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { Event as TauriEvent } from "@tauri-apps/api/event";
 import { DragDropEvent, getCurrentWebview } from "@tauri-apps/api/webview";
 import { DesktopIpcError } from "./desktop-ipc-error";
@@ -27,6 +27,10 @@ export class DesktopIpcService {
 
   channel<TMessage>(onMessage: (message: TMessage) => void): Channel<TMessage> {
     return new Channel<TMessage>(onMessage);
+  }
+
+  mediaUrl(scheme: string, path: string): string {
+    return convertFileSrc(path, scheme);
   }
 
   async onDragDrop(

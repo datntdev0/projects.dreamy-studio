@@ -1,4 +1,5 @@
 import { ImageSort, LibraryImage } from "./library.images.models";
+export { fileNameOf, formatBytes } from "./library.rules";
 
 export interface ImageFilters {
   query: string;
@@ -63,19 +64,6 @@ export function imageCode(id: number): string {
   return `IMG-${String(id).padStart(4, "0")}`;
 }
 
-export function formatBytes(value: number): string {
-  if (value <= 0) {
-    return "0 B";
-  }
-  if (value >= 1024 * 1024 * 1024) {
-    return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-  }
-  if (value >= 1024 * 1024) {
-    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return `${Math.max(1, Math.round(value / 1024))} KB`;
-}
-
 export function dimensionsText(image: LibraryImage): string {
   return `${image.width}×${image.height}`;
 }
@@ -93,10 +81,4 @@ export function filterImages(items: LibraryImage[], filters: ImageFilters): Libr
   const searched = searchImages(items, filters.query);
   const filtered = searched.filter(matchesCollection.bind(null, filters.collection)).filter(hasTag.bind(null, filters.tags));
   return sortImages(filtered, filters.sort);
-}
-
-export function fileNameOf(path: string): string {
-  const segments = path.split(/[\\/]/);
-  const last = segments[segments.length - 1];
-  return last || path;
 }

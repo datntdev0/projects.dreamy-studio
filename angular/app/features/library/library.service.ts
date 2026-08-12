@@ -7,6 +7,15 @@ import { hasCollectionName, searchTags, sortTags, toLibraryError } from "./libra
 
 const EMPTY_COUNTS: KindCounts = { image: 0, sound: 0, video: 0, prompt: 0 };
 const EMPTY_SUMMARY: LibrarySummary = { assets: EMPTY_COUNTS, unfiled: EMPTY_COUNTS };
+const VIEW_STORAGE_KEY = "ds.lb.view";
+
+function readViewMode(): "grid" | "list" {
+  try { return localStorage.getItem(VIEW_STORAGE_KEY) === "list" ? "list" : "grid"; } catch { return "grid"; }
+}
+
+function storeViewMode(value: "grid" | "list"): void {
+  try { localStorage.setItem(VIEW_STORAGE_KEY, value); } catch { return; }
+}
 
 function replaceCollection(items: LibraryCollection[], id: number, next: LibraryCollection): LibraryCollection[] {
   const rows: LibraryCollection[] = [];
@@ -54,6 +63,7 @@ export class LibraryService {
   readonly taxonomySelection = signal<TaxonomySelection | null>(null);
   readonly taxonomyQuery = signal("");
   readonly revision = signal(0);
+  readonly viewMode = signal<"grid" | "list">(readViewMode());
   readonly filterCollection = signal<number | "none" | null>(null);
   readonly filterTags = signal<string[]>([]);
   readonly visibleTags = computed(this.buildVisibleTags.bind(this));
@@ -109,8 +119,9 @@ export class LibraryService {
   async refreshTaxonomy(): Promise<void> { await this.load(); }
   toggleFilterTag(tag: string): void { this.filterTags.set(this.filterTags().includes(tag) ? this.filterTags().filter(withoutFilterTag.bind(null, tag)) : [...this.filterTags(), tag]); }
   setFilterCollection(value: number | "none" | null): void { this.filterCollection.set(value); }
+  setViewMode(value: "grid" | "list"): void { this.viewMode.set(value); storeViewMode(value); }
   clearFilters(): void { this.filterCollection.set(null); this.filterTags.set([]); }
-  viewTag(kind: LibraryKind, tag: string): void { void kind; this.filterTags.set([tag]); this.tabs.openImages(); }
+  viewTag(kind: LibraryKind, tag: string): void { this.filterTags.set([tag]); if (kind === "sound") this.tabs.openSounds(); else this.tabs.openImages(); }
   reset(): void { this.epoch += 1; this.collections.set([]); this.tags.set([]); this.summary.set(EMPTY_SUMMARY); this.loaded.set(false); this.loading.set(false); this.error.set(null); this.taxonomySelection.set(null); this.taxonomyQuery.set(""); this.clearFilters(); }
   private async loadTags(): Promise<void> { this.tags.set(sortTags(await this.ipc.invoke<LibraryTag[]>("library_tag_list"))); await this.refreshSummary(); this.pruneSelection(); this.pruneFilters(); }
   private buildVisibleTags(): LibraryTag[] { return searchTags(this.tags(), this.taxonomyQuery()); }

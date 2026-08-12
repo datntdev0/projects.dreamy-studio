@@ -1,0 +1,47 @@
+import { Injectable, Signal, WritableSignal, computed, inject, signal } from "@angular/core";
+import { LibraryImageService } from "./library.images.service";
+import { AssetRow, toAssetRows } from "./library.assets.models";
+import { filterAssetRows } from "./library.assets.rules";
+import { AssetRef } from "./library.models";
+import { LibraryService } from "./library.service";
+import { LibrarySoundService } from "./library.sounds.service";
+import { SoundSort } from "./library.sounds.models";
+
+function sameRef(left: AssetRef, right: AssetRef): boolean { return left.kind === right.kind && left.id === right.id; }
+function containsRef(rows: AssetRow[], ref: AssetRef): boolean { return rows.some(sameRowRef.bind(null, ref)); }
+function sameRowRef(ref: AssetRef, row: AssetRow): boolean { return sameRef(row.ref, ref); }
+
+@Injectable({ providedIn: "root" })
+export class LibraryCollectionAssetsService {
+  private readonly images = inject(LibraryImageService);
+  private readonly sounds = inject(LibrarySoundService);
+  private readonly library = inject(LibraryService);
+  private readonly rowsByCollection = new Map<number, Signal<AssetRow[]>>();
+  private readonly selections = new Map<number, WritableSignal<AssetRef | null>>();
+
+  readonly query = signal("");
+  readonly sort = signal<SoundSort>("new");
+
+  rows(collectionId: number): Signal<AssetRow[]> {
+    const existing = this.rowsByCollection.get(collectionId);
+    if (existing) return existing;
+    const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
+    this.rowsByCollection.set(collectionId, rows);
+    return rows;
+  }
+
+  selectedRef(collectionId: number): AssetRef | null {
+    const ref = this.selection(collectionId)();
+    return ref !== null && containsRef(this.rows(collectionId)(), ref) ? ref : null;
+  }
+
+  select(collectionId: number, ref: AssetRef | null): void { this.selection(collectionId).set(ref); }
+
+  private selection(collectionId: number): WritableSignal<AssetRef | null> {
+    const existing = this.selections.get(collectionId);
+    if (existing) return existing;
+    const selected = signal<AssetRef | null>(null);
+    this.selections.set(collectionId, selected);
+    return selected;
+  }
+}

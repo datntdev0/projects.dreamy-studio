@@ -6,7 +6,7 @@ export type PanelId = "explorer" | "inspector" | "bottom";
 
 export type RightTabId = "inspector" | "assistant";
 
-export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project" | "images" | "collections" | "collection";
+export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project" | "images" | "sounds" | "collections" | "collection";
 
 export interface RailItem {
   id: RailId;
@@ -39,6 +39,8 @@ export const NOVELS_TAB_ID = "novels";
 export const PROJECTS_TAB_ID = "projects";
 
 export const IMAGES_TAB_ID = "images";
+
+export const SOUNDS_TAB_ID = "sounds";
 
 export const COLLECTIONS_TAB_ID = "collections";
 
@@ -86,6 +88,19 @@ export const IMAGES_TAB: EditorTab = {
   kind: "images",
   icon: "image",
   labelKey: "tabs.images.title",
+  title: "",
+  novelId: null,
+  projectId: null,
+  collectionId: null,
+  rail: "library",
+  closable: true,
+};
+
+export const SOUNDS_TAB: EditorTab = {
+  id: SOUNDS_TAB_ID,
+  kind: "sounds",
+  icon: "music",
+  labelKey: "tabs.sounds.title",
   title: "",
   novelId: null,
   projectId: null,

@@ -1,5 +1,5 @@
 @if (open() && image(); as item) {
-  <ds-dialog size="xl" [title]="item.name" [eyebrow]="'library.preview.position' | t: { current: position().index + 1, total: position().total }" [closeLabel]="'library.preview.close' | t" data-testid="library-image-preview-dialog-panel" (closed)="close()">
+  <ds-dialog size="xl" [title]="item.name" [eyebrow]="'library.preview.position' | t: { kind: 'library.kind.image' | t, current: position().index + 1, total: position().total }" [closeLabel]="'library.preview.close' | t" data-testid="library-image-preview-dialog-panel" (closed)="close()">
     <div class="lbp" data-testid="library-image-preview-content">
       <div class="lbp-stage" data-testid="library-image-preview-stage">
         @if (source(); as url) {

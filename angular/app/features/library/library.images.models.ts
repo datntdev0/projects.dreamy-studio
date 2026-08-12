@@ -1,7 +1,9 @@
-export type ImageRights = "own" | "licensed" | "free" | "other";
+import { ASSET_RIGHTS, AssetCheck, AssetCheckStatus, AssetPatch, AssetRights, AssetUploadInput } from "./library.models";
+
+export type ImageRights = AssetRights;
 export type ImageSort = "new" | "name" | "size";
 export type ImageViewMode = "grid" | "list";
-export type ImageCheckStatus = "ok" | "warn" | "error";
+export type ImageCheckStatus = AssetCheckStatus;
 
 export interface LibraryImage {
   id: number;
@@ -18,28 +20,11 @@ export interface LibraryImage {
   updatedAt: string;
 }
 
-export interface ImageCheck {
-  path: string;
-  name: string;
-  size: number;
-  status: ImageCheckStatus;
-  code?: "empty" | "unsupported" | "too_large" | "not_found" | "duplicate_name";
-}
-
-export interface ImagePatch {
-  name?: string;
-  rights?: ImageRights;
-  collectionId?: number | null;
-  tags?: string[];
-}
-
-export interface ImageUploadInput {
-  collectionId?: number;
-  tags: string[];
-  rights: ImageRights;
-}
+export type ImageCheck = AssetCheck;
+export type ImagePatch = AssetPatch;
+export type ImageUploadInput = AssetUploadInput;
 
 export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"] as const;
 export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
-export const IMAGE_RIGHTS: ImageRights[] = ["own", "licensed", "free", "other"];
+export const IMAGE_RIGHTS: ImageRights[] = ASSET_RIGHTS;
 export const IMAGE_RATIOS = [["1/1", "1:1"], ["16/9", "16:9"], ["9/16", "9:16"]] as const;

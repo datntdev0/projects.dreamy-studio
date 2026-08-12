@@ -1,5 +1,5 @@
 @if (open()) {
-  <ds-dialog size="large" [title]="'library.upload.title' | t" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
+  <ds-dialog size="large" [title]="'library.upload.title' | t: { noun: 'library.noun.image' | t }" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
     <div class="lb-drop" [class.is-compact]="items().length" [class.is-over]="over()" role="group" [attr.aria-label]="'library.upload.dropzone' | t" data-testid="library-upload-dialog-dropzone">
       @if (!items().length) {
         <ds-icon class="lb-drop-ic" name="upload" [size]="30" data-testid="library-upload-dialog-dropzone-icon" />

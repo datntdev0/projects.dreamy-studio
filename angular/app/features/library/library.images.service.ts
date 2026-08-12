@@ -7,19 +7,10 @@ import { LibraryError } from "./library.models";
 import { toLibraryError } from "./library.rules";
 import { filterImages } from "./library.images.rules";
 
-const VIEW_STORAGE_KEY = "ds.lb.images.view";
 const GRID_SIZE_STORAGE_KEY = "ds.lb.images.grid-size";
 const GRID_RATIO_STORAGE_KEY = "ds.lb.images.grid-ratio";
 const DEFAULT_GRID_SIZE = 176;
 const DEFAULT_GRID_RATIO = "16/9";
-
-function readViewMode(): ImageViewMode {
-  try {
-    return localStorage.getItem(VIEW_STORAGE_KEY) === "list" ? "list" : "grid";
-  } catch {
-    return "grid";
-  }
-}
 
 function readGridSize(): number {
   try {
@@ -104,7 +95,7 @@ export class LibraryImageService {
   readonly selectedId = signal<number | null>(null);
   readonly query = signal("");
   readonly sort = signal<ImageSort>("new");
-  readonly viewMode = signal<ImageViewMode>(readViewMode());
+  readonly viewMode = this.library.viewMode;
   readonly gridSize = signal(readGridSize());
   readonly gridRatio = signal(readGridRatio());
   readonly selected = computed(this.findSelected.bind(this));
@@ -176,8 +167,7 @@ export class LibraryImageService {
   }
 
   setViewMode(value: ImageViewMode): void {
-    this.viewMode.set(value);
-    storeValue(VIEW_STORAGE_KEY, value);
+    this.library.setViewMode(value);
   }
 
   setGridSize(value: number): void {

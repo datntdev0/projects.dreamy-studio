@@ -96,11 +96,32 @@ pub struct LibrarySummary {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ImageRights {
+pub enum AssetRights {
     Own,
     Licensed,
     Free,
     Other,
+}
+
+impl AssetRights {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Own => "own",
+            Self::Licensed => "licensed",
+            Self::Free => "free",
+            Self::Other => "other",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "own" => Some(Self::Own),
+            "licensed" => Some(Self::Licensed),
+            "free" => Some(Self::Free),
+            "other" => Some(Self::Other),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -112,7 +133,7 @@ pub struct LibraryImage {
     pub size: i64,
     pub width: u32,
     pub height: u32,
-    pub rights: ImageRights,
+    pub rights: AssetRights,
     pub origin: String,
     pub collection_id: Option<i64>,
     pub tags: Vec<String>,
@@ -122,19 +143,19 @@ pub struct LibraryImage {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImageUploadInput {
+pub struct AssetUploadInput {
     pub collection_id: Option<i64>,
     pub tags: Vec<String>,
-    pub rights: ImageRights,
+    pub rights: AssetRights,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImagePatch {
+pub struct AssetPatch {
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
-    pub rights: Option<ImageRights>,
+    pub rights: Option<AssetRights>,
     #[serde(default, deserialize_with = "deserialize_optional_collection_id")]
     pub collection_id: Option<Option<i64>>,
     #[serde(default)]
@@ -143,21 +164,40 @@ pub struct ImagePatch {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImageCheck {
+pub struct AssetCheck {
     pub path: String,
     pub name: String,
     pub size: i64,
-    pub status: ImageCheckStatus,
+    pub status: AssetCheckStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ImageCheckStatus {
+pub enum AssetCheckStatus {
     Ok,
     Warn,
     Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibrarySound {
+    pub id: i64,
+    pub name: String,
+    pub ext: String,
+    pub size: i64,
+    pub duration_ms: i64,
+    pub sample_rate: u32,
+    pub channels: u32,
+    pub overview: [u8; 32],
+    pub rights: AssetRights,
+    pub origin: String,
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -174,6 +214,10 @@ pub enum LibraryErrorCode {
     ImageUnsupported,
     ImageTooLarge,
     ImageUnreadable,
+    SoundNotFound,
+    SoundUnsupported,
+    SoundTooLarge,
+    SoundUnreadable,
     TagLimit,
     Io,
     Db,
@@ -194,6 +238,10 @@ impl LibraryErrorCode {
             Self::ImageUnsupported => "image_unsupported",
             Self::ImageTooLarge => "image_too_large",
             Self::ImageUnreadable => "image_unreadable",
+            Self::SoundNotFound => "sound_not_found",
+            Self::SoundUnsupported => "sound_unsupported",
+            Self::SoundTooLarge => "sound_too_large",
+            Self::SoundUnreadable => "sound_unreadable",
             Self::TagLimit => "tag_limit",
             Self::Io => "io",
             Self::Db => "db",

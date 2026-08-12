@@ -15,6 +15,12 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .register_asynchronous_uri_scheme_protocol("dreamy-sound", |context, request, responder| {
+            let app = context.app_handle().clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(commands::library_stream::respond(&app, request));
+            });
+        })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_info,
             commands::workspace::recent_list,
@@ -69,6 +75,13 @@ pub fn run() {
             commands::library::library_image_delete,
             commands::library::library_image_thumb,
             commands::library::library_image_read,
+            commands::library::library_sound_pick,
+            commands::library::library_sound_inspect,
+            commands::library::library_sound_upload,
+            commands::library::library_sound_list,
+            commands::library::library_sound_update,
+            commands::library::library_sound_delete,
+            commands::library::library_sound_peaks,
         ])
         .setup(setup)
         .build(tauri::generate_context!())

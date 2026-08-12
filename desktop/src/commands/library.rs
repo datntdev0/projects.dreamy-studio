@@ -1,18 +1,20 @@
 use crate::commands::workspace::picked_path;
 use crate::features::library::images::IMAGE_EXTENSIONS;
+use crate::features::library::models::AssetCheck;
+use crate::features::library::models::AssetPatch;
+use crate::features::library::models::AssetUploadInput;
 use crate::features::library::models::CollectionInput;
 use crate::features::library::models::CollectionPatch;
-use crate::features::library::models::ImageCheck;
-use crate::features::library::models::ImagePatch;
-use crate::features::library::models::ImageUploadInput;
 use crate::features::library::models::LibraryCollection;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryImage;
 use crate::features::library::models::LibraryResult;
+use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
 use crate::features::library::service::LibraryService;
+use crate::features::library::sounds::SOUND_EXTENSIONS;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -20,6 +22,7 @@ use tauri::async_runtime::spawn_blocking;
 use tauri_plugin_dialog::DialogExt;
 
 const IMAGE_PICKER_LABEL: &str = "Images";
+const SOUND_PICKER_LABEL: &str = "Sounds";
 
 pub fn get_summary(
     service: &LibraryService,
@@ -108,7 +111,7 @@ pub fn inspect_images(
     service: &LibraryService,
     session: &WorkspaceSession,
     paths: Vec<String>,
-) -> LibraryResult<Vec<ImageCheck>> {
+) -> LibraryResult<Vec<AssetCheck>> {
     service.open(session)?.image_inspect(&paths)
 }
 
@@ -116,7 +119,7 @@ pub fn upload_image(
     service: &LibraryService,
     session: &WorkspaceSession,
     path: String,
-    input: ImageUploadInput,
+    input: AssetUploadInput,
 ) -> LibraryResult<LibraryImage> {
     service.open(session)?.image_upload(&path, input)
 }
@@ -132,9 +135,69 @@ pub fn update_image(
     service: &LibraryService,
     session: &WorkspaceSession,
     id: i64,
-    patch: ImagePatch,
+    patch: AssetPatch,
 ) -> LibraryResult<LibraryImage> {
     service.open(session)?.image_update(id, patch)
+}
+
+pub fn pick_sounds(app: &AppHandle) -> Vec<String> {
+    app.dialog()
+        .file()
+        .add_filter(SOUND_PICKER_LABEL, &SOUND_EXTENSIONS)
+        .blocking_pick_files()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|picked| picked_path(Some(picked)))
+        .collect()
+}
+
+pub fn inspect_sounds(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    paths: Vec<String>,
+) -> LibraryResult<Vec<AssetCheck>> {
+    service.open(session)?.sound_inspect(&paths)
+}
+
+pub fn upload_sound(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    path: String,
+    input: AssetUploadInput,
+) -> LibraryResult<LibrarySound> {
+    service.open(session)?.sound_upload(&path, input)
+}
+
+pub fn list_sounds(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+) -> LibraryResult<Vec<LibrarySound>> {
+    service.open(session)?.sound_list()
+}
+
+pub fn update_sound(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    id: i64,
+    patch: AssetPatch,
+) -> LibraryResult<LibrarySound> {
+    service.open(session)?.sound_update(id, patch)
+}
+
+pub fn delete_sounds(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
+    service.open(session)?.sound_delete(&ids)
+}
+
+pub fn sound_peaks(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    id: i64,
+) -> LibraryResult<String> {
+    service.open(session)?.sound_peaks(id)
 }
 
 pub fn delete_images(
@@ -265,7 +328,7 @@ pub async fn library_image_pick(app: AppHandle) -> Vec<String> {
 pub async fn library_image_inspect(
     app: AppHandle,
     paths: Vec<String>,
-) -> LibraryResult<Vec<ImageCheck>> {
+) -> LibraryResult<Vec<AssetCheck>> {
     run_blocking(app, move |service, session| {
         inspect_images(service, session, paths)
     })
@@ -276,7 +339,7 @@ pub async fn library_image_inspect(
 pub async fn library_image_upload(
     app: AppHandle,
     path: String,
-    input: ImageUploadInput,
+    input: AssetUploadInput,
 ) -> LibraryResult<LibraryImage> {
     run_blocking(app, move |service, session| {
         upload_image(service, session, path, input)
@@ -293,7 +356,7 @@ pub async fn library_image_list(app: AppHandle) -> LibraryResult<Vec<LibraryImag
 pub async fn library_image_update(
     app: AppHandle,
     id: i64,
-    patch: ImagePatch,
+    patch: AssetPatch,
 ) -> LibraryResult<LibraryImage> {
     run_blocking(app, move |service, session| {
         update_image(service, session, id, patch)
@@ -325,10 +388,72 @@ pub async fn library_image_read(app: AppHandle, id: i64) -> LibraryResult<String
     .await
 }
 
+#[tauri::command]
+pub async fn library_sound_pick(app: AppHandle) -> Vec<String> {
+    let task = spawn_blocking(move || pick_sounds(&app));
+    task.await.unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn library_sound_inspect(
+    app: AppHandle,
+    paths: Vec<String>,
+) -> LibraryResult<Vec<AssetCheck>> {
+    run_blocking(app, move |service, session| {
+        inspect_sounds(service, session, paths)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_sound_upload(
+    app: AppHandle,
+    path: String,
+    input: AssetUploadInput,
+) -> LibraryResult<LibrarySound> {
+    run_blocking(app, move |service, session| {
+        upload_sound(service, session, path, input)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_sound_list(app: AppHandle) -> LibraryResult<Vec<LibrarySound>> {
+    run_blocking(app, list_sounds).await
+}
+
+#[tauri::command]
+pub async fn library_sound_update(
+    app: AppHandle,
+    id: i64,
+    patch: AssetPatch,
+) -> LibraryResult<LibrarySound> {
+    run_blocking(app, move |service, session| {
+        update_sound(service, session, id, patch)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_sound_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+    run_blocking(app, move |service, session| {
+        delete_sounds(service, session, ids)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_sound_peaks(app: AppHandle, id: i64) -> LibraryResult<String> {
+    run_blocking(app, move |service, session| {
+        sound_peaks(service, session, id)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::features::library::models::ImageRights;
+    use crate::features::library::models::AssetRights;
     use crate::features::library::models::KindCounts;
     use serde_json::json;
 
@@ -359,7 +484,7 @@ mod tests {
             size: 12,
             width: 2,
             height: 3,
-            rights: ImageRights::Own,
+            rights: AssetRights::Own,
             origin: "upload".into(),
             collection_id: Some(4),
             tags: vec!["sky".into()],
@@ -370,6 +495,28 @@ mod tests {
         assert_eq!(value["collectionId"], json!(4));
         assert_eq!(value["createdAt"], json!("c"));
         assert!(value.get("collection_id").is_none());
+
+        let sound = LibrarySound {
+            id: 4,
+            name: "Rain.wav".into(),
+            ext: "wav".into(),
+            size: 24,
+            duration_ms: 1_000,
+            sample_rate: 44_100,
+            channels: 2,
+            overview: [0; 32],
+            rights: AssetRights::Free,
+            origin: "upload".into(),
+            collection_id: None,
+            tags: vec!["rain".into()],
+            created_at: "e".into(),
+            updated_at: "f".into(),
+        };
+        let value = serde_json::to_value(sound).unwrap();
+        assert_eq!(value["durationMs"], json!(1_000));
+        assert_eq!(value["sampleRate"], json!(44_100));
+        assert_eq!(value["collectionId"], serde_json::Value::Null);
+        assert!(value.get("duration_ms").is_none());
     }
 
     #[test]
@@ -382,6 +529,12 @@ mod tests {
         );
         assert_eq!(
             list_images(&LibraryService::new(), &WorkspaceSession::new())
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::NoWorkspace
+        );
+        assert_eq!(
+            list_sounds(&LibraryService::new(), &WorkspaceSession::new())
                 .unwrap_err()
                 .code,
             LibraryErrorCode::NoWorkspace

@@ -1,25 +1,32 @@
+use crate::features::library::assets;
 use crate::features::library::collections;
 use crate::features::library::images;
 use crate::features::library::images::ImageFiles;
 use crate::features::library::images::ImageFormat;
 use crate::features::library::images::NewImage;
+use crate::features::library::models::AssetCheck;
+use crate::features::library::models::AssetCheckStatus;
+use crate::features::library::models::AssetPatch;
+use crate::features::library::models::AssetUploadInput;
 use crate::features::library::models::CollectionInput;
 use crate::features::library::models::CollectionPatch;
-use crate::features::library::models::ImageCheck;
-use crate::features::library::models::ImageCheckStatus;
-use crate::features::library::models::ImagePatch;
-use crate::features::library::models::ImageUploadInput;
 use crate::features::library::models::LibraryCollection;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryImage;
 use crate::features::library::models::LibraryResult;
+use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
+use crate::features::library::sounds;
+use crate::features::library::sounds::NewSound;
+use crate::features::library::sounds::SoundFiles;
+use crate::features::library::sounds::SoundFormat;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
+use base64::Engine;
 use chrono::Utc;
 use rusqlite::TransactionBehavior;
 use std::fs;
@@ -27,6 +34,17 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+const SOUND_STREAM_CHUNK_BYTES: u64 = 2 * 1024 * 1024;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SoundChunk {
+    pub mime: String,
+    pub total: u64,
+    pub start: u64,
+    pub end: u64,
+    pub bytes: Vec<u8>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct LibraryService {
@@ -129,7 +147,7 @@ impl LibraryWorkspace {
         crate::features::library::tags::delete(&mut self.database()?, tag)
     }
 
-    pub fn image_inspect(&self, paths: &[String]) -> LibraryResult<Vec<ImageCheck>> {
+    pub fn image_inspect(&self, paths: &[String]) -> LibraryResult<Vec<AssetCheck>> {
         let db = self.database()?;
         paths
             .iter()
@@ -137,7 +155,7 @@ impl LibraryWorkspace {
             .collect()
     }
 
-    pub fn image_upload(&self, path: &str, input: ImageUploadInput) -> LibraryResult<LibraryImage> {
+    pub fn image_upload(&self, path: &str, input: AssetUploadInput) -> LibraryResult<LibraryImage> {
         let _guard = self.lock();
         let source = Path::new(path);
         let metadata = fs::metadata(source)?;
@@ -194,7 +212,7 @@ impl LibraryWorkspace {
         images::list(self.database()?.connection())
     }
 
-    pub fn image_update(&self, id: i64, patch: ImagePatch) -> LibraryResult<LibraryImage> {
+    pub fn image_update(&self, id: i64, patch: AssetPatch) -> LibraryResult<LibraryImage> {
         let _guard = self.lock();
         let mut db = self.database()?;
         let tx = db
@@ -236,9 +254,147 @@ impl LibraryWorkspace {
         let bytes = ImageFiles::new(self.dir.clone()).read_original(id, format)?;
         Ok(images::data_url(format.mime(), &bytes))
     }
+
+    pub fn sound_inspect(&self, paths: &[String]) -> LibraryResult<Vec<AssetCheck>> {
+        let db = self.database()?;
+        paths
+            .iter()
+            .map(|path| inspect_sound(db.connection(), path))
+            .collect()
+    }
+
+    pub fn sound_upload(&self, path: &str, input: AssetUploadInput) -> LibraryResult<LibrarySound> {
+        let source = Path::new(path);
+        let metadata = fs::metadata(source)?;
+        let size = metadata.len();
+        let format = sound_format(source)?;
+        if size == 0 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::SoundUnreadable,
+                "sound file is empty",
+            ));
+        }
+        if size > sounds::SOUND_MAX_BYTES as u64 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::SoundTooLarge,
+                "sound file exceeds 200 MiB",
+            ));
+        }
+        let analysis = sounds::analyze(source, format)?;
+        let name = assets::file_name(source)?;
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let name = sounds::unique_name(&tx, &name, None)?;
+        let sound = NewSound {
+            name,
+            ext: format.extension().to_string(),
+            size: size as i64,
+            duration_ms: analysis.duration_ms,
+            sample_rate: analysis.sample_rate,
+            channels: analysis.channels,
+            peaks: analysis.peaks,
+            overview: analysis.overview,
+            rights: input.rights,
+            collection_id: input.collection_id,
+            tags: input.tags,
+        };
+        let id = sounds::insert(&tx, &sound, &format_timestamp(Utc::now()))?;
+        let files = SoundFiles::new(self.dir.clone());
+        if let Err(error) = files.write_original(id, format, source) {
+            let _ = files.remove(id, format);
+            return Err(error);
+        }
+        if let Err(error) = tx.commit() {
+            let _ = files.remove(id, format);
+            return Err(error.into());
+        }
+        sounds::get(db.connection(), id)
+    }
+
+    pub fn sound_list(&self) -> LibraryResult<Vec<LibrarySound>> {
+        sounds::list(self.database()?.connection())
+    }
+
+    pub fn sound_update(&self, id: i64, patch: AssetPatch) -> LibraryResult<LibrarySound> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let sound = sounds::update(&tx, id, &patch, &format_timestamp(Utc::now()))?;
+        tx.commit()?;
+        Ok(sound)
+    }
+
+    pub fn sound_delete(&self, ids: &[i64]) -> LibraryResult<usize> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let deleted = sounds::delete(&tx, ids)?;
+        tx.commit()?;
+        let files = SoundFiles::new(self.dir.clone());
+        for (id, ext) in &deleted {
+            if let Some(format) = SoundFormat::from_extension(ext) {
+                let _ = files.remove(*id, format);
+            }
+        }
+        Ok(deleted.len())
+    }
+
+    pub fn sound_peaks(&self, id: i64) -> LibraryResult<String> {
+        Ok(base64::engine::general_purpose::STANDARD
+            .encode(sounds::peaks(self.database()?.connection(), id)?))
+    }
+
+    pub fn sound_stream(
+        &self,
+        id: i64,
+        range: Option<(u64, Option<u64>)>,
+    ) -> LibraryResult<SoundChunk> {
+        let sound = sounds::get(self.database()?.connection(), id)?;
+        let format = sound_format_from_extension(&sound.ext)?;
+        let files = SoundFiles::new(self.dir.clone());
+        let total = files.len(id, format)?;
+        if total == 0 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::SoundUnreadable,
+                "sound file is empty",
+            ));
+        }
+        let (start, requested_end) = range.unwrap_or((0, None));
+        if start >= total {
+            return Err(LibraryError::new(
+                LibraryErrorCode::InvalidInput,
+                "sound range starts after the end of the file",
+            ));
+        }
+        let end = requested_end
+            .unwrap_or(total - 1)
+            .min(total - 1)
+            .min(start + SOUND_STREAM_CHUNK_BYTES - 1);
+        if end < start {
+            return Err(LibraryError::new(
+                LibraryErrorCode::InvalidInput,
+                "sound range ends before it starts",
+            ));
+        }
+        let bytes = files.read_range(id, format, start, end - start + 1)?;
+        Ok(SoundChunk {
+            mime: format.mime().to_string(),
+            total,
+            start,
+            end,
+            bytes,
+        })
+    }
 }
 
-fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<ImageCheck> {
+fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
     let source = Path::new(path);
     let name = source
         .file_name()
@@ -252,7 +408,7 @@ fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Image
                 path,
                 name,
                 0,
-                ImageCheckStatus::Error,
+                AssetCheckStatus::Error,
                 "not_found",
             ));
         }
@@ -264,7 +420,7 @@ fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Image
             path,
             name,
             size,
-            ImageCheckStatus::Error,
+            AssetCheckStatus::Error,
             "empty",
         ));
     }
@@ -273,7 +429,7 @@ fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Image
             path,
             name,
             size,
-            ImageCheckStatus::Error,
+            AssetCheckStatus::Error,
             "unsupported",
         ));
     }
@@ -282,7 +438,7 @@ fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Image
             path,
             name,
             size,
-            ImageCheckStatus::Error,
+            AssetCheckStatus::Error,
             "too_large",
         ));
     }
@@ -291,27 +447,87 @@ fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Image
             path,
             name,
             size,
-            ImageCheckStatus::Warn,
+            AssetCheckStatus::Warn,
             "duplicate_name",
         ));
     }
-    Ok(image_check(path, name, size, ImageCheckStatus::Ok, ""))
+    Ok(image_check(path, name, size, AssetCheckStatus::Ok, ""))
 }
 
 fn image_check(
     path: &str,
     name: String,
     size: i64,
-    status: ImageCheckStatus,
+    status: AssetCheckStatus,
     code: &str,
-) -> ImageCheck {
-    ImageCheck {
+) -> AssetCheck {
+    AssetCheck {
         path: path.to_string(),
         name,
         size,
         status,
         code: (!code.is_empty()).then(|| code.to_string()),
     }
+}
+
+fn inspect_sound(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
+    let source = Path::new(path);
+    let name = source
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(path)
+        .to_string();
+    let metadata = match fs::metadata(source) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(assets::check(
+                path,
+                name,
+                0,
+                AssetCheckStatus::Error,
+                "not_found",
+            ));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let size = metadata.len() as i64;
+    if size == 0 {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Error,
+            "empty",
+        ));
+    }
+    if sound_format(source).is_err() {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Error,
+            "unsupported",
+        ));
+    }
+    if metadata.len() > sounds::SOUND_MAX_BYTES as u64 {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Error,
+            "too_large",
+        ));
+    }
+    if sounds::unique_name(conn, &name, None)? != name {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Warn,
+            "duplicate_name",
+        ));
+    }
+    Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
 }
 
 fn image_format(path: &Path) -> LibraryResult<ImageFormat> {
@@ -327,6 +543,23 @@ fn image_format_from_extension(extension: &str) -> LibraryResult<ImageFormat> {
         LibraryError::new(
             LibraryErrorCode::ImageUnsupported,
             format!("unsupported image extension: {extension}"),
+        )
+    })
+}
+
+fn sound_format(path: &Path) -> LibraryResult<SoundFormat> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    sound_format_from_extension(extension)
+}
+
+fn sound_format_from_extension(extension: &str) -> LibraryResult<SoundFormat> {
+    SoundFormat::from_extension(extension).ok_or_else(|| {
+        LibraryError::new(
+            LibraryErrorCode::SoundUnsupported,
+            format!("unsupported sound extension: {extension}"),
         )
     })
 }
@@ -356,7 +589,7 @@ fn thumb_mime(format: ImageFormat) -> &'static str {
 mod tests {
     use super::*;
     use crate::features::library::collections::AssetTable;
-    use crate::features::library::models::ImageRights;
+    use crate::features::library::models::AssetRights;
     use crate::features::library::models::LibraryKind;
     use crate::infra::storage::migrator::Migrator;
     use crate::infra::storage::migrator::workspace_scripts;
@@ -409,17 +642,54 @@ mod tests {
         bytes.into_inner()
     }
 
-    fn image_input(collection_id: Option<i64>) -> ImageUploadInput {
-        ImageUploadInput {
+    fn wav_bytes() -> Vec<u8> {
+        let sample_rate = 8_000_u32;
+        let sample_count = sample_rate as usize;
+        let data_len = sample_count * 2;
+        let mut bytes = Vec::with_capacity(44 + data_len);
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&(36 + data_len as u32).to_le_bytes());
+        bytes.extend_from_slice(b"WAVEfmt ");
+        bytes.extend_from_slice(&16_u32.to_le_bytes());
+        bytes.extend_from_slice(&1_u16.to_le_bytes());
+        bytes.extend_from_slice(&1_u16.to_le_bytes());
+        bytes.extend_from_slice(&sample_rate.to_le_bytes());
+        bytes.extend_from_slice(&(sample_rate * 2).to_le_bytes());
+        bytes.extend_from_slice(&2_u16.to_le_bytes());
+        bytes.extend_from_slice(&16_u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&(data_len as u32).to_le_bytes());
+        for _ in 0..sample_count {
+            bytes.extend_from_slice(&i16::MAX.to_le_bytes());
+        }
+        bytes
+    }
+
+    fn image_input(collection_id: Option<i64>) -> AssetUploadInput {
+        AssetUploadInput {
             collection_id,
             tags: vec!["Example".to_string()],
-            rights: ImageRights::Own,
+            rights: AssetRights::Own,
+        }
+    }
+
+    fn sound_input(collection_id: Option<i64>) -> AssetUploadInput {
+        AssetUploadInput {
+            collection_id,
+            tags: vec!["Example".to_string()],
+            rights: AssetRights::Own,
         }
     }
 
     fn write_png(dir: &TempDir, name: &str) -> PathBuf {
         let path = dir.path().join(name);
         fs::write(&path, png_bytes()).unwrap();
+        path
+    }
+
+    fn write_wav(dir: &TempDir, name: &str) -> PathBuf {
+        let path = dir.path().join(name);
+        fs::write(&path, wav_bytes()).unwrap();
         path
     }
 
@@ -523,6 +793,107 @@ mod tests {
         assert_eq!(summary.assets.image, 2);
         assert_eq!(summary.unfiled.image, 1);
         assert_eq!(workspace.collection_list().unwrap()[0].counts.image, 1);
+    }
+
+    #[test]
+    fn uploads_streams_and_deletes_sounds() {
+        let (dir, workspace) = fixture();
+        let path = write_wav(&dir, "harbor.wav");
+        let check = workspace
+            .sound_inspect(&[path.to_string_lossy().to_string()])
+            .unwrap();
+        assert_eq!(check[0].status, AssetCheckStatus::Ok);
+        let first = workspace
+            .sound_upload(path.to_str().unwrap(), sound_input(None))
+            .unwrap();
+        let second = workspace
+            .sound_upload(path.to_str().unwrap(), sound_input(None))
+            .unwrap();
+        assert_eq!(first.name, "harbor.wav");
+        assert_eq!(second.name, "harbor (2).wav");
+        assert_eq!(workspace.sound_list().unwrap().len(), 2);
+        assert!(!workspace.sound_peaks(first.id).unwrap().is_empty());
+        let chunk = workspace
+            .sound_stream(first.id, Some((4, Some(11))))
+            .unwrap();
+        assert_eq!((chunk.start, chunk.end, chunk.bytes.len()), (4, 11, 8));
+        assert_eq!(chunk.total as usize, wav_bytes().len());
+        let stored = dir
+            .path()
+            .join("library")
+            .join("sounds")
+            .join(format!("{}.wav", first.id));
+        assert!(stored.exists());
+        assert_eq!(workspace.sound_delete(&[first.id]).unwrap(), 1);
+        assert!(!stored.exists());
+    }
+
+    #[test]
+    fn sound_upload_rejects_invalid_files_and_rolls_back_failed_copies() {
+        let (dir, workspace) = fixture();
+        let unsupported = dir.path().join("sound.flac");
+        fs::write(&unsupported, b"not flac").unwrap();
+        assert_eq!(
+            workspace
+                .sound_upload(unsupported.to_str().unwrap(), sound_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::SoundUnsupported
+        );
+        let oversized = dir.path().join("large.wav");
+        std::fs::File::create(&oversized)
+            .unwrap()
+            .set_len(sounds::SOUND_MAX_BYTES as u64 + 1)
+            .unwrap();
+        assert_eq!(
+            workspace
+                .sound_upload(oversized.to_str().unwrap(), sound_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::SoundTooLarge
+        );
+        let source = write_wav(&dir, "blocked.wav");
+        fs::write(dir.path().join("library"), b"not a directory").unwrap();
+        assert_eq!(
+            workspace
+                .sound_upload(source.to_str().unwrap(), sound_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::Io
+        );
+        assert!(workspace.sound_list().unwrap().is_empty());
+    }
+
+    #[test]
+    fn sounds_count_unfile_and_tags_follow_library_operations() {
+        let (dir, workspace) = fixture();
+        let collection = workspace.collection_create(collection("Sounds")).unwrap();
+        let filed = write_wav(&dir, "filed.wav");
+        let unfiled = write_wav(&dir, "unfiled.wav");
+        let filed = workspace
+            .sound_upload(filed.to_str().unwrap(), sound_input(Some(collection.id)))
+            .unwrap();
+        workspace
+            .sound_upload(unfiled.to_str().unwrap(), sound_input(None))
+            .unwrap();
+        let summary = workspace.summary().unwrap();
+        assert_eq!((summary.assets.sound, summary.unfiled.sound), (2, 1));
+        assert_eq!(workspace.collection_list().unwrap()[0].counts.sound, 1);
+        workspace.tag_rename("example", "renamed").unwrap();
+        workspace
+            .sound_update(
+                filed.id,
+                AssetPatch {
+                    tags: Some(vec!["renamed".to_string(), "target".to_string()]),
+                    ..AssetPatch::default()
+                },
+            )
+            .unwrap();
+        let tag = workspace.tag_merge("renamed", "target").unwrap();
+        assert_eq!(tag.counts.sound, 2);
+        assert_eq!(workspace.collection_delete(collection.id).unwrap(), 1);
+        assert_eq!(workspace.sound_list().unwrap()[0].collection_id, None);
+        assert_eq!(filed.tags, vec!["example"]);
     }
 
     #[test]

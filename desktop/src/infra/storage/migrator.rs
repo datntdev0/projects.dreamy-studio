@@ -357,13 +357,14 @@ mod tests {
         let cancel = AtomicBool::new(false);
         Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
         assert!(table_exists(db.connection(), "sys_migration_history"));
-        assert_eq!(history_count(db.connection()), 7);
+        assert_eq!(history_count(db.connection()), 8);
         for table in [
             "ws_novels",
             "ws_novel_chapters",
             "ws_tags",
             "ws_projects",
             "ws_library_collections",
+            "ws_library_sounds",
         ] {
             assert!(table_exists(db.connection(), table), "{table}");
         }

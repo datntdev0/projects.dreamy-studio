@@ -1,11 +1,10 @@
-use crate::features::library::models::ImagePatch;
-use crate::features::library::models::ImageRights;
+use crate::features::library::assets;
+use crate::features::library::models::AssetPatch;
+use crate::features::library::models::AssetRights;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryImage;
 use crate::features::library::models::LibraryResult;
-use crate::shared::tags::normalize_tags;
-use base64::Engine;
 use image::ImageReader;
 use image::imageops::FilterType;
 use rusqlite::Connection;
@@ -14,6 +13,8 @@ use rusqlite::params;
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
+
+pub use crate::features::library::assets::data_url;
 
 pub const IMAGE_MAX_BYTES: usize = 25 * 1024 * 1024;
 pub const IMAGE_EXTENSIONS: [&str; 5] = ["png", "jpg", "jpeg", "webp", "gif"];
@@ -152,8 +153,8 @@ impl ImageFiles {
     }
 
     pub fn remove(&self, id: i64, format: ImageFormat) -> LibraryResult<()> {
-        remove_if_exists(&self.original_path(id, format))?;
-        remove_if_exists(&self.thumb_path(id, format))?;
+        assets::remove_if_exists(&self.original_path(id, format))?;
+        assets::remove_if_exists(&self.thumb_path(id, format))?;
         Ok(())
     }
 
@@ -173,13 +174,6 @@ impl ImageFiles {
     }
 }
 
-pub fn data_url(mime: &str, bytes: &[u8]) -> String {
-    format!(
-        "data:{mime};base64,{}",
-        base64::engine::general_purpose::STANDARD.encode(bytes)
-    )
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewImage {
     pub name: String,
@@ -187,7 +181,7 @@ pub struct NewImage {
     pub size: i64,
     pub width: u32,
     pub height: u32,
-    pub rights: ImageRights,
+    pub rights: AssetRights,
     pub collection_id: Option<i64>,
     pub tags: Vec<String>,
 }
@@ -197,7 +191,7 @@ pub fn list(conn: &Connection) -> LibraryResult<Vec<LibraryImage>> {
     let rows = statement.query_map([], image_from_row)?;
     let mut images = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     for image in &mut images {
-        image.tags = tags_for(conn, image.id)?;
+        image.tags = assets::tags_for(conn, IMAGE_TAG_TYPE, image.id)?;
     }
     Ok(images)
 }
@@ -207,43 +201,27 @@ pub fn get(conn: &Connection, id: i64) -> LibraryResult<LibraryImage> {
         .query_row("SELECT id, name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at FROM ws_library_images WHERE id = ?1", [id], image_from_row)
         .optional()?
         .ok_or_else(|| image_not_found(id))?;
-    image.tags = tags_for(conn, id)?;
+    image.tags = assets::tags_for(conn, IMAGE_TAG_TYPE, id)?;
     Ok(image)
 }
 
 pub fn unique_name(conn: &Connection, name: &str, except_id: Option<i64>) -> LibraryResult<String> {
-    let (stem, extension) = split_name(name);
-    let mut number = 1;
-    loop {
-        let candidate = if number == 1 {
-            name.to_string()
-        } else {
-            format!("{stem} ({number}){extension}")
-        };
-        let exists: bool = match except_id {
-            Some(id) => conn.query_row("SELECT EXISTS(SELECT 1 FROM ws_library_images WHERE name = ?1 COLLATE NOCASE AND id != ?2)", params![&candidate, id], |row| row.get(0))?,
-            None => conn.query_row("SELECT EXISTS(SELECT 1 FROM ws_library_images WHERE name = ?1 COLLATE NOCASE)", [&candidate], |row| row.get(0))?,
-        };
-        if !exists {
-            return Ok(candidate);
-        }
-        number += 1;
-    }
+    assets::unique_name(conn, "ws_library_images", name, except_id)
 }
 
 pub fn insert(conn: &Connection, image: &NewImage, now: &str) -> LibraryResult<i64> {
-    let tags = normalized_tags(&image.tags)?;
-    require_collection(conn, image.collection_id)?;
-    conn.execute("INSERT INTO ws_library_images (name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'upload', ?7, ?8, ?8)", params![image.name, image.ext, image.size, image.width, image.height, rights_text(image.rights), image.collection_id, now])?;
+    let tags = assets::normalized_tags(&image.tags)?;
+    assets::require_collection(conn, image.collection_id)?;
+    conn.execute("INSERT INTO ws_library_images (name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'upload', ?7, ?8, ?8)", params![image.name, image.ext, image.size, image.width, image.height, image.rights.as_str(), image.collection_id, now])?;
     let id = conn.last_insert_rowid();
-    replace_tags(conn, id, &tags)?;
+    assets::replace_tags(conn, IMAGE_TAG_TYPE, id, &tags)?;
     Ok(id)
 }
 
 pub fn update(
     conn: &Connection,
     id: i64,
-    patch: &ImagePatch,
+    patch: &AssetPatch,
     now: &str,
 ) -> LibraryResult<LibraryImage> {
     get(conn, id)?;
@@ -257,18 +235,18 @@ pub fn update(
     if let Some(rights) = patch.rights {
         conn.execute(
             "UPDATE ws_library_images SET rights = ?1, updated_at = ?2 WHERE id = ?3",
-            params![rights_text(rights), now, id],
+            params![rights.as_str(), now, id],
         )?;
     }
     if let Some(collection_id) = patch.collection_id {
-        require_collection(conn, collection_id)?;
+        assets::require_collection(conn, collection_id)?;
         conn.execute(
             "UPDATE ws_library_images SET collection_id = ?1, updated_at = ?2 WHERE id = ?3",
             params![collection_id, now, id],
         )?;
     }
     if let Some(tags) = patch.tags.as_ref() {
-        replace_tags(conn, id, &normalized_tags(tags)?)?;
+        assets::replace_tags(conn, IMAGE_TAG_TYPE, id, &assets::normalized_tags(tags)?)?;
         conn.execute(
             "UPDATE ws_library_images SET updated_at = ?1 WHERE id = ?2",
             params![now, id],
@@ -290,10 +268,7 @@ pub fn delete(conn: &Connection, ids: &[i64]) -> LibraryResult<Vec<(i64, String)
         let Some(ext) = ext else {
             continue;
         };
-        conn.execute(
-            "DELETE FROM ws_tags WHERE type = ?1 AND id = ?2",
-            params![IMAGE_TAG_TYPE, id.to_string()],
-        )?;
+        assets::delete_tags(conn, IMAGE_TAG_TYPE, *id)?;
         conn.execute("DELETE FROM ws_library_images WHERE id = ?1", [id])?;
         removed.push((*id, ext));
     }
@@ -309,7 +284,13 @@ fn image_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryImage> {
         size: row.get(3)?,
         width: row.get(4)?,
         height: row.get(5)?,
-        rights: image_rights(&rights)?,
+        rights: AssetRights::parse(&rights).ok_or_else(|| {
+            rusqlite::Error::FromSqlConversionFailure(
+                6,
+                rusqlite::types::Type::Text,
+                format!("invalid image rights: {rights}").into(),
+            )
+        })?,
         origin: row.get(7)?,
         collection_id: row.get(8)?,
         tags: Vec::new(),
@@ -318,76 +299,11 @@ fn image_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryImage> {
     })
 }
 
-fn tags_for(conn: &Connection, id: i64) -> LibraryResult<Vec<String>> {
-    let mut statement = conn.prepare(
-        "SELECT tag FROM ws_tags WHERE type = ?1 AND id = ?2 ORDER BY tag COLLATE NOCASE",
-    )?;
-    let rows = statement.query_map(params![IMAGE_TAG_TYPE, id.to_string()], |row| row.get(0))?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-}
-
-fn replace_tags(conn: &Connection, id: i64, tags: &[String]) -> LibraryResult<()> {
-    conn.execute(
-        "DELETE FROM ws_tags WHERE type = ?1 AND id = ?2",
-        params![IMAGE_TAG_TYPE, id.to_string()],
-    )?;
-    for tag in tags {
-        conn.execute(
-            "INSERT INTO ws_tags (id, tag, type) VALUES (?1, ?2, ?3)",
-            params![id.to_string(), tag, IMAGE_TAG_TYPE],
-        )?;
-    }
-    Ok(())
-}
-
-fn normalized_tags(tags: &[String]) -> LibraryResult<Vec<String>> {
-    normalize_tags(tags).map_err(|count| {
-        LibraryError::new(
-            LibraryErrorCode::TagLimit,
-            format!("image has {count} tags; maximum is 12"),
-        )
-    })
-}
-
-fn require_collection(conn: &Connection, collection_id: Option<i64>) -> LibraryResult<()> {
-    let Some(collection_id) = collection_id else {
-        return Ok(());
-    };
-    let exists: bool = conn.query_row(
-        "SELECT EXISTS(SELECT 1 FROM ws_library_collections WHERE id = ?1)",
-        [collection_id],
-        |row| row.get(0),
-    )?;
-    if exists {
-        Ok(())
-    } else {
-        Err(LibraryError::new(
-            LibraryErrorCode::CollectionNotFound,
-            format!("collection {collection_id} does not exist"),
-        ))
-    }
-}
-
-fn split_name(name: &str) -> (&str, &str) {
-    match name.rfind('.') {
-        Some(index) if index > 0 => (&name[..index], &name[index..]),
-        _ => (name, ""),
-    }
-}
-
 fn thumb_extension(format: ImageFormat) -> &'static str {
     if format == ImageFormat::Jpeg {
         "jpg"
     } else {
         "png"
-    }
-}
-
-fn remove_if_exists(path: &PathBuf) -> LibraryResult<()> {
-    match fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
     }
 }
 
@@ -404,29 +320,6 @@ fn image_error(detail: impl Into<String>) -> LibraryError {
 
 fn image_decode_error(error: image::ImageError) -> LibraryError {
     image_error(error.to_string())
-}
-
-fn rights_text(rights: ImageRights) -> &'static str {
-    match rights {
-        ImageRights::Own => "own",
-        ImageRights::Licensed => "licensed",
-        ImageRights::Free => "free",
-        ImageRights::Other => "other",
-    }
-}
-
-fn image_rights(value: &str) -> rusqlite::Result<ImageRights> {
-    match value {
-        "own" => Ok(ImageRights::Own),
-        "licensed" => Ok(ImageRights::Licensed),
-        "free" => Ok(ImageRights::Free),
-        "other" => Ok(ImageRights::Other),
-        _ => Err(rusqlite::Error::FromSqlConversionFailure(
-            6,
-            rusqlite::types::Type::Text,
-            format!("invalid image rights: {value}").into(),
-        )),
-    }
 }
 
 #[cfg(test)]
@@ -462,7 +355,7 @@ mod tests {
             size: 12,
             width: 2,
             height: 1,
-            rights: ImageRights::Own,
+            rights: AssetRights::Own,
             collection_id: None,
             tags: vec!["Example".to_string()],
         }
@@ -527,14 +420,14 @@ mod tests {
         );
         let image = get(&conn, id).unwrap();
         assert_eq!(image.tags, ["example"]);
-        let patch = ImagePatch {
+        let patch = AssetPatch {
             name: Some("forest.png".to_string()),
-            rights: Some(ImageRights::Free),
+            rights: Some(AssetRights::Free),
             collection_id: Some(None),
             tags: Some(vec!["green".to_string()]),
         };
         let image = update(&conn, id, &patch, "2026-01-02T00:00:00Z").unwrap();
-        assert_eq!(image.rights, ImageRights::Free);
+        assert_eq!(image.rights, AssetRights::Free);
         assert_eq!(image.tags, ["green"]);
         assert_eq!(list(&conn).unwrap().len(), 1);
         assert_eq!(delete(&conn, &[id]).unwrap(), vec![(id, "png".to_string())]);

@@ -59,5 +59,22 @@
 .lb-th.is-ic { width: 34px; }
 .lb-tic { display: inline-flex; align-items: center; gap: 6px; }
 .lb-ctag { display: inline-flex; }
+.lb-upload-menu { position: relative; }
+
+.lb-upload-menu-popover {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--sp-xs));
+  right: 0;
+  display: grid;
+  min-width: 176px;
+  padding: var(--sp-xs);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-md);
+  background: var(--canvas-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.lb-upload-menu-popover .btn { justify-content: flex-start; }
 app-library-sound-play { display: contents; }
 app-library-sound-wave { display: block; flex: 1; min-width: 0; }

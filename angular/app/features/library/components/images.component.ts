@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit, computed, inject, input, signal } from "@angular/core";
+import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@angular/core";
 import { Icon } from "../../../../components/icon";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "../../../core/desktop/desktop-ipc.service";
 import { I18nKey } from "../../../core/i18n/i18n.models";
@@ -16,10 +16,6 @@ function isField(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(FIELD_SELECTOR) !== null;
 }
 
-function isInCollection(collectionId: number | undefined, image: LibraryImage): boolean {
-  return collectionId === undefined || image.collectionId === collectionId;
-}
-
 @Component({
   selector: "app-library-images",
   standalone: true,
@@ -31,10 +27,7 @@ export class LibraryImages implements OnInit, OnDestroy {
   readonly images = inject(LibraryImageService);
   readonly library = inject(LibraryService);
   readonly dialogs = inject(LibraryDialogsService);
-  readonly collectionId = input<number>();
   readonly dragging = signal(false);
-  readonly scopedItems = computed(this.buildScopedItems.bind(this));
-  readonly scopedVisible = computed(this.buildScopedVisible.bind(this));
   readonly ratioOptions = IMAGE_RATIOS;
   private unlisten: DesktopUnlisten | null = null;
 
@@ -182,15 +175,6 @@ export class LibraryImages implements OnInit, OnDestroy {
       this.dragging.set(false);
       this.dialogs.openUpload(event.paths);
     }
-  }
-
-  private buildScopedItems(): LibraryImage[] {
-    return this.images.items().filter(isInCollection.bind(null, this.collectionId()));
-  }
-
-  private buildScopedVisible(): LibraryImage[] {
-    const collectionId = this.collectionId();
-    return collectionId === undefined ? this.images.visible() : this.images.visible().filter(isInCollection.bind(null, collectionId));
   }
 
   private isDialogOpen(): boolean {

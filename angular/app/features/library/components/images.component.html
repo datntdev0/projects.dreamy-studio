@@ -1,14 +1,11 @@
 <div class="nv lb lb-body" [class.is-drop]="dragging()" data-testid="library-images">
   <div class="nv-bar" data-testid="library-images-toolbar">
     <div class="nv-bar-l" data-testid="library-images-toolbar-left">
-      @if (collectionId(); as scopedId) {
-        <span class="t-ink" data-testid="library-images-collection-title">{{ library.collectionById(scopedId)?.name ?? ("library.image.title" | t) }}</span>
-      }
       <label class="search" data-testid="library-images-search-label">
         <span class="sr-only" data-testid="library-images-search-label-text">{{ "library.image.search" | t }}</span>
         <input class="input" type="search" [value]="images.query()" [attr.placeholder]="'library.image.searchPlaceholder' | t" data-testid="library-images-search" (input)="onQuery($event)" />
       </label>
-      <span class="t-sm t-mute" data-testid="library-images-count">{{ "library.image.count" | t: { shown: scopedVisible().length, total: scopedItems().length } }}</span>
+      <span class="t-sm t-mute" data-testid="library-images-count">{{ "library.image.count" | t: { shown: images.visible().length, total: images.items().length } }}</span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-images-filter-chips">
           @if (library.filterCollection() !== null) {
@@ -52,15 +49,15 @@
   </div>
   <div class="nv-body" data-testid="library-images-body">
     <div class="nv-scroll" data-testid="library-images-scroll">
-      @if (scopedVisible().length === 0) {
-        @if (scopedItems().length === 0 && !hasActiveFilters()) {
+      @if (images.visible().length === 0) {
+        @if (images.items().length === 0 && !hasActiveFilters()) {
           <div class="empty" data-testid="library-images-empty"><div class="empty-inner" data-testid="library-images-empty-inner"><div class="illus" data-testid="library-images-empty-illustration"></div><h3 class="t-display-xs" data-testid="library-images-empty-title">{{ "library.image.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="library-images-empty-description">{{ "library.image.empty.description" | t }}</p><div class="empty-act" data-testid="library-images-empty-actions"><button type="button" class="btn btn-primary" data-testid="library-images-empty-upload" (click)="openUpload()"><ds-icon name="plus" [size]="16" data-testid="library-images-empty-upload-icon" />{{ "library.image.empty.upload" | t }}</button></div></div></div>
         } @else if (images.loaded()) {
           <div class="empty" data-testid="library-images-empty-filtered"><div class="empty-inner" data-testid="library-images-empty-filtered-inner"><div class="illus" data-testid="library-images-empty-filtered-illustration"></div><h3 class="t-display-xs" data-testid="library-images-empty-filtered-title">{{ "library.image.emptyFiltered.title" | t }}</h3><p class="t-sm t-mute" data-testid="library-images-empty-filtered-description">{{ "library.image.emptyFiltered.description" | t }}</p><button type="button" class="btn" data-testid="library-images-empty-filtered-clear" (click)="clearAllFilters()">{{ "library.image.emptyFiltered.clear" | t }}</button></div></div>
         }
       } @else if (images.viewMode() === "grid") {
         <div class="lb-grid" [style.--lb-min]="images.gridSize() + 'px'" [style.--lb-ar]="images.gridRatio()" data-testid="library-images-grid">
-          @for (image of scopedVisible(); track image.id) {
+          @for (image of images.visible(); track image.id) {
             <div class="lb-card" [class.is-selected]="isSelected(image)" tabindex="0" [attr.title]="image.name" data-testid="library-images-card" (click)="select(image)" (dblclick)="open(image)" (keydown)="onImageKeydown(image, $event)"><app-library-image-thumb [image]="image" data-testid="library-images-card-thumb" /><div class="lb-card-b" data-testid="library-images-card-body"><div class="lb-name" data-testid="library-images-card-name"><span class="t-ink lb-name-t" data-testid="library-images-card-name-text">{{ image.name }}</span></div><div class="t-sm t-mute lb-sub" data-testid="library-images-card-meta">{{ dimensions(image) }} · {{ formatBytes(image.size) }}</div></div></div>
           }
         </div>
@@ -68,7 +65,7 @@
         <table class="table" data-testid="library-images-table">
           <thead data-testid="library-images-table-head"><tr data-testid="library-images-table-head-row"><th data-testid="library-images-table-head-name">{{ "library.image.column.name" | t }}</th><th data-testid="library-images-table-head-dimensions">{{ "library.image.column.dimensions" | t }}</th><th data-testid="library-images-table-head-size">{{ "library.image.column.size" | t }}</th><th data-testid="library-images-table-head-tags">{{ "library.image.column.tags" | t }}</th><th data-testid="library-images-table-head-collection">{{ "library.image.column.collection" | t }}</th><th data-testid="library-images-table-head-added">{{ "library.image.column.added" | t }}</th></tr></thead>
           <tbody data-testid="library-images-table-body">
-            @for (image of scopedVisible(); track image.id) {
+            @for (image of images.visible(); track image.id) {
               <tr [class.is-selected]="isSelected(image)" tabindex="0" data-testid="library-images-table-row" (click)="select(image)" (dblclick)="open(image)" (keydown)="onImageKeydown(image, $event)"><td data-testid="library-images-table-name"><div class="nm-title" data-testid="library-images-table-name-wrap"><app-library-image-thumb [image]="image" data-testid="library-images-table-thumb" /><div class="lb-rname" data-testid="library-images-table-name-content"><div class="t-ink" data-testid="library-images-table-name-text">{{ image.name }}</div><div class="t-sm t-mute" data-testid="library-images-table-code">{{ code(image) }}</div></div></div></td><td class="mono t-mute" data-testid="library-images-table-dimensions">{{ dimensions(image) }}</td><td class="num" data-testid="library-images-table-size">{{ formatBytes(image.size) }}</td><td data-testid="library-images-table-tags"><span class="lb-cols" data-testid="library-images-table-tags-text">{{ image.tags.join(", ") || "—" }}</span></td><td data-testid="library-images-table-collection">{{ collectionName(image) }}</td><td class="mono t-mute" data-testid="library-images-table-added">{{ image.createdAt.slice(0, 10) }}</td></tr>
             }
           </tbody>

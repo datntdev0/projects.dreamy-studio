@@ -69,7 +69,17 @@
         }
         @case ("collection") {
           <div data-testid="inspector-collection-host">
-            @if (editorTabs.active().collectionId; as collectionId) { <app-library-collection-panel [collectionId]="collectionId" /> }
+            @if (editorTabs.active().collectionId; as collectionId) {
+              @if (collectionAssets.selectedRef(collectionId); as selected) {
+                @if (selected.kind === "image") {
+                  <app-library-image-panel [imageId]="selected.id" data-testid="inspector-collection-image-panel" />
+                } @else {
+                  <app-library-sound-panel [soundId]="selected.id" data-testid="inspector-collection-sound-panel" />
+                }
+              } @else {
+                <app-library-collection-panel [collectionId]="collectionId" data-testid="inspector-collection-panel" />
+              }
+            }
           </div>
         }
         @case ("images") {
@@ -78,6 +88,15 @@
               <app-library-image-panel data-testid="inspector-image-panel" />
             } @else {
               <app-library-images-panel data-testid="inspector-images-panel" />
+            }
+          </div>
+        }
+        @case ("sounds") {
+          <div data-testid="inspector-sounds-host">
+            @if (sounds.selected()) {
+              <app-library-sound-panel data-testid="inspector-sound-panel" />
+            } @else {
+              <app-library-sounds-panel data-testid="inspector-sounds-panel" />
             }
           </div>
         }

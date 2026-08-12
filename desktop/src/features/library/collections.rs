@@ -26,6 +26,10 @@ pub const ASSET_TABLES: &[AssetTable] = &[
         kind: LibraryKind::Sound,
         table: "ws_library_sounds",
     },
+    AssetTable {
+        kind: LibraryKind::Video,
+        table: "ws_library_videos",
+    },
 ];
 
 fn now_text() -> String {

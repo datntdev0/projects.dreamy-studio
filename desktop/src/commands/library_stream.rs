@@ -1,3 +1,4 @@
+use crate::features::library::models::StreamKind;
 use crate::features::library::service::LibraryService;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
@@ -33,7 +34,10 @@ pub fn parse_range(header: &str, total: u64) -> Option<(u64, u64)> {
     (end >= start).then_some((start, end))
 }
 
-pub fn respond(app: &AppHandle, request: Request<Vec<u8>>) -> Response<Vec<u8>> {
+pub fn respond(app: &AppHandle, request: Request<Vec<u8>>, kind: StreamKind) -> Response<Vec<u8>> {
+    if request.method() == tauri::http::Method::OPTIONS {
+        return options();
+    }
     let Some(id) = request
         .uri()
         .path()
@@ -47,7 +51,7 @@ pub fn respond(app: &AppHandle, request: Request<Vec<u8>>) -> Response<Vec<u8>> 
     let Ok(workspace) = service.open(&session) else {
         return not_found();
     };
-    let Ok(first) = workspace.sound_stream(id, None) else {
+    let Ok(first) = workspace.stream(kind, id, None) else {
         return not_found();
     };
     let range = match request.headers().get(RANGE) {
@@ -62,7 +66,7 @@ pub fn respond(app: &AppHandle, request: Request<Vec<u8>>) -> Response<Vec<u8>> 
         None => None,
     };
     let chunk = match range {
-        Some((start, end)) => match workspace.sound_stream(id, Some((start, Some(end)))) {
+        Some((start, end)) => match workspace.stream(kind, id, Some((start, Some(end)))) {
             Ok(chunk) => chunk,
             Err(_) => return not_found(),
         },
@@ -88,7 +92,23 @@ pub fn respond(app: &AppHandle, request: Request<Vec<u8>>) -> Response<Vec<u8>> 
             format!("bytes {}-{}/{}", chunk.start, chunk.end, chunk.total),
         );
     }
-    response.body(chunk.bytes).expect("sound response is valid")
+    response
+        .body(if request.method() == tauri::http::Method::HEAD {
+            Vec::new()
+        } else {
+            chunk.bytes
+        })
+        .expect("stream response is valid")
+}
+
+fn options() -> Response<Vec<u8>> {
+    Response::builder()
+        .status(StatusCode::NO_CONTENT)
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+        .header("Access-Control-Allow-Headers", "Range")
+        .body(Vec::new())
+        .expect("options response is valid")
 }
 
 fn not_found() -> Response<Vec<u8>> {

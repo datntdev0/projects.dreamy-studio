@@ -18,10 +18,17 @@ use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
+use crate::features::library::models::LibraryVideo;
+use crate::features::library::models::StreamChunk;
+use crate::features::library::models::StreamKind;
 use crate::features::library::sounds;
 use crate::features::library::sounds::NewSound;
 use crate::features::library::sounds::SoundFiles;
 use crate::features::library::sounds::SoundFormat;
+use crate::features::library::video_probe;
+use crate::features::library::videos;
+use crate::features::library::videos::NewVideo;
+use crate::features::library::videos::VideoFiles;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
@@ -34,17 +41,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
-
-const SOUND_STREAM_CHUNK_BYTES: u64 = 2 * 1024 * 1024;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SoundChunk {
-    pub mime: String,
-    pub total: u64,
-    pub start: u64,
-    pub end: u64,
-    pub bytes: Vec<u8>,
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct LibraryService {
@@ -351,41 +347,177 @@ impl LibraryWorkspace {
             .encode(sounds::peaks(self.database()?.connection(), id)?))
     }
 
-    pub fn sound_stream(
+    pub fn video_inspect(&self, paths: &[String]) -> LibraryResult<Vec<AssetCheck>> {
+        let db = self.database()?;
+        paths
+            .iter()
+            .map(|path| inspect_video(db.connection(), path))
+            .collect()
+    }
+
+    pub fn video_upload(&self, path: &str, input: AssetUploadInput) -> LibraryResult<LibraryVideo> {
+        let source = Path::new(path);
+        let metadata = fs::metadata(source)?;
+        let size = metadata.len();
+        let format = video_format(source)?;
+        if size == 0 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::VideoUnreadable,
+                "video file is empty",
+            ));
+        }
+        if size > videos::VIDEO_MAX_BYTES {
+            return Err(LibraryError::new(
+                LibraryErrorCode::VideoTooLarge,
+                "video file exceeds 2 GiB",
+            ));
+        }
+        let info = video_probe::probe(source, format)?;
+        let name = assets::file_name(source)?;
+        let files = VideoFiles::new(self.dir.clone());
+        let staged = files.stage(source)?;
+        let _guard = self.lock();
+        let result = (|| -> LibraryResult<LibraryVideo> {
+            let mut db = self.database()?;
+            let tx = db
+                .connection_mut()
+                .transaction_with_behavior(TransactionBehavior::Immediate)?;
+            let name = videos::unique_name(&tx, &name, None)?;
+            let id = videos::insert(
+                &tx,
+                &NewVideo {
+                    name,
+                    ext: format.extension().to_string(),
+                    size: size as i64,
+                    duration_ms: info.duration_ms,
+                    width: info.width,
+                    height: info.height,
+                    fps: info.fps,
+                    rights: input.rights,
+                    collection_id: input.collection_id,
+                    tags: input.tags,
+                },
+                &format_timestamp(Utc::now()),
+            )?;
+            files.commit(&staged, id, format)?;
+            tx.commit()?;
+            videos::get(db.connection(), id)
+        })();
+        if result.is_err() {
+            let _ = files.discard(&staged);
+        }
+        result
+    }
+
+    pub fn video_list(&self) -> LibraryResult<Vec<LibraryVideo>> {
+        videos::list(self.database()?.connection())
+    }
+
+    pub fn video_update(&self, id: i64, patch: AssetPatch) -> LibraryResult<LibraryVideo> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let video = videos::update(&tx, id, &patch, &format_timestamp(Utc::now()))?;
+        tx.commit()?;
+        Ok(video)
+    }
+
+    pub fn video_delete(&self, ids: &[i64]) -> LibraryResult<usize> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let deleted = videos::delete(&tx, ids)?;
+        tx.commit()?;
+        let files = VideoFiles::new(self.dir.clone());
+        for (id, ext) in &deleted {
+            if let Some(format) = video_probe::VideoFormat::from_extension(ext) {
+                let _ = files.remove(*id, format);
+            }
+        }
+        Ok(deleted.len())
+    }
+
+    pub fn video_poster(&self, id: i64) -> LibraryResult<Option<String>> {
+        videos::get(self.database()?.connection(), id)?;
+        Ok(VideoFiles::new(self.dir.clone())
+            .read_poster(id)?
+            .map(|bytes| assets::data_url("image/jpeg", &bytes)))
+    }
+
+    pub fn video_poster_set(&self, id: i64, data: &str) -> LibraryResult<()> {
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .map_err(|error| {
+                LibraryError::new(LibraryErrorCode::InvalidInput, error.to_string())
+            })?;
+        let _guard = self.lock();
+        videos::get(self.database()?.connection(), id)?;
+        let files = VideoFiles::new(self.dir.clone());
+        files.write_poster(id, &bytes)?;
+        videos::mark_poster(self.database()?.connection(), id)
+    }
+
+    pub fn stream(
         &self,
+        kind: StreamKind,
         id: i64,
         range: Option<(u64, Option<u64>)>,
-    ) -> LibraryResult<SoundChunk> {
-        let sound = sounds::get(self.database()?.connection(), id)?;
-        let format = sound_format_from_extension(&sound.ext)?;
-        let files = SoundFiles::new(self.dir.clone());
-        let total = files.len(id, format)?;
+    ) -> LibraryResult<StreamChunk> {
+        let (mime, total, read): (String, u64, Box<dyn Fn(u64, u64) -> LibraryResult<Vec<u8>>>) =
+            match kind {
+                StreamKind::Sound => {
+                    let sound = sounds::get(self.database()?.connection(), id)?;
+                    let format = sound_format_from_extension(&sound.ext)?;
+                    let files = SoundFiles::new(self.dir.clone());
+                    let total = files.len(id, format)?;
+                    (
+                        format.mime().to_string(),
+                        total,
+                        Box::new(move |start, len| files.read_range(id, format, start, len)),
+                    )
+                }
+                StreamKind::Video => {
+                    let video = videos::get(self.database()?.connection(), id)?;
+                    let format = video_format_from_extension(&video.ext)?;
+                    let files = VideoFiles::new(self.dir.clone());
+                    let total = files.len(id, format)?;
+                    (
+                        format.mime().to_string(),
+                        total,
+                        Box::new(move |start, len| files.read_range(id, format, start, len)),
+                    )
+                }
+            };
         if total == 0 {
             return Err(LibraryError::new(
-                LibraryErrorCode::SoundUnreadable,
-                "sound file is empty",
+                LibraryErrorCode::InvalidInput,
+                "stream file is empty",
             ));
         }
         let (start, requested_end) = range.unwrap_or((0, None));
         if start >= total {
             return Err(LibraryError::new(
                 LibraryErrorCode::InvalidInput,
-                "sound range starts after the end of the file",
+                "stream range starts after the end of the file",
             ));
         }
         let end = requested_end
             .unwrap_or(total - 1)
             .min(total - 1)
-            .min(start + SOUND_STREAM_CHUNK_BYTES - 1);
+            .min(start + kind.max_chunk() - 1);
         if end < start {
             return Err(LibraryError::new(
                 LibraryErrorCode::InvalidInput,
-                "sound range ends before it starts",
+                "stream range ends before it starts",
             ));
         }
-        let bytes = files.read_range(id, format, start, end - start + 1)?;
-        Ok(SoundChunk {
-            mime: format.mime().to_string(),
+        let bytes = read(start, end - start + 1)?;
+        Ok(StreamChunk {
+            mime,
             total,
             start,
             end,
@@ -530,6 +662,66 @@ fn inspect_sound(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Asset
     Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
 }
 
+fn inspect_video(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
+    let source = Path::new(path);
+    let name = source
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(path)
+        .to_string();
+    let metadata = match fs::metadata(source) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(assets::check(
+                path,
+                name,
+                0,
+                AssetCheckStatus::Error,
+                "not_found",
+            ));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let size = metadata.len() as i64;
+    if size == 0 {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Error,
+            "empty",
+        ));
+    }
+    if video_format(source).is_err() {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Error,
+            "unsupported",
+        ));
+    }
+    if metadata.len() > videos::VIDEO_MAX_BYTES {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Error,
+            "too_large",
+        ));
+    }
+    if videos::unique_name(conn, &name, None)? != name {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Warn,
+            "duplicate_name",
+        ));
+    }
+    Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
+}
+
 fn image_format(path: &Path) -> LibraryResult<ImageFormat> {
     let extension = path
         .extension()
@@ -560,6 +752,23 @@ fn sound_format_from_extension(extension: &str) -> LibraryResult<SoundFormat> {
         LibraryError::new(
             LibraryErrorCode::SoundUnsupported,
             format!("unsupported sound extension: {extension}"),
+        )
+    })
+}
+
+fn video_format(path: &Path) -> LibraryResult<video_probe::VideoFormat> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    video_format_from_extension(extension)
+}
+
+fn video_format_from_extension(extension: &str) -> LibraryResult<video_probe::VideoFormat> {
+    video_probe::VideoFormat::from_extension(extension).ok_or_else(|| {
+        LibraryError::new(
+            LibraryErrorCode::VideoUnsupported,
+            format!("unsupported video extension: {extension}"),
         )
     })
 }
@@ -693,6 +902,60 @@ mod tests {
         path
     }
 
+    fn iso_box(kind: &[u8; 4], payload: Vec<u8>) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(payload.len() + 8);
+        bytes.extend_from_slice(&((payload.len() + 8) as u32).to_be_bytes());
+        bytes.extend_from_slice(kind);
+        bytes.extend_from_slice(&payload);
+        bytes
+    }
+
+    fn synthetic_mp4() -> Vec<u8> {
+        let mut mvhd = vec![0; 20];
+        mvhd[12..16].copy_from_slice(&1_000_u32.to_be_bytes());
+        mvhd[16..20].copy_from_slice(&2_000_u32.to_be_bytes());
+        let mut tkhd = vec![0; 84];
+        tkhd[40..44].copy_from_slice(&0x0001_0000_i32.to_be_bytes());
+        tkhd[56..60].copy_from_slice(&0x0001_0000_i32.to_be_bytes());
+        tkhd[76..80].copy_from_slice(&(1_920_u32 << 16).to_be_bytes());
+        tkhd[80..84].copy_from_slice(&(1_080_u32 << 16).to_be_bytes());
+        let mut mdhd = vec![0; 20];
+        mdhd[12..16].copy_from_slice(&1_000_u32.to_be_bytes());
+        mdhd[16..20].copy_from_slice(&2_000_u32.to_be_bytes());
+        let mut hdlr = vec![0; 12];
+        hdlr[8..12].copy_from_slice(b"vide");
+        let mut stts = vec![0; 16];
+        stts[4..8].copy_from_slice(&1_u32.to_be_bytes());
+        stts[8..12].copy_from_slice(&60_u32.to_be_bytes());
+        stts[12..16].copy_from_slice(&33_u32.to_be_bytes());
+        let stbl = iso_box(b"stbl", iso_box(b"stts", stts));
+        let minf = iso_box(b"minf", stbl);
+        let mdia = iso_box(
+            b"mdia",
+            [iso_box(b"mdhd", mdhd), iso_box(b"hdlr", hdlr), minf].concat(),
+        );
+        let trak = iso_box(b"trak", [iso_box(b"tkhd", tkhd), mdia].concat());
+        [
+            iso_box(b"ftyp", b"isom\0\0\0\0isom".to_vec()),
+            iso_box(b"moov", [iso_box(b"mvhd", mvhd), trak].concat()),
+        ]
+        .concat()
+    }
+
+    fn video_input(collection_id: Option<i64>) -> AssetUploadInput {
+        AssetUploadInput {
+            collection_id,
+            tags: vec!["Example".to_string()],
+            rights: AssetRights::Own,
+        }
+    }
+
+    fn write_mp4(dir: &TempDir, name: &str) -> PathBuf {
+        let path = dir.path().join(name);
+        fs::write(&path, synthetic_mp4()).unwrap();
+        path
+    }
+
     #[test]
     fn uploads_lists_and_renames_duplicate_images() {
         let (dir, workspace) = fixture();
@@ -814,7 +1077,7 @@ mod tests {
         assert_eq!(workspace.sound_list().unwrap().len(), 2);
         assert!(!workspace.sound_peaks(first.id).unwrap().is_empty());
         let chunk = workspace
-            .sound_stream(first.id, Some((4, Some(11))))
+            .stream(StreamKind::Sound, first.id, Some((4, Some(11))))
             .unwrap();
         assert_eq!((chunk.start, chunk.end, chunk.bytes.len()), (4, 11, 8));
         assert_eq!(chunk.total as usize, wav_bytes().len());
@@ -1178,6 +1441,185 @@ mod tests {
                 )
                 .is_ok()
         );
+    }
+
+    #[test]
+    fn uploads_lists_posters_and_deletes_videos() {
+        let (dir, workspace) = fixture();
+        let path = write_mp4(&dir, "harbor.mp4");
+        let checks = workspace
+            .video_inspect(&[path.to_string_lossy().to_string()])
+            .unwrap();
+        assert_eq!(checks[0].status, AssetCheckStatus::Ok);
+        let first = workspace
+            .video_upload(path.to_str().unwrap(), video_input(None))
+            .unwrap();
+        let second = workspace
+            .video_upload(path.to_str().unwrap(), video_input(None))
+            .unwrap();
+        assert_eq!(first.name, "harbor.mp4");
+        assert_eq!(second.name, "harbor (2).mp4");
+        assert_eq!(workspace.video_list().unwrap().len(), 2);
+        let original = dir
+            .path()
+            .join("library")
+            .join("videos")
+            .join(format!("{}.mp4", first.id));
+        let poster = dir
+            .path()
+            .join("library")
+            .join("videos")
+            .join("posters")
+            .join(format!("{}.jpg", first.id));
+        let jpeg = base64::engine::general_purpose::STANDARD.encode([0xff, 0xd8, 0xff, 0xdb]);
+        workspace.video_poster_set(first.id, &jpeg).unwrap();
+        assert!(
+            workspace
+                .video_poster(first.id)
+                .unwrap()
+                .unwrap()
+                .starts_with("data:image/jpeg;base64,")
+        );
+        assert!(workspace.video_list().unwrap()[1].has_poster);
+        assert!(original.exists());
+        assert!(poster.exists());
+        assert_eq!(workspace.video_delete(&[first.id]).unwrap(), 1);
+        assert!(!original.exists());
+        assert!(!poster.exists());
+    }
+
+    #[test]
+    fn video_inspection_rejects_unsupported_and_oversize_files() {
+        let (dir, workspace) = fixture();
+        let unsupported = dir.path().join("clip.avi");
+        fs::write(&unsupported, b"not an AVI").unwrap();
+        let unsupported = workspace
+            .video_inspect(&[unsupported.to_string_lossy().to_string()])
+            .unwrap();
+        assert_eq!(unsupported[0].status, AssetCheckStatus::Error);
+        assert_eq!(unsupported[0].code.as_deref(), Some("unsupported"));
+        let oversized = dir.path().join("large.mp4");
+        fs::File::create(&oversized)
+            .unwrap()
+            .set_len(videos::VIDEO_MAX_BYTES + 1)
+            .unwrap();
+        let oversized = workspace
+            .video_inspect(&[oversized.to_string_lossy().to_string()])
+            .unwrap();
+        assert_eq!(oversized[0].status, AssetCheckStatus::Error);
+        assert_eq!(oversized[0].code.as_deref(), Some("too_large"));
+    }
+
+    #[test]
+    fn unreadable_and_failed_commit_videos_leave_no_database_rows_or_temp_files() {
+        let (dir, workspace) = fixture();
+        let unreadable = dir.path().join("broken.mp4");
+        fs::write(&unreadable, b"not a video").unwrap();
+        assert_eq!(
+            workspace
+                .video_upload(unreadable.to_str().unwrap(), video_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::VideoUnreadable
+        );
+        assert!(workspace.video_list().unwrap().is_empty());
+        assert!(!dir.path().join("library").join("videos").exists());
+        let valid = write_mp4(&dir, "blocked.mp4");
+        let target = dir.path().join("library").join("videos").join("1.mp4");
+        fs::create_dir_all(&target).unwrap();
+        assert_eq!(
+            workspace
+                .video_upload(valid.to_str().unwrap(), video_input(None))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::Io
+        );
+        assert!(workspace.video_list().unwrap().is_empty());
+        assert!(
+            fs::read_dir(target.parent().unwrap())
+                .unwrap()
+                .all(|entry| !entry
+                    .unwrap()
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".upload-"))
+        );
+    }
+
+    #[test]
+    fn videos_count_unfile_and_tags_follow_library_operations() {
+        let (dir, workspace) = fixture();
+        let collection = workspace.collection_create(collection("Videos")).unwrap();
+        let filed_path = write_mp4(&dir, "filed.mp4");
+        let unfiled_path = write_mp4(&dir, "unfiled.mp4");
+        let filed = workspace
+            .video_upload(
+                filed_path.to_str().unwrap(),
+                video_input(Some(collection.id)),
+            )
+            .unwrap();
+        workspace
+            .video_upload(unfiled_path.to_str().unwrap(), video_input(None))
+            .unwrap();
+        let summary = workspace.summary().unwrap();
+        assert_eq!((summary.assets.video, summary.unfiled.video), (2, 1));
+        assert_eq!(workspace.collection_list().unwrap()[0].counts.video, 1);
+        workspace.tag_rename("example", "renamed").unwrap();
+        workspace
+            .video_update(
+                filed.id,
+                AssetPatch {
+                    tags: Some(vec!["renamed".to_string(), "target".to_string()]),
+                    ..AssetPatch::default()
+                },
+            )
+            .unwrap();
+        let tag = workspace.tag_merge("renamed", "target").unwrap();
+        assert_eq!(tag.counts.video, 2);
+        assert_eq!(workspace.collection_delete(collection.id).unwrap(), 1);
+        assert!(
+            workspace
+                .video_list()
+                .unwrap()
+                .iter()
+                .all(|video| video.collection_id.is_none())
+        );
+    }
+
+    #[test]
+    fn streams_sound_and_video_ranges_with_kind_specific_clamps() {
+        let (dir, workspace) = fixture();
+        let sound_path = write_wav(&dir, "long.wav");
+        let mut sound_bytes = fs::read(&sound_path).unwrap();
+        sound_bytes.resize(StreamKind::Sound.max_chunk() as usize + 9, 0);
+        fs::write(&sound_path, sound_bytes).unwrap();
+        let sound = workspace
+            .sound_upload(sound_path.to_str().unwrap(), sound_input(None))
+            .unwrap();
+        let video_path = write_mp4(&dir, "long.mp4");
+        let mut video_bytes = fs::read(&video_path).unwrap();
+        video_bytes.resize(StreamKind::Video.max_chunk() as usize + 9, 0);
+        fs::write(&video_path, video_bytes).unwrap();
+        let video = workspace
+            .video_upload(video_path.to_str().unwrap(), video_input(None))
+            .unwrap();
+        let sound_chunk = workspace.stream(StreamKind::Sound, sound.id, None).unwrap();
+        assert_eq!(sound_chunk.total, StreamKind::Sound.max_chunk() + 9);
+        assert_eq!(sound_chunk.start, 0);
+        assert_eq!(sound_chunk.end, StreamKind::Sound.max_chunk() - 1);
+        assert_eq!(
+            sound_chunk.bytes.len() as u64,
+            StreamKind::Sound.max_chunk()
+        );
+        let video_chunk = workspace
+            .stream(StreamKind::Video, video.id, Some((4, Some(11))))
+            .unwrap();
+        assert_eq!(video_chunk.total, StreamKind::Video.max_chunk() + 9);
+        assert_eq!((video_chunk.start, video_chunk.end), (4, 11));
+        assert_eq!(video_chunk.bytes.len(), 8);
+        let clamped = workspace.stream(StreamKind::Video, video.id, None).unwrap();
+        assert_eq!(clamped.end, StreamKind::Video.max_chunk() - 1);
+        assert_eq!(clamped.bytes.len() as u64, StreamKind::Video.max_chunk());
     }
 
     #[test]

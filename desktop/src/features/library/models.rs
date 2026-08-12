@@ -200,6 +200,49 @@ pub struct LibrarySound {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryVideo {
+    pub id: i64,
+    pub name: String,
+    pub ext: String,
+    pub size: i64,
+    pub duration_ms: i64,
+    pub width: u32,
+    pub height: u32,
+    pub fps: Option<f64>,
+    pub rights: AssetRights,
+    pub origin: String,
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub has_poster: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StreamChunk {
+    pub mime: String,
+    pub total: u64,
+    pub start: u64,
+    pub end: u64,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StreamKind {
+    Sound,
+    Video,
+}
+impl StreamKind {
+    pub fn max_chunk(self) -> u64 {
+        match self {
+            Self::Sound => 2 * 1024 * 1024,
+            Self::Video => 8 * 1024 * 1024,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LibraryErrorCode {
@@ -218,6 +261,10 @@ pub enum LibraryErrorCode {
     SoundUnsupported,
     SoundTooLarge,
     SoundUnreadable,
+    VideoNotFound,
+    VideoUnsupported,
+    VideoTooLarge,
+    VideoUnreadable,
     TagLimit,
     Io,
     Db,
@@ -242,6 +289,10 @@ impl LibraryErrorCode {
             Self::SoundUnsupported => "sound_unsupported",
             Self::SoundTooLarge => "sound_too_large",
             Self::SoundUnreadable => "sound_unreadable",
+            Self::VideoNotFound => "video_not_found",
+            Self::VideoUnsupported => "video_unsupported",
+            Self::VideoTooLarge => "video_too_large",
+            Self::VideoUnreadable => "video_unreadable",
             Self::TagLimit => "tag_limit",
             Self::Io => "io",
             Self::Db => "db",

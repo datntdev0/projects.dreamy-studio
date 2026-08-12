@@ -18,7 +18,21 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol("dreamy-sound", |context, request, responder| {
             let app = context.app_handle().clone();
             tauri::async_runtime::spawn_blocking(move || {
-                responder.respond(commands::library_stream::respond(&app, request));
+                responder.respond(commands::library_stream::respond(
+                    &app,
+                    request,
+                    crate::features::library::models::StreamKind::Sound,
+                ));
+            });
+        })
+        .register_asynchronous_uri_scheme_protocol("dreamy-video", |context, request, responder| {
+            let app = context.app_handle().clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(commands::library_stream::respond(
+                    &app,
+                    request,
+                    crate::features::library::models::StreamKind::Video,
+                ));
             });
         })
         .invoke_handler(tauri::generate_handler![
@@ -82,6 +96,14 @@ pub fn run() {
             commands::library::library_sound_update,
             commands::library::library_sound_delete,
             commands::library::library_sound_peaks,
+            commands::library::library_video_pick,
+            commands::library::library_video_inspect,
+            commands::library::library_video_upload,
+            commands::library::library_video_list,
+            commands::library::library_video_update,
+            commands::library::library_video_delete,
+            commands::library::library_video_poster,
+            commands::library::library_video_poster_set,
         ])
         .setup(setup)
         .build(tauri::generate_context!())

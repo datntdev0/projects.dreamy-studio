@@ -13,8 +13,10 @@ use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
+use crate::features::library::models::LibraryVideo;
 use crate::features::library::service::LibraryService;
 use crate::features::library::sounds::SOUND_EXTENSIONS;
+use crate::features::library::videos::VIDEO_EXTENSIONS;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -23,6 +25,7 @@ use tauri_plugin_dialog::DialogExt;
 
 const IMAGE_PICKER_LABEL: &str = "Images";
 const SOUND_PICKER_LABEL: &str = "Sounds";
+const VIDEO_PICKER_LABEL: &str = "Videos";
 
 pub fn get_summary(
     service: &LibraryService,
@@ -198,6 +201,68 @@ pub fn sound_peaks(
     id: i64,
 ) -> LibraryResult<String> {
     service.open(session)?.sound_peaks(id)
+}
+
+pub fn pick_videos(app: &AppHandle) -> Vec<String> {
+    app.dialog()
+        .file()
+        .add_filter(VIDEO_PICKER_LABEL, &VIDEO_EXTENSIONS)
+        .blocking_pick_files()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|picked| picked_path(Some(picked)))
+        .collect()
+}
+pub fn inspect_videos(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    paths: Vec<String>,
+) -> LibraryResult<Vec<AssetCheck>> {
+    service.open(session)?.video_inspect(&paths)
+}
+pub fn upload_video(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    path: String,
+    input: AssetUploadInput,
+) -> LibraryResult<LibraryVideo> {
+    service.open(session)?.video_upload(&path, input)
+}
+pub fn list_videos(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+) -> LibraryResult<Vec<LibraryVideo>> {
+    service.open(session)?.video_list()
+}
+pub fn update_video(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    id: i64,
+    patch: AssetPatch,
+) -> LibraryResult<LibraryVideo> {
+    service.open(session)?.video_update(id, patch)
+}
+pub fn delete_videos(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
+    service.open(session)?.video_delete(&ids)
+}
+pub fn video_poster(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    id: i64,
+) -> LibraryResult<Option<String>> {
+    service.open(session)?.video_poster(id)
+}
+pub fn video_poster_set(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    id: i64,
+    data: String,
+) -> LibraryResult<()> {
+    service.open(session)?.video_poster_set(id, &data)
 }
 
 pub fn delete_images(
@@ -446,6 +511,70 @@ pub async fn library_sound_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResul
 pub async fn library_sound_peaks(app: AppHandle, id: i64) -> LibraryResult<String> {
     run_blocking(app, move |service, session| {
         sound_peaks(service, session, id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_video_pick(app: AppHandle) -> Vec<String> {
+    spawn_blocking(move || pick_videos(&app))
+        .await
+        .unwrap_or_default()
+}
+#[tauri::command]
+pub async fn library_video_inspect(
+    app: AppHandle,
+    paths: Vec<String>,
+) -> LibraryResult<Vec<AssetCheck>> {
+    run_blocking(app, move |service, session| {
+        inspect_videos(service, session, paths)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn library_video_upload(
+    app: AppHandle,
+    path: String,
+    input: AssetUploadInput,
+) -> LibraryResult<LibraryVideo> {
+    run_blocking(app, move |service, session| {
+        upload_video(service, session, path, input)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn library_video_list(app: AppHandle) -> LibraryResult<Vec<LibraryVideo>> {
+    run_blocking(app, list_videos).await
+}
+#[tauri::command]
+pub async fn library_video_update(
+    app: AppHandle,
+    id: i64,
+    patch: AssetPatch,
+) -> LibraryResult<LibraryVideo> {
+    run_blocking(app, move |service, session| {
+        update_video(service, session, id, patch)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn library_video_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+    run_blocking(app, move |service, session| {
+        delete_videos(service, session, ids)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn library_video_poster(app: AppHandle, id: i64) -> LibraryResult<Option<String>> {
+    run_blocking(app, move |service, session| {
+        video_poster(service, session, id)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn library_video_poster_set(app: AppHandle, id: i64, data: String) -> LibraryResult<()> {
+    run_blocking(app, move |service, session| {
+        video_poster_set(service, session, id, data)
     })
     .await
 }

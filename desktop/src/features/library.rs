@@ -5,3 +5,5 @@ pub mod models;
 pub mod service;
 pub mod sounds;
 pub mod tags;
+pub mod video_probe;
+pub mod videos;

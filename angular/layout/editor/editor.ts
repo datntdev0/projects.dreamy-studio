@@ -11,6 +11,7 @@ import { LibraryCollections } from "../../app/features/library/components/collec
 import { LibraryCollectionView } from "../../app/features/library/components/collection.component";
 import { LibraryImages } from "../../app/features/library/components/images.component";
 import { LibrarySounds } from "../../app/features/library/components/sounds.component";
+import { LibraryVideos } from "../../app/features/library/components/videos.component";
 import { Bottom } from "../bottom/bottom";
 import { LayoutService } from "../layout.service";
 import { EditorTab } from "../layout.models";
@@ -19,7 +20,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds],
+  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos],
   templateUrl: "./editor.html",
 })
 export class Editor {
@@ -66,7 +67,7 @@ export class Editor {
     if (tab.kind === "collection") {
       return this.i18n.translate("library.collections");
     }
-    if (tab.kind === "images" || tab.kind === "sounds") {
+    if (tab.kind === "images" || tab.kind === "sounds" || tab.kind === "videos") {
       return this.i18n.translate("main.rail.library");
     }
     return tab.kind === "novel" ? tab.title : null;

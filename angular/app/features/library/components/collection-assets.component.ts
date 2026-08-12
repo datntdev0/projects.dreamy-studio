@@ -6,6 +6,7 @@ import { LibraryCollectionAssetsService } from "../library.collection-assets.ser
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRow, toAssetRows } from "../library.assets.models";
 import { LibraryVideoService } from "../library.videos.service";
+import { videoMeta } from "../library.videos.rules";
 import { dimensionsText } from "../library.images.rules";
 import { LibraryImageService } from "../library.images.service";
 import { AssetRef } from "../library.models";
@@ -16,6 +17,8 @@ import { durationText } from "../library.sounds.rules";
 import { LibraryImageThumb } from "./image-thumb.component";
 import { LibrarySoundMedia } from "./sound-media.component";
 import { LibrarySoundPlay } from "./sound-play.component";
+import { LibraryVideoMedia } from "./video-media.component";
+import { LibraryVideoThumb } from "./video-thumb.component";
 
 const FIELD_SELECTOR = "input,textarea,select";
 
@@ -34,7 +37,7 @@ function inCollection(collectionId: number, row: AssetRow): boolean {
 @Component({
   selector: "app-library-collection-assets",
   standalone: true,
-  imports: [Icon, I18nPipe, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay],
+  imports: [Icon, I18nPipe, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay, LibraryVideoMedia, LibraryVideoThumb],
   templateUrl: "./collection-assets.component.html",
   host: { "data-testid": "library-collection-assets" },
 })
@@ -53,6 +56,7 @@ export class LibraryCollectionAssets implements OnInit {
   ngOnInit(): void {
     void this.images.ensureLoaded();
     void this.sounds.ensureLoaded();
+    void this.videos.ensureLoaded();
   }
 
   onQuery(event: Event): void {
@@ -91,7 +95,7 @@ export class LibraryCollectionAssets implements OnInit {
     this.uploadMenuOpen.update((open) => !open);
   }
 
-  openUpload(kind: "image" | "sound"): void {
+  openUpload(kind: "image" | "sound" | "video"): void {
     this.uploadMenuOpen.set(false);
     this.dialogs.openUpload([], kind, this.collectionId());
   }
@@ -106,6 +110,9 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   meta(row: AssetRow): string {
+    if (row.video) {
+      return videoMeta(row.video);
+    }
     return row.image ? dimensionsText(row.image) : row.sound ? durationText(row.sound.durationMs) : "â€”";
   }
 
@@ -114,11 +121,11 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   typeKey(row: AssetRow): I18nKey {
-    return row.ref.kind === "image" ? "library.kind.image" : "library.kind.sound";
+    return row.ref.kind === "image" ? "library.kind.image" : row.ref.kind === "sound" ? "library.kind.sound" : "library.kind.video";
   }
 
   typeIcon(row: AssetRow): string {
-    return row.ref.kind === "image" ? "image" : "music";
+    return row.ref.kind === "image" ? "image" : row.ref.kind === "sound" ? "music" : "film";
   }
 
   collectionName(row: AssetRow): string {
@@ -149,7 +156,8 @@ export class LibraryCollectionAssets implements OnInit {
       return;
     }
     if (selected.kind === "image") this.dialogs.openDeleteImages([selected.id]);
-    else this.dialogs.openDeleteSounds([selected.id]);
+    else if (selected.kind === "sound") this.dialogs.openDeleteSounds([selected.id]);
+    else this.dialogs.openDeleteVideos([selected.id]);
   }
 
   private buildVisible(): AssetRow[] {
@@ -161,6 +169,6 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   private isDialogOpen(): boolean {
-    return this.dialogs.previewImageId() !== null || this.dialogs.previewSoundId() !== null || this.dialogs.deleteImageIds().length > 0 || this.dialogs.deleteSoundIds().length > 0 || document.querySelector(".modal") !== null;
+    return this.dialogs.previewImageId() !== null || this.dialogs.previewSoundId() !== null || this.dialogs.previewVideoId() !== null || this.dialogs.deleteImageIds().length > 0 || this.dialogs.deleteSoundIds().length > 0 || this.dialogs.deleteVideoIds().length > 0 || document.querySelector(".modal") !== null;
   }
 }

@@ -73,8 +73,10 @@
               @if (collectionAssets.selectedRef(collectionId); as selected) {
                 @if (selected.kind === "image") {
                   <app-library-image-panel [imageId]="selected.id" data-testid="inspector-collection-image-panel" />
-                } @else {
+                } @else if (selected.kind === "sound") {
                   <app-library-sound-panel [soundId]="selected.id" data-testid="inspector-collection-sound-panel" />
+                } @else {
+                  <app-library-video-panel [videoId]="selected.id" data-testid="inspector-collection-video-panel" />
                 }
               } @else {
                 <app-library-collection-panel [collectionId]="collectionId" data-testid="inspector-collection-panel" />
@@ -97,6 +99,15 @@
               <app-library-sound-panel data-testid="inspector-sound-panel" />
             } @else {
               <app-library-sounds-panel data-testid="inspector-sounds-panel" />
+            }
+          </div>
+        }
+        @case ("videos") {
+          <div data-testid="inspector-videos-host">
+            @if (videos.selected()) {
+              <app-library-video-panel data-testid="inspector-video-panel" />
+            } @else {
+              <app-library-videos-panel data-testid="inspector-videos-panel" />
             }
           </div>
         }

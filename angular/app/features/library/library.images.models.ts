@@ -1,4 +1,4 @@
-import { ASSET_RIGHTS, AssetCheck, AssetCheckStatus, AssetPatch, AssetRights, AssetUploadInput } from "./library.models";
+import { ASSET_RATIOS, ASSET_RIGHTS, AssetCheck, AssetCheckStatus, AssetPatch, AssetRights, AssetUploadInput } from "./library.models";
 
 export type ImageRights = AssetRights;
 export type ImageSort = "new" | "name" | "size";
@@ -27,4 +27,4 @@ export type ImageUploadInput = AssetUploadInput;
 export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"] as const;
 export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 export const IMAGE_RIGHTS: ImageRights[] = ASSET_RIGHTS;
-export const IMAGE_RATIOS = [["1/1", "1:1"], ["16/9", "16:9"], ["9/16", "9:16"]] as const;
+export const IMAGE_RATIOS = ASSET_RATIOS;

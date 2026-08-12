@@ -5,6 +5,7 @@ import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRow, toAssetRows } from "../library.assets.models";
+import { LibraryVideoService } from "../library.videos.service";
 import { dimensionsText } from "../library.images.rules";
 import { LibraryImageService } from "../library.images.service";
 import { AssetRef } from "../library.models";
@@ -41,6 +42,7 @@ export class LibraryCollectionAssets implements OnInit {
   readonly collectionId = input.required<number>();
   private readonly images = inject(LibraryImageService);
   private readonly sounds = inject(LibrarySoundService);
+  private readonly videos = inject(LibraryVideoService);
   readonly library = inject(LibraryService);
   readonly assets = inject(LibraryCollectionAssetsService);
   readonly dialogs = inject(LibraryDialogsService);
@@ -155,7 +157,7 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   private buildTotal(): number {
-    return toAssetRows(this.images.items(), this.sounds.items()).filter(inCollection.bind(null, this.collectionId())).length;
+    return toAssetRows(this.images.items(), this.sounds.items(), this.videos.items()).filter(inCollection.bind(null, this.collectionId())).length;
   }
 
   private isDialogOpen(): boolean {

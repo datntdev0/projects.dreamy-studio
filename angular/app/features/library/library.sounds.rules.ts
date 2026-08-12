@@ -1,4 +1,5 @@
 import { LibrarySound, SoundSort } from "./library.sounds.models";
+export { durationText } from "./library.rules";
 
 export interface SoundFilters { query: string; sort: SoundSort; collection: number | "none" | null; tags: string[]; }
 
@@ -12,7 +13,6 @@ function compareSize(a: LibrarySound, b: LibrarySound): number { return b.size -
 function compareFor(sort: SoundSort, a: LibrarySound, b: LibrarySound): number { return sort === "name" ? compareName(a, b) : sort === "size" ? compareSize(a, b) : compareNew(a, b); }
 
 export function soundCode(id: number): string { return `SND-${String(id).padStart(4, "0")}`; }
-export function durationText(milliseconds: number): string { const seconds = Math.max(0, Math.round(milliseconds / 1000)); const hours = Math.floor(seconds / 3600); const minutes = Math.floor((seconds % 3600) / 60); const remainder = seconds % 60; return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}` : `${minutes}:${String(remainder).padStart(2, "0")}`; }
 export function audioText(sound: LibrarySound): string { const rate = sound.sampleRate % 1000 === 0 ? `${sound.sampleRate / 1000} kHz` : `${(sound.sampleRate / 1000).toFixed(1)} kHz`; const channels = sound.channels === 1 ? "Mono" : sound.channels === 2 ? "Stereo" : `${sound.channels} ch`; return `${rate} · ${channels}`; }
 export function searchSounds(items: LibrarySound[], query: string): LibrarySound[] { const needle = query.trim().toLocaleLowerCase(); return items.filter(matchesQuery.bind(null, needle)); }
 export function sortSounds(items: LibrarySound[], sort: SoundSort): LibrarySound[] { return [...items].sort(compareFor.bind(null, sort)); }

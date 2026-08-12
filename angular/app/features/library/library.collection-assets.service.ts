@@ -5,7 +5,8 @@ import { filterAssetRows } from "./library.assets.rules";
 import { AssetRef } from "./library.models";
 import { LibraryService } from "./library.service";
 import { LibrarySoundService } from "./library.sounds.service";
-import { SoundSort } from "./library.sounds.models";
+import { LibraryVideoService } from "./library.videos.service";
+import { VideoSort } from "./library.videos.models";
 
 function sameRef(left: AssetRef, right: AssetRef): boolean { return left.kind === right.kind && left.id === right.id; }
 function containsRef(rows: AssetRow[], ref: AssetRef): boolean { return rows.some(sameRowRef.bind(null, ref)); }
@@ -15,17 +16,18 @@ function sameRowRef(ref: AssetRef, row: AssetRow): boolean { return sameRef(row.
 export class LibraryCollectionAssetsService {
   private readonly images = inject(LibraryImageService);
   private readonly sounds = inject(LibrarySoundService);
+  private readonly videos = inject(LibraryVideoService);
   private readonly library = inject(LibraryService);
   private readonly rowsByCollection = new Map<number, Signal<AssetRow[]>>();
   private readonly selections = new Map<number, WritableSignal<AssetRef | null>>();
 
   readonly query = signal("");
-  readonly sort = signal<SoundSort>("new");
+  readonly sort = signal<VideoSort>("new");
 
   rows(collectionId: number): Signal<AssetRow[]> {
     const existing = this.rowsByCollection.get(collectionId);
     if (existing) return existing;
-    const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
+    const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
     this.rowsByCollection.set(collectionId, rows);
     return rows;
   }

@@ -19,5 +19,6 @@ export type AssetCheckStatus = "ok" | "warn" | "error";
 export interface AssetCheck { path: string; name: string; size: number; status: AssetCheckStatus; code?: "empty" | "unsupported" | "too_large" | "not_found" | "duplicate_name"; }
 export interface AssetUploadInput { collectionId?: number; tags: string[]; rights: AssetRights; }
 export interface AssetPatch { name?: string; rights?: AssetRights; collectionId?: number | null; tags?: string[]; }
-export type AssetRef = { kind: "image" | "sound"; id: number; };
-export type LibraryErrorCode = "no_workspace" | "invalid_input" | "collection_not_found" | "collection_exists" | "tag_exists" | "tag_not_found" | "invalid_tag" | "image_not_found" | "image_unsupported" | "image_too_large" | "image_unreadable" | "sound_not_found" | "sound_unsupported" | "sound_too_large" | "sound_unreadable" | "tag_limit" | "io" | "db" | "task" | "unknown";
+export type AssetRef = { kind: "image" | "sound" | "video"; id: number; };
+export type LibraryErrorCode = "no_workspace" | "invalid_input" | "collection_not_found" | "collection_exists" | "tag_exists" | "tag_not_found" | "invalid_tag" | "image_not_found" | "image_unsupported" | "image_too_large" | "image_unreadable" | "sound_not_found" | "sound_unsupported" | "sound_too_large" | "sound_unreadable" | "video_not_found" | "video_unsupported" | "video_too_large" | "video_unreadable" | "tag_limit" | "io" | "db" | "task" | "unknown";
+export const ASSET_RATIOS = [["1/1", "1:1"], ["16/9", "16:9"], ["9/16", "9:16"]] as const;

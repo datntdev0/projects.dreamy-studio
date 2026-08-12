@@ -6,37 +6,12 @@ import { ImageCheck, ImagePatch, ImageSort, ImageUploadInput, ImageViewMode, Lib
 import { LibraryError } from "./library.models";
 import { toLibraryError } from "./library.rules";
 import { filterImages } from "./library.images.rules";
+import { readGridRatio, readGridSize, writeStored } from "./library.grid.prefs";
 
 const GRID_SIZE_STORAGE_KEY = "ds.lb.images.grid-size";
 const GRID_RATIO_STORAGE_KEY = "ds.lb.images.grid-ratio";
 const DEFAULT_GRID_SIZE = 176;
 const DEFAULT_GRID_RATIO = "16/9";
-
-function readGridSize(): number {
-  try {
-    const value = Number(localStorage.getItem(GRID_SIZE_STORAGE_KEY));
-    return Number.isFinite(value) && value >= 110 && value <= 360 ? value : DEFAULT_GRID_SIZE;
-  } catch {
-    return DEFAULT_GRID_SIZE;
-  }
-}
-
-function readGridRatio(): string {
-  try {
-    const value = localStorage.getItem(GRID_RATIO_STORAGE_KEY);
-    return value === "1/1" || value === "9/16" || value === "16/9" ? value : DEFAULT_GRID_RATIO;
-  } catch {
-    return DEFAULT_GRID_RATIO;
-  }
-}
-
-function storeValue(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    return;
-  }
-}
 
 function replaceImage(items: LibraryImage[], next: LibraryImage): LibraryImage[] {
   const output: LibraryImage[] = [];
@@ -96,8 +71,8 @@ export class LibraryImageService {
   readonly query = signal("");
   readonly sort = signal<ImageSort>("new");
   readonly viewMode = this.library.viewMode;
-  readonly gridSize = signal(readGridSize());
-  readonly gridRatio = signal(readGridRatio());
+  readonly gridSize = signal(readGridSize(GRID_SIZE_STORAGE_KEY, DEFAULT_GRID_SIZE));
+  readonly gridRatio = signal(readGridRatio(GRID_RATIO_STORAGE_KEY, DEFAULT_GRID_RATIO));
   readonly selected = computed(this.findSelected.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
 
@@ -172,12 +147,12 @@ export class LibraryImageService {
 
   setGridSize(value: number): void {
     this.gridSize.set(value);
-    storeValue(GRID_SIZE_STORAGE_KEY, String(value));
+    writeStored(GRID_SIZE_STORAGE_KEY, String(value));
   }
 
   setGridRatio(value: string): void {
     this.gridRatio.set(value);
-    storeValue(GRID_RATIO_STORAGE_KEY, value);
+    writeStored(GRID_RATIO_STORAGE_KEY, value);
   }
 
   private async load(): Promise<void> {

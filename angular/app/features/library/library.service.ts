@@ -121,7 +121,7 @@ export class LibraryService {
   setFilterCollection(value: number | "none" | null): void { this.filterCollection.set(value); }
   setViewMode(value: "grid" | "list"): void { this.viewMode.set(value); storeViewMode(value); }
   clearFilters(): void { this.filterCollection.set(null); this.filterTags.set([]); }
-  viewTag(kind: LibraryKind, tag: string): void { this.filterTags.set([tag]); if (kind === "sound") this.tabs.openSounds(); else this.tabs.openImages(); }
+  viewTag(kind: LibraryKind, tag: string): void { this.filterTags.set([tag]); if (kind === "sound") this.tabs.openSounds(); else if (kind === "video") this.tabs.openVideos(); else this.tabs.openImages(); }
   reset(): void { this.epoch += 1; this.collections.set([]); this.tags.set([]); this.summary.set(EMPTY_SUMMARY); this.loaded.set(false); this.loading.set(false); this.error.set(null); this.taxonomySelection.set(null); this.taxonomyQuery.set(""); this.clearFilters(); }
   private async loadTags(): Promise<void> { this.tags.set(sortTags(await this.ipc.invoke<LibraryTag[]>("library_tag_list"))); await this.refreshSummary(); this.pruneSelection(); this.pruneFilters(); }
   private buildVisibleTags(): LibraryTag[] { return searchTags(this.tags(), this.taxonomyQuery()); }

@@ -9,6 +9,7 @@ import { ImageRights, LibraryImage } from "../library.images.models";
 import { dimensionsText, formatBytes, imageCode } from "../library.images.rules";
 import { LibraryImageService } from "../library.images.service";
 import { LibraryService } from "../library.service";
+import { AssetRef } from "../library.models";
 
 const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
   own: "library.rights.own",
@@ -123,8 +124,8 @@ export class LibraryImagePreviewDialog {
 
   private buildPosition(): { index: number; total: number } {
     const image = this.image();
-    const visible = this.images.visible();
-    return { index: image === null ? -1 : visible.findIndex(sameId.bind(null, image.id)), total: visible.length };
+    const sequence = this.sequence();
+    return { index: image === null ? -1 : sequence.findIndex(this.isImageRef.bind(null, image.id)), total: sequence.length };
   }
 
   private syncPreview(): void {
@@ -153,11 +154,11 @@ export class LibraryImagePreviewDialog {
 
   private move(offset: number): void {
     const position = this.position();
-    const next = this.images.visible()[position.index + offset];
-    if (!next) {
-      return;
-    }
-    this.images.select(next.id);
-    this.dialogs.openPreview(next.id);
+    const next = this.sequence()[position.index + offset];
+    if (next) this.dialogs.openPreviewRef(next, this.sequence());
   }
+
+  private sequence(): AssetRef[] { return this.dialogs.previewSequence() ?? this.images.visible().map(this.toRef); }
+  private toRef(image: LibraryImage): AssetRef { return { kind: "image", id: image.id }; }
+  private isImageRef(id: number, ref: AssetRef): boolean { return ref.kind === "image" && ref.id === id; }
 }

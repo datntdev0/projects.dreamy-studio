@@ -1,4 +1,4 @@
-import { Component, inject } from "@angular/core";
+import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "../../../../components/icon";
 import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
@@ -35,12 +35,14 @@ const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
   host: { "data-testid": "library-image-panel" },
 })
 export class LibraryImagePanel {
+  readonly imageId = input<number | undefined>();
   readonly images = inject(LibraryImageService);
   readonly library = inject(LibraryService);
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
   readonly rightOptions = IMAGE_RIGHTS;
+  readonly image = computed(this.resolveImage.bind(this));
 
   rightKey(right: ImageRights): I18nKey {
     return RIGHTS_KEYS[right];
@@ -152,5 +154,10 @@ export class LibraryImagePanel {
 
   private notifyFailure(cause: unknown): void {
     this.toasts.show(this.i18n.translate(libraryErrorKey(cause) as I18nKey), "danger");
+  }
+
+  private resolveImage(): LibraryImage | null {
+    const id = this.imageId();
+    return id === undefined ? this.images.selected() : this.images.items().find((image) => image.id === id) ?? null;
   }
 }

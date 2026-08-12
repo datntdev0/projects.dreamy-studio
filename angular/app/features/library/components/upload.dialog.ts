@@ -17,6 +17,7 @@ import { fileNameOf } from "../library.images.rules";
 import { formatBytes } from "../library.images.rules";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryImageService } from "../library.images.service";
+import { LibrarySoundService } from "../library.sounds.service";
 import { normalizeTag } from "../library.rules";
 import { libraryErrorKey } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -61,6 +62,7 @@ function parseTags(value: string): string[] {
 export class LibraryUploadDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   readonly images = inject(LibraryImageService);
+  readonly sounds = inject(LibrarySoundService);
   readonly library = inject(LibraryService);
   private readonly ipc = inject(DesktopIpcService);
   private readonly i18n = inject(I18nService);
@@ -70,6 +72,7 @@ export class LibraryUploadDialog {
   private token = 0;
 
   readonly open = this.dialogs.uploadOpen;
+  readonly kind = this.dialogs.uploadKind;
   readonly paths = this.dialogs.uploadPaths;
   readonly items = signal<UploadItem[]>([]);
   readonly collectionId = signal<number | null>(null);
@@ -112,7 +115,7 @@ export class LibraryUploadDialog {
   }
 
   rightKey(right: ImageRights): I18nKey {
-    return `library.image.rights.${right}` as I18nKey;
+    return `library.rights.${right}` as I18nKey;
   }
 
   message(item: UploadItem): string {
@@ -131,7 +134,7 @@ export class LibraryUploadDialog {
 
   async pick(): Promise<void> {
     try {
-      this.addPaths(await this.images.pick());
+      this.addPaths(await (this.kind() === "sound" ? this.sounds.pick() : this.images.pick()));
     } catch {
       return;
     }
@@ -187,7 +190,7 @@ export class LibraryUploadDialog {
     for (const target of targets) {
       this.setRun(target.path, "uploading");
       try {
-        await this.images.upload(target.path, input);
+        if (this.kind() === "sound") await this.sounds.upload(target.path, input); else await this.images.upload(target.path, input);
         this.setRun(target.path, "done");
         completed += 1;
       } catch (cause) {
@@ -222,7 +225,7 @@ export class LibraryUploadDialog {
   private reset(): void {
     this.token += 1;
     this.items.set([]);
-    this.collectionId.set(null);
+    this.collectionId.set(this.dialogs.uploadCollectionId());
     this.newCollection.set("");
     this.tags.set("");
     this.rights.set("");
@@ -250,7 +253,7 @@ export class LibraryUploadDialog {
   private async inspect(paths: string[]): Promise<void> {
     const token = this.token;
     try {
-      const checks = await this.images.inspect(paths);
+      const checks = await (this.kind() === "sound" ? this.sounds.inspect(paths) : this.images.inspect(paths));
       if (token === this.token) {
         this.applyChecks(checks);
       }

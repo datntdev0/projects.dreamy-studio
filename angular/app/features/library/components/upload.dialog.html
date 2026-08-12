@@ -1,13 +1,13 @@
 @if (open()) {
-  <ds-dialog size="large" [title]="'library.upload.title' | t: { noun: (kind() === 'sound' ? 'library.noun.sound' : 'library.noun.image') | t }" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
+  <ds-dialog size="large" [title]="'library.upload.title' | t: { noun: config().nounKey | t }" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
     <div class="lb-drop" [class.is-compact]="items().length" [class.is-over]="over()" role="group" [attr.aria-label]="'library.upload.dropzone' | t" data-testid="library-upload-dialog-dropzone">
       @if (!items().length) {
-        <ds-icon class="lb-drop-ic" [name]="kind() === 'sound' ? 'music' : 'upload'" [size]="30" data-testid="library-upload-dialog-dropzone-icon" />
+        <ds-icon class="lb-drop-ic" [name]="config().icon" [size]="30" data-testid="library-upload-dialog-dropzone-icon" />
         <div class="lb-drop-t" data-testid="library-upload-dialog-dropzone-title">{{ "library.upload.dropTitle" | t }}</div>
         <div class="t-sm t-mute" data-testid="library-upload-dialog-dropzone-or">{{ "library.upload.or" | t }}</div>
       }
       <ds-button data-testid="library-upload-dialog-pick" (pressed)="pick()">{{ (items().length ? "library.upload.add" : "library.upload.pick") | t }}</ds-button>
-      <div class="t-sm t-mute" data-testid="library-upload-dialog-dropzone-hint">{{ (kind() === 'sound' ? "library.upload.hint.sound" : "library.upload.hint.image") | t }}</div>
+      <div class="t-sm t-mute" data-testid="library-upload-dialog-dropzone-hint">{{ config().hintKey | t }}</div>
     </div>
     @if (items().length) {
       <div class="lbu-queue" data-testid="library-upload-dialog-queue">
@@ -15,7 +15,7 @@
           <tbody data-testid="library-upload-dialog-queue-body">
             @for (item of items(); track item.path) {
               <tr [class.is-muted]="item.check?.status === 'error'" data-testid="library-upload-dialog-queue-row">
-                <td data-testid="library-upload-dialog-queue-name"><div class="lbu-fn" data-testid="library-upload-dialog-file"><ds-icon [name]="kind() === 'sound' ? 'music' : 'image'" [size]="18" data-testid="library-upload-dialog-file-icon" /><div class="lb-rname" data-testid="library-upload-dialog-file-details"><div class="t-ink lbu-name" [attr.title]="item.name" data-testid="library-upload-dialog-file-name">{{ item.name }}</div>@if (message(item)) { <div class="t-sm" [class.lbu-err]="item.check?.status === 'error' || item.run === 'error'" [class.t-mute]="item.check?.status !== 'error' && item.run !== 'error'" data-testid="library-upload-dialog-file-message">{{ message(item) }}</div> }</div></div></td>
+                <td data-testid="library-upload-dialog-queue-name"><div class="lbu-fn" data-testid="library-upload-dialog-file"><ds-icon [name]="config().icon" [size]="18" data-testid="library-upload-dialog-file-icon" /><div class="lb-rname" data-testid="library-upload-dialog-file-details"><div class="t-ink lbu-name" [attr.title]="item.name" data-testid="library-upload-dialog-file-name">{{ item.name }}</div>@if (message(item)) { <div class="t-sm" [class.lbu-err]="item.check?.status === 'error' || item.run === 'error'" [class.t-mute]="item.check?.status !== 'error' && item.run !== 'error'" data-testid="library-upload-dialog-file-message">{{ message(item) }}</div> }</div></div></td>
                 <td class="num t-mute" data-testid="library-upload-dialog-queue-size">{{ formatSize(item.size) }}</td>
                 <td class="lbu-st" data-testid="library-upload-dialog-queue-status"><span class="badge" [class]="statusClass(item)" data-testid="library-upload-dialog-status-badge">{{ statusKey(item) | t }}</span></td>
                 <td class="row-actions" data-testid="library-upload-dialog-queue-actions">@if (!uploading()) { <ds-button variant="ghost" size="small" [label]="'library.upload.remove' | t: { name: item.name }" data-testid="library-upload-dialog-remove" (pressed)="remove(item.path)"><ds-icon name="x" [size]="16" data-testid="library-upload-dialog-remove-icon" /></ds-button> }</td>

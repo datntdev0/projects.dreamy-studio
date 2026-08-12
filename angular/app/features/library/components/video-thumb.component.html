@@ -1,0 +1,8 @@
+@if (playable()) {
+  <span class="lb-thv" data-testid="library-video-thumb-playable">
+    <span class="lb-th" [style.background-image]="poster() ? 'url(' + poster() + ')' : ''" data-testid="library-video-thumb-image">@if (!poster()) { <ds-icon name="film" [size]="16" data-testid="library-video-thumb-placeholder" /> }</span>
+    <app-library-video-play [video]="video()" size="sm" data-testid="library-video-thumb-play" />
+  </span>
+} @else {
+  <span class="lb-th" [style.background-image]="poster() ? 'url(' + poster() + ')' : ''" data-testid="library-video-thumb-image">@if (!poster()) { <ds-icon name="film" [size]="16" data-testid="library-video-thumb-placeholder" /> }</span>
+}

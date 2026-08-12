@@ -18,11 +18,27 @@ import { formatBytes } from "../library.images.rules";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryImageService } from "../library.images.service";
 import { LibrarySoundService } from "../library.sounds.service";
+import { LibraryVideoService } from "../library.videos.service";
+import { VIDEO_MAX_BYTES } from "../library.videos.models";
 import { normalizeTag } from "../library.rules";
 import { libraryErrorKey } from "../library.rules";
 import { LibraryService } from "../library.service";
 
 type UploadRunState = "" | "waiting" | "uploading" | "done" | "error";
+type UploadKind = "image" | "sound" | "video";
+
+interface UploadConfig {
+  icon: "image" | "music" | "film";
+  nounKey: I18nKey;
+  hintKey: I18nKey;
+  limit: number;
+}
+
+const UPLOAD_CONFIG: Record<UploadKind, UploadConfig> = {
+  image: { icon: "image", nounKey: "library.noun.image", hintKey: "library.upload.hint.image", limit: 25 * 1024 * 1024 },
+  sound: { icon: "music", nounKey: "library.noun.sound", hintKey: "library.upload.hint.sound", limit: 200 * 1024 * 1024 },
+  video: { icon: "film", nounKey: "library.noun.video", hintKey: "library.upload.hint.video", limit: VIDEO_MAX_BYTES },
+};
 
 interface UploadItem {
   path: string;
@@ -63,6 +79,7 @@ export class LibraryUploadDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   readonly images = inject(LibraryImageService);
   readonly sounds = inject(LibrarySoundService);
+  readonly videos = inject(LibraryVideoService);
   readonly library = inject(LibraryService);
   private readonly ipc = inject(DesktopIpcService);
   private readonly i18n = inject(I18nService);
@@ -92,6 +109,10 @@ export class LibraryUploadDialog {
 
   formatSize(value: number): string {
     return formatBytes(value);
+  }
+
+  config(): UploadConfig {
+    return UPLOAD_CONFIG[this.kind()];
   }
 
   statusKey(item: UploadItem): I18nKey {
@@ -134,7 +155,7 @@ export class LibraryUploadDialog {
 
   async pick(): Promise<void> {
     try {
-      this.addPaths(await (this.kind() === "sound" ? this.sounds.pick() : this.images.pick()));
+      this.addPaths(await this.pickPaths());
     } catch {
       return;
     }
@@ -190,7 +211,7 @@ export class LibraryUploadDialog {
     for (const target of targets) {
       this.setRun(target.path, "uploading");
       try {
-        if (this.kind() === "sound") await this.sounds.upload(target.path, input); else await this.images.upload(target.path, input);
+        await this.uploadPath(target.path, input);
         this.setRun(target.path, "done");
         completed += 1;
       } catch (cause) {
@@ -253,7 +274,7 @@ export class LibraryUploadDialog {
   private async inspect(paths: string[]): Promise<void> {
     const token = this.token;
     try {
-      const checks = await (this.kind() === "sound" ? this.sounds.inspect(paths) : this.images.inspect(paths));
+      const checks = await this.inspectPaths(paths);
       if (token === this.token) {
         this.applyChecks(checks);
       }
@@ -347,5 +368,23 @@ export class LibraryUploadDialog {
   private extension(name: string): string {
     const index = name.lastIndexOf(".");
     return index >= 0 ? name.slice(index + 1).toLowerCase() : "?";
+  }
+
+  private pickPaths(): Promise<string[]> {
+    if (this.kind() === "sound") return this.sounds.pick();
+    if (this.kind() === "video") return this.videos.pick();
+    return this.images.pick();
+  }
+
+  private inspectPaths(paths: string[]): Promise<ImageCheck[]> {
+    if (this.kind() === "sound") return this.sounds.inspect(paths);
+    if (this.kind() === "video") return this.videos.inspect(paths);
+    return this.images.inspect(paths);
+  }
+
+  private uploadPath(path: string, input: ImageUploadInput): Promise<unknown> {
+    if (this.kind() === "sound") return this.sounds.upload(path, input);
+    if (this.kind() === "video") return this.videos.upload(path, input);
+    return this.images.upload(path, input);
   }
 }

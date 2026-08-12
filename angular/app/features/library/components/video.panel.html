@@ -1,0 +1,63 @@
+@if (video(); as item) {
+  <section data-testid="library-video-panel-content">
+    <section class="ins-sec lb-ins-top" data-testid="library-video-panel-summary">
+      <div class="lb-ins-img" data-testid="library-video-panel-stage" (click)="view(item)">
+        @if (poster(item); as source) { <img [src]="source" [alt]="item.name" data-testid="library-video-panel-poster" /> } @else { <ds-icon name="film" [size]="32" data-testid="library-video-panel-placeholder" /> }
+        <app-library-video-play [video]="item" size="lg" data-testid="library-video-panel-play" />
+        <span class="badge lb-ext" data-testid="library-video-panel-duration"><span class="mono lb-dur" data-testid="library-video-panel-duration-text">{{ duration(item) }}</span></span>
+      </div>
+      <div class="lb-ins-name" data-testid="library-video-panel-type"><span class="type-tag" data-testid="library-video-panel-type-tag"><ds-icon name="film" [size]="13" data-testid="library-video-panel-type-icon" />{{ "library.kind.video" | t }}</span></div>
+      <div class="field" data-testid="library-video-panel-name-field">
+        <label for="library-video-panel-name" data-testid="library-video-panel-name-label">{{ "library.video.field.name" | t }}</label>
+        <input id="library-video-panel-name" class="input" maxlength="255" [value]="item.name" autocomplete="off" data-testid="library-video-panel-name" (blur)="nameBlur(item, $event)" (keydown)="nameKeydown($event)" />
+      </div>
+    </section>
+    <section class="ins-sec ins-form" data-testid="library-video-panel-fields">
+      <div class="field" data-testid="library-video-panel-tags-field">
+        <label for="library-video-panel-tags" data-testid="library-video-panel-tags-label">{{ "library.video.field.tags" | t }} <span class="t-mute mono" data-testid="library-video-panel-tags-count">{{ item.tags.length }}/12</span></label>
+        <div class="tags" data-testid="library-video-panel-tags">
+          @if (item.tags.length) {
+            @for (tag of item.tags; track tag) {
+              <span class="tag" data-testid="library-video-panel-tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'library.video.field.tagRemove' | t: { tag }" data-testid="library-video-panel-tag-remove" (click)="removeTag(item, tag)"><ds-icon name="x" [size]="16" data-testid="library-video-panel-tag-remove-icon" /></button></span>
+            }
+          } @else {
+            <span class="t-sm t-mute" data-testid="library-video-panel-tags-empty">{{ "library.video.field.tagsEmpty" | t }}</span>
+          }
+        </div>
+        <input id="library-video-panel-tags" class="input tag-in" list="library-video-panel-tag-suggestions" [disabled]="item.tags.length >= 12" [attr.placeholder]="'library.video.field.tagsPlaceholder' | t" autocomplete="off" data-testid="library-video-panel-tags-input" (keydown)="addTag(item, $event)" />
+        <datalist id="library-video-panel-tag-suggestions" data-testid="library-video-panel-tag-suggestions">@for (tag of library.tags(); track tag.tag) { <option [value]="tag.tag" data-testid="library-video-panel-tag-suggestion"></option> }</datalist>
+      </div>
+      <div class="field" data-testid="library-video-panel-collection-field">
+        <label for="library-video-panel-collection" data-testid="library-video-panel-collection-label">{{ "library.video.field.collection" | t }}</label>
+        <select id="library-video-panel-collection" class="select" [value]="item.collectionId ?? ''" data-testid="library-video-panel-collection" (change)="setCollection(item, $event)">
+          <option value="" data-testid="library-video-panel-collection-none">{{ "library.video.field.collectionNone" | t }}</option>
+          @for (collection of library.collections(); track collection.id) { <option [value]="collection.id" data-testid="library-video-panel-collection-option">{{ collection.name }}</option> }
+          <option value="__new" data-testid="library-video-panel-collection-new">{{ "library.video.field.collectionNew" | t }}</option>
+        </select>
+      </div>
+      <div class="field" data-testid="library-video-panel-rights-field">
+        <label for="library-video-panel-rights" data-testid="library-video-panel-rights-label">{{ "library.video.field.rights" | t }}</label>
+        <select id="library-video-panel-rights" class="select" [value]="item.rights" data-testid="library-video-panel-rights" (change)="setRights(item, $event)">@for (right of rightOptions; track right) { <option [value]="right" data-testid="library-video-panel-rights-option">{{ rightKey(right) | t }}</option> }</select>
+        <span class="field-hint" data-testid="library-video-panel-rights-hint">{{ "library.video.field.rightsHint" | t }}</span>
+      </div>
+    </section>
+    <section class="ins-sec" data-testid="library-video-panel-info">
+      <span class="eyebrow" data-testid="library-video-panel-info-title">{{ "library.video.info" | t }}</span>
+      <dl class="kv" data-testid="library-video-panel-info-list">
+        <dt data-testid="library-video-panel-code-label">{{ "library.image.info.code" | t }}</dt><dd class="mono" data-testid="library-video-panel-code">{{ code(item) }}</dd>
+        <dt data-testid="library-video-panel-format-label">{{ "library.video.info.format" | t }}</dt><dd data-testid="library-video-panel-format">{{ item.ext.toUpperCase() }}</dd>
+        <dt data-testid="library-video-panel-duration-label">{{ "library.video.info.duration" | t }}</dt><dd data-testid="library-video-panel-duration">{{ duration(item) }}</dd>
+        <dt data-testid="library-video-panel-frame-label">{{ "library.video.info.frame" | t }}</dt><dd data-testid="library-video-panel-frame">{{ frame(item) }}</dd>
+        <dt data-testid="library-video-panel-size-label">{{ "library.video.info.size" | t }}</dt><dd data-testid="library-video-panel-size">{{ size(item) }}</dd>
+        <dt data-testid="library-video-panel-added-label">{{ "library.video.info.added" | t }}</dt><dd class="mono" data-testid="library-video-panel-added">{{ item.createdAt }}</dd>
+        <dt data-testid="library-video-panel-origin-label">{{ "library.video.info.origin" | t }}</dt><dd data-testid="library-video-panel-origin">{{ item.origin }}</dd>
+      </dl>
+    </section>
+    <section class="ins-sec ins-actions" data-testid="library-video-panel-actions">
+      <button type="button" class="btn" data-testid="library-video-panel-view" (click)="view(item)"><ds-icon name="play" [size]="16" data-testid="library-video-panel-view-icon" />{{ "library.video.view" | t }}</button>
+      <button type="button" class="btn btn-danger" data-testid="library-video-panel-delete" (click)="remove(item)"><ds-icon name="trash" [size]="16" data-testid="library-video-panel-delete-icon" />{{ "library.video.delete" | t }}</button>
+    </section>
+  </section>
+} @else {
+  <div class="ins-empty" data-testid="library-video-panel-empty"><p class="t-sm t-mute" data-testid="library-video-panel-empty-text">{{ "library.video.empty.title" | t }}</p></div>
+}

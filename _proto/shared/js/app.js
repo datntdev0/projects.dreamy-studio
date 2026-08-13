@@ -54,6 +54,7 @@
   const VIEWS = {};
   const EXPLORER_EXTRA = {};
   const EXPLORER_HEAD = {};
+  const NAV_COUNT = {};
   const viewKey = (id) => String(id).split(":")[0];
 
   /* ---------------- state ---------------- */
@@ -169,7 +170,7 @@
       const key = `${S.rail}.${s.id}`;
       const open = s.headless || !S.collapsed.has(key);
       const rows = s.items.map((i) =>
-        `<div class="tree-row ${S.active === i.id ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="open" data-id="${i.id}">${ic(i.icon)}<span class="tree-label">${esc(i.title)}</span></div>`).join("");
+        `<div class="tree-row ${S.active === i.id ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="open" data-id="${i.id}">${ic(i.icon)}<span class="tree-label">${esc(i.title)}</span>${NAV_COUNT[i.id] ? `<span class="nx-n mono">${NAV_COUNT[i.id]()}</span>` : ""}</div>`).join("");
       return `<section class="ex-sec">
         ${s.headless ? "" : `<header class="ex-sec-head" tabindex="0" data-act="sec-toggle" data-k="${key}">${ic(open ? "chev-d" : "chev-r")}<span>${esc(s.title)}</span></header>`}
         ${open ? `<div class="ex-sec-body" role="tree">${EXPLORER_HEAD[s.id]?.() || ""}${rows}${EXPLORER_EXTRA[s.id]?.() || ""}</div>` : ""}
@@ -348,7 +349,7 @@
   /* ---------------- dialogs ---------------- */
   function modal({ title, eyebrow = "", body, foot = "", cls = "", testid = "" }) {
     $("#layer").innerHTML = `<div class="scrim" data-act="scrim"><div class="modal ${cls}" ${testid ? `data-testid="${testid}"` : ""} role="dialog" aria-modal="true" aria-label="${esc(title)}">
-      <header class="modal-head">${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}<h2 class="t-display-xs">${esc(title)}</h2><span class="spacer"></span>
+      <header class="modal-head">${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}<h2 class="modal-title eyebrow">${esc(title)}</h2><span class="spacer"></span>
         <button class="btn btn-icon btn-sm" data-act="close-modal" aria-label="Đóng (Esc)" data-tip="Đóng (Esc)">${ic("x")}</button></header>
       <div class="modal-body">${body}</div>${foot ? `<footer class="modal-foot">${foot}</footer>` : ""}</div></div>`;
     ($("#layer .modal-body input") || $("#layer .modal-foot .btn-primary") || $("#layer .modal"))?.focus?.();
@@ -719,7 +720,7 @@
   }
 
   window.DSApp = {
-    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, EXPLORER_HEAD, PL, SETTINGS_VIEWS, openSettings, refreshSettings,
+    S, ITEMS, VIEWS, ACT, ON, EXPLORER_EXTRA, EXPLORER_HEAD, NAV_COUNT, PL, SETTINGS_VIEWS, openSettings, refreshSettings,
     $, $$, esc, ic, stamp, store, modal, closeModal, openMenu, toast, openTab, closeTab, rerender, renderInspector, renderExplorer, renderStatus, log, startPipeline, cancelPipeline,
   };
 

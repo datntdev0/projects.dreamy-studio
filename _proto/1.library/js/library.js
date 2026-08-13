@@ -11,9 +11,14 @@
   const filt = () => {
     const f = LB.filt;
     if (f.col && f.col !== "none" && !st().collections.some((c) => c.id === f.col)) f.col = "";
-    f.tags = f.tags.filter((t) => st().tagList.includes(t));
+    const here = tagsInScope(scope(A.S.active));
+    f.tags = f.tags.filter((t) => st().tagList.includes(t) && here.has(t));
     return f;
   };
+  /* Tags are listed per kind of library: a type tab only offers the tags its assets use, a collection
+     tab the tags of what is in that collection; elsewhere (Collections & tags) all of them. */
+  const poolOf = (sc) => st().assets.filter((x) => (sc.type ? x.type === sc.type : sc.col ? x.collectionId === sc.col : true));
+  const tagsInScope = (sc) => new Set(poolOf(sc).flatMap((x) => x.tags));
   const filtActive = () => !!(filt().col || filt().tags.length);
   const byId = (id) => st().assets.find((x) => x.id === id);
   const colById = (id) => st().collections.find((c) => c.id === id);
@@ -37,50 +42,196 @@
     prompt: `${(x.text || "").length} ký tự`,
   })[x.type];
 
-  const PL = { id: null, playing: false, pos: 0, dur: 0, url: "", audio: null, timer: null, raf: 0, t: 0 };
+  const PL = { id: null, playing: false, pos: 0, dur: 0, url: "", srcUrl: "", audio: null, ctx: null, an: null, freq: null, anFail: false, bands: null, timer: null, raf: 0, t: 0 };
   const curPos = () => (PL.playing ? Math.min(PL.dur, PL.pos + (performance.now() - PL.t) / 1000) : PL.pos);
 
+  /* Real waveform: the file is decoded once and reduced to one peak (0-255) per 1/12 s, the same
+     PEAK_RATE the app stores. Real spectrum: the playing <audio> goes through an AnalyserNode.
+     Both need http(s) or blob: (fetch + CORS); on file:// or for assets without a file they fall
+     back to the seeded synthetic data. */
+  const PEAK_RATE = 12;
+  const BANDS = 32;
+  const CORS_OK = /^https?:$/.test(location.protocol);
+  const PK = new Map();
+  async function decodePeaks(url) {
+    const raw = await (await fetch(url)).arrayBuffer();
+    const buf = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(raw);
+    const win = buf.sampleRate / PEAK_RATE;
+    const out = new Uint8Array(Math.max(1, Math.ceil(buf.duration * PEAK_RATE)));
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < d.length; i++) {
+        const a = Math.round(Math.abs(d[i]) * 255);
+        const w = Math.floor(i / win);
+        if (a > out[w]) out[w] = Math.min(255, a);
+      }
+    }
+    return out;
+  }
+  const overviewOf = (p) => Array.from({ length: BANDS }, (_, k) => {
+    const a = Math.floor((k * p.length) / BANDS);
+    const b = Math.max(a + 1, Math.floor(((k + 1) * p.length) / BANDS));
+    let s = 0;
+    for (let i = a; i < b; i++) s += p[i];
+    return s / (b - a) / 255;
+  });
+  const peakAt = (p, t) => {
+    const x = Math.max(0, Math.min(p.length - 1, t * PEAK_RATE - 0.5));
+    const i = Math.floor(x);
+    return (p[i] * (1 - (x - i)) + p[Math.min(p.length - 1, i + 1)] * (x - i)) / 255;
+  };
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const PRE = new Map();
+  function preOf(id) {
+    const name = byId(id)?.name;
+    const raw = name && window.LB_AUDIO?.[name];
+    if (!raw) return null;
+    if (!PRE.has(name)) {
+      const p = b64(raw.peaks);
+      PRE.set(name, { p, ov: overviewOf(p), gain: 255 / Math.max(64, ...p), err: false, bands: b64(raw.bands), rate: raw.rate, nb: raw.nb });
+    }
+    return PRE.get(name);
+  }
+  function preBands(t) {
+    const e = preOf(PL.id);
+    if (!e) return null;
+    const frames = e.bands.length / e.nb;
+    const x = Math.max(0, Math.min(frames - 1, t * e.rate));
+    const i = Math.floor(x);
+    const f = x - i;
+    const j = Math.min(frames - 1, i + 1);
+    return Array.from({ length: e.nb }, (_, k) => (e.bands[i * e.nb + k] * (1 - f) + e.bands[j * e.nb + k] * f) / 255);
+  }
+  function peaksOf(id) {
+    const pre = preOf(id);
+    if (pre) return pre;
+    const url = player.track(id)?.url;
+    if (!url || !CORS_OK && !url.startsWith("blob:")) return null;
+    let e = PK.get(id);
+    if (!e || e.url !== url) {
+      e = { url, p: null, ov: null, gain: 1, err: false };
+      PK.set(id, e);
+      decodePeaks(url)
+        .then((p) => { e.p = p; e.ov = overviewOf(p); e.gain = 255 / Math.max(64, ...p); })
+        .catch(() => { e.err = true; })
+        .finally(() => { if (PK.get(id) === e) paint(); });
+    }
+    return e;
+  }
+  function ensureGraph() {
+    if (PL.an || PL.anFail || !PL.audio || !(CORS_OK || PL.url.startsWith("blob:"))) return;
+    try {
+      PL.ctx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const an = PL.ctx.createAnalyser();
+      an.fftSize = 256;
+      an.smoothingTimeConstant = 0.8;
+      PL.ctx.createMediaElementSource(PL.audio).connect(an);
+      an.connect(PL.ctx.destination);
+      PL.an = an;
+      PL.freq = new Uint8Array(an.frequencyBinCount);
+    } catch { PL.anFail = true; }
+  }
+  function spectrumBands(count = BANDS) {
+    PL.an.getByteFrequencyData(PL.freq);
+    const f = PL.freq;
+    const per = PL.ctx.sampleRate / 2 / f.length;
+    const lo = 60;
+    const hi = Math.min(16000, PL.ctx.sampleRate / 2);
+    return Array.from({ length: count }, (_, k) => {
+      const a = lo * (hi / lo) ** (k / count);
+      const b = lo * (hi / lo) ** ((k + 1) / count);
+      const i0 = Math.min(f.length - 1, Math.floor(a / per));
+      const i1 = Math.min(f.length, Math.max(i0 + 1, Math.ceil(b / per)));
+      if (i1 - i0 > 1) { let s = 0; for (let i = i0; i < i1; i++) s += f[i]; return s / (i1 - i0) / 255; }
+      const x = Math.max(0, Math.min(f.length - 1, Math.sqrt(a * b) / per - 0.5));
+      const j = Math.floor(x);
+      return (f[j] * (1 - (x - j)) + f[Math.min(f.length - 1, j + 1)] * (x - j)) / 255;
+    });
+  }
+
   const css = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
+  /* One canvas, three layouts (class on the canvas):
+       default      sliding window, playhead centered
+       is-paged     fixed sections of data-win seconds, jumps to the next one when the playhead leaves it
+       is-overview  the whole file compressed into the width (sound card cover): static, ignores playback */
   function drawScroller(c) {
     const w = c.clientWidth;
     const h = c.clientHeight;
     if (!w || !h) return;
-    const dpr = window.devicePixelRatio || 1;
-    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
     const dur = +c.dataset.d || 1;
-    const win = Math.min(+c.dataset.win || 5, dur);
-    const active = c.dataset.lbs === PL.id;
+    const ov = c.classList.contains("is-overview");
+    const paged = c.classList.contains("is-paged");
+    const win = ov ? dur : Math.min(+c.dataset.win || 5, dur);
+    const active = !ov && c.dataset.lbs === PL.id;
     const pos = active ? curPos() : 0;
-    const start = Math.max(0, Math.min(dur - win, pos - win / 2));
-    const ctx = c.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const step = 5;
-    const n = Math.max(1, Math.floor(w / step));
+    const start = ov ? 0 : paged ? Math.floor(Math.min(pos, dur - 0.001) / win) * win : Math.max(0, Math.min(dur - win, pos - win / 2));
+    const pk = peaksOf(c.dataset.lbs);
     const played = css(c, "--primary-text");
     const rest = css(c, "--hairline-strong");
+    const key = active ? null : [w, h, start, pk ? (pk.p ? 1 : pk.err ? 2 : 0) : 3, rest].join("|");
+    if (key && c._key === key) return;
+    c._key = key;
+    const dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const ctx = c.getContext("2d");
+    /* clear the whole bitmap in device pixels: at a fractional dpr (125%, 150%) the last row is only
+       partly covered by a scaled clearRect(0, 0, w, h), so whatever was drawn there piles up into a line */
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const step = ov ? 4 : 5;
+    const bw = ov ? 2 : 3;
+    const pad = ov ? 0 : 6;
+    const uw = w - pad * 2;
+    const n = Math.max(1, Math.floor(uw / step));
+    const slice = win / n;
     const seed = c.dataset.seed;
+    const levelAt = (t) => {
+      if (!pk || pk.err) return LB.level(seed, t);
+      if (!pk.p) return 0;
+      const last = pk.p.length - 1;
+      if (slice <= 1.5 / PEAK_RATE) return Math.min(1, peakAt(pk.p, t) * pk.gain);
+      let m = 0;
+      for (let i = Math.max(0, Math.floor((t - slice / 2) * PEAK_RATE)); i <= Math.min(last, Math.floor((t + slice / 2) * PEAK_RATE)); i++) if (pk.p[i] > m) m = pk.p[i];
+      return Math.min(1, (m / 255) * pk.gain);
+    };
     for (let i = 0; i < n; i++) {
       const t = start + ((i + 0.5) / n) * win;
-      const bh = Math.max(2, LB.level(seed, t) * (h - 6));
+      if (t > dur) break;
+      const bh = Math.max(2, levelAt(t) * (h - 6));
       ctx.fillStyle = active && t <= pos ? played : rest;
-      ctx.fillRect(i * step + (w - n * step) / 2, (h - bh) / 2, 3, bh);
+      ctx.fillRect(pad + i * step + (uw - n * step) / 2, (h - bh) / 2, bw, bh);
     }
-    const x = ((pos - start) / win) * w;
-    ctx.fillStyle = css(c, "--ink");
-    ctx.fillRect(Math.max(0, Math.min(w - 1.5, x - 0.75)), 0, 1.5, h);
-    c._win = { start, len: win };
+    if (active) {
+      const x = pad + ((pos - start) / win) * uw;
+      ctx.fillStyle = css(c, "--ink");
+      ctx.fillRect(Math.round(x * dpr - 0.75 * dpr) / dpr, 0, 1.5, h);
+    }
+    c._win = { start, len: win, pad, uw };
   }
   function drawEq(el) {
     const live = el.dataset.eq === PL.id && PL.playing;
     el.classList.toggle("is-live", live);
-    if (!live) { if (el._was) { el._was = false; el.querySelectorAll("i").forEach((i) => i.style.removeProperty("--l")); } return; }
+    const bars = el.querySelectorAll("i");
+    const pk = peaksOf(el.dataset.eq);
+    if (pk?.ov && el._ov !== pk) {
+      el._ov = pk;
+      const m = Math.max(...pk.ov) || 1;
+      bars.forEach((i, k) => i.style.setProperty("--h", `${Math.max(14, Math.round((pk.ov[Math.floor((k * BANDS) / bars.length)] / m) * 100))}%`));
+    }
+    if (!live) { if (el._was) { el._was = false; bars.forEach((i) => i.style.removeProperty("--l")); } return; }
     el._was = true;
     const t = curPos();
     const seed = el.dataset.seed;
-    el.querySelectorAll("i").forEach((i, k) => i.style.setProperty("--l", `${Math.round(LB.band(seed, k, t) * 100)}%`));
+    const b = PL.bands;
+    bars.forEach((i, k) => {
+      const v = b ? b[Math.floor((k * b.length) / bars.length)] : LB.band(seed, k, t);
+      i.style.setProperty("--l", `${Math.max(8, Math.round(v * 100))}%`);
+    });
   }
   function drawLive() {
+    const live = PL.an && PL.url && PL.ctx.state === "running";
+    PL.bands = !PL.playing ? null : live ? spectrumBands() : PL.url ? preBands(curPos()) : null;
     A.$$("canvas[data-lbs]").forEach(drawScroller);
     A.$$(".lb-eq").forEach(drawEq);
   }
@@ -127,8 +278,13 @@
     PL.playing = true;
     PL.t = performance.now();
     if (PL.url) {
-      PL.audio ||= new Audio();
-      if (PL.audio.src !== PL.url) PL.audio.src = PL.url;
+      if (!PL.audio) {
+        PL.audio = new Audio();
+        if (CORS_OK) PL.audio.crossOrigin = "anonymous";
+      }
+      ensureGraph();
+      PL.ctx?.resume?.();
+      if (PL.srcUrl !== PL.url) { PL.audio.src = PL.url; PL.srcUrl = PL.url; }
       PL.audio.currentTime = PL.pos;
       PL.audio.play().catch(() => { PL.url = ""; PL.t = performance.now(); });
     }
@@ -163,6 +319,7 @@
   LB.reseed = function () {
     reseed.call(this);
     player.stop();
+    PK.clear();
     const tts = window.DS.STARTUP_STEPS.find((x) => x.id === "tts");
     if (tts) tts.result = "warn";
   };
@@ -170,22 +327,26 @@
   new MutationObserver(() => {
     if (pending) return;
     pending = true;
-    requestAnimationFrame(() => { pending = false; if (A.$("canvas[data-lbs], .lb-eq, [data-lb-play]")) paint(); });
+    requestAnimationFrame(() => {
+      pending = false;
+      if (PV.open && !A.$(".lbp-modal")) { PV.open = false; if (PL.playing && PV.ids.includes(PL.id)) player.stop(); }
+      if (A.$("canvas[data-lbs], .lb-eq, [data-lb-play]")) paint();
+    });
   }).observe(document.body, { childList: true, subtree: true });
 
   const eqBars = (x, n = 32) => LB.bars(x.seed || x.id, n).map((v) => `<i style="--h:${Math.max(14, v)}%"></i>`).join("");
-  const eq = (x, n = 32) => `<div class="lb-eq" data-eq="${esc(x.id)}" data-seed="${esc(x.seed || x.id)}" aria-hidden="true">${eqBars(x, n)}</div>`;
+  const eq = (x, n = 32, cls = "") => `<div class="lb-eq ${cls}" data-eq="${esc(x.id)}" data-seed="${esc(x.seed || x.id)}" aria-hidden="true">${eqBars(x, n)}</div>`;
   const scroller = (x, win = 5, cls = "") => `<canvas class="lb-scroll ${cls}" data-lbs="${esc(x.id)}" data-seed="${esc(x.seed || x.id)}" data-d="${x.meta?.dur || 1}" data-win="${win}" data-act="lb-seek" data-id="${esc(x.id)}" aria-label="Waveform, bấm để tua"></canvas>`;
+  const overview = (x) => `<canvas class="lb-scroll is-overview" data-lbs="${esc(x.id)}" data-seed="${esc(x.seed || x.id)}" data-d="${x.meta?.dur || 1}" aria-hidden="true"></canvas>`;
   const playBtn = (x, cls = "") => `<button type="button" class="lb-pbtn ${cls}" data-act="lb-play" data-lb-play="${esc(x.id)}" data-id="${esc(x.id)}" aria-label="Phát">${ic("play")}</button>`;
   const timeLabel = (x, cls = "") => `<span class="mono lb-dur ${cls}" data-lb-time="${esc(x.id)}" data-d="${x.meta?.dur || 0}">${LB.dur(x.meta?.dur || 0)}</span>`;
   const vbar = (x, cls = "") => `<div class="lb-vbar ${cls}" data-lbp="${esc(x.id)}" data-d="${x.meta?.dur || 1}" data-act="lb-seek" data-id="${esc(x.id)}" style="--p:0"><i></i></div>`;
-  const tagsHtml = (x, max = 3) => `<span class="tags">${x.tags.slice(0, max).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}${x.tags.length > max ? `<span class="tag is-more">+${x.tags.length - max}</span>` : ""}</span>`;
   const typeBadge = (x) => `<span class="type-tag">${ic(T[x.type].icon)}${esc(T[x.type].label)}</span>`;
 
   function media(x) {
     if (x.type === "image") return `<div class="lb-media" style="background:${esc(bgOf(x))}"><span class="badge lb-ext">${esc(ext(x))}</span></div>`;
-    if (x.type === "video") return `<div class="lb-media" style="background:${esc(bgOf(x))}">${playBtn(x)}<span class="badge lb-ext">${timeLabel(x)}</span>${vbar(x, "is-card")}</div>`;
-    if (x.type === "sound") return `<div class="lb-media is-sound">${eq(x)}${playBtn(x)}${timeLabel(x)}</div>`;
+    if (x.type === "video") return `<div class="lb-media" style="background:${esc(bgOf(x))}"><span class="badge lb-ext">${timeLabel(x)}</span></div>`;
+    if (x.type === "sound") return `<div class="lb-media is-sound">${overview(x)}${timeLabel(x)}</div>`;
     return `<div class="lb-media is-prompt"><p>${esc(x.text.length > 180 ? `${x.text.slice(0, 180).trimEnd()}…` : x.text)}</p><span class="badge lb-ext">${esc(LB.PROMPT_KINDS[x.kind])}</span></div>`;
   }
   function thumb(x, cls = "") {
@@ -250,18 +411,17 @@
           : emptyBox(`Chưa có ${type.noun} nào`, `Upload ${type.noun} vào thư viện chung để dùng lại trong mọi project. ${esc(type.hint)}.`, `<div class="empty-act"><button class="btn btn-primary" data-act="lb-upload" data-v="${type.key}">${ic("upload")}Upload ${type.noun}</button>${sc.type === "prompt" ? `<button class="btn" data-act="lb-upload" data-v="prompt" data-w="write">${ic("pen")}Viết prompt</button>` : ""}</div>`);
     } else if (view() === "grid") {
       const gp = hasRatio(sc.type) ? gridPref(sc.type) : null;
-      body = `<div class="lb-grid ${sc.type === "prompt" ? "is-wide" : ""}" ${gp ? `style="--lb-min:${gp.size}px;--lb-ar:${gp.ratio}"` : ""}>${list.map((x) => `<div class="lb-card ${selected === x.id ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" data-lb-open="${x.id}" title="${esc(x.name)}">
+      body = `<div class="lb-grid ${sc.type === "prompt" ? "is-wide" : ""}" ${gp ? `style="--lb-min:${gp.size}px;--lb-ar:${gp.ratio}"` : ""}>${list.map((x) => `<div class="lb-card ${selected === x.id ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" ${openAttr(x)} title="${esc(x.name)}">
           ${media(x)}
           <div class="lb-card-b"><div class="lb-name t-ink">${sc.col ? `<span class="lb-tic">${ic(T[x.type].icon)}</span>` : ""}<span class="lb-name-t">${esc(x.name)}</span></div>
           <div class="t-sm t-mute lb-sub">${esc(metaText(x))} · ${LB.bytes(x.size)}</div></div></div>`).join("")}</div>`;
     } else {
-      const rows = list.map((x) => `<tr class="${selected === x.id ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" data-lb-open="${x.id}">
-        <td><div class="nm-title">${x.type === "sound" ? playBtn(x, "is-sm") : x.type === "video" ? `<span class="lb-thv">${thumb(x)}${playBtn(x, "is-sm")}</span>` : thumb(x)}<div class="lb-rname"><div class="t-ink">${esc(x.name)}</div>${sc.col ? `<div class="t-sm t-mute">${typeBadge(x)}</div>` : ""}</div></div></td>
+      const rows = list.map((x) => `<tr class="${selected === x.id ? "is-selected" : ""}" tabindex="0" data-act="lb-sel" data-id="${x.id}" ${openAttr(x)}>
+        <td><div class="nm-title">${thumb(x)}<div class="lb-rname"><div class="t-ink">${esc(x.name)}</div>${sc.col ? `<div class="t-sm t-mute">${typeBadge(x)}</div>` : ""}</div></div></td>
         <td class="mono t-mute">${esc(metaText(x))}</td><td class="num">${LB.bytes(x.size)}</td>
-        <td>${tagsHtml(x, 2)}</td>
         <td class="t-sm t-mute lb-cols">${collectionOf(x) ? esc(collectionOf(x).name) : "—"}</td>
         <td class="mono t-mute">${esc((x.added || "").slice(0, 10))}</td></tr>`).join("");
-      body = `<table class="table"><thead><tr><th>Tên</th><th>${sc.type === "image" ? "Kích thước" : sc.type === "prompt" ? "Độ dài" : "Thông số"}</th><th class="num">Dung lượng</th><th>Tags</th><th>Collection</th><th>Thêm lúc</th></tr></thead><tbody>${rows}</tbody></table>`;
+      body = `<table class="table"><thead><tr><th>Tên</th><th>${sc.type === "image" ? "Kích thước" : sc.type === "prompt" ? "Độ dài" : "Thông số"}</th><th class="num">Dung lượng</th><th>Collection</th><th>Thêm lúc</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     const title = sc.col ? `<span class="nv-ttl">${ic("folder")}<span class="t-ink">${esc(colById(sc.col).name)}</span></span>` : "";
@@ -294,11 +454,6 @@
     return `<div class="field"><label for="lb-col-add">Collection</label>
       <select id="lb-col-add" class="select" data-change="lb-col-add"><option value="" ${x.collectionId ? "" : "selected"}>Chưa thuộc collection nào</option>${st().collections.map((c) => `<option value="${c.id}" ${x.collectionId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="__new">＋ Collection mới…</option></select></div>`;
   }
-  function inspectorStage(x) {
-    if (x.type === "sound") return `<div class="lb-ins-wave">${playBtn(x)}${scroller(x, 5)}${timeLabel(x)}</div>`;
-    if (x.type === "prompt") return "";
-    return `<div class="lb-ins-img" style="background:${esc(bgOf(x))}" data-lb-open="${x.id}">${x.type === "video" ? `${playBtn(x, "is-lg")}<span class="badge lb-ext">${timeLabel(x)}</span>${vbar(x, "is-card")}` : ""}</div>`;
-  }
   function assetPanel(x) {
     const t = T[x.type];
     const rows = [["Mã", `<span class="mono">${esc(x.id)}</span>`]];
@@ -308,7 +463,7 @@
     if (x.type === "video") rows.push(["Thời lượng", LB.dur(x.meta.dur)], ["Khung hình", `${x.meta.w} × ${x.meta.h}${x.meta.fps ? ` · ${x.meta.fps} fps` : ""}`]);
     if (x.type === "prompt") rows.push(["Độ dài", `${x.text.length} ký tự`], ["Biến", LB.varsOf(x.text).map((v) => `<span class="chip is-static">${esc(`{{${v}}}`)}</span>`).join("") || "—"]);
     rows.push(["Dung lượng", LB.bytes(x.size)], ["Thêm lúc", `<span class="mono">${esc(x.added || "—")}</span>`], ["Nguồn", esc(x.origin)]);
-    return `<section class="ins-sec lb-ins-top">${inspectorStage(x)}
+    return `<section class="ins-sec lb-ins-top">
         <div class="lb-ins-name"><span class="type-tag">${ic(t.icon)}${esc(t.label)}</span></div>
         ${field("Tên", "lb-f-name", `<input id="lb-f-name" class="input" value="${esc(x.name)}" data-change="lb-edit" data-id="${x.id}" data-f="name" autocomplete="off">`)}
         ${x.type === "prompt" ? field("Loại prompt", "lb-f-kind", `<select id="lb-f-kind" class="select" data-change="lb-edit" data-id="${x.id}" data-f="kind">${opts(Object.entries(LB.PROMPT_KINDS), x.kind)}</select>`)
@@ -317,25 +472,12 @@
       <section class="ins-sec ins-form">${tagEditor([x.id], x.tags)}${colEditor(x)}
         ${field("Quyền sử dụng", "lb-f-rights", `<select id="lb-f-rights" class="select" data-change="lb-edit" data-id="${x.id}" data-f="rights">${opts(Object.entries(LB.RIGHTS), x.rights)}</select><span class="field-hint">Bạn chịu trách nhiệm bảo đảm có quyền dùng tài nguyên này cho mục đích dự kiến.</span>`)}</section>
       ${insSec("Thông tin", kv(rows))}
-      <section class="ins-sec ins-actions">${x.type === "prompt" ? `<button class="btn" data-act="lb-copy" data-id="${x.id}">${ic("copy")}Sao chép</button>` : `<button class="btn" data-act="lb-open-preview" data-id="${x.id}">${ic(x.type === "image" ? "image" : "play")}Xem</button>`}<button class="btn btn-danger" data-act="lb-del" data-id="${x.id}">${ic("trash")}Xóa</button></section>`;
-  }
-  function typePanel(type) {
-    const t = T[type];
-    const all = st().assets.filter((x) => x.type === type);
-    const tags = new Map();
-    all.forEach((x) => x.tags.forEach((g) => tags.set(g, (tags.get(g) || 0) + 1)));
-    const top = [...tags.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-    const cols = st().collections.map((c) => [c, all.filter((x) => x.collectionId === c.id).length]).filter(([, n]) => n);
-    return `${insSec(`Thư viện ${t.label.toLowerCase()}`, kv([[`Số ${t.noun}`, all.length], ["Dung lượng", LB.bytes(all.reduce((a, x) => a + x.size, 0))], ["Chưa phân loại", all.filter((x) => !x.collectionId).length], ["Định dạng", esc(t.exts.map((e) => `.${e}`).join(" "))], ["Giới hạn", LB.bytes(t.max)]]))}
-      <section class="ins-sec"><span class="eyebrow">Thêm ${t.noun}</span><button class="btn btn-block" data-act="lb-upload" data-v="${type}">${ic("upload")}Upload ${t.noun}…</button>${type === "prompt" ? `<button class="btn btn-block" data-act="lb-upload" data-v="prompt" data-w="write">${ic("pen")}Viết prompt mới</button>` : ""}<span class="field-hint">Có thể kéo thả file vào vùng danh sách.</span></section>
-      ${top.length ? `<section class="ins-sec"><span class="eyebrow">Tags phổ biến</span><span class="tags">${top.map(([g, n]) => `<button type="button" class="tag lb-tagbtn" data-act="lb-ftag" data-v="${esc(g)}">${esc(g)} <span class="mono t-mute">${n}</span></button>`).join("")}</span></section>` : ""}
-      ${cols.length ? `<section class="ins-sec"><span class="eyebrow">Collection</span>${cols.map(([c, n]) => `<button type="button" class="nm-recent" data-act="lb-open-col" data-id="${c.id}">${ic("folder")}<span class="tree-label">${esc(c.name)}</span><span class="mono t-mute">${n}</span></button>`).join("")}</section>` : ""}`;
+      <section class="ins-sec ins-actions">${x.type === "prompt" ? `<button class="btn" data-act="lb-copy" data-id="${x.id}">${ic("copy")}Sao chép</button>` : ""}<button class="btn btn-danger" data-act="lb-del" data-id="${x.id}">${ic("trash")}Xóa</button></section>`;
   }
   function browseInspector(id) {
-    const sc = scope(id);
     const selected = selectedId(id);
     if (selected) return assetPanel(byId(selected));
-    return sc.col ? colPanel(colById(sc.col), false) : typePanel(sc.type);
+    return `<div class="ins-empty"><p>Chọn một tài nguyên để xem thuộc tính.</p></div>`;
   }
 
   const uniqueName = (type, name, exceptId) => {
@@ -370,14 +512,17 @@
     });
   }
 
-  let PV = { ids: [], i: 0 };
+  /* Prompts have no preview dialog: they are read and copied from the inspector. */
+  const previewable = (x) => !!x && x.type !== "prompt";
+  const openAttr = (x) => (previewable(x) ? `data-lb-open="${x.id}"` : "");
+  let PV = { ids: [], i: 0, open: false };
   function openPreview(id) {
-    const ids = items(scope(A.S.active)).map((x) => x.id);
-    PV = { ids: ids.includes(id) ? ids : [id], i: 0 };
+    if (!previewable(byId(id))) return;
+    const ids = items(scope(A.S.active)).filter(previewable).map((x) => x.id);
+    PV = { ids: ids.includes(id) ? ids : [id], i: 0, open: false };
     PV.i = Math.max(0, PV.ids.indexOf(id));
     drawPreview();
   }
-  const promptHtml = (text) => esc(text).replace(/\{\{\s*([\w .-]+?)\s*\}\}/g, (_, v) => `<mark class="lb-var">{{${v}}}</mark>`);
   function stage(x) {
     if (x.type === "image") return x.img ? `<img class="lbp-img" src="${esc(x.img)}" alt="${esc(x.name)}">` : `<div class="lbp-img is-art" style="background:${esc(bgOf(x))}" role="img" aria-label="${esc(x.name)}"></div>`;
     if (x.type === "video") {
@@ -385,20 +530,19 @@
       return `<div class="lbp-img is-art is-video" style="background:${esc(bgOf(x))}" role="img" aria-label="${esc(x.name)}"><button type="button" class="lb-pbtn is-lg" data-act="lb-play" data-lb-play="${x.id}" data-id="${x.id}" aria-label="Phát">${ic("play")}</button>
         ${vbar(x)}</div><div class="lbp-bar">${timeLabel(x)}<span class="t-sm t-mute">Prototype: video được mô phỏng, không có hình thật.</span></div>`;
     }
-    if (x.type === "sound") return `<div class="lbp-sound">${scroller(x, 10, "is-big")}<div class="lbp-bar">${playBtn(x, "is-lg")}${timeLabel(x)}<span class="t-sm t-mute">${esc(x.meta.rate)} · ${esc(x.meta.ch)}</span></div></div>`;
-    return `<div class="lbp-prompt"><div class="lbp-bar"><span class="badge">${esc(LB.PROMPT_KINDS[x.kind])}</span><span class="spacer"></span><button class="btn btn-sm" data-act="lb-copy" data-id="${x.id}">${ic("copy")}Sao chép</button></div><pre class="lb-prompt">${promptHtml(x.text)}</pre></div>`;
+    return `<div class="lbp-sound"><div class="lbp-part"><span class="eyebrow">Spectrum</span>${eq(x, BANDS, "is-big")}</div><div class="lbp-part"><span class="eyebrow">Waveform</span>${scroller(x, 10, "is-big is-paged")}</div><div class="lbp-bar">${playBtn(x, "is-lg")}${timeLabel(x)}<span class="t-sm t-mute">${esc(x.meta.rate)} · ${esc(x.meta.ch)}</span></div></div>`;
   }
   function drawPreview() {
     const x = byId(PV.ids[PV.i]);
     if (!x) { A.closeModal(); return; }
     const n = PV.ids.length;
+    PV.open = true;
     A.modal({
       title: x.name, eyebrow: `${T[x.type].label} · ${PV.i + 1} / ${n}`, cls: "modal-xl lbp-modal",
-      body: `<div class="lbp"><div class="lbp-stage">${stage(x)}</div>
+      body: `<div class="lbp"><div class="lbp-stage">${stage(x)}<button type="button" class="btn btn-icon lbp-nav is-prev" data-act="lb-pv-prev" aria-label="Trước" ${PV.i <= 0 ? "disabled" : ""}>${ic("chev-l")}</button><button type="button" class="btn btn-icon lbp-nav is-next" data-act="lb-pv-next" aria-label="Sau" ${PV.i >= n - 1 ? "disabled" : ""}>${ic("chev-r")}</button></div>
         <aside class="lbp-side">${kv([["Mã", `<span class="mono">${esc(x.id)}</span>`], ["Thông số", esc(metaText(x))], ["Dung lượng", LB.bytes(x.size)], ["Thêm lúc", `<span class="mono">${esc(x.added || "—")}</span>`], ["Quyền dùng", esc(LB.RIGHTS[x.rights])]])}
           ${x.tags.length ? `<div><span class="eyebrow">Tags</span><div class="tags lb-pt">${x.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></div>` : ""}
           ${collectionOf(x) ? `<div><span class="eyebrow">Collection</span><div class="tags lb-pt"><span class="tag lb-ctag">${ic("folder")}${esc(collectionOf(x).name)}</span></div></div>` : ""}</aside></div>`,
-      foot: `<button class="btn" data-act="lb-pv-prev" ${PV.i <= 0 ? "disabled" : ""}>${ic("chev-l")}Trước</button><button class="btn" data-act="lb-pv-next" ${PV.i >= n - 1 ? "disabled" : ""}>Sau${ic("chev-r")}</button><span class="spacer"></span><button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
     });
     player.paint();
   }
@@ -418,8 +562,7 @@
     const unfiled = st().assets.filter((x) => !x.collectionId).length;
     const colRows = cols.map((c) => `<tr tabindex="0" data-act="ct-sel" data-k="col" data-id="${c.id}" class="${sel?.k === "col" && sel.id === c.id ? "is-selected" : ""}">
         <td><div class="nm-title">${ic("folder")}<div><div class="t-ink">${esc(c.name)}</div><div class="t-sm t-mute lb-desc">${esc(c.desc || "Không có mô tả")}</div></div></div></td>
-        <td>${cntRow(counts((x) => x.collectionId === c.id))}</td>
-        <td class="row-actions"><button class="btn btn-sm btn-ghost" data-act="lb-open-col" data-id="${c.id}" data-tip="Mở collection">${ic("chev-r")}Mở</button></td></tr>`).join("");
+        <td>${cntRow(counts((x) => x.collectionId === c.id))}</td></tr>`).join("");
     const tagRows = tags.map((r) => `<tr tabindex="0" data-act="ct-sel" data-k="tag" data-id="${esc(r.t)}" class="${sel?.k === "tag" && sel.id === r.t ? "is-selected" : ""}">
         <td><span class="tag">${esc(r.t)}</span></td><td>${cntRow(r.c)}</td><td class="num mono t-mute">${r.n}</td></tr>`).join("");
     return `<div class="nv lb">
@@ -427,7 +570,7 @@
         `<button class="btn btn-sm" data-act="ct-new-tag">${ic("plus")}Tag</button><button class="btn btn-sm btn-primary" data-act="ct-new-col">${ic("plus")}Collection</button>`)}
       <div class="nv-body lb-ct">
         <section class="lb-ct-pane"><header class="lb-ct-h"><span class="eyebrow">Collections</span><span class="t-sm t-mute">Mỗi tài nguyên thuộc tối đa một collection; collection có thể chứa mọi loại.</span></header>
-          <div class="nv-scroll" data-keep="ct-col">${cols.length ? `<table class="table"><thead><tr><th>Collection</th><th>Tài nguyên</th><th></th></tr></thead><tbody>${colRows}</tbody></table>`
+          <div class="nv-scroll" data-keep="ct-col">${cols.length ? `<table class="table"><thead><tr><th>Collection</th><th>Tài nguyên</th></tr></thead><tbody>${colRows}</tbody></table>`
             : emptyBox("Chưa có collection nào", "Collection gom các tài nguyên thuộc cùng một chủ đề, ví dụ bối cảnh của một tác phẩm hoặc bộ nhận diện kênh.", `<button class="btn btn-primary" data-act="ct-new-col">${ic("plus")}Tạo collection</button>`)}</div></section>
         <section class="lb-ct-pane"><header class="lb-ct-h"><span class="eyebrow">Tags</span><label class="search"><span class="sr-only">Tìm tag</span><input id="ct-q" class="input" type="search" value="${esc(u.q || "")}" placeholder="Tìm tag…" data-on="ct-q"></label></header>
           <div class="nv-scroll" data-keep="ct-tag">${tags.length ? `<table class="table"><thead><tr><th>Tag</th><th>Tài nguyên</th><th class="num">Tổng</th></tr></thead><tbody>${tagRows}</tbody></table>`
@@ -516,12 +659,15 @@
   }
   LB.openCollection = openCollection;
 
+  Object.entries(LB.TAB).forEach(([tab, type]) => { A.NAV_COUNT[tab] = () => st().assets.filter((x) => x.type === type).length; });
+
   A.EXPLORER_EXTRA.libfilters = () => {
     const f = filt();
     const cnt = (pred) => st().assets.filter(pred).length;
     const pill = (act, v, label, n, on) => `<button type="button" class="nf-pill ${on ? "is-on" : ""}" data-act="${act}" data-v="${esc(v)}" aria-pressed="${on}" title="${esc(label)} · ${n}"><span class="nf-t">${esc(label)}</span><span class="nf-n mono">${n}</span></button>`;
     const colOpts = [["", `Tất cả collection (${st().assets.length})`], ["none", `Chưa phân loại (${cnt((x) => !x.collectionId)})`], ...st().collections.map((c) => [c.id, `${c.name} (${cnt((x) => x.collectionId === c.id)})`])];
-    const tags = st().tagList.map((t) => [t, cnt((x) => x.tags.includes(t))]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const pool = poolOf(scope(A.S.active));
+    const tags = st().tagList.map((t) => [t, pool.filter((x) => x.tags.includes(t)).length]).filter(([, n]) => n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     return `<div class="nf-label">Collection</div><div class="nf-sel"><select class="select" data-change="lb-fcol-sel" aria-label="Lọc theo collection">${opts(colOpts, f.col)}</select></div>
       <div class="nf-label">Tags</div><div class="nf-pills">${tags.map(([t, n]) => pill("lb-ftag", t, t, n, f.tags.includes(t))).join("") || `<span class="nx-empty">Chưa có tag</span>`}</div>
       ${filtActive() ? `<div class="tree-row nf-clear" tabindex="0" data-act="lb-ftag-clear">${ic("x")}<span class="tree-label">Xóa bộ lọc</span></div>` : ""}`;
@@ -533,18 +679,20 @@
       const n = st().assets.filter((x) => x.collectionId === c.id).length;
       return `<div class="tree-row nx-child lb-xcol ${active === `collection:${c.id}` ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="lb-open-col" data-id="${c.id}">${ic("folder")}<span class="tree-label">${esc(c.name)}</span><span class="nx-n mono">${n}</span></div>`;
     }).join("");
-    return `<div class="nx-sep"></div>${rows || `<div class="nx-empty">Chưa có collection nào</div>`}<div class="tree-row nx-child lb-xnew" tabindex="0" data-act="ct-new-col">${ic("plus")}<span class="tree-label">Tạo collection</span></div>`;
+    return `<div class="nx-sep"></div>${rows || `<div class="nx-empty">Chưa có collection nào</div>`}`;
   };
 
   const stopEvt = (e) => e?.stopPropagation();
   const assign = (ids, fn) => { ids.map(byId).filter(Boolean).forEach((x) => { fn(x); touch(x); }); };
 
   Object.assign(A.ACT, {
-    "lb-sel": (el) => {
+    "lb-sel": (el, e) => {
       const id = A.S.active;
       const u = ui(id);
-      u.sel = el.dataset.id;
+      const dbl = e?.detail >= 2;
+      u.sel = !dbl && u.sel === el.dataset.id ? null : el.dataset.id;
       applySel();
+      if (e?.detail >= 2 && !e.target.closest("input,button,select")) openPreview(el.dataset.id);
     },
     "lb-ratio": (el) => {
       const t = scope(A.S.active).type;
@@ -571,12 +719,11 @@
     "lb-seek": (el, e) => {
       stopEvt(e);
       const r = el.getBoundingClientRect();
-      const x01 = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-      const tr = player.track(el.dataset.id) || { dur: +el.dataset.d };
       const w = el._win;
+      const x01 = Math.max(0, Math.min(1, w ? (e.clientX - r.left - w.pad) / w.uw : (e.clientX - r.left) / r.width));
+      const tr = player.track(el.dataset.id) || { dur: +el.dataset.d };
       player.seek(el.dataset.id, tr, w ? (w.start + x01 * w.len) / Math.max(1, tr.dur) : x01);
     },
-    "lb-open-preview": (el) => openPreview(el.dataset.id),
     "lb-pv-prev": () => pvGo(-1),
     "lb-pv-next": () => pvGo(1),
     "lb-copy": (el) => {
@@ -616,7 +763,11 @@
     "lb-upload-menu": (el) => {
       A.openMenu(el, Object.values(T).map((t) => ({ label: `Upload ${t.noun}…`, icon: t.icon, act: "lb-upload", v: t.key })));
     },
-    "ct-sel": (el) => { CT().sel = { k: el.dataset.k, id: el.dataset.id }; A.rerender(); },
+    "ct-sel": (el, e) => {
+      if (el.dataset.k === "col" && e?.detail >= 2) { openCollection(el.dataset.id); return; }
+      CT().sel = { k: el.dataset.k, id: el.dataset.id };
+      A.rerender();
+    },
     "ct-new-col": () => openNewCollection(),
     "ct-new-col-submit": (el) => {
       const name = A.$("#nc-name").value.trim();
@@ -753,7 +904,7 @@
 
   document.addEventListener("dblclick", (e) => {
     const el = e.target.closest("[data-lb-open]");
-    if (el && !e.target.closest("input,button,select")) openPreview(el.dataset.lbOpen);
+    if (el && !el.dataset.act && !e.target.closest("input,button,select")) openPreview(el.dataset.lbOpen);
   });
   document.addEventListener("keydown", (e) => {
     if ($modal() && /lbp-modal/.test($modal().className)) {
@@ -761,6 +912,7 @@
       else if (e.key === "ArrowRight") pvGo(1);
       return;
     }
+    if (e.key === "Enter" && e.target.matches?.("tr[data-k=col]")) { openCollection(e.target.dataset.id); return; }
     if (e.key === "Enter" && e.target.matches?.("[data-lb-open]")) { openPreview(e.target.dataset.lbOpen); return; }
     const sc = A.S.active in LB.TAB || String(A.S.active).startsWith("collection:");
     const selected = selectedId(A.S.active);

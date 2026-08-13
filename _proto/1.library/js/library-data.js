@@ -1,9 +1,12 @@
 window.LB = (function () {
   const MB = 1048576;
   const GB = 1024 * MB;
+  const IMG_DIR = "../shared/assets/library/";
+  const SND_DIR = IMG_DIR;
+  const VID_DIR = IMG_DIR;
 
   const TYPES = {
-    image: { key: "image", id: "IMG", tab: "images", label: "Images", noun: "ảnh", icon: "image", exts: ["png", "jpg", "jpeg", "webp", "gif"], max: 25 * MB, hint: "PNG, JPG, WEBP, GIF · tối đa 25 MB mỗi ảnh" },
+    image: { key: "image", id: "IMG", tab: "images", label: "Images", noun: "ảnh", icon: "image", exts: ["png", "jpg"], max: 25 * MB, hint: "PNG, JPG · tối đa 25 MB mỗi ảnh" },
     sound: { key: "sound", id: "SND", tab: "sounds", label: "Sounds", noun: "âm thanh", icon: "music", exts: ["mp3", "wav", "m4a", "flac", "ogg"], max: 200 * MB, hint: "MP3, WAV, M4A, FLAC, OGG · tối đa 200 MB mỗi file" },
     video: { key: "video", id: "VID", tab: "videos", label: "Videos", noun: "video", icon: "film", exts: ["mp4", "mov", "webm", "mkv"], max: 2 * GB, hint: "MP4, MOV, WEBM, MKV · tối đa 2 GB mỗi file" },
     prompt: { key: "prompt", id: "PRM", tab: "prompts", label: "Prompts", noun: "prompt", icon: "prompt", exts: ["txt", "md"], max: 256 * 1024, hint: "TXT, MD · tối đa 256 KB mỗi file, hoặc viết trực tiếp" },
@@ -82,9 +85,9 @@ window.LB = (function () {
     const seq = { image: 0, sound: 0, video: 0, prompt: 0, col: 0, voice: 0 };
     const nid = (type) => `${TYPES[type].id}-${String(++seq[type]).padStart(4, "0")}`;
     const a = (type, name, o) => ({ id: nid(type), type, name, tags: [], collectionId: null, rights: "own", origin: "Tải lên từ máy", seed: name, ...o });
-    const img = (name, w, h, size, o) => a("image", name, { size, meta: { w, h }, bg: bgFor(name), ...o });
-    const snd = (name, d, size, o) => a("sound", name, { size, meta: { dur: d, rate: "44.1 kHz", ch: "Stereo" }, ...o });
-    const vid = (name, d, w, h, fps, size, o) => a("video", name, { size, meta: { dur: d, w, h, fps }, bg: bgFor(name), ...o });
+    const img = (name, w, h, size, o) => a("image", name, { size, meta: { w, h }, bg: bgFor(name), img: `${IMG_DIR}${name}`, ...o });
+    const snd = (name, d, size, rate, ch, o) => a("sound", name, { size, meta: { dur: d, rate: `${rate} kHz`, ch }, url: `${SND_DIR}${name}`, ...o });
+    const vid = (name, d, w, h, fps, size, o) => a("video", name, { size, meta: { dur: d, w, h, fps }, bg: bgFor(name), url: `${VID_DIR}${name}`, img: `${VID_DIR}${name.replace(/.mp4$/, ".poster.jpg")}`, ...o });
     const prm = (name, kind, text, o) => a("prompt", name, { size: new Blob([text]).size, text, kind, origin: "Tạo trong app", ...o });
 
     const collections = [
@@ -96,35 +99,41 @@ window.LB = (function () {
     seq.col = collections.length;
 
     const assets = [
-      img("harrowmere-harbor-dusk.png", 1920, 1080, 3.4 * MB, { tags: ["harbor", "dusk", "background"], collectionId: "COL-01", added: day(1, "21:03") }),
-      img("lantern-room-interior.jpg", 1536, 1024, 1.2 * MB, { tags: ["lantern", "interior"], collectionId: "COL-01", added: day(1, "20:41") }),
-      img("keeper-portrait-ref.png", 1024, 1280, 2.1 * MB, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:22") }),
-      img("maro-quill-ref.webp", 1024, 1280, 640 * 1024, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:25") }),
-      img("drowned-bell-tower.png", 1792, 1024, 2.9 * MB, { tags: ["night", "ruins", "background"], collectionId: "COL-01", added: day(3, "22:10") }),
-      img("sea-fog-texture.jpg", 2048, 2048, 4.8 * MB, { tags: ["texture", "fog"], added: day(4, "09:40"), rights: "free", origin: "Tải lên từ máy" }),
-      img("channel-logo-square.png", 1024, 1024, 310 * 1024, { tags: ["logo", "brand"], collectionId: "COL-03", added: day(12, "10:00") }),
-      img("thumbnail-template-01.png", 1280, 720, 880 * 1024, { tags: ["thumbnail", "template", "brand"], collectionId: "COL-03", added: day(12, "10:06") }),
-      img("tide-chart-parchment.jpg", 1600, 1200, 1.7 * MB, { tags: ["prop", "map"], collectionId: "COL-01", added: day(5, "14:30"), rights: "licensed" }),
-      img("council-hall.webp", 1920, 1080, 980 * 1024, { tags: ["interior", "council", "background"], collectionId: "COL-01", added: day(6, "19:48") }),
-      img("moonlit-pier.png", 1920, 1080, 3.1 * MB, { tags: ["harbor", "night", "background"], collectionId: "COL-01", added: day(7, "23:15") }),
-      img("lamp-closeup.jpg", 1200, 1200, 760 * 1024, { tags: ["lantern", "prop"], added: day(8, "16:02") }),
-      img("sunrise-gradient-bg.png", 1920, 1080, 420 * 1024, { tags: ["background", "gradient"], collectionId: "COL-03", added: day(14, "11:20") }),
-      img("gull-silhouette.png", 800, 600, 190 * 1024, { tags: ["prop", "bird"], added: day(15, "08:45") }),
+      img("harrowmere-harbor-dusk.png", 1920, 1080, 214 * 1024, { tags: ["harbor", "dusk", "background"], collectionId: "COL-01", added: day(1, "21:03") }),
+      img("lantern-room-interior.jpg", 1536, 1024, 49 * 1024, { tags: ["lantern", "interior"], collectionId: "COL-01", added: day(1, "20:41") }),
+      img("keeper-portrait-ref.png", 1080, 1920, 313 * 1024, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:22") }),
+      img("maro-quill-ref.png", 1080, 1920, 378 * 1024, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:25") }),
+      img("drowned-bell-tower.png", 1792, 1024, 217 * 1024, { tags: ["night", "ruins", "background"], collectionId: "COL-01", added: day(3, "22:10") }),
+      img("sea-fog-texture.jpg", 2048, 2048, 85 * 1024, { tags: ["texture", "fog"], added: day(4, "09:40"), rights: "free", origin: "Tải lên từ máy" }),
+      img("channel-logo-square.png", 1024, 1024, 140 * 1024, { tags: ["logo", "brand"], collectionId: "COL-03", added: day(12, "10:00") }),
+      img("thumbnail-template-01.png", 1280, 720, 233 * 1024, { tags: ["thumbnail", "template", "brand"], collectionId: "COL-03", added: day(12, "10:06") }),
+      img("tide-chart-parchment.jpg", 1600, 1200, 47 * 1024, { tags: ["prop", "map"], collectionId: "COL-01", added: day(5, "14:30"), rights: "licensed" }),
+      img("council-hall.jpg", 1920, 1080, 54 * 1024, { tags: ["interior", "council", "background"], collectionId: "COL-01", added: day(6, "19:48") }),
+      img("moonlit-pier.png", 1920, 1080, 318 * 1024, { tags: ["harbor", "night", "background"], collectionId: "COL-01", added: day(7, "23:15") }),
+      img("lamp-closeup.jpg", 1200, 1200, 68 * 1024, { tags: ["lantern", "prop"], added: day(8, "16:02") }),
+      img("sunrise-gradient-bg.png", 1920, 1080, 364 * 1024, { tags: ["background", "gradient"], collectionId: "COL-03", added: day(14, "11:20") }),
+      img("gull-silhouette.png", 800, 600, 96 * 1024, { tags: ["prop", "bird"], added: day(15, "08:45") }),
+      img("story-reel-cover.png", 1080, 1920, 396 * 1024, { tags: ["vertical", "cover", "brand"], collectionId: "COL-03", added: day(0, "09:15") }),
+      img("short-hook-frame.png", 1080, 1920, 343 * 1024, { tags: ["vertical", "thumbnail"], collectionId: "COL-03", added: day(0, "08:40") }),
+      img("vertical-title-card.jpg", 1080, 1920, 50 * 1024, { tags: ["vertical", "title"], added: day(1, "07:55") }),
 
-      snd("harbor-ambience-loop.wav", 200, 35.3 * MB, { tags: ["ambience", "harbor", "loop"], collectionId: "COL-02", added: day(1, "19:30") }),
-      snd("waves-lapping.mp3", 105, 2.4 * MB, { tags: ["ambience", "sea"], collectionId: "COL-02", added: day(3, "17:05"), rights: "free" }),
-      snd("bell-toll-distant.wav", 12, 2.1 * MB, { tags: ["sfx", "bell"], collectionId: "COL-02", added: day(3, "17:12") }),
-      snd("wind-howl-night.mp3", 150, 3.4 * MB, { tags: ["ambience", "night", "wind"], collectionId: "COL-02", added: day(5, "21:00") }),
-      snd("theme-lantern-keeper.mp3", 185, 4.2 * MB, { tags: ["music", "theme"], collectionId: "COL-03", added: day(10, "13:10"), rights: "licensed" }),
-      snd("narrator-sample-warm.wav", 42, 7.1 * MB, { tags: ["voice-ref"], collectionId: "COL-04", added: day(9, "20:20") }),
-      snd("page-turn.wav", 2, 380 * 1024, { tags: ["sfx", "book"], collectionId: "COL-02", added: day(11, "12:00") }),
-      snd("intro-sting.mp3", 6, 210 * 1024, { tags: ["sfx", "brand"], collectionId: "COL-03", added: day(12, "10:15") }),
+      snd("harbor-ambience-loop.mp3", 44.98, 1439232, 48, "Stereo", { tags: ["ambience", "harbor", "loop"], collectionId: "COL-02", added: day(1, "19:30") }),
+      snd("waves-lapping.mp3", 44.98, 1439451, 44.1, "Stereo", { tags: ["ambience", "sea"], collectionId: "COL-02", added: day(3, "17:05"), rights: "free" }),
+      snd("bell-toll-distant.mp3", 2.3, 73560, 44.1, "Stereo", { tags: ["sfx", "bell"], collectionId: "COL-02", added: day(3, "17:12") }),
+      snd("wind-howl-night.mp3", 44.98, 1439232, 48, "Stereo", { tags: ["ambience", "night", "wind"], collectionId: "COL-02", added: day(5, "21:00") }),
+      snd("theme-lantern-keeper.mp3", 44.98, 1439451, 44.1, "Stereo", { tags: ["music", "theme"], collectionId: "COL-03", added: day(10, "13:10"), rights: "licensed" }),
+      snd("narrator-sample-warm.mp3", 29.99, 959634, 44.1, "Stereo", { tags: ["voice-ref"], collectionId: "COL-04", added: day(9, "20:20") }),
+      snd("page-turn.mp3", 1.58, 50688, 48, "Mono", { tags: ["sfx", "book"], collectionId: "COL-02", added: day(11, "12:00") }),
+      snd("intro-sting.mp3", 13.8, 441600, 48, "Stereo", { tags: ["sfx", "brand"], collectionId: "COL-03", added: day(12, "10:15") }),
 
-      vid("channel-intro-v2.mp4", 8, 1920, 1080, 24, 18.4 * MB, { tags: ["intro", "brand"], collectionId: "COL-03", added: day(12, "10:30") }),
-      vid("fog-loop-bg.mp4", 30, 1920, 1080, 30, 46 * MB, { tags: ["fog", "loop", "background"], collectionId: "COL-01", added: day(4, "15:40") }),
-      vid("lighthouse-beam-overlay.webm", 12, 1920, 1080, 30, 9.6 * MB, { tags: ["overlay", "lantern"], collectionId: "COL-01", added: day(6, "10:11") }),
-      vid("outro-endcard.mp4", 15, 1920, 1080, 24, 12.2 * MB, { tags: ["outro", "brand"], collectionId: "COL-03", added: day(12, "10:42") }),
-      vid("waves-closeup.mov", 20, 3840, 2160, 60, 214 * MB, { tags: ["sea", "background"], added: day(13, "07:30"), rights: "licensed" }),
+      vid("channel-intro-v2.mp4", 18.47, 1280, 720, 60, 1693328, { tags: ["intro", "brand"], collectionId: "COL-03", added: day(12, "10:30") }),
+      vid("fog-loop-bg.mp4", 17.73, 1280, 720, 23, 2804240, { tags: ["fog", "loop", "background"], collectionId: "COL-01", added: day(4, "15:40") }),
+      vid("lighthouse-beam-overlay.mp4", 17.17, 1280, 720, 60, 3253432, { tags: ["overlay", "lantern"], collectionId: "COL-01", added: day(6, "10:11") }),
+      vid("outro-endcard.mp4", 21.96, 640, 360, 30, 1823679, { tags: ["outro", "brand"], collectionId: "COL-03", added: day(12, "10:42") }),
+      vid("waves-closeup.mp4", 30.13, 640, 360, 24, 2669577, { tags: ["sea", "background"], added: day(13, "07:30"), rights: "licensed" }),
+      vid("story-reel-lighthouse-night.mp4", 9.53, 540, 960, 60, 1162933, { tags: ["vertical", "lantern", "night"], collectionId: "COL-03", added: day(0, "09:30") }),
+      vid("short-hook-evening-cloud.mp4", 10.02, 540, 960, 60, 696942, { tags: ["vertical", "lantern"], added: day(0, "08:50") }),
+      vid("vertical-sea-sunset.mp4", 16.79, 540, 960, 24, 2169065, { tags: ["vertical", "sea", "background"], collectionId: "COL-03", added: day(1, "08:05") }),
 
       prm("Harbor at dusk — cảnh rộng", "image", "Wide establishing shot of {{location}} at dusk, low fog over still water, a single lantern glowing on the pier, painterly {{style}}, muted teal and amber palette, cinematic composition, no text.", { tags: ["harbor", "background"], collectionId: "COL-01", added: day(2, "21:10") }),
       prm("Chân dung nhân vật (reference sheet)", "image", "Character reference sheet of {{character}}: front, side and three-quarter views, neutral expression, plain background, consistent costume details, {{style}}.", { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:10") }),
@@ -136,7 +145,7 @@ window.LB = (function () {
       prm("Phong cách sơn dầu u tối", "image", "oil painting, heavy impasto, chiaroscuro, desaturated blues, warm lamplight accents", { tags: ["style"], added: day(16, "22:00") }),
     ];
     assets.forEach((x) => { if (x.type === "prompt") x.size = Math.max(x.size, 1); });
-    seq.image = 14; seq.sound = 8; seq.video = 5; seq.prompt = 8;
+    seq.image = 17; seq.sound = 8; seq.video = 8; seq.prompt = 8;
 
     const voices = [
       { id: "VOC-01", family: "vieneu", name: "Minh Quân", kind: "default", lang: "VI", gender: "Nam", style: "Giọng mặc định của VieNeu, rõ chữ", engine: "local", status: "ready", created: "—" },
@@ -146,7 +155,7 @@ window.LB = (function () {
       { id: "VOC-05", provider: "everai", name: "Linh", kind: "default", lang: "VI", gender: "Nữ", style: "Tự nhiên, hội thoại", engine: "cloud", status: "ready", created: "—" },
       { id: "VOC-06", provider: "elevenlabs", name: "Oliver", kind: "default", lang: "EN", gender: "Nam", style: "Ấm, giàu cảm xúc", engine: "cloud", status: "ready", created: "—" },
       { id: "VOC-07", family: "vieneu", name: "Giọng của tôi", kind: "cloned", lang: "VI", gender: "Nữ", style: "Ghi âm trực tiếp", engine: "local", status: "ready", created: day(9, "20:40"), desc: "Giọng đọc chính cho audiobook Harrowmere.", src: { type: "record", name: "Bản ghi âm", dur: 38 } },
-      { id: "VOC-08", provider: "elevenlabs", name: "Narrator ấm", kind: "cloned", lang: "VI", gender: "Nam", style: "Từ file audio", engine: "cloud", status: "ready", created: day(6, "11:05"), desc: "Giọng dẫn chuyện trầm cho các chương hồi tưởng.", src: { type: "file", name: "narrator-sample-warm.wav", dur: 42 } },
+      { id: "VOC-08", provider: "elevenlabs", name: "Narrator ấm", kind: "cloned", lang: "VI", gender: "Nam", style: "Từ file audio", engine: "cloud", status: "ready", created: day(6, "11:05"), desc: "Giọng dẫn chuyện trầm cho các chương hồi tưởng.", src: { type: "file", name: "narrator-sample-warm.mp3", dur: 30 } },
       { id: "VOC-09", family: "omnivoice", name: "Thử nghiệm giọng trầm", kind: "cloned", lang: "VI", gender: "Nam", style: "Từ file audio", engine: "local", status: "failed", created: day(4, "09:12"), error: "Mẫu có nhiều tạp âm nền nên không trích xuất được đặc trưng giọng. Hãy dùng bản thu sạch hơn, dài từ 10 giây.", src: { type: "file", name: "noisy-test.mp3", dur: 14 } },
     ];
     seq.voice = voices.length;

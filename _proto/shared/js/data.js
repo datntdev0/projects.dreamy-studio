@@ -10,7 +10,7 @@ window.DS = (function () {
     "02": "CAP-02 · Novel Management",
     "03": "CAP-03 · Novel Translation",
     "04": "CAP-04 · Novel Knowledgebase",
-    "05": "CAP-05 · Library Management",
+    "05": "Library Management",
     "06": "CAP-06 · Project Management",
     "07": "CAP-07 · Pre-Production",
     "08": "CAP-08 · Production Modules",

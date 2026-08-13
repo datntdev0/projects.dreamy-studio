@@ -3,7 +3,7 @@
  * Documented in ../design.html. Dense spacing and small radii. Components reference semantic tokens only (no raw hex),
  * so every screen works in both themes (data-theme="dark" | "light"; dark is default).
  */
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500;600&display=swap");
 
 :root,
 :root[data-theme="dark"] {
@@ -229,6 +229,9 @@ a:hover { text-decoration: underline; }
 }
 .modal-lg { width: min(720px, 94vw); }
 .modal-head { padding: var(--sp-md) var(--sp-lg) var(--sp-md) var(--sp-xl); border-bottom: 1px solid var(--hairline); display: flex; align-items: center; gap: var(--sp-sm); }
+.modal-head .eyebrow { white-space: nowrap; }
+.modal-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
+.modal-head > span.eyebrow + .modal-title::before { content: ""; display: inline-block; width: 1px; height: 12px; margin: 0 var(--sp-lg) 0 var(--sp-sm); background: var(--hairline-strong); vertical-align: -2px; }
 .modal-body { padding: var(--sp-xl); overflow: auto; display: grid; gap: var(--sp-lg); }
 .modal-foot { padding: var(--sp-md) var(--sp-xl); border-top: 1px solid var(--hairline); display: flex; justify-content: flex-end; gap: var(--sp-sm); }
 .menu {

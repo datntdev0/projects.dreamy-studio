@@ -33,7 +33,7 @@ export class LibrarySoundPreviewDialog {
   duration(sound: LibrarySound): string { return durationText(sound.durationMs); }
   audio(sound: LibrarySound): string { return audioText(sound); }
   size(sound: LibrarySound): string { return formatBytes(sound.size); }
-  collection(sound: LibrarySound): string { return sound.collectionId === null ? "" : this.library.collectionById(sound.collectionId)?.name ?? "â€”"; }
+  collection(sound: LibrarySound): string { return sound.collectionId === null ? "" : this.library.collectionById(sound.collectionId)?.name ?? "—"; }
   rightsKey(sound: LibrarySound): I18nKey { return `library.rights.${sound.rights}` as I18nKey; }
   @HostListener("document:keydown", ["$event"]) onKeydown(event: KeyboardEvent): void { if (!this.sound()) return; if (event.key === "Escape") { event.preventDefault(); this.close(); } else if (event.key === "ArrowLeft") { event.preventDefault(); this.previous(); } else if (event.key === "ArrowRight") { event.preventDefault(); this.next(); } }
   private findSound(): LibrarySound | null { const id = this.dialogs.previewSoundId(); return id === null ? null : this.sounds.items().find(sameId.bind(null, id)) ?? null; }

@@ -50,7 +50,7 @@
       } @else if (library.viewMode() === "grid") {
         <div class="lb-grid" data-testid="library-sounds-grid">
           @for (sound of sounds.visible(); track sound.id) {
-            <div class="lb-card" [class.is-selected]="isSelected(sound)" tabindex="0" [attr.title]="sound.name" data-testid="library-sounds-card" (click)="select(sound)" (dblclick)="open(sound)" (keydown)="onSoundKeydown(sound, $event)"><app-library-sound-media [sound]="sound" data-testid="library-sounds-card-media" /><div class="lb-card-b" data-testid="library-sounds-card-body"><div class="lb-name" data-testid="library-sounds-card-name"><span class="t-ink lb-name-t" data-testid="library-sounds-card-name-text">{{ sound.name }}</span></div><div class="t-sm t-mute lb-sub" data-testid="library-sounds-card-meta">{{ duration(sound) }} Â· {{ size(sound) }}</div></div></div>
+            <div class="lb-card" [class.is-selected]="isSelected(sound)" tabindex="0" [attr.title]="sound.name" data-testid="library-sounds-card" (click)="select(sound)" (dblclick)="open(sound)" (keydown)="onSoundKeydown(sound, $event)"><app-library-sound-media [sound]="sound" data-testid="library-sounds-card-media" /><div class="lb-card-b" data-testid="library-sounds-card-body"><div class="lb-name" data-testid="library-sounds-card-name"><span class="t-ink lb-name-t" data-testid="library-sounds-card-name-text">{{ sound.name }}</span></div><div class="t-sm t-mute lb-sub" data-testid="library-sounds-card-meta">{{ duration(sound) }} · {{ size(sound) }}</div></div></div>
           }
         </div>
       } @else {

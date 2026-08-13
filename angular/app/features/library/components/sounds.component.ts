@@ -97,12 +97,12 @@ export class LibrarySounds implements OnInit, OnDestroy {
   }
 
   collectionName(sound: LibrarySound): string {
-    return sound.collectionId === null ? "â€”" : this.library.collectionById(sound.collectionId)?.name ?? "â€”";
+    return sound.collectionId === null ? "—" : this.library.collectionById(sound.collectionId)?.name ?? "—";
   }
 
   collectionFilterName(): string {
     const filter = this.library.filterCollection();
-    return typeof filter === "number" ? this.library.collectionById(filter)?.name ?? "â€”" : "";
+    return typeof filter === "number" ? this.library.collectionById(filter)?.name ?? "—" : "";
   }
 
   collectionFilterIsKey(): boolean {

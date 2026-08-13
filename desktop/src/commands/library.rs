@@ -9,11 +9,15 @@ use crate::features::library::models::LibraryCollection;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryImage;
+use crate::features::library::models::LibraryPrompt;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
 use crate::features::library::models::LibraryVideo;
+use crate::features::library::models::PromptCreateInput;
+use crate::features::library::models::PromptPatch;
+use crate::features::library::prompts::PROMPT_EXTENSIONS;
 use crate::features::library::service::LibraryService;
 use crate::features::library::sounds::SOUND_EXTENSIONS;
 use crate::features::library::videos::VIDEO_EXTENSIONS;
@@ -26,6 +30,7 @@ use tauri_plugin_dialog::DialogExt;
 const IMAGE_PICKER_LABEL: &str = "Images";
 const SOUND_PICKER_LABEL: &str = "Sounds";
 const VIDEO_PICKER_LABEL: &str = "Videos";
+const PROMPT_PICKER_LABEL: &str = "Prompts";
 
 pub fn get_summary(
     service: &LibraryService,
@@ -263,6 +268,66 @@ pub fn video_poster_set(
     data: String,
 ) -> LibraryResult<()> {
     service.open(session)?.video_poster_set(id, &data)
+}
+
+pub fn pick_prompts(app: &AppHandle) -> Vec<String> {
+    app.dialog()
+        .file()
+        .add_filter(PROMPT_PICKER_LABEL, &PROMPT_EXTENSIONS)
+        .blocking_pick_files()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|picked| picked_path(Some(picked)))
+        .collect()
+}
+
+pub fn inspect_prompts(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    paths: Vec<String>,
+) -> LibraryResult<Vec<AssetCheck>> {
+    service.open(session)?.prompt_inspect(&paths)
+}
+
+pub fn upload_prompt(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    path: String,
+    input: AssetUploadInput,
+) -> LibraryResult<LibraryPrompt> {
+    service.open(session)?.prompt_upload(&path, input)
+}
+
+pub fn create_prompt(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    input: PromptCreateInput,
+) -> LibraryResult<LibraryPrompt> {
+    service.open(session)?.prompt_create(input)
+}
+
+pub fn list_prompts(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+) -> LibraryResult<Vec<LibraryPrompt>> {
+    service.open(session)?.prompt_list()
+}
+
+pub fn update_prompt(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    id: i64,
+    patch: PromptPatch,
+) -> LibraryResult<LibraryPrompt> {
+    service.open(session)?.prompt_update(id, patch)
+}
+
+pub fn delete_prompts(
+    service: &LibraryService,
+    session: &WorkspaceSession,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
+    service.open(session)?.prompt_delete(&ids)
 }
 
 pub fn delete_images(
@@ -579,6 +644,72 @@ pub async fn library_video_poster_set(app: AppHandle, id: i64, data: String) -> 
     .await
 }
 
+#[tauri::command]
+pub async fn library_prompt_pick(app: AppHandle) -> Vec<String> {
+    spawn_blocking(move || pick_prompts(&app))
+        .await
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn library_prompt_inspect(
+    app: AppHandle,
+    paths: Vec<String>,
+) -> LibraryResult<Vec<AssetCheck>> {
+    run_blocking(app, move |service, session| {
+        inspect_prompts(service, session, paths)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_prompt_upload(
+    app: AppHandle,
+    path: String,
+    input: AssetUploadInput,
+) -> LibraryResult<LibraryPrompt> {
+    run_blocking(app, move |service, session| {
+        upload_prompt(service, session, path, input)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_prompt_create(
+    app: AppHandle,
+    input: PromptCreateInput,
+) -> LibraryResult<LibraryPrompt> {
+    run_blocking(app, move |service, session| {
+        create_prompt(service, session, input)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_prompt_list(app: AppHandle) -> LibraryResult<Vec<LibraryPrompt>> {
+    run_blocking(app, list_prompts).await
+}
+
+#[tauri::command]
+pub async fn library_prompt_update(
+    app: AppHandle,
+    id: i64,
+    patch: PromptPatch,
+) -> LibraryResult<LibraryPrompt> {
+    run_blocking(app, move |service, session| {
+        update_prompt(service, session, id, patch)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn library_prompt_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+    run_blocking(app, move |service, session| {
+        delete_prompts(service, session, ids)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -646,6 +777,34 @@ mod tests {
         assert_eq!(value["sampleRate"], json!(44_100));
         assert_eq!(value["collectionId"], serde_json::Value::Null);
         assert!(value.get("duration_ms").is_none());
+
+        let prompt = LibraryPrompt {
+            id: 5,
+            name: "Prompt".into(),
+            kind: crate::features::library::models::PromptKind::General,
+            text: "text".into(),
+            size: 4,
+            rights: AssetRights::Own,
+            origin: "app".into(),
+            collection_id: Some(6),
+            tags: vec![],
+            created_at: "g".into(),
+            updated_at: "h".into(),
+        };
+        let value = serde_json::to_value(prompt).unwrap();
+        assert_eq!(value["collectionId"], json!(6));
+        assert_eq!(value["createdAt"], json!("g"));
+        assert!(value.get("collection_id").is_none());
+    }
+
+    #[test]
+    fn prompt_patch_deserializes_collection_variants() {
+        let absent: PromptPatch = serde_json::from_value(json!({})).unwrap();
+        let null: PromptPatch = serde_json::from_value(json!({"collectionId": null})).unwrap();
+        let number: PromptPatch = serde_json::from_value(json!({"collectionId": 7})).unwrap();
+        assert_eq!(absent.collection_id, None);
+        assert_eq!(null.collection_id, Some(None));
+        assert_eq!(number.collection_id, Some(Some(7)));
     }
 
     #[test]
@@ -664,6 +823,12 @@ mod tests {
         );
         assert_eq!(
             list_sounds(&LibraryService::new(), &WorkspaceSession::new())
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::NoWorkspace
+        );
+        assert_eq!(
+            list_prompts(&LibraryService::new(), &WorkspaceSession::new())
                 .unwrap_err()
                 .code,
             LibraryErrorCode::NoWorkspace

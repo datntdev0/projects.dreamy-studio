@@ -104,6 +104,13 @@ pub fn run() {
             commands::library::library_video_delete,
             commands::library::library_video_poster,
             commands::library::library_video_poster_set,
+            commands::library::library_prompt_pick,
+            commands::library::library_prompt_inspect,
+            commands::library::library_prompt_upload,
+            commands::library::library_prompt_create,
+            commands::library::library_prompt_list,
+            commands::library::library_prompt_update,
+            commands::library::library_prompt_delete,
         ])
         .setup(setup)
         .build(tauri::generate_context!())

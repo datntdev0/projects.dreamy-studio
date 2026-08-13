@@ -14,13 +14,20 @@ use crate::features::library::models::LibraryCollection;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryImage;
+use crate::features::library::models::LibraryPrompt;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
 use crate::features::library::models::LibraryVideo;
+use crate::features::library::models::PromptCreateInput;
+use crate::features::library::models::PromptKind;
+use crate::features::library::models::PromptPatch;
 use crate::features::library::models::StreamChunk;
 use crate::features::library::models::StreamKind;
+use crate::features::library::prompts;
+use crate::features::library::prompts::NewPrompt;
+use crate::features::library::prompts::PromptFiles;
 use crate::features::library::sounds;
 use crate::features::library::sounds::NewSound;
 use crate::features::library::sounds::SoundFiles;
@@ -345,6 +352,133 @@ impl LibraryWorkspace {
     pub fn sound_peaks(&self, id: i64) -> LibraryResult<String> {
         Ok(base64::engine::general_purpose::STANDARD
             .encode(sounds::peaks(self.database()?.connection(), id)?))
+    }
+
+    pub fn prompt_inspect(&self, paths: &[String]) -> LibraryResult<Vec<AssetCheck>> {
+        let db = self.database()?;
+        paths
+            .iter()
+            .map(|path| inspect_prompt(db.connection(), path))
+            .collect()
+    }
+
+    pub fn prompt_upload(
+        &self,
+        path: &str,
+        input: AssetUploadInput,
+    ) -> LibraryResult<LibraryPrompt> {
+        let source = Path::new(path);
+        let metadata = fs::metadata(source)?;
+        let size = metadata.len();
+        prompt_extension(source)?;
+        if size == 0 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::PromptEmpty,
+                "prompt file is empty",
+            ));
+        }
+        if size > prompts::PROMPT_MAX_BYTES as u64 {
+            return Err(LibraryError::new(
+                LibraryErrorCode::PromptTooLarge,
+                "prompt file exceeds 256 KiB",
+            ));
+        }
+        let text = prompts::decode_file(&fs::read(source)?)?;
+        let name = prompts::normalize_name(&prompts::name_from_file(&assets::file_name(source)?))?;
+        self.prompt_insert(NewPrompt {
+            name,
+            kind: PromptKind::General,
+            text,
+            rights: input.rights,
+            origin: "upload",
+            collection_id: input.collection_id,
+            tags: input.tags,
+        })
+    }
+
+    pub fn prompt_create(&self, input: PromptCreateInput) -> LibraryResult<LibraryPrompt> {
+        self.prompt_insert(NewPrompt {
+            name: prompts::normalize_name(&input.name)?,
+            kind: input.kind,
+            text: prompts::normalize_text(&input.text)?,
+            rights: input.rights,
+            origin: "app",
+            collection_id: input.collection_id,
+            tags: input.tags,
+        })
+    }
+
+    fn prompt_insert(&self, mut prompt: NewPrompt) -> LibraryResult<LibraryPrompt> {
+        let _guard = self.lock();
+        let files = PromptFiles::new(self.dir.clone());
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        prompt.name = prompts::unique_name(&tx, &prompt.name, None)?;
+        let id = prompts::insert(&tx, &prompt, &format_timestamp(Utc::now()))?;
+        if let Err(error) = files.write(id, &prompt.text) {
+            let _ = files.remove(id);
+            return Err(error);
+        }
+        if let Err(error) = tx.commit() {
+            let _ = files.remove(id);
+            return Err(error.into());
+        }
+        prompts::get(db.connection(), &files, id)
+    }
+
+    pub fn prompt_list(&self) -> LibraryResult<Vec<LibraryPrompt>> {
+        prompts::list(
+            self.database()?.connection(),
+            &PromptFiles::new(self.dir.clone()),
+        )
+    }
+
+    pub fn prompt_update(&self, id: i64, patch: PromptPatch) -> LibraryResult<LibraryPrompt> {
+        let patch = prompts::normalize_patch(&patch)?;
+        let _guard = self.lock();
+        let files = PromptFiles::new(self.dir.clone());
+        let mut db = self.database()?;
+        let previous = if patch.text.is_some() {
+            Some(prompts::get(db.connection(), &files, id)?.text)
+        } else {
+            None
+        };
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        prompts::update(&tx, id, &patch, &format_timestamp(Utc::now()))?;
+        if let Some(text) = patch.text.as_deref() {
+            if let Err(error) = files.write(id, text) {
+                if let Some(previous) = previous.as_deref() {
+                    let _ = files.write(id, previous);
+                }
+                return Err(error);
+            }
+        }
+        if let Err(error) = tx.commit() {
+            if let Some(previous) = previous.as_deref() {
+                let _ = files.write(id, previous);
+            }
+            return Err(error.into());
+        }
+        prompts::get(db.connection(), &files, id)
+    }
+
+    pub fn prompt_delete(&self, ids: &[i64]) -> LibraryResult<usize> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let deleted = prompts::delete(&tx, ids)?;
+        tx.commit()?;
+        let files = PromptFiles::new(self.dir.clone());
+        for id in &deleted {
+            let _ = files.remove(*id);
+        }
+        Ok(deleted.len())
     }
 
     pub fn video_inspect(&self, paths: &[String]) -> LibraryResult<Vec<AssetCheck>> {
@@ -722,6 +856,85 @@ fn inspect_video(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Asset
     Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
 }
 
+fn inspect_prompt(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
+    let source = Path::new(path);
+    let file_name = source
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(path)
+        .to_string();
+    let metadata = match fs::metadata(source) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(assets::check(
+                path,
+                file_name,
+                0,
+                AssetCheckStatus::Error,
+                "not_found",
+            ));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let size = metadata.len() as i64;
+    if size == 0 {
+        return Ok(assets::check(
+            path,
+            file_name,
+            size,
+            AssetCheckStatus::Error,
+            "empty",
+        ));
+    }
+    if prompt_extension(source).is_err() {
+        return Ok(assets::check(
+            path,
+            file_name,
+            size,
+            AssetCheckStatus::Error,
+            "unsupported",
+        ));
+    }
+    if metadata.len() > prompts::PROMPT_MAX_BYTES as u64 {
+        return Ok(assets::check(
+            path,
+            file_name,
+            size,
+            AssetCheckStatus::Error,
+            "too_large",
+        ));
+    }
+    match prompts::decode_file(&fs::read(source)?) {
+        Ok(_) => {}
+        Err(error) => {
+            let code = match error.code {
+                LibraryErrorCode::PromptEmpty => "empty",
+                LibraryErrorCode::PromptUnreadable => "unreadable",
+                LibraryErrorCode::PromptTooLarge => "too_large",
+                _ => return Err(error),
+            };
+            return Ok(assets::check(
+                path,
+                file_name,
+                size,
+                AssetCheckStatus::Error,
+                code,
+            ));
+        }
+    }
+    let name = prompts::normalize_name(&prompts::name_from_file(&file_name))?;
+    if prompts::unique_name(conn, &name, None)? != name {
+        return Ok(assets::check(
+            path,
+            name,
+            size,
+            AssetCheckStatus::Warn,
+            "duplicate_name",
+        ));
+    }
+    Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
+}
+
 fn image_format(path: &Path) -> LibraryResult<ImageFormat> {
     let extension = path
         .extension()
@@ -762,6 +975,24 @@ fn video_format(path: &Path) -> LibraryResult<video_probe::VideoFormat> {
         .and_then(|value| value.to_str())
         .unwrap_or("");
     video_format_from_extension(extension)
+}
+
+fn prompt_extension(path: &Path) -> LibraryResult<()> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    if prompts::PROMPT_EXTENSIONS
+        .iter()
+        .any(|supported| extension.eq_ignore_ascii_case(supported))
+    {
+        Ok(())
+    } else {
+        Err(LibraryError::new(
+            LibraryErrorCode::PromptUnsupported,
+            format!("unsupported prompt extension: {extension}"),
+        ))
+    }
 }
 
 fn video_format_from_extension(extension: &str) -> LibraryResult<video_probe::VideoFormat> {
@@ -1620,6 +1851,207 @@ mod tests {
         let clamped = workspace.stream(StreamKind::Video, video.id, None).unwrap();
         assert_eq!(clamped.end, StreamKind::Video.max_chunk() - 1);
         assert_eq!(clamped.bytes.len() as u64, StreamKind::Video.max_chunk());
+    }
+
+    fn prompt_input(collection_id: Option<i64>) -> AssetUploadInput {
+        AssetUploadInput {
+            collection_id,
+            tags: vec!["Example".to_string()],
+            rights: AssetRights::Own,
+        }
+    }
+
+    #[test]
+    fn prompts_upload_create_update_list_and_delete() {
+        let (dir, workspace) = fixture();
+        let source = dir.path().join("Harbor v1.2.md");
+        fs::write(&source, "\u{feff} hello\r\nworld \n").unwrap();
+        let uploaded = workspace
+            .prompt_upload(source.to_str().unwrap(), prompt_input(None))
+            .unwrap();
+        assert_eq!(
+            (
+                uploaded.name.as_str(),
+                uploaded.kind,
+                uploaded.origin.as_str(),
+                uploaded.text.as_str()
+            ),
+            ("Harbor v1.2", PromptKind::General, "upload", "hello\nworld")
+        );
+        assert!(
+            dir.path()
+                .join(format!("library/prompts/{}.txt", uploaded.id))
+                .is_file()
+        );
+        let duplicate = workspace
+            .prompt_upload(source.to_str().unwrap(), prompt_input(None))
+            .unwrap();
+        assert_eq!(duplicate.name, "Harbor v1.2 (2)");
+        let created = workspace
+            .prompt_create(PromptCreateInput {
+                name: "Written".into(),
+                kind: PromptKind::Image,
+                text: "old".into(),
+                collection_id: None,
+                tags: vec![],
+                rights: AssetRights::Free,
+            })
+            .unwrap();
+        assert_eq!(created.origin, "app");
+        let updated = workspace
+            .prompt_update(
+                created.id,
+                PromptPatch {
+                    text: Some("new\r\ntext".into()),
+                    ..PromptPatch::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.text, "new\ntext");
+        assert_eq!(
+            fs::read_to_string(
+                dir.path()
+                    .join(format!("library/prompts/{}.txt", created.id))
+            )
+            .unwrap(),
+            "new\ntext"
+        );
+        fs::remove_file(
+            dir.path()
+                .join(format!("library/prompts/{}.txt", uploaded.id)),
+        )
+        .unwrap();
+        assert_eq!(
+            workspace
+                .prompt_list()
+                .unwrap()
+                .iter()
+                .find(|prompt| prompt.id == uploaded.id)
+                .unwrap()
+                .text,
+            ""
+        );
+        assert_eq!(workspace.prompt_delete(&[created.id]).unwrap(), 1);
+        assert!(
+            !dir.path()
+                .join(format!("library/prompts/{}.txt", created.id))
+                .exists()
+        );
+    }
+
+    #[test]
+    fn prompt_inspection_reports_all_file_errors_and_duplicate_warning() {
+        let (dir, workspace) = fixture();
+        let valid = dir.path().join("same.txt");
+        fs::write(&valid, "text").unwrap();
+        workspace
+            .prompt_upload(valid.to_str().unwrap(), prompt_input(None))
+            .unwrap();
+        let empty = dir.path().join("empty.txt");
+        fs::write(&empty, []).unwrap();
+        let png = dir.path().join("bad.png");
+        fs::write(&png, "x").unwrap();
+        let invalid = dir.path().join("invalid.txt");
+        fs::write(&invalid, [0xff]).unwrap();
+        let large = dir.path().join("large.txt");
+        fs::write(&large, vec![b'x'; prompts::PROMPT_MAX_BYTES + 1]).unwrap();
+        let checks = workspace
+            .prompt_inspect(&[
+                valid.to_string_lossy().to_string(),
+                empty.to_string_lossy().to_string(),
+                png.to_string_lossy().to_string(),
+                invalid.to_string_lossy().to_string(),
+                large.to_string_lossy().to_string(),
+                dir.path().join("missing.txt").to_string_lossy().to_string(),
+            ])
+            .unwrap();
+        let codes = checks
+            .iter()
+            .map(|check| check.code.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            codes,
+            [
+                "duplicate_name",
+                "empty",
+                "unsupported",
+                "unreadable",
+                "too_large",
+                "not_found"
+            ]
+        );
+        assert_eq!(workspace.prompt_list().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn prompt_counts_collections_and_tags_include_prompts() {
+        let (dir, workspace) = fixture();
+        let collection = workspace.collection_create(collection("Prompts")).unwrap();
+        let source = dir.path().join("file.txt");
+        fs::write(&source, "body").unwrap();
+        let prompt = workspace
+            .prompt_upload(source.to_str().unwrap(), prompt_input(Some(collection.id)))
+            .unwrap();
+        assert_eq!(workspace.summary().unwrap().assets.prompt, 1);
+        assert_eq!(workspace.collection_list().unwrap()[0].counts.prompt, 1);
+        workspace.tag_rename("example", "renamed").unwrap();
+        workspace
+            .prompt_update(
+                prompt.id,
+                PromptPatch {
+                    tags: Some(vec!["renamed".into(), "target".into()]),
+                    ..PromptPatch::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            workspace
+                .tag_merge("renamed", "target")
+                .unwrap()
+                .counts
+                .prompt,
+            1
+        );
+        workspace.collection_delete(collection.id).unwrap();
+        assert!(workspace.prompt_list().unwrap()[0].collection_id.is_none());
+    }
+
+    #[test]
+    fn prompt_failures_leave_insert_clean_and_preserve_previous_update_text() {
+        let (dir, workspace) = fixture();
+        let source = dir.path().join("clean.txt");
+        fs::write(&source, "before").unwrap();
+        assert_eq!(
+            workspace
+                .prompt_upload(source.to_str().unwrap(), prompt_input(Some(99_999)))
+                .unwrap_err()
+                .code,
+            LibraryErrorCode::CollectionNotFound
+        );
+        assert!(workspace.prompt_list().unwrap().is_empty());
+        let prompt = workspace
+            .prompt_upload(source.to_str().unwrap(), prompt_input(None))
+            .unwrap();
+        let error = workspace
+            .prompt_update(
+                prompt.id,
+                PromptPatch {
+                    text: Some("after".into()),
+                    collection_id: Some(Some(99_999)),
+                    ..PromptPatch::default()
+                },
+            )
+            .unwrap_err();
+        assert_eq!(error.code, LibraryErrorCode::CollectionNotFound);
+        assert_eq!(workspace.prompt_list().unwrap()[0].text, "before");
+        assert_eq!(
+            fs::read_to_string(
+                dir.path()
+                    .join(format!("library/prompts/{}.txt", prompt.id))
+            )
+            .unwrap(),
+            "before"
+        );
     }
 
     #[test]

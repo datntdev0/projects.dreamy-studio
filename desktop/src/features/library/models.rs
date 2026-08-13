@@ -220,6 +220,81 @@ pub struct LibraryVideo {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PromptKind {
+    Image,
+    Video,
+    Voice,
+    General,
+}
+
+impl PromptKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Image => "image",
+            Self::Video => "video",
+            Self::Voice => "voice",
+            Self::General => "general",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "image" => Some(Self::Image),
+            "video" => Some(Self::Video),
+            "voice" => Some(Self::Voice),
+            "general" => Some(Self::General),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryPrompt {
+    pub id: i64,
+    pub name: String,
+    pub kind: PromptKind,
+    pub text: String,
+    pub size: i64,
+    pub rights: AssetRights,
+    pub origin: String,
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PromptCreateInput {
+    pub name: String,
+    pub kind: PromptKind,
+    pub text: String,
+    #[serde(default)]
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub rights: AssetRights,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PromptPatch {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub kind: Option<PromptKind>,
+    #[serde(default)]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub rights: Option<AssetRights>,
+    #[serde(default, deserialize_with = "deserialize_optional_collection_id")]
+    pub collection_id: Option<Option<i64>>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StreamChunk {
     pub mime: String,
@@ -265,6 +340,12 @@ pub enum LibraryErrorCode {
     VideoUnsupported,
     VideoTooLarge,
     VideoUnreadable,
+    PromptNotFound,
+    PromptUnsupported,
+    PromptTooLarge,
+    PromptUnreadable,
+    PromptEmpty,
+    PromptNameInvalid,
     TagLimit,
     Io,
     Db,
@@ -293,6 +374,12 @@ impl LibraryErrorCode {
             Self::VideoUnsupported => "video_unsupported",
             Self::VideoTooLarge => "video_too_large",
             Self::VideoUnreadable => "video_unreadable",
+            Self::PromptNotFound => "prompt_not_found",
+            Self::PromptUnsupported => "prompt_unsupported",
+            Self::PromptTooLarge => "prompt_too_large",
+            Self::PromptUnreadable => "prompt_unreadable",
+            Self::PromptEmpty => "prompt_empty",
+            Self::PromptNameInvalid => "prompt_name_invalid",
             Self::TagLimit => "tag_limit",
             Self::Io => "io",
             Self::Db => "db",

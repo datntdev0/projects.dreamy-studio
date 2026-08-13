@@ -30,6 +30,10 @@ pub const ASSET_TABLES: &[AssetTable] = &[
         kind: LibraryKind::Video,
         table: "ws_library_videos",
     },
+    AssetTable {
+        kind: LibraryKind::Prompt,
+        table: "ws_library_prompts",
+    },
 ];
 
 fn now_text() -> String {

@@ -1,0 +1,21 @@
+{
+  "name": "dreamy-studio-verify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Visual verification of the Dreamy Studio desktop app with Playwright",
+  "scripts": {
+    "build:app": "npm --prefix .. run build -- --debug --no-bundle",
+    "fixture": "node src/fixture/cli.ts",
+    "baseline": "playwright test --project=prototype --update-snapshots=changed",
+    "test": "playwright test --project=app",
+    "test:prototype": "playwright test --project=prototype",
+    "report": "playwright show-report ../_output/verify/report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.0.0",
+    "typescript": "~6.0.3"
+  }
+}

@@ -9,6 +9,7 @@ use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendLaunch;
 use crate::infra::backend::BackendProcess;
 use crate::infra::logging::Logger;
+use crate::shared::args;
 
 pub struct AppDirectories {
     pub root: PathBuf,
@@ -35,7 +36,10 @@ pub struct AppContainer {
 
 impl AppContainer {
     pub fn new<R: Runtime>(app: &App<R>) -> tauri::Result<Self> {
-        let root = app.path().local_data_dir()?.join("DreamyStudio");
+        let root = match args::data_dir() {
+            Some(root) => root,
+            None => app.path().local_data_dir()?.join("DreamyStudio"),
+        };
         Ok(Self::from_root(root))
     }
 

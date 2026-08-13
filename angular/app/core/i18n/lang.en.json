@@ -856,6 +856,7 @@
   ,"library.prompt.column.length": "Length"
   ,"library.prompt.field.kind": "Prompt kind"
   ,"library.prompt.field.text": "Content"
+  ,"library.prompt.chars": "{count} chars"
   ,"library.prompt.info.length": "Length"
   ,"library.prompt.info.variables": "Variables"
   ,"library.prompt.kind.image": "Image"

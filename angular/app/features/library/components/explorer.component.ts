@@ -18,11 +18,13 @@ export class LibraryExplorer {
   isImagesActive(): boolean { return this.tabs.isActive("images"); }
   isSoundsActive(): boolean { return this.tabs.isActive("sounds"); }
   isVideosActive(): boolean { return this.tabs.isActive("videos"); }
+  isPromptsActive(): boolean { return this.tabs.isActive("prompts"); }
   isTagOn(tag: string): boolean { return this.library.filterTags().includes(tag); }
   openCollections(): void { this.tabs.openCollections(); }
   openImages(): void { this.tabs.openImages(); }
   openSounds(): void { this.tabs.openSounds(); }
   openVideos(): void { this.tabs.openVideos(); }
+  openPrompts(): void { this.tabs.openPrompts(); }
   openCollection(id: number, name: string): void { this.library.selectCollection(id); this.tabs.openCollection(id, name); }
   setCollectionFilter(event: Event): void { const value = (event.target as HTMLSelectElement).value; this.library.setFilterCollection(value === "" ? null : value === "none" ? "none" : Number(value)); }
   count(counts: Parameters<typeof sumCounts>[0]): number { return sumCounts(counts); }

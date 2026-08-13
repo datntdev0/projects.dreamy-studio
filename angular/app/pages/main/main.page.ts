@@ -22,6 +22,8 @@ import { LibrarySoundDeleteDialog } from "../../features/library/components/soun
 import { LibrarySoundPreviewDialog } from "../../features/library/components/sound-preview.dialog";
 import { LibraryVideoDeleteDialog } from "../../features/library/components/video-delete.dialog";
 import { LibraryVideoPreviewDialog } from "../../features/library/components/video-preview.dialog";
+import { LibraryPromptDeleteDialog } from "../../features/library/components/prompt-delete.dialog";
+import { LibraryPromptPreviewDialog } from "../../features/library/components/prompt-preview.dialog";
 import { LibraryTagConfirmDialog } from "../../features/library/components/tag-confirm.dialog";
 import { LibraryUploadDialog } from "../../features/library/components/upload.dialog";
 import { SwitchWorkspaceDialog } from "../../features/workspace/components/switch.dialog";
@@ -33,7 +35,7 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog, LibraryCollectionDialog, LibraryCollectionDeleteDialog, LibraryImageDeleteDialog, LibraryImagePreviewDialog, LibrarySoundDeleteDialog, LibrarySoundPreviewDialog, LibraryVideoDeleteDialog, LibraryVideoPreviewDialog, LibraryTagConfirmDialog, LibraryUploadDialog],
+  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog, LibraryCollectionDialog, LibraryCollectionDeleteDialog, LibraryImageDeleteDialog, LibraryImagePreviewDialog, LibrarySoundDeleteDialog, LibrarySoundPreviewDialog, LibraryVideoDeleteDialog, LibraryVideoPreviewDialog, LibraryPromptDeleteDialog, LibraryPromptPreviewDialog, LibraryTagConfirmDialog, LibraryUploadDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {

@@ -856,6 +856,7 @@
   ,"library.prompt.column.length": "Độ dài"
   ,"library.prompt.field.kind": "Loại prompt"
   ,"library.prompt.field.text": "Nội dung"
+  ,"library.prompt.chars": "{count} ký tự"
   ,"library.prompt.info.length": "Độ dài"
   ,"library.prompt.info.variables": "Biến"
   ,"library.prompt.kind.image": "Ảnh"

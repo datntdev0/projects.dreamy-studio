@@ -1,5 +1,9 @@
 @if (open()) {
-  <ds-dialog size="large" [title]="'library.upload.title' | t: { noun: config().nounKey | t }" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
+  <ds-dialog size="large" [title]="isWrite() ? ('library.promptWrite.title' | t) : ('library.upload.title' | t: { noun: config().nounKey | t })" [eyebrow]="'library.cap' | t" [closeLabel]="'library.upload.close' | t" data-testid="library-upload-dialog-panel" (closed)="close()">
+    @if (kind() === "prompt") {
+      <ds-segments [label]="'library.upload.tab.files' | t" [options]="tabOptions()" [value]="mode()" data-testid="library-upload-dialog-tabs" (valueChange)="setMode($event)" />
+    }
+    @if (!isWrite()) {
     <div class="lb-drop" [class.is-compact]="items().length" [class.is-over]="over()" role="group" [attr.aria-label]="'library.upload.dropzone' | t" data-testid="library-upload-dialog-dropzone">
       @if (!items().length) {
         <ds-icon class="lb-drop-ic" [name]="config().icon" [size]="30" data-testid="library-upload-dialog-dropzone-icon" />
@@ -25,6 +29,27 @@
         </table>
       </div>
     }
+    } @else {
+      <div class="field" data-testid="library-upload-dialog-write-name-field">
+        <label for="library-upload-write-name" data-testid="library-upload-dialog-write-name-label">{{ "library.promptWrite.name" | t }}</label>
+        <input id="library-upload-write-name" class="input" [class.is-invalid]="nameInvalid()" [attr.maxlength]="nameMax" [placeholder]="'library.promptWrite.namePlaceholder' | t" [value]="writeName()" data-testid="library-upload-dialog-write-name" (input)="setWriteName($event)" />
+        <p class="field-err" [hidden]="!nameInvalid()" data-testid="library-upload-dialog-write-name-error">{{ "library.promptWrite.nameRequired" | t }}</p>
+      </div>
+      <div class="field" data-testid="library-upload-dialog-write-kind-field">
+        <label for="library-upload-write-kind" data-testid="library-upload-dialog-write-kind-label">{{ "library.promptWrite.kind" | t }}</label>
+        <select id="library-upload-write-kind" class="select" [value]="writeKind()" data-testid="library-upload-dialog-write-kind" (change)="setWriteKind($event)">
+          @for (kindOption of promptKinds; track kindOption) {
+            <option [value]="kindOption" [selected]="kindOption === writeKind()" data-testid="library-upload-dialog-write-kind-option">{{ kindKey(kindOption) | t }}</option>
+          }
+        </select>
+      </div>
+      <div class="field" data-testid="library-upload-dialog-write-text-field">
+        <label for="library-upload-write-text" data-testid="library-upload-dialog-write-text-label">{{ "library.promptWrite.text" | t }}</label>
+        <textarea id="library-upload-write-text" class="textarea" rows="7" [class.is-invalid]="textInvalid()" [placeholder]="'library.promptWrite.textPlaceholder' | t" [value]="writeText()" data-testid="library-upload-dialog-write-text" (input)="setWriteText($event)"></textarea>
+        <p class="field-hint" data-testid="library-upload-dialog-write-variables">@if (writeVariables()) { {{ "library.promptWrite.variables" | t: { vars: writeVariables() } }} } @else { {{ "library.promptWrite.noVariables" | t }} }</p>
+        <p class="field-err" [hidden]="!textInvalid()" data-testid="library-upload-dialog-write-text-error">{{ "library.promptWrite.textRequired" | t }}</p>
+      </div>
+    }
     <div class="form-2" data-testid="library-upload-dialog-collection-fields">
       <div class="field" data-testid="library-upload-dialog-collection-field"><label for="library-upload-collection" data-testid="library-upload-dialog-collection-label">{{ "library.upload.collection" | t }}</label><select id="library-upload-collection" class="select" [value]="collectionId() ?? ''" data-testid="library-upload-dialog-collection" (change)="setCollection($event)"><option value="" data-testid="library-upload-dialog-collection-none">{{ "library.upload.collectionNone" | t }}</option>@for (collection of library.collections(); track collection.id) { <option [value]="collection.id" data-testid="library-upload-dialog-collection-option">{{ collection.name }}</option> }</select></div>
       <div class="field" data-testid="library-upload-dialog-new-collection-field"><label for="library-upload-new-collection" data-testid="library-upload-dialog-new-collection-label">{{ "library.upload.newCollection" | t }}</label><input id="library-upload-new-collection" class="input" [value]="newCollection()" [attr.placeholder]="'library.upload.newCollectionPlaceholder' | t" autocomplete="off" data-testid="library-upload-dialog-new-collection" (input)="setNewCollection($event)" /></div>
@@ -36,7 +61,7 @@
     <ng-container ngProjectAs="[dialogFoot]">
       <ds-button [disabled]="uploading()" data-testid="library-upload-dialog-cancel" (pressed)="close()">{{ "library.upload.cancel" | t }}</ds-button>
       <span class="spacer" data-testid="library-upload-dialog-spacer"></span>
-      <ds-button variant="primary" [disabled]="!canSubmit()" data-testid="library-upload-dialog-submit" (pressed)="submit()">@if (uploading()) { {{ "library.upload.submitting" | t }} } @else { {{ "library.upload.submit" | t: { count: validCount() } }} }</ds-button>
+      <ds-button variant="primary" [disabled]="!canSubmit()" data-testid="library-upload-dialog-submit" (pressed)="submit()">@if (uploading()) { {{ "library.upload.submitting" | t }} } @else if (isWrite()) { <ds-icon name="check" [size]="15" data-testid="library-upload-dialog-submit-icon" /> {{ "library.promptWrite.save" | t }} } @else { {{ "library.upload.submit" | t: { count: validCount() } }} }</ds-button>
     </ng-container>
   </ds-dialog>
 }

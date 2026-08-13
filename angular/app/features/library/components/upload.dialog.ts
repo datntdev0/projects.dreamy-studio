@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, effect, inject, signal, untracked } fr
 import { Button } from "../../../../components/button";
 import { Dialog } from "../../../../components/dialog";
 import { Icon } from "../../../../components/icon";
+import { Segments, SegmentOption } from "../../../../components/segments";
 import { DesktopDragDropEvent } from "../../../core/desktop/desktop-ipc.service";
 import { DesktopIpcService } from "../../../core/desktop/desktop-ipc.service";
 import { DesktopUnlisten } from "../../../core/desktop/desktop-ipc.service";
@@ -21,7 +22,8 @@ import { LibrarySoundService } from "../library.sounds.service";
 import { LibraryVideoService } from "../library.videos.service";
 import { VIDEO_MAX_BYTES } from "../library.videos.models";
 import { LibraryPromptService } from "../library.prompts.service";
-import { PROMPT_MAX_BYTES } from "../library.prompts.models";
+import { PROMPT_KINDS, PROMPT_MAX_BYTES, PROMPT_NAME_MAX, PromptCreateInput, PromptKind } from "../library.prompts.models";
+import { promptVariables } from "../library.prompts.rules";
 import { normalizeTag } from "../library.rules";
 import { libraryErrorKey } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -74,7 +76,7 @@ function parseTags(value: string): string[] {
 @Component({
   selector: "app-library-upload-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe],
+  imports: [Button, Dialog, Icon, I18nPipe, Segments],
   templateUrl: "./upload.dialog.html",
   host: { "data-testid": "library-upload-dialog" },
 })
@@ -101,6 +103,16 @@ export class LibraryUploadDialog {
   readonly tags = signal("");
   readonly rights = signal<ImageRights | "">("");
   readonly over = signal(false);
+  readonly mode = this.dialogs.uploadMode;
+  readonly writeName = signal("");
+  readonly writeKind = signal<PromptKind>("general");
+  readonly writeText = signal("");
+  readonly writeTried = signal(false);
+  readonly nameMax = PROMPT_NAME_MAX;
+  readonly promptKinds = PROMPT_KINDS;
+  readonly isWrite = computed(this.buildIsWrite.bind(this));
+  readonly writeVariables = computed(this.buildWriteVariables.bind(this));
+  readonly tabOptions = computed(this.buildTabOptions.bind(this));
   readonly uploading = signal(false);
   readonly rightOptions = IMAGE_RIGHTS;
   readonly validCount = computed(this.countValid.bind(this));
@@ -137,6 +149,37 @@ export class LibraryUploadDialog {
       return "badge-success";
     }
     return item.run === "error" || item.check?.status === "error" ? "badge-danger" : item.check?.status === "warn" ? "badge-warning" : "";
+  }
+
+  kindKey(kind: PromptKind): I18nKey {
+    return `library.prompt.kind.${kind}` as I18nKey;
+  }
+
+  setMode(value: string): void {
+    if (!this.uploading()) {
+      this.dialogs.uploadMode.set(value === "write" ? "write" : "files");
+      this.writeTried.set(false);
+    }
+  }
+
+  setWriteName(event: Event): void {
+    this.writeName.set((event.target as HTMLInputElement).value);
+  }
+
+  setWriteKind(event: Event): void {
+    this.writeKind.set((event.target as HTMLSelectElement).value as PromptKind);
+  }
+
+  setWriteText(event: Event): void {
+    this.writeText.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  nameInvalid(): boolean {
+    return this.writeTried() && !this.writeName().trim();
+  }
+
+  textInvalid(): boolean {
+    return this.writeTried() && !this.writeText().trim();
   }
 
   rightKey(right: ImageRights): I18nKey {
@@ -196,6 +239,10 @@ export class LibraryUploadDialog {
     if (!rights) {
       return;
     }
+    if (this.isWrite()) {
+      await this.submitWrite(rights);
+      return;
+    }
     this.uploading.set(true);
     const targets = this.validItems();
     this.setWaiting(targets);
@@ -232,6 +279,45 @@ export class LibraryUploadDialog {
     }
   }
 
+  private async submitWrite(rights: ImageRights): Promise<void> {
+    const name = this.writeName().trim();
+    const text = this.writeText().trim();
+    this.writeTried.set(true);
+    if (!name || !text) {
+      return;
+    }
+    this.uploading.set(true);
+    try {
+      const collectionId = await this.resolveCollection();
+      const input: PromptCreateInput = { name, kind: this.writeKind(), text, tags: parseTags(this.tags()), rights };
+      if (collectionId !== undefined) {
+        input.collectionId = collectionId;
+      }
+      const prompt = await this.prompts.create(input);
+      this.uploading.set(false);
+      this.dialogs.closeUpload();
+      this.toasts.show(this.i18n.translate("library.promptWrite.toast", { name: prompt.name }));
+    } catch (cause) {
+      this.uploading.set(false);
+      this.toasts.show(this.i18n.translate(libraryErrorKey(cause) as I18nKey), "danger");
+    }
+  }
+
+  private buildIsWrite(): boolean {
+    return this.kind() === "prompt" && this.mode() === "write";
+  }
+
+  private buildWriteVariables(): string {
+    return promptVariables(this.writeText()).join(", ");
+  }
+
+  private buildTabOptions(): SegmentOption[] {
+    return [
+      { value: "files", label: this.i18n.translate("library.upload.tab.files") },
+      { value: "write", label: this.i18n.translate("library.upload.tab.write") },
+    ];
+  }
+
   private syncOpen(): void {
     untracked(this.applyOpen.bind(this, this.open()));
   }
@@ -254,6 +340,10 @@ export class LibraryUploadDialog {
     this.newCollection.set("");
     this.tags.set("");
     this.rights.set("");
+    this.writeName.set("");
+    this.writeKind.set("general");
+    this.writeText.set("");
+    this.writeTried.set(false);
     this.over.set(false);
     this.uploading.set(false);
   }
@@ -317,7 +407,7 @@ export class LibraryUploadDialog {
   }
 
   private onDragDrop(event: DesktopDragDropEvent): void {
-    if (!this.open() || this.uploading()) {
+    if (!this.open() || this.uploading() || this.isWrite()) {
       this.over.set(false);
       return;
     }
@@ -344,6 +434,9 @@ export class LibraryUploadDialog {
   }
 
   private buildCanSubmit(): boolean {
+    if (this.isWrite()) {
+      return !this.uploading() && !!this.rights();
+    }
     return !this.uploading() && !!this.rights() && this.validCount() > 0;
   }
 

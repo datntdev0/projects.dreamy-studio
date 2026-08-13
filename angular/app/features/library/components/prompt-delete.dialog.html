@@ -1,0 +1,9 @@
+@if (ids().length) {
+  <ds-dialog [title]="titleKey() | t: { count: ids().length }" [closeLabel]="'library.promptDelete.close' | t" data-testid="library-prompt-delete-dialog-panel" (closed)="close()">
+    <div class="del-list" data-testid="library-prompt-delete-dialog-list">
+      @for (item of items(); track item.id) { <div class="del-row" data-testid="library-prompt-delete-dialog-row"><span class="lb-th is-ic is-md" data-testid="library-prompt-delete-dialog-icon"><ds-icon name="prompt" [size]="18" data-testid="library-prompt-delete-dialog-icon-svg" /></span><div data-testid="library-prompt-delete-dialog-item"><div data-testid="library-prompt-delete-dialog-name">{{ item.name }}</div><div class="t-sm t-mute" data-testid="library-prompt-delete-dialog-meta">{{ 'library.prompt.title' | t }} · {{ item.size }}</div></div></div> }
+    </div>
+    <div class="ld-warn" data-testid="library-prompt-delete-dialog-warning">{{ 'library.promptDelete.warning' | t }}</div>
+    <ds-button dialogFoot data-testid="library-prompt-delete-dialog-cancel" (pressed)="close()">{{ 'library.promptDelete.cancel' | t }}</ds-button><ds-button dialogFoot variant="danger" [disabled]="busy()" data-testid="library-prompt-delete-dialog-confirm" (pressed)="confirm()">{{ confirmKey() | t: { count: ids().length } }}</ds-button>
+  </ds-dialog>
+}

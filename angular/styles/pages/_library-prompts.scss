@@ -1,0 +1,8 @@
+app-library-prompt-media, app-library-prompt-preview-dialog, app-library-prompt-delete-dialog, app-library-prompt-panel, app-library-prompts-panel { display: contents; }
+.lb-grid.is-wide { grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); }
+.lb-media.is-prompt { display: flex; flex-direction: column; justify-content: space-between; padding: var(--sp-md); background: var(--surface-2); }
+.lb-media.is-prompt p { margin: 0; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.55; white-space: pre-wrap; }
+.lb-media.is-prompt .lb-ext { align-self: flex-start; margin-top: var(--sp-sm); }
+.lbp-prompt { display: flex; flex-direction: column; min-height: 0; gap: var(--sp-sm); }
+.lb-prompt { margin: 0; padding: var(--sp-md); overflow: auto; white-space: pre-wrap; font: var(--font-mono); line-height: 1.6; background: var(--surface-2); border-radius: var(--radius-md); }
+.lb-var { padding: 0 2px; color: var(--accent-strong); background: color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 3px; }

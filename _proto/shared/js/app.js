@@ -481,7 +481,16 @@
       const entry = WS.list().find((w) => !w.isCurrent && w.status === "ok" && w.path === el.dataset.path);
       if (entry) switchTo(entry);
     },
-    "remove-recent": (el) => { WS.remove(el.dataset.path); openSwitchDialog(); },
+    "workspace-delete": (el) => {
+      const row = WS.list().find((item) => item.path === el.dataset.path);
+      if (!row) return;
+      modal({
+        title: "Xóa workspace", eyebrow: "Workspace", testid: "recent-delete-dialog",
+        body: `<p>Xóa <strong>${esc(row.name)}</strong> và toàn bộ tệp trong đó?</p><div class="ld-warn is-error">${ic("alert")}<span>Thao tác này không thể hoàn tác.</span></div>`,
+        foot: `<button class="btn" data-act="switch-workspace">Hủy</button><button class="btn btn-danger" data-testid="recent-delete-confirm" data-act="workspace-delete-confirm" data-path="${esc(row.path)}">${ic("trash")}Xóa</button>`,
+      });
+    },
+    "workspace-delete-confirm": (el) => { WS.deleteWorkspace(el.dataset.path); openSwitchDialog(); },
     "cancel-loading": () => WS.cancel(),
 
     rail: (el) => {

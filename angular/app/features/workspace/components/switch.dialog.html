@@ -4,7 +4,7 @@
     @if (notice(); as message) {
       <div class="ld-warn is-error" role="alert" data-testid="switch-dialog-notice"><ds-icon name="alert" /><span>{{ message }}</span></div>
     }
-    <app-recent-workspace-list [rows]="rows()" (opened)="openRecent($event)" (relocated)="relocate($event)" (removed)="remove($event)" />
+    <app-recent-workspace-list [rows]="rows()" (opened)="openRecent($event)" (relocated)="relocate($event)" (deleted)="refresh()" />
     <ds-button dialogFoot variant="ghost" data-testid="switch-close" (pressed)="close()">{{ "switch.close" | t }}</ds-button>
     <ds-button dialogFoot data-testid="switch-open-folder" (pressed)="openFolder()"><ds-icon name="folder-open" />{{ "switch.openFolder" | t }}</ds-button>
   </ds-dialog>

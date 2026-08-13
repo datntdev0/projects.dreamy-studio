@@ -14,6 +14,7 @@ window.WS = (function () {
   const MAIN_PAGE = document.body.dataset.mainPage || "../1.library/1.library.html";
   const FIRST_RUN = /[?&]first-run\b/.test(location.search);
   const FAILURE_HOLD_MS = 1200;
+  const RECENT_WORKSPACE_LIMIT = 5;
   const STEP_ORDER = ["application", "backend", "workspace"];
   const CODES_WITHOUT_DETAIL = ["folder_missing", "folder_not_directory", "db_newer_version"];
 
@@ -82,10 +83,10 @@ window.WS = (function () {
     const cur = current();
     const rows = recent.map((w) => ({ ...w, isCurrent: !!cur && samePath(w.path, cur.path) }));
     if (cur && !rows.some((w) => w.isCurrent)) rows.unshift({ ...normalize(cur), status: "ok", isCurrent: true });
-    return rows;
+    return rows.slice(0, RECENT_WORKSPACE_LIMIT);
   }
 
-  function remove(path) {
+  function deleteWorkspace(path) {
     recent = recent.filter((w) => !samePath(w.path, path));
     saveRecent();
   }
@@ -131,13 +132,14 @@ window.WS = (function () {
       return `<div class="ws-row" role="button" tabindex="0" data-act="open-recent" data-path="${esc(w.path)}" data-testid="recent-row">${ic("hdd")}<div class="ws-main">
           <div class="ws-name" data-testid="recent-row-name">${esc(w.name)}${last}</div>
           <div class="path t-mute" data-testid="recent-row-path">${esc(w.path)}</div>${metaHtml(w)}</div>
-          <button class="btn btn-sm" tabindex="-1" data-testid="recent-open">Mở</button></div>`;
+          <button class="btn btn-sm" tabindex="-1" data-testid="recent-open">Mở</button>
+          <button class="btn btn-sm btn-danger" data-act="workspace-delete" data-path="${esc(w.path)}" data-testid="recent-delete">Delete</button></div>`;
     }
     return `<div class="ws-row is-error" data-testid="recent-row">${ic("alert")}<div class="ws-main">
         <div class="ws-name"><span class="path" data-testid="recent-row-path">${esc(w.path)}</span><span class="badge badge-danger" data-testid="recent-not-found">NOT FOUND</span></div>
         <div class="t-sm ws-err" data-testid="recent-not-found-reason">${esc(REASONS[w.reason] || REASONS.missing)}</div></div>
         <button class="btn btn-sm" data-act="relocate-recent" data-path="${esc(w.path)}" data-testid="recent-relocate">Tìm lại…</button>
-        <button class="btn btn-sm btn-ghost" data-act="remove-recent" data-path="${esc(w.path)}" data-testid="recent-remove">Bỏ khỏi danh sách</button></div>`;
+        <button class="btn btn-sm btn-danger" data-act="workspace-delete" data-path="${esc(w.path)}" data-testid="recent-delete">Delete</button></div>`;
   }
 
   function rowsHtml(rows, lastUsedPath = null) {
@@ -249,7 +251,7 @@ window.WS = (function () {
   const pickFolder = () => toast(PICK_FOLDER_NOTICE, "info");
 
   return {
-    SPLASH_PAGE, MAIN_PAGE, FIRST_RUN, esc, ic, stamp, local, current, list, remove, requireCurrent,
+    SPLASH_PAGE, MAIN_PAGE, FIRST_RUN, esc, ic, stamp, local, current, list, deleteWorkspace, requireCurrent,
     rowsHtml, lastUsedPath, hydrateSizes, start, cancel, toast, pickFolder,
   };
 })();

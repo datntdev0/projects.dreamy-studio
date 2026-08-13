@@ -71,11 +71,6 @@ export class SplashPage implements OnInit {
     }
   }
 
-  async remove(row: RecentWorkspace): Promise<void> {
-    await this.workspace.recentRemove(row.path);
-    await this.refresh();
-  }
-
   private firstAccessiblePath(list: RecentWorkspace[]): string | null {
     return list.find(this.isAccessible)?.path ?? null;
   }

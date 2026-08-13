@@ -18,6 +18,9 @@
           <div class="t-sm t-mute" data-testid="recent-row-meta"><span data-testid="recent-row-projects">{{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}</span> · <span data-testid="recent-row-size">{{ sizeOf(row.path) }}</span> · {{ "splash.recent.lastOpened" | t }} <span class="mono" data-testid="recent-row-opened">{{ formatLastOpened(row.lastOpenedAt) }}</span></div>
         </div>
         <ds-button size="small" data-testid="recent-open">{{ "splash.recent.open" | t }}</ds-button>
+        <span (click)="$event.stopPropagation()">
+          <ds-button size="small" variant="danger" data-testid="recent-delete" (pressed)="delete(row)">{{ "splash.recent.delete" | t }}</ds-button>
+        </span>
       </div>
     } @else {
       <div class="ws-row is-error" data-testid="recent-row">
@@ -27,8 +30,19 @@
           <div class="t-sm ws-err" data-testid="recent-not-found-reason">{{ reasonKey(row.reason) | t }}</div>
         </div>
         <ds-button size="small" data-testid="recent-relocate" (pressed)="relocate(row)">{{ "splash.recent.relocate" | t }}</ds-button>
-        <ds-button size="small" variant="ghost" data-testid="recent-remove" (pressed)="remove(row)">{{ "splash.recent.remove" | t }}</ds-button>
+        <ds-button size="small" variant="danger" data-testid="recent-delete" (pressed)="delete(row)">{{ "splash.recent.delete" | t }}</ds-button>
       </div>
     }
   }
 </div>
+@if (deleteTarget(); as row) {
+  <ds-dialog [title]="'splash.recent.deleteTitle' | t" [closeLabel]="'common.cancel' | t" data-testid="recent-delete-dialog" (closed)="closeDelete()">
+    <p data-testid="recent-delete-message">{{ "splash.recent.deleteMessage" | t: { name: row.name } }}</p>
+    <div class="ld-warn is-error" role="alert" data-testid="recent-delete-warning"><ds-icon name="alert" [size]="15" /><span>{{ "splash.recent.deleteWarning" | t }}</span></div>
+    @if (deleteError(); as error) {
+      <p class="t-sm ws-err" role="alert" data-testid="recent-delete-error">{{ error }}</p>
+    }
+    <ds-button dialogFoot data-testid="recent-delete-cancel" [disabled]="deleting()" (pressed)="closeDelete()">{{ "common.cancel" | t }}</ds-button>
+    <ds-button dialogFoot variant="danger" data-testid="recent-delete-confirm" [disabled]="deleting()" (pressed)="confirmDelete()"><ds-icon name="trash" [size]="14" />{{ "splash.recent.delete" | t }}</ds-button>
+  </ds-dialog>
+}

@@ -11,6 +11,8 @@ use rusqlite::Transaction;
 use serde::Serialize;
 use std::path::PathBuf;
 
+pub const RECENT_WORKSPACE_LIMIT: usize = 5;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecentWorkspace {
@@ -79,9 +81,9 @@ impl WorkspaceRepository {
 fn list_entries(conn: &Connection) -> StorageResult<Vec<RecentWorkspace>> {
     let mut statement = conn.prepare(
         "SELECT path, name, last_opened_at FROM app_workspaces \
-         ORDER BY last_opened_at DESC, id DESC",
+         ORDER BY last_opened_at DESC, id DESC LIMIT ?1",
     )?;
-    let rows = statement.query_map([], row_to_entry)?;
+    let rows = statement.query_map([RECENT_WORKSPACE_LIMIT as i64], row_to_entry)?;
     let entries = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(entries)
 }
@@ -194,6 +196,26 @@ mod tests {
         assert_eq!(listed.len(), 3);
         assert_eq!(listed[0].name, "B");
         assert_eq!(listed[0].last_opened_at, "2026-01-01T00:00:03.000Z");
+    }
+
+    #[test]
+    fn lists_at_most_five_workspaces() {
+        let dir = TempDir::new().unwrap();
+        let repo = prepared(&dir);
+        for second in 1..=6 {
+            repo.touch(&format!("D:\\Workspace{second}"), at(second))
+                .unwrap();
+        }
+        assert_eq!(
+            paths(&repo),
+            vec![
+                "D:\\Workspace6",
+                "D:\\Workspace5",
+                "D:\\Workspace4",
+                "D:\\Workspace3",
+                "D:\\Workspace2",
+            ]
+        );
     }
 
     #[test]

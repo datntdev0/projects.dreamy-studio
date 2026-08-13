@@ -152,8 +152,8 @@ export class WorkspaceService {
     return this.ipc.invoke<number>("workspace_measure", { path });
   }
 
-  recentRemove(path: string): Promise<void> {
-    return this.ipc.invoke<void>("recent_remove", { path });
+  workspaceDelete(path: string): Promise<void> {
+    return this.ipc.invoke<void>("workspace_delete", { path });
   }
 
   folderPick(): Promise<string | null> {

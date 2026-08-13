@@ -1,15 +1,17 @@
 use crate::features::workspace::inspector::NotFoundReason;
 use crate::features::workspace::inspector::StatusKind;
 use crate::features::workspace::inspector::WorkspaceInspector;
-use crate::features::workspace::repository::RecentWorkspace;
-use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::repository::format_timestamp;
+use crate::features::workspace::repository::RecentWorkspace;
+use crate::features::workspace::repository::RECENT_WORKSPACE_LIMIT;
+use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::session::CurrentWorkspace;
 use crate::infra::storage::StorageResult;
 use crate::shared::path::NormalizedPath;
 use chrono::DateTime;
 use chrono::Utc;
 use serde::Serialize;
+use std::fs;
 use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -64,6 +66,7 @@ impl WorkspaceService {
         if let (Some(current), false) = (current, found) {
             views.insert(0, self.to_current_view(entry_of_current(current)));
         }
+        views.truncate(RECENT_WORKSPACE_LIMIT);
         views
     }
 
@@ -71,8 +74,29 @@ impl WorkspaceService {
         self.inspector.directory_size(Path::new(path))
     }
 
-    pub fn remove_recent(&self, path: &str) -> StorageResult<()> {
-        self.repository.remove(path)
+    pub fn delete_workspace(&self, path: &str) -> Result<(), String> {
+        let target = NormalizedPath::new(path);
+        let known = self
+            .repository
+            .list()
+            .into_iter()
+            .any(|entry| NormalizedPath::new(&entry.path).key == target.key);
+        if !known {
+            return Err("Workspace is not in the recent list.".to_string());
+        }
+        let folder = Path::new(&target.path);
+        if folder.parent().is_none() {
+            return Err("Deleting a filesystem root is not allowed.".to_string());
+        }
+        if folder.exists() {
+            if !folder.is_dir() {
+                return Err("Workspace path is not a directory.".to_string());
+            }
+            fs::remove_dir_all(folder).map_err(|error| error.to_string())?;
+        }
+        self.repository
+            .remove(&target.path)
+            .map_err(|error| error.to_string())
     }
 
     pub fn record_opened(&self, path: &str, now: DateTime<Utc>) -> StorageResult<()> {
@@ -308,15 +332,15 @@ mod tests {
     }
 
     #[test]
-    fn remove_recent_deletes_entry_only() {
+    fn delete_workspace_removes_entry_and_workspace_directory() {
         let dir = TempDir::new().unwrap();
         let service = service_in(&dir);
         let folder = make_folder(&dir, "Novel");
-        fs::write(folder.join("keep.txt"), b"data").unwrap();
+        fs::write(folder.join("delete.txt"), b"data").unwrap();
         service.record_opened(text(&folder), at(1)).unwrap();
-        service.remove_recent(text(&folder)).unwrap();
+        service.delete_workspace(text(&folder)).unwrap();
         assert!(service.recent_list().is_empty());
-        assert!(folder.join("keep.txt").is_file());
+        assert!(!folder.exists());
     }
 
     #[test]

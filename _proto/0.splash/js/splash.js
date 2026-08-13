@@ -72,7 +72,13 @@
   const ACT = {
     "pick-folder": () => WS.pickFolder(),
     "relocate-recent": () => WS.pickFolder(),
-    "remove-recent": (el) => { WS.remove(el.dataset.path); renderRecent(); },
+    "workspace-delete": (el) => {
+      const row = WS.list().find((item) => item.path === el.dataset.path);
+      if (row && window.confirm(`Delete ${row.name} and all of its files? This cannot be undone.`)) {
+        WS.deleteWorkspace(row.path);
+        renderRecent();
+      }
+    },
     "open-recent": (el) => openRecent(el.dataset.path),
     "cancel-loading": () => WS.cancel(),
     theme: toggleTheme,

@@ -39,7 +39,7 @@ pub fn run() {
             commands::app::app_info,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
-            commands::workspace::recent_remove,
+            commands::workspace::workspace_delete,
             commands::workspace::folder_pick,
             commands::workspace::workspace_load,
             commands::workspace::workspace_cancel,

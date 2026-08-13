@@ -50,11 +50,6 @@ export class SwitchWorkspaceDialog {
     }
   }
 
-  async remove(row: RecentWorkspace): Promise<void> {
-    await this.workspace.recentRemove(row.path);
-    await this.refresh();
-  }
-
   private syncOpen(): void {
     if (this.open()) {
       this.notice.set(null);

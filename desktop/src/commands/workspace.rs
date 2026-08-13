@@ -89,9 +89,11 @@ fn measure_folder(app: &AppHandle, path: &str) -> u64 {
     app.state::<WorkspaceService>().measure(path)
 }
 
-fn remove_recent_entry(app: &AppHandle, path: &str) -> Result<(), LoadError> {
-    let result = app.state::<WorkspaceService>().remove_recent(path);
-    result.map_err(|error| LoadError::from_storage(LoadStep::Application, &error))
+fn delete_workspace(app: &AppHandle, path: &str) -> Result<(), String> {
+    if app.state::<WorkspaceSession>().is_current(path) {
+        return Err("The active workspace cannot be deleted.".to_string());
+    }
+    app.state::<WorkspaceService>().delete_workspace(path)
 }
 
 fn pick_folder(app: &AppHandle) -> Option<String> {
@@ -137,12 +139,9 @@ pub async fn workspace_measure(app: AppHandle, path: String) -> u64 {
 }
 
 #[tauri::command]
-pub async fn recent_remove(app: AppHandle, path: String) -> Result<(), LoadError> {
-    let task = spawn_blocking(move || remove_recent_entry(&app, &path));
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(LoadStep::Application, error)),
-    }
+pub async fn workspace_delete(app: AppHandle, path: String) -> Result<(), String> {
+    let task = spawn_blocking(move || delete_workspace(&app, &path));
+    task.await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

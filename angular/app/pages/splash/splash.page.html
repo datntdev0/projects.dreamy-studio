@@ -31,7 +31,7 @@
             <span class="eyebrow">{{ "splash.recent.title" | t }}</span>
             <ds-badge data-testid="splash-recent-count">{{ recent().length }}</ds-badge>
           </div>
-          <app-recent-workspace-list [rows]="recent()" [lastUsedPath]="lastUsedPath()" (opened)="openRecent($event)" (relocated)="relocate($event)" (removed)="remove($event)" />
+          <app-recent-workspace-list [rows]="recent()" [lastUsedPath]="lastUsedPath()" (opened)="openRecent($event)" (relocated)="relocate($event)" (deleted)="refresh()" />
         } @else {
           <div class="ws-first" data-testid="splash-first-run">
             <div class="illus"></div>

@@ -3,7 +3,7 @@ import { VideoSort } from "./library.videos.models";
 
 export interface AssetFilters { query: string; sort: VideoSort; collection: number; tags: string[]; }
 
-function matchesQuery(needle: string, row: AssetRow): boolean { return !needle || row.name.toLocaleLowerCase().includes(needle) || row.tags.some(matchesTag.bind(null, needle)); }
+function matchesQuery(needle: string, row: AssetRow): boolean { return !needle || row.name.toLocaleLowerCase().includes(needle) || row.prompt?.text.toLocaleLowerCase().includes(needle) === true || row.tags.some(matchesTag.bind(null, needle)); }
 function matchesTag(needle: string, tag: string): boolean { return tag.toLocaleLowerCase().includes(needle); }
 function hasTags(tags: string[], row: AssetRow): boolean { for (const tag of tags) { if (!row.tags.includes(tag)) return false; } return true; }
 function inCollection(collection: number, row: AssetRow): boolean { return row.collectionId === collection; }

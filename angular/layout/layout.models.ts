@@ -6,7 +6,7 @@ export type PanelId = "explorer" | "inspector" | "bottom";
 
 export type RightTabId = "inspector" | "assistant";
 
-export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project" | "images" | "sounds" | "videos" | "collections" | "collection";
+export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project" | "images" | "sounds" | "videos" | "prompts" | "collections" | "collection";
 
 export interface RailItem {
   id: RailId;
@@ -43,6 +43,7 @@ export const IMAGES_TAB_ID = "images";
 export const SOUNDS_TAB_ID = "sounds";
 
 export const VIDEOS_TAB_ID = "videos";
+export const PROMPTS_TAB_ID = "prompts";
 
 export const COLLECTIONS_TAB_ID = "collections";
 
@@ -116,6 +117,19 @@ export const VIDEOS_TAB: EditorTab = {
   kind: "videos",
   icon: "film",
   labelKey: "tabs.videos.title",
+  title: "",
+  novelId: null,
+  projectId: null,
+  collectionId: null,
+  rail: "library",
+  closable: true,
+};
+
+export const PROMPTS_TAB: EditorTab = {
+  id: PROMPTS_TAB_ID,
+  kind: "prompts",
+  icon: "prompt",
+  labelKey: "tabs.prompts.title",
   title: "",
   novelId: null,
   projectId: null,

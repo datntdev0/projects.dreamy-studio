@@ -5,6 +5,7 @@ import { filterAssetRows } from "./library.assets.rules";
 import { AssetRef } from "./library.models";
 import { LibraryService } from "./library.service";
 import { LibrarySoundService } from "./library.sounds.service";
+import { LibraryPromptService } from "./library.prompts.service";
 import { LibraryVideoService } from "./library.videos.service";
 import { VideoSort } from "./library.videos.models";
 
@@ -17,6 +18,7 @@ export class LibraryCollectionAssetsService {
   private readonly images = inject(LibraryImageService);
   private readonly sounds = inject(LibrarySoundService);
   private readonly videos = inject(LibraryVideoService);
+  private readonly prompts = inject(LibraryPromptService);
   private readonly library = inject(LibraryService);
   private readonly rowsByCollection = new Map<number, Signal<AssetRow[]>>();
   private readonly selections = new Map<number, WritableSignal<AssetRef | null>>();
@@ -27,7 +29,7 @@ export class LibraryCollectionAssetsService {
   rows(collectionId: number): Signal<AssetRow[]> {
     const existing = this.rowsByCollection.get(collectionId);
     if (existing) return existing;
-    const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
+    const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items(), this.prompts.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
     this.rowsByCollection.set(collectionId, rows);
     return rows;
   }

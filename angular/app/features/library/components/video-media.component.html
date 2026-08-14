@@ -1,9 +1,6 @@
-<div class="lb-media" data-testid="library-video-media-content">
-  @if (poster(); as source) {
-    <img [src]="source" [alt]="video().name" data-testid="library-video-media-poster" />
-  } @else {
+<div class="lb-media" [class.is-empty]="!poster()" [style.background-image]="poster() ? 'url(' + poster() + ')' : null" data-testid="library-video-media-content">
+  @if (!poster()) {
     <ds-icon name="film" [size]="32" data-testid="library-video-media-placeholder" />
   }
-  <app-library-video-play [video]="video()" data-testid="library-video-media-play" />
   <span class="badge lb-ext" data-testid="library-video-media-duration"><span class="mono lb-dur" data-testid="library-video-media-duration-text">{{ duration() }}</span></span>
 </div>

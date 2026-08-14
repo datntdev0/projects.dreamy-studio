@@ -1,23 +1,14 @@
-import {
-  Component,
-  HostListener,
-  QueryList,
-  ViewChildren,
-  computed,
-  inject,
-  signal,
-} from "@angular/core";
-import { Button } from "../../../../components/button";
+import { Component, HostListener, QueryList, ViewChildren, computed, inject, signal } from "@angular/core";
 import { Dialog } from "../../../../components/dialog";
 import { Icon } from "../../../../components/icon";
 import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRef, AssetRights } from "../library.models";
-import { formatBytes } from "../library.rules";
+import { formatBytes, formatIsoMinute } from "../library.rules";
 import { LibraryService } from "../library.service";
 import { LibraryVideo } from "../library.videos.models";
-import { frameText, videoCode, videoMeta } from "../library.videos.rules";
+import { videoCode, videoMeta } from "../library.videos.rules";
 import { LibraryVideoService } from "../library.videos.service";
 
 const RIGHTS_KEYS: Record<AssetRights, I18nKey> = {
@@ -37,7 +28,7 @@ function isVideoTarget(target: EventTarget | null): boolean {
 @Component({
   selector: "app-library-video-preview-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe],
+  imports: [Dialog, Icon, I18nPipe],
   templateUrl: "./video-preview.dialog.html",
   host: { "data-testid": "library-video-preview-dialog" },
 })
@@ -76,13 +67,13 @@ export class LibraryVideoPreviewDialog {
     return videoCode(video.id);
   }
   parameters(video: LibraryVideo): string {
-    return `${videoMeta(video)} · ${frameText(video)}`;
+    return videoMeta(video);
   }
   size(video: LibraryVideo): string {
     return formatBytes(video.size);
   }
   added(video: LibraryVideo): string {
-    return video.createdAt.slice(0, 10);
+    return formatIsoMinute(video.createdAt);
   }
   rightsKey(rights: AssetRights): I18nKey {
     return RIGHTS_KEYS[rights];

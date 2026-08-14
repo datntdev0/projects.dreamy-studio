@@ -116,12 +116,6 @@ export class LibraryVideos implements OnInit, OnDestroy {
   size(video: LibraryVideo): string {
     return formatBytes(video.size);
   }
-  firstTags(video: LibraryVideo): string[] {
-    return video.tags.slice(0, 2);
-  }
-  moreTags(video: LibraryVideo): number {
-    return Math.max(0, video.tags.length - 2);
-  }
   isSelected(video: LibraryVideo): boolean {
     return this.videos.selectedId() === video.id;
   }

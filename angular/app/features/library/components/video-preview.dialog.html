@@ -37,6 +37,34 @@
         (error)="onVideoError(current)"
       ></video>
       } }
+      <button
+        type="button"
+        class="btn btn-icon lbp-nav is-prev"
+        [attr.aria-label]="'library.preview.previous' | t"
+        [disabled]="!hasPrevious()"
+        data-testid="library-video-preview-previous"
+        (click)="previous()"
+      >
+        <ds-icon
+          name="chev-l"
+          [size]="14"
+          data-testid="library-video-preview-previous-icon"
+        />
+      </button>
+      <button
+        type="button"
+        class="btn btn-icon lbp-nav is-next"
+        [attr.aria-label]="'library.preview.next' | t"
+        [disabled]="!hasNext()"
+        data-testid="library-video-preview-next"
+        (click)="next()"
+      >
+        <ds-icon
+          name="chev-r"
+          [size]="14"
+          data-testid="library-video-preview-next-icon"
+        />
+      </button>
     </div>
     <aside class="lbp-side" data-testid="library-video-preview-side">
       <dl class="kv" data-testid="library-video-preview-info">
@@ -47,17 +75,17 @@
           {{ code(item) }}
         </dd>
         <dt data-testid="library-video-preview-parameters-label">
-          {{ "library.video.info.frame" | t }}
+          {{ "library.image.info.specs" | t }}
         </dt>
         <dd data-testid="library-video-preview-parameters">
           {{ parameters(item) }}
         </dd>
         <dt data-testid="library-video-preview-size-label">
-          {{ "library.video.info.size" | t }}
+          {{ "library.image.info.size" | t }}
         </dt>
         <dd data-testid="library-video-preview-size">{{ size(item) }}</dd>
         <dt data-testid="library-video-preview-added-label">
-          {{ "library.video.info.added" | t }}
+          {{ "library.image.info.added" | t }}
         </dt>
         <dd class="mono" data-testid="library-video-preview-added">
           {{ added(item) }}
@@ -73,7 +101,7 @@
         <span class="eyebrow" data-testid="library-video-preview-tags-label"
           >{{ "library.preview.tags" | t }}</span
         >
-        <div class="row-badges" data-testid="library-video-preview-tags">
+        <div class="tags lb-pt" data-testid="library-video-preview-tags">
           @for (tag of item.tags; track tag) {
           <span class="tag" data-testid="library-video-preview-tag"
             >{{ tag }}</span
@@ -87,9 +115,15 @@
           data-testid="library-video-preview-collection-label"
           >{{ "library.preview.collection" | t }}</span
         >@if (hasCollection(item)) {
-        <span class="tag lb-ctag" data-testid="library-video-preview-collection"
-          >{{ collectionName(item) }}</span
-        >
+        <div class="tags lb-pt" data-testid="library-video-preview-collection-tags">
+          <span class="tag lb-ctag" data-testid="library-video-preview-collection">
+            <ds-icon
+              name="folder"
+              [size]="16"
+              data-testid="library-video-preview-collection-icon"
+            />{{ collectionName(item) }}
+          </span>
+        </div>
         } @else {
         <span
           class="t-sm t-mute"
@@ -97,28 +131,6 @@
           >{{ "library.video.field.collectionNone" | t }}</span
         >
         }
-      </div>
-      <div class="row-actions" data-testid="library-video-preview-navigation">
-        <ds-button
-          size="small"
-          [disabled]="!hasPrevious()"
-          data-testid="library-video-preview-previous"
-          (pressed)="previous()"
-          ><ds-icon
-            name="chev-l"
-            [size]="14"
-            data-testid="library-video-preview-previous-icon"
-          />{{ "library.preview.previous" | t }}</ds-button
-        ><ds-button
-          size="small"
-          [disabled]="!hasNext()"
-          data-testid="library-video-preview-next"
-          (pressed)="next()"
-          >{{ "library.preview.next" | t }}<ds-icon
-            name="chev-r"
-            [size]="14"
-            data-testid="library-video-preview-next-icon"
-        /></ds-button>
       </div>
     </aside>
   </div>

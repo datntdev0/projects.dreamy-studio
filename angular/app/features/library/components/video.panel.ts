@@ -6,12 +6,11 @@ import { I18nService } from "../../../core/i18n/i18n.service";
 import { ToastService } from "../../../core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { ASSET_RIGHTS, AssetPatch, AssetRights } from "../library.models";
-import { durationText, formatBytes, libraryErrorKey, normalizeTag } from "../library.rules";
+import { durationText, formatBytes, formatIsoMinute, libraryErrorKey, normalizeTag } from "../library.rules";
 import { LibraryService } from "../library.service";
 import { LibraryVideo } from "../library.videos.models";
 import { frameText, videoCode } from "../library.videos.rules";
 import { LibraryVideoService } from "../library.videos.service";
-import { LibraryVideoPlay } from "./video-play.component";
 
 const MAX_TAGS = 12;
 
@@ -25,7 +24,7 @@ const RIGHTS_KEYS: Record<AssetRights, I18nKey> = {
 @Component({
   selector: "app-library-video-panel",
   standalone: true,
-  imports: [Icon, I18nPipe, LibraryVideoPlay],
+  imports: [Icon, I18nPipe],
   templateUrl: "./video.panel.html",
   host: { "data-testid": "library-video-panel" },
 })
@@ -59,8 +58,12 @@ export class LibraryVideoPanel {
     return formatBytes(video.size);
   }
 
-  poster(video: LibraryVideo): string | null {
-    return this.videos.poster(video.id);
+  addedAt(video: LibraryVideo): string {
+    return formatIsoMinute(video.createdAt);
+  }
+
+  originKey(video: LibraryVideo): I18nKey {
+    return video.origin === "app" ? "library.origin.app" : "library.origin.upload";
   }
 
   nameKeydown(event: KeyboardEvent): void {
@@ -123,10 +126,6 @@ export class LibraryVideoPanel {
     if (rights !== video.rights) {
       void this.save(video, { rights });
     }
-  }
-
-  view(video: LibraryVideo): void {
-    this.dialogs.openVideoPreview(video.id);
   }
 
   remove(video: LibraryVideo): void {

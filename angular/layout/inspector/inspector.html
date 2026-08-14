@@ -109,7 +109,7 @@
             @if (videos.selected()) {
               <app-library-video-panel data-testid="inspector-video-panel" />
             } @else {
-              <app-library-videos-panel data-testid="inspector-videos-panel" />
+              <div class="ins-empty" data-testid="inspector-videos-empty"><p class="t-sm t-mute" data-testid="inspector-videos-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
             }
           </div>
         }

@@ -12,8 +12,8 @@
   const pad = (n) => String(n).padStart(2, "0");
   const spkClass = (sp) => SCR.spkClass(sp);
   const badge = ([label, cls], testid = "") => `<span class="badge ${cls}" ${testid ? `data-testid="${testid}"` : ""}>${label}</span>`;
-  const unitWord = (an) => (an.film ? "cảnh" : "chương");
-  const SRC_LABEL = { gen: "AI", upload: "TẢI LÊN", lib: "THƯ VIỆN" };
+  const unitWord = (an) => (an.film ? "scene" : "chapter");
+  const SRC_LABEL = { gen: "AI", upload: "UPLOADED", lib: "LIBRARY" };
 
   function ctx(p) {
     const x = ui(p.id);
@@ -41,7 +41,7 @@
   const isGen = (c, ch, o) => !!taskOf(slotKey(c.p, ch, o));
   const anyGen = (c) => CR.all(c.e).some((q) => isGen(c, c.ch, q));
   const sheetState = (c) => (isGen(c, c.ch, c.o) ? "run" : CR.sheetOf(c.p, c.e, c.o));
-  const STATE_BADGE = { run: ["ĐANG TẠO", "badge-running"], ...CR.SHEET };
+  const STATE_BADGE = { run: ["GENERATING", "badge-running"], ...CR.SHEET };
 
   function syncP(p) {
     if (p.modules.includes("character")) p.prog.character = CR.progOf(p);
@@ -55,14 +55,14 @@
   function charMark(c, r) {
     const outs = r.req.length ? r.req.map((x) => x.o) : r.e.outfits.filter((o) => CR.filled(o));
     const sts = outs.map((o) => CR.sheetOf(c.p, r.e, o));
-    if (sts.includes("stale")) return `<span class="sc-mk is-warn" title="Cần xem lại">${ic("alert")}</span>`;
-    if (outs.length && sts.every((s) => s === "ok")) return `<span class="sc-mk is-ok" title="Đủ sheet đã duyệt">${ic("check-circle")}</span>`;
-    if (r.needed || !c.an.known) return `<span class="dot dot-warning" title="Còn thiếu sheet"></span>`;
-    return `<span class="dot-o" title="Chưa cần sheet"></span>`;
+    if (sts.includes("stale")) return `<span class="sc-mk is-warn" title="Needs review">${ic("alert")}</span>`;
+    if (outs.length && sts.every((s) => s === "ok")) return `<span class="sc-mk is-ok" title="All sheets approved">${ic("check-circle")}</span>`;
+    if (r.needed || !c.an.known) return `<span class="dot dot-warning" title="Sheets missing"></span>`;
+    return `<span class="dot-o" title="No sheet needed yet"></span>`;
   }
   function railRow(c, r, i) {
     const okN = r.req.filter((x) => CR.sheetOf(c.p, r.e, x.o) === "ok").length;
-    const meta = r.needed ? `${r.e.outfits.length} trang phục · ${okN}/${r.req.length} sheet đủ` : c.an.known ? (r.mention.length ? "Chỉ được nhắc đến" : "Chưa có cảnh nào dùng") : `${r.e.outfits.length} trang phục · chưa có kịch bản`;
+    const meta = r.needed ? `${r.e.outfits.length} outfits · ${okN}/${r.req.length} sheets complete` : c.an.known ? (r.mention.length ? "Only mentioned" : "Not used in any scene yet") : `${r.e.outfits.length} outfits · no script yet`;
     return `<div class="sc-unit ${r.ch.id === c.ch.id ? "is-active" : ""}" data-testid="cr-char-${r.ch.id}" tabindex="0" role="treeitem" data-act="cr-char" data-id="${r.ch.id}">
       <span class="sc-un mono">${pad(i + 1)}</span>
       <div class="sc-ub"><div class="t-ink ellip"><i class="sc-dot ${spkClass(r.ch)}"></i> ${esc(r.ch.name)}</div><div class="t-sm t-mute ellip">${esc(meta)}</div></div>${charMark(c, r)}</div>`;
@@ -74,13 +74,13 @@
     const need = an.known ? an.rows.filter((r) => r.needed) : an.rows;
     const rest = an.known ? an.rows.filter((r) => !r.needed) : [];
     const group = (title, list, testid, hint) => (list.length ? `<div class="cr-rail-g" data-testid="${testid}"><span class="eyebrow">${title}</span>${hint ? `<span class="t-sm t-mute">${hint}</span>` : ""}</div>${list.map((r) => railRow(c, r, idx.get(r.ch.id))).join("")}` : "");
-    return `<div class="sc-rail-h"><span class="eyebrow">Nhân vật</span><span class="mono t-mute" data-testid="cr-rail-count">${g.done}/${g.total} đủ sheet</span></div>
+    return `<div class="sc-rail-h"><span class="eyebrow">Characters</span><span class="mono t-mute" data-testid="cr-rail-count">${g.done}/${g.total} sheets complete</span></div>
       <div class="progress is-done sc-rail-pg"><i style="width:${g.total ? Math.round((g.done / g.total) * 100) : 0}%"></i></div>
       <div class="sc-units" role="tree" data-keep="cr-units" data-testid="cr-chars">
-        ${an.known ? group("Cần cho kịch bản", need, "cr-grp-need") : `<div class="cr-rail-note t-sm t-mute" data-testid="cr-rail-note">Chưa có kịch bản nên chưa xác định được nhân vật cần thiết.</div>${need.map((r) => railRow(c, r, idx.get(r.ch.id))).join("")}`}
-        ${group("Chưa thấy trong kịch bản", rest, "cr-grp-rest", "Có thể xuất hiện ở phần chưa có kịch bản")}
+        ${an.known ? group("Needed for the script", need, "cr-grp-need") : `<div class="cr-rail-note t-sm t-mute" data-testid="cr-rail-note">There is no script yet, so the required characters cannot be determined.</div>${need.map((r) => railRow(c, r, idx.get(r.ch.id))).join("")}`}
+        ${group("Not seen in the script", rest, "cr-grp-rest", "May appear in parts that have no script yet")}
       </div>
-      <button type="button" class="btn btn-sm btn-ghost sc-unit-add" data-testid="cr-char-add-btn" data-act="cr-char-add">${ic("plus")}Thêm nhân vật</button>`;
+      <button type="button" class="btn btn-sm btn-ghost sc-unit-add" data-testid="cr-char-add-btn" data-act="cr-char-add">${ic("plus")}Add character</button>`;
   }
 
   function bar(c) {
@@ -89,8 +89,8 @@
     return U.bar(
       `<button class="btn btn-sm" data-testid="cr-back-btn" data-act="pj-back" data-id="${p.id}">${ic("arrow-left")}${esc(p.name)}</button>
        <span class="nv-ttl">${ic("user")}<span class="t-ink">Character</span></span>`,
-      `<button class="btn btn-sm" data-testid="cr-suggest-btn" data-act="cr-suggest">${ic("spark")}Gợi ý prompt bằng AI</button>
-       <button class="btn btn-sm btn-primary" data-testid="cr-gen-missing-btn" data-act="cr-gen-open" data-scope="missing" ${todo ? "" : "disabled"}>${ic("image")}${todo ? `Tạo ${todo} sheet còn thiếu` : "Đã đủ sheet"}</button>`,
+      `<button class="btn btn-sm" data-testid="cr-suggest-btn" data-act="cr-suggest">${ic("spark")}Suggest prompt with AI</button>
+       <button class="btn btn-sm btn-primary" data-testid="cr-gen-missing-btn" data-act="cr-gen-open" data-scope="missing" ${todo ? "" : "disabled"}>${ic("image")}${todo ? `Generate ${todo} missing sheets` : "All sheets complete"}</button>`,
     );
   }
 
@@ -99,19 +99,19 @@
     const kb = !!CR.kbItem(ch.id);
     const i = an.rows.indexOf(row);
     return `<div class="tl-sub is-wrap cr-sub" data-testid="cr-sub">
-      <span class="mono t-mute sc-sub-n">NHÂN VẬT ${pad(i + 1)}</span>
+      <span class="mono t-mute sc-sub-n">CHARACTER ${pad(i + 1)}</span>
       <span class="t-ink cr-sub-t" data-testid="cr-sub-name"><i class="sc-dot ${spkClass(ch)}"></i> ${esc(ch.name)}</span>
-      ${kb ? `<span class="badge badge-info" title="Lấy từ Knowledgebase">KB</span>` : `<span class="badge" title="Nhập thủ công">THỦ CÔNG</span>`}
-      <span class="badge" data-testid="cr-outfit-count">${e.outfits.length} TRANG PHỤC</span>
+      ${kb ? `<span class="badge badge-info" title="From the Knowledgebase">KB</span>` : `<span class="badge" title="Entered manually">MANUAL</span>`}
+      <span class="badge" data-testid="cr-outfit-count">${e.outfits.length} OUTFITS</span>
       <span class="spacer"></span>
-      <span class="t-sm t-mute" data-testid="cr-usage-note">${row.on.length ? `Cần cho ${row.on.length} ${unitWord(an)} trong kịch bản` : "Chưa có cảnh nào dùng"}</span></div>`;
+      <span class="t-sm t-mute" data-testid="cr-usage-note">${row.on.length ? `Needed for ${row.on.length} ${unitWord(an)} in the script` : "Not used in any scene yet"}</span></div>`;
   }
 
   function usedChips(c) {
     if (c.o.base) return "";
     const req = c.row.req.find((x) => x.o.id === c.o.id);
-    if (!req) return `<span class="t-sm t-mute">Chưa có ${unitWord(c.an)} nào dùng trang phục này</span>`;
-    return `<span class="eyebrow">Dùng ở</span>${req.cols.slice(0, 6).map((q) => `<span class="sc-ref" title="${esc(q.sub)}">${esc(q.label)}</span>`).join("")}${req.cols.length > 6 ? `<span class="sc-ref">+${req.cols.length - 6}</span>` : ""}`;
+    if (!req) return `<span class="t-sm t-mute">No ${unitWord(c.an)} uses this outfit yet</span>`;
+    return `<span class="eyebrow">Used in</span>${req.cols.slice(0, 6).map((q) => `<span class="sc-ref" title="${esc(q.sub)}">${esc(q.label)}</span>`).join("")}${req.cols.length > 6 ? `<span class="sc-ref">+${req.cols.length - 6}</span>` : ""}`;
   }
 
   function sheetFrame(c) {
@@ -122,37 +122,37 @@
       const key = slotKey(c.p, c.ch, o);
       const pl = taskOf(key);
       const t = pl && pl.tasks.find((q) => q.key === key);
-      return `<div class="cr-ph is-run" data-testid="cr-run-${o.id}"><span class="dot dot-running"></span><span class="t-sm">Đang tạo design sheet…</span>${pl ? `<div class="progress cr-run-pg" data-prog="${pl.id}|${key}"><i style="width:${Math.round(t ? t.progress : 0)}%"></i></div>` : ""}</div>`;
+      return `<div class="cr-ph is-run" data-testid="cr-run-${o.id}"><span class="dot dot-running"></span><span class="t-sm">Generating the design sheet…</span>${pl ? `<div class="progress cr-run-pg" data-prog="${pl.id}|${key}"><i style="width:${Math.round(t ? t.progress : 0)}%"></i></div>` : ""}</div>`;
     }
     if (!s) {
       return `<div class="cr-ph" data-testid="cr-empty-${o.id}"><div class="cr-ghost" aria-hidden="true">${CR.VIEWS.map((v) => `<span class="mono">${v.tag}</span>`).join("")}</div>
-        <span class="t-sm t-mute">${o.base ? "Chưa có Character sheet: nhân vật mặc áo thun ngắn và quần short trắng trơn." : "Chưa có design sheet của trang phục này."} Một ảnh dài gồm 4 góc: front, back, side, 3/4 nửa người.</span>
-        <div class="cr-ph-act"><button type="button" class="btn btn-primary" data-testid="cr-gen-${o.id}" data-act="cr-gen-open" data-scope="outfit">${ic("spark")}Tạo bằng AI</button>
-          <button type="button" class="btn" data-testid="cr-up-${o.id}" data-act="cr-up-open">${ic("upload")}Tải lên</button>
-          <button type="button" class="btn" data-testid="cr-pick-${o.id}" data-act="cr-up-open" data-tab="lib">${ic("library")}Thư viện</button></div></div>`;
+        <span class="t-sm t-mute">${o.base ? "No Character sheet yet: the character wears a plain white short T-shirt and shorts." : "No design sheet for this outfit yet."} One long image with 4 views: front, back, side, 3/4 half body.</span>
+        <div class="cr-ph-act"><button type="button" class="btn btn-primary" data-testid="cr-gen-${o.id}" data-act="cr-gen-open" data-scope="outfit">${ic("spark")}Generate with AI</button>
+          <button type="button" class="btn" data-testid="cr-up-${o.id}" data-act="cr-up-open">${ic("upload")}Upload</button>
+          <button type="button" class="btn" data-testid="cr-pick-${o.id}" data-act="cr-up-open" data-tab="lib">${ic("library")}Library</button></div></div>`;
     }
     const btn = (act, icon, tip, extra = "") => `<button type="button" class="btn btn-icon btn-sm" data-testid="${act}-${o.id}" data-act="${act}" data-tip="${tip}" aria-label="${tip}" ${extra}>${ic(icon)}</button>`;
-    return `${CR.slotThumb(c.e, o, s)}<div class="cr-sheet-tools" data-testid="cr-tools-${o.id}">${btn("cr-gen-open", s.src === "gen" ? "refresh" : "spark", "Tạo lại", `data-scope="outfit"`)}${btn("cr-up-open", "upload", "Thay bằng ảnh khác")}${btn("cr-approve", s.ok ? "unlock" : "check", s.ok ? "Bỏ duyệt" : "Duyệt")}${btn("cr-zoom", "eye", "Xem lớn")}${btn("cr-sheet-del", "trash", "Xóa sheet")}</div>`;
+    return `${CR.slotThumb(c.e, o, s)}<div class="cr-sheet-tools" data-testid="cr-tools-${o.id}">${btn("cr-gen-open", s.src === "gen" ? "refresh" : "spark", "Regenerate", `data-scope="outfit"`)}${btn("cr-up-open", "upload", "Replace with another image")}${btn("cr-approve", s.ok ? "unlock" : "check", s.ok ? "Unapprove" : "Approve")}${btn("cr-zoom", "eye", "View large")}${btn("cr-sheet-del", "trash", "Delete sheet")}</div>`;
   }
   function sheetCard(c) {
     const { o } = c;
     const s = o.sheet;
     const stt = sheetState(c);
     return `<section class="cr-card cr-sheet" data-testid="cr-sheet-${o.id}">
-      <header class="cr-card-h"><span class="eyebrow">${o.base ? "Character sheet" : "Design sheet · trang phục"}</span>${s ? `<span class="badge cr-src" title="Nguồn ảnh">${SRC_LABEL[s.src]}</span>` : ""}<span class="spacer"></span><span id="cr-sst-${o.id}">${badge(STATE_BADGE[stt], `cr-sheet-badge-${o.id}`)}</span></header>
+      <header class="cr-card-h"><span class="eyebrow">${o.base ? "Character sheet" : "Design sheet · outfit"}</span>${s ? `<span class="badge cr-src" title="Image source">${SRC_LABEL[s.src]}</span>` : ""}<span class="spacer"></span><span id="cr-sst-${o.id}">${badge(STATE_BADGE[stt], `cr-sheet-badge-${o.id}`)}</span></header>
       <div class="cr-sheetfr is-${stt}" data-testid="cr-sheetfr-${o.id}">${sheetFrame(c)}</div>
       <footer class="cr-sheet-f" data-testid="cr-sheet-foot-${o.id}">
-        <button class="btn btn-primary" data-testid="cr-gen-btn-${o.id}" data-act="cr-gen-open" data-scope="outfit" ${stt === "run" ? "disabled" : ""}>${ic("spark")}${s ? "Tạo lại sheet" : o.base ? "Tạo Character sheet bằng AI" : "Tạo sheet bằng AI"}</button>
-        <button class="btn" data-testid="cr-up-btn-${o.id}" data-act="cr-up-open">${ic("upload")}Tải lên</button>
-        <button class="btn" data-testid="cr-approve-btn-${o.id}" data-act="cr-approve" ${s && !s.ok ? "" : "disabled"}>${ic("check")}Duyệt sheet</button>
-        <button class="btn" data-testid="cr-save-lib-btn-${o.id}" data-act="cr-save-lib" ${s ? "" : "disabled"}>${ic("library")}Lưu vào thư viện</button></footer></section>`;
+        <button class="btn btn-primary" data-testid="cr-gen-btn-${o.id}" data-act="cr-gen-open" data-scope="outfit" ${stt === "run" ? "disabled" : ""}>${ic("spark")}${s ? "Regenerate sheet" : o.base ? "Generate Character sheet with AI" : "Generate sheet with AI"}</button>
+        <button class="btn" data-testid="cr-up-btn-${o.id}" data-act="cr-up-open">${ic("upload")}Upload</button>
+        <button class="btn" data-testid="cr-approve-btn-${o.id}" data-act="cr-approve" ${s && !s.ok ? "" : "disabled"}>${ic("check")}Approve sheet</button>
+        <button class="btn" data-testid="cr-save-lib-btn-${o.id}" data-act="cr-save-lib" ${s ? "" : "disabled"}>${ic("library")}Save to library</button></footer></section>`;
   }
 
   const fid = (f, o) => (f.scope === "char" ? f.k : `${o.id}-${f.k}`);
   function metaHtml(f, v) {
-    if (!v.v) return `<span class="t-sm t-mute">Văn bản chưa mô tả. Nhập tay hoặc để AI đề xuất.</span>`;
+    if (!v.v) return `<span class="t-sm t-mute">The text is not described yet. Enter it by hand or let the AI propose it.</span>`;
     const s = CR.SRC[v.src];
-    const act = v.src === "ai" ? `<button type="button" class="btn btn-sm" data-testid="cr-confirm-${f.k}" data-act="cr-confirm" data-k="${f.k}">${ic("check")}Xác nhận</button>` : "";
+    const act = v.src === "ai" ? `<button type="button" class="btn btn-sm" data-testid="cr-confirm-${f.k}" data-act="cr-confirm" data-k="${f.k}">${ic("check")}Confirm</button>` : "";
     return `<span class="badge ${s[0]}" title="${esc(s[2])}">${s[1]}</span>${v.ev.map((q) => U.ref(q)).join("")}${v.why ? `<span class="t-sm t-mute cr-why">${esc(v.why)}</span>` : ""}${act}`;
   }
   const rowCls = (v) => `cr-row ${v.src ? `is-${v.src}` : "is-missing"}`;
@@ -161,29 +161,29 @@
       <label for="cr-f-${fid(f, o)}">${esc(f.label)}</label>
       <input id="cr-f-${fid(f, o)}" class="input" data-testid="cr-input-${fid(f, o)}" value="${esc(v.v)}" placeholder="${esc(f.ph)}" data-change="cr-fld" data-k="${f.k}" autocomplete="off">
       <div class="cr-meta" id="cr-meta-${fid(f, o)}" data-testid="cr-meta-${fid(f, o)}">${metaHtml(f, v)}</div></div>`;
-  const paletteRow = (c) => `<div class="cr-row ${c.o.palOk ? "is-user" : "is-missing"}" id="cr-row-${c.o.id}-palette" data-testid="cr-row-${c.o.id}-palette"><label>Bảng màu</label>
+  const paletteRow = (c) => `<div class="cr-row ${c.o.palOk ? "is-user" : "is-missing"}" id="cr-row-${c.o.id}-palette" data-testid="cr-row-${c.o.id}-palette"><label>Color palette</label>
       <div class="cr-pal" data-testid="cr-pal-${c.o.id}">${c.o.palette.map((x, i) => `<label class="cr-sw" data-testid="cr-sw-${c.o.id}-${i}" title="${esc(x.n)}"><input type="color" data-testid="cr-sw-input-${c.o.id}-${i}" data-change="cr-pal" data-i="${i}" value="${esc(x.c)}"><span class="ellip">${esc(x.n)}</span></label>`).join("")}</div>
-      <div class="cr-meta" id="cr-meta-${c.o.id}-palette" data-testid="cr-meta-${c.o.id}-palette"><span class="t-sm t-mute">${c.o.palOk ? "Bảng màu của trang phục này." : "Chưa chọn màu, đang dùng bảng màu trung tính."}</span></div></div>`;
+      <div class="cr-meta" id="cr-meta-${c.o.id}-palette" data-testid="cr-meta-${c.o.id}-palette"><span class="t-sm t-mute">${c.o.palOk ? "The color palette of this outfit." : "No color chosen, using the neutral palette."}</span></div></div>`;
 
-  const profCount = (c) => `${CR.usedFields(c.e, c.o).length}/${CR.FIELDS.length} chi tiết`;
+  const profCount = (c) => `${CR.usedFields(c.e, c.o).length}/${CR.FIELDS.length} details`;
   function profileCard(c) {
     const { e, o, ch } = c;
     const item = CR.kbItem(ch.id);
     const body = o.base
-      ? `<p class="t-sm t-mute" data-testid="cr-prof-intro">${item ? `AI đọc tóm tắt, thuộc tính và ${item.ev.length} dẫn chứng của “${esc(ch.name)}” trong Knowledgebase. Chỉ chi tiết văn bản nêu trực tiếp mới là “Văn bản”; phần còn lại là AI suy luận hoặc để trống.` : "Nhân vật này không có trong Knowledgebase. Hãy nhập những chi tiết bạn biết, AI sẽ soạn prompt từ đó."}</p>
-         <div class="cr-sec-h" data-testid="cr-shared-h"><span class="eyebrow">Ngoại hình nhân vật</span><span class="t-sm t-mute">Dùng chung cho Character sheet và mọi trang phục</span></div>
+      ? `<p class="t-sm t-mute" data-testid="cr-prof-intro">${item ? `The AI reads the summary, attributes and ${item.ev.length} pieces of evidence of “${esc(ch.name)}” in the Knowledgebase. Only details the text states directly count as “Text”; the rest are AI inference or left empty.` : "This character is not in the Knowledgebase. Enter the details you know and the AI will draft the prompt from them."}</p>
+         <div class="cr-sec-h" data-testid="cr-shared-h"><span class="eyebrow">Character appearance</span><span class="t-sm t-mute">Shared by the Character sheet and every outfit</span></div>
          <div class="cr-rows" data-testid="cr-rows-char">${CR.CHAR_FIELDS.map((f) => fieldRow(f, e.profile[f.k], o)).join("")}</div>
-         ${item ? `<details class="cr-kb" data-testid="cr-kb"><summary>Tóm tắt trong Knowledgebase</summary><p class="t-sm">${esc(item.summary)}</p><div class="cr-kb-act"><button class="btn btn-sm" data-testid="cr-open-kb-btn" data-act="cr-open-kb">${ic("graph")}Mở Knowledgebase</button></div></details>` : ""}`
-      : `<p class="t-sm t-mute" data-testid="cr-shared-note-${o.id}">Ngoại hình lấy từ Character sheet. Ở đây chỉ mô tả phần trang phục.</p>
+         ${item ? `<details class="cr-kb" data-testid="cr-kb"><summary>Summary in the Knowledgebase</summary><p class="t-sm">${esc(item.summary)}</p><div class="cr-kb-act"><button class="btn btn-sm" data-testid="cr-open-kb-btn" data-act="cr-open-kb">${ic("graph")}Open Knowledgebase</button></div></details>` : ""}`
+      : `<p class="t-sm t-mute" data-testid="cr-shared-note-${o.id}">Appearance comes from the Character sheet. Only the outfit is described here.</p>
          <div class="cr-rows" data-testid="cr-rows-outfit-${o.id}">${CR.OUTFIT_FIELDS.map((f) => fieldRow(f, o[f.k], o)).join("")}${paletteRow(c)}</div>`;
     return `<section class="cr-card cr-profile" data-testid="cr-profile-${o.id}">
-      <header class="cr-card-h"><span class="eyebrow">${o.base ? "Hồ sơ ngoại hình trích từ KB" : "Hồ sơ trang phục"}</span><span class="mono t-mute" id="cr-pn-${o.id}" data-testid="cr-prof-count-${o.id}">${profCount(c)}</span><span class="spacer"></span>
-        <button class="btn btn-sm" data-testid="cr-read-kb-btn-${o.id}" data-act="cr-suggest">${ic("spark")}Đọc KB và gợi ý</button></header>
+      <header class="cr-card-h"><span class="eyebrow">${o.base ? "Appearance profile extracted from the KB" : "Outfit profile"}</span><span class="mono t-mute" id="cr-pn-${o.id}" data-testid="cr-prof-count-${o.id}">${profCount(c)}</span><span class="spacer"></span>
+        <button class="btn btn-sm" data-testid="cr-read-kb-btn-${o.id}" data-act="cr-suggest">${ic("spark")}Read the KB and suggest</button></header>
       ${body}</section>`;
   }
 
-  const promptHead = (c) => `<div class="cr-prompt-h" id="cr-prompt-h-${c.o.id}" data-testid="cr-prompt-h-${c.o.id}"><span class="badge ${c.o.prompt.edited ? "badge-warning" : "badge-success"}" data-testid="cr-prompt-mode-${c.o.id}">${c.o.prompt.edited ? "ĐÃ SỬA TAY" : "TỰ ĐỘNG TỪ HỒ SƠ"}</span><span class="spacer"></span>
-      <button class="btn btn-sm" data-testid="cr-recompose-btn-${c.o.id}" data-act="cr-recompose" ${c.o.prompt.edited ? "" : "disabled"}>${ic("refresh")}Soạn lại từ hồ sơ</button></div>`;
+  const promptHead = (c) => `<div class="cr-prompt-h" id="cr-prompt-h-${c.o.id}" data-testid="cr-prompt-h-${c.o.id}"><span class="badge ${c.o.prompt.edited ? "badge-warning" : "badge-success"}" data-testid="cr-prompt-mode-${c.o.id}">${c.o.prompt.edited ? "EDITED BY HAND" : "AUTO FROM PROFILE"}</span><span class="spacer"></span>
+      <button class="btn btn-sm" data-testid="cr-recompose-btn-${c.o.id}" data-act="cr-recompose" ${c.o.prompt.edited ? "" : "disabled"}>${ic("refresh")}Recompose from profile</button></div>`;
   function promptFoot(c) {
     const { e, o } = c;
     const used = CR.usedFields(e, o);
@@ -191,27 +191,27 @@
     const bits = ["text", "claim", "ai", "user"].filter(count).map((k) => `<span class="badge ${CR.SRC[k][0]}">${count(k)} ${CR.SRC[k][1].toLowerCase()}</span>`).join("");
     const gaps = CR.gaps(e, o);
     return `<div id="cr-prompt-foot-${o.id}" data-testid="cr-prompt-foot-${o.id}">
-      <div class="cr-legend" data-testid="cr-legend-${o.id}"><span class="eyebrow">Chi tiết trong prompt</span>${bits || `<span class="t-sm t-mute">Chưa có chi tiết nào</span>`}${gaps.length ? `<span class="t-sm t-mute" title="${esc(gaps.map((g) => g.label).join(", "))}">Thiếu ${gaps.length}</span>` : ""}</div></div>`;
+      <div class="cr-legend" data-testid="cr-legend-${o.id}"><span class="eyebrow">Details in the prompt</span>${bits || `<span class="t-sm t-mute">No details yet</span>`}${gaps.length ? `<span class="t-sm t-mute" title="${esc(gaps.map((g) => g.label).join(", "))}">Missing ${gaps.length}</span>` : ""}</div></div>`;
   }
   function promptCard(c) {
     const { o } = c;
     return `<section class="cr-card cr-prompt" data-testid="cr-prompt-${o.id}">
-      <header class="cr-card-h"><span class="eyebrow">${o.base ? "Prompt Character sheet" : "Prompt tạo sheet"}</span><span class="cr-layout" data-testid="cr-layout-${o.id}" title="Sheet là một ảnh dài gồm 4 góc">${CR.VIEWS.map((v) => `<span class="sc-ref" title="${esc(v.label)}">${v.tag}</span>`).join("")}</span><span class="spacer"></span>
-        <button class="btn btn-sm" data-testid="cr-copy-btn-${o.id}" data-act="cr-copy">${ic("copy")}Sao chép</button>
-        <button class="btn btn-sm" data-testid="cr-save-prompt-btn-${o.id}" data-act="cr-save-prompt">${ic("prompt")}Lưu vào thư viện</button></header>
+      <header class="cr-card-h"><span class="eyebrow">${o.base ? "Prompt Character sheet" : "Sheet generation prompt"}</span><span class="cr-layout" data-testid="cr-layout-${o.id}" title="A sheet is one long image with 4 views">${CR.VIEWS.map((v) => `<span class="sc-ref" title="${esc(v.label)}">${v.tag}</span>`).join("")}</span><span class="spacer"></span>
+        <button class="btn btn-sm" data-testid="cr-copy-btn-${o.id}" data-act="cr-copy">${ic("copy")}Copy</button>
+        <button class="btn btn-sm" data-testid="cr-save-prompt-btn-${o.id}" data-act="cr-save-prompt">${ic("prompt")}Save to library</button></header>
       <div class="cr-box" data-testid="cr-prompt-box-${o.id}">${promptHead(c)}
         <textarea id="cr-prompt-${o.id}" class="textarea cr-ta" data-testid="cr-prompt-input-${o.id}" rows="7" data-change="cr-prompt" aria-label="Prompt">${esc(o.prompt.text)}</textarea>${promptFoot(c)}</div></section>`;
   }
 
-  const styleName = (s) => (s.lib && LB.state.assets.some((x) => x.type === "prompt" && x.name === s.lib) ? `${s.name} · từ Prompts` : s.name);
+  const styleName = (s) => (s.lib && LB.state.assets.some((x) => x.type === "prompt" && x.name === s.lib) ? `${s.name} · from Prompts` : s.name);
   function commonCard(c) {
     const { st } = c;
-    return `<section class="cr-card cr-common" data-testid="cr-common"><header class="cr-card-h"><span class="eyebrow">Thiết lập chung của project</span><span class="t-sm t-mute">Áp dụng cho mọi nhân vật để các sheet cùng một phong cách</span></header>
+    return `<section class="cr-card cr-common" data-testid="cr-common"><header class="cr-card-h"><span class="eyebrow">Project-wide settings</span><span class="t-sm t-mute">Applies to every character so the sheets share one style</span></header>
       <div class="cr-common-g">
-        <div class="field"><label for="cr-style">Phong cách</label><select id="cr-style" class="select" data-testid="cr-style-select" data-change="cr-style">${U.options(CR.STYLES.map((s) => [s.id, styleName(s)]), st.style)}</select></div>
-        <div class="field"><label for="cr-prov">Công cụ tạo ảnh</label><select id="cr-prov" class="select" data-testid="cr-prov-select" data-change="cr-prov">${U.options(CR.PROVIDERS.map((q) => [q.id, q.ok ? q.name : `${q.name} (chưa cài)`, !q.ok]), st.prov)}</select></div>
+        <div class="field"><label for="cr-style">Style</label><select id="cr-style" class="select" data-testid="cr-style-select" data-change="cr-style">${U.options(CR.STYLES.map((s) => [s.id, styleName(s)]), st.style)}</select></div>
+        <div class="field"><label for="cr-prov">Image generator</label><select id="cr-prov" class="select" data-testid="cr-prov-select" data-change="cr-prov">${U.options(CR.PROVIDERS.map((q) => [q.id, q.ok ? q.name : `${q.name} (not installed)`, !q.ok]), st.prov)}</select></div>
         <div class="field cr-common-neg"><label for="cr-neg">Negative prompt</label><input id="cr-neg" class="input" data-testid="cr-neg-input" value="${esc(st.neg)}" data-change="cr-neg" autocomplete="off"></div></div>
-      <label class="check" data-testid="cr-lock"><input type="checkbox" data-testid="cr-lock-input" data-change="cr-lock" ${st.lock ? "checked" : ""}><span>Giữ seed của sheet cũ khi tạo lại để hình dáng nhân vật ổn định</span></label></section>`;
+      <label class="check" data-testid="cr-lock"><input type="checkbox" data-testid="cr-lock-input" data-change="cr-lock" ${st.lock ? "checked" : ""}><span>Keep the seed of the old sheet when regenerating so the character’s shape stays stable</span></label></section>`;
   }
 
   function osecHead(c, o) {
@@ -219,13 +219,13 @@
     const stt = sheetState(cq);
     const st = `<span id="cr-ost-${o.id}">${badge(STATE_BADGE[stt], `cr-status-${o.id}`)}</span>`;
     if (o.base) {
-      return `<header class="cr-osec-h" data-testid="cr-osec-h-${o.id}"><span class="cr-osec-i">${ic("user")}</span><div class="cr-osec-t"><div class="t-ink">Character sheet</div><div class="t-sm t-mute">Nhân vật mặc áo thun ngắn và quần short trắng trơn, làm gốc ngoại hình cho mọi trang phục</div></div>${st}</header>`;
+      return `<header class="cr-osec-h" data-testid="cr-osec-h-${o.id}"><span class="cr-osec-i">${ic("user")}</span><div class="cr-osec-t"><div class="t-ink">Character sheet</div><div class="t-sm t-mute">The character wears a plain white short T-shirt and shorts, the base appearance for every outfit</div></div>${st}</header>`;
     }
     const can = c.e.outfits.length > 1 && !c.row.req.some((x) => x.o.id === o.id);
     return `<header class="cr-osec-h" data-testid="cr-osec-h-${o.id}"><span class="cr-osec-i">${ic("shirt")}</span>
-        <input class="input cr-oname" id="cr-oname-${o.id}" data-testid="cr-oname-input-${o.id}" value="${esc(o.name)}" data-change="cr-oname" autocomplete="off" aria-label="Tên trang phục">
+        <input class="input cr-oname" id="cr-oname-${o.id}" data-testid="cr-oname-input-${o.id}" value="${esc(o.name)}" data-change="cr-oname" autocomplete="off" aria-label="Outfit name">
         ${st}<span class="cr-used" data-testid="cr-used-${o.id}">${usedChips(cq)}</span><span class="spacer"></span>
-        <button type="button" class="btn btn-icon btn-sm" data-testid="cr-odel-${o.id}" data-act="cr-outfit-del" data-v="${o.id}" ${can ? "" : "disabled"} data-tip="${can ? "Xóa trang phục" : c.e.outfits.length < 2 ? "Phải còn ít nhất một trang phục" : "Đang được kịch bản dùng"}" aria-label="Xóa trang phục">${ic("trash")}</button></header>`;
+        <button type="button" class="btn btn-icon btn-sm" data-testid="cr-odel-${o.id}" data-act="cr-outfit-del" data-v="${o.id}" ${can ? "" : "disabled"} data-tip="${can ? "Delete outfit" : c.e.outfits.length < 2 ? "At least one outfit must remain" : "Used by the script"}" aria-label="Delete outfit">${ic("trash")}</button></header>`;
   }
   function outfitSection(c, o) {
     const cq = { ...c, o };
@@ -236,27 +236,27 @@
   function suggCard(c) {
     const list = c.an.sugg.filter((g) => g.row.ch.id === c.ch.id);
     if (!list.length) return "";
-    return `<section class="cr-card" data-testid="cr-sugg"><header class="cr-card-h"><span class="eyebrow">AI gợi ý trang phục từ kịch bản</span><span class="mono t-mute">${list.length}</span></header>
+    return `<section class="cr-card" data-testid="cr-sugg"><header class="cr-card-h"><span class="eyebrow">AI suggests outfits from the script</span><span class="mono t-mute">${list.length}</span></header>
       ${list.map((g) => `<div class="cr-sugg" data-testid="cr-sugg-${g.id}"><span class="cr-sugg-i">${ic("spark")}</span>
-        <div class="cr-sugg-b"><div class="t-ink">Thêm “${esc(g.name)}” cho ${esc(g.cols.map((q) => q.label).join(", "))}</div><div class="t-sm t-mute">${esc(g.why)}</div><div class="t-sm">${esc(g.garment.v)} <span class="badge badge-warning">AI suy luận</span></div></div>
-        <button class="btn btn-sm btn-primary" data-testid="cr-sugg-accept-${g.id}" data-act="cr-sugg-accept" data-id="${g.id}">${ic("check")}Chấp nhận</button><button class="btn btn-sm btn-ghost" data-testid="cr-sugg-skip-${g.id}" data-act="cr-sugg-skip" data-id="${g.id}">Bỏ qua</button></div>`).join("")}</section>`;
+        <div class="cr-sugg-b"><div class="t-ink">Add “${esc(g.name)}” for ${esc(g.cols.map((q) => q.label).join(", "))}</div><div class="t-sm t-mute">${esc(g.why)}</div><div class="t-sm">${esc(g.garment.v)} <span class="badge badge-warning">AI inference</span></div></div>
+        <button class="btn btn-sm btn-primary" data-testid="cr-sugg-accept-${g.id}" data-act="cr-sugg-accept" data-id="${g.id}">${ic("check")}Accept</button><button class="btn btn-sm btn-ghost" data-testid="cr-sugg-skip-${g.id}" data-act="cr-sugg-skip" data-id="${g.id}">Ignore</button></div>`).join("")}</section>`;
   }
   function sheetsBody(c) {
     return `<div class="cr-page" data-testid="cr-sheets">${commonCard(c)}${outfitSection(c, c.e.base)}${suggCard(c)}
-      <div class="cr-sec-title" data-testid="cr-outfits-h"><span class="eyebrow">Trang phục</span><span class="mono t-mute">${c.e.outfits.length}</span><span class="t-sm t-mute">Mỗi trang phục là một card riêng, có design sheet và prompt riêng</span></div>
+      <div class="cr-sec-title" data-testid="cr-outfits-h"><span class="eyebrow">Outfit</span><span class="mono t-mute">${c.e.outfits.length}</span><span class="t-sm t-mute">Each outfit is a separate card, with its own design sheet and prompt</span></div>
       ${c.e.outfits.map((o) => outfitSection(c, o)).join("")}
-      <button type="button" class="cr-add-o" data-testid="cr-outfit-add-btn" data-act="cr-outfit-add">${ic("plus")}<span>Thêm trang phục cho ${esc(c.ch.name)}</span></button></div>`;
+      <button type="button" class="cr-add-o" data-testid="cr-outfit-add-btn" data-act="cr-outfit-add">${ic("plus")}<span>Add an outfit for ${esc(c.ch.name)}</span></button></div>`;
   }
 
   function render(p) {
     const c = ctx(p);
     if (!c.ch) {
       return `<div class="nv" data-testid="cr-root">${U.bar(`<button class="btn btn-sm" data-testid="cr-back-btn" data-act="pj-back" data-id="${p.id}">${ic("arrow-left")}${esc(p.name)}</button><span class="nv-ttl">${ic("user")}<span class="t-ink">Character</span></span>`)}
-        <div class="nv-body">${U.empty("Project chưa có nhân vật", "Nhân vật được lấy từ Knowledgebase của novel và danh sách nhân vật trong Scripting. Bạn cũng có thể thêm thủ công.", `<div class="empty-act"><button class="btn btn-primary" data-testid="cr-empty-add-btn" data-act="cr-char-add">${ic("plus")}Thêm nhân vật</button>${p.novel ? `<button class="btn" data-testid="cr-empty-kb-btn" data-act="cr-open-kb">${ic("graph")}Mở Knowledgebase</button>` : ""}</div>`)}</div></div>`;
+        <div class="nv-body">${U.empty("The project has no characters yet", "Characters are taken from the novel’s Knowledgebase and the character list in Scripting. You can also add them manually.", `<div class="empty-act"><button class="btn btn-primary" data-testid="cr-empty-add-btn" data-act="cr-char-add">${ic("plus")}Add character</button>${p.novel ? `<button class="btn" data-testid="cr-empty-kb-btn" data-act="cr-open-kb">${ic("graph")}Open Knowledgebase</button>` : ""}</div>`)}</div></div>`;
     }
     return `<div class="nv" data-testid="cr-root">${bar(c)}
       <div class="nv-body">
-        <aside class="sc-rail" id="cr-rail-in" data-testid="cr-rail" aria-label="Danh sách nhân vật">${railInner(c)}</aside>
+        <aside class="sc-rail" id="cr-rail-in" data-testid="cr-rail" aria-label="Character list">${railInner(c)}</aside>
         <div class="sc-main" data-testid="cr-main">${sub(c)}
           <div class="sc-scroll cr-scroll" data-keep="cr-sheets" data-testid="cr-scroll">${sheetsBody(c)}</div></div>
       </div></div>`;
@@ -345,10 +345,10 @@
       const c = activeCtx();
       if (!c || !c.o.sheet) return;
       c.o.sheet.ok = !c.o.sheet.ok;
-      if (c.o.sheet.ok) log(c, `Duyệt sheet ${c.ch.name} · ${c.o.name}`);
+      if (c.o.sheet.ok) log(c, `Approve sheet ${c.ch.name} · ${c.o.name}`);
       sync(c);
       refresh();
-      if (c.o.sheet.ok) A.toast(`Đã duyệt sheet “${c.ch.name} · ${c.o.name}”.`);
+      if (c.o.sheet.ok) A.toast(`Approved sheet “${c.ch.name} · ${c.o.name}”.`);
     },
     "cr-sheet-del": (el, ev) => {
       ev?.stopPropagation();
@@ -357,7 +357,7 @@
       c.o.sheet = null;
       sync(c);
       refresh();
-      A.toast("Đã xóa design sheet.", "warning");
+      A.toast("Deleted the design sheet.", "warning");
     },
     "cr-confirm": (el) => {
       const c = activeCtx();
@@ -377,19 +377,19 @@
     "cr-copy": () => {
       const c = activeCtx();
       if (!c) return;
-      const fail = () => A.toast("Không sao chép được vào clipboard.", "warning");
+      const fail = () => A.toast("Could not copy to the clipboard.", "warning");
       if (!navigator.clipboard) { fail(); return; }
-      navigator.clipboard.writeText(c.o.prompt.text).then(() => A.toast("Đã sao chép prompt."), fail);
+      navigator.clipboard.writeText(c.o.prompt.text).then(() => A.toast("Prompt copied."), fail);
     },
     "cr-sugg-accept": (el) => {
       const c = activeCtx();
       const g = c && c.an.sugg.find((q) => q.id === el.dataset.id);
       if (!g) return;
       const o = CR.accept(c.p, g);
-      log(c, `Thêm trang phục “${o.name}” cho ${g.row.ch.name}`);
+      log(c, `Add outfit “${o.name}” for ${g.row.ch.name}`);
       sync(c);
       refresh();
-      A.toast(`Đã thêm trang phục “${o.name}” cho ${g.row.ch.name}.`);
+      A.toast(`Added outfit “${o.name}” for ${g.row.ch.name}.`);
     },
     "cr-sugg-skip": (el) => { const c = activeCtx(); if (!c) return; c.st.dismissed.push(el.dataset.id); refresh(); },
   });

@@ -29,11 +29,11 @@ window.DS = (function () {
         {
           id: "projects", title: "Projects", headless: true,
           items: [{
-            id: "projects", title: "Danh mục project", icon: "folder", cap: CAP["06"],
-            blurb: "Tạo project từ template, quản lý danh mục project trong workspace và mở không gian làm việc của từng project.",
+            id: "projects", title: "Project catalog", icon: "folder", cap: CAP["06"],
+            blurb: "Create projects from templates, manage the project catalog in the workspace and open each project’s workspace.",
             reqs: [
-              ["REQ-06-001", "Tạo mới project từ template và quản lý danh mục project trong workspace"],
-              ["REQ-06-002", "Không gian làm việc của project với các modules và công cụ cần thiết"],
+              ["REQ-06-001", "Create a new project from a template and manage the project catalog in the workspace"],
+              ["REQ-06-002", "The project workspace with the modules and tools it needs"],
             ],
           }],
         },
@@ -43,26 +43,26 @@ window.DS = (function () {
           items: [
             {
               id: "scripting", title: "Scripting", icon: "pen", cap: CAP["07"],
-              blurb: "Lên kịch bản cho dự án audiobook và filmseries.",
+              blurb: "Script audiobook and filmseries projects.",
               reqs: [
-                ["REQ-07-001", "SCRIPTING: lên kịch bản cho dự án audiobook"],
-                ["REQ-07-002", "SCRIPTING: lên kịch bản cho dự án filmseries"],
+                ["REQ-07-001", "SCRIPTING: script the audiobook project"],
+                ["REQ-07-002", "SCRIPTING: script the filmseries project"],
               ],
             },
             {
               id: "character", title: "Character", icon: "user", cap: CAP["07"],
-              blurb: "Tạo tham chiếu hình ảnh cho nhân vật để dùng nhất quán giữa các cảnh.",
-              reqs: [["REQ-07-003", "CHARACTER: tạo tham chiếu hình ảnh cho nhân vật"]],
+              blurb: "Create image references for characters to use consistently across scenes.",
+              reqs: [["REQ-07-003", "CHARACTER: create image references for characters"]],
             },
             {
               id: "world", title: "World", icon: "cube", cap: CAP["07"],
-              blurb: "Xây dựng thế giới ba chiều bằng mô hình clays.",
-              reqs: [["REQ-07-004", "WORLD: xây dựng thế giới ba chiều bằng mô hình clays"]],
+              blurb: "Build a three-dimensional world with clays models.",
+              reqs: [["REQ-07-004", "WORLD: build a three-dimensional world with clays models"]],
             },
             {
               id: "storyboard", title: "Storyboard", icon: "frames", cap: CAP["07"],
-              blurb: "Chia phân cảnh từ nội dung và vẽ storyboard với các frames.",
-              reqs: [["REQ-07-005", "STORYBOARD: chia phân cảnh từ nội dung và vẽ storyboard với các frames"]],
+              blurb: "Split scenes from the content and draw a storyboard with frames.",
+              reqs: [["REQ-07-005", "STORYBOARD: split scenes from the content and draw a storyboard with frames"]],
             },
           ],
         },
@@ -71,15 +71,15 @@ window.DS = (function () {
           items: [
             {
               id: "audiobook", title: "Audiobook", icon: "mic", cap: CAP["08"],
-              blurb: "Tạo audio dựa trên kịch bản đã chốt và kiểm tra kết quả.",
-              reqs: [["REQ-08-001", "AUDIOBOOK: tạo audio dựa trên kịch bản đã chốt và kiểm tra kết quả"]],
+              blurb: "Generate audio from the locked script and check the results.",
+              reqs: [["REQ-08-001", "AUDIOBOOK: generate audio from the locked script and check the results"]],
             },
             {
               id: "canvas", title: "Canvas", icon: "nodes", cap: CAP["08"],
-              blurb: "Thiết kế workflow tự do theo cơ chế canvas để sản xuất tài nguyên chất lượng cao.",
+              blurb: "Design free-form workflows with a canvas mechanism to produce high-quality resources.",
               reqs: [
-                ["REQ-08-002", "CANVAS: Dựng canvas workflow từ các tài nguyên chuẩn bị ở trước đó"],
-                ["REQ-08-003", "CANVAS: Khởi chạy canvas workflow để tạo ra tài nguyên chất lượng cao"],
+                ["REQ-08-002", "CANVAS: Build the canvas workflow from the resources prepared earlier"],
+                ["REQ-08-003", "CANVAS: Run the canvas workflow to produce high-quality resources"],
               ],
             },
           ],
@@ -88,12 +88,12 @@ window.DS = (function () {
           id: "post", title: "Post-Production", hidden: true,
           items: [{
             id: "video", title: "Video editor", icon: "film", cap: CAP["09"],
-            blurb: "Dựng video hậu kỳ từ các tài nguyên của project, áp dụng hiệu ứng và kết xuất thành phẩm.",
+            blurb: "Assemble post-production video from the project’s resources, apply effects and render the final product.",
             reqs: [
-              ["REQ-09-001", "Tổng hợp các tài nguyên trong dự án lên trình chỉnh sửa video hậu kỳ"],
-              ["REQ-09-002", "Áp dụng một số hiệu ứng hình ảnh lên video hậu kỳ"],
-              ["REQ-09-003", "Áp dụng một số hiệu ứng âm thanh lên video hậu kỳ"],
-              ["REQ-09-004", "Kết xuất kết quả cuối cùng của giai đoạn hậu kỳ"],
+              ["REQ-09-001", "Gather the project’s resources into the post-production video editor"],
+              ["REQ-09-002", "Apply some visual effects to the post-production video"],
+              ["REQ-09-003", "Apply some sound effects to the post-production video"],
+              ["REQ-09-004", "Render the final result of the post-production stage"],
             ],
           }],
         },
@@ -108,12 +108,12 @@ window.DS = (function () {
           id: "novels", title: "Novels", headless: true,
           items: [{
             id: "novels", title: "Novel management", icon: "frames", cap: CAP["02"],
-            blurb: "Danh sách novel của workspace. Mỗi novel có ba màn hình: Chapters (đọc, chỉnh sửa), Translation và Knowledgebase.",
+            blurb: "The workspace’s novel list. Each novel has three screens: Chapters (read, edit), Translation and Knowledgebase.",
             reqs: [
-              ["REQ-02-001", "Tạo mới, hoặc nhập novel từ một file package theo cấu trúc của phần mềm"],
-              ["REQ-02-002", "Trình đọc và chỉnh sửa nội dung của novel đã có trong phần mềm"],
-              ["REQ-03-001", "Cấu hình hướng dẫn dịch và từ điển dịch thuật để AI sử dụng"],
-              ["REQ-04-001", "Phân tích nội dung novel theo ontology được định nghĩa"],
+              ["REQ-02-001", "Create a new novel, or import one from a package file following the software’s structure"],
+              ["REQ-02-002", "Reader and editor for the content of novels already in the software"],
+              ["REQ-03-001", "Configure the translation guidelines and translation dictionary used by the AI"],
+              ["REQ-04-001", "Analyze the novel’s content against the defined ontology"],
             ],
           }],
         },
@@ -126,44 +126,44 @@ window.DS = (function () {
       icon: "library",
       sections: [
         {
-          id: "assets", title: "Thư viện", headless: true,
+          id: "assets", title: "Library", headless: true,
           items: [
             {
               id: "images", title: "Images", icon: "image", cap: CAP["05"],
-              blurb: "Upload và quản lý ảnh trong thư viện tài nguyên chung của workspace.",
-              reqs: [["REQ-05-001", "Upload IMAGES lên thư viện tài nguyên chung của workspace"]],
+              blurb: "Upload and manage images in the workspace’s shared resource library.",
+              reqs: [["REQ-05-001", "Upload IMAGES to the workspace’s shared resource library"]],
             },
             {
               id: "sounds", title: "Sounds", icon: "music", cap: CAP["05"],
-              blurb: "Upload và quản lý âm thanh trong thư viện tài nguyên chung của workspace.",
-              reqs: [["REQ-05-002", "Upload SOUNDS lên thư viện tài nguyên chung của workspace"]],
+              blurb: "Upload and manage sounds in the workspace’s shared resource library.",
+              reqs: [["REQ-05-002", "Upload SOUNDS to the workspace’s shared resource library"]],
             },
             {
               id: "videos", title: "Videos", icon: "film", cap: CAP["05"],
-              blurb: "Upload và quản lý video trong thư viện tài nguyên chung của workspace.",
-              reqs: [["REQ-05-003", "Upload VIDEOS lên thư viện tài nguyên chung của workspace"]],
+              blurb: "Upload and manage videos in the workspace’s shared resource library.",
+              reqs: [["REQ-05-003", "Upload VIDEOS to the workspace’s shared resource library"]],
             },
             {
               id: "prompts", title: "Prompts", icon: "prompt", cap: CAP["05"],
-              blurb: "Upload và quản lý prompt dùng chung trong workspace.",
-              reqs: [["REQ-05-004", "Upload PROMPTS lên thư viện tài nguyên chung của workspace"]],
+              blurb: "Upload and manage prompts shared in the workspace.",
+              reqs: [["REQ-05-004", "Upload PROMPTS to the workspace’s shared resource library"]],
             },
             {
               id: "voices", title: "Voices", icon: "voice", cap: CAP["05"],
-              blurb: "Clone voice từ audio file hoặc tự ghi âm, nghe thử với default voice hoặc cloned voice.",
+              blurb: "Clone a voice from an audio file or record yourself, and preview with a default voice or a cloned voice.",
               reqs: [
-                ["REQ-05-006", "Clone voice từ một audio file hoặc tự ghi âm"],
-                ["REQ-05-007", "Preview voice với default voice hoặc cloned voice"],
+                ["REQ-05-006", "Clone a voice from an audio file or by recording"],
+                ["REQ-05-007", "Preview a voice with a default voice or a cloned voice"],
               ],
             },
           ],
         },
         {
-          id: "organize", title: "Phân loại",
+          id: "organize", title: "Classification",
           items: [{
             id: "collections", title: "Collections & tags", icon: "tag", cap: CAP["05"],
-            blurb: "Hệ thống phân loại và quản lý tài nguyên bằng collections và tags.",
-            reqs: [["REQ-05-005", "Hệ thống phân loại và quản lý tài nguyên gồm collections và tags"]],
+            blurb: "Classify and manage resources with collections and tags.",
+            reqs: [["REQ-05-005", "Classification and resource management with collections and tags"]],
           }],
         },
         { id: "libfilters", title: "Filters", items: [] },
@@ -179,13 +179,13 @@ window.DS = (function () {
           items: [
             {
               id: "channels", title: "Channels", icon: "globe", cap: CAP["10"],
-              blurb: "Kết nối và quản lý các kênh phân phối nội dung.",
-              reqs: [["REQ-10-001", "Kết nối và quản lý các kênh phân phối đã kết nối thành công"]],
+              blurb: "Connect and manage content distribution channels.",
+              reqs: [["REQ-10-001", "Connect and manage the distribution channels that are connected successfully"]],
             },
             {
               id: "packages", title: "Packages", icon: "package", cap: CAP["10"],
-              blurb: "Chuẩn bị package cho một project để đăng tải lên các kênh phân phối.",
-              reqs: [["REQ-10-002", "Chuẩn bị package cho một project để có thể đăng tải lên các kênh phân phối"]],
+              blurb: "Prepare a package for a project to publish to distribution channels.",
+              reqs: [["REQ-10-002", "Prepare a package for a project so it can be published to distribution channels"]],
             },
           ],
         },
@@ -196,34 +196,34 @@ window.DS = (function () {
   /** Pseudo-items (not in the explorer) — Assistant panel and Settings dialog. */
   const ASSISTANT = {
     cap: CAP["11"],
-    blurb: "Trợ lý thông minh hỗ trợ bạn trong mọi công việc.",
+    blurb: "A smart assistant that helps you with every task.",
     reqs: [
-      ["REQ-11-001", "Yêu cầu Assistant rà soát kết quả theo yêu cầu mặc định hoặc yêu cầu cụ thể"],
-      ["REQ-11-002", "Khám phá thêm tri thức với Assistant và ra lệnh chỉnh sửa, thực thi"],
+      ["REQ-11-001", "Ask the Assistant to review results with the default request or a specific request"],
+      ["REQ-11-002", "Explore more knowledge with the Assistant and give commands to edit and execute"],
     ],
   };
 
   const SETTINGS = [
-    { id: "general", title: "General", icon: "settings", reqs: [["REQ-12-001", "Dialog chung để cài đặt và cấu hình các chức năng của phần mềm - cơ bản"]] },
-    { id: "llm", title: "LLM providers", icon: "nodes", reqs: [["REQ-12-002", "Cấu hình sử dụng các LLM providers: CLI đã cài trên máy hoặc dịch vụ cloud"]] },
-    { id: "backend", title: "Python backend", icon: "server", reqs: [["REQ-12-004", "Tải xuống và cài đặt mô hình TTS chạy trên python local backend"]] },
-    { id: "analysis", title: "Analysis providers", icon: "spark", reqs: [["REQ-12-006", "Cấu hình provider dùng cho dịch và phân tích tri thức"]] },
-    { id: "tts", title: "Local TTS models", icon: "cpu", reqs: [["REQ-12-004", "Tải xuống và cài đặt mô hình TTS chạy trên python local backend"]] },
-    { id: "speech", title: "Speech providers", icon: "cloud", reqs: [["REQ-12-005", "Cấu hình sử dụng các speech providers từ cloud services"]] },
+    { id: "general", title: "General", icon: "settings", reqs: [["REQ-12-001", "A shared dialog to install and configure the software’s features - basics"]] },
+    { id: "llm", title: "LLM providers", icon: "nodes", reqs: [["REQ-12-002", "Configure the LLM providers to use: a CLI installed on this machine or a cloud service"]] },
+    { id: "backend", title: "Python backend", icon: "server", reqs: [["REQ-12-004", "Download and install TTS models that run on the Python local backend"]] },
+    { id: "analysis", title: "Analysis providers", icon: "spark", reqs: [["REQ-12-006", "Configure the provider used for translation and knowledge analysis"]] },
+    { id: "tts", title: "Local TTS models", icon: "cpu", reqs: [["REQ-12-004", "Download and install TTS models that run on the Python local backend"]] },
+    { id: "speech", title: "Speech providers", icon: "cloud", reqs: [["REQ-12-005", "Configure the speech providers from cloud services"]] },
   ];
 
   /** Mock local TTS state used by the status bar and settings (not part of the loading splash). */
   const STARTUP_STEPS = [
-    { id: "folder", label: "Kiểm tra thư mục workspace", detail: "Quyền đọc / ghi", result: "ok" },
-    { id: "config", label: "Đọc cấu hình workspace", detail: "workspace.json", result: "ok" },
-    { id: "index", label: "Nạp danh mục project, novel và thư viện", detail: "Quét thư mục", result: "ok" },
-    { id: "cli", label: "Phát hiện CLI providers đã cài", detail: "Tìm trên máy này", result: "ok" },
-    { id: "executor", label: "Khởi động pipeline executor", detail: "Concurrency mặc định", result: "ok" },
-    { id: "tts", label: "Kiểm tra local TTS backend", detail: "FastAPI backend & mô hình", result: "warn", note: "Chưa cài mô hình TTS. Có thể cài sau trong Settings." },
+    { id: "folder", label: "Check the workspace folder", detail: "Read / write permission", result: "ok" },
+    { id: "config", label: "Read the workspace configuration", detail: "workspace.json", result: "ok" },
+    { id: "index", label: "Load the catalog of projects, novels and library", detail: "Scan folders", result: "ok" },
+    { id: "cli", label: "Detect installed CLI providers", detail: "Look on this machine", result: "ok" },
+    { id: "executor", label: "Start the pipeline executor", detail: "Default concurrency", result: "ok" },
+    { id: "tts", label: "Check the local TTS backend", detail: "FastAPI backend & models", result: "warn", note: "No TTS model installed. You can install one later in Settings." },
   ];
 
   const seedWorkspaces = [
-    { path: "D:\\DreamyWorkspace", name: "DreamyWorkspace", lastOpened: "2026-11-09 21:12", projects: 6, size: "48.2 GB" },
+    { path: "D:\\Dreamy Studio", name: "Dreamy Studio", lastOpened: "2026-11-09 21:12", projects: 6, size: "48.2 GB" },
     { path: "E:\\Archive\\Dreamy-2025", name: "Dreamy-2025", lastOpened: "2026-09-18 21:40", projects: 14, size: "212.7 GB" },
     { path: "C:\\Program Files\\Locked", name: "Locked", lastOpened: "2026-08-21 09:30", projects: 0, size: "1.2 MB", fail: { step: "workspace", code: "folder_not_writable", detail: "Access is denied. (os error 5)" } },
     { path: "F:\\USB\\dreamy-test", name: "dreamy-test", lastOpened: "2026-07-02 10:03", projects: 1, size: "—", status: "not_found", reason: "missing" },
@@ -231,5 +231,5 @@ window.DS = (function () {
     { path: "E:\\Private\\Dreamy", name: "Dreamy", lastOpened: "2026-05-27 14:20", projects: 2, size: "—", status: "not_found", reason: "no_access" },
   ];
 
-  return { version: "0.1.0-dev", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, seedWorkspaces };
+  return { version: "0.1.0", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, seedWorkspaces };
 })();

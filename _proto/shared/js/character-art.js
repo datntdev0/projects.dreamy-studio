@@ -75,7 +75,7 @@
     const upper = `<svg x="480" y="2" width="160" height="190" viewBox="26 8 68 80" preserveAspectRatio="xMidYMid meet">${inner(e, o, "tq", seed + 3)}</svg>`;
     const lines = [160, 320, 480].map((x) => `<path d="M${x} 10 V196" class="cr-sheet-ln"/>`).join("");
     const text = labels.map((t, i) => `<text x="${i * 160 + 80}" y="207" text-anchor="middle" class="cr-sheet-lb">${t}</text>`).join("");
-    return `<svg class="cr-sheetsvg" viewBox="0 0 640 212" preserveAspectRatio="xMidYMid meet" data-testid="cr-sheet-art" role="img" aria-label="Design sheet gồm 4 góc nhìn">${lines}${full}${upper}${text}</svg>`;
+    return `<svg class="cr-sheetsvg" viewBox="0 0 640 212" preserveAspectRatio="xMidYMid meet" data-testid="cr-sheet-art" role="img" aria-label="Design sheet with 4 views">${lines}${full}${upper}${text}</svg>`;
   }
 
   CR.sheetArt = (e, o, seed = 0) => sheet(e, o, seed);
@@ -83,7 +83,7 @@
     if (slot && slot.src === "upload") return `<img class="cr-img" data-testid="cr-img" src="${esc(slot.url)}" alt="${esc(slot.name || "")}">`;
     if (slot && slot.src === "lib") {
       const a = LB.state.assets.find((x) => x.id === slot.libId);
-      return `<div class="cr-img is-lib" data-testid="cr-img" style="background:${esc(a ? a.bg : "var(--canvas-soft)")}"><span class="cr-lib-n">${esc(a ? a.name : "Ảnh thư viện")}</span></div>`;
+      return `<div class="cr-img is-lib" data-testid="cr-img" style="background:${esc(a ? a.bg : "var(--canvas-soft)")}"><span class="cr-lib-n">${esc(a ? a.name : "Library images")}</span></div>`;
     }
     return sheet(e, o, slot ? slot.seed % 7 : 0);
   };

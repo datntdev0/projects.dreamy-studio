@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -118,34 +118,38 @@
   <!-- Main layout -->
   <div id="app" class="app">
     <header class="titlebar">
-      <img class="tb-logo" src="shared/assets/dreamy-studio-mark.svg" alt="">
-      <span class="tb-name">Dreamy Studio</span>
-      <nav class="tb-menu" aria-label="Menu">
-        <button class="tb-mi" data-act="app-menu" data-v="file">File</button>
-        <button class="tb-mi" data-act="app-menu" data-v="view">View</button>
-        <button class="tb-mi" data-act="app-menu" data-v="help">Help</button>
-      </nav>
-      <span class="spacer"></span>
-      <button class="tb-ws" id="tb-ws" data-act="switch-workspace" data-tip="Đổi workspace" aria-label="Đổi workspace"></button>
-      <span class="spacer"></span>
-      <span class="tb-actions">
-        <button class="btn btn-icon btn-sm" id="tg-explorer" data-act="toggle-explorer" data-tip="Explorer (Ctrl B)" aria-label="Toggle explorer"><svg class="ic"><use href="#i-panel-left"/></svg></button>
-        <button class="btn btn-icon btn-sm" id="tg-bottom" data-act="toggle-bottom" data-tip="Pipelines (Ctrl J)" aria-label="Toggle bottom panel"><svg class="ic"><use href="#i-panel-bottom"/></svg></button>
-        <button class="btn btn-icon btn-sm" id="tg-inspector" data-act="toggle-inspector" data-tip="Inspector (Ctrl Alt B)" aria-label="Toggle inspector"><svg class="ic"><use href="#i-panel-right"/></svg></button>
-      </span>
+      <div class="tb-left">
+        <img class="tb-logo" src="shared/assets/dreamy-studio-mark.svg" alt="">
+        <span class="tb-name">Dreamy Studio</span>
+        <nav class="tb-menu" aria-label="Menu">
+          <button class="tb-mi" data-act="app-menu" data-v="file">File</button>
+          <button class="tb-mi" data-act="app-menu" data-v="view">View</button>
+          <button class="tb-mi" data-act="app-menu" data-v="help">Help</button>
+        </nav>
+      </div>
+      <div class="tb-center">
+        <button class="tb-ws" id="tb-ws" data-act="switch-workspace" data-tip="Switch workspace" aria-label="Switch workspace"></button>
+      </div>
+      <div class="tb-right">
+        <span class="tb-actions">
+          <button class="btn btn-icon btn-sm" id="tg-explorer" data-act="toggle-explorer" data-tip="Explorer (Ctrl B)" aria-label="Explorer"><svg class="ic" aria-hidden="true"><use href="#i-panel-left"/></svg></button>
+          <button class="btn btn-icon btn-sm" id="tg-bottom" data-act="toggle-bottom" data-tip="Pipelines (Ctrl J)" aria-label="Pipelines"><svg class="ic" aria-hidden="true"><use href="#i-panel-bottom"/></svg></button>
+          <button class="btn btn-icon btn-sm" id="tg-inspector" data-act="toggle-inspector" data-tip="Inspector (Ctrl Alt B)" aria-label="Inspector"><svg class="ic" aria-hidden="true"><use href="#i-panel-right"/></svg></button>
+        </span>
+      </div>
     </header>
 
     <div class="shell" id="shell">
       <nav class="rail" id="rail" aria-label="Activity bar"></nav>
       <aside class="explorer" id="explorer" aria-label="Explorer"></aside>
-      <div class="resizer" data-resize="explorer" role="separator" aria-orientation="vertical" aria-label="Điều chỉnh kích thước bảng Explorer" aria-valuenow="264" aria-valuemin="200" aria-valuemax="420" tabindex="0"></div>
+      <div class="resizer" data-resize="explorer" role="separator" aria-orientation="vertical" aria-label="Resize Explorer panel" aria-valuenow="264" aria-valuemin="200" aria-valuemax="420" tabindex="0"></div>
       <main class="edcol" id="edcol">
         <div class="tabbar" id="tabbar" role="tablist"></div>
         <div class="crumbs" id="crumbs"></div>
         <section class="editor" id="editor"></section>
         <section class="bottom" id="bottom" aria-label="Bottom panel" hidden></section>
       </main>
-      <div class="resizer" data-resize="inspector" role="separator" aria-orientation="vertical" aria-label="Điều chỉnh kích thước bảng Inspector" aria-valuenow="320" aria-valuemin="240" aria-valuemax="480" tabindex="0"></div>
+      <div class="resizer" data-resize="inspector" role="separator" aria-orientation="vertical" aria-label="Resize Inspector panel" aria-valuenow="320" aria-valuemin="240" aria-valuemax="480" tabindex="0"></div>
       <aside class="inspector" id="inspector" aria-label="Inspector"></aside>
     </div>
 
@@ -172,8 +176,8 @@
           <div class="empty-inner">
             ${app.ic("book", "cs-ico")}
             <h1 class="t-display-sm">Novels</h1>
-            <p class="t-sm t-mute">Quản lý novel, dịch thuật và knowledgebase được mở trong một trang prototype riêng.</p>
-            <div class="empty-act"><a class="btn btn-primary" href="2.novel/2.novel.html">Mở Novels</a></div>
+            <p class="t-sm t-mute">Novel management, translation and knowledgebase open in a separate prototype page.</p>
+            <div class="empty-act"><a class="btn btn-primary" href="2.novel/2.novel.html">Open Novels</a></div>
           </div>
         </div>`;
       ["novels", "novel", "translation", "knowledge"].forEach((id) => {
@@ -195,8 +199,8 @@
           <div class="empty-inner">
             ${app.ic("library", "cs-ico")}
             <h1 class="t-display-sm">Library</h1>
-            <p class="t-sm t-mute">Thư viện tài nguyên được mở trong một trang prototype riêng.</p>
-            <div class="empty-act"><a class="btn btn-primary" href="1.library/1.library.html">Mở Library</a></div>
+            <p class="t-sm t-mute">The resource library opens in a separate prototype page.</p>
+            <div class="empty-act"><a class="btn btn-primary" href="1.library/1.library.html">Open Library</a></div>
           </div>
         </div>`;
       ["images", "sounds", "videos", "prompts", "voices", "collections", "collection"].forEach((id) => {

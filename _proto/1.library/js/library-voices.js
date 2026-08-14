@@ -6,23 +6,23 @@
   const { esc, ic } = A;
   const CAP = window.DS.CAP["05"];
   const st = () => LB.state;
-  const LANGS = [["VI", "Tiếng Việt"], ["EN", "Tiếng Anh"], ["ZH", "Tiếng Trung"], ["JA", "Tiếng Nhật"], ["KO", "Tiếng Hàn"]];
+  const LANGS = [["VI", "Vietnamese"], ["EN", "English"], ["ZH", "Chinese"], ["JA", "Japanese"], ["KO", "Korean"]];
   const ENG = {
-    local: { label: "Local TTS", short: "LOCAL", note: "Chạy trên máy này, không gửi dữ liệu ra ngoài." },
-    cloud: { label: "Cloud speech", short: "CLOUD", note: "Gửi dữ liệu tới provider." },
+    local: { label: "Local TTS", short: "LOCAL", note: "Runs on this machine, no data leaves it." },
+    cloud: { label: "Cloud speech", short: "CLOUD", note: "Sends data to the provider." },
   };
   const engLabel = (v) => (v.engine === "cloud" ? LB.speech.name(v.provider) : ENG.local.label);
   const engShort = (v) => (v.engine === "cloud" ? String(LB.speech.name(v.provider)).split(/[ .]/)[0].toUpperCase() : "LOCAL");
-  const engNote = (v) => (v.engine === "cloud" ? `Gửi dữ liệu tới ${LB.speech.name(v.provider)}.` : ENG.local.note);
-  const sendNote = (v, chars) => (LB.speech.billing(v.provider) === "credit" ? `Đoạn văn trên (${chars} ký tự) sẽ được gửi tới ${LB.speech.name(v.provider)} · tính theo credit của tài khoản` : `Đoạn văn trên (${chars} ký tự) sẽ được gửi tới ${LB.speech.name(v.provider)} · ${money(chars * 0.000016)}`);
+  const engNote = (v) => (v.engine === "cloud" ? `Sends data to ${LB.speech.name(v.provider)}.` : ENG.local.note);
+  const sendNote = (v, chars) => (LB.speech.billing(v.provider) === "credit" ? `The text above (${chars} characters) will be sent to ${LB.speech.name(v.provider)} · billed to the account’s credits` : `The text above (${chars} characters) will be sent to ${LB.speech.name(v.provider)} · ${money(chars * 0.000016)}`);
   const MIN_SEC = 10;
   const MAX_SEC = 300;
-  const SCRIPT = ["Đêm xuống Harrowmere, và ngọn đèn cuối cùng trên bến tàu vẫn còn cháy.", "Người giữ đèn không thắp lửa cho tàu thuyền, bà nói, mà cho những thứ còn nằm dưới nước.", "Tôi đọc chậm, rõ từng chữ, nghỉ một nhịp sau mỗi dấu chấm."];
+  const SCRIPT = ["Night falls over Harrowmere, and the last lamp on the pier is still burning.", "The lamp keeper does not light the fire for the ships, she said, but for the things still lying under the water.", "I read slowly, every word clear, pausing a beat after each full stop."];
 
   const voices = () => st().voices;
   const voice = (id) => voices().find((v) => v.id === id);
   const usable = (v) => v && v.status === "ready" && (v.engine === "cloud" ? LB.speech.ready(v.provider) : LB.tts.localOk(v));
-  const whyNot = (v) => (v.status === "failed" ? "Clone lỗi" : v.status === "processing" ? "Đang xử lý" : v.engine === "local" && !LB.tts.localOk(v) ? (LB.tts.backendOk() ? `Cần cài mô hình ${LB.tts.familyName(v.family)}` : "Python backend đang tắt") : v.engine === "cloud" && !LB.speech.ready(v.provider) ? `Cần kết nối ${LB.speech.name(v.provider)}` : "");
+  const whyNot = (v) => (v.status === "failed" ? "Clone failed" : v.status === "processing" ? "Processing" : v.engine === "local" && !LB.tts.localOk(v) ? (LB.tts.backendOk() ? `Requires installing the ${LB.tts.familyName(v.family)} model` : "Python backend is off") : v.engine === "cloud" && !LB.speech.ready(v.provider) ? `Requires connecting ${LB.speech.name(v.provider)}` : "");
   const initial = (v) => String(v.name).trim().charAt(0).toUpperCase() || "?";
   const avatar = (v, cls = "") => `<span class="vc-av tone-${LB.hash(v.name) % 4} ${cls}" aria-hidden="true">${esc(initial(v))}</span>`;
   const sampleText = (lang) => (lang === "VI" ? LB.sample.vi : LB.sample.en);
@@ -49,9 +49,9 @@
       const p = cloneJob(v);
       return `<div class="vc-prog"><div class="progress" data-prog="${p?.id || ""}"><i style="width:${p?.progress || 0}%"></i></div><span class="mono t-mute" data-prog-text="${p?.id || ""}">${p?.progress || 0}%</span></div>`;
     }
-    if (v.status === "failed") return `<span class="badge badge-danger">LỖI</span>`;
-    if (!usable(v)) return `<span class="badge badge-warning" data-tip="${esc(whyNot(v))}">${v.engine === "cloud" ? "CHƯA KẾT NỐI" : LB.tts.backendOk() ? "CẦN MÔ HÌNH" : "BACKEND TẮT"}</span>`;
-    return `<span class="dot dot-success"></span><span class="t-sm"> Sẵn sàng</span>`;
+    if (v.status === "failed") return `<span class="badge badge-danger">ERROR</span>`;
+    if (!usable(v)) return `<span class="badge badge-warning" data-tip="${esc(whyNot(v))}">${v.engine === "cloud" ? "NOT CONNECTED" : LB.tts.backendOk() ? "MODEL REQUIRED" : "BACKEND OFF"}</span>`;
+    return `<span class="dot dot-success"></span><span class="t-sm"> Ready</span>`;
   }
 
   function engineStrip() {
@@ -59,10 +59,10 @@
     const up = LB.tts.backendOk();
     const c = LB.speech.count();
     return `<div class="vc-strip">
-      <span class="vc-eng ${n ? "is-ok" : "is-warn"}"><span class="dot ${n ? "dot-success" : "dot-warning"}"></span><b>Local TTS</b><span class="t-mute">${!up ? "Backend đang tắt" : n ? `${n} mô hình sẵn sàng` : "Chưa cài mô hình"}</span></span>
-      <span class="vc-eng ${c ? "is-ok" : "is-warn"}"><span class="dot ${c ? "dot-success" : "dot-warning"}"></span><b>Cloud speech</b><span class="t-mute">${c ? `${c} provider đã kết nối` : "Chưa kết nối provider"}</span></span>
+      <span class="vc-eng ${n ? "is-ok" : "is-warn"}"><span class="dot ${n ? "dot-success" : "dot-warning"}"></span><b>Local TTS</b><span class="t-mute">${!up ? "Backend is off" : n ? `${n} models ready` : "No model installed"}</span></span>
+      <span class="vc-eng ${c ? "is-ok" : "is-warn"}"><span class="dot ${c ? "dot-success" : "dot-warning"}"></span><b>Cloud speech</b><span class="t-mute">${c ? `${c} providers connected` : "No provider connected"}</span></span>
       <span class="spacer"></span>
-      <button class="btn btn-sm" data-act="settings" data-v="tts">${ic("settings")}${n ? "Local TTS models" : "Cài mô hình TTS"}</button>
+      <button class="btn btn-sm" data-act="settings" data-v="tts">${ic("settings")}${n ? "Local TTS models" : "Install TTS model"}</button>
       <button class="btn btn-sm" data-act="settings" data-v="speech">${ic("cloud")}Speech providers</button></div>`;
   }
 
@@ -73,24 +73,24 @@
     const eng = v ? { note: engNote(v) } : null;
     const g = u.gen;
     const chars = u.text.length;
-    const note = !v ? "Chọn một giọng trong danh sách ở trên để nghe thử." : !ok ? `${esc(whyNot(v))}.${v.status === "ready" ? ` <a data-act="settings" data-v="${v.engine === "local" ? (LB.tts.backendOk() ? "tts" : "backend") : "speech"}" tabindex="0">Mở Settings → ${v.engine === "local" ? (LB.tts.backendOk() ? "Local TTS models" : "Python backend") : "Speech providers"}</a>` : ""}` : v.engine === "cloud" ? sendNote(v, chars) : eng.note;
+    const note = !v ? "Choose a voice in the list above to preview it." : !ok ? `${esc(whyNot(v))}.${v.status === "ready" ? ` <a data-act="settings" data-v="${v.engine === "local" ? (LB.tts.backendOk() ? "tts" : "backend") : "speech"}" tabindex="0">Open Settings → ${v.engine === "local" ? (LB.tts.backendOk() ? "Local TTS models" : "Python backend") : "Speech providers"}</a>` : ""}` : v.engine === "cloud" ? sendNote(v, chars) : eng.note;
     const result = g?.state === "gen"
-      ? `<div class="vc-result is-gen"><span class="dot dot-running"></span><span class="t-sm">Đang tạo giọng đọc…</span></div>`
+      ? `<div class="vc-result is-gen"><span class="dot dot-running"></span><span class="t-sm">Generating voice…</span></div>`
       : g?.state === "ready"
-        ? `<div class="vc-result">${`<button type="button" class="lb-pbtn is-lg" data-act="lb-play" data-lb-play="pv" data-id="pv" aria-label="Phát">${ic("play")}</button>`}
+        ? `<div class="vc-result">${`<button type="button" class="lb-pbtn is-lg" data-act="lb-play" data-lb-play="pv" data-id="pv" aria-label="Play">${ic("play")}</button>`}
             ${API.scroller({ id: "pv", seed: g.seed, meta: { dur: g.dur } }, 5)}<span class="mono lb-dur" data-lb-time="pv" data-d="${g.dur}">${LB.dur(g.dur)}</span></div>
-            <div class="t-sm t-mute">${esc(voice(g.voice)?.name || "")} · tốc độ ${g.speed}× · ${g.chars} ký tự</div>`
-        : `<div class="vc-result is-idle t-sm t-mute">Bấm “Nghe thử” để tạo một đoạn nghe thử với giọng đang chọn.</div>`;
+            <div class="t-sm t-mute">${esc(voice(g.voice)?.name || "")} · speed ${g.speed}× · ${g.chars} characters</div>`
+        : `<div class="vc-result is-idle t-sm t-mute">Click “Preview” to generate a short preview with the selected voice.</div>`;
     return `<div class="vc-dock">
       <div class="vc-dock-l">
         <div class="vc-dock-row">
-          <div class="vc-cur">${v ? `${avatar(v)}<div class="vc-cur-b"><div class="t-ink">${esc(v.name)}</div><div class="row-badges"><span class="badge">${esc(v.lang)}</span><span class="badge ${v.kind === "cloned" ? "badge-primary" : ""}">${v.kind === "cloned" ? "ĐÃ CLONE" : "MẶC ĐỊNH"}</span><span class="badge">${ENG[v.engine].short}</span></div></div>` : `<span class="t-sm t-mute">Chưa chọn giọng</span>`}</div>
-          <div class="field"><label>Tốc độ</label>${API.seg("vc-speed", [[0.9, "0.9×"], [1, "1×"], [1.1, "1.1×"], [1.25, "1.25×"]], u.speed)}</div>
-          <button class="btn btn-primary vc-go" data-act="vc-gen" ${ok && g?.state !== "gen" ? "" : "disabled"}>${ic("play")}Nghe thử</button></div>
-        <div class="field"><label for="vc-text">Đoạn văn mẫu</label><textarea id="vc-text" class="textarea" rows="2" data-on="vc-text">${esc(u.text)}</textarea>
+          <div class="vc-cur">${v ? `${avatar(v)}<div class="vc-cur-b"><div class="t-ink">${esc(v.name)}</div><div class="row-badges"><span class="badge">${esc(v.lang)}</span><span class="badge ${v.kind === "cloned" ? "badge-primary" : ""}">${v.kind === "cloned" ? "CLONED" : "DEFAULT"}</span><span class="badge">${ENG[v.engine].short}</span></div></div>` : `<span class="t-sm t-mute">No voice selected</span>`}</div>
+          <div class="field"><label>Speed</label>${API.seg("vc-speed", [[0.9, "0.9×"], [1, "1×"], [1.1, "1.1×"], [1.25, "1.25×"]], u.speed)}</div>
+          <button class="btn btn-primary vc-go" data-act="vc-gen" ${ok && g?.state !== "gen" ? "" : "disabled"}>${ic("play")}Preview</button></div>
+        <div class="field"><label for="vc-text">Sample text</label><textarea id="vc-text" class="textarea" rows="2" data-on="vc-text">${esc(u.text)}</textarea>
           <span class="field-hint ${ok || !v ? "" : "vc-warn"}" id="vc-note">${note}</span></div>
       </div>
-      <div class="vc-dock-r"><span class="eyebrow">Kết quả nghe thử</span>${result}</div></div>`;
+      <div class="vc-dock-r"><span class="eyebrow">Preview result</span>${result}</div></div>`;
   }
 
   function voicesView() {
@@ -99,16 +99,16 @@
     const rows = list.map((v) => `<tr tabindex="0" data-act="vc-sel" data-id="${v.id}" class="${u.pick === v.id ? "is-selected" : ""} ${v.status === "failed" ? "is-muted" : ""}">
         <td><div class="nm-title">${avatar(v)}<div><div class="t-ink">${esc(v.name)}</div><div class="t-sm t-mute">${esc(v.style)}</div></div></div></td>
         <td><span class="badge">${esc(v.lang)}</span></td><td>${esc(v.gender)}</td>
-        <td><span class="badge ${v.kind === "cloned" ? "badge-primary" : ""}">${v.kind === "cloned" ? "ĐÃ CLONE" : "MẶC ĐỊNH"}</span></td>
+        <td><span class="badge ${v.kind === "cloned" ? "badge-primary" : ""}">${v.kind === "cloned" ? "CLONED" : "DEFAULT"}</span></td>
         <td class="mono t-mute">${esc(engShort(v))}</td><td class="vc-st">${statusCell(v)}</td>
-        <td class="row-actions">${v.status === "ready" ? `<button class="btn btn-sm" data-act="vc-try" data-id="${v.id}" ${usable(v) ? "" : "disabled"} data-tip="${usable(v) ? "Nghe thử giọng này" : esc(whyNot(v))}">${ic("play")}Nghe thử</button>` : ""}</td></tr>`).join("");
+        <td class="row-actions">${v.status === "ready" ? `<button class="btn btn-sm" data-act="vc-try" data-id="${v.id}" ${usable(v) ? "" : "disabled"} data-tip="${usable(v) ? "Preview this voice" : esc(whyNot(v))}">${ic("play")}Preview</button>` : ""}</td></tr>`).join("");
     return `<div class="nv lb">
       ${API.bar(
-        `<label class="search"><span class="sr-only">Tìm giọng</span><input id="vc-q" class="input" type="search" value="${esc(u.q || "")}" placeholder="Tìm theo tên, ngôn ngữ…" data-on="vc-q"></label><span class="t-sm t-mute">${list.length} giọng</span>`,
-        `${API.seg("vc-filter", [["all", "Tất cả"], ["default", "Mặc định"], ["cloned", "Đã clone"]], u.filter)}<button class="btn btn-sm btn-primary" data-act="vc-clone">${ic("mic")}Clone voice</button>`)}
+        `<label class="search"><span class="sr-only">Find a voice</span><input id="vc-q" class="input" type="search" value="${esc(u.q || "")}" placeholder="Search by name, language…" data-on="vc-q"></label><span class="t-sm t-mute">${list.length} voices</span>`,
+        `${API.seg("vc-filter", [["all", "All"], ["default", "Default"], ["cloned", "Cloned"]], u.filter)}<button class="btn btn-sm btn-primary" data-act="vc-clone">${ic("mic")}Clone voice</button>`)}
       ${engineStrip()}
-      <div class="nv-body is-col"><div class="nv-scroll" data-keep="vc">${list.length ? `<table class="table"><thead><tr><th>Giọng</th><th>Ngôn ngữ</th><th>Giới tính</th><th>Nguồn</th><th>Engine</th><th>Trạng thái</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-        : API.emptyBox(u.filter === "cloned" && !u.q ? "Chưa có giọng nào được clone" : "Không có giọng nào khớp", u.filter === "cloned" && !u.q ? "Clone giọng từ một đoạn audio sạch (10 giây đến 5 phút) hoặc tự ghi âm ngay trong ứng dụng." : "Thử từ khóa khác hoặc đổi bộ lọc.", u.filter === "cloned" && !u.q ? `<button class="btn btn-primary" data-act="vc-clone">${ic("mic")}Clone voice</button>` : "")}</div>
+      <div class="nv-body is-col"><div class="nv-scroll" data-keep="vc">${list.length ? `<table class="table"><thead><tr><th>Voice</th><th>Language</th><th>Gender</th><th>Source</th><th>Engine</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        : API.emptyBox(u.filter === "cloned" && !u.q ? "No voices have been cloned yet" : "No voices match", u.filter === "cloned" && !u.q ? "Clone a voice from a clean audio clip (10 seconds to 5 minutes) or record yourself in the app." : "Try another keyword or change the filters.", u.filter === "cloned" && !u.q ? `<button class="btn btn-primary" data-act="vc-clone">${ic("mic")}Clone voice</button>` : "")}</div>
         ${dock()}</div></div>`;
   }
 
@@ -116,20 +116,20 @@
     const v = voice(vc().pick);
     if (!v) {
       const cl = voices().filter((x) => x.kind === "cloned");
-      return `${API.insSec("Thư viện giọng", API.kv([["Giọng mặc định", voices().filter((x) => x.kind === "default").length], ["Đã clone", cl.length], ["Local TTS", LB.tts.count() ? `<span class="badge badge-success">${LB.tts.count()} MÔ HÌNH</span>` : `<span class="badge badge-warning">CHƯA CÀI</span>`], ["Cloud speech", LB.speech.count() ? `<span class="badge badge-success">${LB.speech.count()} PROVIDER</span>` : `<span class="badge badge-warning">CHƯA KẾT NỐI</span>`]]))}
-        <section class="ins-sec"><span class="eyebrow">Clone voice</span><p class="t-sm t-mute">Tạo giọng riêng từ một đoạn audio sạch hoặc tự ghi âm. Chỉ clone giọng của chính bạn hoặc giọng bạn có quyền sử dụng.</p><button class="btn btn-block btn-primary" data-act="vc-clone">${ic("mic")}Clone voice…</button></section>
-        <section class="ins-sec"><span class="eyebrow">Chọn một giọng</span><p class="t-sm t-mute">Chọn giọng trong danh sách để xem chi tiết, nghe thử và quản lý.</p></section>`;
+      return `${API.insSec("Voice library", API.kv([["Default voices", voices().filter((x) => x.kind === "default").length], ["Cloned", cl.length], ["Local TTS", LB.tts.count() ? `<span class="badge badge-success">${LB.tts.count()} MODELS</span>` : `<span class="badge badge-warning">NOT INSTALLED</span>`], ["Cloud speech", LB.speech.count() ? `<span class="badge badge-success">${LB.speech.count()} PROVIDER</span>` : `<span class="badge badge-warning">NOT CONNECTED</span>`]]))}
+        <section class="ins-sec"><span class="eyebrow">Clone voice</span><p class="t-sm t-mute">Create your own voice from a clean audio clip or by recording. Only clone your own voice or a voice you have the right to use.</p><button class="btn btn-block btn-primary" data-act="vc-clone">${ic("mic")}Clone voice…</button></section>
+        <section class="ins-sec"><span class="eyebrow">Choose a voice</span><p class="t-sm t-mute">Choose a voice in the list to see details, preview and manage it.</p></section>`;
     }
-    const src = v.src ? `<div class="lb-ins-wave">${`<button type="button" class="lb-pbtn" data-act="lb-play" data-lb-play="vs:${v.id}" data-id="vs:${v.id}" aria-label="Phát">${ic("play")}</button>`}${API.scroller({ id: `vs:${v.id}`, seed: v.id, meta: { dur: v.src.dur } }, 5)}<span class="mono lb-dur" data-lb-time="vs:${v.id}" data-d="${v.src.dur}">${LB.dur(v.src.dur)}</span></div>` : "";
+    const src = v.src ? `<div class="lb-ins-wave">${`<button type="button" class="lb-pbtn" data-act="lb-play" data-lb-play="vs:${v.id}" data-id="vs:${v.id}" aria-label="Play">${ic("play")}</button>`}${API.scroller({ id: `vs:${v.id}`, seed: v.id, meta: { dur: v.src.dur } }, 5)}<span class="mono lb-dur" data-lb-time="vs:${v.id}" data-d="${v.src.dur}">${LB.dur(v.src.dur)}</span></div>` : "";
     return `<section class="ins-sec vc-hero">${avatar(v, "is-lg")}<div class="vc-hero-b"><div class="ins-hero-t">${esc(v.name)}</div>
-        <div class="row-badges"><span class="badge">${esc(v.lang)}</span><span class="badge ${v.kind === "cloned" ? "badge-primary" : ""}">${v.kind === "cloned" ? "ĐÃ CLONE" : "MẶC ĐỊNH"}</span><span class="badge">${esc(engShort(v))}</span></div>
+        <div class="row-badges"><span class="badge">${esc(v.lang)}</span><span class="badge ${v.kind === "cloned" ? "badge-primary" : ""}">${v.kind === "cloned" ? "CLONED" : "DEFAULT"}</span><span class="badge">${esc(engShort(v))}</span></div>
         <div class="t-sm t-mute">${esc(v.style)}</div></div></section>
-      ${v.status === "failed" ? `<section class="ins-sec"><div class="ld-warn">${ic("alert")}<span>${esc(v.error || "Clone không thành công.")}</span></div><button class="btn btn-block" data-act="vc-retry" data-id="${v.id}">${ic("refresh")}Clone lại với mẫu khác</button></section>` : ""}
-      ${v.kind === "cloned" ? `<section class="ins-sec ins-form"><div class="field"><label for="vc-f-name">Tên</label><input id="vc-f-name" class="input" value="${esc(v.name)}" data-change="vc-edit" data-id="${v.id}" data-f="name" autocomplete="off"></div>
-        <div class="field"><label for="vc-f-desc">Mô tả</label><textarea id="vc-f-desc" class="textarea" rows="3" data-change="vc-edit" data-id="${v.id}" data-f="desc">${esc(v.desc || "")}</textarea></div></section>` : ""}
-      ${API.insSec("Thông tin", API.kv([["Ngôn ngữ", esc(langName(v.lang))], ["Giới tính", esc(v.gender)], ["Engine", `${esc(engLabel(v))}<div class="t-sm t-mute">${esc(engNote(v))}</div>`], ...(v.engine === "local" ? [["Mô hình", esc(v.modelName || LB.tts.familyName(v.family))]] : []), ["Trạng thái", v.status === "ready" ? (usable(v) ? "Sẵn sàng" : esc(whyNot(v))) : v.status === "processing" ? "Đang xử lý" : "Lỗi"], ...(v.kind === "cloned" ? [["Tạo lúc", `<span class="mono">${esc(v.created)}</span>`]] : [])]))}
-      ${v.src ? `<section class="ins-sec"><span class="eyebrow">Mẫu gốc · ${v.src.type === "record" ? "ghi âm" : esc(v.src.name)}</span>${src}</section>` : ""}
-      <section class="ins-sec ins-actions">${v.status === "ready" ? `<button class="btn" data-act="vc-try" data-id="${v.id}" ${usable(v) ? "" : "disabled"}>${ic("play")}Nghe thử</button>` : ""}${v.kind === "cloned" ? `<button class="btn btn-danger" data-act="vc-del" data-id="${v.id}">${ic("trash")}Xóa</button>` : ""}</section>`;
+      ${v.status === "failed" ? `<section class="ins-sec"><div class="ld-warn">${ic("alert")}<span>${esc(v.error || "Clone was unsuccessful.")}</span></div><button class="btn btn-block" data-act="vc-retry" data-id="${v.id}">${ic("refresh")}Clone again with another sample</button></section>` : ""}
+      ${v.kind === "cloned" ? `<section class="ins-sec ins-form"><div class="field"><label for="vc-f-name">Name</label><input id="vc-f-name" class="input" value="${esc(v.name)}" data-change="vc-edit" data-id="${v.id}" data-f="name" autocomplete="off"></div>
+        <div class="field"><label for="vc-f-desc">Description</label><textarea id="vc-f-desc" class="textarea" rows="3" data-change="vc-edit" data-id="${v.id}" data-f="desc">${esc(v.desc || "")}</textarea></div></section>` : ""}
+      ${API.insSec("Information", API.kv([["Language", esc(langName(v.lang))], ["Gender", esc(v.gender)], ["Engine", `${esc(engLabel(v))}<div class="t-sm t-mute">${esc(engNote(v))}</div>`], ...(v.engine === "local" ? [["Model", esc(v.modelName || LB.tts.familyName(v.family))]] : []), ["Status", v.status === "ready" ? (usable(v) ? "Ready" : esc(whyNot(v))) : v.status === "processing" ? "Processing" : "Error"], ...(v.kind === "cloned" ? [["Created at", `<span class="mono">${esc(v.created)}</span>`]] : [])]))}
+      ${v.src ? `<section class="ins-sec"><span class="eyebrow">Original sample · ${v.src.type === "record" ? "recording" : esc(v.src.name)}</span>${src}</section>` : ""}
+      <section class="ins-sec ins-actions">${v.status === "ready" ? `<button class="btn" data-act="vc-try" data-id="${v.id}" ${usable(v) ? "" : "disabled"}>${ic("play")}Preview</button>` : ""}${v.kind === "cloned" ? `<button class="btn btn-danger" data-act="vc-del" data-id="${v.id}">${ic("trash")}Delete</button>` : ""}</section>`;
   }
 
   A.VIEWS.voices = { fill: true, render: voicesView, inspector: voicesInspector, mount: () => player.paint() };
@@ -156,8 +156,8 @@
   function generate() {
     const u = vc();
     const v = voice(u.pick);
-    if (!usable(v)) { A.toast(v ? `${whyNot(v)}.` : "Hãy chọn một giọng để nghe thử.", "warning"); return; }
-    if (!u.text.trim()) { A.toast("Nhập đoạn văn cần nghe thử.", "warning"); return; }
+    if (!usable(v)) { A.toast(v ? `${whyNot(v)}.` : "Choose a voice to preview.", "warning"); return; }
+    if (!u.text.trim()) { A.toast("Enter the text to preview.", "warning"); return; }
     player.stop();
     const text = u.text.trim();
     u.gen = { state: "gen" };
@@ -177,10 +177,10 @@
   const sampleDur = () => (CL.mode === "record" ? CL.rec.sec : CL.file?.dur ?? 0);
   const sampleReady = () => (CL.mode === "record" ? CL.rec.state === "done" : !!CL.file);
   function sampleIssue() {
-    if (!sampleReady()) return CL.mode === "record" ? "Chưa ghi âm" : "Chưa chọn mẫu";
+    if (!sampleReady()) return CL.mode === "record" ? "Not recorded" : "No sample selected";
     const d = sampleDur();
-    if (d && d < MIN_SEC) return `Mẫu quá ngắn (${LB.dur(d)}, cần ít nhất ${MIN_SEC} giây)`;
-    if (d > MAX_SEC) return `Mẫu quá dài (${LB.dur(d)}, tối đa ${LB.dur(MAX_SEC)})`;
+    if (d && d < MIN_SEC) return `Sample too short (${LB.dur(d)}, at least ${MIN_SEC} seconds required)`;
+    if (d > MAX_SEC) return `Sample too long (${LB.dur(d)}, at most ${LB.dur(MAX_SEC)})`;
     return "";
   }
   const nameTaken = () => voices().some((v) => v.id !== CL.replace && v.name.toLowerCase() === CL.name.trim().toLowerCase());
@@ -188,10 +188,10 @@
   function missing() {
     const m = [];
     if (sampleIssue()) m.push(sampleIssue());
-    if (!CL.name.trim()) m.push("Nhập tên giọng");
-    else if (nameTaken()) m.push("Tên giọng đã tồn tại");
-    if (!engineOk()) m.push(CL.engine === "cloud" ? "Chưa có provider cloud hỗ trợ clone, hãy kết nối trong Settings" : "Chưa có mô hình Local hỗ trợ clone, chọn Cloud hoặc cài mô hình");
-    if (!CL.consent) m.push("Xác nhận quyền sử dụng giọng");
+    if (!CL.name.trim()) m.push("Enter a voice name");
+    else if (nameTaken()) m.push("Voice name already exists");
+    if (!engineOk()) m.push(CL.engine === "cloud" ? "No cloud provider supports cloning yet, connect one in Settings" : "No Local model supports cloning yet, choose Cloud or install a model");
+    if (!CL.consent) m.push("Confirm the right to use this voice");
     return m;
   }
   function syncClone() {
@@ -199,7 +199,7 @@
     const b = A.$('#layer [data-act="vc-clone-submit"]');
     if (b) b.disabled = m.length > 0;
     const hint = A.$("#vcl-missing");
-    if (hint) { hint.textContent = m.length ? `Còn thiếu: ${m.join("; ")}.` : ""; hint.hidden = !m.length; }
+    if (hint) { hint.textContent = m.length ? `Missing: ${m.join("; ")}.` : ""; hint.hidden = !m.length; }
   }
   const aliveCl = () => !!A.$("#layer .modal.vcl");
 
@@ -207,26 +207,26 @@
     if (CL.mode === "record") {
       const r = CL.rec;
       const t = `${String(Math.floor(r.sec / 60)).padStart(2, "0")}:${String(r.sec % 60).padStart(2, "0")}`;
-      return `<div class="vc-script"><span class="eyebrow">Đọc đoạn sau bằng giọng tự nhiên</span>${SCRIPT.map((s) => `<p>${esc(s)}</p>`).join("")}</div>
+      return `<div class="vc-script"><span class="eyebrow">Read the following passage in a natural voice</span>${SCRIPT.map((s) => `<p>${esc(s)}</p>`).join("")}</div>
         <div class="vc-rec">
           ${r.state === "recording"
-            ? `<button class="btn btn-danger" data-act="vc-rec-stop">${ic("stop")}Dừng</button><span class="vc-rec-t mono" id="vc-rec-t"><span class="dot dot-danger"></span> ${t}</span><span class="vc-meter" id="vc-meter">${Array.from({ length: 24 }, () => "<i></i>").join("")}</span>`
+            ? `<button class="btn btn-danger" data-act="vc-rec-stop">${ic("stop")}Stop</button><span class="vc-rec-t mono" id="vc-rec-t"><span class="dot dot-danger"></span> ${t}</span><span class="vc-meter" id="vc-meter">${Array.from({ length: 24 }, () => "<i></i>").join("")}</span>`
             : r.state === "done"
-              ? `<button type="button" class="lb-pbtn" data-act="lb-play" data-lb-play="vs:rec" data-id="vs:rec" aria-label="Phát">${ic("play")}</button><span class="mono lb-dur" data-lb-time="vs:rec" data-d="${r.sec}">${LB.dur(r.sec)}</span><span class="t-sm t-mute">Đã ghi ${t}</span><span class="spacer"></span><button class="btn btn-sm" data-act="vc-rec-start">${ic("refresh")}Ghi lại</button>`
-              : `<button class="btn btn-primary" data-act="vc-rec-start">${ic("record")}Bắt đầu ghi</button><span class="t-sm t-mute">Nên ghi ở nơi yên tĩnh, ít nhất ${MIN_SEC} giây.</span>`}
+              ? `<button type="button" class="lb-pbtn" data-act="lb-play" data-lb-play="vs:rec" data-id="vs:rec" aria-label="Play">${ic("play")}</button><span class="mono lb-dur" data-lb-time="vs:rec" data-d="${r.sec}">${LB.dur(r.sec)}</span><span class="t-sm t-mute">Recorded ${t}</span><span class="spacer"></span><button class="btn btn-sm" data-act="vc-rec-start">${ic("refresh")}Record again</button>`
+              : `<button class="btn btn-primary" data-act="vc-rec-start">${ic("record")}Start recording</button><span class="t-sm t-mute">Record in a quiet place, at least ${MIN_SEC} seconds.</span>`}
         </div>
-        <span class="field-hint">Prototype: ghi âm được mô phỏng, ứng dụng thật sẽ xin quyền dùng micro.</span>`;
+        <span class="field-hint">Prototype: recording is simulated; the real app will ask for microphone permission.</span>`;
     }
     const f = CL.file;
     const lib = st().assets.filter((x) => x.type === "sound" && x.meta?.dur);
-    return `<div class="lb-drop ${f ? "is-compact" : ""}" role="group" aria-label="Vùng chọn file audio">
-        ${f ? `<div class="lbu-fn">${ic("music")}<div class="lb-rname"><div class="t-ink lbu-name">${esc(f.name)}</div><div class="t-sm t-mute">${LB.bytes(f.size)}${f.dur ? ` · ${LB.dur(f.dur)}` : " · đang đọc thời lượng…"}${f.lib ? " · từ thư viện Sounds" : ""}</div></div>
-          ${f.dur ? `<button type="button" class="lb-pbtn is-sm" data-act="lb-play" data-lb-play="vs:file" data-id="vs:file" aria-label="Phát">${ic("play")}</button>` : ""}
-          <button class="btn btn-sm btn-ghost" data-act="vc-file-clear">${ic("x")}Bỏ chọn</button></div>`
-          : `${ic("upload", "lb-drop-ic")}<div class="lb-drop-t">Kéo thả file audio vào đây</div><div class="t-sm t-mute">hoặc</div>
-            <div class="lb-drop-act"><label class="btn">Chọn file…<input type="file" hidden accept=".wav,.mp3,.m4a,.flac,.ogg" data-change="vc-file"></label></div><div class="t-sm t-mute">WAV, MP3, M4A, FLAC, OGG · ${MIN_SEC} giây đến ${LB.dur(MAX_SEC)} · tối đa 50 MB</div>`}</div>
-      ${f ? "" : `<div class="form-2"><div class="field"><label for="vcl-lib">Hoặc chọn từ thư viện Sounds</label><select id="vcl-lib" class="select" data-on="vc-lib"><option value="">Chọn một âm thanh…</option>${lib.map((x) => `<option value="${x.id}">${esc(x.name)} · ${LB.dur(x.meta.dur)}</option>`).join("")}</select></div>
-        <div class="field"><label>&nbsp;</label><span class="field-hint">Chưa có file? <a data-act="vc-sample" tabindex="0">Dùng file mẫu</a> để thử nhanh.</span></div></div>`}`;
+    return `<div class="lb-drop ${f ? "is-compact" : ""}" role="group" aria-label="Audio file drop area">
+        ${f ? `<div class="lbu-fn">${ic("music")}<div class="lb-rname"><div class="t-ink lbu-name">${esc(f.name)}</div><div class="t-sm t-mute">${LB.bytes(f.size)}${f.dur ? ` · ${LB.dur(f.dur)}` : " · reading duration…"}${f.lib ? " · from the Sounds library" : ""}</div></div>
+          ${f.dur ? `<button type="button" class="lb-pbtn is-sm" data-act="lb-play" data-lb-play="vs:file" data-id="vs:file" aria-label="Play">${ic("play")}</button>` : ""}
+          <button class="btn btn-sm btn-ghost" data-act="vc-file-clear">${ic("x")}Deselect</button></div>`
+          : `${ic("upload", "lb-drop-ic")}<div class="lb-drop-t">Drag and drop an audio file here</div><div class="t-sm t-mute">or</div>
+            <div class="lb-drop-act"><label class="btn">Choose files…<input type="file" hidden accept=".wav,.mp3,.m4a,.flac,.ogg" data-change="vc-file"></label></div><div class="t-sm t-mute">WAV, MP3, M4A, FLAC, OGG · ${MIN_SEC} seconds to ${LB.dur(MAX_SEC)} · up to 50 MB</div>`}</div>
+      ${f ? "" : `<div class="form-2"><div class="field"><label for="vcl-lib">Or choose from the Sounds library</label><select id="vcl-lib" class="select" data-on="vc-lib"><option value="">Choose a sound…</option>${lib.map((x) => `<option value="${x.id}">${esc(x.name)} · ${LB.dur(x.meta.dur)}</option>`).join("")}</select></div>
+        <div class="field"><label>&nbsp;</label><span class="field-hint">No file yet? <a data-act="vc-sample" tabindex="0">Use the sample file</a> to try quickly.</span></div></div>`}`;
   }
 
   function drawClone() {
@@ -236,24 +236,24 @@
     const cloudProv = LB.speech.cloneProviders();
     const eng = (id, title, text, disabled) => `<label class="opt ${CL.engine === id ? "is-on" : ""}"><input type="radio" name="vcl-eng" ${CL.engine === id ? "checked" : ""} ${disabled ? "disabled" : ""} data-on="vc-eng" data-v="${id}"><span class="opt-b"><span class="t-ink">${title}</span><span class="t-sm t-mute">${text}</span></span></label>`;
     A.modal({
-      title: CL.replace ? "Clone lại voice" : "Clone voice", eyebrow: CAP, cls: "modal-lg vcl",
-      body: `<div class="field"><span class="eyebrow">1 · Mẫu giọng</span>${API.seg("vc-mode", [["file", `${ic("upload")}Từ file audio`], ["record", `${ic("mic")}Ghi âm trực tiếp`]], CL.mode)}</div>
+      title: CL.replace ? "Clone the voice again" : "Clone voice", eyebrow: CAP, cls: "modal-lg vcl",
+      body: `<div class="field"><span class="eyebrow">1 · Voice sample</span>${API.seg("vc-mode", [["file", `${ic("upload")}From audio file`], ["record", `${ic("mic")}Live recording`]], CL.mode)}</div>
         ${sampleBlock()}
         ${issue && sampleReady() ? `<p class="field-err">${esc(issue)}.</p>` : ""}
-        <div class="field"><span class="eyebrow">2 · Thông tin giọng</span></div>
-        <div class="form-2"><div class="field"><label for="vcl-name">Tên giọng</label><input id="vcl-name" class="input" value="${esc(CL.name)}" placeholder="Ví dụ: Giọng của tôi" data-on="vc-f" data-f="name" autocomplete="off"></div>
-          <div class="field"><label for="vcl-lang">Ngôn ngữ của mẫu</label><select id="vcl-lang" class="select" data-on="vc-f" data-f="lang">${API.opts(LANGS, CL.lang)}</select></div></div>
-        <div class="field"><label for="vcl-desc">Mô tả</label><input id="vcl-desc" class="input" value="${esc(CL.desc)}" placeholder="Tùy chọn, ví dụ: dùng cho phần dẫn truyện" data-on="vc-f" data-f="desc" autocomplete="off"></div>
-        <div class="field"><span class="eyebrow">3 · Nơi xử lý</span><div class="opts">
-          ${eng("local", "Local TTS", localModels.length ? "Mẫu giọng được xử lý trên máy này, không gửi ra ngoài." : "Chưa có mô hình hỗ trợ clone (VieNeu-TTS, OmniVoice). Cài trong Settings để dùng.", !localModels.length)}
-          ${CL.engine === "local" && localModels.length ? `<div class="field vc-model"><label for="vcl-model">Mô hình clone</label><select id="vcl-model" class="select" data-on="vc-model">${localModels.map((x) => `<option value="${x.id}" ${x.id === CL.model ? "selected" : ""}>${esc(x.name)}${x.design ? " · có voice design" : ""}</option>`).join("")}</select></div>` : ""}
-          ${localModels.length ? "" : `<button class="btn btn-sm vc-model-link" data-act="settings" data-v="tts">${ic("settings")}Mở Local TTS models</button>`}
-          ${eng("cloud", "Cloud speech", cloudProv.length ? "Mẫu giọng của bạn sẽ được gửi tới provider bạn chọn để tạo giọng clone." : "Chưa có provider hỗ trợ clone được kết nối (ElevenLabs, VieNeu.io). Kết nối trong Settings để dùng.", !cloudProv.length)}
+        <div class="field"><span class="eyebrow">2 · Voice information</span></div>
+        <div class="form-2"><div class="field"><label for="vcl-name">Voice name</label><input id="vcl-name" class="input" value="${esc(CL.name)}" placeholder="Example: My voice" data-on="vc-f" data-f="name" autocomplete="off"></div>
+          <div class="field"><label for="vcl-lang">Sample language</label><select id="vcl-lang" class="select" data-on="vc-f" data-f="lang">${API.opts(LANGS, CL.lang)}</select></div></div>
+        <div class="field"><label for="vcl-desc">Description</label><input id="vcl-desc" class="input" value="${esc(CL.desc)}" placeholder="Optional, e.g. for the narration part" data-on="vc-f" data-f="desc" autocomplete="off"></div>
+        <div class="field"><span class="eyebrow">3 · Where to process</span><div class="opts">
+          ${eng("local", "Local TTS", localModels.length ? "The voice sample is processed on this machine and not sent out." : "No model supports cloning yet (VieNeu-TTS, OmniVoice). Install one in Settings to use it.", !localModels.length)}
+          ${CL.engine === "local" && localModels.length ? `<div class="field vc-model"><label for="vcl-model">Clone model</label><select id="vcl-model" class="select" data-on="vc-model">${localModels.map((x) => `<option value="${x.id}" ${x.id === CL.model ? "selected" : ""}>${esc(x.name)}${x.design ? " · has voice design" : ""}</option>`).join("")}</select></div>` : ""}
+          ${localModels.length ? "" : `<button class="btn btn-sm vc-model-link" data-act="settings" data-v="tts">${ic("settings")}Open Local TTS models</button>`}
+          ${eng("cloud", "Cloud speech", cloudProv.length ? "Your voice sample will be sent to the provider you choose to create the cloned voice." : "No cloning-capable provider is connected (ElevenLabs, VieNeu.io). Connect one in Settings to use it.", !cloudProv.length)}
           ${CL.engine === "cloud" && cloudProv.length ? `<div class="field vc-model"><label for="vcl-prov">Provider</label><select id="vcl-prov" class="select" data-on="vc-prov">${cloudProv.map((x) => `<option value="${x.id}" ${x.id === CL.provider ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div>` : ""}
-          ${cloudProv.length ? "" : `<button class="btn btn-sm vc-model-link" data-act="settings" data-v="speech">${ic("cloud")}Mở Speech providers</button>`}</div></div>
-        <label class="check"><input type="checkbox" data-on="vc-consent" ${CL.consent ? "checked" : ""}><span>Đây là giọng của chính tôi, hoặc tôi có sự đồng ý và quyền hợp pháp để tạo bản sao giọng này. Tôi không dùng giọng clone để mạo danh người khác.</span></label>
-        <p class="field-err" id="vcl-missing" ${m.length ? "" : "hidden"}>${m.length ? `Còn thiếu: ${esc(m.join("; "))}.` : ""}</p>`,
-      foot: `<button class="btn" data-act="close-modal">Hủy</button><span class="spacer"></span><button class="btn btn-primary" data-act="vc-clone-submit" ${m.length ? "disabled" : ""}>${ic("mic")}Clone voice</button>`,
+          ${cloudProv.length ? "" : `<button class="btn btn-sm vc-model-link" data-act="settings" data-v="speech">${ic("cloud")}Open Speech providers</button>`}</div></div>
+        <label class="check"><input type="checkbox" data-on="vc-consent" ${CL.consent ? "checked" : ""}><span>This is my own voice, or I have the consent and legal right to create a copy of this voice. I will not use a cloned voice to impersonate others.</span></label>
+        <p class="field-err" id="vcl-missing" ${m.length ? "" : "hidden"}>${m.length ? `Missing: ${esc(m.join("; "))}.` : ""}</p>`,
+      foot: `<button class="btn" data-act="close-modal">Cancel</button><span class="spacer"></span><button class="btn btn-primary" data-act="vc-clone-submit" ${m.length ? "disabled" : ""}>${ic("mic")}Clone voice</button>`,
     });
     player.paint();
   }
@@ -288,7 +288,7 @@
       const a = new Audio();
       a.preload = "metadata";
       a.onloadedmetadata = () => { if (CL.file === file) { file.dur = Math.round(a.duration) || 0; if (aliveCl()) drawClone(); } };
-      a.onerror = () => { if (CL.file === file) { file.dur = 0; A.toast("Không đọc được file audio này.", "warning"); CL.file = null; if (aliveCl()) drawClone(); } };
+      a.onerror = () => { if (CL.file === file) { file.dur = 0; A.toast("Could not read this audio file.", "warning"); CL.file = null; if (aliveCl()) drawClone(); } };
       a.src = file.url;
     }
   }
@@ -298,8 +298,8 @@
     const id = `VOC-${String(++st().seq.voice).padStart(2, "0")}`;
     const rec = CL.mode === "record";
     const v = {
-      id, name: CL.name.trim(), kind: "cloned", provider: CL.engine === "cloud" ? CL.provider : "", family: CL.engine === "local" ? LB.tts.CATALOG.find((x) => x.id === CL.model)?.family : "", modelName: CL.engine === "local" ? LB.tts.CATALOG.find((x) => x.id === CL.model)?.name : "", lang: CL.lang, gender: "—", style: rec ? "Ghi âm trực tiếp" : "Từ file audio", engine: CL.engine, status: "processing", created: A.stamp(), desc: CL.desc.trim(),
-      src: { type: rec ? "record" : "file", name: rec ? "Bản ghi âm" : CL.file.name, dur: sampleDur() || 30 },
+      id, name: CL.name.trim(), kind: "cloned", provider: CL.engine === "cloud" ? CL.provider : "", family: CL.engine === "local" ? LB.tts.CATALOG.find((x) => x.id === CL.model)?.family : "", modelName: CL.engine === "local" ? LB.tts.CATALOG.find((x) => x.id === CL.model)?.name : "", lang: CL.lang, gender: "—", style: rec ? "Live recording" : "From audio file", engine: CL.engine, status: "processing", created: A.stamp(), desc: CL.desc.trim(),
+      src: { type: rec ? "record" : "file", name: rec ? "Recording" : CL.file.name, dur: sampleDur() || 30 },
     };
     if (CL.replace) st().voices = voices().filter((x) => x.id !== CL.replace);
     voices().push(v);
@@ -309,10 +309,10 @@
     u.pick = id;
     u.filter = u.filter === "default" ? "all" : u.filter;
     A.startPipeline({
-      kind: "voice-clone", label: `Clone voice: ${v.name}`, detail: `${engLabel(v)} · mẫu ${LB.dur(v.src.dur)}`,
-      tasks: [{ key: id, label: "Xử lý mẫu" }, { key: `${id}-b`, label: "Trích xuất đặc trưng giọng" }, { key: `${id}-c`, label: "Kiểm tra chất lượng" }],
+      kind: "voice-clone", label: `Clone voice: ${v.name}`, detail: `${engLabel(v)} · ${LB.dur(v.src.dur)} sample`,
+      tasks: [{ key: id, label: "Process sample" }, { key: `${id}-b`, label: "Extract voice features" }, { key: `${id}-c`, label: "Quality check" }],
       onDone: () => { v.status = "ready"; },
-      onCancel: () => { v.status = "failed"; v.error = "Bạn đã hủy việc clone voice này."; },
+      onCancel: () => { v.status = "failed"; v.error = "You cancelled cloning this voice."; },
     });
     A.rerender();
   }
@@ -323,10 +323,10 @@
     if (!v) return;
     pendingDel = id;
     A.modal({
-      title: "Xóa giọng đã clone", eyebrow: CAP,
+      title: "Delete cloned voice", eyebrow: CAP,
       body: `<div class="del-row">${avatar(v, "is-md")}<div><div class="t-ink">${esc(v.name)}</div><div class="t-sm t-mute">${esc(v.lang)} · ${esc(engLabel(v))}</div></div></div>
-        <div class="ld-warn">${ic("alert")}<span>Dữ liệu giọng và mẫu gốc sẽ bị xóa khỏi thư mục <span class="path">library\\voices\\</span>. Các audio đã tạo bằng giọng này không bị ảnh hưởng. Không thể hoàn tác.</span></div>`,
-      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-danger" data-act="vc-del-confirm">${ic("trash")}Xóa giọng</button>`,
+        <div class="ld-warn">${ic("alert")}<span>The voice data and original sample will be deleted from the folder <span class="path">library\\voices\\</span>. Audio already generated with this voice is not affected. This cannot be undone.</span></div>`,
+      foot: `<button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-danger" data-act="vc-del-confirm">${ic("trash")}Delete voice</button>`,
     });
   }
 
@@ -340,7 +340,7 @@
     "vc-retry": (el) => { const v = voice(el.dataset.id); openClone({ name: v?.name, lang: v?.lang, replace: v?.id }); },
     "vc-mode": (el) => { if (CL.mode === el.dataset.v) return; stopRec(); player.stop(); CL.mode = el.dataset.v; drawClone(); },
     "vc-rec-start": startRec,
-    "vc-rec-stop": () => { stopRec(); CL.rec.state = CL.rec.sec ? "done" : "idle"; if (!CL.rec.sec) A.toast("Bản ghi quá ngắn, hãy thử lại.", "warning"); drawClone(); },
+    "vc-rec-stop": () => { stopRec(); CL.rec.state = CL.rec.sec ? "done" : "idle"; if (!CL.rec.sec) A.toast("The recording is too short, please try again.", "warning"); drawClone(); },
     "vc-file-clear": () => { player.stop(); CL.file = null; drawClone(); },
     "vc-sample": () => setFile({ name: "narrator-sample-warm.wav", size: 7.1 * LB.MB, dur: 42, fake: true }),
     "vc-clone-submit": submitClone,
@@ -353,7 +353,7 @@
       pendingDel = "";
       A.closeModal();
       A.rerender();
-      A.toast(`Đã xóa giọng “${v?.name}”.`);
+      A.toast(`Deleted voice “${v?.name}”.`);
     },
   });
   Object.assign(A.ON, {
@@ -381,16 +381,16 @@
       const f = el.files[0];
       el.value = "";
       if (!f) return;
-      if (!/\.(wav|mp3|m4a|flac|ogg)$/i.test(f.name)) { A.toast("Chỉ nhận file WAV, MP3, M4A, FLAC hoặc OGG.", "warning"); return; }
-      if (f.size > 50 * LB.MB) { A.toast("File lớn hơn 50 MB.", "warning"); return; }
+      if (!/\.(wav|mp3|m4a|flac|ogg)$/i.test(f.name)) { A.toast("Only WAV, MP3, M4A, FLAC or OGG files are accepted.", "warning"); return; }
+      if (f.size > 50 * LB.MB) { A.toast("The file is larger than 50 MB.", "warning"); return; }
       setFile({ name: f.name, size: f.size, dur: 0, real: true, url: URL.createObjectURL(f) });
     },
     "vc-edit": (el) => {
       const v = voice(el.dataset.id);
       const val = el.value.trim();
       if (el.dataset.f === "name") {
-        if (!val) { el.value = v.name; A.toast("Tên giọng không được để trống.", "warning"); return; }
-        if (voices().some((x) => x.id !== v.id && x.name.toLowerCase() === val.toLowerCase())) { el.value = v.name; A.toast("Đã có giọng trùng tên này.", "warning"); return; }
+        if (!val) { el.value = v.name; A.toast("The voice name cannot be empty.", "warning"); return; }
+        if (voices().some((x) => x.id !== v.id && x.name.toLowerCase() === val.toLowerCase())) { el.value = v.name; A.toast("A voice with this name already exists.", "warning"); return; }
         v.name = val;
       } else v.desc = val;
       A.rerender();

@@ -28,10 +28,10 @@
     if (!cur) { el.innerHTML = ""; return; }
     const total = P.q.reduce((a, x) => a + x.dur, 0);
     const done = P.q.slice(0, P.i).reduce((a, x) => a + x.dur, 0) + P.t;
-    el.innerHTML = `<button class="btn btn-icon btn-sm" data-testid="ab-pl-toggle" data-act="ab-pp" aria-label="${P.on ? "Tạm dừng" : "Phát"}">${ic(P.on ? "pause" : "play")}</button>
+    el.innerHTML = `<button class="btn btn-icon btn-sm" data-testid="ab-pl-toggle" data-act="ab-pp" aria-label="${P.on ? "Pause" : "Play"}">${ic(P.on ? "pause" : "play")}</button>
       <div class="ab-pl-b"><div class="t-sm t-ink ellip" data-testid="ab-pl-title">${esc(cur.title)}</div><div class="progress"><i id="ab-pl-bar" style="width:${Math.min(100, (done / total) * 100)}%"></i></div></div>
       <span class="mono t-mute" id="ab-pl-time">${mmss(done)} / ${mmss(total)}</span>
-      <button class="btn btn-icon btn-sm" data-testid="ab-pl-stop" data-act="ab-stop" title="Dừng" aria-label="Dừng">${ic("stop")}</button>`;
+      <button class="btn btn-icon btn-sm" data-testid="ab-pl-stop" data-act="ab-stop" title="Stop" aria-label="Stop">${ic("stop")}</button>`;
     const row = cur.id && A.$(`#editor .ab-seg[data-id="${cur.id}"]`);
     if (row) row.style.setProperty("--pg", `${Math.min(100, (P.t / cur.dur) * 100)}%`);
   }
@@ -90,10 +90,10 @@
   function startGen(c, ids) {
     const { p, u, s } = c;
     A.startPipeline({
-      kind: "audio", label: `Audiobook · ${p.name}`, detail: `${s.cfg.unit} ${u.no} · ${ids.length} đoạn`,
+      kind: "audio", label: `Audiobook · ${p.name}`, detail: `${s.cfg.unit} ${u.no} · ${ids.length} segments`,
       tasks: ids.map((id) => ({ key: `${p.id}|${u.id}|${id}`, label: id })),
       onTask: (t) => commit(p, u.id, t.key.split("|")[2]),
-      onDone: () => { AB.sync(p); p.activity.unshift([A.stamp(), `Tạo audio ${s.cfg.unit.toLowerCase()} ${u.no}: ${ids.length} đoạn`]); A.renderExplorer(); },
+      onDone: () => { AB.sync(p); p.activity.unshift([A.stamp(), `Generate audio for ${s.cfg.unit.toLowerCase()} ${u.no}: ${ids.length} segments`]); A.renderExplorer(); },
     });
     A.rerender();
   }
@@ -108,36 +108,36 @@
     });
     let cost = 0;
     const rows = [...groups.entries()].map(([k, chars]) => {
-      if (k === "local") return `<div class="sc-chk is-ok">${ic("hdd")}<span class="sc-chk-t">Local TTS · chạy trên máy này, không gửi dữ liệu ra ngoài</span><span class="mono">${U.fmt(chars)} ký tự</span></div>`;
+      if (k === "local") return `<div class="sc-chk is-ok">${ic("hdd")}<span class="sc-chk-t">Local TTS · runs on this machine, no data leaves it</span><span class="mono">${U.fmt(chars)} characters</span></div>`;
       const credit = LB.speech.billing(k) === "credit";
       if (!credit) cost += chars * 0.000016;
-      return `<div class="sc-chk is-warn">${ic("cloud")}<span class="sc-chk-t">${esc(LB.speech.name(k))} · văn bản sẽ được gửi tới provider, ${credit ? "tính theo credit của tài khoản" : money(chars * 0.000016)}</span><span class="mono">${U.fmt(chars)} ký tự</span></div>`;
+      return `<div class="sc-chk is-warn">${ic("cloud")}<span class="sc-chk-t">${esc(LB.speech.name(k))} · the text will be sent to the provider, ${credit ? "billed to the account’s credits" : money(chars * 0.000016)}</span><span class="mono">${U.fmt(chars)} characters</span></div>`;
     }).join("");
     const stale = list.filter((b) => AB.segState(c.bk, c.s, c.u, b).st !== "none").length;
-    A.modal({ title: `Tạo audio ${c.s.cfg.unit.toLowerCase()} ${c.u.no}`, eyebrow: "Audiobook", testid: "ab-gen-modal",
-      body: `<p class="t-sm">Sẽ tạo <b>${list.length} đoạn</b>${stale ? `, trong đó ${stale} đoạn tạo lại vì kịch bản, giọng hoặc quy tắc đọc đã đổi` : ""}. Đoạn đã đạt và không đổi được giữ nguyên.</p>
+    A.modal({ title: `Generate audio for ${c.s.cfg.unit.toLowerCase()} ${c.u.no}`, eyebrow: "Audiobook", testid: "ab-gen-modal",
+      body: `<p class="t-sm">Will generate <b>${list.length} segments</b>${stale ? `, of which ${stale} segments are regenerated because the script, voice or reading rules changed` : ""}. Segments that passed and have not changed are kept.</p>
         <div class="sc-chks" data-testid="ab-gen-groups">${rows}</div>
-        <div class="sc-est" data-testid="ab-gen-estimate">${ic("info")}<div class="t-sm">Chi phí ước tính: <b>${cost ? money(cost) : "không phát sinh phí trực tiếp"}</b>. Tiến độ xem ở panel Pipelines.</div></div>`,
-      foot: `<button class="btn" data-testid="ab-gen-cancel-btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-testid="ab-gen-go-btn" data-act="ab-gen-go">${ic("spark")}Tạo ${list.length} đoạn</button>` });
+        <div class="sc-est" data-testid="ab-gen-estimate">${ic("info")}<div class="t-sm">Estimated cost: <b>${cost ? money(cost) : "no direct cost"}</b>. Progress is shown in the Pipelines panel.</div></div>`,
+      foot: `<button class="btn" data-testid="ab-gen-cancel-btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" data-testid="ab-gen-go-btn" data-act="ab-gen-go">${ic("spark")}Generate ${list.length} segments</button>` });
   }
 
   const kvRows = (c) => {
     const st = AB.unitStat(c.s, c.bk, c.u);
-    return [["Chương", `${esc(c.s.cfg.unit)} ${c.u.no}${c.u.title ? ` · ${esc(c.u.title)}` : ""}`], ["Kịch bản", c.locked ? `<span class="badge badge-success">ĐÃ CHỐT</span>` : `<span class="badge badge-warning">CHƯA CHỐT</span>`],
-      ["Đoạn", st.total || "—"], ["Đã tạo", st.total ? `${st.done}/${st.total}` : "—"], ["Cần xử lý", st.total ? st.stale + st.none : "—"], ["Audio", st.dur ? `≈ ${mmss(st.dur)}` : "—"]];
+    return [["Chapters", `${esc(c.s.cfg.unit)} ${c.u.no}${c.u.title ? ` · ${esc(c.u.title)}` : ""}`], ["Script", c.locked ? `<span class="badge badge-success">LOCKED</span>` : `<span class="badge badge-warning">NOT LOCKED</span>`],
+      ["Passage", st.total || "—"], ["Generated", st.total ? `${st.done}/${st.total}` : "—"], ["Needs attention", st.total ? st.stale + st.none : "—"], ["Audio", st.dur ? `≈ ${mmss(st.dur)}` : "—"]];
   };
   const mixField = (label, id, f, val, min, max, step, unit) => `<div class="field"><label for="${id}">${label}</label><div class="ab-mix"><input id="${id}" class="input" type="number" min="${min}" max="${max}" step="${step}" value="${val}" data-testid="ab-mix-${f}" data-change="ab-mix" data-f="${f}"><span class="t-sm t-mute">${unit}</span></div></div>`;
 
   function chapterPanel(c) {
     const m = AB.rec(c.bk, c.u).mix;
     const bl = c.u.blocks ? AB.blockers(c.s, c.bk, c.u) : [];
-    return `${U.insSec("Chương", U.kv(kvRows(c)))}
-      ${c.u.blocks ? `<section class="ins-sec" data-testid="ab-ins-mix"><span class="eyebrow">Ghép chương</span><div class="ins-form">
-        ${mixField("Khoảng nghỉ giữa các đoạn", "ab-m-gap", "gap", m.gap, 0, 5, 0.1, "giây")}${mixField("Im lặng đầu chương", "ab-m-intro", "intro", m.intro, 0, 10, 0.1, "giây")}
-        ${mixField("Im lặng cuối chương", "ab-m-outro", "outro", m.outro, 0, 10, 0.1, "giây")}${mixField("Âm lượng", "ab-m-vol", "vol", m.vol, -12, 6, 1, "dB")}</div>
-        <span class="field-hint">Khoảng nghỉ trong kịch bản được cộng thêm vào khoảng nghỉ này.</span></section>` : ""}
-      ${bl.length ? `<section class="ins-sec" data-testid="ab-ins-blockers"><span class="eyebrow">Cần xử lý · ${bl.length}</span>${bl.map((b) => `<div class="sc-iss is-warn">${ic("alert")}<span>${esc(b.text)}</span></div>`).join("")}</section>` : ""}
-      <section class="ins-sec ins-actions" data-testid="ab-ins-actions"><button class="btn" data-testid="ab-ins-script-btn" data-act="ab-open-script">${ic("pen")}Mở Scripting</button></section>`;
+    return `${U.insSec("Chapters", U.kv(kvRows(c)))}
+      ${c.u.blocks ? `<section class="ins-sec" data-testid="ab-ins-mix"><span class="eyebrow">Chapter assembly</span><div class="ins-form">
+        ${mixField("Pause between segments", "ab-m-gap", "gap", m.gap, 0, 5, 0.1, "seconds")}${mixField("Silence at chapter start", "ab-m-intro", "intro", m.intro, 0, 10, 0.1, "seconds")}
+        ${mixField("Silence at chapter end", "ab-m-outro", "outro", m.outro, 0, 10, 0.1, "seconds")}${mixField("Volume", "ab-m-vol", "vol", m.vol, -12, 6, 1, "dB")}</div>
+        <span class="field-hint">Pauses in the script are added on top of this pause.</span></section>` : ""}
+      ${bl.length ? `<section class="ins-sec" data-testid="ab-ins-blockers"><span class="eyebrow">Needs attention · ${bl.length}</span>${bl.map((b) => `<div class="sc-iss is-warn">${ic("alert")}<span>${esc(b.text)}</span></div>`).join("")}</section>` : ""}
+      <section class="ins-sec ins-actions" data-testid="ab-ins-actions"><button class="btn" data-testid="ab-ins-script-btn" data-act="ab-open-script">${ic("pen")}Open Scripting</button></section>`;
   }
 
   function segPanel(c, b) {
@@ -147,30 +147,30 @@
     const t = T[b.type];
     const rd = AB.readText(c.bk, b.text);
     const fields = "";
-    const status = info.st === "none" ? "Chưa tạo" : info.st === "flag" ? "Chưa đạt" : info.st === "stale" ? "Cần tạo lại" : "Đã tạo";
-    return `<section class="ins-sec" data-testid="ab-ins-seg"><span class="eyebrow">Đoạn đã chọn</span><div class="ins-h">${ic(t.icon)}<span class="t-ink">${esc(t.label)}</span>${X.stBadge(info.st)}</div>
-        <div class="ab-ro" data-testid="ab-ins-text">${esc(b.text)}</div>${rd !== b.text ? `<span class="eyebrow">Đọc là</span><div class="ab-ro is-read" data-testid="ab-ins-read">${esc(rd)}</div>` : ""}
-        <span class="field-hint">Chữ chỉ sửa được trong Scripting.</span></section>
+    const status = info.st === "none" ? "Not generated" : info.st === "flag" ? "Failed" : info.st === "stale" ? "Needs regeneration" : "Generated";
+    return `<section class="ins-sec" data-testid="ab-ins-seg"><span class="eyebrow">Selected segment</span><div class="ins-h">${ic(t.icon)}<span class="t-ink">${esc(t.label)}</span>${X.stBadge(info.st)}</div>
+        <div class="ab-ro" data-testid="ab-ins-text">${esc(b.text)}</div>${rd !== b.text ? `<span class="eyebrow">Read as</span><div class="ab-ro is-read" data-testid="ab-ins-read">${esc(rd)}</div>` : ""}
+        <span class="field-hint">Text can only be edited in Scripting.</span></section>
       ${fields ? `<section class="ins-sec">${fields}</section>` : ""}
-      ${U.insSec("Audio", U.kv([["Trạng thái", status], ["Nhân vật", sp ? esc(sp.name) : "—"], ...(b.paren ? [["Sắc thái", esc(b.paren)]] : []), ["Giọng", v ? `${esc(v.name)}<div class="t-sm t-mute">${esc(AB.engineName(v))}${AB.usable(v) ? "" : ` · ${esc(AB.whyNot(v))}`}</div>` : "Chưa chọn"], ["Tốc độ", `${speed}×`], ["Thời lượng", a ? mmss(a.dur) : "—"], ["Tạo lúc", a ? `<span class="mono">${esc(a.at)}</span>` : "—"]]))}
-      ${info.why && info.why.length ? `<section class="ins-sec"><span class="eyebrow">Vì sao cần tạo lại</span>${info.why.map((w) => `<div class="sc-iss is-warn">${ic("alert")}<span>${esc(w)}</span></div>`).join("")}</section>` : ""}
-      ${a && a.flag ? `<section class="ins-sec"><span class="eyebrow">Ghi chú đánh dấu</span><p class="t-sm">${esc(a.flag)}</p></section>` : ""}
+      ${U.insSec("Audio", U.kv([["Status", status], ["Characters", sp ? esc(sp.name) : "—"], ...(b.paren ? [["Tone", esc(b.paren)]] : []), ["Voice", v ? `${esc(v.name)}<div class="t-sm t-mute">${esc(AB.engineName(v))}${AB.usable(v) ? "" : ` · ${esc(AB.whyNot(v))}`}</div>` : "Not selected"], ["Speed", `${speed}×`], ["Duration", a ? mmss(a.dur) : "—"], ["Created at", a ? `<span class="mono">${esc(a.at)}</span>` : "—"]]))}
+      ${info.why && info.why.length ? `<section class="ins-sec"><span class="eyebrow">Why regeneration is needed</span>${info.why.map((w) => `<div class="sc-iss is-warn">${ic("alert")}<span>${esc(w)}</span></div>`).join("")}</section>` : ""}
+      ${a && a.flag ? `<section class="ins-sec"><span class="eyebrow">Flag note</span><p class="t-sm">${esc(a.flag)}</p></section>` : ""}
       <section class="ins-sec ins-actions" data-testid="ab-ins-seg-actions">
         <button class="btn" data-testid="ab-ins-play" data-act="ab-play" data-id="${b.id}" ${a ? "" : "disabled"}>${ic("play")}Nghe</button>
-        <button class="btn" data-testid="ab-ins-regen" data-act="ab-regen" data-id="${b.id}">${ic("refresh")}Tạo lại</button>
-        ${a ? (a.flag ? `<button class="btn" data-testid="ab-ins-unflag" data-act="ab-unflag" data-id="${b.id}">${ic("check")}Bỏ đánh dấu</button>` : `<button class="btn" data-testid="ab-ins-flag" data-act="ab-flag" data-id="${b.id}">${ic("flag")}Chưa đạt</button>`) : ""}
-        <button class="btn" data-testid="ab-ins-edit" data-act="ab-edit" data-id="${b.id}">${ic("pen")}Sửa trong Scripting</button></section>`;
+        <button class="btn" data-testid="ab-ins-regen" data-act="ab-regen" data-id="${b.id}">${ic("refresh")}Regenerate</button>
+        ${a ? (a.flag ? `<button class="btn" data-testid="ab-ins-unflag" data-act="ab-unflag" data-id="${b.id}">${ic("check")}Clear flag</button>` : `<button class="btn" data-testid="ab-ins-flag" data-act="ab-flag" data-id="${b.id}">${ic("flag")}Failed</button>`) : ""}
+        <button class="btn" data-testid="ab-ins-edit" data-act="ab-edit" data-id="${b.id}">${ic("pen")}Edit in Scripting</button></section>`;
   }
 
   function voicesPanel() {
-    return `${U.insSec("Engine", U.kv([["Local TTS", LB.tts.count() ? `<span class="badge badge-success">${LB.tts.count()} MÔ HÌNH</span>` : `<span class="badge badge-warning">CHƯA CÀI</span>`], ["Cloud speech", LB.speech.count() ? `<span class="badge badge-success">${LB.speech.count()} PROVIDER</span>` : `<span class="badge badge-warning">CHƯA KẾT NỐI</span>`]]))}
+    return `${U.insSec("Engine", U.kv([["Local TTS", LB.tts.count() ? `<span class="badge badge-success">${LB.tts.count()} MODELS</span>` : `<span class="badge badge-warning">NOT INSTALLED</span>`], ["Cloud speech", LB.speech.count() ? `<span class="badge badge-success">${LB.speech.count()} PROVIDER</span>` : `<span class="badge badge-warning">NOT CONNECTED</span>`]]))}
       <section class="ins-sec ins-actions" data-testid="ab-ins-engine"><button class="btn" data-testid="ab-ins-tts-btn" data-act="settings" data-v="tts">${ic("cpu")}Local TTS</button><button class="btn" data-testid="ab-ins-speech-btn" data-act="settings" data-v="speech">${ic("cloud")}Cloud speech</button>
-        <button class="btn" data-testid="ab-ins-library-btn" data-act="open" data-id="voices">${ic("voice")}Thư viện giọng</button></section>
-      <section class="ins-sec"><span class="eyebrow">Lưu ý</span><p class="t-sm t-mute">Giọng cloud gửi văn bản tới provider khi tạo audio. Giọng local chạy trên máy này và cần mô hình đã cài. Đổi giọng hoặc tốc độ sẽ đánh dấu các đoạn đã tạo bằng giọng đó là cần tạo lại.</p></section>`;
+        <button class="btn" data-testid="ab-ins-library-btn" data-act="open" data-id="voices">${ic("voice")}Voice library</button></section>
+      <section class="ins-sec"><span class="eyebrow">Note</span><p class="t-sm t-mute">Cloud voices send text to the provider when generating audio. Local voices run on this machine and need an installed model. Changing a voice or speed marks segments generated with that voice as needing regeneration.</p></section>`;
   }
   function rulesPanel(c) {
-    return `${U.insSec("Quy tắc đọc", U.kv([["Phát âm", c.bk.lex.length], ["Ký hiệu đang bật", c.bk.symbols.filter((x) => x.on).length], ["Đoạn bị ảnh hưởng", X.affected(c)]]))}
-      <section class="ins-sec"><span class="eyebrow">Cách hoạt động</span><p class="t-sm t-mute">Quy tắc thay cách đọc, không thay chữ trong kịch bản. Thêm hoặc đổi quy tắc sẽ đánh dấu các đoạn chứa từ đó là cần tạo lại; đoạn không chứa từ đó không bị ảnh hưởng.</p></section>`;
+    return `${U.insSec("Reading rules", U.kv([["Pronunciation", c.bk.lex.length], ["Active symbols", c.bk.symbols.filter((x) => x.on).length], ["Affected segments", X.affected(c)]]))}
+      <section class="ins-sec"><span class="eyebrow">How it works</span><p class="t-sm t-mute">Rules change how text is read, not the text in the script. Adding or changing a rule marks segments containing that word as needing regeneration; segments without that word are not affected.</p></section>`;
   }
 
   window.ABX = {
@@ -196,9 +196,9 @@
     "ab-play-all": () => {
       const c = X.activeCtx();
       if (!c || !c.u.blocks) return;
-      const items = c.u.blocks.map((b) => (b.type === "pause" ? { id: "", dur: b.ms / 1000, title: "Khoảng nghỉ" } : AB.VOICED.includes(b.type) ? segItem(c, b) : null)).filter(Boolean);
-      if (!items.some((x) => x.id)) { A.toast("Chương này chưa có audio để nghe.", "warning"); return; }
-      play(items.map((x) => (x.id ? x : { ...x, title: "Khoảng nghỉ" })));
+      const items = c.u.blocks.map((b) => (b.type === "pause" ? { id: "", dur: b.ms / 1000, title: "Pauses" } : AB.VOICED.includes(b.type) ? segItem(c, b) : null)).filter(Boolean);
+      if (!items.some((x) => x.id)) { A.toast("This chapter has no audio to listen to yet.", "warning"); return; }
+      play(items.map((x) => (x.id ? x : { ...x, title: "Pauses" })));
     },
     "ab-pp": () => { if (P.q.length) { P.on = !P.on; paintPlayer(); } },
     "ab-stop": stop,
@@ -208,8 +208,8 @@
       if (!sp) return;
       const cfg = c.bk.voices[sp.id];
       const v = cfg && AB.voiceById(cfg.voice);
-      play([{ id: "", dur: 6, title: `Nghe thử · ${sp.name} · ${v ? v.name : ""}` }]);
-      if (v && v.engine === "cloud") A.toast(`Nghe thử gửi một câu mẫu tới ${LB.speech.name(v.provider)}.`, "warning");
+      play([{ id: "", dur: 6, title: `Preview · ${sp.name} · ${v ? v.name : ""}` }]);
+      if (v && v.engine === "cloud") A.toast(`Preview sends a sample sentence to ${LB.speech.name(v.provider)}.`, "warning");
     },
     "ab-generate": () => { const c = X.activeCtx(); if (c && X.todo(c).length && !AB.blockers(c.s, c.bk, c.u).length) openGenerate(c); },
     "ab-gen-go": () => {
@@ -232,20 +232,20 @@
       const c = X.activeCtx();
       if (!c) return;
       flagId = el.dataset.id;
-      A.modal({ title: "Đánh dấu đọc chưa đạt", eyebrow: "Audiobook", testid: "ab-flag-modal",
-        body: `<p class="t-sm t-mute">Ghi lại điều chưa ổn. Sửa kịch bản hoặc đổi giọng, rồi tạo lại đoạn này.</p><div class="field"><label for="ab-flag-note">Ghi chú</label><textarea id="ab-flag-note" class="textarea" rows="3" data-testid="ab-flag-note" placeholder="vd. Đọc sai trọng âm ở tên riêng, ngắt câu quá nhanh"></textarea></div>`,
-        foot: `<button class="btn" data-testid="ab-flag-cancel-btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-testid="ab-flag-save-btn" data-act="ab-flag-save">${ic("flag")}Đánh dấu</button>` });
+      A.modal({ title: "Flag a failed reading", eyebrow: "Audiobook", testid: "ab-flag-modal",
+        body: `<p class="t-sm t-mute">Note what is wrong. Edit the script or change the voice, then regenerate this segment.</p><div class="field"><label for="ab-flag-note">Note</label><textarea id="ab-flag-note" class="textarea" rows="3" data-testid="ab-flag-note" placeholder="e.g. Wrong stress on a proper name, pauses too fast"></textarea></div>`,
+        foot: `<button class="btn" data-testid="ab-flag-cancel-btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" data-testid="ab-flag-save-btn" data-act="ab-flag-save">${ic("flag")}Flag</button>` });
     },
     "ab-flag-save": () => {
       const c = X.activeCtx();
       const a = c && flagId && AB.rec(c.bk, c.u).audio[flagId];
       if (!a) return;
-      a.flag = ((A.$("#ab-flag-note") || {}).value || "").trim() || "Cần nghe lại";
+      a.flag = ((A.$("#ab-flag-note") || {}).value || "").trim() || "Needs re-listening";
       AB.sync(c.p);
       A.closeModal();
       A.renderExplorer();
       X.refresh();
-      A.toast("Đã đánh dấu đoạn chưa đạt.", "warning");
+      A.toast("Flagged the segment as failed.", "warning");
     },
     "ab-unflag": (el) => {
       const c = X.activeCtx();

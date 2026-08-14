@@ -1,8 +1,8 @@
-/* Wizard nhập novel từ package (novel-import.js). Chỉ dùng token trong tokens.css. */
+/* Wizard for importing a novel from a package (novel-import.js). Use only tokens from tokens.css. */
 
 .modal.imw .modal-body { gap: var(--sp-lg); }
 
-/* thanh bước */
+/* step bar */
 .imw-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-sm); }
 .imw-step { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; padding: var(--sp-xs) var(--sp-md) var(--sp-xs) var(--sp-sm); border: 1px solid var(--hairline); border-radius: var(--r-md); color: var(--mute); }
 .imw-n { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: var(--r-full); border: 1px solid var(--hairline-strong); font: 500 12px/1 var(--font-mono); color: var(--body); }
@@ -13,7 +13,7 @@
 .imw-step.is-done { color: var(--body); }
 .imw-step.is-done .imw-n { background: var(--success-soft); border-color: var(--success); color: var(--success); }
 
-/* vùng chọn file */
+/* file drop area */
 .imw-drop { display: grid; justify-items: center; align-content: center; gap: var(--sp-sm); min-height: 170px; padding: var(--sp-xl); text-align: center; background: var(--canvas-soft); border: 1.5px dashed var(--hairline-strong); border-radius: var(--r-lg); transition: border-color 0.12s, background 0.12s; }
 .imw-drop:hover, .imw-drop.is-over { border-color: var(--primary); background: var(--primary-soft); }
 .imw-drop.has-file { border-style: solid; justify-items: stretch; min-height: 0; padding: var(--sp-md) var(--sp-lg); }
@@ -26,7 +26,7 @@
 .imw-file-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .imw-file-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* kiểm tra */
+/* check */
 .imw-checks { gap: 2px; }
 .imw-checks .ld-step { min-height: 30px; }
 .imw-result { display: flex; align-items: flex-start; gap: var(--sp-md); padding: var(--sp-md) var(--sp-lg); border-radius: var(--r-md); }
@@ -36,7 +36,7 @@
 .imw-result.is-bad { background: var(--danger-soft); }
 .imw-result.is-bad > .ic { color: var(--danger); }
 
-/* xem trước + form */
+/* preview + form */
 .imw-form { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: var(--sp-xl); align-items: start; }
 .imw-pv { display: grid; gap: var(--sp-sm); justify-items: start; }
 .imw-pv .kv { grid-template-columns: 56px minmax(0, 1fr); width: 100%; }

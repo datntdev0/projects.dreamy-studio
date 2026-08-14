@@ -1,9 +1,9 @@
 /*
- * Dialog sửa tri thức (entity + fact), theo mô hình draft của dreamer-studio `world-edit-dialog`:
- *  - mở trong phạm vi của một mục hoặc một vấn đề (issue) ở Review;
- *  - mọi thao tác (sửa, thêm, xóa, gộp, tách) là một "edit" trong danh sách, có thể hoàn tác từng cái;
- *  - xem trước kết quả kiểm tra xung đột trên bản nháp trước khi cho xác nhận;
- *  - chỉ khi xác nhận mới ghi vào dữ liệu thật.
+ * Knowledge edit dialog (entity + fact), following the draft model of dreamer-studio `world-edit-dialog`:
+ *  - opened within the scope of one item or one issue in Review;
+ *  - every action (edit, add, delete, merge, split) is one "edit" in the list that can be undone one by one;
+ *  - preview the conflict check results on the draft before allowing confirmation;
+ *  - only on confirmation is the real data written.
  */
 window.KBE = (function () {
   const A = window.DSApp;
@@ -18,12 +18,12 @@ window.KBE = (function () {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const ICON = { character: "user", place: "globe", org: "library", object: "package", event: "activity", relation: "swap" };
   const typeName = (t) => O().entityTypes[t]?.label || t;
-  const CERTS = [["text", "Văn bản xác nhận"], ["claim", "Lời nhân vật"], ["inferred", "AI suy luận"]];
-  const STATE = { new: ["badge-info", "Mới"], edited: ["badge-warning", "Đã sửa"], deleted: ["", "Đã xóa"], merged: ["", "Đã gộp"], removed: ["", "Bị loại"] };
+  const CERTS = [["text", "Stated in text"], ["claim", "Character’s words"], ["inferred", "AI inference"]];
+  const STATE = { new: ["badge-info", "New"], edited: ["badge-warning", "Edited"], deleted: ["", "Deleted"], merged: ["", "Merged"], removed: ["", "Rejected"] };
 
   const D = { base: [], baseIds: new Set(), baseOpen: [], scope: new Set(), issue: null, edits: [], open: new Set(), sel: [], merge: null, split: null, changes: false, evd: {}, seq: 0 };
 
-  /* ---------------- phạm vi + áp dụng edit ---------------- */
+  /* ---------------- scope + applying edits ---------------- */
   function scopeIds(ids) {
     const all = D.base;
     const out = new Set(ids);
@@ -36,7 +36,7 @@ window.KBE = (function () {
     return out;
   }
 
-  /** Áp dụng danh sách edit lên toàn bộ tri thức (nên xóa / gộp / tách lan sang cả quan hệ ngoài phạm vi). */
+  /** Applies the edit list to the whole knowledge (deleting / merging / splitting should propagate to relations outside the scope too). */
   function apply(edits) {
     let list = clone(D.base);
     const get = (id) => list.find((i) => i.id === id);
@@ -66,7 +66,7 @@ window.KBE = (function () {
 
   const createdOp = (id) => D.edits.find((e) => (e.k === "add" || e.k === "split") && e.item.id === id);
 
-  /** Sửa một trường: gộp vào edit sẵn có, bỏ trường trùng giá trị gốc. */
+  /** Edits one field: merges into the existing edit, dropping fields equal to the original value. */
   function patch(id, p) {
     const made = createdOp(id);
     if (made) { Object.assign(made.item, clone(p)); return; }
@@ -96,7 +96,7 @@ window.KBE = (function () {
   }
   const present = (c) => !["deleted", "merged", "removed"].includes(c.state);
 
-  /* ---------------- xem trước kết quả kiểm tra ---------------- */
+  /* ---------------- preview of check results ---------------- */
   const incomplete = (cur) => cur.filter((i) => D.scope.has(i.id) || createdOp(i.id)).some((i) =>
     (i.kind !== "relation" && !String(i.name).trim()) || (i.kind === "relation" && (!cur.some((e) => e.id === i.from) || !cur.some((e) => e.id === i.to))));
 
@@ -111,15 +111,15 @@ window.KBE = (function () {
     return { state, added, fixed };
   }
   const PV = {
-    idle: ["info", "Chưa có thay đổi nào. Sửa xong, kết quả kiểm tra xung đột sẽ hiện ở đây."],
-    invalid: ["alert", "Còn mục chưa hợp lệ: tên đang trống hoặc quan hệ thiếu đầu mút."],
-    resolved: ["check", "Xung đột này sẽ được giải quyết."],
-    open: ["alert", "Xung đột này vẫn còn sau khi sửa."],
-    clean: ["check", "Không phát hiện xung đột mới."],
-    warn: ["alert", "Thay đổi sẽ tạo xung đột mới:"],
+    idle: ["info", "No changes yet. Once you edit, the conflict check results will appear here."],
+    invalid: ["alert", "Some items are invalid: a name is empty or a relation is missing an endpoint."],
+    resolved: ["check", "This conflict will be resolved."],
+    open: ["alert", "This conflict remains after the edit."],
+    clean: ["check", "No new conflicts detected."],
+    warn: ["alert", "The change will create new conflicts:"],
   };
 
-  /* ---------------- mở / đóng ---------------- */
+  /* ---------------- open / close ---------------- */
   function open({ ids = [], issue = null, add = null } = {}) {
     D.base = clone(K().items);
     D.baseIds = new Set(C.run().open.map((x) => x.id));
@@ -147,33 +147,33 @@ window.KBE = (function () {
     D.open.add(item.id);
   }
 
-  const itemName = (cur, id, fallback = "?") => { const e = cur.find((i) => i.id === id) || D.base.find((i) => i.id === id); return e ? e.name || "(chưa đặt tên)" : fallback; };
-  const entLabel = (e) => `${e.name || "(chưa đặt tên)"} · ${typeName(e.type)}`;
+  const itemName = (cur, id, fallback = "?") => { const e = cur.find((i) => i.id === id) || D.base.find((i) => i.id === id); return e ? e.name || "(unnamed)" : fallback; };
+  const entLabel = (e) => `${e.name || "(unnamed)"} · ${typeName(e.type)}`;
   const chap = (it) => (it.ev.length ? `Ch.${U.rangeText(it.ev.map((e) => NV.chOf(e.p)))}` : "");
 
-  /* ---------------- vẽ ---------------- */
+  /* ---------------- render ---------------- */
   const selectHtml = (id, on, data, list, value, cls = "") => `<select id="${id}" class="select ${cls}" data-on="${on}" ${data}>${U.options(list, value)}</select>`;
   const field = (label, control, id, span = "") => `<div class="field ${span}"><label ${id ? `for="${id}"` : ""}>${label}</label>${control}</div>`;
 
   function evidenceBlock(it) {
     const d = D.evd[it.id] || { p: "", q: "" };
-    return `<div class="field span-full"><span class="eyebrow">Dẫn chứng (${it.ev.length})</span>
-      ${it.ev.map((e, i) => `<div class="ed-ev"><blockquote class="quote">${esc(e.q)}</blockquote>${U.ref(e.p)}<button class="btn btn-icon btn-sm" data-act="ed-ev-del" data-k="${it.id}" data-i="${i}" aria-label="Xóa dẫn chứng">${ic("x")}</button></div>`).join("") || `<p class="t-sm t-mute">Chưa có dẫn chứng. Nhận định không có dẫn chứng sẽ bị bắt ở bước kiểm tra.</p>`}
-      <div class="ed-ev-add"><input id="ed-${it.id}-evp" class="input" placeholder="Đoạn, ví dụ 1.3" value="${esc(d.p)}" data-on="ed-evd" data-k="${it.id}" data-f="p" aria-label="Đoạn nguồn">
-        <input id="ed-${it.id}-evq" class="input" placeholder="Trích nguyên văn từ đoạn nguồn" value="${esc(d.q)}" data-on="ed-evd" data-k="${it.id}" data-f="q" aria-label="Trích dẫn">
-        <button class="btn btn-sm" data-act="ed-ev-add" data-k="${it.id}">${ic("plus")}Thêm</button></div></div>`;
+    return `<div class="field span-full"><span class="eyebrow">Evidence (${it.ev.length})</span>
+      ${it.ev.map((e, i) => `<div class="ed-ev"><blockquote class="quote">${esc(e.q)}</blockquote>${U.ref(e.p)}<button class="btn btn-icon btn-sm" data-act="ed-ev-del" data-k="${it.id}" data-i="${i}" aria-label="Delete evidence">${ic("x")}</button></div>`).join("") || `<p class="t-sm t-mute">No evidence yet. A claim without evidence will be caught at the check step.</p>`}
+      <div class="ed-ev-add"><input id="ed-${it.id}-evp" class="input" placeholder="Paragraph, e.g. 1.3" value="${esc(d.p)}" data-on="ed-evd" data-k="${it.id}" data-f="p" aria-label="Source paragraph">
+        <input id="ed-${it.id}-evq" class="input" placeholder="Quote verbatim from the source paragraph" value="${esc(d.q)}" data-on="ed-evd" data-k="${it.id}" data-f="q" aria-label="Quote">
+        <button class="btn btn-sm" data-act="ed-ev-add" data-k="${it.id}">${ic("plus")}Add</button></div></div>`;
   }
 
   function entityBody(it) {
     const attrs = it.attrs.map((a, i) => `<div class="ke-attr">${selectHtml(`ed-${it.id}-ak${i}`, "ed-attr", `data-k="${it.id}" data-i="${i}" data-f="k"`, Object.entries(O().attributes).map(([k, x]) => [k, x.label]), a.k)}
-        <input id="ed-${it.id}-av${i}" class="input" value="${esc(a.v)}" data-on="ed-attr" data-k="${it.id}" data-i="${i}" data-f="v" aria-label="Giá trị">${a.p ? U.ref(a.p) : "<span></span>"}
-        <button class="btn btn-icon btn-sm" data-act="ed-attr-del" data-k="${it.id}" data-i="${i}" aria-label="Xóa thuộc tính">${ic("x")}</button></div>`).join("");
+        <input id="ed-${it.id}-av${i}" class="input" value="${esc(a.v)}" data-on="ed-attr" data-k="${it.id}" data-i="${i}" data-f="v" aria-label="Value">${a.p ? U.ref(a.p) : "<span></span>"}
+        <button class="btn btn-icon btn-sm" data-act="ed-attr-del" data-k="${it.id}" data-i="${i}" aria-label="Delete attribute">${ic("x")}</button></div>`).join("");
     return `<div class="ed-body">
-      ${field("Tên", `<input id="ed-${it.id}-name" class="input" value="${esc(it.name)}" data-on="ed-f" data-k="${it.id}" data-f="name" autocomplete="off">${it.name.trim() ? "" : `<span class="field-err">Nhập tên.</span>`}`, `ed-${it.id}-name`)}
-      ${field("Loại", selectHtml(`ed-${it.id}-type`, "ed-f", `data-k="${it.id}" data-f="type"`, Object.entries(O().entityTypes).map(([k, x]) => [k, x.label]), it.type), `ed-${it.id}-type`)}
-      ${field("Tóm tắt", `<textarea id="ed-${it.id}-sum" class="textarea" rows="2" data-on="ed-f" data-k="${it.id}" data-f="summary">${esc(it.summary || "")}</textarea>`, `ed-${it.id}-sum`, "span-full")}
-      <div class="field span-full"><span class="eyebrow">Thuộc tính</span>${attrs || `<p class="t-sm t-mute">Chưa có thuộc tính.</p>`}<div><button class="btn btn-sm" data-act="ed-attr-add" data-k="${it.id}">${ic("plus")}Thêm thuộc tính</button></div></div>
-      ${field("Nguồn gốc nhận định", selectHtml(`ed-${it.id}-cert`, "ed-f", `data-k="${it.id}" data-f="cert"`, CERTS, it.cert), `ed-${it.id}-cert`)}
+      ${field("Name", `<input id="ed-${it.id}-name" class="input" value="${esc(it.name)}" data-on="ed-f" data-k="${it.id}" data-f="name" autocomplete="off">${it.name.trim() ? "" : `<span class="field-err">Enter a name.</span>`}`, `ed-${it.id}-name`)}
+      ${field("Type", selectHtml(`ed-${it.id}-type`, "ed-f", `data-k="${it.id}" data-f="type"`, Object.entries(O().entityTypes).map(([k, x]) => [k, x.label]), it.type), `ed-${it.id}-type`)}
+      ${field("Summary", `<textarea id="ed-${it.id}-sum" class="textarea" rows="2" data-on="ed-f" data-k="${it.id}" data-f="summary">${esc(it.summary || "")}</textarea>`, `ed-${it.id}-sum`, "span-full")}
+      <div class="field span-full"><span class="eyebrow">Attributes</span>${attrs || `<p class="t-sm t-mute">No attributes yet.</p>`}<div><button class="btn btn-sm" data-act="ed-attr-add" data-k="${it.id}">${ic("plus")}Add attribute</button></div></div>
+      ${field("Claim provenance", selectHtml(`ed-${it.id}-cert`, "ed-f", `data-k="${it.id}" data-f="cert"`, CERTS, it.cert), `ed-${it.id}-cert`)}
       ${evidenceBlock(it)}</div>`;
   }
 
@@ -181,19 +181,19 @@ window.KBE = (function () {
     const ents = cur.filter((i) => i.kind === "entity").sort((a, b) => a.name.localeCompare(b.name)).map((e) => [e.id, entLabel(e)]);
     let main;
     if (it.kind === "relation") {
-      const miss = (id) => (cur.some((e) => e.id === id) ? [] : [["", "— chọn entity —", true]]);
+      const miss = (id) => (cur.some((e) => e.id === id) ? [] : [["", "— choose entity —", true]]);
       main = `<div class="form-3">
-        ${field("Chủ thể", selectHtml(`ed-${it.id}-from`, "ed-f", `data-k="${it.id}" data-f="from"`, [...miss(it.from), ...ents], it.from), `ed-${it.id}-from`)}
-        ${field("Quan hệ", selectHtml(`ed-${it.id}-pred`, "ed-f", `data-k="${it.id}" data-f="pred"`, Object.entries(O().predicates).map(([k, x]) => [k, `${x.label} (${k})`]), it.pred), `ed-${it.id}-pred`)}
-        ${field("Đối tượng", selectHtml(`ed-${it.id}-to`, "ed-f", `data-k="${it.id}" data-f="to"`, [...miss(it.to), ...ents], it.to), `ed-${it.id}-to`)}</div>`;
+        ${field("Subject", selectHtml(`ed-${it.id}-from`, "ed-f", `data-k="${it.id}" data-f="from"`, [...miss(it.from), ...ents], it.from), `ed-${it.id}-from`)}
+        ${field("Relation", selectHtml(`ed-${it.id}-pred`, "ed-f", `data-k="${it.id}" data-f="pred"`, Object.entries(O().predicates).map(([k, x]) => [k, `${x.label} (${k})`]), it.pred), `ed-${it.id}-pred`)}
+        ${field("Object", selectHtml(`ed-${it.id}-to`, "ed-f", `data-k="${it.id}" data-f="to"`, [...miss(it.to), ...ents], it.to), `ed-${it.id}-to`)}</div>`;
     } else {
-      main = `${field("Tên sự kiện", `<input id="ed-${it.id}-name" class="input" value="${esc(it.name)}" data-on="ed-f" data-k="${it.id}" data-f="name" autocomplete="off">${it.name.trim() ? "" : `<span class="field-err">Nhập tên.</span>`}`, `ed-${it.id}-name`)}
-        <div class="form-2">${field("Thời điểm", `<input id="ed-${it.id}-when" class="input" value="${esc(it.when || "")}" data-on="ed-f" data-k="${it.id}" data-f="when">`, `ed-${it.id}-when`)}
-        ${field("Thứ tự trên dòng thời gian", `<input id="ed-${it.id}-order" class="input" type="number" value="${esc(it.order ?? 0)}" data-on="ed-f" data-k="${it.id}" data-f="order">`, `ed-${it.id}-order`)}</div>
-        ${field("Tóm tắt", `<textarea id="ed-${it.id}-sum" class="textarea" rows="2" data-on="ed-f" data-k="${it.id}" data-f="summary">${esc(it.summary || "")}</textarea>`, `ed-${it.id}-sum`)}`;
+      main = `${field("Event name", `<input id="ed-${it.id}-name" class="input" value="${esc(it.name)}" data-on="ed-f" data-k="${it.id}" data-f="name" autocomplete="off">${it.name.trim() ? "" : `<span class="field-err">Enter a name.</span>`}`, `ed-${it.id}-name`)}
+        <div class="form-2">${field("Time", `<input id="ed-${it.id}-when" class="input" value="${esc(it.when || "")}" data-on="ed-f" data-k="${it.id}" data-f="when">`, `ed-${it.id}-when`)}
+        ${field("Timeline order", `<input id="ed-${it.id}-order" class="input" type="number" value="${esc(it.order ?? 0)}" data-on="ed-f" data-k="${it.id}" data-f="order">`, `ed-${it.id}-order`)}</div>
+        ${field("Summary", `<textarea id="ed-${it.id}-sum" class="textarea" rows="2" data-on="ed-f" data-k="${it.id}" data-f="summary">${esc(it.summary || "")}</textarea>`, `ed-${it.id}-sum`)}`;
     }
     return `<div class="ed-body">${main}
-      ${field("Nguồn gốc nhận định", selectHtml(`ed-${it.id}-cert`, "ed-f", `data-k="${it.id}" data-f="cert"`, CERTS, it.cert), `ed-${it.id}-cert`)}${evidenceBlock(it)}</div>`;
+      ${field("Claim provenance", selectHtml(`ed-${it.id}-cert`, "ed-f", `data-k="${it.id}" data-f="cert"`, CERTS, it.cert), `ed-${it.id}-cert`)}${evidenceBlock(it)}</div>`;
   }
 
   function cardHead(c, cur, selectable) {
@@ -201,16 +201,16 @@ window.KBE = (function () {
     const isRel = it.kind === "relation";
     const title = isRel
       ? `<span class="${cur.some((e) => e.id === it.from) ? "" : "ed-missing"}">${esc(itemName(cur, it.from))}</span> <span class="ed-pred">${esc(it.label)}</span> <span class="${cur.some((e) => e.id === it.to) ? "" : "ed-missing"}">${esc(itemName(cur, it.to))}</span>`
-      : esc(it.name || "(chưa đặt tên)");
+      : esc(it.name || "(unnamed)");
     const kind = it.kind === "entity" ? it.type : it.kind;
     const open = D.open.has(c.key);
     return `<div class="ed-head">
-      ${selectable ? `<input type="checkbox" data-on="ed-sel" data-k="${c.key}" ${D.sel.includes(c.key) ? "checked" : ""} ${present(c) ? "" : "disabled"} aria-label="Chọn ${esc(it.name || "")}">` : ""}
+      ${selectable ? `<input type="checkbox" data-on="ed-sel" data-k="${c.key}" ${D.sel.includes(c.key) ? "checked" : ""} ${present(c) ? "" : "disabled"} aria-label="Choose ${esc(it.name || "")}">` : ""}
       <button type="button" class="ed-toggle" data-act="ed-toggle" data-k="${c.key}" aria-expanded="${open}" ${present(c) ? "" : "disabled"}>${ic(open ? "chev-d" : "chev-r")}<span class="ed-ico">${ic(ICON[kind])}</span><span class="ed-title">${title}</span><span class="t-sm t-mute mono">${esc(chap(it))}</span></button>
-      ${c.involved ? `<span class="badge badge-danger">${ic("flag")}LIÊN QUAN</span>` : ""}
+      ${c.involved ? `<span class="badge badge-danger">${ic("flag")}RELATED</span>` : ""}
       ${c.state !== "same" ? `<span class="badge ${STATE[c.state][0]}">${STATE[c.state][1].toUpperCase()}</span>` : ""}
-      ${c.state === "deleted" ? `<button class="btn btn-sm btn-ghost" data-act="ed-restore" data-k="${c.key}">${ic("undo")}Hoàn lại</button>`
-    : present(c) ? `${it.kind === "entity" ? `<button class="btn btn-icon btn-sm" data-act="ed-split-start" data-k="${c.key}" aria-label="Tách entity" data-tip="Tách entity">${ic("scissors")}</button>` : ""}<button class="btn btn-icon btn-sm" data-act="ed-del" data-k="${c.key}" aria-label="Xóa" data-tip="Xóa">${ic("trash")}</button>` : ""}
+      ${c.state === "deleted" ? `<button class="btn btn-sm btn-ghost" data-act="ed-restore" data-k="${c.key}">${ic("undo")}Undo</button>`
+    : present(c) ? `${it.kind === "entity" ? `<button class="btn btn-icon btn-sm" data-act="ed-split-start" data-k="${c.key}" aria-label="Split entity" data-tip="Split entity">${ic("scissors")}</button>` : ""}<button class="btn btn-icon btn-sm" data-act="ed-del" data-k="${c.key}" aria-label="Delete" data-tip="Delete">${ic("trash")}</button>` : ""}
     </div>`;
   }
 
@@ -218,20 +218,20 @@ window.KBE = (function () {
     const f = D.split;
     const rels = cur.filter((i) => i.kind === "relation" && (i.from === c.key || i.to === c.key));
     return `<div class="ed-body">
-      <div class="form-2">${field("Tên entity mới", `<input id="ed-split-name" class="input" value="${esc(f.name)}" data-on="ed-split" data-f="name" autocomplete="off">`, "ed-split-name")}
-      ${field("Loại", selectHtml("ed-split-type", "ed-split", 'data-f="type"', Object.entries(O().entityTypes).map(([k, x]) => [k, x.label]), f.type), "ed-split-type")}</div>
-      <div class="field"><span class="eyebrow">Chuyển các quan hệ sang entity mới</span>${rels.map((r) => `<label class="check"><input type="checkbox" data-on="ed-split-fact" data-k="${r.id}" ${f.facts.includes(r.id) ? "checked" : ""}><span>${esc(itemName(cur, r.from))} <b>${esc(r.label)}</b> ${esc(itemName(cur, r.to))}</span></label>`).join("") || `<p class="t-sm t-mute">Entity này chưa có quan hệ nào.</p>`}</div>
-      <div class="ed-actions"><button class="btn btn-sm" data-act="ed-split-cancel">Hủy</button><button class="btn btn-sm btn-primary" data-act="ed-split-apply" ${f.name.trim() ? "" : "disabled"}>${ic("scissors")}Tách</button></div></div>`;
+      <div class="form-2">${field("New entity name", `<input id="ed-split-name" class="input" value="${esc(f.name)}" data-on="ed-split" data-f="name" autocomplete="off">`, "ed-split-name")}
+      ${field("Type", selectHtml("ed-split-type", "ed-split", 'data-f="type"', Object.entries(O().entityTypes).map(([k, x]) => [k, x.label]), f.type), "ed-split-type")}</div>
+      <div class="field"><span class="eyebrow">Move relations to the new entity</span>${rels.map((r) => `<label class="check"><input type="checkbox" data-on="ed-split-fact" data-k="${r.id}" ${f.facts.includes(r.id) ? "checked" : ""}><span>${esc(itemName(cur, r.from))} <b>${esc(r.label)}</b> ${esc(itemName(cur, r.to))}</span></label>`).join("") || `<p class="t-sm t-mute">This entity has no relations yet.</p>`}</div>
+      <div class="ed-actions"><button class="btn btn-sm" data-act="ed-split-cancel">Cancel</button><button class="btn btn-sm btn-primary" data-act="ed-split-apply" ${f.name.trim() ? "" : "disabled"}>${ic("scissors")}Split</button></div></div>`;
   }
 
   function describe(e, cur) {
     const nm = (id) => itemName(cur, id, id);
     const label = (id) => { const i = D.base.find((x) => x.id === id) || createdOp(id)?.item; return i ? (i.kind === "relation" ? `${nm(i.from)} ${i.label} ${nm(i.to)}` : i.name) : id; };
-    if (e.k === "add") return `Thêm ${e.item.kind === "entity" ? "entity" : "fact"} “${e.item.kind === "relation" ? `${nm(e.item.from)} ${e.item.label} ${nm(e.item.to)}` : e.item.name || "(chưa đặt tên)"}”`;
-    if (e.k === "edit") return `Sửa “${label(e.id)}”: ${Object.keys(e.patch).map((f) => ({ name: "tên", type: "loại", summary: "tóm tắt", attrs: "thuộc tính", cert: "nguồn gốc", ev: "dẫn chứng", from: "chủ thể", to: "đối tượng", pred: "quan hệ", label: "nhãn", when: "thời điểm", order: "thứ tự" }[f] || f)).join(", ")}`;
-    if (e.k === "del") return `Xóa “${label(e.id)}”`;
-    if (e.k === "merge") return `Gộp ${e.sources.filter((s) => s !== e.target).map(label).join(", ")} vào “${label(e.target)}”`;
-    return `Tách “${label(e.id)}” → “${e.item.name}” (${e.facts.length} quan hệ)`;
+    if (e.k === "add") return `Add ${e.item.kind === "entity" ? "entity" : "fact"} “${e.item.kind === "relation" ? `${nm(e.item.from)} ${e.item.label} ${nm(e.item.to)}` : e.item.name || "(unnamed)"}”`;
+    if (e.k === "edit") return `Edit “${label(e.id)}”: ${Object.keys(e.patch).map((f) => ({ name: "name", type: "type", summary: "summary", attrs: "attributes", cert: "provenance", ev: "evidence", from: "subject", to: "object", pred: "relation", label: "label", when: "time", order: "order" }[f] || f)).join(", ")}`;
+    if (e.k === "del") return `Delete “${label(e.id)}”`;
+    if (e.k === "merge") return `Merge ${e.sources.filter((s) => s !== e.target).map(label).join(", ")} into “${label(e.target)}”`;
+    return `Split “${label(e.id)}” → “${e.item.name}” (${e.facts.length} relations)`;
   }
 
   function draw() {
@@ -246,33 +246,33 @@ window.KBE = (function () {
     const rule = D.issue ? O().rules[D.issue.rule] : null;
     const ok = D.edits.length && !incomplete(cur) && (D.issue ? pv.state === "resolved" : pv.state === "clean" || pv.state === "warn");
 
-    const mergeForm = D.merge ? `<div class="ed-merge"><div class="field"><label for="ed-merge-t">Giữ lại entity</label>${selectHtml("ed-merge-t", "ed-merge", "", sel.map((c) => [c.key, entLabel(c.item)]), D.merge)}</div>
-        <p class="t-sm t-mute">Quan hệ, dẫn chứng và thuộc tính của các entity còn lại được chuyển sang entity giữ lại.</p>
-        <div class="ed-actions"><button class="btn btn-sm" data-act="ed-merge-cancel">Hủy</button><button class="btn btn-sm btn-primary" data-act="ed-merge-apply">${ic("merge")}Gộp</button></div></div>` : "";
-    const selBar = sel.length ? `<div class="ed-sel"><div class="ed-sel-bar"><span class="mono">Đã chọn ${sel.length}</span><span class="spacer"></span>
-        <button class="btn btn-sm" data-act="ed-merge-start" ${sel.length < 2 || D.merge ? "disabled" : ""}>${ic("merge")}Gộp</button>
-        <button class="btn btn-sm btn-danger" data-act="ed-del-sel">${ic("trash")}Xóa</button><button class="btn btn-sm btn-ghost" data-act="ed-clear">Bỏ chọn</button></div>${mergeForm}</div>` : "";
+    const mergeForm = D.merge ? `<div class="ed-merge"><div class="field"><label for="ed-merge-t">Keep entity</label>${selectHtml("ed-merge-t", "ed-merge", "", sel.map((c) => [c.key, entLabel(c.item)]), D.merge)}</div>
+        <p class="t-sm t-mute">The relations, evidence and attributes of the remaining entities are moved to the kept entity.</p>
+        <div class="ed-actions"><button class="btn btn-sm" data-act="ed-merge-cancel">Cancel</button><button class="btn btn-sm btn-primary" data-act="ed-merge-apply">${ic("merge")}Merge</button></div></div>` : "";
+    const selBar = sel.length ? `<div class="ed-sel"><div class="ed-sel-bar"><span class="mono">${sel.length} selected</span><span class="spacer"></span>
+        <button class="btn btn-sm" data-act="ed-merge-start" ${sel.length < 2 || D.merge ? "disabled" : ""}>${ic("merge")}Merge</button>
+        <button class="btn btn-sm btn-danger" data-act="ed-del-sel">${ic("trash")}Delete</button><button class="btn btn-sm btn-ghost" data-act="ed-clear">Deselect</button></div>${mergeForm}</div>` : "";
 
     const body = `<div class="ed-layout">
       ${D.issue ? `<section class="ed-issue is-${D.issue.sev}">${ic("alert")}<div><b>${esc(rule.label)}</b><p>${esc(D.issue.msg)}</p></div></section>` : ""}
-      <section class="ed-group"><div class="ed-ghead"><h4>Entity (${ents.length})</h4><span class="spacer"></span><button class="btn btn-sm btn-ghost" data-act="ed-add" data-v="entity">${ic("plus")}Thêm entity</button></div>
-        ${selBar}${ents.map(entCard).join("") || `<p class="t-sm t-mute">Không có entity nào trong phạm vi này.</p>`}</section>
+      <section class="ed-group"><div class="ed-ghead"><h4>Entity (${ents.length})</h4><span class="spacer"></span><button class="btn btn-sm btn-ghost" data-act="ed-add" data-v="entity">${ic("plus")}Add entity</button></div>
+        ${selBar}${ents.map(entCard).join("") || `<p class="t-sm t-mute">No entities in this scope.</p>`}</section>
       <section class="ed-group"><div class="ed-ghead"><h4>Fact (${facts.length})</h4><span class="spacer"></span>
-        <button class="btn btn-sm btn-ghost" data-act="ed-add" data-v="relation">${ic("plus")}Thêm quan hệ</button><button class="btn btn-sm btn-ghost" data-act="ed-add" data-v="event">${ic("plus")}Thêm sự kiện</button></div>
-        ${facts.map(factCard).join("") || `<p class="t-sm t-mute">Không có fact nào trong phạm vi này.</p>`}</section>
-      <section class="ed-changes"><button type="button" class="ed-toggle" data-act="ed-changes" aria-expanded="${D.changes}">${ic(D.changes ? "chev-d" : "chev-r")}<b>Thay đổi (${D.edits.length})</b></button>
-        ${D.changes ? (D.edits.length ? `<ol>${D.edits.map((e, i) => `<li><span>${esc(describe(e, cur))}</span><button class="btn btn-icon btn-sm" data-act="ed-undo" data-i="${i}" aria-label="Hoàn tác" data-tip="Hoàn tác">${ic("undo")}</button></li>`).join("")}</ol>` : `<p class="t-sm t-mute">Chưa có thay đổi.</p>`) : ""}</section>
+        <button class="btn btn-sm btn-ghost" data-act="ed-add" data-v="relation">${ic("plus")}Add relation</button><button class="btn btn-sm btn-ghost" data-act="ed-add" data-v="event">${ic("plus")}Add event</button></div>
+        ${facts.map(factCard).join("") || `<p class="t-sm t-mute">No facts in this scope.</p>`}</section>
+      <section class="ed-changes"><button type="button" class="ed-toggle" data-act="ed-changes" aria-expanded="${D.changes}">${ic(D.changes ? "chev-d" : "chev-r")}<b>Changes (${D.edits.length})</b></button>
+        ${D.changes ? (D.edits.length ? `<ol>${D.edits.map((e, i) => `<li><span>${esc(describe(e, cur))}</span><button class="btn btn-icon btn-sm" data-act="ed-undo" data-i="${i}" aria-label="Undo" data-tip="Undo">${ic("undo")}</button></li>`).join("")}</ol>` : `<p class="t-sm t-mute">No changes yet.</p>`) : ""}</section>
       <section class="ed-preview is-${pv.state}" role="status"><p>${ic(PV[pv.state][0])}<span>${PV[pv.state][1]}</span></p>
         ${pv.added.length ? `<ul>${pv.added.map((x) => `<li class="is-${x.sev}">${esc(O().rules[x.rule].label)} · ${esc(x.msg)}</li>`).join("")}</ul>` : ""}
-        ${pv.fixed.length ? `<p class="t-sm t-mute">${ic("check")}<span>Cũng giải quyết ${pv.fixed.length} vấn đề khác đang mở.</span></p>` : ""}</section></div>`;
+        ${pv.fixed.length ? `<p class="t-sm t-mute">${ic("check")}<span>Also resolves ${pv.fixed.length} other open issues.</span></p>` : ""}</section></div>`;
 
     A.modal({
-      title: D.issue ? "Xử lý xung đột" : "Sửa tri thức", eyebrow: "Knowledgebase", cls: "modal-xl ed-dialog", body,
-      foot: `<span class="t-sm t-mute">${D.edits.length} thay đổi</span><span class="spacer"></span><button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" data-act="ed-confirm" ${ok ? "" : "disabled"}>${ic("check")}${D.issue ? "Xác nhận xử lý" : "Xác nhận thay đổi"}</button>`,
+      title: D.issue ? "Resolve conflict" : "Edit knowledge", eyebrow: "Knowledgebase", cls: "modal-xl ed-dialog", body,
+      foot: `<span class="t-sm t-mute">${D.edits.length} changes</span><span class="spacer"></span><button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" data-act="ed-confirm" ${ok ? "" : "disabled"}>${ic("check")}${D.issue ? "Confirm resolution" : "Confirm changes"}</button>`,
     });
   }
 
-  /** Vẽ lại nhưng giữ vị trí cuộn và ô đang gõ. */
+  /** Re-renders but keeps the scroll position and the field being typed in. */
   function redraw() {
     const mb = A.$("#layer .modal-body");
     const top = mb ? mb.scrollTop : 0;
@@ -295,14 +295,14 @@ window.KBE = (function () {
       else if (w !== JSON.stringify(i)) { i.status = "edited"; i.stale = null; }
     });
     K().items = cur;
-    K().log.unshift({ date: A.stamp(), text: `Sửa tri thức: ${D.edits.length} thay đổi.` });
+    K().log.unshift({ date: A.stamp(), text: `Edited knowledge: ${D.edits.length} changes.` });
     const left = C.run().open.length;
     A.closeModal();
     A.rerender();
-    A.toast(`Đã áp dụng ${D.edits.length} thay đổi. ${left ? `Còn ${left} vấn đề cần xem.` : "Không còn xung đột."}`, left ? "warning" : "success");
+    A.toast(`Applied ${D.edits.length} changes. ${left ? `${left} issues still need review.` : "No conflicts remain."}`, left ? "warning" : "success");
   }
 
-  /* ---------------- sự kiện ---------------- */
+  /* ---------------- events ---------------- */
   const cur = () => apply(D.edits);
   const itemOf = (id) => cur().find((i) => i.id === id);
 
@@ -325,7 +325,7 @@ window.KBE = (function () {
     "ed-ev-add": (el) => {
       const id = el.dataset.k;
       const d = D.evd[id] || { p: "", q: "" };
-      if (!d.p.trim() || !d.q.trim()) { A.toast("Nhập cả đoạn nguồn và trích dẫn.", "warning"); return; }
+      if (!d.p.trim() || !d.q.trim()) { A.toast("Enter both the source paragraph and the quote.", "warning"); return; }
       const it = itemOf(id);
       patch(id, { ev: [...it.ev, { p: d.p.trim(), q: d.q.trim() }] });
       D.evd[id] = { p: "", q: "" };

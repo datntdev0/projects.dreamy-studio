@@ -2,25 +2,25 @@ window.SC = (function () {
   const NVS = () => window.NV.state;
   const PJ = window.PJ;
   const pad = (n) => String(n).padStart(2, "0");
-  const num = (n) => ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín", "mười", "mười một", "mười hai"][n] || String(n);
+  const num = (n) => ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"][n] || String(n);
   const words = (t) => (String(t || "").trim() ? String(t).trim().split(/\s+/).length : 0);
 
   const TYPES = {
-    heading: { label: "Tiêu đề", icon: "list", hint: "Cách đọc tiêu đề chương.", text: true },
-    narration: { label: "Dẫn chuyện", icon: "book", hint: "Lời người dẫn chuyện đọc.", text: true },
-    dialogue: { label: "Hội thoại", icon: "users", hint: "Lời thoại của một người nói.", text: true, who: true },
-    pause: { label: "Khoảng nghỉ", icon: "pause", hint: "Dừng im lặng trong một khoảng thời gian.", text: false },
-    note: { label: "Ghi chú", icon: "info", hint: "Ghi chú nội bộ, không đưa vào bản chốt.", text: true },
-    scene: { label: "Phân cảnh", icon: "frames", hint: "Tiêu đề cảnh: nội hay ngoại, bối cảnh, thời điểm.", text: false },
-    action: { label: "Hành động", icon: "film", hint: "Mô tả hình ảnh và hành động trong cảnh.", text: true },
+    heading: { label: "Title", icon: "list", hint: "How the chapter title is read.", text: true },
+    narration: { label: "Narration", icon: "book", hint: "Words read by the narrator.", text: true },
+    dialogue: { label: "Dialogue", icon: "users", hint: "A line spoken by a speaker.", text: true, who: true },
+    pause: { label: "Pauses", icon: "pause", hint: "Stay silent for a period of time.", text: false },
+    note: { label: "Note", icon: "info", hint: "Internal note, not included in the locked version.", text: true },
+    scene: { label: "Scene", icon: "frames", hint: "Scene heading: interior or exterior, setting, time of day.", text: false },
+    action: { label: "Action", icon: "film", hint: "Description of the visuals and action in the scene.", text: true },
   };
   const NEXT = { heading: "narration", narration: "narration", dialogue: "action", pause: "narration", note: "action", scene: "action", action: "action" };
   const SPOKEN = ["heading", "narration", "dialogue", "action"];
-  const TIMES = ["BÌNH MINH", "SÁNG", "TRƯA", "CHIỀU", "HOÀNG HÔN", "ĐÊM", "LIÊN TỤC"];
+  const TIMES = ["DAWN", "MORNING", "NOON", "AFTERNOON", "SUNSET", "NIGHT", "CONTINUOUS"];
 
   const PRESETS = {
-    audiobook: { label: "Lời đọc audiobook", short: "AUDIOBOOK", icon: "mic", unit: "Chương", types: ["heading", "narration", "dialogue", "pause", "note"], layout: "page", source: true, speakers: true, ranges: false, freeUnits: false, blurb: "Lời đọc theo từng chương, mỗi đoạn nguồn là một nhóm các khối. Giọng đọc chọn ở module Audiobook." },
-    film: { label: "Kịch bản phim", short: "FILMSERIES", icon: "film", unit: "Tập", types: ["scene", "action", "dialogue", "note"], layout: "page", source: false, speakers: true, ranges: true, freeUnits: true, blurb: "Mỗi tập gồm vài chương. AI dựng kịch bản từ Knowledgebase, bạn chỉnh sửa và chốt." },
+    audiobook: { label: "Audiobook narration", short: "AUDIOBOOK", icon: "mic", unit: "Chapters", types: ["heading", "narration", "dialogue", "pause", "note"], layout: "page", source: true, speakers: true, ranges: false, freeUnits: false, blurb: "Narration per chapter, each source paragraph is a group of blocks. Voices are chosen in the Audiobook module." },
+    film: { label: "Film script", short: "FILMSERIES", icon: "film", unit: "Episode", types: ["scene", "action", "dialogue", "note"], layout: "page", source: false, speakers: true, ranges: true, freeUnits: true, blurb: "Each episode has a few chapters. The AI builds the script from the Knowledgebase, you edit and lock it." },
   };
   const PRESET_OF = { audiobook: "audiobook", "audiobook-video": "audiobook", filmseries: "film", blank: null };
   const cfgOf = (preset) => { const { label, short, icon, blurb, ...rest } = PRESETS[preset]; return { preset, ...rest, types: [...rest.types] }; };
@@ -28,7 +28,7 @@ window.SC = (function () {
   const VI_TITLES = { 1: "Ngọn đèn cuối cùng", 2: "Thư lại từ bến cảng", 3: "Điều thủy triều trả lại" };
   const SPEAK = { "1.3": "E02", "1.4": "E01", "2.2": "E03", "2.4": "E04" };
 
-  const mk = (s, type, o = {}) => ({ id: `B${++s.seq}`, type, text: "", who: "", paren: "", ms: 0, loc: "", time: "SÁNG", ref: null, snap: null, beat: "", refs: [], chars: [], ...o });
+  const mk = (s, type, o = {}) => ({ id: `B${++s.seq}`, type, text: "", who: "", paren: "", ms: 0, loc: "", time: "MORNING", ref: null, snap: null, beat: "", refs: [], chars: [], ...o });
 
   const split = (text) => {
     const out = [];
@@ -48,7 +48,7 @@ window.SC = (function () {
     ? mk(s, "dialogue", { who: who || (guess ? SPEAK[para.id] || firstChar(s) : ""), text: seg.t.replace(/[,;]$/, "."), ref: para.id, snap: para.t })
     : mk(s, "narration", { text: seg.t, ref: para.id, snap: para.t })));
   const draftAudio = (s, unit, paras, o = {}) => [
-    mk(s, "heading", { text: `Chương ${num(unit.no)}.${unit.title ? ` ${unit.title}.` : ""}` }),
+    mk(s, "heading", { text: `Chapter ${num(unit.no)}.${unit.title ? ` ${unit.title}.` : ""}` }),
     mk(s, "pause", { ms: 800 }),
     ...paras.flatMap((p) => (o.split ? rowBlocks(s, p, "", o.guess !== false) : [mk(s, "narration", { text: p.t, ref: p.id, snap: p.t })])),
   ];
@@ -68,7 +68,7 @@ window.SC = (function () {
   };
   const chapterTitle = (p, n) => {
     if (p.novel === "NOV-0001") return p.src && p.src.kind === "translation" && VI_TITLES[n] ? VI_TITLES[n] : NVS().chapters[n - 1].title;
-    return `Chương ${n}`;
+    return `Chapter ${n}`;
   };
 
   const kbAvail = (p) => p.novel === "NOV-0001";
@@ -96,7 +96,7 @@ window.SC = (function () {
       const dist = (pl) => Math.min(99, ...pl.ev.filter((x) => chNo(x.p) === chNo(refs[0])).map((x) => Math.abs(paraNo(x.p) - paraNo(refs[0]))));
       const near = places.map((pl) => [pl, dist(pl)]).sort((a, b) => a[1] - b[1])[0];
       const loc = near && near[1] < 99 ? near[0].name.toUpperCase() : "";
-      return { ev: ev.id, text: ev.summary, refs, chars: chars.filter((c) => c.ev.some((x) => refs.includes(x.p))).map((c) => c.id), loc, time: "NGÀY" };
+      return { ev: ev.id, text: ev.summary, refs, chars: chars.filter((c) => c.ev.some((x) => refs.includes(x.p))).map((c) => c.id), loc, time: "DAY" };
     });
   }
   const beatBlocks = (s, beats) => beats.map((b) => mk(s, "scene", { loc: b.loc, time: b.time, beat: b.text, refs: b.refs, chars: b.chars }));
@@ -112,7 +112,7 @@ window.SC = (function () {
     });
     return out;
   };
-  const narrOnly = () => [{ id: "narr", name: "Người dẫn chuyện", kind: "narrator", c: -1 }];
+  const narrOnly = () => [{ id: "narr", name: "Narrator", kind: "narrator", c: -1 }];
   function syncCast(p, s) {
     s.cast = [...(s.cfg.preset === "audiobook" ? narrOnly() : []), ...kbCast(p), ...(s.extraCast || [])];
   }
@@ -170,12 +170,12 @@ window.SC = (function () {
     const u1 = s.units[0];
     const u2 = s.units[1];
     const u3 = s.units[2];
-    at(u1, "1.3", "dialogue").paren = "khô khốc";
-    at(u1, "1.4", "dialogue").paren = "lạnh, không quay lại";
-    at(u2, "2.2", "dialogue").paren = "đọc thư, trang trọng";
-    u2.blocks.splice(u2.blocks.indexOf(at(u2, "2.3", "narration")), 0, mk(s, "note", { text: "Giữ nhịp chậm, hơi thở dài khi Maro đi dọc phố vắng." }));
-    at(u3, "3.2", "narration").snap = at(u3, "3.2", "narration").snap.replace("xanh rêu", "xanh xám");
-    at(u3, "3.3", "narration").snap = at(u3, "3.3", "narration").snap.replace("treo nó cạnh ngọn đèn", "treo nó cạnh đèn");
+    at(u1, "1.3", "dialogue").paren = "dry, curt";
+    at(u1, "1.4", "dialogue").paren = "cold, does not turn back";
+    at(u2, "2.2", "dialogue").paren = "reading the letter, formal";
+    u2.blocks.splice(u2.blocks.indexOf(at(u2, "2.3", "narration")), 0, mk(s, "note", { text: "Keep a slow pace, with a long breath as Maro walks down the empty street." }));
+    at(u3, "3.2", "narration").snap = at(u3, "3.2", "narration").snap.replace("moss green", "grey-green");
+    at(u3, "3.3", "narration").snap = at(u3, "3.3", "narration").snap.replace("hangs it beside the lamp", "hangs it beside the light");
   }
 
   function seedFilm(p) {
@@ -186,18 +186,18 @@ window.SC = (function () {
     const dl = (who, text, paren = "") => ({ type: "dialogue", who, text, paren });
     const u1 = newUnit(s, { no: 1, chs: [1, 2], title: "Ngọn đèn cuối cùng" });
     u1.blocks = [
-      ...scene("THÁP ĐÈN", "NGOẠI", "HOÀNG HÔN", "Wren thắp ngọn đèn cuối cùng của Harrowmere.", ["1.1", "1.2"], ["E01"], [
+      ...scene("LANTERN TOWER", "EXT.", "SUNSET", "Wren lights the last lamp of Harrowmere.", ["1.1", "1.2"], ["E01"], [
         ac("Chạng vạng. Sương mù phủ dày lên bến cảng Harrowmere. WREN ALDOUS leo hết ba trăm mười hai bậc thang của Tháp Đèn và thắp ngọn đèn cuối cùng. Những ngọn đèn khác trong thị trấn đã tắt từ nhiều năm trước."),
       ]),
-      ...scene("THÁP ĐÈN", "NGOẠI", "HOÀNG HÔN", "Maro Quill, thư lại bến cảng, đến để kiểm kê Harrowmere.", ["1.3", "1.4", "1.5"], ["E01", "E02"], [
+      ...scene("LANTERN TOWER", "EXT.", "SUNSET", "Maro Quill, the harbor clerk, arrives to take an inventory of Harrowmere.", ["1.3", "1.4", "1.5"], ["E01", "E02"], [
         ac("MARO QUILL, thư lại bến cảng, đã leo lên cầu thang mà không phát ra một tiếng động. Anh ôm chặt cuốn sổ cái trước ngực."),
-        dl("E02", "Cô đang phí dầu đấy. Hội đồng đã sáu mùa đông không trả tiền cho nó.", "khô khốc"),
-        dl("E01", "Hội đồng đâu có thắp đèn. Tôi thắp.", "không quay lại"),
+        dl("E02", "Cô đang phí dầu đấy. Hội đồng đã sáu mùa đông không trả tiền cho nó.", "dry, curt"),
+        dl("E01", "Hội đồng đâu có thắp đèn. Tôi thắp.", "does not turn back"),
         ac("Anh tự giới thiệu là Maro Quill, được cử đến để kiểm kê những gì còn lại của Harrowmere. Anh không nói ai đã cử mình."),
       ]),
-      ...scene("BẾN CHÌM", "NGOẠI", "HOÀNG HÔN", "Từ đỉnh tháp, ánh đèn dường như vươn xuống tận mặt nước.", ["1.6"], [], []),
-      ...scene("PHÒNG TRỌ", "NỘI", "SÁNG", "Maro tìm thấy thư của Phu nhân Sevrin trong cuốn sổ cái.", ["2.1", "2.2"], ["E02", "E03"], []),
-      ...scene("BẾN CHÌM", "NGOẠI", "NGÀY", "Bà lão bán trà cảnh báo Maro về ngọn đèn.", ["2.4"], ["E02", "E04"], []),
+      ...scene("SUNKEN WHARF", "EXT.", "SUNSET", "Từ đỉnh tháp, ánh đèn dường như vươn xuống tận mặt nước.", ["1.6"], [], []),
+      ...scene("BOARDING HOUSE", "INT.", "MORNING", "Maro finds Lady Severin’s letter in the ledger.", ["2.1", "2.2"], ["E02", "E03"], []),
+      ...scene("SUNKEN WHARF", "EXT.", "DAY", "The tea-selling old woman warns Maro about the lamp.", ["2.4"], ["E02", "E04"], []),
     ];
     s.units.push(u1);
     s.units.push(newUnit(s, { no: 2, chs: [3, 3], title: "Điều thủy triều trả lại" }));
@@ -222,9 +222,9 @@ window.SC = (function () {
     const p6 = byId("PRJ-0006");
     if (p1) { scripts[p1.id] = seedAudio(p1, { 3: "review" }, true); tuneAudio(scripts[p1.id]); }
     if (p3) scripts[p3.id] = seedFilm(p3);
-    if (p4) scripts[p4.id] = seedLocked(p4, 8, "Chương", 2230);
+    if (p4) scripts[p4.id] = seedLocked(p4, 8, "Chapters", 2230);
     if (p5) scripts[p5.id] = seedAudio(p5, {}, false);
-    if (p6) scripts[p6.id] = seedLocked(p6, 2, "Tập", 2400);
+    if (p6) scripts[p6.id] = seedLocked(p6, 2, "Episode", 2400);
     return { scripts };
   }
 

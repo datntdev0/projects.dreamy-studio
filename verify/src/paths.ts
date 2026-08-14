@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export const WORKSPACE_NAME = "Library prototype";
+export const WORKSPACE_NAME = "Dreamy Studio";
 export const verifyRoot = resolve(here, "..");
 export const repoRoot = resolve(verifyRoot, "..");
 export const outputRoot = join(repoRoot, "_output", "verify");

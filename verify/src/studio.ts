@@ -10,9 +10,8 @@ import type { ListSpec, PanelSpec, ScreenSpec, SuiteSpec, Target } from "./scree
 
 const VIEWPORT = { width: 1440, height: 900 };
 const THEME = "dark";
-const LANGUAGE = "vi";
+const LANGUAGE = "en";
 const READY_SELECTOR = ".editor .nv-bar";
-const PROTOTYPE_WORKSPACE_NAME = '[data-testid="main-workspace-name"]';
 
 export interface Region {
   readonly x: number;
@@ -33,6 +32,7 @@ export interface Studio {
   panel(spec: PanelSpec): Locator;
   region(spec: PanelSpec): Promise<Region | null>;
   outline(spec: PanelSpec): Promise<string>;
+  conceal(spec: PanelSpec): Promise<void>;
 }
 
 export interface Runtime {
@@ -109,13 +109,15 @@ abstract class BaseStudio implements Studio {
 
   async outline(spec: PanelSpec): Promise<string> {
     const root = this.page.locator(spec.aria ?? spec.selector).first();
-    let text = await root.ariaSnapshot();
-    for (const selector of spec.mask ?? []) {
-      const hidden = (await this.panel(spec).locator(selector).first().innerText()).trim();
-      text = hidden ? text.replaceAll(hidden, "<masked>") : text;
-    }
-    return `${text}
+    return `${await root.ariaSnapshot()}
 `;
+  }
+
+  async conceal(spec: PanelSpec): Promise<void> {
+    const rules = (spec.hide ?? []).map((selector) => `${spec.selector} ${selector} { visibility: hidden !important; }`);
+    if (rules.length > 0) {
+      await this.page.addStyleTag({ content: rules.join(" ") });
+    }
   }
 
   protected async requireFonts(): Promise<void> {
@@ -146,13 +148,6 @@ class PrototypeStudio extends BaseStudio {
     await this.page.evaluate(() => localStorage.clear());
     await this.page.goto(url);
     await this.page.locator(READY_SELECTOR).first().waitFor();
-    await this.page.evaluate(
-      ([selector, name]) => {
-        (window as unknown as { DSApp: { S: { workspace: { name: string } } } }).DSApp.S.workspace.name = name as string;
-        document.querySelector(selector as string)!.textContent = name as string;
-      },
-      [PROTOTYPE_WORKSPACE_NAME, WORKSPACE_NAME],
-    );
     await this.requireFonts();
     await this.settle();
   }
@@ -186,7 +181,7 @@ class AppStudio extends BaseStudio {
 
 async function startPrototype(): Promise<Runtime> {
   const browser: Browser = await chromium.launch({ channel: "msedge" });
-  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, colorScheme: "dark", locale: "vi-VN" });
+  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, colorScheme: "dark", locale: "en-US" });
   const page = await context.newPage();
   return { studio: new PrototypeStudio(page, "prototype"), stop: () => browser.close() };
 }

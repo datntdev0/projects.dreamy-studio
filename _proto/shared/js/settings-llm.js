@@ -3,18 +3,18 @@
   const LB = window.LB;
   const { esc, ic } = A;
   const PROVIDERS = [
-    { id: "claude", command: "claude", name: "Claude Code CLI", version: "2.1.4", caps: ["DỊCH", "TRI THỨC", "ASSISTANT"] },
-    { id: "antigravity", command: "agy", name: "Antigravity CLI", version: "1.0.3", caps: ["DỊCH", "TRI THỨC", "ASSISTANT"] },
-    { id: "codex", command: "codex", name: "Codex CLI", version: "0.87.0", caps: ["TRI THỨC", "ASSISTANT"] },
+    { id: "claude", command: "claude", name: "Claude Code CLI", version: "2.1.4", caps: ["TRANSLATION", "KNOWLEDGE", "ASSISTANT"] },
+    { id: "antigravity", command: "agy", name: "Antigravity CLI", version: "1.0.3", caps: ["TRANSLATION", "KNOWLEDGE", "ASSISTANT"] },
+    { id: "codex", command: "codex", name: "Codex CLI", version: "0.87.0", caps: ["KNOWLEDGE", "ASSISTANT"] },
   ];
   PROVIDERS.forEach((p) => { p.kind = "cli"; });
-  const cloudCaps = ["DỊCH", "TRI THỨC", "ASSISTANT"];
+  const cloudCaps = ["TRANSLATION", "KNOWLEDGE", "ASSISTANT"];
   const cloudProviders = [
-    { id: "anthropic", name: "Anthropic API", site: "console.anthropic.com", note: "Gọi Claude qua Anthropic API bằng API key tạo trong Console." },
-    { id: "openai", name: "OpenAI", site: "platform.openai.com", note: "Dùng Chat/Responses API. Có thể đổi Base URL nếu bạn dùng cổng tương thích OpenAI.", baseUrl: "https://api.openai.com/v1", baseUrlEditable: true },
-    { id: "google", name: "Google AI Studio (Gemini)", site: "aistudio.google.com", note: "Dùng API key tạo trong Google AI Studio để gọi Gemini API." },
-    { id: "openrouter", name: "OpenRouter", site: "openrouter.ai", note: "Một API key để dùng nhiều mô hình của nhiều nhà cung cấp.", baseUrl: "https://openrouter.ai/api/v1" },
-    { id: "custom", name: "Tùy chỉnh (OpenAI-compatible)", site: "máy chủ của bạn", note: "Dùng máy chủ tương thích OpenAI, ví dụ Ollama hoặc LM Studio chạy trên máy này hoặc trong mạng của bạn.", baseUrl: "", baseUrlEditable: true }
+    { id: "anthropic", name: "Anthropic API", site: "console.anthropic.com", note: "Call Claude through the Anthropic API with an API key created in the Console." },
+    { id: "openai", name: "OpenAI", site: "platform.openai.com", note: "Uses the Chat/Responses API. You can change the Base URL if you use an OpenAI-compatible gateway.", baseUrl: "https://api.openai.com/v1", baseUrlEditable: true },
+    { id: "google", name: "Google AI Studio (Gemini)", site: "aistudio.google.com", note: "Use an API key created in Google AI Studio to call the Gemini API." },
+    { id: "openrouter", name: "OpenRouter", site: "openrouter.ai", note: "One API key to use many models from many providers.", baseUrl: "https://openrouter.ai/api/v1" },
+    { id: "custom", name: "Custom (OpenAI-compatible)", site: "your server", note: "Use an OpenAI-compatible server, for example Ollama or LM Studio running on this machine or on your network.", baseUrl: "", baseUrlEditable: true }
   ];
   cloudProviders.forEach((p) => Object.assign(p, { kind: "cloud", caps: cloudCaps, keyRequired: p.id !== "custom", baseUrlEditable: !!p.baseUrlEditable }));
   const cliProviders = [...PROVIDERS];
@@ -52,7 +52,7 @@
     open: () => A.openSettings("llm"),
   };
 
-  const detection = () => cliProviders.map((p) => ({ id: p.id, name: p.name, status: !P(p.id).found ? "missing" : P(p.id).status === "ok" ? "ok" : "none", detail: P(p.id).found ? `${P(p.id).version} · ${P(p.id).path}` : "Không tìm thấy trong PATH" }));
+  const detection = () => cliProviders.map((p) => ({ id: p.id, name: p.name, status: !P(p.id).found ? "missing" : P(p.id).status === "ok" ? "ok" : "none", detail: P(p.id).found ? `${P(p.id).version} · ${P(p.id).path}` : "Not found in PATH" }));
   const checkRows = () => (checks || detection()).map((p) => `<div class="ld-step is-${p.status === "ok" ? "done" : p.status === "missing" ? "warn" : p.status}">${p.status === "ok" ? ic("check") : p.status === "missing" ? ic("alert") : `<span class="dot ${p.status === "running" ? "dot-running" : ""}"></span>`}<span>${esc(p.name)}</span><span class="ld-detail">${esc(p.detail)}</span></div>`).join("");
   const paintChecks = () => { const el = A.$("#cl-checks"); if (el) el.innerHTML = checkRows(); };
   async function scan() {
@@ -75,35 +75,35 @@
     refresh();
   }
   const statusBadge = (s) => {
-    if (!s.found) return badge("badge-warning", "CHƯA CÀI");
-    if (!s.enabled) return badge("", "ĐÃ TẮT");
-    const styles = { none: ["", "CHƯA KIỂM TRA"], checking: ["badge-running", "ĐANG KIỂM TRA"], ok: ["badge-success", "ĐÃ KẾT NỐI"], error: ["badge-danger", "LỖI"] };
+    if (!s.found) return badge("badge-warning", "NOT INSTALLED");
+    if (!s.enabled) return badge("", "DISABLED");
+    const styles = { none: ["", "NOT CHECKED"], checking: ["badge-running", "CHECKING"], ok: ["badge-success", "CONNECTED"], error: ["badge-danger", "ERROR"] };
     return badge(...styles[s.status]);
   };
   const message = (p, s) => {
-    if (!s.found) return "Chưa cài trên máy này.";
-    if (s.status === "ok") return `${ic("check")}<span>Kiểm tra thành công · ${s.latency} ms · ${esc(s.at)}</span>`;
+    if (!s.found) return "Not installed on this machine.";
+    if (s.status === "ok") return `${ic("check")}<span>Check succeeded · ${s.latency} ms · ${esc(s.at)}</span>`;
     if (s.status === "error") return `${ic("alert")}<span>${esc(s.error)}</span>`;
-    if (s.status === "checking") return `<span class="dot dot-running"></span><span>Đang chạy <span class="path">${p.command} --version</span>…</span>`;
-    return "Chưa kiểm tra. Bấm Kiểm tra để chạy thử lệnh.";
+    if (s.status === "checking") return `<span class="dot dot-running"></span><span>Running <span class="path">${p.command} --version</span>…</span>`;
+    return "Not checked. Click Check to try running the command.";
   };
   const fields = (p, s) => `<div class="spc-fields">
-    <div class="field cl-wide"><label for="cl-${p.id}-path">Đường dẫn executable</label><div class="cl-pathrow"><input id="cl-${p.id}-path" class="input mono-in" value="${esc(s.path)}" data-change="cl-field" data-p="${p.id}" data-f="path" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-sm btn-icon" data-act="cl-copy" data-p="${p.id}" aria-label="Sao chép đường dẫn">${ic("copy")}</button></div></div>
-    <div class="field cl-wide"><label for="cl-${p.id}-args">Tham số bổ sung</label><input id="cl-${p.id}-args" class="input mono-in" value="${esc(s.args)}" placeholder="ví dụ: --max-turns 5" data-change="cl-field" data-p="${p.id}" data-f="args" autocomplete="off" spellcheck="false"><span class="field-hint">Thêm vào mỗi lần chạy lệnh. Không nhập khóa bí mật vào đây.</span></div></div>`;
-  const missing = (p) => `<div class="tts-pending">${ic("alert")}<div class="tts-pending-b"><b>Không tìm thấy <span class="path">${p.command}</span> trong PATH</b><p class="t-sm">Cài CLI rồi bấm Quét lại, hoặc nhập đường dẫn executable thủ công.</p><div class="field"><label class="sr-only" for="cl-${p.id}-manual">Đường dẫn executable</label><div class="cl-pathrow"><input id="cl-${p.id}-manual" class="input mono-in" placeholder="C:\\...\\${p.command}.cmd" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-sm" data-act="cl-use-path" data-p="${p.id}">Dùng đường dẫn này</button></div></div></div></div>`;
+    <div class="field cl-wide"><label for="cl-${p.id}-path">Executable path</label><div class="cl-pathrow"><input id="cl-${p.id}-path" class="input mono-in" value="${esc(s.path)}" data-change="cl-field" data-p="${p.id}" data-f="path" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-sm btn-icon" data-act="cl-copy" data-p="${p.id}" aria-label="Copy path">${ic("copy")}</button></div></div>
+    <div class="field cl-wide"><label for="cl-${p.id}-args">Extra arguments</label><input id="cl-${p.id}-args" class="input mono-in" value="${esc(s.args)}" placeholder="e.g. --max-turns 5" data-change="cl-field" data-p="${p.id}" data-f="args" autocomplete="off" spellcheck="false"><span class="field-hint">Added to every command run. Do not enter secret keys here.</span></div></div>`;
+  const missing = (p) => `<div class="tts-pending">${ic("alert")}<div class="tts-pending-b"><b>Not found <span class="path">${p.command}</span> trong PATH</b><p class="t-sm">Install the CLI then click Rescan, or enter the executable path by hand.</p><div class="field"><label class="sr-only" for="cl-${p.id}-manual">Executable path</label><div class="cl-pathrow"><input id="cl-${p.id}-manual" class="input mono-in" placeholder="C:\\...\\${p.command}.cmd" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-sm" data-act="cl-use-path" data-p="${p.id}">Use this path</button></div></div></div></div>`;
   const card = (p) => {
     const s = P(p.id);
     return `<article class="cl-card ${s.enabled ? "" : "is-off"} ${s.found ? "" : "is-missing"}" data-testid="cl-${p.id}">
-      <header class="spc-h"><div class="spc-t"><span class="t-ink spc-name">${p.name}</span>${statusBadge(s)}${LB.llm.isDefault(p.id) ? badge("badge-primary", "MẶC ĐỊNH") : ""}</div><label class="check spc-on"><input type="checkbox" data-change="cl-enable" data-p="${p.id}" ${s.found && s.enabled ? "checked" : ""} ${s.found ? "" : "disabled"}><span>Bật</span></label></header>
+      <header class="spc-h"><div class="spc-t"><span class="t-ink spc-name">${p.name}</span>${statusBadge(s)}${LB.llm.isDefault(p.id) ? badge("badge-primary", "DEFAULT") : ""}</div><label class="check spc-on"><input type="checkbox" data-change="cl-enable" data-p="${p.id}" ${s.found && s.enabled ? "checked" : ""} ${s.found ? "" : "disabled"}><span>Enable</span></label></header>
       <div class="tts-m-meta"><span class="path t-mute">${p.command}</span>${s.found ? badge("cl-version", s.version) : ""}${p.caps.map((c) => badge("badge-primary", c)).join("")}</div>
       ${s.found ? fields(p, s) : missing(p)}
-      <footer class="spc-foot"><div class="spc-msg t-sm ${s.status === "ok" ? "is-ok" : s.status === "error" ? "is-err" : "t-mute"}" role="status">${message(p, s)}</div>${s.found ? `<button type="button" class="btn btn-sm btn-primary" data-act="cl-test" data-p="${p.id}" ${!s.enabled || s.status === "checking" ? "disabled" : ""}>${ic("refresh")}Kiểm tra</button><button type="button" class="btn btn-sm" data-act="cl-default" data-p="${p.id}" ${!ready(p.id) || LB.llm.isDefault(p.id) ? "disabled" : ""}>Đặt mặc định</button>` : ""}</footer></article>`;
+      <footer class="spc-foot"><div class="spc-msg t-sm ${s.status === "ok" ? "is-ok" : s.status === "error" ? "is-err" : "t-mute"}" role="status">${message(p, s)}</div>${s.found ? `<button type="button" class="btn btn-sm btn-primary" data-act="cl-test" data-p="${p.id}" ${!s.enabled || s.status === "checking" ? "disabled" : ""}>${ic("refresh")}Check</button><button type="button" class="btn btn-sm" data-act="cl-default" data-p="${p.id}" ${!ready(p.id) || LB.llm.isDefault(p.id) ? "disabled" : ""}>Set as default</button>` : ""}</footer></article>`;
   };
   const cloudMessage = (p, s) => {
-    if (s.status === "checking") return '<span class="dot dot-running"></span><span>Đang kiểm tra kết nối tới ' + esc(p.name) + '…</span>';
-    if (s.status === "ok") return ic("check") + '<span>Kết nối thành công · ' + s.latency + ' ms · ' + esc(s.at) + '</span>';
+    if (s.status === "checking") return '<span class="dot dot-running"></span><span>Checking the connection to ' + esc(p.name) + '…</span>';
+    if (s.status === "ok") return ic("check") + '<span>Connected successfully · ' + s.latency + ' ms · ' + esc(s.at) + '</span>';
     if (s.status === "error") return ic("alert") + '<span>' + esc(s.error) + '</span>';
-    return s.saved ? "Đã lưu khóa, chưa kiểm tra." : "Nhập API key rồi bấm kiểm tra kết nối.";
+    return s.saved ? "Key saved, not checked yet." : "Enter an API key then click check connection.";
   };
   const cloudField = (p, f, label, placeholder = "") => {
     const id = 'cl-' + p.id + '-' + f;
@@ -112,19 +112,19 @@
   const cloudButton = (p, action, label, disabled, primary = false) => '<button type="button" class="btn btn-sm ' + (primary ? 'btn-primary' : '') + '" data-testid="cl-' + p.id + '-' + (action === 'cloud-test' ? 'test' : action) + '" data-act="cl-' + action + '" data-p="' + p.id + '" ' + (disabled ? 'disabled' : '') + '>' + (primary ? ic("refresh") : '') + label + '</button>';
   const cloudCard = (p) => {
     const s = P(p.id);
-    const statuses = { none: ["", "CHƯA CẤU HÌNH"], checking: ["badge-running", "ĐANG KIỂM TRA"], ok: ["badge-success", "ĐÃ KẾT NỐI"], error: ["badge-danger", "LỖI KẾT NỐI"] };
+    const statuses = { none: ["", "NOT CONFIGURED"], checking: ["badge-running", "CHECKING"], ok: ["badge-success", "CONNECTED"], error: ["badge-danger", "CONNECTION ERROR"] };
     const id = 'cl-' + p.id;
-    return '<article class="cl-card cl-cloud ' + (s.enabled ? '' : 'is-off') + '" data-testid="' + id + '"><header class="spc-h"><div class="spc-t"><span class="t-ink spc-name">' + esc(p.name) + '</span>' + (s.enabled ? badge(...statuses[s.status]) : badge('', 'ĐÃ TẮT')) + (LB.llm.isDefault(p.id) ? badge('badge-primary', 'MẶC ĐỊNH') : '') + '</div><label class="check spc-on"><input type="checkbox" data-testid="' + id + '-enable" data-change="cl-enable" data-p="' + p.id + '" ' + (s.enabled ? 'checked' : '') + '><span>Bật</span></label></header><div class="tts-m-meta"><span class="path t-mute">' + esc(p.site) + '</span>' + p.caps.map((c) => badge('badge-primary', c)).join('') + '</div><p class="t-sm t-mute">' + esc(p.note) + '</p><div class="spc-fields"><div class="field spc-key ' + (p.baseUrl === undefined ? 'is-solo' : '') + '"><label for="' + id + '-key">API key</label><div class="spc-keyrow"><input id="' + id + '-key" data-testid="' + id + '-key" class="input mono-in" type="password" value="' + esc(s.draft) + '" placeholder="' + (s.saved ? '•••••••••••• (đã lưu, nhập để thay)' : 'Dán API key') + '" data-on="cl-key" data-p="' + p.id + '" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-icon" data-testid="' + id + '-eye" data-act="cl-eye" data-p="' + p.id + '" aria-label="Hiện / ẩn khóa">' + ic('eye') + '</button></div></div>' + (p.baseUrl !== undefined ? cloudField(p, 'baseUrl', 'Base URL', p.id === 'custom' ? 'http://localhost:11434/v1' : '') : '') + '</div><footer class="spc-foot"><div class="spc-msg t-sm ' + (s.status === 'ok' ? 'is-ok' : s.status === 'error' ? 'is-err' : 't-mute') + '" data-testid="' + id + '-status" role="status">' + cloudMessage(p, s) + '</div>' + cloudButton(p, 'cloud-test', 'Lưu và kiểm tra', s.status === 'checking', true) + cloudButton(p, 'default', 'Đặt mặc định', !ready(p.id) || LB.llm.isDefault(p.id)) + cloudButton(p, 'clear', 'Xóa khóa', !s.saved) + '</footer></article>';
+    return '<article class="cl-card cl-cloud ' + (s.enabled ? '' : 'is-off') + '" data-testid="' + id + '"><header class="spc-h"><div class="spc-t"><span class="t-ink spc-name">' + esc(p.name) + '</span>' + (s.enabled ? badge(...statuses[s.status]) : badge('', 'DISABLED')) + (LB.llm.isDefault(p.id) ? badge('badge-primary', 'DEFAULT') : '') + '</div><label class="check spc-on"><input type="checkbox" data-testid="' + id + '-enable" data-change="cl-enable" data-p="' + p.id + '" ' + (s.enabled ? 'checked' : '') + '><span>Enable</span></label></header><div class="tts-m-meta"><span class="path t-mute">' + esc(p.site) + '</span>' + p.caps.map((c) => badge('badge-primary', c)).join('') + '</div><p class="t-sm t-mute">' + esc(p.note) + '</p><div class="spc-fields"><div class="field spc-key ' + (p.baseUrl === undefined ? 'is-solo' : '') + '"><label for="' + id + '-key">API key</label><div class="spc-keyrow"><input id="' + id + '-key" data-testid="' + id + '-key" class="input mono-in" type="password" value="' + esc(s.draft) + '" placeholder="' + (s.saved ? '•••••••••••• (saved, enter to replace)' : 'Paste API key') + '" data-on="cl-key" data-p="' + p.id + '" autocomplete="off" spellcheck="false"><button type="button" class="btn btn-icon" data-testid="' + id + '-eye" data-act="cl-eye" data-p="' + p.id + '" aria-label="Show / hide key">' + ic('eye') + '</button></div></div>' + (p.baseUrl !== undefined ? cloudField(p, 'baseUrl', 'Base URL', p.id === 'custom' ? 'http://localhost:11434/v1' : '') : '') + '</div><footer class="spc-foot"><div class="spc-msg t-sm ' + (s.status === 'ok' ? 'is-ok' : s.status === 'error' ? 'is-err' : 't-mute') + '" data-testid="' + id + '-status" role="status">' + cloudMessage(p, s) + '</div>' + cloudButton(p, 'cloud-test', 'Save and check', s.status === 'checking', true) + cloudButton(p, 'default', 'Set as default', !ready(p.id) || LB.llm.isDefault(p.id)) + cloudButton(p, 'clear', 'Delete key', !s.saved) + '</footer></article>';
   };
-  const defaultOptions = () => [["cli", "CLI trên máy"], ["cloud", "Dịch vụ cloud"]].map(([kind, label]) => '<optgroup label="' + label + '">' + available().filter((p) => p.kind === kind).map((p) => '<option value="' + p.id + '" ' + (LB.llm.isDefault(p.id) ? 'selected' : '') + '>' + p.name + '</option>').join('') + '</optgroup>').join('');
-  const render = () => '<div class="tts cl-view" data-testid="cl-settings"><header class="tts-head"><div><h3 class="t-display-xs">LLM providers</h3></div></header><p class="t-sm t-mute">Kết nối các LLM dùng cho dịch, phân tích tri thức và Assistant: CLI đã cài trên máy này hoặc dịch vụ cloud qua API key.</p><div class="spc-note">' + ic('shield') + '<span>CLI chạy bằng tài khoản đăng nhập sẵn có của bạn. API key chỉ lưu trên máy này, không nằm trong workspace và không đi cùng project khi xuất. Nội dung cần xử lý được gửi tới dịch vụ của nhà cung cấp tương ứng; chi phí và giới hạn do tài khoản của bạn quyết định.</span></div><section class="tts-card"><header class="tts-card-h cl-detection-h"><span class="eyebrow">Mặc định</span>' + badge(available().length ? 'badge-success' : 'badge-warning', available().length ? available().length + ' / 8 SẴN SÀNG' : 'CHƯA CÓ LLM SẴN SÀNG') + '</header><div class="field"><label for="cl-default">LLM mặc định</label><span class="field-hint">Dùng khi một tác vụ không chọn provider riêng.</span><select id="cl-default" data-testid="cl-default" class="select" data-change="cl-default" ' + (available().length ? '' : 'disabled') + '>' + (available().length ? (S().default ? '' : '<option value="" selected>Chưa có LLM sẵn sàng</option>') + defaultOptions() : '<option value="">Chưa có LLM sẵn sàng</option>') + '</select></div></section><header class="cl-sec-h"><span class="eyebrow">CLI trên máy</span><button type="button" class="btn btn-sm" data-act="cl-scan" ' + (running ? 'disabled' : '') + '>' + ic('refresh') + 'Quét lại</button></header><section class="tts-card" aria-label="Phát hiện"><div class="ld-steps tts-checks" id="cl-checks" role="status" aria-live="polite">' + checkRows() + '</div></section><section class="tts-list">' + cliProviders.map(card).join('') + '</section><header class="cl-sec-h"><span class="eyebrow">Dịch vụ cloud</span></header><section class="tts-list">' + cloudProviders.map(cloudCard).join('') + '</section><p class="t-sm t-mute tts-foot">' + ic('info') + '<span>Prototype: quét CLI và kiểm tra kết nối là mô phỏng, không chạy lệnh hay gọi mạng thật. CLI có đường dẫn chứa “bad” hoặc tham số <span class="path">--fail</span>, và API key ngắn hơn 8 ký tự hoặc bắt đầu bằng “bad”, sẽ thất bại để bạn thấy trạng thái lỗi.</span></p></div>';
+  const defaultOptions = () => [["cli", "CLI on this machine"], ["cloud", "Cloud services"]].map(([kind, label]) => '<optgroup label="' + label + '">' + available().filter((p) => p.kind === kind).map((p) => '<option value="' + p.id + '" ' + (LB.llm.isDefault(p.id) ? 'selected' : '') + '>' + p.name + '</option>').join('') + '</optgroup>').join('');
+  const render = () => '<div class="tts cl-view" data-testid="cl-settings"><header class="tts-head"><div><h3 class="t-display-xs">LLM providers</h3></div></header><p class="t-sm t-mute">Connect the LLMs used for translation, knowledge analysis and the Assistant: CLIs installed on this machine or cloud services via an API key.</p><div class="spc-note">' + ic('shield') + '<span>CLIs run with your existing signed-in account. API keys are stored only on this machine, not in the workspace, and do not travel with the project when exported. The content to process is sent to the respective provider’s service; costs and limits are determined by your account.</span></div><section class="tts-card"><header class="tts-card-h cl-detection-h"><span class="eyebrow">Default</span>' + badge(available().length ? 'badge-success' : 'badge-warning', available().length ? available().length + ' / 8 READY' : 'NO LLM READY') + '</header><div class="field"><label for="cl-default">Default LLM</label><span class="field-hint">Used when a task does not choose its own provider.</span><select id="cl-default" data-testid="cl-default" class="select" data-change="cl-default" ' + (available().length ? '' : 'disabled') + '>' + (available().length ? (S().default ? '' : '<option value="" selected>No LLM is ready</option>') + defaultOptions() : '<option value="">No LLM is ready</option>') + '</select></div></section><header class="cl-sec-h"><span class="eyebrow">CLI on this machine</span><button type="button" class="btn btn-sm" data-act="cl-scan" ' + (running ? 'disabled' : '') + '>' + ic('refresh') + 'Rescan</button></header><section class="tts-card" aria-label="Detect"><div class="ld-steps tts-checks" id="cl-checks" role="status" aria-live="polite">' + checkRows() + '</div></section><section class="tts-list">' + cliProviders.map(card).join('') + '</section><header class="cl-sec-h"><span class="eyebrow">Cloud services</span></header><section class="tts-list">' + cloudProviders.map(cloudCard).join('') + '</section><p class="t-sm t-mute tts-foot">' + ic('info') + '<span>Prototype: CLI scanning and connection checks are simulated, no real commands run and no network calls are made. A CLI whose path contains “bad” or the argument <span class="path">--fail</span>, and an API key shorter than 8 characters or starting with “bad”, will fail so you can see the error state.</span></p></div>';
   async function testCloud(id) {
     const p = provider(id);
     const s = P(id);
     if (s.status === "checking") return;
     const key = (s.draft || s.key || "").trim();
     const missing = p.keyRequired && !key ? ["key", "API key"] : id === "custom" && !s.baseUrl ? ["baseUrl", "Base URL"] : null;
-    if (missing) { A.toast('Nhập ' + missing[1] + ' của ' + p.name + '.', 'warning'); A.$('#cl-' + id + '-' + missing[0])?.focus(); return; }
+    if (missing) { A.toast('Enter ' + missing[1] + ' of ' + p.name + '.', 'warning'); A.$('#cl-' + id + '-' + missing[0])?.focus(); return; }
     const epoch = generation;
     const ticket = {};
     tests.set(id, ticket);
@@ -136,7 +136,7 @@
     const invalid = key && (key.length < 8 || /^bad/i.test(key));
     const refused = id === "custom" && /bad/i.test(s.baseUrl);
     s.status = invalid || refused ? "error" : "ok";
-    s.error = refused ? "Không kết nối được tới máy chủ: connection refused." : invalid ? id === "google" ? "400 API_KEY_INVALID: khóa không hợp lệ hoặc đã bị thu hồi trong Google AI Studio." : "401 Unauthorized: API key không hợp lệ hoặc đã bị thu hồi." : "";
+    s.error = refused ? "Could not connect to the server: connection refused." : invalid ? id === "google" ? "400 API_KEY_INVALID: the key is invalid or was revoked in Google AI Studio." : "401 Unauthorized: the API key is invalid or was revoked." : "";
     if (s.status === "ok") { s.latency = 120 + LB.hash(id + key) % 280; s.at = A.stamp(); if (!S().default && s.enabled) S().default = id; }
     changed();
   }
@@ -154,7 +154,7 @@
     if (epoch !== generation || tests.get(id) !== ticket || P(id) !== s || s.status !== "checking") return;
     if (/bad/i.test(s.path) || s.args.includes("--fail")) {
       s.status = "error";
-      s.error = `Lệnh thoát với mã 1: chưa đăng nhập. Chạy \`${PROVIDERS.find((p) => p.id === id).command} login\` trong terminal rồi kiểm tra lại.`;
+      s.error = `Command exited with code 1: not signed in. Run \`${PROVIDERS.find((p) => p.id === id).command} login\` in the terminal then check again.`;
     } else {
       s.status = "ok";
       s.latency = 120 + LB.hash(id + s.path + s.args) % 280;
@@ -180,7 +180,7 @@
     "cl-use-path": (el) => {
       const id = el.dataset.p;
       const path = A.$(`#cl-${id}-manual`)?.value.trim() || "";
-      if (!/^[A-Za-z]:\\.+\.(exe|cmd|bat)$/i.test(path)) { A.toast("Nhập đường dẫn đầy đủ tới file .exe, .cmd hoặc .bat.", "warning"); return; }
+      if (!/^[A-Za-z]:\\.+\.(exe|cmd|bat)$/i.test(path)) { A.toast("Enter the full path to a .exe, .cmd or .bat file.", "warning"); return; }
       Object.assign(P(id), { found: true, enabled: true, path, version: PROVIDERS.find((p) => p.id === id).version, status: "none", error: "" });
       changed();
     },

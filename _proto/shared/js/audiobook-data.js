@@ -6,23 +6,23 @@ window.AB = (function () {
   const NARR = "VOC-08";
 
   const symbols = () => [
-    { id: "S1", sym: "* * *", rule: "Nghỉ 1,2 giây, đổi cảnh", on: true },
-    { id: "S2", sym: "…", rule: "Nghỉ ngắn 0,4 giây", on: true },
-    { id: "S3", sym: "—", rule: "Nghỉ 0,3 giây", on: true },
-    { id: "S4", sym: "“ ”", rule: "Hội thoại, đổi sang giọng của người nói", on: true },
+    { id: "S1", sym: "* * *", rule: "Pause 1.2 seconds, scene change", on: true },
+    { id: "S2", sym: "…", rule: "Short pause 0.4 seconds", on: true },
+    { id: "S3", sym: "—", rule: "Pause 0.3 seconds", on: true },
+    { id: "S4", sym: "“ ”", rule: "Dialogue, switch to the speaker’s voice", on: true },
   ];
   const lexAll = () => [
-    { id: "L01", term: "Harrowmere", say: "Hê-rô-mia", kind: "Tên riêng" },
-    { id: "L02", term: "Wren", say: "Ren", kind: "Tên riêng" },
-    { id: "L03", term: "Quill", say: "Quin", kind: "Tên riêng" },
-    { id: "L04", term: "Sevrin", say: "Sê-vrin", kind: "Tên riêng" },
-    { id: "L05", term: "312", say: "ba trăm mười hai", kind: "Số" },
+    { id: "L01", term: "Harrowmere", say: "HAIR-oh-meer", kind: "Proper names" },
+    { id: "L02", term: "Wren", say: "Ren", kind: "Proper names" },
+    { id: "L03", term: "Quill", say: "Quin", kind: "Proper names" },
+    { id: "L04", term: "Sevrin", say: "SEV-er-in", kind: "Proper names" },
+    { id: "L05", term: "312", say: "three hundred twelve", kind: "Number" },
   ];
 
   const voices = () => LB.state.voices;
   const voiceById = (id) => voices().find((v) => v.id === id);
   const usable = (v) => !!v && v.status === "ready" && (v.engine === "cloud" ? LB.speech.ready(v.provider) : LB.tts.localOk(v));
-  const whyNot = (v) => (!v ? "Chưa chọn giọng" : v.status === "failed" ? "Clone lỗi" : v.status === "processing" ? "Đang xử lý" : v.engine === "local" && !LB.tts.localOk(v) ? (LB.tts.backendOk() ? `Cần cài mô hình ${LB.tts.familyName(v.family)}` : "Python backend đang tắt") : v.engine === "cloud" && !LB.speech.ready(v.provider) ? `Cần kết nối ${LB.speech.name(v.provider)}` : "");
+  const whyNot = (v) => (!v ? "No voice selected" : v.status === "failed" ? "Clone failed" : v.status === "processing" ? "Processing" : v.engine === "local" && !LB.tts.localOk(v) ? (LB.tts.backendOk() ? `Requires installing the ${LB.tts.familyName(v.family)} model` : "Python backend is off") : v.engine === "cloud" && !LB.speech.ready(v.provider) ? `Requires connecting ${LB.speech.name(v.provider)}` : "");
   const engineName = (v) => (v.engine === "cloud" ? LB.speech.name(v.provider) : "Local TTS");
 
   const narrator = (s) => s.cast.find((x) => x.kind === "narrator");
@@ -48,10 +48,10 @@ window.AB = (function () {
   function reasons(bk, s, b, a) {
     const { v, speed } = voiceFor(bk, s, b);
     const why = [];
-    if (a.text !== b.text) why.push("Kịch bản đã đổi");
-    if (a.voice !== (v ? v.id : "") || a.speed !== speed) why.push("Giọng hoặc tốc độ đã đổi");
-    if (a.rules !== sigOf(bk.lex, b.text)) why.push("Quy tắc đọc đã đổi");
-    if ((a.paren || "") !== (b.paren || "")) why.push("Sắc thái đã đổi");
+    if (a.text !== b.text) why.push("Script changed");
+    if (a.voice !== (v ? v.id : "") || a.speed !== speed) why.push("Voice or speed changed");
+    if (a.rules !== sigOf(bk.lex, b.text)) why.push("Reading rule changed");
+    if ((a.paren || "") !== (b.paren || "")) why.push("Tone changed");
     return why;
   }
   function segState(bk, s, u, b) {
@@ -88,23 +88,23 @@ window.AB = (function () {
     const done = st.filter((x) => x.st === "done").length;
     const stale = st.filter((x) => x.st === "stale").length;
     const any = st.some((x) => x.st !== "none");
-    p.prog.audiobook = { state: stale ? "stale" : done === st.length && st.length ? "done" : any ? "doing" : "idle", done, total: st.length, note: `${done}/${st.length} ${s.cfg.unit.toLowerCase()}${stale ? ` · ${stale} cần xem lại` : ""}` };
+    p.prog.audiobook = { state: stale ? "stale" : done === st.length && st.length ? "done" : any ? "doing" : "idle", done, total: st.length, note: `${done}/${st.length} ${s.cfg.unit.toLowerCase()}${stale ? ` · ${stale} need review` : ""}` };
   }
 
   function blockers(s, bk, u) {
     const out = [];
-    if (u.status !== "locked") out.push({ k: "lock", text: `${s.cfg.unit} này chưa chốt kịch bản.` });
+    if (u.status !== "locked") out.push({ k: "lock", text: `The script of this ${s.cfg.unit} is not locked yet.` });
     const segs = voiced(u);
     const lost = segs.filter((b) => b.type === "dialogue" && !s.cast.some((x) => x.id === b.who));
-    if (lost.length) out.push({ k: "who", text: `${lost.length} hội thoại chưa gán người nói.`, id: lost[0].id });
+    if (lost.length) out.push({ k: "who", text: `${lost.length} dialogues have no speaker assigned.`, id: lost[0].id });
     const seen = new Set();
     segs.forEach((b) => {
       const sp = speakerOf(s, b);
       if (!sp || seen.has(sp.id)) return;
       seen.add(sp.id);
       const v = bk.voices[sp.id] && bk.voices[sp.id].voice ? voiceById(bk.voices[sp.id].voice) : null;
-      if (!v) out.push({ k: "voice", sp: sp.id, text: `${sp.name} chưa có giọng đọc.` });
-      else if (!usable(v)) out.push({ k: "engine", sp: sp.id, text: `${sp.name}: giọng “${v.name}” chưa dùng được (${whyNot(v)}).` });
+      if (!v) out.push({ k: "voice", sp: sp.id, text: `${sp.name} has no voice yet.` });
+      else if (!usable(v)) out.push({ k: "engine", sp: sp.id, text: `${sp.name}: voice “${v.name}” cannot be used yet (${whyNot(v)}).` });
     });
     return out;
   }

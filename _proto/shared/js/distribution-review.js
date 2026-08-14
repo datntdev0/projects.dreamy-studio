@@ -58,7 +58,7 @@
   function open({ pkgId, outId }) {
     const k = pkgId ? PK.byId(pkgId) : null;
     const ref = k ? PK.outOf(k) : PJ.outputRef(outId);
-    if (!ref) { A.toast("Không tìm thấy tệp thành phẩm để xem.", "warning"); return; }
+    if (!ref) { A.toast("The finished file to review could not be found.", "warning"); return; }
     halt();
     Object.assign(RV, { k, key: pkgId || outId, dur: Math.max(1, ref.o.dur), pos: 0, speed: 1 });
     const o = ref.o;
@@ -68,33 +68,33 @@
     const art = LB.bgFor(ref.p.name);
     const poster = (k && PK.thumbBg(k.thumb)) || art;
     const locked = check && PK.locked(k);
-    const kv = [["Tệp", `<span class="path">${esc(o.name)}</span>`], ["Thời lượng", LB.dur(o.dur)], ["Độ phân giải", `${o.w}×${o.h} (${PK.ratioOf(o)})`], ["Dung lượng", LB.bytes(o.size)], ["Kết xuất lúc", `<span class="mono">${esc(o.at)}</span>`], ["Project", esc(ref.p.name)]];
+    const kv = [["File", `<span class="path">${esc(o.name)}</span>`], ["Duration", LB.dur(o.dur)], ["Resolution", `${o.w}×${o.h} (${PK.ratioOf(o)})`], ["File size", LB.bytes(o.size)], ["Rendered at", `<span class="mono">${esc(o.at)}</span>`], ["Project", esc(ref.p.name)]];
     const side = check
       ? `${U.kv(kv)}
-          <div class="rv-chaps" data-testid="${tp}-chapters"><span class="eyebrow">Mốc thời gian</span>
-            ${chaps.length ? chaps.map((c, i) => `<button type="button" class="rv-chap" data-testid="${tp}-chapter-${i}" data-rv-chap="${i}" data-act="pk-rv-chap" data-t="${c.t}"><span class="mono">${LB.dur(c.t)}</span><span class="tree-label">${esc(c.title)}</span></button>`).join("") : `<span class="t-sm t-mute">Package chưa có mốc thời gian. Thêm ở phần Nội dung của package.</span>`}</div>
-          <div class="rv-state">${k.reviewed ? `<span class="badge badge-success" data-testid="${tp}-state">ĐÃ XEM LẠI · ${esc(k.reviewed)}</span>` : `<span class="badge badge-warning" data-testid="${tp}-state">CHƯA XEM LẠI</span>`}</div>`
+          <div class="rv-chaps" data-testid="${tp}-chapters"><span class="eyebrow">Timestamps</span>
+            ${chaps.length ? chaps.map((c, i) => `<button type="button" class="rv-chap" data-testid="${tp}-chapter-${i}" data-rv-chap="${i}" data-act="pk-rv-chap" data-t="${c.t}"><span class="mono">${LB.dur(c.t)}</span><span class="tree-label">${esc(c.title)}</span></button>`).join("") : `<span class="t-sm t-mute">The package has no timestamps yet. Add them in the package’s Content section.</span>`}</div>
+          <div class="rv-state">${k.reviewed ? `<span class="badge badge-success" data-testid="${tp}-state">REVIEWED · ${esc(k.reviewed)}</span>` : `<span class="badge badge-warning" data-testid="${tp}-state">NOT REVIEWED</span>`}</div>`
       : U.kv(kv);
     A.modal({
-      title: check ? "Xem lại thành phẩm" : "Xem trước thành phẩm", eyebrow: window.DS.CAP[check ? "10" : "06"], cls: "modal-xl", testid: `${tp}-dialog`,
+      title: check ? "Review the finished video" : "Preview the finished video", eyebrow: window.DS.CAP[check ? "10" : "06"], cls: "modal-xl", testid: `${tp}-dialog`,
       body: `<div class="rv ${o.h > o.w ? "is-vertical" : ""}">
         <div class="rv-main">
           <div class="rv-stage-wrap"><div id="rv-stage" class="rv-stage" data-testid="${tp}-stage" data-act="pk-rv-toggle" data-art="${esc(art)}" data-poster="${esc(poster)}" style="aspect-ratio:${o.w} / ${o.h};background:${esc(poster)}">
-            <span class="badge rv-note">MÔ PHỎNG</span><span id="rv-code" class="mono rv-code">0:00</span>
-            <button id="rv-stage-btn" type="button" class="lb-pbtn is-lg rv-play" data-testid="${tp}-stage-btn" data-act="pk-rv-toggle" aria-label="Phát hoặc tạm dừng">${ic("play")}</button>
+            <span class="badge rv-note">SIMULATED</span><span id="rv-code" class="mono rv-code">0:00</span>
+            <button id="rv-stage-btn" type="button" class="lb-pbtn is-lg rv-play" data-testid="${tp}-stage-btn" data-act="pk-rv-toggle" aria-label="Play or pause">${ic("play")}</button>
             <div id="rv-cap" class="rv-cap" data-testid="${tp}-caption"></div></div></div>
           <div class="rv-bar">
-            <button id="rv-play-btn" type="button" class="lb-pbtn" data-testid="${tp}-play-btn" data-act="pk-rv-toggle" aria-label="Phát hoặc tạm dừng">${ic("play")}</button>
+            <button id="rv-play-btn" type="button" class="lb-pbtn" data-testid="${tp}-play-btn" data-act="pk-rv-toggle" aria-label="Play or pause">${ic("play")}</button>
             <div class="rv-seek" data-testid="${tp}-seek" data-act="pk-rv-seek" role="slider" aria-label="Tua video">${chaps.map((c) => `<i class="rv-tick" style="left:${Math.min(100, (c.t / RV.dur) * 100)}%" title="${esc(c.title)}"></i>`).join("")}<span id="rv-fill" class="rv-fill"></span></div>
             <span id="rv-time" class="mono rv-time" data-testid="${tp}-time">0:00 / ${LB.dur(RV.dur)}</span>
             ${U.seg("pk-rv-speed", SPEEDS, 1, "", `${tp}-speed`)}
           </div>
-          <p class="t-sm t-mute">Prototype: video được mô phỏng, không có hình thật. Space để phát hoặc dừng, mũi tên để tua 10 giây.</p>
+          <p class="t-sm t-mute">Prototype: video is simulated, no real picture. Space to play or pause, arrow keys to seek 10 seconds.</p>
         </div>
         <aside class="rv-side">${side}</aside></div>`,
-      foot: `<button class="btn" data-testid="${tp}-close-btn" data-act="close-modal">Đóng</button><span class="spacer"></span>${check ? (k.reviewed
-        ? `<button class="btn" data-testid="${tp}-unmark-btn" data-act="pk-rv-mark" data-id="${k.id}" data-v="off" ${locked ? "disabled" : ""}>${ic("undo")}Bỏ đánh dấu</button>`
-        : `<button class="btn btn-primary" data-testid="${tp}-mark-btn" data-act="pk-rv-mark" data-id="${k.id}" data-v="on" ${locked ? "disabled" : ""}>${ic("check")}Đánh dấu đã xem lại</button>`) : ""}`,
+      foot: `<button class="btn" data-testid="${tp}-close-btn" data-act="close-modal">Close</button><span class="spacer"></span>${check ? (k.reviewed
+        ? `<button class="btn" data-testid="${tp}-unmark-btn" data-act="pk-rv-mark" data-id="${k.id}" data-v="off" ${locked ? "disabled" : ""}>${ic("undo")}Clear flag</button>`
+        : `<button class="btn btn-primary" data-testid="${tp}-mark-btn" data-act="pk-rv-mark" data-id="${k.id}" data-v="on" ${locked ? "disabled" : ""}>${ic("check")}Mark as reviewed</button>`) : ""}`,
     });
     paint();
   }
@@ -120,7 +120,7 @@
       PK.touch(k);
       A.closeModal();
       PK.refresh();
-      A.toast(k.reviewed ? "Đã đánh dấu đã xem lại thành phẩm." : "Đã bỏ dấu xem lại.");
+      A.toast(k.reviewed ? "Marked the finished video as reviewed." : "Cleared the reviewed mark.");
     },
   });
 

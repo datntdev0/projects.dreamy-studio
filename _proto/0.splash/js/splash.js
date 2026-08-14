@@ -99,7 +99,7 @@
     e.target.click();
   });
 
-  try { selectLanguage(JSON.parse(localStorage.getItem("ds.lang")) === "en" ? "en" : "vi", false); } catch { /* storage blocked */ }
+  try { selectLanguage(JSON.parse(localStorage.getItem("ds.lang")) === "vi" ? "vi" : "en", false); } catch { /* storage blocked */ }
   $("#sp-version").textContent = window.DS.version;
   syncThemeIcon();
   renderRecent();

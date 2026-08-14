@@ -1,7 +1,7 @@
 /*
- * Bộ kiểm tra xung đột của Knowledgebase: code tất định, không gọi LLM.
- * Đầu vào là kết quả phân tích (entity, fact, dẫn chứng) + ontology.yml; đầu ra là danh sách vấn đề có khóa ổn định
- * để "Bỏ qua" nhớ được và để vấn đề tự biến mất khi dữ liệu đã được sửa.
+ * Knowledgebase conflict checker: deterministic code, no LLM calls.
+ * Input is the analysis result (entities, facts, evidence) + ontology.yml; output is a list of issues with a stable key
+ * so that "Ignore" can be remembered and issues disappear on their own once the data is fixed.
  */
 window.KBC = (function () {
   const NV = window.NV;
@@ -9,7 +9,7 @@ window.KBC = (function () {
 
   const O = () => NV.ontology;
   const K = () => U.N().kb;
-  let override = null; // danh sách giả định (draft) khi xem trước kết quả sửa
+  let override = null; // list of draft assumptions when previewing fix results
   const items = () => override || K().items;
   const byId = (id) => items().find((i) => i.id === id);
   const live = (i) => i && i.status !== "rejected";
@@ -20,20 +20,20 @@ window.KBC = (function () {
   const flat = (s) => String(s).replace(/[“”"]/g, "").replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
   const nameOf = (it) => (it.kind === "relation" ? `${byId(it.from)?.name ?? "?"} —${it.label}→ ${byId(it.to)?.name ?? "?"}` : it.name);
 
-  /* ---------- các quy tắc ---------- */
+  /* ---------- rules ---------- */
   const RULES = {
     evidence_quote() {
       const out = [];
       items().filter(live).forEach((it) => {
-        if (!it.ev.length) out.push({ ids: [it.id], key: "none", msg: "Chưa có dẫn chứng nào gắn với nhận định này.", data: { none: true } });
+        if (!it.ev.length) out.push({ ids: [it.id], key: "none", msg: "No evidence is attached to this claim yet.", data: { none: true } });
         it.ev.forEach((e, idx) => {
           const para = U.findPara(e.p);
           const chapter = U.chapter(NV.chOf(e.p));
-          if (!chapter?.paras) return; // prototype không có nội dung chương này nên không kiểm được
-          if (!para) { out.push({ ids: [it.id], key: `${e.p}|${flat(e.q).slice(0, 40)}`, msg: `Đoạn nguồn ${U.refLabel(e.p)} không tồn tại.`, data: { idx, p: e.p, q: e.q } }); return; }
+          if (!chapter?.paras) return; // the prototype has no content for this chapter so it cannot be checked
+          if (!para) { out.push({ ids: [it.id], key: `${e.p}|${flat(e.q).slice(0, 40)}`, msg: `Source paragraph ${U.refLabel(e.p)} does not exist.`, data: { idx, p: e.p, q: e.q } }); return; }
           const text = flat(para.t);
           const frags = e.q.split(/…|\.{3}/).map((f) => flat(f)).filter((f) => f.length >= 3);
-          if (frags.some((f) => !text.includes(f))) out.push({ ids: [it.id], key: `${e.p}|${flat(e.q).slice(0, 40)}`, msg: `Dẫn chứng không có trong ${U.refLabel(e.p)}.`, data: { idx, p: e.p, q: e.q, source: para.t } });
+          if (frags.some((f) => !text.includes(f))) out.push({ ids: [it.id], key: `${e.p}|${flat(e.q).slice(0, 40)}`, msg: `The evidence is not in ${U.refLabel(e.p)}.`, data: { idx, p: e.p, q: e.q, source: para.t } });
         });
       });
       return out;
@@ -45,11 +45,11 @@ window.KBC = (function () {
         const pred = O().predicates[r.pred];
         const a = byId(r.from);
         const b = byId(r.to);
-        if (!live(a) || !live(b)) return; // thuộc quy tắc dangling_ref
-        if (!pred) { out.push({ ids: [r.id], key: r.pred || "none", msg: `Predicate “${r.pred || "—"}” không có trong ontology.`, data: {} }); return; }
+        if (!live(a) || !live(b)) return; // covered by the dangling_ref rule
+        if (!pred) { out.push({ ids: [r.id], key: r.pred || "none", msg: `Predicate “${r.pred || "—"}” is not in the ontology.`, data: {} }); return; }
         if (!pred.domain.includes(a.type) || !pred.range.includes(b.type)) {
           const want = `${pred.domain.map(typeLabel).join("/")} → ${pred.range.map(typeLabel).join("/")}`;
-          out.push({ ids: [r.id], key: `${r.pred}|${a.type}|${b.type}`, msg: `“${pred.label}” (${r.pred}) yêu cầu ${want}, nhưng đang là ${typeLabel(a.type)} → ${typeLabel(b.type)}.`, data: { pred: r.pred } });
+          out.push({ ids: [r.id], key: `${r.pred}|${a.type}|${b.type}`, msg: `“${pred.label}” (${r.pred}) requires ${want}, but is ${typeLabel(a.type)} → ${typeLabel(b.type)}.`, data: { pred: r.pred } });
         }
       });
       return out;
@@ -63,7 +63,7 @@ window.KBC = (function () {
         Object.entries(groups).forEach(([k, list]) => {
           if (!O().attributes[k]?.single) return;
           const vals = [...new Set(list.map((a) => a.v))];
-          if (vals.length > 1) out.push({ ids: [e.id], key: k, msg: `“${attrLabel(k)}” chỉ được có một giá trị nhưng có ${vals.length}: ${vals.map((v) => `“${v}”`).join(", ")}.`, data: { k, list } });
+          if (vals.length > 1) out.push({ ids: [e.id], key: k, msg: `“${attrLabel(k)}” may only have one value but has ${vals.length}: ${vals.map((v) => `“${v}”`).join(", ")}.`, data: { k, list } });
         });
       });
       return out;
@@ -76,7 +76,7 @@ window.KBC = (function () {
       Object.entries(groups).forEach(([key, list]) => {
         if (new Set(list.map((r) => r.from)).size < 2) return;
         const [pred, to] = key.split("|");
-        out.push({ ids: list.map((r) => r.id), key, msg: `${list.map((r) => byId(r.from).name).join(" và ")} cùng là “${O().predicates[pred].label}” của ${byId(to).name}, trong khi chỉ được một.`, data: {} });
+        out.push({ ids: list.map((r) => r.id), key, msg: `${list.map((r) => byId(r.from).name).join(" and ")} are both “${O().predicates[pred].label}” of ${byId(to).name}, while only one is allowed.`, data: {} });
       });
       return out;
     },
@@ -92,7 +92,7 @@ window.KBC = (function () {
           const ta = plain(a.name).split(" ").filter(Boolean);
           const tb = plain(b.name).split(" ").filter(Boolean);
           const [small, big] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-          if (small.length && small.every((t) => big.includes(t))) out.push({ ids: [a.id, b.id], key: `${a.id},${b.id}`, msg: `“${a.name}” và “${b.name}” (cùng là ${typeLabel(a.type).toLowerCase()}) có thể là một.`, data: {} });
+          if (small.length && small.every((t) => big.includes(t))) out.push({ ids: [a.id, b.id], key: `${a.id},${b.id}`, msg: `“${a.name}” and “${b.name}” (both ${typeLabel(a.type).toLowerCase()}) may be the same.`, data: {} });
         }
       }
       return out;
@@ -102,7 +102,7 @@ window.KBC = (function () {
       const out = [];
       items().filter((i) => i.kind === "relation" && live(i)).forEach((r) => {
         const miss = [["from", byId(r.from)], ["to", byId(r.to)]].filter(([, e]) => !live(e));
-        if (miss.length) out.push({ ids: [r.id], key: r.id, msg: `Quan hệ trỏ tới entity đã bị từ chối hoặc không còn: ${miss.map(([side]) => (side === "from" ? byId(r.from)?.name || r.from : byId(r.to)?.name || r.to)).join(", ")}.`, data: {} });
+        if (miss.length) out.push({ ids: [r.id], key: r.id, msg: `The relation points to an entity that was rejected or no longer exists: ${miss.map(([side]) => (side === "from" ? byId(r.from)?.name || r.from : byId(r.to)?.name || r.to)).join(", ")}.`, data: {} });
       });
       return out;
     },
@@ -112,7 +112,7 @@ window.KBC = (function () {
     },
   };
 
-  /** Chạy toàn bộ quy tắc. `open` = chưa bị bỏ qua; `ignored` = đã bỏ qua. */
+  /** Runs all rules. `open` = not ignored; `ignored` = ignored. */
   function run() {
     const ignored = (K().ignored ||= {});
     const all = [];
@@ -123,24 +123,24 @@ window.KBC = (function () {
     return { open: all.filter((x) => !ignored[x.id]), ignored: all.filter((x) => ignored[x.id]) };
   }
 
-  /** Chạy bộ kiểm tra trên một danh sách giả định mà không đụng dữ liệu thật. */
+  /** Runs the checker on a list of draft assumptions without touching the real data. */
   function runOn(list) {
     override = list;
     try { return run(); } finally { override = null; }
   }
 
-  /** Số vấn đề đang mở theo quy tắc, kể cả quy tắc không có vấn đề (= 0). */
+  /** Number of open issues per rule, including rules with no issues (= 0). */
   const perRule = (open) => Object.keys(O().rules).map((rule) => ({ rule, ...O().rules[rule], n: open.filter((x) => x.rule === rule).length }));
   const forItem = (id, open) => open.filter((x) => x.ids.includes(id));
 
-  /* ---------- sửa nhanh ---------- */
+  /* ---------- quick fixes ---------- */
   const reject = (id) => { byId(id).status = "rejected"; };
   const dismiss = (issueId) => { (K().ignored ||= {})[issueId] = true; };
   const restore = (issueId) => { delete (K().ignored ||= {})[issueId]; };
   const removeEvidence = (id, idx) => { byId(id).ev.splice(idx, 1); };
   const keepAttr = (id, k, v) => { const e = byId(id); e.attrs = e.attrs.filter((a) => a.k !== k || a.v === v); };
 
-  /** Gộp `drop` vào `keep`: chuyển quan hệ, hợp nhất dẫn chứng / thuộc tính, rồi bỏ `drop`. */
+  /** Merge `drop` into `keep`: move relations, merge evidence / attributes, then drop `drop`. */
   function merge(keepId, dropId) {
     const keep = byId(keepId);
     const drop = byId(dropId);
@@ -149,9 +149,9 @@ window.KBC = (function () {
     (drop.attrs || []).forEach((a) => { if (!keep.attrs.some((x) => x.k === a.k && x.v === a.v)) keep.attrs.push(a); });
     if (!keep.summary && drop.summary) keep.summary = drop.summary;
     K().items = items().filter((i) => i.id !== dropId);
-    // quan hệ tự trỏ vào chính nó sau khi gộp thì bỏ
+    // a relation pointing to itself after the merge is dropped
     K().items = items().filter((i) => !(i.kind === "relation" && i.from === i.to));
-    K().log.unshift({ date: window.DSApp.stamp(), text: `Gộp “${drop.name}” vào “${keep.name}”.` });
+    K().log.unshift({ date: window.DSApp.stamp(), text: `Merged “${drop.name}” into “${keep.name}”.` });
   }
 
   /* ---------- ontology.yml ---------- */
@@ -160,17 +160,17 @@ window.KBC = (function () {
   function yaml() {
     const o = O();
     const L = [];
-    L.push("# ontology.yml — định nghĩa tri thức của novel", "# Dùng cho (1) prompt phân tích gửi tới LLM và (2) bộ kiểm tra xung đột tất định ở tab Review.", "");
+    L.push("# ontology.yml — knowledge definition of the novel", "# Used for (1) the analysis prompt sent to the LLM and (2) the deterministic conflict checker in the Review tab.", "");
     L.push(`version: ${o.version}`, `language: ${o.language}`, "");
-    L.push("# Loại entity", "entity_types:");
+    L.push("# Entity types", "entity_types:");
     Object.entries(o.entityTypes).forEach(([k, v]) => L.push(`  ${k}: ${flow(v)}`));
-    L.push("", "# Thuộc tính của entity. single: true = mỗi entity chỉ được một giá trị", "attributes:");
+    L.push("", "# Entity attributes. single: true = each entity may have only one value", "attributes:");
     Object.entries(o.attributes).forEach(([k, v]) => L.push(`  ${k}: ${flow(v)}`));
-    L.push("", "# Quan hệ (fact nối hai entity). domain / range = loại entity được phép ở hai đầu", "predicates:");
+    L.push("", "# Relations (facts linking two entities). domain / range = entity types allowed at the two ends", "predicates:");
     Object.entries(o.predicates).forEach(([k, v]) => L.push(`  ${k}: ${flow({ label: v.label, domain: v.domain, range: v.range, ...(v.uniqueRange ? { unique_range: true } : {}) })}`));
-    L.push("", "# Sự kiện (fact có thời điểm)", "event:", `  fields: [${o.event.fields.join(", ")}]`);
-    L.push("", "# Nguồn gốc của nhận định: văn bản xác nhận / lời nhân vật / AI suy luận", `certainty: [${o.certainty.join(", ")}]`);
-    L.push("", "# Quy tắc kiểm tra xung đột (chạy bằng code, không dùng LLM)", "rules:");
+    L.push("", "# Events (facts with a point in time)", "event:", `  fields: [${o.event.fields.join(", ")}]`);
+    L.push("", "# Origin of a claim: stated in the text / character’s words / AI inference", `certainty: [${o.certainty.join(", ")}]`);
+    L.push("", "# Conflict check rules (run by code, no LLM)", "rules:");
     Object.entries(o.rules).forEach(([k, v]) => L.push(`  ${k}:`, `    severity: ${v.severity}`, `    label: ${q(v.label)}`, `    check: ${q(v.desc)}`));
     return L.join("\n");
   }

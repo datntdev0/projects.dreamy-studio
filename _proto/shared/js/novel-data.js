@@ -9,7 +9,7 @@ window.NV = (function () {
   const lantern = corpusOf(PACK.lantern);
   const titles = lantern.map((c) => c.title);
   const words = lantern.map((c) => c.words);
-  const SAMPLE_CHAPTERS = 3; // chỉ ba chương đầu có bản dịch và tri thức mẫu
+  const SAMPLE_CHAPTERS = 3; // only the first three chapters have a sample translation and knowledge
 
   const SRC = Object.fromEntries(lantern.slice(0, SAMPLE_CHAPTERS).map((c, i) => [i + 1, c.paras]));
 
@@ -32,59 +32,59 @@ window.NV = (function () {
   };
 
   const KB_CH3 = [
-    { id: "E09", kind: "entity", type: "character", name: "Cha của Wren", summary: "Người từng buộc chiếc chuông tàu bằng một nút thắt mà Wren nhận ra. Văn bản không nêu tên.", attrs: [["Quan hệ", "Cha của Wren"]], cert: "inferred", ev: [["3.2", "It was her father's knot."]], pos: { x: 70, y: 70 } },
-    { id: "E10", kind: "entity", type: "object", name: "Chiếc chuông tàu", summary: "Chiếc chuông xanh rêu được thủy triều trả lại, sau đó được treo cạnh ngọn đèn. Không kêu, nhưng ngọn lửa nghiêng về phía nó.", attrs: [["Tình trạng", "Xanh rêu, không kêu"], ["Vị trí hiện tại", "Cạnh ngọn đèn, Tháp Đèn"]], cert: "text", ev: [["3.2", "a ship's bell, green with age"], ["3.3", "hung it beside the lamp"]], pos: { x: 230, y: 40 } },
-    { id: "V05", kind: "event", name: "Thủy triều rút xa nhất", summary: "Vào đêm thứ bảy, thủy triều rút xa hơn bất kỳ ai còn sống từng thấy; Bến Chìm lộ ra dưới trăng.", when: "Đêm thứ bảy (Ch.3)", order: 5, cert: "text", ev: [["3.1", "On the seventh night the tide went out farther than anyone alive had seen"]] },
-    { id: "V06", kind: "event", name: "Wren tìm thấy chiếc chuông tàu", summary: "Wren nhận ra nút thắt của cha trên sợi dây chuông.", when: "Đêm thứ bảy (Ch.3)", order: 6, cert: "text", ev: [["3.2", "a knot Wren recognised"]] },
-    { id: "V07", kind: "event", name: "Wren treo chuông cạnh ngọn đèn", summary: "Chuông không kêu nhưng ngọn lửa nghiêng về phía nó.", when: "Đêm thứ bảy (Ch.3)", order: 7, cert: "text", ev: [["3.3", "the flame bent toward it"]] },
-    { id: "R09", kind: "relation", from: "E10", to: "E09", label: "do cha của Wren buộc", cert: "inferred", ev: [["3.2", "It was her father's knot."]] },
-    { id: "R10", kind: "relation", from: "E01", to: "E10", label: "tìm thấy và treo", cert: "text", ev: [["3.2", "a ship's bell"], ["3.3", "She carried the bell up"]] },
+    { id: "E09", kind: "entity", type: "character", name: "Wren’s father", summary: "The one who tied the ship’s bell with a knot Wren recognizes. The text does not give his name.", attrs: [["Relation", "Wren’s father"]], cert: "inferred", ev: [["3.2", "It was her father's knot."]], pos: { x: 70, y: 70 } },
+    { id: "E10", kind: "entity", type: "object", name: "The ship’s bell", summary: "The moss-green bell returned by the tide, later hung beside the lamp. It does not ring, but the flame leans toward it.", attrs: [["Condition", "Moss-green, does not ring"], ["Current location", "Beside the lamp, Lantern Tower"]], cert: "text", ev: [["3.2", "a ship's bell, green with age"], ["3.3", "hung it beside the lamp"]], pos: { x: 230, y: 40 } },
+    { id: "V05", kind: "event", name: "Lowest tide", summary: "On the seventh night, the tide drew out farther than anyone alive had seen; Sunken Wharf was exposed under the moon.", when: "Seventh night (Ch.3)", order: 5, cert: "text", ev: [["3.1", "On the seventh night the tide went out farther than anyone alive had seen"]] },
+    { id: "V06", kind: "event", name: "Wren finds the ship’s bell", summary: "Wren recognizes her father’s knot on the bell’s rope.", when: "Seventh night (Ch.3)", order: 6, cert: "text", ev: [["3.2", "a knot Wren recognised"]] },
+    { id: "V07", kind: "event", name: "Wren hangs the bell beside the lamp", summary: "The bell does not ring but the flame leans toward it.", when: "Seventh night (Ch.3)", order: 7, cert: "text", ev: [["3.3", "the flame bent toward it"]] },
+    { id: "R09", kind: "relation", from: "E10", to: "E09", label: "tied by Wren’s father", cert: "inferred", ev: [["3.2", "It was her father's knot."]] },
+    { id: "R10", kind: "relation", from: "E01", to: "E10", label: "found and hung", cert: "text", ev: [["3.2", "a ship's bell"], ["3.3", "She carried the bell up"]] },
   ];
 
-  /* ontology.yml của novel: nguồn duy nhất cho phân tích (LLM) và bộ kiểm tra xung đột (code tất định). */
+  /* the novel’s ontology.yml: the single source for analysis (LLM) and the conflict checker (deterministic code). */
   const ontology = {
     version: 1,
     language: "vi",
     entityTypes: {
-      character: { label: "Nhân vật", hint: "Người, sinh vật có ý chí" },
-      place: { label: "Địa điểm", hint: "Nơi chốn, công trình, vùng đất" },
-      org: { label: "Tổ chức", hint: "Hội đồng, gia tộc, phe phái" },
-      object: { label: "Vật phẩm", hint: "Đồ vật có vai trò trong cốt truyện" },
+      character: { label: "Characters", hint: "People, beings with a will" },
+      place: { label: "Location", hint: "Places, structures, lands" },
+      org: { label: "Organizations", hint: "Councils, families, factions" },
+      object: { label: "Object", hint: "Objects that play a role in the plot" },
     },
     attributes: {
-      role: { label: "Vai trò", single: true },
-      workplace: { label: "Nơi làm việc", single: true },
-      occupation: { label: "Nghề", single: true },
-      purpose: { label: "Mục đích", single: false },
-      title: { label: "Chức vụ", single: true },
-      seen_at: { label: "Nơi gặp", single: false },
-      steps: { label: "Số bậc", single: true },
-      state: { label: "Tình trạng", single: true },
-      chair: { label: "Chủ tịch", single: true },
-      relation_to: { label: "Quan hệ", single: false },
-      location: { label: "Vị trí hiện tại", single: true },
+      role: { label: "Role", single: true },
+      workplace: { label: "Workplace", single: true },
+      occupation: { label: "Occupation", single: true },
+      purpose: { label: "Purpose", single: false },
+      title: { label: "Position", single: true },
+      seen_at: { label: "Meeting place", single: false },
+      steps: { label: "Step count", single: true },
+      state: { label: "Condition", single: true },
+      chair: { label: "Chair", single: true },
+      relation_to: { label: "Relation", single: false },
+      location: { label: "Current location", single: true },
     },
     predicates: {
-      keeps_at: { label: "giữ đèn tại", domain: ["character"], range: ["place"] },
-      works_for: { label: "làm việc cho", domain: ["character"], range: ["org"] },
-      chair_of: { label: "chủ tịch", domain: ["character"], range: ["org"], uniqueRange: true },
-      sent_by: { label: "được cử bởi", domain: ["character"], range: ["character"] },
-      distrusts: { label: "không tin tưởng", domain: ["character"], range: ["character", "org"] },
-      located_in: { label: "nằm trong", domain: ["place"], range: ["place"] },
-      present_at: { label: "có mặt tại", domain: ["character"], range: ["place"] },
-      made_by: { label: "do ai làm ra", domain: ["object"], range: ["character"] },
-      handles: { label: "tìm thấy / sử dụng", domain: ["character"], range: ["object"] },
+      keeps_at: { label: "keeps the lamp at", domain: ["character"], range: ["place"] },
+      works_for: { label: "works for", domain: ["character"], range: ["org"] },
+      chair_of: { label: "chair of", domain: ["character"], range: ["org"], uniqueRange: true },
+      sent_by: { label: "sent by", domain: ["character"], range: ["character"] },
+      distrusts: { label: "distrusts", domain: ["character"], range: ["character", "org"] },
+      located_in: { label: "located in", domain: ["place"], range: ["place"] },
+      present_at: { label: "present at", domain: ["character"], range: ["place"] },
+      made_by: { label: "made by", domain: ["object"], range: ["character"] },
+      handles: { label: "found / used", domain: ["character"], range: ["object"] },
     },
     event: { fields: ["name", "when", "order", "summary"] },
     certainty: ["text", "claim", "inferred"],
     rules: {
-      evidence_quote: { severity: "error", label: "Dẫn chứng khớp văn bản", desc: "Mỗi dẫn chứng phải là đoạn trích có thật trong đoạn nguồn được gắn." },
-      relation_signature: { severity: "error", label: "Quan hệ đúng kiểu", desc: "Loại của hai đầu quan hệ phải nằm trong domain và range của predicate." },
-      attribute_single: { severity: "error", label: "Thuộc tính một giá trị", desc: "Thuộc tính đánh dấu single chỉ được có một giá trị cho mỗi entity." },
-      relation_unique: { severity: "error", label: "Quan hệ duy nhất", desc: "Predicate có unique_range chỉ cho phép một chủ thể trên mỗi đối tượng." },
-      entity_duplicate: { severity: "warning", label: "Entity trùng lặp", desc: "Hai entity cùng loại có tên trùng hoặc tên này nằm trong tên kia." },
-      dangling_ref: { severity: "error", label: "Quan hệ trỏ đúng entity", desc: "Hai đầu quan hệ phải là entity còn hiệu lực (chưa bị từ chối)." },
-      source_stale: { severity: "warning", label: "Nguồn chưa bị sửa", desc: "Đoạn nguồn gắn với nhận định đã được sửa sau lần phân tích." },
+      evidence_quote: { severity: "error", label: "Evidence matches the text", desc: "Each piece of evidence must be a real excerpt from the attached source paragraph." },
+      relation_signature: { severity: "error", label: "Correct relation types", desc: "The types at both ends of a relation must be within the predicate’s domain and range." },
+      attribute_single: { severity: "error", label: "Single-valued attributes", desc: "An attribute marked single may only have one value per entity." },
+      relation_unique: { severity: "error", label: "Unique relation", desc: "A predicate with unique_range allows only one subject per object." },
+      entity_duplicate: { severity: "warning", label: "Duplicate entities", desc: "Two entities of the same type have the same name or one name is contained in the other." },
+      dangling_ref: { severity: "error", label: "Relations point to valid entities", desc: "Both ends of a relation must be valid entities (not rejected)." },
+      source_stale: { severity: "warning", label: "Source not edited", desc: "The source paragraph attached to the claim was edited after the analysis." },
     },
   };
   const attrByLabel = Object.fromEntries(Object.entries(ontology.attributes).map(([k, a]) => [a.label, k]));
@@ -98,26 +98,26 @@ window.NV = (function () {
       return [id, { t: VI[id], st: "draft", notes: [] }];
     }));
     const tr = {
-      lang: "Tiếng Việt",
+      lang: "Vietnamese",
       provider: "claude",
       guidelines: {
         purpose: "release", // research | release
-        audience: "Độc giả trưởng thành yêu thích fantasy u tối",
-        tone: "Trang trọng, nhịp câu chậm, hơi cổ",
-        pronouns: "Ngôi thứ ba dùng “cô” / “anh”. Không dùng “hắn”, “nàng”.",
-        conventions: "Giữ nguyên tên riêng. Địa danh có nghĩa thì dịch nghĩa (Tháp Đèn, Bến Chìm). Dùng dấu “ ” cho lời thoại.",
+        audience: "Adult readers who love dark fantasy",
+        tone: "Formal, slow sentence rhythm, slightly archaic",
+        pronouns: "Third person uses “cô” / “anh”. Do not use “hắn”, “nàng”.",
+        conventions: "Keep proper names. Place names with a meaning are translated by meaning (Tháp Đèn, Bến Chìm). Use “ ” marks for dialogue.",
         version: 3,
       },
       dict: [
-        { id: "D01", src: "Wren Aldous", dst: "Wren Aldous", type: "name", note: "Giữ nguyên" },
-        { id: "D02", src: "Maro Quill", dst: "Maro Quill", type: "name", note: "Giữ nguyên" },
+        { id: "D01", src: "Wren Aldous", dst: "Wren Aldous", type: "name", note: "Keep as is" },
+        { id: "D02", src: "Maro Quill", dst: "Maro Quill", type: "name", note: "Keep as is" },
         { id: "D03", src: "Lady Sevrin", dst: "Phu nhân Sevrin", type: "title", note: "" },
         { id: "D04", src: "Lantern Tower", dst: "Tháp Đèn", type: "place", note: "" },
-        { id: "D05", src: "Drowned Quay", dst: "Bến Chìm", type: "place", note: "Dịch nghĩa" },
-        { id: "D06", src: "Harrowmere", dst: "Harrowmere", type: "place", note: "Giữ nguyên" },
+        { id: "D05", src: "Drowned Quay", dst: "Bến Chìm", type: "place", note: "Translate by meaning" },
+        { id: "D06", src: "Harrowmere", dst: "Harrowmere", type: "place", note: "Keep as is" },
         { id: "D07", src: "Council", dst: "Hội đồng", type: "org", note: "" },
         { id: "D08", src: "harbor clerk", dst: "thư lại bến cảng", type: "title", note: "" },
-        { id: "D09", src: "keeper", dst: "người giữ đèn", type: "term", note: "Đổi từ “người coi đèn” ở v3 để nhất quán" },
+        { id: "D09", src: "keeper", dst: "người giữ đèn", type: "term", note: "Changed from “người coi đèn” in v3 for consistency" },
         { id: "D10", src: "ledger", dst: "sổ cái", type: "term", note: "" },
       ],
       chapters: {
@@ -125,16 +125,16 @@ window.NV = (function () {
         2: { status: "draft", paras: trParas(2) },
       },
       warnings: [
-        { id: "W01", kind: "source", ch: 1, p: "1.3", reason: "Đoạn nguồn đã được sửa sau khi dịch.", before: "…has not paid for it in five winters.", after: "…has not paid for it in six winters.", date: "2026-11-08 20:41", state: "open" },
-        { id: "W02", kind: "dict", ch: 2, p: "2.4", reason: "Từ điển v3: “keeper” → “người giữ đèn”, nhưng đoạn dịch còn dùng “người coi đèn”.", before: "người coi đèn", after: "người giữ đèn", date: "2026-11-09 09:15", state: "open" },
+        { id: "W01", kind: "source", ch: 1, p: "1.3", reason: "The source passage was edited after translation.", before: "…has not paid for it in five winters.", after: "…has not paid for it in six winters.", date: "2026-11-08 20:41", state: "open" },
+        { id: "W02", kind: "dict", ch: 2, p: "2.4", reason: "Dictionary v3: “keeper” → “người giữ đèn”, but the translated passage still uses “người coi đèn”.", before: "người coi đèn", after: "người giữ đèn", date: "2026-11-09 09:15", state: "open" },
       ],
       suggestions: [
-        { id: "S01", ch: 2, p: "2.4", kind: "Nhất quán thuật ngữ", text: "Đoạn dùng “người coi đèn”, trong khi từ điển và chương 2 ¶2 dùng “người giữ đèn”.", quote: "“The keeper does not light the lamp for the ships,” she said.", revise: "“Người giữ đèn không thắp đèn cho tàu thuyền,” bà nói. “Cô ấy thắp cho những thứ còn nằm dưới nước.”", state: "open" },
-        { id: "S02", ch: 1, p: "1.5", kind: "Mô-típ lặp lại", text: "Cả truyện lặp lại động từ “count” (đếm). Bản dịch dùng “kiểm kê”, làm mất liên kết với thư ở chương 2.", quote: "…he had been sent to count what remained of Harrowmere.", revise: "Viên thư lại tự giới thiệu tên là Maro Quill, và nói anh được cử đến để đếm những gì còn lại của Harrowmere. Anh không nói ai đã cử mình.", state: "open" },
-        { id: "S03", ch: 1, p: "1.3", kind: "Đúng nghĩa", text: "Bản gốc đã sửa thành “six winters” nhưng bản dịch còn ghi “năm mùa đông”.", quote: "“The Council has not paid for it in six winters.”", revise: "“Hội đồng đã sáu mùa đông không trả tiền cho nó.”", state: "open" },
+        { id: "S01", ch: 2, p: "2.4", kind: "Terminology consistency", text: "The passage uses “người coi đèn”, while the dictionary and chapter 2 ¶2 use “người giữ đèn”.", quote: "“The keeper does not light the lamp for the ships,” she said.", revise: "“Người giữ đèn không thắp đèn cho tàu thuyền,” bà nói. “Cô ấy thắp cho những thứ còn nằm dưới nước.”", state: "open" },
+        { id: "S02", ch: 1, p: "1.5", kind: "Recurring motif", text: "The whole story repeats the verb “count” (đếm). The translation uses “kiểm kê”, losing the link to the letter in chapter 2.", quote: "…he had been sent to count what remained of Harrowmere.", revise: "Viên thư lại tự giới thiệu tên là Maro Quill, và nói anh được cử đến để đếm những gì còn lại của Harrowmere. Anh không nói ai đã cử mình.", state: "open" },
+        { id: "S03", ch: 1, p: "1.3", kind: "Accurate meaning", text: "The source was edited to “six winters” but the translation still says “năm mùa đông”.", quote: "“The Council has not paid for it in six winters.”", revise: "“Hội đồng đã sáu mùa đông không trả tiền cho nó.”", state: "open" },
       ],
     };
-    tr.chapters[1].paras["1.4"].notes.push({ text: "Giọng Wren cần cộc và lạnh. Cân nhắc bỏ “đâu có”.", date: "2026-11-07 22:10" });
+    tr.chapters[1].paras["1.4"].notes.push({ text: "Wren’s voice should be curt and cold. Consider dropping “đâu có”.", date: "2026-11-07 22:10" });
     tr.chapters[1].paras["1.4"].st = "edited";
     tr.chapters[1].paras["1.3"].st = "review";
     tr.chapters[2].paras["2.4"].st = "review";
@@ -143,33 +143,33 @@ window.NV = (function () {
     const kb = {
       upTo: 3,
       analyzed: { 1: "done", 2: "done" },
-      lang: "Tiếng Việt",
+      lang: "Vietnamese",
       types: { character: true, place: true, org: true, event: true, relation: true, object: true },
       items: [
-        { id: "E01", kind: "entity", type: "character", name: "Wren Aldous", summary: "Người giữ đèn cuối cùng của Harrowmere. Mỗi chiều chạng vạng, cô leo lên Tháp Đèn để thắp ngọn đèn duy nhất còn lại.", attrs: [["Vai trò", "Người giữ đèn"], ["Nơi làm việc", "Tháp Đèn"]], cert: "text", status: "confirmed", ev: ev([["1.1", "Wren Aldous climbed the three hundred and twelve steps of the Lantern Tower and lit the last lamp of Harrowmere."], ["1.4", "“The Council does not light the lamp,” she said. “I do.”"]]), pos: { x: 120, y: 120 } },
-        { id: "E02", kind: "entity", type: "character", name: "Maro Quill", summary: "Thư lại bến cảng, được cử đến để đếm những gì còn lại của Harrowmere. Không nói ai đã cử mình.", attrs: [["Nghề", "Thư lại bến cảng"], ["Mục đích", "Kiểm kê Harrowmere"]], cert: "text", status: "confirmed", ev: ev([["1.3", "The harbor clerk had climbed the stairs without a sound"], ["1.5", "The clerk introduced himself as Maro Quill"]]), pos: { x: 110, y: 250 } },
-        { id: "E03", kind: "entity", type: "character", name: "Phu nhân Sevrin", summary: "Người viết thư cho Maro. Dấu mặt trời tỏa tia ở cuối thư là dấu của chủ tịch Hội đồng.", attrs: [["Chức vụ", "Chủ tịch Hội đồng (theo dấu thư)"]], cert: "text", status: "proposed", ev: ev([["2.1", "Lady Sevrin's letter folded inside his ledger"], ["2.2", "the mark of the Council's chair"]]), pos: { x: 310, y: 190 } },
-        { id: "E04", kind: "entity", type: "character", name: "Bà lão bán trà", summary: "Bà lão ở Bến Chìm, cảnh báo Maro rằng người giữ đèn thắp đèn cho những thứ dưới nước.", attrs: [["Nơi gặp", "Bến Chìm"]], cert: "text", status: "proposed", ev: ev([["2.4", "an old woman sold him tea and a warning"]]), pos: { x: 190, y: 330 } },
-        { id: "E05", kind: "entity", type: "place", name: "Tháp Đèn", summary: "Tòa tháp 312 bậc, nơi ngọn đèn cuối cùng của Harrowmere được thắp.", attrs: [["Số bậc", "312"]], cert: "text", status: "confirmed", ev: ev([["1.1", "the three hundred and twelve steps of the Lantern Tower"]]), pos: { x: 320, y: 70 } },
-        { id: "E06", kind: "entity", type: "place", name: "Bến Chìm", summary: "Bến cảng phủ sương mù. Nhìn từ Tháp Đèn, ánh đèn dường như vươn xuống tận mặt nước ở đây.", attrs: [], cert: "text", status: "proposed", ev: ev([["1.6", "the fog lay thick over the Drowned Quay"], ["2.4", "At the Drowned Quay an old woman sold him tea"]]), pos: { x: 360, y: 305 } },
-        { id: "E07", kind: "entity", type: "place", name: "Harrowmere", summary: "Thị trấn cảng bị sương mù nuốt từ nhiều năm trước; tàu thuyền ngừng ghé và hầu hết đèn đã tắt.", attrs: [["Tình trạng", "Vắng, bị sương mù bao phủ"]], cert: "text", status: "confirmed", ev: ev([["1.1", "the last lamp of Harrowmere"], ["1.2", "the fog took the harbor and the ships stopped coming"]]), pos: { x: 520, y: 170 } },
-        { id: "E08", kind: "entity", type: "org", name: "Hội đồng Harrowmere", summary: "Cơ quan quản lý thị trấn. Theo lời Maro, đã sáu mùa đông không trả tiền dầu đèn.", attrs: [["Chủ tịch", "Phu nhân Sevrin (suy ra)"]], cert: "claim", status: "proposed", ev: ev([["1.3", "“The Council has not paid for it in six winters.”"], ["1.4", "“The Council does not light the lamp,” she said."]]), pos: { x: 520, y: 300 }, stale: "Đoạn nguồn 1.3 đã sửa ngày 08/11/2026: “five winters” → “six winters”." },
-        { id: "V01", kind: "event", name: "Sương mù nuốt bến cảng", summary: "Sương mù phủ bến cảng; tàu thuyền ngừng ghé và các ngọn đèn lần lượt tắt.", when: "Nhiều năm trước", order: 1, cert: "text", status: "confirmed", ev: ev([["1.2", "when the fog took the harbor and the ships stopped coming"]]) },
-        { id: "V02", kind: "event", name: "Hội đồng ngừng trả tiền dầu", summary: "Hội đồng không còn trả tiền dầu đèn.", when: "Sáu mùa đông trước", order: 2, cert: "claim", status: "proposed", ev: ev([["1.3", "“The Council has not paid for it in six winters.”"]]), stale: "Đoạn nguồn 1.3 đã sửa ngày 08/11/2026: “five winters” → “six winters”." },
-        { id: "V03", kind: "event", name: "Maro leo Tháp Đèn gặp Wren", summary: "Maro đến Tháp Đèn lúc chạng vạng và tự giới thiệu.", when: "Chạng vạng (Ch.1)", order: 3, cert: "text", status: "confirmed", ev: ev([["1.3", "a voice behind her"], ["1.5", "The clerk introduced himself as Maro Quill"]]) },
-        { id: "V04", kind: "event", name: "Maro tìm thấy thư của Sevrin", summary: "Lá thư ra lệnh: đếm đèn, đếm người giữ đèn, báo xem ánh sáng còn đáp lại hay không.", when: "Sáng hôm sau (Ch.2)", order: 4, cert: "text", status: "proposed", ev: ev([["2.1", "he found Lady Sevrin's letter folded inside his ledger"], ["2.2", "“Count the lamps,” the letter said."]]) },
-        { id: "R01", kind: "relation", from: "E01", to: "E05", label: "giữ đèn tại", cert: "text", status: "confirmed", ev: ev([["1.1", "climbed … the Lantern Tower and lit the last lamp"]]) },
-        { id: "R02", kind: "relation", from: "E02", to: "E08", label: "làm việc cho", cert: "inferred", status: "proposed", ev: ev([["1.3", "“The Council has not paid for it in six winters.”"]]) },
-        { id: "R03", kind: "relation", from: "E03", to: "E08", label: "chủ tịch", cert: "text", status: "proposed", ev: ev([["2.2", "the mark of the Council's chair"]]) },
-        { id: "R04", kind: "relation", from: "E02", to: "E03", label: "được cử bởi", cert: "inferred", status: "proposed", ev: ev([["1.5", "He did not say who had sent him."], ["2.1", "Lady Sevrin's letter folded inside his ledger"]]) },
-        { id: "R05", kind: "relation", from: "E01", to: "E08", label: "không tin tưởng", cert: "claim", status: "proposed", ev: ev([["1.4", "“The Council does not light the lamp,” she said. “I do.”"]]) },
-        { id: "R06", kind: "relation", from: "E05", to: "E07", label: "nằm trong", cert: "text", status: "confirmed", ev: ev([["1.1", "the Lantern Tower and lit the last lamp of Harrowmere"]]) },
-        { id: "R07", kind: "relation", from: "E06", to: "E07", label: "nằm trong", cert: "inferred", status: "proposed", ev: ev([["1.6", "Below them the fog lay thick over the Drowned Quay"]]) },
-        { id: "R08", kind: "relation", from: "E04", to: "E06", label: "bán trà ở", cert: "text", status: "proposed", ev: ev([["2.4", "At the Drowned Quay an old woman sold him tea"]]) },
+        { id: "E01", kind: "entity", type: "character", name: "Wren Aldous", summary: "The last lamp keeper of Harrowmere. Every dusk she climbs the Lantern Tower to light the only lamp left.", attrs: [["Role", "Lamp keeper"], ["Workplace", "Tháp Đèn"]], cert: "text", status: "confirmed", ev: ev([["1.1", "Wren Aldous climbed the three hundred and twelve steps of the Lantern Tower and lit the last lamp of Harrowmere."], ["1.4", "“The Council does not light the lamp,” she said. “I do.”"]]), pos: { x: 120, y: 120 } },
+        { id: "E02", kind: "entity", type: "character", name: "Maro Quill", summary: "Harbor clerk, sent to count what is left of Harrowmere. Does not say who sent him.", attrs: [["Occupation", "Harbor clerk"], ["Purpose", "Harrowmere inventory"]], cert: "text", status: "confirmed", ev: ev([["1.3", "The harbor clerk had climbed the stairs without a sound"], ["1.5", "The clerk introduced himself as Maro Quill"]]), pos: { x: 110, y: 250 } },
+        { id: "E03", kind: "entity", type: "character", name: "Phu nhân Sevrin", summary: "The writer of the letter to Maro. The radiating sun mark at the end of the letter is the mark of the Council chair.", attrs: [["Position", "Council chair (by the letter’s mark)"]], cert: "text", status: "proposed", ev: ev([["2.1", "Lady Sevrin's letter folded inside his ledger"], ["2.2", "the mark of the Council's chair"]]), pos: { x: 310, y: 190 } },
+        { id: "E04", kind: "entity", type: "character", name: "Tea-selling old woman", summary: "An old woman at Sunken Wharf, warns Maro that the lamp keeper lights the lamp for things under the water.", attrs: [["Meeting place", "Bến Chìm"]], cert: "text", status: "proposed", ev: ev([["2.4", "an old woman sold him tea and a warning"]]), pos: { x: 190, y: 330 } },
+        { id: "E05", kind: "entity", type: "place", name: "Tháp Đèn", summary: "A 312-step tower, where the last lamp of Harrowmere is lit.", attrs: [["Step count", "312"]], cert: "text", status: "confirmed", ev: ev([["1.1", "the three hundred and twelve steps of the Lantern Tower"]]), pos: { x: 320, y: 70 } },
+        { id: "E06", kind: "entity", type: "place", name: "Bến Chìm", summary: "The fog-covered harbor. Seen from the Lantern Tower, the lamplight seems to reach down to the water here.", attrs: [], cert: "text", status: "proposed", ev: ev([["1.6", "the fog lay thick over the Drowned Quay"], ["2.4", "At the Drowned Quay an old woman sold him tea"]]), pos: { x: 360, y: 305 } },
+        { id: "E07", kind: "entity", type: "place", name: "Harrowmere", summary: "A harbor town swallowed by fog years ago; ships stopped calling and most lamps went out.", attrs: [["Condition", "Deserted, covered in fog"]], cert: "text", status: "confirmed", ev: ev([["1.1", "the last lamp of Harrowmere"], ["1.2", "the fog took the harbor and the ships stopped coming"]]), pos: { x: 520, y: 170 } },
+        { id: "E08", kind: "entity", type: "org", name: "Harrowmere Council", summary: "The town’s governing body. According to Maro, it has not paid for lamp oil for six winters.", attrs: [["Chair", "Lady Severin (inferred)"]], cert: "claim", status: "proposed", ev: ev([["1.3", "“The Council has not paid for it in six winters.”"], ["1.4", "“The Council does not light the lamp,” she said."]]), pos: { x: 520, y: 300 }, stale: "Source paragraph 1.3 edited on 08/11/2026: “five winters” → “six winters”." },
+        { id: "V01", kind: "event", name: "Fog swallows the harbor", summary: "Fog covers the harbor; ships stop calling and the lamps go out one by one.", when: "Years ago", order: 1, cert: "text", status: "confirmed", ev: ev([["1.2", "when the fog took the harbor and the ships stopped coming"]]) },
+        { id: "V02", kind: "event", name: "The Council stops paying for oil", summary: "The Council no longer pays for lamp oil.", when: "Six winters ago", order: 2, cert: "claim", status: "proposed", ev: ev([["1.3", "“The Council has not paid for it in six winters.”"]]), stale: "Source paragraph 1.3 edited on 08/11/2026: “five winters” → “six winters”." },
+        { id: "V03", kind: "event", name: "Maro climbs the Lantern Tower to meet Wren", summary: "Maro arrives at the Lantern Tower at dusk and introduces himself.", when: "Dusk (Ch.1)", order: 3, cert: "text", status: "confirmed", ev: ev([["1.3", "a voice behind her"], ["1.5", "The clerk introduced himself as Maro Quill"]]) },
+        { id: "V04", kind: "event", name: "Maro finds Severin’s letter", summary: "The letter orders: count the lamps, count the lamp keepers, report whether the light still answers.", when: "The next morning (Ch.2)", order: 4, cert: "text", status: "proposed", ev: ev([["2.1", "he found Lady Sevrin's letter folded inside his ledger"], ["2.2", "“Count the lamps,” the letter said."]]) },
+        { id: "R01", kind: "relation", from: "E01", to: "E05", label: "keeps the lamp at", cert: "text", status: "confirmed", ev: ev([["1.1", "climbed … the Lantern Tower and lit the last lamp"]]) },
+        { id: "R02", kind: "relation", from: "E02", to: "E08", label: "works for", cert: "inferred", status: "proposed", ev: ev([["1.3", "“The Council has not paid for it in six winters.”"]]) },
+        { id: "R03", kind: "relation", from: "E03", to: "E08", label: "chair of", cert: "text", status: "proposed", ev: ev([["2.2", "the mark of the Council's chair"]]) },
+        { id: "R04", kind: "relation", from: "E02", to: "E03", label: "sent by", cert: "inferred", status: "proposed", ev: ev([["1.5", "He did not say who had sent him."], ["2.1", "Lady Sevrin's letter folded inside his ledger"]]) },
+        { id: "R05", kind: "relation", from: "E01", to: "E08", label: "distrusts", cert: "claim", status: "proposed", ev: ev([["1.4", "“The Council does not light the lamp,” she said. “I do.”"]]) },
+        { id: "R06", kind: "relation", from: "E05", to: "E07", label: "located in", cert: "text", status: "confirmed", ev: ev([["1.1", "the Lantern Tower and lit the last lamp of Harrowmere"]]) },
+        { id: "R07", kind: "relation", from: "E06", to: "E07", label: "located in", cert: "inferred", status: "proposed", ev: ev([["1.6", "Below them the fog lay thick over the Drowned Quay"]]) },
+        { id: "R08", kind: "relation", from: "E04", to: "E06", label: "sells tea at", cert: "text", status: "proposed", ev: ev([["2.4", "At the Drowned Quay an old woman sold him tea"]]) },
       ],
       ch3: KB_CH3.map((x) => ({ ...x, status: "proposed", ev: ev(x.ev) })),
       log: [
-        { date: "2026-11-08 20:41", text: "Nguồn ch.1 ¶3 được sửa (“five winters” → “six winters”)." },
+        { date: "2026-11-08 20:41", text: "Source ch.1 ¶3 was edited (“five winters” → “six winters”)." },
       ],
     };
     const fixItem = (i) => {
@@ -178,20 +178,20 @@ window.NV = (function () {
     };
     kb.items.forEach(fixItem);
     kb.ch3.forEach(fixItem);
-    // Kết quả "LLM" có sẵn lỗi để Review có việc làm: trùng entity, sai kiểu quan hệ, dẫn chứng bịa, thuộc tính mâu thuẫn.
+    // Results "LLM" have built-in errors so Review has work to do: duplicate entities, wrong relation types, fabricated evidence, contradictory attributes.
     kb.items.find((i) => i.id === "E05").attrs.push({ k: "steps", v: "321", p: "3.3" });
     kb.items.push(
-      { id: "E11", kind: "entity", type: "character", name: "Maro", summary: "Viên thư lại không biết phải đếm gì ở Bến Chìm.", attrs: [], cert: "text", status: "proposed", ev: ev([["2.5", "Maro wrote nothing in his ledger that day."]]) },
-      { id: "R11", kind: "relation", pred: "located_in", from: "E04", to: "E06", label: "nằm trong", cert: "inferred", status: "proposed", ev: ev([["2.4", "At the Drowned Quay an old woman sold him tea"]]) },
-      { id: "V08", kind: "event", name: "Wren thắp đèn mỗi đêm", summary: "Wren thắp ngọn đèn cuối cùng vào mỗi đêm.", when: "Mỗi đêm", order: 8, cert: "text", status: "proposed", ev: ev([["1.1", "Wren lit the lamp every night."]]) },
+      { id: "E11", kind: "entity", type: "character", name: "Maro", summary: "The clerk does not know what to count at Sunken Wharf.", attrs: [], cert: "text", status: "proposed", ev: ev([["2.5", "Maro wrote nothing in his ledger that day."]]) },
+      { id: "R11", kind: "relation", pred: "located_in", from: "E04", to: "E06", label: "located in", cert: "inferred", status: "proposed", ev: ev([["2.4", "At the Drowned Quay an old woman sold him tea"]]) },
+      { id: "V08", kind: "event", name: "Wren lights the lamp every night", summary: "Wren lights the last lamp every night.", when: "Every night", order: 8, cert: "text", status: "proposed", ev: ev([["1.1", "Wren lit the lamp every night."]]) },
     );
     // Newest first, as the app lists them (and as the prototype adds new ones). Seeding runs in reverse so ids ascend in creation order.
     const sumWords = (pack) => corpusOf(pack).reduce((a, c) => a + c.words, 0);
     const novels = [
-      { id: "NOV-0004", pack: null, title: "Những Con Sóng Không Tên", author: "Nguyễn Hạ", lang: "VI", langName: "Tiếng Việt", chapters: 0, words: 0, updated: "2026-11-12 08:20", origin: "Tạo mới", desc: "Ý tưởng mới, chưa có chương nào.", cover: ["var(--acc-breeze)", "var(--primary)", "var(--acc-midnight)"], coverImg: `${NOVEL_ASSETS}${ART.waves}/cover.png`, coverFile: `${ART.waves}/cover.png`, tags: ["idea"] },
-      { id: "NOV-0003", pack: PACK.pine, title: "Gió Muộn Trên Đồi Thông", author: "Nguyễn Hạ", lang: "VI", langName: "Tiếng Việt", chapters: corpusOf(PACK.pine).length, words: sumWords(PACK.pine), updated: "2026-11-04 21:30", origin: "Nhập từ package", desc: "Bản thảo đang viết dở.", cover: ["var(--acc-sunset)", "var(--secondary)", "var(--acc-midnight)"], coverImg: `${NOVEL_ASSETS}${PACK.pine}/cover.png`, tags: ["drama", "draft"] },
-      { id: "NOV-0002", pack: PACK.glass, title: "Ash Under the Glass Sea", display: "Tro Dưới Biển Thủy Tinh", author: "Tomas Hale", lang: "EN", langName: "Tiếng Anh", chapters: corpusOf(PACK.glass).length, words: sumWords(PACK.glass), updated: "2026-10-30 18:02", origin: "Nhập từ package", desc: "Một thành phố xây trên đáy biển đã hóa thủy tinh.", cover: ["var(--acc-midnight)", "var(--acc-breeze)", "var(--acc-twilight)"], coverImg: `${NOVEL_ASSETS}${PACK.glass}/cover.png`, tags: ["sci-fi", "dystopia"] },
-      { id: "NOV-0001", pack: PACK.lantern, title: "The Lantern Keeper of Harrowmere", display: "Người Giữ Đèn Harrowmere", author: "Isolde Verran", lang: "EN", langName: "Tiếng Anh", chapters: lantern.length, words: sumWords(PACK.lantern), updated: "2026-11-09 09:15", origin: "Nhập từ package", desc: "Người giữ đèn cuối cùng của một thị trấn cảng bị sương mù bao phủ, và viên thư lại được cử đến để đếm những gì còn lại.", cover: ["var(--acc-midnight)", "var(--primary)", "var(--acc-sunset)"], coverImg: `${NOVEL_ASSETS}${PACK.lantern}/cover.png`, tags: ["fantasy", "dark", "harbor"] },
+      { id: "NOV-0004", pack: null, title: "Những Con Sóng Không Tên", author: "Nguyễn Hạ", lang: "VI", langName: "Vietnamese", chapters: 0, words: 0, updated: "2026-11-12 08:20", origin: "Create new", desc: "New idea, no chapters yet.", cover: ["var(--acc-breeze)", "var(--primary)", "var(--acc-midnight)"], coverImg: `${NOVEL_ASSETS}${ART.waves}/cover.png`, coverFile: `${ART.waves}/cover.png`, tags: ["idea"] },
+      { id: "NOV-0003", pack: PACK.pine, title: "Gió Muộn Trên Đồi Thông", author: "Nguyễn Hạ", lang: "VI", langName: "Vietnamese", chapters: corpusOf(PACK.pine).length, words: sumWords(PACK.pine), updated: "2026-11-04 21:30", origin: "Imported from package", desc: "Work-in-progress draft.", cover: ["var(--acc-sunset)", "var(--secondary)", "var(--acc-midnight)"], coverImg: `${NOVEL_ASSETS}${PACK.pine}/cover.png`, tags: ["drama", "draft"] },
+      { id: "NOV-0002", pack: PACK.glass, title: "Ash Under the Glass Sea", display: "Ash Under the Glass Sea", author: "Tomas Hale", lang: "EN", langName: "English", chapters: corpusOf(PACK.glass).length, words: sumWords(PACK.glass), updated: "2026-10-30 18:02", origin: "Imported from package", desc: "A city built on a seabed that has turned to glass.", cover: ["var(--acc-midnight)", "var(--acc-breeze)", "var(--acc-twilight)"], coverImg: `${NOVEL_ASSETS}${PACK.glass}/cover.png`, tags: ["sci-fi", "dystopia"] },
+      { id: "NOV-0001", pack: PACK.lantern, title: "The Lantern Keeper of Harrowmere", display: "The Lantern Keeper of Harrowmere", author: "Isolde Verran", lang: "EN", langName: "English", chapters: lantern.length, words: sumWords(PACK.lantern), updated: "2026-11-09 09:15", origin: "Imported from package", desc: "The last lamp keeper of a fog-covered harbor town, and the clerk sent to count what is left.", cover: ["var(--acc-midnight)", "var(--primary)", "var(--acc-sunset)"], coverImg: `${NOVEL_ASSETS}${PACK.lantern}/cover.png`, tags: ["fantasy", "dark", "harbor"] },
     ];
 
     return { novels, chapters, tr, kb, reader: { novel: "NOV-0001", ch: 1, mode: "read", size: 15, edit: null } };
@@ -199,12 +199,12 @@ window.NV = (function () {
 
   const viFresh = {
     "1.3": VI["1.3"].replace("năm mùa đông", "sáu mùa đông"),
-    "2.4": VI["2.4"].replace("Người coi đèn", "Người giữ đèn"),
+    "2.4": VI["2.4"].replace("Người coi đèn", "Lamp keeper"),
   };
 
   return { state: seed(), reseed() { this.state = seed(); }, chOf, vi: VI, viFresh, ontology, providers: [
     { id: "claude", name: "Claude Code CLI", ok: true },
     { id: "gemini", name: "Gemini CLI", ok: true },
-    { id: "codex", name: "Codex CLI", ok: false, note: "Chưa cài trên máy này" },
+    { id: "codex", name: "Codex CLI", ok: false, note: "Not installed on this machine" },
   ] };
 })();

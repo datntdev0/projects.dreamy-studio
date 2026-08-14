@@ -9,7 +9,7 @@ export interface PanelSpec {
   readonly selector: string;
   readonly below?: string;
   readonly aria?: string;
-  readonly mask?: readonly string[];
+  readonly hide?: readonly string[];
 }
 
 export interface ListSpec {
@@ -42,16 +42,19 @@ export function folderOf(screen: ScreenSpec): readonly string[] {
   return screen.folder ?? [screen.id];
 }
 
-export const PANELS: readonly PanelSpec[] = [
+export const LAYOUT_PANELS: readonly PanelSpec[] = [
   { name: "titlebar", selector: ".titlebar" },
   { name: "railbar", selector: ".rail" },
+  { name: "statusbar", selector: ".statusbar", hide: ['[data-testid="statusbar-workspace"] .path'] },
+];
+
+export const PANELS: readonly PanelSpec[] = [
   { name: "explorer", selector: ".explorer" },
   { name: "tabbar", selector: ".tabbar" },
   { name: "crumbs", selector: ".crumbs" },
   { name: "toolbar", selector: ".editor .nv-bar" },
   { name: "content", selector: ".editor", below: ".nv-bar", aria: ".editor .nv-body" },
   { name: "inspector", selector: ".inspector" },
-  { name: "statusbar", selector: ".statusbar", mask: ['[data-testid="statusbar-workspace"]'] },
 ];
 
 const SELECTED_PANELS = ["content", "inspector"];
@@ -109,8 +112,12 @@ export const SCREENS: readonly ScreenSpec[] = [
   },
 ];
 
-export function panelsNamed(names: readonly string[]): PanelSpec[] {
-  return PANELS.filter((panel) => names.includes(panel.name));
+export function layoutPanel(name: string): PanelSpec {
+  const panel = LAYOUT_PANELS.find((candidate) => candidate.name === name);
+  if (!panel) {
+    throw new Error(`unknown layout panel: ${name}`);
+  }
+  return panel;
 }
 
 export const LIBRARY_SUITE: SuiteSpec = { id: "library", page: prototypeLibraryPage, rail: "library", panels: PANELS, screens: SCREENS };

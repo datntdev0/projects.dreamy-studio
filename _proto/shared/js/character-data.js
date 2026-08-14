@@ -6,51 +6,51 @@ window.CR = (function () {
   const NV = window.NV;
 
   const VIEWS = [
-    { id: "front", label: "Chính diện", tag: "FRONT" },
-    { id: "back", label: "Mặt sau", tag: "BACK" },
-    { id: "side", label: "Nghiêng", tag: "SIDE" },
-    { id: "tq", label: "3/4 nửa người", tag: "3/4 UPPER" },
+    { id: "front", label: "Front", tag: "FRONT" },
+    { id: "back", label: "Back", tag: "BACK" },
+    { id: "side", label: "Side", tag: "SIDE" },
+    { id: "tq", label: "3/4 half body", tag: "3/4 UPPER" },
   ];
   const LAYOUT = "Single wide character design sheet with four views of the same character side by side in one row: front view full body, back view full body, side profile view full body, and three-quarter view upper body. Identical face, outfit and proportions in every view, plain neutral grey background, even soft lighting, no text or labels.";
 
   const FIELDS = [
-    { k: "gender", label: "Giới tính", scope: "char", ph: "vd. nữ" },
-    { k: "age", label: "Độ tuổi", scope: "char", ph: "vd. khoảng 30 tuổi" },
-    { k: "build", label: "Dáng người", scope: "char", ph: "vd. gầy, cao" },
-    { k: "face", label: "Khuôn mặt", scope: "char", ph: "vd. mặt dài, mắt xám" },
-    { k: "hair", label: "Tóc", scope: "char", ph: "vd. tóc bạc búi cao" },
-    { k: "skin", label: "Màu da", scope: "char", ph: "vd. da sạm gió biển" },
-    { k: "marks", label: "Dấu hiệu riêng", scope: "char", ph: "vd. vết sẹo, biểu tượng" },
-    { k: "garment", label: "Trang phục", scope: "outfit", ph: "vd. áo khoác dài màu xám" },
-    { k: "props", label: "Vật dụng", scope: "outfit", ph: "vd. cuốn sổ cái, đèn dầu" },
+    { k: "gender", label: "Gender", scope: "char", ph: "e.g. female" },
+    { k: "age", label: "Age", scope: "char", ph: "e.g. about 30 years old" },
+    { k: "build", label: "Build", scope: "char", ph: "e.g. thin, tall" },
+    { k: "face", label: "Face", scope: "char", ph: "e.g. long face, grey eyes" },
+    { k: "hair", label: "Hair", scope: "char", ph: "e.g. grey hair in a high bun" },
+    { k: "skin", label: "Skin tone", scope: "char", ph: "e.g. skin weathered by the sea wind" },
+    { k: "marks", label: "Distinguishing marks", scope: "char", ph: "e.g. a scar, an emblem" },
+    { k: "garment", label: "Outfit", scope: "outfit", ph: "e.g. long grey coat" },
+    { k: "props", label: "Props", scope: "outfit", ph: "e.g. a ledger, an oil lamp" },
   ];
   const CHAR_FIELDS = FIELDS.filter((f) => f.scope === "char");
   const OUTFIT_FIELDS = FIELDS.filter((f) => f.scope === "outfit");
 
   const SRC = {
-    text: ["badge-success", "Văn bản", "Văn bản nêu trực tiếp"],
-    claim: ["badge-info", "Lời nhân vật", "Lời kể của một nhân vật khác"],
-    ai: ["badge-warning", "AI suy luận", "AI suy luận, văn bản không nêu. Hãy xác nhận hoặc sửa"],
-    user: ["badge-primary", "Bạn nhập", "Do bạn nhập hoặc xác nhận"],
+    text: ["badge-success", "Text", "Stated directly in the text"],
+    claim: ["badge-info", "Character’s words", "Told by another character"],
+    ai: ["badge-warning", "AI inference", "AI inference, not stated in the text. Please confirm or edit"],
+    user: ["badge-primary", "You entered", "Entered or confirmed by you"],
   };
   const SHEET = {
-    none: ["CHƯA CÓ SHEET", ""],
-    draft: ["CHỜ DUYỆT", "badge-info"],
-    ok: ["ĐÃ DUYỆT", "badge-success"],
-    stale: ["CẦN XEM LẠI", "badge-warning"],
+    none: ["NO SHEET", ""],
+    draft: ["AWAITING APPROVAL", "badge-info"],
+    ok: ["APPROVED", "badge-success"],
+    stale: ["NEEDS REVIEW", "badge-warning"],
   };
   const STYLES = [
-    { id: "oil", name: "Sơn dầu u tối", lib: "Phong cách sơn dầu u tối", text: "oil painting, heavy impasto, chiaroscuro, desaturated blues, warm lamplight accents" },
-    { id: "concept", name: "Concept art bán tả thực", text: "semi-realistic character concept art, clean line, soft painterly shading, muted palette" },
+    { id: "oil", name: "Dark oil painting", lib: "Dark oil-painting style", text: "oil painting, heavy impasto, chiaroscuro, desaturated blues, warm lamplight accents" },
+    { id: "concept", name: "Semi-realistic concept art", text: "semi-realistic character concept art, clean line, soft painterly shading, muted palette" },
     { id: "anime", name: "Anime cel-shaded", text: "anime character design, cel shading, clean line art, flat colors" },
-    { id: "storybook", name: "Tranh minh họa màu nước", text: "watercolor storybook illustration, soft edges, paper texture, gentle colors" },
+    { id: "storybook", name: "Watercolor illustration", text: "watercolor storybook illustration, soft edges, paper texture, gentle colors" },
   ];
   const PROVIDERS = [
     { id: "gemini", name: "Gemini CLI (Imagen)", ok: true, per: 0.04, mins: 0.4 },
-    { id: "comfy", name: "ComfyUI (chạy trên máy)", ok: true, per: 0, mins: 1.6, note: "Không tốn phí, chậm hơn" },
-    { id: "codex", name: "Codex CLI", ok: false, per: 0.05, mins: 0.5, note: "Chưa cài trên máy này" },
+    { id: "comfy", name: "ComfyUI (runs on this machine)", ok: true, per: 0, mins: 1.6, note: "No cost, slower" },
+    { id: "codex", name: "Codex CLI", ok: false, per: 0.05, mins: 0.5, note: "Not installed on this machine" },
   ];
-  const BASE_VI = "Áo thun ngắn và quần short trắng trơn";
+  const BASE_VI = "Plain white short T-shirt and shorts";
   const BASE_EN = "a plain short-sleeved white t-shirt and plain white shorts, barefoot, no accessories";
   const NEG = "text, watermark, extra limbs, deformed hands, cropped, multiple characters, busy background";
 
@@ -58,74 +58,74 @@ window.CR = (function () {
   const R = (v, en, ev) => fld(v, "text", ev, en);
   const G = (v, en, why) => ({ v, en, why });
   const pal = (a, b, c) => [a, b, c].map(([n, en, hex]) => ({ n, en, c: hex }));
-  const NEUTRAL = () => pal(["Xám", "grey", "#8a8f98"], ["Xám đậm", "charcoal", "#3a3f47"], ["Be", "beige", "#b9a98a"]);
+  const NEUTRAL = () => pal(["Grey", "grey", "#8a8f98"], ["Dark grey", "charcoal", "#3a3f47"], ["Be", "beige", "#b9a98a"]);
 
   const READ = {
-    E01: { gender: R("Nữ", "woman", ["1.4"]) },
+    E01: { gender: R("Female", "woman", ["1.4"]) },
     E02: {
-      gender: R("Nam", "man", ["1.3"]), build: R("Gầy", "thin, slender build", ["1.3"]),
-      garment: R("Áo khoác xám", "a long grey coat", ["1.3"]), props: R("Cuốn sổ cái ôm trước ngực", "a ledger pressed to his chest", ["1.3"]),
+      gender: R("Nam", "man", ["1.3"]), build: R("Thin", "thin, slender build", ["1.3"]),
+      garment: R("Grey coat", "a long grey coat", ["1.3"]), props: R("A ledger held to the chest", "a ledger pressed to his chest", ["1.3"]),
     },
-    E03: { gender: R("Nữ", "woman", ["2.1"]), marks: R("Biểu tượng mặt trời tỏa tia, dấu của chủ tịch Hội đồng", "a sunburst emblem, the mark of the Council's chair", ["2.2"]) },
-    E04: { gender: R("Nữ", "woman", ["2.4"]), age: R("Già (bà lão)", "elderly", ["2.4"]), props: R("Ấm trà và tách trà", "a teapot and cups of tea", ["2.4"]) },
+    E03: { gender: R("Female", "woman", ["2.1"]), marks: R("A radiating sun emblem, the mark of the council chair", "a sunburst emblem, the mark of the Council's chair", ["2.2"]) },
+    E04: { gender: R("Female", "woman", ["2.4"]), age: R("Old (an elderly woman)", "elderly", ["2.4"]), props: R("A teapot and teacups", "a teapot and cups of tea", ["2.4"]) },
   };
   const GUESS = {
     E01: {
-      age: G("Khoảng 30 tuổi", "around 30 years old", "Đã giữ đèn nhiều năm; văn bản không nêu tuổi."),
-      build: G("Mảnh, săn chắc", "lean, wiry build", "Leo 312 bậc thang mỗi chiều (¶1.1)."),
-      face: G("Gương mặt góc cạnh, sạm gió, ánh nhìn kiên định", "angular weathered face, steady resolute gaze", "Không quay lại khi bị chất vấn (¶1.4)."),
-      hair: G("Tóc đen dài, buộc gọn", "long dark hair tied back", "Hợp công việc leo tháp, gió biển."),
-      skin: G("Da sạm gió biển", "sun- and wind-weathered skin", "Sống và làm việc ngoài cảng."),
-      garment: G("Áo choàng len dày xanh biển sẫm, ủng da", "a heavy dark sea-teal wool coat and leather boots", "Trang phục người giữ đèn ở cảng sương mù."),
-      props: G("Đèn dầu đồng cầm tay", "carrying a brass oil lantern", "Gắn với việc thắp đèn mỗi chiều (¶1.1)."),
-      palette: pal(["Xanh biển sẫm", "dark sea-teal", "#2f5d62"], ["Nâu da", "leather brown", "#6b4f3a"], ["Đồng thau", "brass", "#d9a441"]),
+      age: G("About 30 years old", "around 30 years old", "Has kept the lamp for many years; the text does not state her age."),
+      build: G("Slender, wiry", "lean, wiry build", "Climbs 312 steps each way (¶1.1)."),
+      face: G("Angular face, weathered by wind, steady gaze", "angular weathered face, steady resolute gaze", "Does not turn back when questioned (¶1.4)."),
+      hair: G("Long black hair, tied back neatly", "long dark hair tied back", "Suits tower climbing and sea wind."),
+      skin: G("Skin weathered by the sea wind", "sun- and wind-weathered skin", "Lives and works at the harbor."),
+      garment: G("Thick dark-blue wool cloak, leather boots", "a heavy dark sea-teal wool coat and leather boots", "Outfit of the lamp keeper of the foggy harbor."),
+      props: G("Hand-held brass oil lamp", "carrying a brass oil lantern", "Tied to lighting the lamp every evening (¶1.1)."),
+      palette: pal(["Dark sea blue", "dark sea-teal", "#2f5d62"], ["Leather brown", "leather brown", "#6b4f3a"], ["Brass", "brass", "#d9a441"]),
     },
     E02: {
-      age: G("Khoảng 40 tuổi", "in his forties", "Đã có sự nghiệp thư lại lâu năm (¶2.5)."),
-      face: G("Mặt dài, nhợt nhạt, ánh mắt dè dặt", "long pale face, wary eyes", "Leo lên mà không phát ra tiếng động (¶1.3)."),
-      hair: G("Tóc xám chải gọn", "neatly combed grey-streaked hair", "Gọn gàng, hợp một thư lại."),
-      skin: G("Nhợt nhạt vì ít ra nắng", "pale skin", "Làm việc trong nhà với sổ sách."),
-      palette: pal(["Xám", "grey", "#8a8f98"], ["Than", "charcoal", "#33373e"], ["Be sổ cái", "parchment beige", "#c2b08a"]),
+      age: G("About 40 years old", "in his forties", "Has had a long career as a clerk (¶2.5)."),
+      face: G("Long, pale face, guarded eyes", "long pale face, wary eyes", "Climbs up without making a sound (¶1.3)."),
+      hair: G("Neatly combed grey hair", "neatly combed grey-streaked hair", "Tidy, suits a clerk."),
+      skin: G("Pale from little sun", "pale skin", "Works indoors with ledgers."),
+      palette: pal(["Grey", "grey", "#8a8f98"], ["Than", "charcoal", "#33373e"], ["Beige ledger", "parchment beige", "#c2b08a"]),
     },
     E03: {
-      age: G("Khoảng 55 tuổi", "in her mid fifties", "Là chủ tịch Hội đồng (¶2.2)."),
-      build: G("Cao, dáng thẳng", "tall, upright posture", "Dáng người quyền lực."),
-      face: G("Nghiêm nghị, sắc sảo", "stern, sharp-featured face", "Ra lệnh bằng thư, không lộ diện (¶2.2)."),
-      hair: G("Tóc bạc búi cao", "silver hair in a high bun", "Trang trọng, hợp chức vụ."),
-      skin: G("Da trắng xanh", "pale skin", "Ít ra ngoài trời."),
-      garment: G("Áo dài nhung đen cổ cao", "a black high-collared velvet gown", "Trang phục của chủ tịch Hội đồng."),
-      props: G("Trâm cài hình mặt trời tỏa tia", "a sunburst brooch", "Lặp lại dấu mặt trời trên thư (¶2.2)."),
-      palette: pal(["Đen tuyền", "black", "#1d1b24"], ["Đỏ rượu", "wine red", "#7d2a3a"], ["Vàng nắng", "sun gold", "#d9a441"]),
+      age: G("About 55 years old", "in her mid fifties", "She is the Council chair (¶2.2)."),
+      build: G("Tall, upright posture", "tall, upright posture", "A commanding build."),
+      face: G("Stern, sharp", "stern, sharp-featured face", "Gives orders by letter, never shows herself (¶2.2)."),
+      hair: G("Silver hair in a high bun", "silver hair in a high bun", "Formal, suits her office."),
+      skin: G("Pale, bluish-white skin", "pale skin", "Rarely goes outdoors."),
+      garment: G("Black high-collared velvet gown", "a black high-collared velvet gown", "Outfit of the Council chair."),
+      props: G("Brooch in the shape of a radiating sun", "a sunburst brooch", "Repeats the sun mark on the letter (¶2.2)."),
+      palette: pal(["Jet black", "black", "#1d1b24"], ["Wine red", "wine red", "#7d2a3a"], ["Sunny yellow", "sun gold", "#d9a441"]),
     },
     E04: {
-      build: G("Nhỏ bé, lưng còng", "small, stooped frame", "Tuổi cao (¶2.4)."),
-      face: G("Nhiều nếp nhăn, đôi mắt tinh", "deeply lined face, sharp eyes", "Biết điều người khác không biết (¶2.4)."),
-      hair: G("Tóc bạc, phủ khăn", "grey hair under a headscarf", "Bán hàng ngoài bến gió."),
-      skin: G("Da nâu sạm", "weathered brown skin", "Sống ngoài bến cảng."),
-      garment: G("Áo len vá, khăn choàng", "a patched wool dress and shawl", "Người bán hàng rong ở Bến Chìm."),
-      palette: pal(["Nâu đất", "earth brown", "#7a5a40"], ["Xám khói", "smoke grey", "#6b6f75"], ["Kem", "cream", "#d8c9a8"]),
+      build: G("Small, stooped", "small, stooped frame", "Advanced age (¶2.4)."),
+      face: G("Many wrinkles, sharp eyes", "deeply lined face, sharp eyes", "Knows what others do not (¶2.4)."),
+      hair: G("Grey hair, covered with a scarf", "grey hair under a headscarf", "Sells goods on the windy wharf."),
+      skin: G("Tanned brown skin", "weathered brown skin", "Lives on the wharf."),
+      garment: G("Patched sweater, shawl", "a patched wool dress and shawl", "A street vendor at Sunken Wharf."),
+      palette: pal(["Earth brown", "earth brown", "#7a5a40"], ["Smoke grey", "smoke grey", "#6b6f75"], ["Kem", "cream", "#d8c9a8"]),
     },
   };
   const NIGHT = {
     E01: {
-      garment: G("Áo choàng dài chống sương, mũ trùm", "a long hooded cloak against the sea fog", "Cảnh đêm ngoài trời, văn bản không nêu trang phục khác."),
-      palette: pal(["Xanh đêm", "midnight blue", "#1f3b4d"], ["Nâu da", "leather brown", "#6b4f3a"], ["Đồng thau", "brass", "#d9a441"]),
+      garment: G("Long fog-proof cloak, hood", "a long hooded cloak against the sea fog", "Outdoor night scene, the text does not mention other outfits."),
+      palette: pal(["Night blue", "midnight blue", "#1f3b4d"], ["Leather brown", "leather brown", "#6b4f3a"], ["Brass", "brass", "#d9a441"]),
     },
     E02: {
-      garment: G("Áo khoác xám dày, dựng cổ", "a heavier grey coat with the collar turned up", "Đêm lạnh ngoài bến, văn bản không nêu trang phục khác."),
-      palette: pal(["Xám tối", "dark grey", "#5f646c"], ["Than", "charcoal", "#33373e"], ["Be sổ cái", "parchment beige", "#c2b08a"]),
+      garment: G("Thick grey coat, collar turned up", "a heavier grey coat with the collar turned up", "Cold night on the wharf, the text does not mention other outfits."),
+      palette: pal(["Dark grey", "dark grey", "#5f646c"], ["Than", "charcoal", "#33373e"], ["Beige ledger", "parchment beige", "#c2b08a"]),
     },
   };
-  const NIGHT_DEFAULT = { garment: G("Áo khoác dày hơn cho đêm lạnh", "a heavier coat for the cold night", "Cảnh đêm ngoài trời, văn bản không nêu trang phục khác."), palette: null };
+  const NIGHT_DEFAULT = { garment: G("A thicker coat for cold nights", "a heavier coat for the cold night", "Outdoor night scene, the text does not mention other outfits."), palette: null };
 
-  const MENTION = { E03: { refs: ["2.1", "2.2"], why: "Chỉ hiện diện qua lá thư Maro tìm thấy (¶2.1–2.2): lời của Phu nhân Sevrin được đọc như thư, bà không có mặt trong cảnh." } };
-  const ALIAS = { E01: ["Wren"], E02: ["Maro", "Quill"], E03: ["Sevrin"], E04: ["bà lão"] };
+  const MENTION = { E03: { refs: ["2.1", "2.2"], why: "Only present through the letter Maro finds (¶2.1–2.2): Lady Severin’s words are read as a letter, she is not present in the scene." } };
+  const ALIAS = { E01: ["Wren"], E02: ["Maro", "Quill"], E03: ["Sevrin"], E04: ["old woman"] };
   const MANUAL = [
-    ["spk6a", "Ilya Brandt", "Nam", "man", "Khoảng 35 tuổi", "in his mid thirties", "Áo khoác kỹ sư màu xanh lam", "a blue engineer's jacket"],
-    ["spk6b", "Mara Kest", "Nữ", "woman", "Khoảng 28 tuổi", "in her late twenties", "Áo choàng phòng thí nghiệm, kính bảo hộ", "a lab coat with protective goggles"],
+    ["spk6a", "Ilya Brandt", "Nam", "man", "About 35 years old", "in his mid thirties", "Blue engineer’s coat", "a blue engineer's jacket"],
+    ["spk6b", "Mara Kest", "Female", "woman", "About 28 years old", "in her late twenties", "Lab coat, safety goggles", "a lab coat with protective goggles"],
     ["spk6c", "Odel Voss"],
-    ["spk6d", "Sơ Ione"],
-    ["spk6e", "Thuyền trưởng Hale"],
+    ["spk6d", "Sister Ione"],
+    ["spk6e", "Captain Hale"],
   ];
   const SEED = {
     "PRJ-0001": { E01: "full:IMG-0003", E02: "full:IMG-0004", E03: "full", E04: "full" },
@@ -187,8 +187,8 @@ window.CR = (function () {
     const base = READ[id] || {};
     const profile = {};
     CHAR_FIELDS.forEach((f) => { profile[f.k] = base[f.k] ? { ...base[f.k] } : fld(); });
-    const o = newOutfit(st, "Trang phục chính", { garment: base.garment ? { ...base.garment } : fld(), props: base.props ? { ...base.props } : fld() });
-    const root = newOutfit(st, "Character sheet", { base: true, garment: fld(BASE_VI, "user", [], BASE_EN), palette: pal(["Trắng", "white", "#f2f2ee"], ["Trắng", "white", "#f2f2ee"], ["Trắng", "white", "#f2f2ee"]), palOk: true });
+    const o = newOutfit(st, "Main outfit", { garment: base.garment ? { ...base.garment } : fld(), props: base.props ? { ...base.props } : fld() });
+    const root = newOutfit(st, "Character sheet", { base: true, garment: fld(BASE_VI, "user", [], BASE_EN), palette: pal(["White", "white", "#f2f2ee"], ["White", "white", "#f2f2ee"], ["White", "white", "#f2f2ee"]), palOk: true });
     const e = { id, profile, base: root, outfits: [o], sel: o.id, kbSnap: kbSig(id) };
     st.chars[id] = e;
     all(e).forEach((q) => recompose(p, e, q));
@@ -262,7 +262,7 @@ window.CR = (function () {
     const refs = uniq([...kbHit, ...speakBlocks.map((b) => b.ref).filter(Boolean), ...nameBlocks.map((b) => b.ref).filter(Boolean), ...(nameHit && col.scene ? col.scene.refs.filter((r) => !evRefs.length || evRefs.includes(r)) : [])]);
     const M = MENTION[ch.id];
     const mention = !!M && refs.length > 0 && refs.every((r) => M.refs.includes(r));
-    const how = speakBlocks.length ? "Có lời thoại trong phần này" : inScene ? "Được gắn vào cảnh trong kịch bản" : nameHit ? "Tên nhân vật xuất hiện trong nội dung" : "Knowledgebase ghi nhận có mặt";
+    const how = speakBlocks.length ? "Has dialogue in this part" : inScene ? "Attached to a scene in the script" : nameHit ? "The character’s name appears in the content" : "The Knowledgebase records them as present";
     const auto = mention ? "mention" : "on";
     const ov = st.over[ch.id] && st.over[ch.id][col.key];
     return { mode: ov || auto, auto, refs, how, why: mention ? M.why : "", over: !!ov };
@@ -283,8 +283,8 @@ window.CR = (function () {
       const sc = film ? scenesOf(u) : null;
       if (!u.blocks || !u.blocks.length || (film && !sc.length)) { miss.push(u); return; }
       if (film) {
-        sc.forEach((x, i) => cols.push({ key: `${u.id}:${x.b.id}`, unit: u, label: `Cảnh ${i + 1}`, sub: [x.b.loc, x.b.time].filter(Boolean).join(" · "), time: x.b.time, group: `${s.cfg.unit} ${u.no}`, blocks: x.body, scene: x.b }));
-      } else cols.push({ key: u.id, unit: u, label: `Ch.${u.ch || u.no}`, sub: u.title, time: nightOf(u) ? "ĐÊM" : "", group: "", blocks: u.blocks, scene: null });
+        sc.forEach((x, i) => cols.push({ key: `${u.id}:${x.b.id}`, unit: u, label: `Scene ${i + 1}`, sub: [x.b.loc, x.b.time].filter(Boolean).join(" · "), time: x.b.time, group: `${s.cfg.unit} ${u.no}`, blocks: x.body, scene: x.b }));
+      } else cols.push({ key: u.id, unit: u, label: `Ch.${u.ch || u.no}`, sub: u.title, time: nightOf(u) ? "NIGHT" : "", group: "", blocks: u.blocks, scene: null });
     });
     const known = cols.length > 0;
     const rows = chars.map((ch) => {
@@ -318,12 +318,12 @@ window.CR = (function () {
     const out = [];
     an.rows.forEach((r) => {
       if (r.e.outfits.length > 1 || !r.on.length) return;
-      const night = r.on.filter((c) => c.time === "ĐÊM");
-      const day = r.on.filter((c) => c.time !== "ĐÊM");
+      const night = r.on.filter((c) => c.time === "NIGHT");
+      const day = r.on.filter((c) => c.time !== "NIGHT");
       const id = `${r.ch.id}:night`;
       if (!night.length || !day.length || st.dismissed.includes(id)) return;
       const g = NIGHT[r.ch.id] || NIGHT_DEFAULT;
-      out.push({ id, row: r, name: "Trang phục đi đêm", cols: night, garment: g.garment, palette: g.palette, why: `${night.map((c) => c.label).join(", ")} diễn ra ban đêm, còn ${day.map((c) => c.label).join(", ")} ban ngày. ${g.garment.why}` });
+      out.push({ id, row: r, name: "Night outfit", cols: night, garment: g.garment, palette: g.palette, why: `${night.map((c) => c.label).join(", ")} take place at night, while ${day.map((c) => c.label).join(", ")} during the day. ${g.garment.why}` });
     });
     return out;
   }
@@ -350,7 +350,7 @@ window.CR = (function () {
     const stale = rows.filter((r) => r.e.outfits.some((o) => sheetOf(p, r.e, o) === "stale")).length;
     const any = rows.some((r) => hasContent(r.e));
     const state = stale ? "stale" : rows.length && done === rows.length ? "done" : any ? "doing" : "idle";
-    return { state, done, total: rows.length, note: `${done}/${rows.length} nhân vật${stale ? ` · ${stale} cần xem lại` : ""}` };
+    return { state, done, total: rows.length, note: `${done}/${rows.length} characters${stale ? ` · ${stale} need review` : ""}` };
   }
 
   return {

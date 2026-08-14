@@ -6,14 +6,14 @@ window.LB = (function () {
   const VID_DIR = IMG_DIR;
 
   const TYPES = {
-    image: { key: "image", id: "IMG", tab: "images", label: "Images", noun: "ảnh", icon: "image", exts: ["png", "jpg"], max: 25 * MB, hint: "PNG, JPG · tối đa 25 MB mỗi ảnh" },
-    sound: { key: "sound", id: "SND", tab: "sounds", label: "Sounds", noun: "âm thanh", icon: "music", exts: ["mp3", "wav", "m4a", "flac", "ogg"], max: 200 * MB, hint: "MP3, WAV, M4A, FLAC, OGG · tối đa 200 MB mỗi file" },
-    video: { key: "video", id: "VID", tab: "videos", label: "Videos", noun: "video", icon: "film", exts: ["mp4", "mov", "webm", "mkv"], max: 2 * GB, hint: "MP4, MOV, WEBM, MKV · tối đa 2 GB mỗi file" },
-    prompt: { key: "prompt", id: "PRM", tab: "prompts", label: "Prompts", noun: "prompt", icon: "prompt", exts: ["txt", "md"], max: 256 * 1024, hint: "TXT, MD · tối đa 256 KB mỗi file, hoặc viết trực tiếp" },
+    image: { key: "image", id: "IMG", tab: "images", label: "Images", noun: "images", icon: "image", exts: ["png", "jpg"], max: 25 * MB, hint: "PNG, JPG · up to 25 MB per image" },
+    sound: { key: "sound", id: "SND", tab: "sounds", label: "Sounds", noun: "sounds", icon: "music", exts: ["mp3", "wav", "m4a", "flac", "ogg"], max: 200 * MB, hint: "MP3, WAV, M4A, FLAC, OGG · up to 200 MB per file" },
+    video: { key: "video", id: "VID", tab: "videos", label: "Videos", noun: "video", icon: "film", exts: ["mp4", "mov", "webm", "mkv"], max: 2 * GB, hint: "MP4, MOV, WEBM, MKV · up to 2 GB per file" },
+    prompt: { key: "prompt", id: "PRM", tab: "prompts", label: "Prompts", noun: "prompt", icon: "prompt", exts: ["txt", "md"], max: 256 * 1024, hint: "TXT, MD · up to 256 KB per file, or write directly" },
   };
   const TAB = Object.fromEntries(Object.values(TYPES).map((t) => [t.tab, t.key]));
-  const RIGHTS = { own: "Tôi tự tạo hoặc sở hữu", licensed: "Có giấy phép sử dụng", free: "Miễn phí bản quyền (CC0, public domain)", other: "Khác / chưa xác định" };
-  const PROMPT_KINDS = { image: "Ảnh", video: "Video", voice: "Giọng đọc", general: "Chung" };
+  const RIGHTS = { own: "I created or own it", licensed: "Licensed for use", free: "Royalty-free (CC0, public domain)", other: "Other / unspecified" };
+  const PROMPT_KINDS = { image: "Image", video: "Video", voice: "Voice", general: "Chung" };
 
   const hash = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
   const rng = (seed) => {
@@ -84,17 +84,17 @@ window.LB = (function () {
     };
     const seq = { image: 0, sound: 0, video: 0, prompt: 0, col: 0, voice: 0 };
     const nid = (type) => `${TYPES[type].id}-${String(++seq[type]).padStart(4, "0")}`;
-    const a = (type, name, o) => ({ id: nid(type), type, name, tags: [], collectionId: null, rights: "own", origin: "Tải lên từ máy", seed: name, ...o });
+    const a = (type, name, o) => ({ id: nid(type), type, name, tags: [], collectionId: null, rights: "own", origin: "Uploaded from device", seed: name, ...o });
     const img = (name, w, h, size, o) => a("image", name, { size, meta: { w, h }, bg: bgFor(name), img: `${IMG_DIR}${name}`, ...o });
     const snd = (name, d, size, rate, ch, o) => a("sound", name, { size, meta: { dur: d, rate: `${rate} kHz`, ch }, url: `${SND_DIR}${name}`, ...o });
     const vid = (name, d, w, h, fps, size, o) => a("video", name, { size, meta: { dur: d, w, h, fps }, bg: bgFor(name), url: `${VID_DIR}${name}`, img: `${VID_DIR}${name.replace(/.mp4$/, ".poster.jpg")}`, ...o });
-    const prm = (name, kind, text, o) => a("prompt", name, { size: new Blob([text]).size, text, kind, origin: "Tạo trong app", ...o });
+    const prm = (name, kind, text, o) => a("prompt", name, { size: new Blob([text]).size, text, kind, origin: "Created in app", ...o });
 
     const collections = [
-      { id: "COL-01", name: "Harrowmere · Bối cảnh", desc: "Ảnh, âm thanh và prompt dùng cho bối cảnh cảng Harrowmere.", created: day(20) },
-      { id: "COL-02", name: "Ambience & nhạc nền", desc: "Âm thanh nền, hiệu ứng và nhạc chủ đề dùng chung cho các project.", created: day(18) },
-      { id: "COL-03", name: "Nhận diện kênh", desc: "Logo, intro / outro, mẫu thumbnail.", created: day(12) },
-      { id: "COL-04", name: "Nhân vật", desc: "Tham chiếu hình ảnh và giọng của nhân vật.", created: day(9) },
+      { id: "COL-01", name: "Harrowmere · Setting", desc: "Images, sounds and prompts for the Harrowmere harbor setting.", created: day(20) },
+      { id: "COL-02", name: "Ambience & music", desc: "Background sound, effects and theme music shared across projects.", created: day(18) },
+      { id: "COL-03", name: "Channel branding", desc: "Logo, intro / outro, thumbnail templates.", created: day(12) },
+      { id: "COL-04", name: "Characters", desc: "Image and voice references for characters.", created: day(9) },
     ];
     seq.col = collections.length;
 
@@ -104,7 +104,7 @@ window.LB = (function () {
       img("keeper-portrait-ref.png", 1080, 1920, 313 * 1024, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:22") }),
       img("maro-quill-ref.png", 1080, 1920, 378 * 1024, { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:25") }),
       img("drowned-bell-tower.png", 1792, 1024, 217 * 1024, { tags: ["night", "ruins", "background"], collectionId: "COL-01", added: day(3, "22:10") }),
-      img("sea-fog-texture.jpg", 2048, 2048, 85 * 1024, { tags: ["texture", "fog"], added: day(4, "09:40"), rights: "free", origin: "Tải lên từ máy" }),
+      img("sea-fog-texture.jpg", 2048, 2048, 85 * 1024, { tags: ["texture", "fog"], added: day(4, "09:40"), rights: "free", origin: "Uploaded from device" }),
       img("channel-logo-square.png", 1024, 1024, 140 * 1024, { tags: ["logo", "brand"], collectionId: "COL-03", added: day(12, "10:00") }),
       img("thumbnail-template-01.png", 1280, 720, 233 * 1024, { tags: ["thumbnail", "template", "brand"], collectionId: "COL-03", added: day(12, "10:06") }),
       img("tide-chart-parchment.jpg", 1600, 1200, 47 * 1024, { tags: ["prop", "map"], collectionId: "COL-01", added: day(5, "14:30"), rights: "licensed" }),
@@ -135,28 +135,28 @@ window.LB = (function () {
       vid("short-hook-evening-cloud.mp4", 10.02, 540, 960, 60, 696942, { tags: ["vertical", "lantern"], added: day(0, "08:50") }),
       vid("vertical-sea-sunset.mp4", 16.79, 540, 960, 24, 2169065, { tags: ["vertical", "sea", "background"], collectionId: "COL-03", added: day(1, "08:05") }),
 
-      prm("Harbor at dusk — cảnh rộng", "image", "Wide establishing shot of {{location}} at dusk, low fog over still water, a single lantern glowing on the pier, painterly {{style}}, muted teal and amber palette, cinematic composition, no text.", { tags: ["harbor", "background"], collectionId: "COL-01", added: day(2, "21:10") }),
-      prm("Chân dung nhân vật (reference sheet)", "image", "Character reference sheet of {{character}}: front, side and three-quarter views, neutral expression, plain background, consistent costume details, {{style}}.", { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:10") }),
-      prm("Tia sáng hải đăng (overlay)", "video", "Slow rotating lighthouse beam sweeping through thick fog, volumetric light, seamless loop, 10 seconds, {{mood}} mood.", { tags: ["lantern", "overlay"], collectionId: "COL-01", added: day(6, "10:00") }),
-      prm("Mở đầu chương — giọng dẫn", "voice", "Giọng dẫn chuyện trầm ấm, nhịp chậm. Nghỉ 0,6 giây sau tiêu đề chương, nhấn nhẹ ở tên riêng, không đọc số đoạn.", { tags: ["narration"], collectionId: "COL-04", added: day(9, "20:30") }),
-      prm("Sóng biển — loop", "video", "Close-up of slow waves lapping against stone, overcast light, {{mood}} mood, seamless 8 second loop.", { tags: ["sea", "loop"], added: day(13, "07:10") }),
-      prm("Thumbnail kênh", "image", "YouTube thumbnail, {{subject}} in the foreground, dramatic rim light, large empty area on the left for title text, 16:9.", { tags: ["thumbnail", "brand"], collectionId: "COL-03", added: day(12, "10:50") }),
-      prm("Tóm tắt chương (ngắn)", "general", "Tóm tắt chương {{chapter}} trong 3 câu, giữ nguyên tên riêng và không tiết lộ nội dung các chương sau.", { tags: ["summary"], added: day(8, "09:00") }),
-      prm("Phong cách sơn dầu u tối", "image", "oil painting, heavy impasto, chiaroscuro, desaturated blues, warm lamplight accents", { tags: ["style"], added: day(16, "22:00") }),
+      prm("Harbor at dusk — wide shot", "image", "Wide establishing shot of {{location}} at dusk, low fog over still water, a single lantern glowing on the pier, painterly {{style}}, muted teal and amber palette, cinematic composition, no text.", { tags: ["harbor", "background"], collectionId: "COL-01", added: day(2, "21:10") }),
+      prm("Character portrait (reference sheet)", "image", "Character reference sheet of {{character}}: front, side and three-quarter views, neutral expression, plain background, consistent costume details, {{style}}.", { tags: ["character", "reference"], collectionId: "COL-04", added: day(2, "18:10") }),
+      prm("Lighthouse beam (overlay)", "video", "Slow rotating lighthouse beam sweeping through thick fog, volumetric light, seamless loop, 10 seconds, {{mood}} mood.", { tags: ["lantern", "overlay"], collectionId: "COL-01", added: day(6, "10:00") }),
+      prm("Chapter opening — narrator voice", "voice", "Warm, low narrator voice, slow pace. Pause 0.6 seconds after the chapter title, lightly stress proper names, do not read paragraph numbers.", { tags: ["narration"], collectionId: "COL-04", added: day(9, "20:30") }),
+      prm("Ocean waves — loop", "video", "Close-up of slow waves lapping against stone, overcast light, {{mood}} mood, seamless 8 second loop.", { tags: ["sea", "loop"], added: day(13, "07:10") }),
+      prm("Channel thumbnail", "image", "YouTube thumbnail, {{subject}} in the foreground, dramatic rim light, large empty area on the left for title text, 16:9.", { tags: ["thumbnail", "brand"], collectionId: "COL-03", added: day(12, "10:50") }),
+      prm("Chapter summary (short)", "general", "Summarize chapter {{chapter}} in 3 sentences, keep proper names unchanged and do not reveal the content of later chapters.", { tags: ["summary"], added: day(8, "09:00") }),
+      prm("Dark oil-painting style", "image", "oil painting, heavy impasto, chiaroscuro, desaturated blues, warm lamplight accents", { tags: ["style"], added: day(16, "22:00") }),
     ];
     assets.forEach((x) => { if (x.type === "prompt") x.size = Math.max(x.size, 1); });
     seq.image = 17; seq.sound = 8; seq.video = 8; seq.prompt = 8;
 
     const voices = [
-      { id: "VOC-01", family: "vieneu", name: "Minh Quân", kind: "default", lang: "VI", gender: "Nam", style: "Giọng mặc định của VieNeu, rõ chữ", engine: "local", status: "ready", created: "—" },
-      { id: "VOC-02", family: "vieneu", name: "Xuân Vinh", kind: "default", lang: "VI", gender: "Nam", style: "Giọng miền Nam", engine: "local", status: "ready", created: "—" },
-      { id: "VOC-03", family: "kokoro", name: "Aria", kind: "default", lang: "EN", gender: "Nữ", style: "Sáng, rõ chữ", engine: "local", status: "ready", created: "—" },
-      { id: "VOC-04", family: "kokoro", name: "Daniel", kind: "default", lang: "EN", gender: "Nam", style: "Kể chuyện, chậm", engine: "local", status: "ready", created: "—" },
-      { id: "VOC-05", provider: "everai", name: "Linh", kind: "default", lang: "VI", gender: "Nữ", style: "Tự nhiên, hội thoại", engine: "cloud", status: "ready", created: "—" },
-      { id: "VOC-06", provider: "elevenlabs", name: "Oliver", kind: "default", lang: "EN", gender: "Nam", style: "Ấm, giàu cảm xúc", engine: "cloud", status: "ready", created: "—" },
-      { id: "VOC-07", family: "vieneu", name: "Giọng của tôi", kind: "cloned", lang: "VI", gender: "Nữ", style: "Ghi âm trực tiếp", engine: "local", status: "ready", created: day(9, "20:40"), desc: "Giọng đọc chính cho audiobook Harrowmere.", src: { type: "record", name: "Bản ghi âm", dur: 38 } },
-      { id: "VOC-08", provider: "elevenlabs", name: "Narrator ấm", kind: "cloned", lang: "VI", gender: "Nam", style: "Từ file audio", engine: "cloud", status: "ready", created: day(6, "11:05"), desc: "Giọng dẫn chuyện trầm cho các chương hồi tưởng.", src: { type: "file", name: "narrator-sample-warm.mp3", dur: 30 } },
-      { id: "VOC-09", family: "omnivoice", name: "Thử nghiệm giọng trầm", kind: "cloned", lang: "VI", gender: "Nam", style: "Từ file audio", engine: "local", status: "failed", created: day(4, "09:12"), error: "Mẫu có nhiều tạp âm nền nên không trích xuất được đặc trưng giọng. Hãy dùng bản thu sạch hơn, dài từ 10 giây.", src: { type: "file", name: "noisy-test.mp3", dur: 14 } },
+      { id: "VOC-01", family: "vieneu", name: "Minh Quân", kind: "default", lang: "VI", gender: "Nam", style: "VieNeu default voice, clear diction", engine: "local", status: "ready", created: "—" },
+      { id: "VOC-02", family: "vieneu", name: "Xuân Vinh", kind: "default", lang: "VI", gender: "Nam", style: "Southern accent", engine: "local", status: "ready", created: "—" },
+      { id: "VOC-03", family: "kokoro", name: "Aria", kind: "default", lang: "EN", gender: "Female", style: "Bright, clear diction", engine: "local", status: "ready", created: "—" },
+      { id: "VOC-04", family: "kokoro", name: "Daniel", kind: "default", lang: "EN", gender: "Nam", style: "Storytelling, slow", engine: "local", status: "ready", created: "—" },
+      { id: "VOC-05", provider: "everai", name: "Linh", kind: "default", lang: "VI", gender: "Female", style: "Natural, conversational", engine: "cloud", status: "ready", created: "—" },
+      { id: "VOC-06", provider: "elevenlabs", name: "Oliver", kind: "default", lang: "EN", gender: "Nam", style: "Warm, emotionally rich", engine: "cloud", status: "ready", created: "—" },
+      { id: "VOC-07", family: "vieneu", name: "My voice", kind: "cloned", lang: "VI", gender: "Female", style: "Live recording", engine: "local", status: "ready", created: day(9, "20:40"), desc: "Main narration voice for the Harrowmere audiobook.", src: { type: "record", name: "Recording", dur: 38 } },
+      { id: "VOC-08", provider: "elevenlabs", name: "Warm narrator", kind: "cloned", lang: "VI", gender: "Nam", style: "From audio file", engine: "cloud", status: "ready", created: day(6, "11:05"), desc: "Low narrator voice for flashback chapters.", src: { type: "file", name: "narrator-sample-warm.mp3", dur: 30 } },
+      { id: "VOC-09", family: "omnivoice", name: "Low voice experiment", kind: "cloned", lang: "VI", gender: "Nam", style: "From audio file", engine: "local", status: "failed", created: day(4, "09:12"), error: "The sample has too much background noise, so voice features could not be extracted. Use a cleaner recording of at least 10 seconds.", src: { type: "file", name: "noisy-test.mp3", dur: 14 } },
     ];
     seq.voice = voices.length;
 
@@ -166,7 +166,7 @@ window.LB = (function () {
         log: ["INFO:     Started server process [18420]", "INFO:     Waiting for application startup.", "INFO:     Application startup complete.", "INFO:     Uvicorn running on http://127.0.0.1:8721 (Press CTRL+C to quit)", "INFO:     127.0.0.1 - \"GET /health HTTP/1.1\" 200 OK"],
       },
       tts: {
-        models: { omnivoice: { status: "error", error: "Lần tải trước bị gián đoạn: tệp model.safetensors không khớp checksum (sha256)." } },
+        models: { omnivoice: { status: "error", error: "The previous download was interrupted: model.safetensors does not match its checksum (sha256)." } },
       },
       speech: { providers: { elevenlabs: { enabled: true, saved: true, fields: {}, status: "ok", latency: 184, at: "2026-11-09 21:14" } } } };
   }
@@ -180,6 +180,6 @@ window.LB = (function () {
     state, ui: {}, filt: { col: "", tags: [] },
     reseed() { this.state = seed(); syncTags(this.state); this.ui = {}; this.filt = { col: "", tags: [] }; },
     hash, rng, bgFor, bars, level, band, bytes, dur, normTag, parseTags, varsOf, extOf,
-    sample: { en: "Night fell over Harrowmere, and the last lantern on the pier was still burning.", vi: "Đêm xuống Harrowmere, và ngọn đèn cuối cùng trên bến tàu vẫn còn cháy." },
+    sample: { en: "Night fell over Harrowmere, and the last lantern on the pier was still burning.", vi: "Night falls over Harrowmere, and the last lamp on the pier is still burning." },
   };
 })();

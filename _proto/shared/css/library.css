@@ -1,7 +1,7 @@
 
 .lb-body { position: relative; }
 .lb-body.is-drop .nv-scroll { opacity: 0.35; }
-.lb-body.is-drop::after { content: "Thả file để upload"; position: absolute; inset: var(--sp-md); z-index: 5; display: grid; place-items: center; border: 2px dashed var(--primary); border-radius: var(--r-lg); background: var(--primary-soft); color: var(--primary-text); font: 500 15px/20px var(--font); pointer-events: none; }
+.lb-body.is-drop::after { content: "Drop the file to upload"; position: absolute; inset: var(--sp-md); z-index: 5; display: grid; place-items: center; border: 2px dashed var(--primary); border-radius: var(--r-lg); background: var(--primary-soft); color: var(--primary-text); font: 500 15px/20px var(--font); pointer-events: none; }
 .lb-tagbtn { border: 0; cursor: pointer; }
 .lb-tagbtn:hover { filter: brightness(1.15); }
 

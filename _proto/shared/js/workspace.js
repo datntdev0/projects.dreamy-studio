@@ -19,40 +19,40 @@ window.WS = (function () {
   const CODES_WITHOUT_DETAIL = ["folder_missing", "folder_not_directory", "db_newer_version"];
 
   const STEP_LABELS = {
-    application: "Chuẩn bị ứng dụng: application.dreamydb và nhật ký",
-    backend: "Khởi động backend cục bộ",
-    workspace: "Chuẩn bị workspace: thư mục và workspace.dreamydb",
+    application: "Preparing the app: application.dreamydb and logs",
+    backend: "Starting the local backend",
+    workspace: "Preparing the workspace: folder and workspace.dreamydb",
   };
   const STEP_NAMES = {
-    application: "khởi động ứng dụng",
-    backend: "backend cục bộ",
-    workspace: "khởi động workspace",
+    application: "app startup",
+    backend: "local backend",
+    workspace: "workspace startup",
   };
   const MODE_LABELS = {
-    create: "Đang khởi tạo workspace",
-    open: "Đang mở workspace",
-    prepare: "Đang chuẩn bị workspace",
+    create: "Initializing the workspace",
+    open: "Opening the workspace",
+    prepare: "Preparing the workspace",
   };
   const CAUSES = {
-    folder_missing: "thư mục workspace không tồn tại",
-    folder_not_directory: "đường dẫn đã chọn không phải là thư mục",
-    folder_not_readable: "không có quyền đọc thư mục workspace",
-    folder_not_writable: "không có quyền ghi vào thư mục workspace",
-    db_corrupt: "dữ liệu bị hỏng hoặc không phải tệp CSDL hợp lệ",
-    db_newer_version: "dữ liệu do phiên bản phần mềm mới hơn tạo ra, không thể nâng cấp",
-    db_migration_failed: "nâng cấp dữ liệu thất bại",
-    db_io: "không đọc hoặc ghi được dữ liệu",
-    logs_failed: "không chuẩn bị được nhật ký ứng dụng",
-    backend_missing: "không tìm thấy chương trình backend cục bộ",
-    backend_start_failed: "backend cục bộ không khởi động được hoặc đã dừng đột ngột",
-    backend_timeout: "backend cục bộ không sẵn sàng kịp thời",
+    folder_missing: "the workspace folder does not exist",
+    folder_not_directory: "the chosen path is not a folder",
+    folder_not_readable: "no permission to read the workspace folder",
+    folder_not_writable: "no permission to write to the workspace folder",
+    db_corrupt: "the data is corrupted or is not a valid database file",
+    db_newer_version: "the data was created by a newer version of the software and cannot be upgraded",
+    db_migration_failed: "data upgrade failed",
+    db_io: "the data cannot be read or written",
+    logs_failed: "could not prepare the application log",
+    backend_missing: "the local backend program was not found",
+    backend_start_failed: "the local backend failed to start or stopped unexpectedly",
+    backend_timeout: "the local backend was not ready in time",
   };
   const REASONS = {
-    missing: "Thư mục không còn tồn tại hoặc ổ đĩa chưa được gắn.",
-    not_a_directory: "Đường dẫn này không còn là một thư mục.",
-    no_access: "Không có quyền truy cập thư mục này.",
+    missing: "The folder no longer exists or the drive is not mounted.",
+    not_a_directory: "This path is no longer a folder.",
+    no_access: "No permission to access this folder.",
   };
-  const PICK_FOLDER_NOTICE = "Hộp thoại chọn thư mục của hệ điều hành sẽ được hiển thị.";
+  const PICK_FOLDER_NOTICE = "The operating system’s folder picker dialog will be shown.";
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const ic = (name) => `<svg class="ic" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
@@ -108,23 +108,23 @@ window.WS = (function () {
 
   function errorText(error) {
     const showDetail = !!error.detail && !CODES_WITHOUT_DETAIL.includes(error.code);
-    return `Bước ${STEP_NAMES[error.step]} lỗi: ${CAUSES[error.code]}${showDetail ? ` (${error.detail})` : ""}`;
+    return `The ${STEP_NAMES[error.step]} step failed: ${CAUSES[error.code]}${showDetail ? ` (${error.detail})` : ""}`;
   }
 
   function formatOpened(text) {
     const date = new Date(String(text).replace(" ", "T"));
     if (Number.isNaN(date.getTime())) return text;
-    return new Intl.DateTimeFormat("vi", { dateStyle: "short", timeStyle: "short" }).format(date);
+    return new Intl.DateTimeFormat("en", { dateStyle: "short", timeStyle: "short" }).format(date);
   }
 
   function metaHtml(w) {
-    return `<div class="t-sm t-mute" data-testid="recent-row-meta"><span data-testid="recent-row-projects">${w.projects ?? 0} project</span> · <span data-testid="recent-row-size" data-ws-size="${esc(w.path)}">…</span> · mở lần cuối <span class="mono" data-testid="recent-row-opened">${esc(formatOpened(w.lastOpened))}</span></div>`;
+    return `<div class="t-sm t-mute" data-testid="recent-row-meta"><span data-testid="recent-row-projects">${w.projects ?? 0} project</span> · <span data-testid="recent-row-size" data-ws-size="${esc(w.path)}">…</span> · last opened <span class="mono" data-testid="recent-row-opened">${esc(formatOpened(w.lastOpened))}</span></div>`;
   }
 
   function rowHtml(w, lastUsedPath) {
     if (w.isCurrent) {
       return `<div class="ws-row is-current" data-testid="recent-row">${ic("hdd")}<div class="ws-main">
-          <div class="ws-name" data-testid="recent-row-name">${esc(w.name)}<span class="badge badge-primary" data-testid="recent-current">ĐANG MỞ</span></div>
+          <div class="ws-name" data-testid="recent-row-name">${esc(w.name)}<span class="badge badge-primary" data-testid="recent-current">OPEN</span></div>
           <div class="path t-mute" data-testid="recent-row-path">${esc(w.path)}</div>${metaHtml(w)}</div></div>`;
     }
     if (w.status === "ok") {
@@ -132,13 +132,13 @@ window.WS = (function () {
       return `<div class="ws-row" role="button" tabindex="0" data-act="open-recent" data-path="${esc(w.path)}" data-testid="recent-row">${ic("hdd")}<div class="ws-main">
           <div class="ws-name" data-testid="recent-row-name">${esc(w.name)}${last}</div>
           <div class="path t-mute" data-testid="recent-row-path">${esc(w.path)}</div>${metaHtml(w)}</div>
-          <button class="btn btn-sm" tabindex="-1" data-testid="recent-open">Mở</button>
+          <button class="btn btn-sm" tabindex="-1" data-testid="recent-open">Open</button>
           <button class="btn btn-sm btn-danger" data-act="workspace-delete" data-path="${esc(w.path)}" data-testid="recent-delete">Delete</button></div>`;
     }
     return `<div class="ws-row is-error" data-testid="recent-row">${ic("alert")}<div class="ws-main">
         <div class="ws-name"><span class="path" data-testid="recent-row-path">${esc(w.path)}</span><span class="badge badge-danger" data-testid="recent-not-found">NOT FOUND</span></div>
         <div class="t-sm ws-err" data-testid="recent-not-found-reason">${esc(REASONS[w.reason] || REASONS.missing)}</div></div>
-        <button class="btn btn-sm" data-act="relocate-recent" data-path="${esc(w.path)}" data-testid="recent-relocate">Tìm lại…</button>
+        <button class="btn btn-sm" data-act="relocate-recent" data-path="${esc(w.path)}" data-testid="recent-relocate">Locate again…</button>
         <button class="btn btn-sm btn-danger" data-act="workspace-delete" data-path="${esc(w.path)}" data-testid="recent-delete">Delete</button></div>`;
   }
 
@@ -178,8 +178,8 @@ window.WS = (function () {
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.pct}" data-testid="loading-progress"><i style="width:${L.pct}%"></i></div>
         <div class="mono t-mute" data-testid="loading-percent">${L.pct}%</div>
         <div class="ld-steps" data-testid="loading-steps">${steps}</div>
-        ${L.failed ? `<div class="ld-warn is-error" role="alert" data-testid="loading-failed">${ic("alert")}<span>Không thể hoàn tất, đang quay lại màn hình chính.</span></div>` : ""}
-        <button class="btn btn-ghost btn-sm" data-act="cancel-loading" data-testid="loading-cancel">Hủy</button>
+        ${L.failed ? `<div class="ld-warn is-error" role="alert" data-testid="loading-failed">${ic("alert")}<span>Could not complete, returning to the main screen.</span></div>` : ""}
+        <button class="btn btn-ghost btn-sm" data-act="cancel-loading" data-testid="loading-cancel">Cancel</button>
       </div>`;
   }
 
@@ -242,7 +242,7 @@ window.WS = (function () {
     const el = document.createElement("div");
     el.className = `toast ${sticky ? "is-sticky" : ""}`;
     el.setAttribute("role", kind === "danger" ? "alert" : "status");
-    el.innerHTML = `<span class="dot dot-${kind}"></span><span>${esc(message)}</span>${sticky ? `<button type="button" class="toast-x" aria-label="Đóng thông báo" data-testid="toast-dismiss">${ic("x")}</button>` : ""}`;
+    el.innerHTML = `<span class="dot dot-${kind}"></span><span>${esc(message)}</span>${sticky ? `<button type="button" class="toast-x" aria-label="Close notification" data-testid="toast-dismiss">${ic("x")}</button>` : ""}`;
     box.appendChild(el);
     if (sticky) el.querySelector(".toast-x").addEventListener("click", () => el.remove());
     else setTimeout(() => el.remove(), 3800);

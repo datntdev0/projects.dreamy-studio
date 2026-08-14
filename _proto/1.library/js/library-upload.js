@@ -15,10 +15,10 @@
   function check(f) {
     const t = T[UP.type];
     const e = LB.extOf(f.name);
-    if (!f.size) return ["error", "File rỗng."];
-    if (!t.exts.includes(e)) return ["error", `Định dạng .${e || "?"} không được hỗ trợ cho ${t.noun}.`];
-    if (f.size > t.max) return ["error", `Lớn hơn giới hạn ${LB.bytes(t.max)} của ${t.noun}.`];
-    if (st().assets.some((x) => x.type === UP.type && x.name.toLowerCase() === (UP.type === "prompt" ? f.name.replace(/\.(txt|md)$/i, "") : f.name).toLowerCase())) return ["warn", "Đã có tài nguyên cùng tên, sẽ tự đổi tên khi thêm."];
+    if (!f.size) return ["error", "Empty file."];
+    if (!t.exts.includes(e)) return ["error", `The .${e || "?"} format is not supported for ${t.noun}.`];
+    if (f.size > t.max) return ["error", `Larger than the ${LB.bytes(t.max)} limit for ${t.noun}.`];
+    if (st().assets.some((x) => x.type === UP.type && x.name.toLowerCase() === (UP.type === "prompt" ? f.name.replace(/\.(txt|md)$/i, "") : f.name).toLowerCase())) return ["warn", "A resource with the same name already exists; it will be renamed when added."];
     return ["ok", ""];
   }
   function addFiles(list) {
@@ -28,38 +28,38 @@
       const [s, msg] = check(f);
       UP.files.push({ name: f.name, size: f.size, file: f, st: s, msg, run: "" });
     });
-    if (skipped) A.toast(`Bỏ qua ${skipped} file đã có trong danh sách.`, "warning");
+    if (skipped) A.toast(`Skipped ${skipped} files already in the list.`, "warning");
   }
   const valid = () => UP.files.filter((f) => f.st !== "error");
 
   function fieldsBlock() {
     return `<div class="form-2">
-        <div class="field"><label for="lbu-col">Collection</label><select id="lbu-col" class="select" data-on="lbu-f" data-f="col"><option value="">Không thêm vào collection</option>${st().collections.map((c) => `<option value="${c.id}" ${UP.col === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
-        <div class="field"><label for="lbu-newcol">Hoặc tạo collection mới</label><input id="lbu-newcol" class="input" value="${esc(UP.newCol)}" placeholder="Tên collection mới" data-on="lbu-f" data-f="newCol" autocomplete="off"></div></div>
+        <div class="field"><label for="lbu-col">Collection</label><select id="lbu-col" class="select" data-on="lbu-f" data-f="col"><option value="">Do not add to a collection</option>${st().collections.map((c) => `<option value="${c.id}" ${UP.col === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
+        <div class="field"><label for="lbu-newcol">Or create a new collection</label><input id="lbu-newcol" class="input" value="${esc(UP.newCol)}" placeholder="New collection name" data-on="lbu-f" data-f="newCol" autocomplete="off"></div></div>
       <div class="form-2">
-        <div class="field"><label for="lbu-tags">Tags</label><input id="lbu-tags" class="input" value="${esc(UP.tags)}" placeholder="harbor, night, background" data-on="lbu-f" data-f="tags" autocomplete="off" list="lb-tag-sug"><datalist id="lb-tag-sug">${st().tagList.map((t) => `<option value="${esc(t)}"></option>`).join("")}</datalist><span class="field-hint">Cách nhau bằng dấu phẩy, tối đa 12 tag.</span></div>
-        <div class="field"><label for="lbu-rights">Quyền sử dụng</label><select id="lbu-rights" class="select" data-on="lbu-f" data-f="rights" required><option value="" disabled ${UP.rights ? "" : "selected"}>Chọn quyền sử dụng…</option>${API.opts(Object.entries(LB.RIGHTS), UP.rights)}</select><span class="field-hint">Bắt buộc chọn trước khi lưu.</span></div></div>`;
+        <div class="field"><label for="lbu-tags">Tags</label><input id="lbu-tags" class="input" value="${esc(UP.tags)}" placeholder="harbor, night, background" data-on="lbu-f" data-f="tags" autocomplete="off" list="lb-tag-sug"><datalist id="lb-tag-sug">${st().tagList.map((t) => `<option value="${esc(t)}"></option>`).join("")}</datalist><span class="field-hint">Separated by commas, up to 12 tags.</span></div>
+        <div class="field"><label for="lbu-rights">Usage rights</label><select id="lbu-rights" class="select" data-on="lbu-f" data-f="rights" required><option value="" disabled ${UP.rights ? "" : "selected"}>Choose usage rights…</option>${API.opts(Object.entries(LB.RIGHTS), UP.rights)}</select><span class="field-hint">Required before saving.</span></div></div>`;
   }
 
   function queue() {
     const t = T[UP.type];
     const running = UP.phase === "run";
     const pill = (f) => {
-      if (running) return { queued: `<span class="badge">CHỜ</span>`, running: `<span class="badge badge-running">ĐANG UPLOAD</span>`, done: `<span class="badge badge-success">XONG</span>`, error: `<span class="badge badge-danger">LỖI</span>` }[f.run] || "";
-      return { ok: `<span class="badge badge-success">HỢP LỆ</span>`, warn: `<span class="badge badge-warning">ĐỔI TÊN</span>`, error: `<span class="badge badge-danger">KHÔNG HỢP LỆ</span>` }[f.st];
+      if (running) return { queued: `<span class="badge">WAITING</span>`, running: `<span class="badge badge-running">UPLOADING</span>`, done: `<span class="badge badge-success">XONG</span>`, error: `<span class="badge badge-danger">ERROR</span>` }[f.run] || "";
+      return { ok: `<span class="badge badge-success">VALID</span>`, warn: `<span class="badge badge-warning">RENAME</span>`, error: `<span class="badge badge-danger">INVALID</span>` }[f.st];
     };
     const rows = UP.files.map((f, i) => `<tr class="${f.st === "error" ? "is-muted" : ""}"><td><div class="lbu-fn">${ic(t.icon)}<div class="lb-rname"><div class="t-ink lbu-name">${esc(f.name)}</div>${f.msg ? `<div class="t-sm ${f.st === "error" || f.run === "error" ? "lbu-err" : "t-mute"}">${esc(f.msg)}</div>` : ""}</div></div></td>
         <td class="num t-mute">${LB.bytes(f.size)}</td>
         <td class="lbu-st">${pill(f)}</td>
-        <td class="row-actions">${running ? "" : `<button class="btn btn-icon btn-sm" data-act="lbu-remove" data-i="${i}" aria-label="Bỏ ${esc(f.name)}" data-tip="Bỏ khỏi danh sách">${ic("x")}</button>`}</td></tr>`).join("");
+        <td class="row-actions">${running ? "" : `<button class="btn btn-icon btn-sm" data-act="lbu-remove" data-i="${i}" aria-label="Remove ${esc(f.name)}" data-tip="Remove from list">${ic("x")}</button>`}</td></tr>`).join("");
     return `<div class="lbu-queue"><table class="table"><tbody>${rows}</tbody></table></div>`;
   }
 
   function dropzone() {
     const t = T[UP.type];
-    return `<div class="lb-drop ${UP.files.length ? "is-compact" : ""}" role="group" aria-label="Vùng chọn file">
-      ${UP.files.length ? "" : `${ic("upload", "lb-drop-ic")}<div class="lb-drop-t">Kéo thả ${t.noun} vào đây</div><div class="t-sm t-mute">hoặc</div>`}
-      <div class="lb-drop-act"><label class="btn">${UP.files.length ? "Thêm file…" : "Chọn file…"}<input type="file" hidden multiple accept="${t.exts.map((e) => `.${e}`).join(",")}" data-change="lbu-file"></label></div>
+    return `<div class="lb-drop ${UP.files.length ? "is-compact" : ""}" role="group" aria-label="File drop area">
+      ${UP.files.length ? "" : `${ic("upload", "lb-drop-ic")}<div class="lb-drop-t">Drag and drop ${t.noun} here</div><div class="t-sm t-mute">or</div>`}
+      <div class="lb-drop-act"><label class="btn">${UP.files.length ? "Add files…" : "Choose files…"}<input type="file" hidden multiple accept="${t.exts.map((e) => `.${e}`).join(",")}" data-change="lbu-file"></label></div>
       <div class="t-sm t-mute">${esc(t.hint)}</div></div>`;
   }
 
@@ -70,23 +70,23 @@
     let body;
     let foot;
     if (UP.phase === "run") {
-      body = `${queue()}<p class="t-sm t-mute">Đang sao chép file vào thư mục <span class="path">library\\</span> của workspace…</p>`;
-      foot = `<button class="btn" data-act="close-modal">Đóng</button><span class="spacer"></span><button class="btn btn-primary" disabled>Đang upload…</button>`;
+      body = `${queue()}<p class="t-sm t-mute">Copying files into the folder <span class="path">library\\</span> of the workspace…</p>`;
+      foot = `<button class="btn" data-act="close-modal">Close</button><span class="spacer"></span><button class="btn btn-primary" disabled>Uploading…</button>`;
     } else if (write) {
       const p = UP.prompt;
       const vars = LB.varsOf(p.text);
-      body = `${UP.type === "prompt" ? API.seg("lbu-tab", [["files", "Từ file"], ["write", "Viết mới"]], UP.tab) : ""}
-        <div class="form-2"><div class="field"><label for="lbp-name">Tên prompt</label><input id="lbp-name" class="input" value="${esc(p.name)}" placeholder="Ví dụ: Cảnh cảng lúc hoàng hôn" data-on="lbu-p" data-f="name" autocomplete="off"><p class="field-err" id="lbp-err" hidden></p></div>
-          <div class="field"><label for="lbp-kind">Loại prompt</label><select id="lbp-kind" class="select" data-on="lbu-p" data-f="kind">${API.opts(Object.entries(LB.PROMPT_KINDS), p.kind)}</select></div></div>
-        <div class="field"><label for="lbp-text">Nội dung</label><textarea id="lbp-text" class="textarea" rows="7" placeholder="Mô tả… Dùng {{tên_biến}} cho phần cần thay khi áp dụng." data-on="lbu-p" data-f="text">${esc(p.text)}</textarea>
-          <span class="field-hint" id="lbp-vars">${vars.length ? `Biến phát hiện: ${vars.map((v) => `{{${esc(v)}}}`).join(", ")}` : "Chưa có biến nào."}</span></div>
+      body = `${UP.type === "prompt" ? API.seg("lbu-tab", [["files", "From file"], ["write", "Write new"]], UP.tab) : ""}
+        <div class="form-2"><div class="field"><label for="lbp-name">Prompt name</label><input id="lbp-name" class="input" value="${esc(p.name)}" placeholder="Example: Harbor scene at sunset" data-on="lbu-p" data-f="name" autocomplete="off"><p class="field-err" id="lbp-err" hidden></p></div>
+          <div class="field"><label for="lbp-kind">Prompt type</label><select id="lbp-kind" class="select" data-on="lbu-p" data-f="kind">${API.opts(Object.entries(LB.PROMPT_KINDS), p.kind)}</select></div></div>
+        <div class="field"><label for="lbp-text">Content</label><textarea id="lbp-text" class="textarea" rows="7" placeholder="Description… Use {{variable_name}} for the parts to replace when applied." data-on="lbu-p" data-f="text">${esc(p.text)}</textarea>
+          <span class="field-hint" id="lbp-vars">${vars.length ? `Detected variables: ${vars.map((v) => `{{${esc(v)}}}`).join(", ")}` : "No variables yet."}</span></div>
         ${fieldsBlock()}`;
-      foot = `<button class="btn" data-act="close-modal">Hủy</button><span class="spacer"></span><button class="btn btn-primary" data-act="lbu-save-prompt" ${UP.rights ? "" : "disabled"}>${ic("check")}Lưu prompt</button>`;
+      foot = `<button class="btn" data-act="close-modal">Cancel</button><span class="spacer"></span><button class="btn btn-primary" data-act="lbu-save-prompt" ${UP.rights ? "" : "disabled"}>${ic("check")}Save prompt</button>`;
     } else {
-      body = `${UP.type === "prompt" ? API.seg("lbu-tab", [["files", "Từ file"], ["write", "Viết mới"]], UP.tab) : ""}
+      body = `${UP.type === "prompt" ? API.seg("lbu-tab", [["files", "From file"], ["write", "Write new"]], UP.tab) : ""}
         ${dropzone()}${UP.files.length ? queue() : ""}
         ${fieldsBlock()}`;
-      foot = `<button class="btn" data-act="close-modal">Hủy</button><span class="spacer"></span><button class="btn btn-primary" data-act="lbu-submit" ${nOk && UP.rights ? "" : "disabled"}>${ic("upload")}Upload ${nOk || ""} ${t.noun}</button>`;
+      foot = `<button class="btn" data-act="close-modal">Cancel</button><span class="spacer"></span><button class="btn btn-primary" data-act="lbu-submit" ${nOk && UP.rights ? "" : "disabled"}>${ic("upload")}Upload ${nOk || ""} ${t.noun}</button>`;
     }
     A.modal({ title: `Upload ${t.noun}`, eyebrow: CAP, cls: "modal-lg lbu", body, foot });
   }
@@ -185,29 +185,29 @@
       try {
         const meta = await readMeta(f, type);
         const name = type === "prompt" ? f.name.replace(/\.(txt|md)$/i, "") : f.name;
-        const x = { id: API.nextId(type), type, name: API.uniqueName(type, name), size: f.size, tags: [...tags], collectionId: colId || null, rights: UP.rights, origin: "Tải lên từ máy", added: A.stamp(), seed: `${f.name}${f.size}`, ...meta };
+        const x = { id: API.nextId(type), type, name: API.uniqueName(type, name), size: f.size, tags: [...tags], collectionId: colId || null, rights: UP.rights, origin: "Uploaded from device", added: A.stamp(), seed: `${f.name}${f.size}`, ...meta };
         st().assets.push(x);
         f.run = "done";
         ok++;
       } catch {
         f.run = "error";
-        f.msg = "Không đọc được file. Có thể file bị hỏng hoặc trình duyệt không hỗ trợ codec này.";
+        f.msg = "Could not read the file. It may be corrupted or the browser does not support this codec.";
       }
       draw();
     }
-    if (!alive(token)) { API.refresh(); if (ok) A.toast(`Đã upload ${ok} ${T[type].noun}.`); return; }
+    if (!alive(token)) { API.refresh(); if (ok) A.toast(`Uploaded ${ok} ${T[type].noun}.`); return; }
     const failed = list.filter((f) => f.run === "error").length;
-    if (failed) { draw(); API.refresh(); A.toast(`Đã upload ${ok}/${list.length} ${T[type].noun}, ${failed} file lỗi.`, "warning"); return; }
+    if (failed) { draw(); API.refresh(); A.toast(`Uploaded ${ok}/${list.length} ${T[type].noun}, ${failed} files failed.`, "warning"); return; }
     A.closeModal();
     API.refresh();
-    A.toast(`Đã upload ${ok} ${T[type].noun} vào thư viện.`);
+    A.toast(`Uploaded ${ok} ${T[type].noun} to the library.`);
   }
 
   function savePrompt() {
     const p = UP.prompt;
     const err = A.$("#lbp-err");
     if (!p.name.trim() || !p.text.trim()) {
-      err.textContent = !p.name.trim() ? "Nhập tên prompt." : "Nhập nội dung prompt.";
+      err.textContent = !p.name.trim() ? "Enter a prompt name." : "Enter the prompt content.";
       err.hidden = false;
       A.$(!p.name.trim() ? "#lbp-name" : "#lbp-text")?.classList.add("is-invalid");
       return;
@@ -216,11 +216,11 @@
     const colId = resolveCollection();
     const tags = LB.parseTags(UP.tags);
     registerTags(tags);
-    const x = { id: API.nextId("prompt"), type: "prompt", name: API.uniqueName("prompt", p.name.trim()), kind: p.kind, text: p.text.trim(), size: new Blob([p.text]).size, tags, collectionId: colId || null, rights: UP.rights, origin: "Tạo trong app", added: A.stamp(), seed: p.name };
+    const x = { id: API.nextId("prompt"), type: "prompt", name: API.uniqueName("prompt", p.name.trim()), kind: p.kind, text: p.text.trim(), size: new Blob([p.text]).size, tags, collectionId: colId || null, rights: UP.rights, origin: "Created in app", added: A.stamp(), seed: p.name };
     st().assets.push(x);
     A.closeModal();
     API.refresh();
-    A.toast(`Đã lưu prompt “${x.name}”.`);
+    A.toast(`Saved prompt “${x.name}”.`);
   }
 
   Object.assign(A.ACT, {
@@ -238,7 +238,7 @@
       if (el.dataset.f === "text") {
         const v = LB.varsOf(el.value);
         const hint = A.$("#lbp-vars");
-        if (hint) hint.textContent = v.length ? `Biến phát hiện: ${v.map((x) => `{{${x}}}`).join(", ")}` : "Chưa có biến nào.";
+        if (hint) hint.textContent = v.length ? `Detected variables: ${v.map((x) => `{{${x}}}`).join(", ")}` : "No variables yet.";
       }
       if (el.value.trim()) { el.classList.remove("is-invalid"); const e = A.$("#lbp-err"); if (e) e.hidden = true; }
     },

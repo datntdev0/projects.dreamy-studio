@@ -178,7 +178,7 @@
     }).join("");
     $("#explorer").innerHTML = `
       <header class="pane-head"><span class="eyebrow">${esc(rail.label)}</span><span class="spacer"></span>
-        <button class="btn btn-icon btn-sm" data-act="toggle-explorer" data-tip="Thu gọn (Ctrl B)" aria-label="Thu gọn">${ic("chev-l")}</button></header>
+        <button class="btn btn-icon btn-sm" data-act="toggle-explorer" data-tip="Collapse (Ctrl B)" aria-label="Collapse">${ic("chev-l")}</button></header>
       <div class="pane-body">${sections}</div>`;
   }
 
@@ -190,7 +190,7 @@
       const on = id === S.active;
       return `<div class="etab ${on ? "is-active" : ""}" role="tab" aria-selected="${on}" tabindex="0" data-act="open" data-id="${id}" title="${esc(t.title)}">
         ${t.logo ? `<img src="${logoSrc}" alt="">` : ic(t.icon)}<span class="etab-label">${esc(t.title)}</span>
-        <button class="etab-close" data-act="close-tab" data-id="${id}" aria-label="Đóng tab" data-tip="Đóng (Ctrl W)">${ic("x")}</button></div>`;
+        <button class="etab-close" data-act="close-tab" data-id="${id}" aria-label="Close tab" data-tip="Close (Ctrl W)">${ic("x")}</button></div>`;
     }).join("")}</div>`;
     $(".etab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
@@ -210,7 +210,7 @@
       <div><span class="eyebrow">${esc(cap)}</span>
         <div class="cs-title"><h1 class="t-display-md">${esc(title)}</h1><span class="badge badge-info">COMING SOON</span></div></div>
       <p>${esc(blurb)}</p>
-      <div><span class="eyebrow">Sẽ bao gồm</span></div>
+      <div><span class="eyebrow">Will include</span></div>
       ${reqList(reqs)}
     </div>`;
   }
@@ -284,7 +284,7 @@
     const head = `<header class="ins-head">${[["inspector", "Inspector"], ["assistant", "Assistant"]].map(([id, label]) =>
       `<button class="ins-tab ${S.rightTab === id ? "is-active" : ""}" data-act="right-tab" data-v="${id}" aria-pressed="${S.rightTab === id}">${label}</button>`).join("")}
       <span class="spacer"></span>
-      <button class="btn btn-icon btn-sm" data-act="toggle-inspector" data-tip="Thu gọn" aria-label="Thu gọn">${ic("chev-r")}</button></header>`;
+      <button class="btn btn-icon btn-sm" data-act="toggle-inspector" data-tip="Collapse" aria-label="Collapse">${ic("chev-r")}</button></header>`;
     let body;
     if (S.rightTab === "assistant") {
       body = `<div class="asst">
@@ -295,18 +295,18 @@
           <p class="t-sm">${esc(D.ASSISTANT.blurb)}</p>
           ${reqList(D.ASSISTANT.reqs)}
         </div>
-        <div class="asst-input"><input class="input" placeholder="Hỏi Assistant…" disabled aria-label="Hỏi Assistant"><button class="btn btn-icon btn-primary" disabled aria-label="Gửi">${ic("send-up")}</button></div>
+        <div class="asst-input"><input class="input" placeholder="Ask the Assistant…" disabled aria-label="Ask the Assistant"><button class="btn btn-icon btn-primary" disabled aria-label="Send">${ic("send-up")}</button></div>
       </div>`;
     } else if (VIEWS[viewKey(S.active)]?.inspector) {
       body = VIEWS[viewKey(S.active)].inspector(S.active);
     } else if (S.active === "home") {
       body = `<section class="ins-sec"><span class="eyebrow">Workspace</span>
-        <dl class="kv"><dt>Tên</dt><dd>${esc(S.workspace.name)}</dd><dt>Đường dẫn</dt><dd class="path">${esc(S.workspace.path)}</dd><dt>Mở lúc</dt><dd class="mono">${esc(S.workspace.lastOpened)}</dd></dl></section>`;
+        <dl class="kv"><dt>Name</dt><dd>${esc(S.workspace.name)}</dd><dt>Path</dt><dd class="path">${esc(S.workspace.path)}</dd><dt>Opened at</dt><dd class="mono">${esc(S.workspace.lastOpened)}</dd></dl></section>`;
     } else {
       const it = ITEMS[S.active];
       body = `<section class="ins-sec"><span class="eyebrow">${esc(it.title)}</span>
-        <dl class="kv"><dt>Nhóm</dt><dd>${esc(it.section)}</dd><dt>Capability</dt><dd>${esc(it.cap)}</dd><dt>Trạng thái</dt><dd><span class="badge badge-info">COMING SOON</span></dd><dt>Yêu cầu</dt><dd>${it.reqs.length}</dd></dl></section>
-        <div class="ins-empty"><p>Thuộc tính của mục đang chọn sẽ hiển thị ở đây.</p></div>`;
+        <dl class="kv"><dt>Group</dt><dd>${esc(it.section)}</dd><dt>Capability</dt><dd>${esc(it.cap)}</dd><dt>Status</dt><dd><span class="badge badge-info">COMING SOON</span></dd><dt>Request</dt><dd>${it.reqs.length}</dd></dl></section>
+        <div class="ins-empty"><p>Properties of the selected item will appear here.</p></div>`;
     }
     $("#inspector").innerHTML = `${head}<div class="pane-body">${body}</div>`;
   }
@@ -320,29 +320,25 @@
     const body = S.bottomTab === "pipelines" && PL.list.length
       ? `<div class="pl-list">${PL.list.map(plRow).join("")}</div>`
       : S.bottomTab === "pipelines"
-      ? `<div class="empty"><div class="empty-inner"><h3 class="t-display-xs">Chưa có pipeline nào chạy</h3>
-          <p class="t-sm t-mute">Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây.</p></div></div>`
+      ? `<div class="empty"><div class="empty-inner"><h3 class="t-display-xs">No pipelines running</h3>
+          <p class="t-sm t-mute">Long tasks such as translating, analyzing, generating audio or rendering will show their progress here.</p></div></div>`
       : `<div class="log">${S.log.map(([t, lv, src, msg]) => `<div class="log-row log-${lv}"><span class="t-mute">${t}</span><span class="log-lv">${lv}</span><span class="t-mute">${esc(src)}</span><span>${esc(msg)}</span></div>`).join("")}</div>`;
-    el.innerHTML = `<div class="resizer-h" data-resize="bottom" role="separator" aria-orientation="horizontal" aria-label="Điều chỉnh kích thước bảng dưới" aria-valuenow="${S.panelSizes.bottom}" aria-valuemin="${PANEL_LIMITS.bottom.min}" aria-valuemax="${PANEL_LIMITS.bottom.max}" tabindex="0"></div>
-      <header class="bottom-head">${tab("pipelines", `Pipelines${PL.list.length ? ` <span class="count">${nRun ? nRun + " chạy / " : ""}${PL.list.length}</span>` : ""}`)}${tab("output", "Output")}<span class="spacer"></span>
-        <button class="btn btn-icon btn-sm" data-act="toggle-bottom" data-tip="Đóng panel" aria-label="Đóng panel">${ic("x")}</button></header>
+    el.innerHTML = `<div class="resizer-h" data-resize="bottom" role="separator" aria-orientation="horizontal" aria-label="Resize bottom panel" aria-valuenow="${S.panelSizes.bottom}" aria-valuemin="${PANEL_LIMITS.bottom.min}" aria-valuemax="${PANEL_LIMITS.bottom.max}" tabindex="0"></div>
+      <header class="bottom-head">${tab("pipelines", `Pipelines${PL.list.length ? ` <span class="count">${nRun ? nRun + " running / " : ""}${PL.list.length}</span>` : ""}`)}${tab("output", "Output")}<span class="spacer"></span>
+        <button class="btn btn-icon btn-sm" data-act="toggle-bottom" data-tip="Close panel" aria-label="Close panel">${ic("x")}</button></header>
       <div class="bottom-body">${body}</div>`;
   }
 
   function pipelineStatus() {
     const run = PL.list.filter((p) => p.status === "running");
-    if (!run.length) return `<button class="sb-item" data-act="toggle-bottom" data-tip-t="Pipelines (Ctrl J)" aria-label="Pipelines">${ic("activity")}<span class="mono">PIPELINES · IDLE</span></button>`;
+    if (!run.length) return `<button class="sb-item" data-act="toggle-bottom" data-tip-t="Pipelines (Ctrl J)" aria-label="Pipelines">${ic("activity")}<span class="mono">Pipelines · Idle</span></button>`;
     return `<button class="sb-item sb-running" data-act="toggle-bottom" data-tip-t="Pipelines (Ctrl J)" aria-label="Pipelines"><span class="dot dot-running"></span><span class="mono">${run.length} RUNNING · <span data-sb-avg>${avgProgress(run)}%</span></span></button>`;
   }
   function renderStatus() {
-    const theme = document.documentElement.getAttribute("data-theme");
-    const tts = D.STARTUP_STEPS.find((s) => s.id === "tts");
     $("#statusbar").innerHTML = `
       <span class="sb-item" title="${esc(S.workspace.path)}" data-testid="statusbar-workspace">${ic("hdd")}<span class="path">${esc(S.workspace.path)}</span></span>
       <span class="spacer"></span>
       ${pipelineStatus()}
-      ${tts.result === "warn" ? `<button class="sb-item sb-warn" data-act="settings" data-v="tts" data-tip-t="Local TTS chưa sẵn sàng"><span class="dot dot-warning"></span><span class="mono">LOCAL TTS · ${window.LB?.tts && !window.LB.tts.backendOk() ? "BACKEND STOPPED" : "NOT INSTALLED"}</span></button>` : ""}
-      <button class="sb-item" data-act="theme" data-tip-t="Đổi theme" aria-label="Đổi theme">${ic(theme === "light" ? "moon" : "sun")}</button>
       <span class="sb-item mono">V${esc(D.version)}</span>`;
   }
 
@@ -350,7 +346,7 @@
   function modal({ title, eyebrow = "", body, foot = "", cls = "", testid = "" }) {
     $("#layer").innerHTML = `<div class="scrim" data-act="scrim"><div class="modal ${cls}" ${testid ? `data-testid="${testid}"` : ""} role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <header class="modal-head">${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}<h2 class="modal-title eyebrow">${esc(title)}</h2><span class="spacer"></span>
-        <button class="btn btn-icon btn-sm" data-act="close-modal" aria-label="Đóng (Esc)" data-tip="Đóng (Esc)">${ic("x")}</button></header>
+        <button class="btn btn-icon btn-sm" data-act="close-modal" aria-label="Close (Esc)" data-tip="Close (Esc)">${ic("x")}</button></header>
       <div class="modal-body">${body}</div>${foot ? `<footer class="modal-foot">${foot}</footer>` : ""}</div></div>`;
     ($("#layer .modal-body input") || $("#layer .modal-foot .btn-primary") || $("#layer .modal"))?.focus?.();
   }
@@ -359,10 +355,10 @@
   /** Switch workspace dialog (REQ-01-002). */
   function openSwitchDialog() {
     modal({
-      title: "Đổi workspace", eyebrow: "Workspace", cls: "modal-lg", testid: "switch-dialog",
-      body: `<p class="t-sm t-mute switch-note" data-testid="switch-dialog-note">Workspace đang mở vẫn được giữ cho đến khi workspace mới sẵn sàng. Nếu việc mở thất bại hoặc bị hủy, bạn quay lại đúng màn hình đang làm việc.</p>
+      title: "Switch workspace", eyebrow: "Workspace", cls: "modal-lg", testid: "switch-dialog",
+      body: `<p class="t-sm t-mute switch-note" data-testid="switch-dialog-note">The open workspace is kept until the new workspace is ready. If opening fails or is cancelled, you return to the screen you were working on.</p>
         ${WS.rowsHtml(WS.list())}`,
-      foot: `<button class="btn btn-ghost" data-testid="switch-close" data-act="close-modal">Đóng</button><button class="btn btn-primary" data-testid="switch-open-folder" data-act="pick-folder">${ic("folder-open")}Mở thư mục khác…</button>`,
+      foot: `<button class="btn btn-ghost" data-testid="switch-close" data-act="close-modal">Close</button><button class="btn btn-primary" data-testid="switch-open-folder" data-act="pick-folder">${ic("folder-open")}Open another folder…</button>`,
     });
     WS.hydrateSizes($("#layer"));
   }
@@ -393,7 +389,7 @@
           <div class="cs-title"><h3 class="t-display-xs">${esc(cur.title)}</h3><span class="badge badge-info">COMING SOON</span></div>
           <div class="req-list">${cur.reqs.map(([, text]) => `<div class="req-row" style="grid-template-columns:minmax(0,1fr)"><span>${esc(text)}</span></div>`).join("")}</div>
         </div>`}</div>`,
-      foot: `<button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
+      foot: `<button class="btn btn-primary" data-act="close-modal">Close</button>`,
     });
     view?.mount?.();
   }
@@ -407,11 +403,11 @@
 
   function openAbout() {
     modal({
-      title: "Dreamy Studio", eyebrow: "Giới thiệu", cls: "",
+      title: "Dreamy Studio", eyebrow: "About", cls: "",
       body: `<div style="display:flex;gap:16px;align-items:center"><img src="${logoSrc}" width="56" height="56" alt="">
-          <div><div class="t-ink">Phiên bản <span class="mono">${esc(D.version)}</span></div><div class="t-sm t-mute">Prototype giao diện — chưa có backend.</div></div></div>
-        <p class="t-sm t-mute">Dreamy Studio cung cấp công cụ để người dùng tạo và phân phối nội dung từ tài nguyên do họ tự chọn. Người dùng chịu trách nhiệm bảo đảm mình có quyền sử dụng tài nguyên cho mục đích dự kiến và quyết định nội dung được gửi đến dịch vụ bên ngoài hoặc đăng lên tài khoản của mình.</p>`,
-      foot: `<button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
+          <div><div class="t-ink">Version <span class="mono">${esc(D.version)}</span></div><div class="t-sm t-mute">Interface prototype — no backend yet.</div></div></div>
+        <p class="t-sm t-mute">Dreamy Studio provides tools for users to create and distribute content from resources they choose themselves. Users are responsible for ensuring they have the right to use the resources for their intended purpose and for deciding what content is sent to external services or posted to their own accounts.</p>`,
+      foot: `<button class="btn btn-primary" data-act="close-modal">Close</button>`,
     });
   }
 
@@ -429,24 +425,24 @@
     el.style.left = `${Math.min(r.left, innerWidth - el.offsetWidth - 8)}px`;
     el.style.top = `${r.bottom + 2}px`;
   }
-  const LANGUAGE_NAMES = { vi: "Tiếng Việt", en: "English" };
+  const LANGUAGE_NAMES = { vi: "Vietnamese", en: "English" };
   const MENUS = {
     file: () => [
-      { label: "Mở workspace…", icon: "folder-open", act: "pick-folder" },
-      { label: "Đổi workspace…", icon: "swap", act: "switch-workspace" },
+      { label: "Open workspace…", icon: "folder-open", act: "pick-folder" },
+      { label: "Switch workspace…", icon: "swap", act: "switch-workspace" },
       "-",
       { label: "Settings", icon: "settings", act: "settings", kbd: "Ctrl ," },
-      { label: "Đóng tab", icon: "x", act: "close-tab", v: S.active, kbd: "Ctrl W" },
+      { label: "Close tab", icon: "x", act: "close-tab", v: S.active, kbd: "Ctrl W" },
     ],
     view: () => [
       { label: "Explorer", icon: "panel-left", act: "toggle-explorer", kbd: "Ctrl B" },
       { label: "Inspector", icon: "panel-right", act: "toggle-inspector", kbd: "Ctrl Alt B" },
       { label: "Pipelines", icon: "panel-bottom", act: "toggle-bottom", kbd: "Ctrl J" },
       "-",
-      { label: "Đổi theme sáng / tối", icon: "sun", act: "theme" },
-      { label: "Đổi ngôn ngữ", icon: "lang", act: "language", kbd: LANGUAGE_NAMES[store.get("lang", "vi")] },
+      { label: "Switch light / dark theme", icon: "sun", act: "theme" },
+      { label: "Change language", icon: "lang", act: "language", kbd: LANGUAGE_NAMES[store.get("lang", "en")] },
     ],
-    help: () => [{ label: "Giới thiệu Dreamy Studio", icon: "info", act: "about" }],
+    help: () => [{ label: "About Dreamy Studio", icon: "info", act: "about" }],
   };
 
   /* ---------------- actions ---------------- */
@@ -486,9 +482,9 @@
       const row = WS.list().find((item) => item.path === el.dataset.path);
       if (!row) return;
       modal({
-        title: "Xóa workspace", eyebrow: "Workspace", testid: "recent-delete-dialog",
-        body: `<p>Xóa <strong>${esc(row.name)}</strong> và toàn bộ tệp trong đó?</p><div class="ld-warn is-error">${ic("alert")}<span>Thao tác này không thể hoàn tác.</span></div>`,
-        foot: `<button class="btn" data-act="switch-workspace">Hủy</button><button class="btn btn-danger" data-testid="recent-delete-confirm" data-act="workspace-delete-confirm" data-path="${esc(row.path)}">${ic("trash")}Xóa</button>`,
+        title: "Delete workspace", eyebrow: "Workspace", testid: "recent-delete-dialog",
+        body: `<p>Delete <strong>${esc(row.name)}</strong> and all files inside it?</p><div class="ld-warn is-error">${ic("alert")}<span>This action cannot be undone.</span></div>`,
+        foot: `<button class="btn" data-act="switch-workspace">Cancel</button><button class="btn btn-danger" data-testid="recent-delete-confirm" data-act="workspace-delete-confirm" data-path="${esc(row.path)}">${ic("trash")}Delete</button>`,
       });
     },
     "workspace-delete-confirm": (el) => { WS.deleteWorkspace(el.dataset.path); openSwitchDialog(); },
@@ -523,7 +519,7 @@
     settings: (el) => openSettings(el?.dataset?.v),
     "settings-tab": (el) => openSettings(el.dataset.v),
     about: openAbout,
-    language: () => store.set("lang", store.get("lang", "vi") === "vi" ? "en" : "vi"),
+    language: () => store.set("lang", store.get("lang", "en") === "en" ? "vi" : "en"),
     theme: () => applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light"),
     "app-menu": (el) => openMenu(el, MENUS[el.dataset.v]()),
   };
@@ -535,7 +531,7 @@
     const a = e.target.closest("[data-act]");
     if (!a?.dataset.act.endsWith("menu") || !e.target.closest("body > .menu")) closeMenu();
     if (a && ACT[a.dataset.act]) {
-      // không chặn radio / checkbox (trong dialog hoặc ô chọn của danh sách), nếu không trình duyệt hoàn lại trạng thái checked sau khi handler chạy
+      // do not block radio / checkbox (in a dialog or a list’s selection cell), otherwise the browser restores the checked state after the handler runs
       if (a.dataset.act !== "scrim" && !e.target.matches?.('input[type="checkbox"], input[type="radio"]')) e.preventDefault();
       ACT[a.dataset.act](a, e);
     }
@@ -646,7 +642,7 @@
       <div class="pl-main"><div class="t-ink">${esc(p.label)}</div><div class="t-sm t-mute">${esc(p.detail)} · <span class="mono">${p.id}</span> · ${taskDone(p)}/${p.tasks.length} task</div></div>
       <div class="pl-prog"><div class="progress" data-prog="${p.id}"><i style="width:${p.progress}%"></i></div><span class="mono" data-prog-text="${p.id}">${p.progress}%</span></div>
       ${badge}
-      ${p.status === "running" ? `<button class="btn btn-sm" data-act="pl-cancel" data-id="${p.id}">Hủy</button>` : ""}
+      ${p.status === "running" ? `<button class="btn btn-sm" data-act="pl-cancel" data-id="${p.id}">Cancel</button>` : ""}
     </div>`;
   }
 
@@ -660,7 +656,7 @@
     if (!PL.timer) PL.timer = setInterval(plTick, 450);
     renderStatus();
     renderBottom();
-    toast(`Đã bắt đầu: ${label}`, "running");
+    toast(`Started: ${label}`, "running");
     return p;
   }
   function cancelPipeline(id) {
@@ -670,7 +666,7 @@
     p.tasks.forEach((t) => { if (t.status !== "done") t.status = "cancelled"; });
     log("warn", p.id, "Cancelled");
     p.onCancel?.(p);
-    toast(`Đã hủy: ${p.label}`, "warning");
+    toast(`Cancelled: ${p.label}`, "warning");
     plAfterChange();
   }
   function plAfterChange() {
@@ -698,7 +694,7 @@
         changed = true;
         log("ok", p.id, `${p.label} · done`);
         p.onDone?.(p);
-        toast(`Hoàn tất: ${p.label}`, "success");
+        toast(`Completed: ${p.label}`, "success");
       }
     });
     updateBars();
@@ -726,11 +722,11 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     const standalone = document.body.dataset.standalone === "true";
-    const workspace = WS.current() || (standalone ? {
+    const workspace = standalone ? {
       ...D.seedWorkspaces[0],
-      name: document.body.dataset.workspaceName || "Library prototype",
+      name: document.body.dataset.workspaceName || "Dreamy Studio",
       path: document.body.dataset.workspacePath || "Prototype / Library",
-    } : WS.requireCurrent());
+    } : WS.current() || WS.requireCurrent();
     if (workspace) enterShell(workspace);
   });
 })();

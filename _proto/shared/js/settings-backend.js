@@ -5,11 +5,11 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const RT = {
-    bundle: { label: "Python bundle của ứng dụng", path: "C:\\Program Files\\Dreamy Studio\\resources\\python\\python.exe", note: "Bản cài bằng installer: Python đi kèm ứng dụng, không cần cài Python riêng." },
-    custom: { label: "Python tùy chỉnh", note: "Bản chạy từ mã nguồn: dùng Python và môi trường ảo do bạn chỉ định." },
+    bundle: { label: "App-bundled Python", path: "C:\\Program Files\\Dreamy Studio\\resources\\python\\python.exe", note: "Installer build: Python ships with the app, no separate Python install needed." },
+    custom: { label: "Custom Python", note: "Run-from-source build: uses the Python and virtual environment you specify." },
   };
   const INFO = { py: "Python 3.11.9", dir: "%APPDATA%\\DreamyStudio", free: "212.7 GB" };
-  const DEVICES = { auto: "Tự động (hiện dùng CPU)", cpu: "CPU" };
+  const DEVICES = { auto: "Automatic (currently using CPU)", cpu: "CPU" };
   const PATH_RE = /^[A-Za-z]:\\.+python(w)?\.exe$/i;
 
   const B = () => LB.state.backend;
@@ -97,10 +97,10 @@
     const up = b.status === "running";
     return [
       { id: "py", label: "Python runtime", state: "ok", detail: `${INFO.py} · ${pyPath()}` },
-      { id: "api", label: "FastAPI server", state: up ? "ok" : "warn", detail: up ? `uvicorn · 127.0.0.1:${b.port} · PID ${b.pid}` : b.status === "starting" ? "Đang khởi động…" : "Chưa chạy" },
-      { id: "health", label: "Health check", state: up ? "ok" : "warn", detail: up ? "GET /health → 200 · 8 ms" : "Không phản hồi" },
-      { id: "dev", label: "Bộ tăng tốc", state: "warn", detail: "Không phát hiện GPU CUDA, sẽ chạy bằng CPU" },
-      { id: "disk", label: "Dung lượng trống", state: "ok", detail: `${INFO.free} trống tại ổ chứa dữ liệu` },
+      { id: "api", label: "FastAPI server", state: up ? "ok" : "warn", detail: up ? `uvicorn · 127.0.0.1:${b.port} · PID ${b.pid}` : b.status === "starting" ? "Starting…" : "Not running" },
+      { id: "health", label: "Health check", state: up ? "ok" : "warn", detail: up ? "GET /health → 200 · 8 ms" : "Not responding" },
+      { id: "dev", label: "Accelerator", state: "warn", detail: "No CUDA GPU detected, will run on CPU" },
+      { id: "disk", label: "Free space", state: "ok", detail: `${INFO.free} free on the data drive` },
     ];
   };
   const checkIcon = (s) => (s === "ok" ? ic("check") : s === "warn" ? ic("alert") : s === "error" ? ic("x") : s === "running" ? `<span class="dot dot-running"></span>` : `<span class="dot"></span>`);
@@ -131,46 +131,46 @@
   function pendingBar(c) {
     const a = applied();
     const rows = [];
-    if (c.source !== a.source) rows.push(`Nguồn Python: ${RT[a.source].label} → ${RT[c.source].label}`);
+    if (c.source !== a.source) rows.push(`Python source: ${RT[a.source].label} → ${RT[c.source].label}`);
     if (c.source === "custom" && (c.source !== a.source || c.customPython !== a.customPython)) rows.push(`python.exe: ${c.customPython}`);
-    if (c.device !== a.device) rows.push(`Thiết bị suy luận: ${DEVICES[a.device]} → ${DEVICES[c.device]}`);
+    if (c.device !== a.device) rows.push(`Inference device: ${DEVICES[a.device]} → ${DEVICES[c.device]}`);
     const n = jobs().length;
     const up = B().status !== "stopped";
-    return `<div class="tts-pending">${ic("alert")}<div class="tts-pending-b"><b>Thay đổi chưa được áp dụng</b>
+    return `<div class="tts-pending">${ic("alert")}<div class="tts-pending-b"><b>Changes not applied yet</b>
         <ul>${rows.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
-        <span class="t-sm t-mute">${up ? "Backend sẽ khởi động lại khi bạn lưu." : "Backend sẽ được khởi động với cài đặt mới."}${n ? ` ${n} tác vụ tải mô hình đang chạy sẽ bị hủy.` : ""}</span></div>
-      <div class="tts-pending-act"><button class="btn btn-sm btn-ghost" data-act="be-discard">Hủy thay đổi</button><button class="btn btn-sm btn-primary" data-act="be-apply" ${B().status === "starting" ? "disabled" : ""}>${up ? "Lưu và khởi động lại" : "Lưu và khởi động"}</button></div></div>`;
+        <span class="t-sm t-mute">${up ? "The backend will restart when you save." : "The backend will be started with the new settings."}${n ? ` ${n} running model download tasks will be cancelled.` : ""}</span></div>
+      <div class="tts-pending-act"><button class="btn btn-sm btn-ghost" data-act="be-discard">Discard changes</button><button class="btn btn-sm btn-primary" data-act="be-apply" ${B().status === "starting" ? "disabled" : ""}>${up ? "Save and restart" : "Save and start"}</button></div></div>`;
   }
 
   function usageCard() {
-    return `<section class="tts-card"><header class="tts-card-h"><span class="eyebrow">Đang dùng backend này</span></header>
+    return `<section class="tts-card"><header class="tts-card-h"><span class="eyebrow">Using this backend</span></header>
       <div class="be-uses">${consumers.map((c) => `<button type="button" class="be-use" data-act="settings" data-v="${c.tab}">${ic(c.icon)}<span class="be-use-t">${esc(c.label)}</span><span class="t-sm t-mute">${esc(c.summary())}</span>${ic("chev-r")}</button>`).join("")}</div></section>`;
   }
 
   function render() {
     const b = B();
     const c = cfg();
-    const st = { running: badge("badge-success", "ĐANG CHẠY"), starting: badge("badge-running", "ĐANG KHỞI ĐỘNG"), stopped: badge("badge-warning", "ĐÃ DỪNG") }[b.status];
+    const st = { running: badge("badge-success", "RUNNING"), starting: badge("badge-running", "STARTING"), stopped: badge("badge-warning", "STOPPED") }[b.status];
     const lines = b.log.slice(-8);
     return `<div class="tts">
       <header class="tts-head"><div><h3 class="t-display-xs">Python backend</h3></div></header>
-      <p class="t-sm t-mute">Ứng dụng khởi động một Python backend (FastAPI) cùng lúc mở workspace, chỉ lắng nghe trên <span class="path">127.0.0.1</span>. Mọi mô hình chạy local, dù là giọng nói hay loại khác, đều chạy trên backend này.</p>
+      <p class="t-sm t-mute">The app starts a Python backend (FastAPI) at the same time as opening a workspace, listening only on <span class="path">127.0.0.1</span>. Every local model, whether speech or otherwise, runs on this backend.</p>
       <section class="tts-card">
-        <header class="tts-card-h"><span class="eyebrow">Trạng thái</span>${st}<span class="spacer"></span>
-          <button class="btn btn-sm" data-act="be-check">${ic("refresh")}Kiểm tra lại</button>
-          ${b.status === "stopped" ? `<button class="btn btn-sm btn-primary" data-act="be-start">${ic("play")}Khởi động</button>` : `<button class="btn btn-sm" data-act="be-restart" ${b.status === "starting" ? "disabled" : ""}>${ic("swap")}Khởi động lại</button><button class="btn btn-sm" data-act="be-stop" ${b.status === "starting" ? "disabled" : ""}>${ic("stop")}Dừng</button>`}</header>
+        <header class="tts-card-h"><span class="eyebrow">Status</span>${st}<span class="spacer"></span>
+          <button class="btn btn-sm" data-act="be-check">${ic("refresh")}Check again</button>
+          ${b.status === "stopped" ? `<button class="btn btn-sm btn-primary" data-act="be-start">${ic("play")}Start</button>` : `<button class="btn btn-sm" data-act="be-restart" ${b.status === "starting" ? "disabled" : ""}>${ic("swap")}Restart</button><button class="btn btn-sm" data-act="be-stop" ${b.status === "starting" ? "disabled" : ""}>${ic("stop")}Stop</button>`}</header>
         <div class="ld-steps tts-checks" id="be-checks" role="status" aria-live="polite">${checkRows()}</div>
       </section>
       <section class="tts-card">
-        <header class="tts-card-h"><span class="eyebrow">Cài đặt</span></header>
+        <header class="tts-card-h"><span class="eyebrow">Settings</span></header>
         <div class="form-2 tts-env">
-          <div class="field"><label for="be-src">Nguồn Python</label><select id="be-src" class="select" data-change="be-source"><option value="bundle" ${c.source === "bundle" ? "selected" : ""}>${RT.bundle.label} (khuyên dùng)</option><option value="custom" ${c.source === "custom" ? "selected" : ""}>${RT.custom.label}</option></select>
+          <div class="field"><label for="be-src">Python source</label><select id="be-src" class="select" data-change="be-source"><option value="bundle" ${c.source === "bundle" ? "selected" : ""}>${RT.bundle.label} (recommended)</option><option value="custom" ${c.source === "custom" ? "selected" : ""}>${RT.custom.label}</option></select>
             <span class="field-hint">${esc(RT[c.source].note)}</span></div>
-          <div class="field"><label for="be-py">${c.source === "bundle" ? "Đường dẫn Python bundle" : "Đường dẫn python.exe"}</label>
+          <div class="field"><label for="be-py">${c.source === "bundle" ? "Python bundle path" : "python.exe path"}</label>
             <input id="be-py" class="input mono-in" value="${esc(pyOf(c))}" ${c.source === "bundle" ? "readonly" : ""} data-change="be-pypath" autocomplete="off">
-            <span class="field-hint">${c.source === "bundle" ? "Đi kèm installer, không chỉnh sửa." : "Cần cài sẵn các gói trong requirements.txt của backend."}</span></div>
-          <div class="field"><label for="be-dev">Thiết bị suy luận</label><select id="be-dev" class="select" data-change="be-device"><option value="auto" ${c.device === "auto" ? "selected" : ""}>${DEVICES.auto}</option><option value="cpu" ${c.device === "cpu" ? "selected" : ""}>${DEVICES.cpu}</option><option value="cuda" disabled>GPU CUDA (không phát hiện)</option></select></div>
-          <div class="field"><label>Thư mục dữ liệu mô hình</label><div class="tts-dir"><span class="path">${esc(INFO.dir)}\\models</span><button class="btn btn-sm" data-act="be-open-dir">${ic("folder-open")}Mở</button></div></div>
+            <span class="field-hint">${c.source === "bundle" ? "Ships with the installer, not editable." : "The packages in the backend’s requirements.txt must be installed already."}</span></div>
+          <div class="field"><label for="be-dev">Inference device</label><select id="be-dev" class="select" data-change="be-device"><option value="auto" ${c.device === "auto" ? "selected" : ""}>${DEVICES.auto}</option><option value="cpu" ${c.device === "cpu" ? "selected" : ""}>${DEVICES.cpu}</option><option value="cuda" disabled>CUDA GPU (not detected)</option></select></div>
+          <div class="field"><label>Model data folder</label><div class="tts-dir"><span class="path">${esc(INFO.dir)}\\models</span><button class="btn btn-sm" data-act="be-open-dir">${ic("folder-open")}Open</button></div></div>
         </div>
         ${dirty() ? pendingBar(c) : ""}
       </section>
@@ -195,7 +195,7 @@
     "be-apply": () => {
       const d = B().draft;
       if (!d || !dirty()) { B().draft = null; refresh(); return; }
-      if (d.source === "custom" && !PATH_RE.test(d.customPython)) { A.toast("Đường dẫn python.exe chưa hợp lệ.", "warning"); return; }
+      if (d.source === "custom" && !PATH_RE.test(d.customPython)) { A.toast("The python.exe path is not valid.", "warning"); return; }
       B().source = d.source;
       B().customPython = d.customPython;
       B().device = d.device;
@@ -203,14 +203,14 @@
       boot("Settings changed, restarting backend");
     },
     "be-discard": () => { B().draft = null; refresh(); },
-    "be-open-dir": () => A.toast("Prototype: sẽ mở thư mục dữ liệu trong File Explorer.", "warning"),
+    "be-open-dir": () => A.toast("Prototype: will open the data folder in File Explorer.", "warning"),
   });
   Object.assign(A.ON, {
     "be-device": (el) => setDraft({ device: el.value }),
     "be-source": (el) => setDraft({ source: el.value }),
     "be-pypath": (el) => {
       const v = el.value.trim();
-      if (!PATH_RE.test(v)) { el.value = pyOf(cfg()); A.toast("Nhập đường dẫn đầy đủ tới python.exe, ví dụ C:\\Python311\\python.exe.", "warning"); return; }
+      if (!PATH_RE.test(v)) { el.value = pyOf(cfg()); A.toast("Enter the full path to python.exe, for example C:\\Python311\\python.exe.", "warning"); return; }
       setDraft({ customPython: v });
     },
   });

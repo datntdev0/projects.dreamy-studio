@@ -15,28 +15,28 @@ window.NVU = (function () {
   const chapter = (n) => N().chapters[n - 1];
   const novelById = (id) => N().novels.find((x) => x.id === id);
   const current = () => novelById(N().reader.novel);
-  /** Tên hiển thị (dùng khắp app); để trống thì dùng tên gốc. Tên gốc chỉ hiện trên bìa ở dạng lưới và trong form sửa. */
+  /** Display name (used throughout the app); if empty the original name is used. The original name only shows on the cover in grid view and in the edit form. */
   const nameOf = (n) => (n.display && n.display.trim()) || n.title;
   const hasText = () => N().reader.novel === SAMPLE;
-  /** Màn hình theo từng novel có id dạng `kind:NOV-xxxx`; gắn novel đó làm novel hiện tại trước khi vẽ. */
+  /** Per-novel screens have an id of the form `kind:NOV-xxxx`; attaches that novel as the current novel before rendering. */
   const bind = (tabId) => { const id = String(tabId).split(":")[1]; if (id && novelById(id)) N().reader.novel = id; return current(); };
   const findPara = (pid) => chapter(NV.chOf(pid))?.paras?.find((p) => p.id === pid);
   const paraNo = (pid) => pid.split(".")[1];
   const refLabel = (pid) => `Ch.${NV.chOf(pid)} ¶${paraNo(pid)}`;
   const ref = (pid, view = "src") => `<button type="button" class="chip" data-act="jump-src" data-p="${pid}" data-view="${view}">${refLabel(pid)}</button>`;
 
-  /** Danh sách chương của novel: novel mẫu có nội dung thật, novel khác chỉ có siêu dữ liệu. */
+  /** The novel’s chapter list: the sample novel has real content, other novels only have metadata. */
   const packChapters = (n) => (n.pack && window.NVC?.[n.pack]?.chapters) || [];
   const chaptersFor = (n) => (n.id === SAMPLE ? N().chapters
-    : Array.from({ length: n.chapters }, (_, i) => ({ n: i + 1, title: packChapters(n)[i]?.title || `Chương ${i + 1}`, words: packChapters(n)[i]?.words ?? Math.round(n.words / Math.max(1, n.chapters)), paras: null })));
+    : Array.from({ length: n.chapters }, (_, i) => ({ n: i + 1, title: packChapters(n)[i]?.title || `Chapter ${i + 1}`, words: packChapters(n)[i]?.words ?? Math.round(n.words / Math.max(1, n.chapters)), paras: null })));
   const analyzedCount = () => Object.values(N().kb.analyzed).filter((v) => v === "done").length;
   const progress = (n) => (n.id === SAMPLE
     ? { tr: Object.keys(N().tr.chapters).length, kb: analyzedCount(), total: n.chapters }
     : { tr: 0, kb: 0, total: n.chapters });
-  /** Nền bìa: ảnh người dùng chọn (`coverImg`) hoặc gradient sinh sẵn. */
+  /** Cover background: an image the user chose (`coverImg`) or a pre-generated gradient. */
   const coverBg = (n) => (n.coverImg ? `url(${n.coverImg}) center / cover no-repeat` : `linear-gradient(160deg,${n.cover[0]},${n.cover[1]} 55%,${n.cover[2]})`);
   const cover = (n, cls = "", actions = "") => `<span class="cover ${cls}" style="background:${esc(coverBg(n))}">${actions}</span>`;
-  /** `2/12` kèm icon, dùng thay cho chữ dài ở danh sách, lưới và bảng chương. */
+  /** `2/12` with an icon, used instead of long text in lists, grids and the chapters table. */
   const frac = (icon, a, b, title) => `<span class="frac ${a >= b && b ? "is-full" : a ? "is-part" : ""}" title="${esc(title)}">${ic(icon)}<b>${a}</b>/${b}</span>`;
 
   const seg = (act, list, currentValue, extra = "", testid = "") => `<div class="seg" role="group" ${testid ? `data-testid="${testid}"` : ""}>${list.map(([v, label, tip]) => {
@@ -92,15 +92,15 @@ window.NVU = (function () {
     }
   }, true);
   const empty = (title, text, cta = "") => `<div class="empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">${title}</h3><p class="t-sm t-mute">${text}</p>${cta}</div></div>`;
-  const noSample = () => empty("Chưa có nội dung mẫu", "Prototype chỉ có nội dung chương, bản dịch và tri thức cho “The Lantern Keeper of Harrowmere”.", novelById(SAMPLE) ? `<button class="btn btn-primary" data-act="nv-sample">Mở novel mẫu</button>` : "");
+  const noSample = () => empty("No sample content yet", "The prototype only has chapter content, translations and knowledge for “The Lantern Keeper of Harrowmere”.", novelById(SAMPLE) ? `<button class="btn btn-primary" data-act="nv-sample">Open the sample novel</button>` : "");
   const insSec = (title, body) => `<section class="ins-sec"><span class="eyebrow">${esc(title)}</span>${body}</section>`;
   const kv = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
   const novelTitle = () => `<span class="nv-ttl">${cover(current(), "cover-xs")}<span class="t-ink">${esc(nameOf(current()))}</span><span class="badge">${esc(current().lang)}</span></span>`;
 
-  /* ---- chương: dropdown chọn chương (`suffix(n)` thêm ghi chú sau tên chương) ---- */
-  const chapterJump = (id, cur, total, title, suffix) => `<select id="${id}" class="select ch-select" data-change="${id}" aria-label="Chương">${options(chaptersFor(current()).map((c) => [c.n, `Ch.${c.n} · ${c.title}${suffix ? suffix(c.n) : ""}`]), cur)}</select>`;
+  /* ---- chapters: chapter dropdown (`suffix(n)` adds a note after the chapter name) ---- */
+  const chapterJump = (id, cur, total, title, suffix) => `<select id="${id}" class="select ch-select" data-change="${id}" aria-label="Chapters">${options(chaptersFor(current()).map((c) => [c.n, `Ch.${c.n} · ${c.title}${suffix ? suffix(c.n) : ""}`]), cur)}</select>`;
 
-  /* ---- tags + bộ lọc novel (dùng chung cho explorer Filters và màn Novel management) ---- */
+  /* ---- tags + novel filters (shared by explorer Filters and the Novel management screen) ---- */
   const tagsOf = (n) => n.tags || [];
   const allTags = () => {
     const m = new Map();
@@ -111,19 +111,19 @@ window.NVU = (function () {
   const filters = () => {
     const f = ui("nf", { tags: [], langs: [] });
     const known = new Set(allTags().map(([t]) => t));
-    f.tags = f.tags.filter((t) => known.has(t)); // tag không còn novel nào dùng thì bỏ khỏi bộ lọc
+    f.tags = f.tags.filter((t) => known.has(t)); // a tag no novel uses any more is dropped from the filter
     f.langs = f.langs.filter((l) => N().novels.some((n) => n.lang === l));
     return f;
   };
   const nextNovelId = () => `NOV-${String(Math.max(0, ...N().novels.map((n) => parseInt(n.id.slice(4), 10) || 0)) + 1).padStart(4, "0")}`;
   const filterActive = () => filters().tags.length + filters().langs.length > 0;
-  /** Khớp mọi tag đã chọn (AND) và một trong các ngôn ngữ đã chọn (OR). */
+  /** Matches every selected tag (AND) and any one of the selected languages (OR). */
   const passes = (n) => filters().tags.every((t) => tagsOf(n).includes(t)) && (!filters().langs.length || filters().langs.includes(n.lang));
   const tagChips = (n, max = 99) => {
     const tags = tagsOf(n);
     return tags.slice(0, max).map((t) => `<span class="tag">${esc(t)}</span>`).join("") + (tags.length > max ? `<span class="tag is-more">+${tags.length - max}</span>` : "");
   };
-  /** Tên novel / ngôn ngữ đổi thì nhãn tab của các màn hình thuộc novel đó cũng đổi. */
+  /** When a novel’s name / language changes, the tab labels of that novel’s screens change too. */
   const refreshTabs = (novelId) => {
     const n = novelById(novelId);
     Object.entries(TABS).forEach(([kind, t]) => {
@@ -132,7 +132,7 @@ window.NVU = (function () {
     });
   };
 
-  const CERT = { text: ["badge-success", "Văn bản", "Văn bản xác nhận"], claim: ["badge-info", "Lời nhân vật", "Lời kể của nhân vật"], inferred: ["badge-warning", "AI suy luận", "Suy luận của AI, văn bản không nói trực tiếp"] };
+  const CERT = { text: ["badge-success", "Text", "Stated in text"], claim: ["badge-info", "Character’s words", "Character’s words"], inferred: ["badge-warning", "AI inference", "AI inference, not stated directly in the text"] };
   const certBadge = (c) => `<span class="badge ${CERT[c][0]}" title="${CERT[c][2]}">${CERT[c][1]}</span>`;
 
   const estimate = (nums, { outRatio = 1.8, guide = 420 } = {}) => {
@@ -143,7 +143,7 @@ window.NVU = (function () {
   };
   const money = (v) => `≈ $${v.toFixed(2)}`;
   const provider = (id) => NV.providers.find((p) => p.id === id);
-  const providerSelect = (id, value) => `<select id="${id}" class="select" data-on="${id}">${options(NV.providers.map((p) => [p.id, p.ok ? p.name : `${p.name} (chưa cài)`, !p.ok]), value)}</select>`;
+  const providerSelect = (id, value) => `<select id="${id}" class="select" data-on="${id}">${options(NV.providers.map((p) => [p.id, p.ok ? p.name : `${p.name} (not installed)`, !p.ok]), value)}</select>`;
   /** `[3,4,5,9]` → `3–5, 9` */
   const rangeText = (nums) => {
     const out = [];
@@ -191,28 +191,28 @@ window.NVU = (function () {
     if (tp) {
       if (tp.st !== "review") tp.prev = tp.st;
       tp.st = "review";
-      addWarning({ kind: "source", ch: NV.chOf(pid), p: pid, reason: "Đoạn nguồn đã được sửa sau khi dịch.", before, after: text });
+      addWarning({ kind: "source", ch: NV.chOf(pid), p: pid, reason: "The source passage was edited after translation.", before, after: text });
       warned = 1;
     }
     s.kb.items.forEach((it) => {
-      if (it.ev.some((e) => e.p === pid)) { it.stale = `Đoạn nguồn ${refLabel(pid)} đã sửa ngày ${A.stamp()}.`; stale++; }
+      if (it.ev.some((e) => e.p === pid)) { it.stale = `Source passage ${refLabel(pid)} was edited on ${A.stamp()}.`; stale++; }
     });
-    s.kb.log.unshift({ date: A.stamp(), text: `Nguồn ${refLabel(pid)} được sửa.` });
+    s.kb.log.unshift({ date: A.stamp(), text: `Source ${refLabel(pid)} was edited.` });
     return { warned, stale };
   };
 
   const inspectorNovel = () => {
     const n = current();
     const pg = progress(n);
-    return insSec("Tác phẩm", `<div class="ins-novel">${cover(n, "cover-md")}<div class="ins-novel-t"><div class="t-ink">${esc(nameOf(n))}</div><div class="t-sm t-mute">${esc(n.author)}</div></div></div>`
-      + kv([["Ngôn ngữ", esc(n.langName)], ["Chương", fmt(n.chapters)], ["Số từ", fmt(n.words)], ["Dịch", frac("lang", pg.tr, pg.total, "Chương đã dịch")], ["Tri thức", frac("graph", pg.kb, pg.total, "Chương đã phân tích")], ...(tagsOf(n).length ? [["Tags", `<span class="tags">${tagChips(n)}</span>`]] : [])]));
+    return insSec("Work", `<div class="ins-novel">${cover(n, "cover-md")}<div class="ins-novel-t"><div class="t-ink">${esc(nameOf(n))}</div><div class="t-sm t-mute">${esc(n.author)}</div></div></div>`
+      + kv([["Language", esc(n.langName)], ["Chapters", fmt(n.chapters)], ["Words", fmt(n.words)], ["Translate", frac("lang", pg.tr, pg.total, "Translated chapters")], ["Knowledge", frac("graph", pg.kb, pg.total, "Analyzed chapters")], ...(tagsOf(n).length ? [["Tags", `<span class="tags">${tagChips(n)}</span>`]] : [])]));
   };
 
-  /** Mở một màn hình của novel: `novel` (chapters / reading), `translation`, `knowledge`. */
+  /** Opens a screen of the novel: `novel` (chapters / reading), `translation`, `knowledge`. */
   const TABS = {
     novel: { icon: "book", title: "Chapters", tab: (n) => nameOf(n) },
-    translation: { icon: "lang", title: "Translation", tab: (n) => `Dịch · ${nameOf(n)}` },
-    knowledge: { icon: "graph", title: "Knowledgebase", tab: (n) => `Tri thức · ${nameOf(n)}` },
+    translation: { icon: "lang", title: "Translation", tab: (n) => `Translation · ${nameOf(n)}` },
+    knowledge: { icon: "graph", title: "Knowledgebase", tab: (n) => `Knowledge · ${nameOf(n)}` },
   };
   const openNovelTab = (kind, novelId) => {
     const n = novelById(novelId);

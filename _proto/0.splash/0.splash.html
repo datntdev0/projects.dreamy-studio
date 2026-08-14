@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,11 +28,11 @@
 
   <div id="splash" class="splash" data-testid="splash-page">
     <div class="sp-tools" data-testid="splash-tools">
-      <div class="seg" role="group" aria-label="Ngôn ngữ" data-testid="splash-language">
-        <button type="button" class="is-active" aria-pressed="true" data-act="language" data-v="vi" data-testid="splash-language-vi">VI</button>
-        <button type="button" aria-pressed="false" data-act="language" data-v="en" data-testid="splash-language-en">EN</button>
+      <div class="seg" role="group" aria-label="Language" data-testid="splash-language">
+        <button type="button" aria-pressed="false" data-act="language" data-v="vi" data-testid="splash-language-vi">VI</button>
+        <button type="button" class="is-active" aria-pressed="true" data-act="language" data-v="en" data-testid="splash-language-en">EN</button>
       </div>
-      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-act="theme" aria-label="Đổi giao diện sáng / tối" data-testid="splash-theme-toggle"><svg class="ic" aria-hidden="true" data-testid="splash-theme-icon"><use id="sp-theme-use" href="#i-sun"></use></svg></button>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-act="theme" aria-label="Switch light / dark theme" data-testid="splash-theme-toggle"><svg class="ic" aria-hidden="true" data-testid="splash-theme-icon"><use id="sp-theme-use" href="#i-sun"></use></svg></button>
     </div>
 
     <div id="sp-welcome" class="sp-card" data-testid="splash-card">
@@ -40,24 +40,24 @@
         <img class="logo" src="../shared/assets/dreamy-studio-mark.svg" alt="Dreamy Studio" data-testid="splash-logo">
         <h1 class="t-display-sm" data-testid="splash-name">Dreamy Studio</h1>
         <p class="mono t-mute" data-testid="splash-version">V<span id="sp-version" data-testid="splash-version-value"></span></p>
-        <p class="t-sm" data-testid="splash-tagline">Biến tác phẩm văn học thành audiobook, hình ảnh và video, ngay trên máy tính của bạn.</p>
+        <p class="t-sm" data-testid="splash-tagline">Turn literary works into audiobooks, images and video, right on your computer.</p>
         <div class="sp-actions" data-testid="splash-actions">
-          <button type="button" class="btn btn-primary btn-block" data-act="pick-folder" data-testid="splash-open-workspace"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"></use></svg>Mở workspace…</button>
+          <button type="button" class="btn btn-primary btn-block" data-act="pick-folder" data-testid="splash-open-workspace"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"></use></svg>Open workspace…</button>
         </div>
         <span class="spacer" data-testid="splash-spacer"></span>
-        <div class="sp-note" data-testid="splash-local-note"><svg class="ic" aria-hidden="true"><use href="#i-lock"></use></svg><span>Dữ liệu chỉ được lưu trên máy tính của bạn.</span></div>
+        <div class="sp-note" data-testid="splash-local-note"><svg class="ic" aria-hidden="true"><use href="#i-lock"></use></svg><span>Your data is stored only on your computer.</span></div>
       </div>
       <div class="sp-right" data-testid="splash-right">
         <div id="sp-notice" class="ld-warn is-error" role="alert" hidden data-testid="splash-notice"><svg class="ic" aria-hidden="true"><use href="#i-alert"></use></svg><span id="sp-notice-text" data-testid="splash-notice-text"></span></div>
         <div id="sp-recent" hidden data-testid="splash-recent">
-          <div class="sp-head" data-testid="splash-recent-head"><span class="eyebrow" data-testid="splash-recent-title">Workspace gần đây</span><span class="badge" id="sp-count" data-testid="splash-recent-count"></span></div>
+          <div class="sp-head" data-testid="splash-recent-head"><span class="eyebrow" data-testid="splash-recent-title">Recent workspaces</span><span class="badge" id="sp-count" data-testid="splash-recent-count"></span></div>
           <div id="sp-list" data-testid="splash-recent-list"></div>
         </div>
         <div id="sp-first" class="ws-first" hidden data-testid="splash-first-run">
           <div class="illus" data-testid="splash-first-illustration"></div>
-          <h2 class="t-display-xs" data-testid="splash-first-title">Chưa có workspace nào</h2>
-          <p class="t-sm t-mute" data-testid="splash-first-description">Workspace là một thư mục bình thường trên máy tính do bạn chọn. Dreamy Studio lưu toàn bộ novel, project và thư viện của bạn bên trong đó.</p>
-          <p class="t-sm t-mute" data-testid="splash-first-init">Nếu thư mục chưa phải workspace, Dreamy Studio sẽ khởi tạo tại đó bằng tệp <span class="mono">workspace.dreamydb</span> và giữ nguyên các tệp sẵn có.</p>
+          <h2 class="t-display-xs" data-testid="splash-first-title">No workspaces yet</h2>
+          <p class="t-sm t-mute" data-testid="splash-first-description">A workspace is an ordinary folder on your computer that you choose. Dreamy Studio stores all of your novels, projects and library inside it.</p>
+          <p class="t-sm t-mute" data-testid="splash-first-init">If the folder is not a workspace yet, Dreamy Studio will initialize it there with the file <span class="mono">workspace.dreamydb</span> and keep any existing files.</p>
         </div>
       </div>
     </div>

@@ -4,14 +4,14 @@ import type { Studio } from "./studio.ts";
 
 export async function comparePanels(studio: Studio, panels: readonly PanelSpec[], folder: readonly string[]): Promise<void> {
   for (const panel of panels) {
-    const masks = (panel.mask ?? []).map((selector) => studio.panel(panel).locator(selector));
+    await studio.conceal(panel);
     const clip = await studio.region(panel);
     const name = [...folder, `${panel.name}.png`];
     const label = `${folder.join("/")}/${panel.name}`;
     if (clip) {
-      await expect.soft(studio.page, label).toHaveScreenshot(name, { clip, mask: masks });
+      await expect.soft(studio.page, label).toHaveScreenshot(name, { clip });
     } else {
-      await expect.soft(studio.panel(panel), label).toHaveScreenshot(name, { mask: masks });
+      await expect.soft(studio.panel(panel), label).toHaveScreenshot(name);
     }
     expect.soft(await studio.outline(panel), `${label} (aria)`).toMatchSnapshot([...folder, `${panel.name}.aria.yml`]);
   }

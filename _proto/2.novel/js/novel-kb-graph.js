@@ -1,7 +1,7 @@
 /*
- * Knowledge graph kiểu Obsidian: force-directed, kéo nút, kéo nền để pan, cuộn để zoom, rê chuột để làm nổi láng giềng,
- * bảng Filters / Display / Forces nổi ở góc. Tự đứng một mình: màn hình chỉ cung cấp dữ liệu và nhận sự kiện chọn / mở.
- * Vị trí và góc nhìn được giữ trong `state` nên vẽ lại màn hình không làm đồ thị "nhảy".
+ * Obsidian-style knowledge graph: force-directed, drag nodes, drag the background to pan, scroll to zoom, hover to highlight neighbors,
+ * Filters / Display / Forces panel floating in the corner. Self-contained: the screen only supplies data and receives select / open events.
+ * Position and viewport are kept in `state` so re-rendering the screen does not make the graph "jump".
  */
 window.KBG = (function () {
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -20,24 +20,24 @@ window.KBG = (function () {
 
   const range = (key, label, min, max, step, value) => `<label class="kbg-rng"><span>${label}</span><input type="range" class="range" data-g="set" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
 
-  /** HTML của bảng điều khiển và các nút zoom; `types` = [[key, label]]. */
+  /** HTML of the control panel and the zoom buttons; `types` = [[key, label]]. */
   function markup(S, types) {
     const f = S.f;
-    return `<svg class="kbg-svg" role="img" aria-label="Đồ thị tri thức"></svg>
-      <aside class="kbg-panel" aria-label="Điều khiển đồ thị">
-        <details data-sec="filters" ${S.open.filters ? "open" : ""}><summary>Bộ lọc</summary><div class="kbg-sec">
-          <input class="input" type="search" data-g="q" value="${esc(f.q)}" placeholder="Tìm nút…" aria-label="Tìm nút">
+    return `<svg class="kbg-svg" role="img" aria-label="Knowledge graph"></svg>
+      <aside class="kbg-panel" aria-label="Graph controls">
+        <details data-sec="filters" ${S.open.filters ? "open" : ""}><summary>Filters</summary><div class="kbg-sec">
+          <input class="input" type="search" data-g="q" value="${esc(f.q)}" placeholder="Search nodes…" aria-label="Search nodes">
           ${types.map(([k, l]) => `<label class="check"><input type="checkbox" data-g="type" data-k="${k}" ${f.types[k] ? "checked" : ""}><span class="gt gt-${k}"></span><span>${esc(l)}</span></label>`).join("")}
-          <label class="check"><input type="checkbox" data-g="orphans" ${f.orphans ? "checked" : ""}><span>Hiện nút chưa có liên kết</span></label></div></details>
-        <details data-sec="display" ${S.open.display ? "open" : ""}><summary>Hiển thị</summary><div class="kbg-sec">
-          <label class="check"><input type="checkbox" data-g="labels" ${f.labels ? "checked" : ""}><span>Nhãn nút</span></label>
-          <label class="check"><input type="checkbox" data-g="edgeLabels" ${f.edgeLabels ? "checked" : ""}><span>Nhãn quan hệ</span></label></div></details>
-        <details data-sec="forces" ${S.open.forces ? "open" : ""}><summary>Lực</summary><div class="kbg-sec">
-          ${range("center", "Hút về tâm", 0, 0.2, 0.01, S.set.center)}${range("repel", "Đẩy nhau", 200, 6000, 100, S.set.repel)}${range("dist", "Độ dài liên kết", 30, 200, 5, S.set.dist)}
-          <button type="button" class="btn btn-sm" data-g-act="relayout">Sắp xếp lại</button></div></details>
+          <label class="check"><input type="checkbox" data-g="orphans" ${f.orphans ? "checked" : ""}><span>Show nodes without links</span></label></div></details>
+        <details data-sec="display" ${S.open.display ? "open" : ""}><summary>Display</summary><div class="kbg-sec">
+          <label class="check"><input type="checkbox" data-g="labels" ${f.labels ? "checked" : ""}><span>Node labels</span></label>
+          <label class="check"><input type="checkbox" data-g="edgeLabels" ${f.edgeLabels ? "checked" : ""}><span>Relation labels</span></label></div></details>
+        <details data-sec="forces" ${S.open.forces ? "open" : ""}><summary>Forces</summary><div class="kbg-sec">
+          ${range("center", "Pull to center", 0, 0.2, 0.01, S.set.center)}${range("repel", "Repulsion", 200, 6000, 100, S.set.repel)}${range("dist", "Link distance", 30, 200, 5, S.set.dist)}
+          <button type="button" class="btn btn-sm" data-g-act="relayout">Rearrange</button></div></details>
       </aside>
-      <div class="kbg-legend">${types.map(([k, l]) => `<span><i class="gt gt-${k}"></i>${esc(l)}</span>`).join("")}<span><i class="gt gt-issue"></i>Có xung đột</span></div>
-      <div class="kbg-zoom"><button type="button" class="btn btn-icon btn-sm" data-g-act="zin" aria-label="Phóng to">+</button><button type="button" class="btn btn-icon btn-sm" data-g-act="zout" aria-label="Thu nhỏ">−</button><button type="button" class="btn btn-icon btn-sm" data-g-act="fit" aria-label="Vừa khung" data-tip-l="Vừa khung">◎</button></div>`;
+      <div class="kbg-legend">${types.map(([k, l]) => `<span><i class="gt gt-${k}"></i>${esc(l)}</span>`).join("")}<span><i class="gt gt-issue"></i>Has conflict</span></div>
+      <div class="kbg-zoom"><button type="button" class="btn btn-icon btn-sm" data-g-act="zin" aria-label="Zoom in">+</button><button type="button" class="btn btn-icon btn-sm" data-g-act="zout" aria-label="Zoom out">−</button><button type="button" class="btn btn-icon btn-sm" data-g-act="fit" aria-label="Fit to view" data-tip-l="Fit to view">◎</button></div>`;
   }
 
   /**
@@ -88,7 +88,7 @@ window.KBG = (function () {
         return { ...n, deg: deg[n.id] || 0, x, y: p ? p[1] : null, vx: 0, vy: 0, fixed: false, i };
       });
       byId = new Map(nodes.map((n) => [n.id, n]));
-      // nút mới: đặt gần láng giềng đã có vị trí, nếu không thì rải theo vòng tròn
+      // new nodes: place near a neighbor that already has a position, otherwise spread around a circle
       nodes.forEach((n) => {
         if (n.x != null) return;
         const nb = ls.map((l) => (l.a === n.id ? byId.get(l.b) : l.b === n.id ? byId.get(l.a) : null)).find((m) => m && m.x != null);
@@ -151,7 +151,7 @@ window.KBG = (function () {
           const uy = dy / d0;
           d2 = Math.max(d2, 400);
           const f = (repel * a) / d2;
-          // lực đẩy theo alpha + lực chống chồng nút (không phụ thuộc alpha để layout cuối không bị dính nhau)
+          // repulsion by alpha + node anti-overlap force (independent of alpha so the final layout does not clump)
           const sep = d0 < 70 ? (70 - d0) * 0.12 : 0;
           dx = ux * (f + sep); dy = uy * (f + sep);
           p.vx -= dx; p.vy -= dy; q.vx += dx; q.vy += dy;

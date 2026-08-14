@@ -16,7 +16,7 @@
   const spk = (s, id) => s.cast.find((x) => x.id === id);
   const spkClass = (sp) => (sp ? (sp.kind === "narrator" ? "spk-n" : `spk-${sp.c % 6}`) : "spk-x");
   const dur = (secs) => LB.dur(Math.round(secs));
-  const chLabel = (u) => { const cs = SC.chaptersOf(u); return cs.length ? `Ch.${cs[0]}${cs.length > 1 ? `–${cs[cs.length - 1]}` : ""}` : "Chưa chọn chương"; };
+  const chLabel = (u) => { const cs = SC.chaptersOf(u); return cs.length ? `Ch.${cs[0]}${cs.length > 1 ? `–${cs[cs.length - 1]}` : ""}` : "No chapters selected"; };
 
   function srcOf(p, u) {
     const list = u ? SC.sourceRange(p, u) : null;
@@ -84,17 +84,17 @@
   function issues(c) {
     const { u, cfg } = c;
     const out = [];
-    if (!u.blocks || !u.blocks.length) return [{ k: "none", lv: "error", text: `${cfg.unit} chưa có nội dung.` }];
+    if (!u.blocks || !u.blocks.length) return [{ k: "none", lv: "error", text: `${cfg.unit} has no content.` }];
     const seen = new Set();
     u.blocks.forEach((b) => {
       const t = T[b.type];
-      if (t.text && b.type !== "note" && !b.text.trim()) out.push({ k: "empty", lv: "error", id: b.id, text: `Khối ${t.label.toLowerCase()} đang trống.` });
-      if (b.type === "dialogue" && cfg.speakers && !b.who) out.push({ k: "who", lv: "error", id: b.id, text: "Hội thoại chưa gán nhân vật." });
-      if (b.type === "scene" && !b.loc.trim()) out.push({ k: "scene", lv: "error", id: b.id, text: "Phân cảnh chưa có bối cảnh." });
-      if (isStale(c, b) && !seen.has(b.ref)) { seen.add(b.ref); out.push({ k: "stale", lv: "warn", id: b.id, text: `Đoạn nguồn ¶${b.ref.split(".")[1]} đã đổi sau khi lập kịch bản.` }); }
+      if (t.text && b.type !== "note" && !b.text.trim()) out.push({ k: "empty", lv: "error", id: b.id, text: `The ${t.label.toLowerCase()} block is empty.` });
+      if (b.type === "dialogue" && cfg.speakers && !b.who) out.push({ k: "who", lv: "error", id: b.id, text: "Dialogue has no character assigned." });
+      if (b.type === "scene" && !b.loc.trim()) out.push({ k: "scene", lv: "error", id: b.id, text: "Scene has no setting." });
+      if (isStale(c, b) && !seen.has(b.ref)) { seen.add(b.ref); out.push({ k: "stale", lv: "warn", id: b.id, text: `Source paragraph ¶${b.ref.split(".")[1]} changed after the script was made.` }); }
     });
-    if (cfg.source) uncovered(c).forEach((q) => out.push({ k: "uncovered", lv: "warn", ref: q.id, text: `Đoạn nguồn ¶${q.id.split(".")[1]} chưa có lời đọc.` }));
-    if (cfg.types.includes("scene") && !scenes(c).length) out.push({ k: "noscene", lv: "warn", text: "Chưa có phân cảnh nào." });
+    if (cfg.source) uncovered(c).forEach((q) => out.push({ k: "uncovered", lv: "warn", ref: q.id, text: `Source paragraph ¶${q.id.split(".")[1]} has no narration.` }));
+    if (cfg.types.includes("scene") && !scenes(c).length) out.push({ k: "noscene", lv: "warn", text: "No scenes yet." });
     return out;
   }
 
@@ -132,8 +132,8 @@
   }
 
   const statusBadge = (c, u) => {
-    if (generating(c, u)) return `<span class="badge badge-running" data-testid="sc-status-${u.id}">ĐANG TẠO</span>`;
-    const [label, cls] = { locked: ["ĐÃ CHỐT", "badge-success"], review: ["CẦN RÀ SOÁT", "badge-warning"], draft: ["BẢN NHÁP", ""] }[u.status];
+    if (generating(c, u)) return `<span class="badge badge-running" data-testid="sc-status-${u.id}">GENERATING</span>`;
+    const [label, cls] = { locked: ["LOCKED", "badge-success"], review: ["NEEDS REVIEW", "badge-warning"], draft: ["DRAFT", ""] }[u.status];
     return `<span class="badge ${cls}" data-testid="sc-status-${u.id}">${label}</span>`;
   };
 
@@ -143,25 +143,25 @@
     const rows = s.units.map((q) => {
       const m = q.blocks ? metrics(s, q) : null;
       const meta = cfg.ranges
-        ? `${chLabel(q)} · ${m ? `${m.scenes} cảnh` : q.meta ? `${q.meta.blocks} khối` : "chưa lập"}`
-        : m ? `${m.blocks} khối · ${fmt(m.words)} từ` : q.meta ? `${q.meta.blocks} khối · ${fmt(q.meta.words)} từ` : "Chưa lập";
+        ? `${chLabel(q)} · ${m ? `${m.scenes} scenes` : q.meta ? `${q.meta.blocks} blocks` : "not drafted"}`
+        : m ? `${m.blocks} blocks · ${fmt(m.words)} words` : q.meta ? `${q.meta.blocks} blocks · ${fmt(q.meta.words)} words` : "Not drafted";
       const stale = staleRefs(c, q).length;
-      const mark = q.status === "locked" ? `<span class="sc-mk is-ok" title="Đã chốt">${ic("lock")}</span>` : stale ? `<span class="sc-mk is-warn" title="Nguồn đã đổi">${ic("alert")}</span>` : q.status === "review" ? `<span class="dot dot-warning" title="Cần rà soát"></span>` : `<span class="dot-o" title="Bản nháp"></span>`;
+      const mark = q.status === "locked" ? `<span class="sc-mk is-ok" title="Locked">${ic("lock")}</span>` : stale ? `<span class="sc-mk is-warn" title="Source changed">${ic("alert")}</span>` : q.status === "review" ? `<span class="dot dot-warning" title="Needs review"></span>` : `<span class="dot-o" title="Draft"></span>`;
       return `<div class="sc-unit ${q.id === cur.id ? "is-active" : ""}" data-testid="sc-unit-${q.id}" tabindex="0" role="treeitem" data-act="sc-unit" data-id="${q.id}">
           <span class="sc-un mono">${pad(q.no)}</span>
           <div class="sc-ub"><div class="t-ink ellip">${esc(q.title || `${cfg.unit} ${q.no}`)}</div><div class="t-sm t-mute ellip">${meta}</div></div>${mark}</div>`;
     }).join("");
-    return `<div class="sc-rail-h"><span class="eyebrow">${esc(cfg.unit)}</span><span class="mono t-mute" data-testid="sc-rail-count">${done}/${s.units.length} đã chốt</span></div>
+    return `<div class="sc-rail-h"><span class="eyebrow">${esc(cfg.unit)}</span><span class="mono t-mute" data-testid="sc-rail-count">${done}/${s.units.length} locked</span></div>
       <div class="progress is-done sc-rail-pg"><i style="width:${s.units.length ? Math.round((done / s.units.length) * 100) : 0}%"></i></div>
       <div class="sc-units" role="tree" data-keep="sc-units">${rows}</div>
-      ${cfg.freeUnits ? `<button type="button" class="btn btn-sm btn-ghost sc-unit-add" data-testid="sc-unit-add-btn" data-act="sc-unit-add">${ic("plus")}Thêm ${esc(cfg.unit.toLowerCase())}</button>` : ""}`;
+      ${cfg.freeUnits ? `<button type="button" class="btn btn-sm btn-ghost sc-unit-add" data-testid="sc-unit-add-btn" data-act="sc-unit-add">${ic("plus")}Add ${esc(cfg.unit.toLowerCase())}</button>` : ""}`;
   }
 
   function statsHtml(c) {
     const m = metrics(c.s, c.u);
-    const bits = [`${m.blocks} khối`, `${fmt(m.words)} từ`, `≈ ${dur(m.secs)}`];
-    if (c.cfg.types.includes("scene")) bits.push(`${scenes(c).length} cảnh`);
-    if (c.cfg.source && c.src) bits.push(`${c.src.list.length - uncovered(c).length}/${c.src.list.length} đoạn nguồn`);
+    const bits = [`${m.blocks} blocks`, `${fmt(m.words)} words`, `≈ ${dur(m.secs)}`];
+    if (c.cfg.types.includes("scene")) bits.push(`${scenes(c).length} scenes`);
+    if (c.cfg.source && c.src) bits.push(`${c.src.list.length - uncovered(c).length}/${c.src.list.length} source paragraphs`);
     return bits.map((x) => `<span>${x}</span>`).join("");
   }
 
@@ -173,8 +173,8 @@
     return U.bar(
       `<button class="btn btn-sm" data-testid="sc-back-btn" data-act="pj-back" data-id="${p.id}">${ic("arrow-left")}${esc(p.name)}</button>
        <span class="nv-ttl">${ic("pen")}<span class="t-ink">Scripting</span><span class="badge badge-primary" data-testid="sc-preset-badge" title="${esc(pr.label)}">${pr.short}</span></span>`,
-      `${c.locked ? "" : `<button class="btn btn-sm" data-testid="sc-draft-btn" data-act="sc-draft">${ic("spark")}Tạo bản nháp</button>`}
-       ${c.locked ? `<button class="btn btn-sm" data-testid="sc-unlock-btn" data-act="sc-unlock">${ic("unlock")}Mở khóa</button>` : `<button class="btn btn-sm btn-primary" data-testid="sc-lock-btn" data-act="sc-check">${ic("shield")}Kiểm tra và chốt</button>`}`,
+      `${c.locked ? "" : `<button class="btn btn-sm" data-testid="sc-draft-btn" data-act="sc-draft">${ic("spark")}Generate draft</button>`}
+       ${c.locked ? `<button class="btn btn-sm" data-testid="sc-unlock-btn" data-act="sc-unlock">${ic("unlock")}Unlock</button>` : `<button class="btn btn-sm btn-primary" data-testid="sc-lock-btn" data-act="sc-check">${ic("shield")}Check and lock</button>`}`,
     );
   }
 
@@ -182,11 +182,11 @@
     const { u, cfg, src, p } = c;
     const max = (U.novelById(p.novel) || {}).chapters || 99;
     const chs = cfg.ranges
-      ? `<span class="sc-chs" data-testid="sc-chs">Chương<input class="input" type="number" min="1" max="${max}" data-testid="sc-chs-from" value="${u.chs ? u.chs[0] : ""}" data-change="sc-chs" data-f="0" ${c.locked || !p.novel ? "disabled" : ""} aria-label="Từ chương">–<input class="input" type="number" min="1" max="${max}" data-testid="sc-chs-to" value="${u.chs ? u.chs[1] : ""}" data-change="sc-chs" data-f="1" ${c.locked || !p.novel ? "disabled" : ""} aria-label="Đến chương"></span>`
+      ? `<span class="sc-chs" data-testid="sc-chs">Chapters<input class="input" type="number" min="1" max="${max}" data-testid="sc-chs-from" value="${u.chs ? u.chs[0] : ""}" data-change="sc-chs" data-f="0" ${c.locked || !p.novel ? "disabled" : ""} aria-label="From chapter">–<input class="input" type="number" min="1" max="${max}" data-testid="sc-chs-to" value="${u.chs ? u.chs[1] : ""}" data-change="sc-chs" data-f="1" ${c.locked || !p.novel ? "disabled" : ""} aria-label="To chapter"></span>`
       : "";
     const title = cfg.preset === "audiobook"
       ? `<span class="t-ink sc-title-ro" data-testid="sc-unit-title">${esc(u.title || `${cfg.unit} ${u.no}`)}</span>`
-      : `<input class="input sc-title" data-testid="sc-unit-title" value="${esc(u.title)}" placeholder="Tên ${esc(cfg.unit.toLowerCase())}" data-change="sc-unit-title" ${c.locked ? "disabled" : ""} aria-label="Tên ${esc(cfg.unit.toLowerCase())}">`;
+      : `<input class="input sc-title" data-testid="sc-unit-title" value="${esc(u.title)}" placeholder="${esc(cfg.unit.toLowerCase())} name" data-change="sc-unit-title" ${c.locked ? "disabled" : ""} aria-label="${esc(cfg.unit.toLowerCase())} name">`;
     const grouped = cfg.source && src && u.blocks;
     const anyOpen = grouped && src.list.some((q) => !c.x.collapsed[q.id]);
     return `<div class="tl-sub is-wrap sc-sub" id="sc-sub" data-testid="sc-sub">
@@ -194,8 +194,8 @@
       <span id="sc-status">${statusBadge(c, u)}</span>${chs}
       <span class="sc-stats mono" id="sc-stats" data-testid="sc-stats">${u.blocks ? statsHtml(c) : ""}</span>
       <span class="spacer"></span>
-      ${grouped ? `<button class="btn btn-sm" data-testid="sc-grp-all-btn" data-act="sc-grp-all">${ic(anyOpen ? "chev-r" : "chev-d")}${anyOpen ? "Thu gọn tất cả" : "Mở rộng tất cả"}</button>` : ""}
-      ${cfg.ranges && src ? `<button class="btn btn-sm ${c.x.drawer ? "is-active" : ""}" data-testid="sc-drawer-btn" data-act="sc-drawer" aria-pressed="${c.x.drawer}">${ic("book")}Nguồn</button>` : ""}
+      ${grouped ? `<button class="btn btn-sm" data-testid="sc-grp-all-btn" data-act="sc-grp-all">${ic(anyOpen ? "chev-r" : "chev-d")}${anyOpen ? "Collapse all" : "Expand all"}</button>` : ""}
+      ${cfg.ranges && src ? `<button class="btn btn-sm ${c.x.drawer ? "is-active" : ""}" data-testid="sc-drawer-btn" data-act="sc-drawer" aria-pressed="${c.x.drawer}">${ic("book")}Source</button>` : ""}
       ${u.blocks && !c.locked ? addBar(c) : ""}
     </div>`;
   }
@@ -203,39 +203,39 @@
   function banners(c) {
     const { u, locked, src, p } = c;
     const out = [];
-    if (generating(c)) out.push(`<div class="sc-ban is-run" data-testid="sc-ban-run"><span class="dot dot-running"></span><span>AI đang làm việc cho ${esc(c.cfg.unit.toLowerCase())} này. Xem tiến độ ở panel Pipelines.</span></div>`);
-    if (locked) out.push(`<div class="sc-ban is-ok" data-testid="sc-ban-locked">${ic("lock")}<span>Đã chốt. Các module sản xuất dùng đúng bản này; muốn sửa, hãy mở khóa.</span></div>`);
+    if (generating(c)) out.push(`<div class="sc-ban is-run" data-testid="sc-ban-run"><span class="dot dot-running"></span><span>The AI is working on this ${esc(c.cfg.unit.toLowerCase())}. See progress in the Pipelines panel.</span></div>`);
+    if (locked) out.push(`<div class="sc-ban is-ok" data-testid="sc-ban-locked">${ic("lock")}<span>Locked. Production modules use exactly this version; to edit, unlock it.</span></div>`);
     const n = u.blocks ? staleRefs(c).length : 0;
-    if (n && (!c.cfg.source || !src)) out.push(`<div class="sc-ban is-warn" data-testid="sc-ban-stale">${ic("alert")}<span>${n} đoạn nguồn đã đổi sau khi lập kịch bản.</span></div>`);
+    if (n && (!c.cfg.source || !src)) out.push(`<div class="sc-ban is-warn" data-testid="sc-ban-stale">${ic("alert")}<span>${n} source paragraphs changed after the script was made.</span></div>`);
     if (c.cfg.ranges && !u.meta && !locked) {
       const chs = SC.chaptersOf(u);
       const miss = SC.kbMissing(p, chs);
-      if (!p.novel) out.push(`<div class="sc-ban is-info" data-testid="sc-ban-kb">${ic("info")}<span>Project không gắn novel nên chưa dùng được Knowledgebase. Bạn vẫn có thể viết tay.</span></div>`);
-      else if (!SC.kbAvail(p)) out.push(`<div class="sc-ban is-info" data-testid="sc-ban-kb">${ic("info")}<span>Novel này chưa có Knowledgebase trong prototype nên nhân vật và địa điểm không có gợi ý.</span></div>`);
-      else if (miss.length) out.push(`<div class="sc-ban is-warn" data-testid="sc-ban-kb">${ic("alert")}<span>Chương ${miss.join(", ")} chưa phân tích tri thức. Cần Knowledgebase để AI dựng danh sách cảnh.</span><button class="btn btn-sm" data-testid="sc-open-kb-btn" data-act="sc-open-kb">${ic("graph")}Mở Knowledgebase</button></div>`);
+      if (!p.novel) out.push(`<div class="sc-ban is-info" data-testid="sc-ban-kb">${ic("info")}<span>The project has no novel attached so the Knowledgebase cannot be used. You can still write by hand.</span></div>`);
+      else if (!SC.kbAvail(p)) out.push(`<div class="sc-ban is-info" data-testid="sc-ban-kb">${ic("info")}<span>This novel has no Knowledgebase in the prototype so there are no character and place suggestions.</span></div>`);
+      else if (miss.length) out.push(`<div class="sc-ban is-warn" data-testid="sc-ban-kb">${ic("alert")}<span>Chapter ${miss.join(", ")} have no knowledge analysis yet. The Knowledgebase is needed for the AI to build the scene list.</span><button class="btn btn-sm" data-testid="sc-open-kb-btn" data-act="sc-open-kb">${ic("graph")}Open Knowledgebase</button></div>`);
     }
     return out.join("");
   }
 
-  const editable = (b, c, ph = "Nhập nội dung…") => `<div id="sc-t-${b.id}" class="sc-t" data-testid="sc-text-${b.id}" ${c.locked ? "" : `contenteditable="plaintext-only"`} data-on="sc-text" data-id="${b.id}" data-ph="${ph}" spellcheck="false" role="textbox" aria-multiline="true" aria-label="${esc(T[b.type].label)}">${esc(b.text)}</div>`;
+  const editable = (b, c, ph = "Enter content…") => `<div id="sc-t-${b.id}" class="sc-t" data-testid="sc-text-${b.id}" ${c.locked ? "" : `contenteditable="plaintext-only"`} data-on="sc-text" data-id="${b.id}" data-ph="${ph}" spellcheck="false" role="textbox" aria-multiline="true" aria-label="${esc(T[b.type].label)}">${esc(b.text)}</div>`;
   const whoBtn = (b, c) => {
     const sp = spk(c.s, b.who);
-    return `<button type="button" class="sc-who ${spkClass(sp)}" data-testid="sc-who-btn-${b.id}" data-act="sc-who-menu" data-id="${b.id}" ${c.locked ? "disabled" : ""}><i></i><span>${esc(sp ? sp.name : "Chưa gán nhân vật")}</span>${ic("chev-d")}</button>`;
+    return `<button type="button" class="sc-who ${spkClass(sp)}" data-testid="sc-who-btn-${b.id}" data-act="sc-who-menu" data-id="${b.id}" ${c.locked ? "disabled" : ""}><i></i><span>${esc(sp ? sp.name : "No character assigned")}</span>${ic("chev-d")}</button>`;
   };
-  const parenIn = (b, c) => `<input class="sc-par" data-testid="sc-paren-${b.id}" value="${esc(b.paren)}" placeholder="sắc thái" data-change="sc-fld" data-id="${b.id}" data-f="paren" ${c.locked ? "disabled" : ""} aria-label="Sắc thái">`;
+  const parenIn = (b, c) => `<input class="sc-par" data-testid="sc-paren-${b.id}" value="${esc(b.paren)}" placeholder="tone" data-change="sc-fld" data-id="${b.id}" data-f="paren" ${c.locked ? "disabled" : ""} aria-label="Tone">`;
   const slug = (b, c) => `<div class="sc-slug" data-testid="sc-slug-${b.id}">
-      <input class="sc-loc" list="sc-places" data-testid="sc-loc-${b.id}" value="${esc(b.loc)}" placeholder="BỐI CẢNH" data-change="sc-fld" data-id="${b.id}" data-f="loc" ${c.locked ? "disabled" : ""} aria-label="Bối cảnh">
+      <input class="sc-loc" list="sc-places" data-testid="sc-loc-${b.id}" value="${esc(b.loc)}" placeholder="SETTING" data-change="sc-fld" data-id="${b.id}" data-f="loc" ${c.locked ? "disabled" : ""} aria-label="Setting">
       <span class="sc-dash">—</span>
-      <select class="select sc-sel" data-testid="sc-time-${b.id}" data-change="sc-fld" data-id="${b.id}" data-f="time" ${c.locked ? "disabled" : ""} aria-label="Thời điểm">${opts(SC.TIMES, b.time)}</select></div>`;
-  const pauseIn = (b, c) => `<div class="sc-pz" data-testid="sc-pause-${b.id}"><span>Nghỉ</span><input class="sc-num" type="number" min="0" max="30" step="0.1" value="${(b.ms / 1000).toFixed(1)}" data-change="sc-fld" data-id="${b.id}" data-f="ms" ${c.locked ? "disabled" : ""} aria-label="Số giây nghỉ"><span>giây</span></div>`;
+      <select class="select sc-sel" data-testid="sc-time-${b.id}" data-change="sc-fld" data-id="${b.id}" data-f="time" ${c.locked ? "disabled" : ""} aria-label="Time">${opts(SC.TIMES, b.time)}</select></div>`;
+  const pauseIn = (b, c) => `<div class="sc-pz" data-testid="sc-pause-${b.id}"><span>Pause</span><input class="sc-num" type="number" min="0" max="30" step="0.1" value="${(b.ms / 1000).toFixed(1)}" data-change="sc-fld" data-id="${b.id}" data-f="ms" ${c.locked ? "disabled" : ""} aria-label="Pause seconds"><span>seconds</span></div>`;
   function tools(b, c) {
     if (c.locked) return "";
     const btn = (act, icon, tip) => `<button type="button" class="btn btn-icon btn-sm" data-testid="${act}-${b.id}" data-act="${act}" data-id="${b.id}" title="${tip}" aria-label="${tip}">${ic(icon)}</button>`;
-    return `<div class="sc-tools" data-testid="sc-tools-${b.id}">${btn("sc-up", "arrow-up", "Lên")}${btn("sc-down", "arrow-down", "Xuống")}${btn("sc-dup", "copy", "Nhân bản")}${btn("sc-del", "trash", "Xóa")}</div>`;
+    return `<div class="sc-tools" data-testid="sc-tools-${b.id}">${btn("sc-up", "arrow-up", "Up")}${btn("sc-down", "arrow-down", "Down")}${btn("sc-dup", "copy", "Duplicate")}${btn("sc-del", "trash", "Delete")}</div>`;
   }
 
   function inner(b, c) {
-    if (b.type === "dialogue" && c.cfg.speakers) return `<div class="sc-line">${whoBtn(b, c)}${parenIn(b, c)}</div>${editable(b, c, "Lời thoại…")}`;
+    if (b.type === "dialogue" && c.cfg.speakers) return `<div class="sc-line">${whoBtn(b, c)}${parenIn(b, c)}</div>${editable(b, c, "Dialogue…")}`;
     if (b.type === "pause") return pauseIn(b, c);
     if (b.type === "scene") return slug(b, c);
     return editable(b, c);
@@ -243,23 +243,23 @@
   function blk(b, c) {
     const t = T[b.type];
     return `<div class="sc-blk is-${b.type} ${c.x.sel === b.id ? "is-sel" : ""} ${isStale(c, b) ? "is-stale" : ""}" data-testid="sc-blk-${b.id}" data-id="${b.id}">
-      <button type="button" class="sc-gut" data-testid="sc-type-btn-${b.id}" data-act="sc-type-menu" data-id="${b.id}" ${c.locked ? "disabled" : ""} title="${esc(t.label)} · đổi loại" aria-label="Loại khối: ${esc(t.label)}">${ic(t.icon)}<span>${esc(t.label)}</span></button>
+      <button type="button" class="sc-gut" data-testid="sc-type-btn-${b.id}" data-act="sc-type-menu" data-id="${b.id}" ${c.locked ? "disabled" : ""} title="${esc(t.label)} · change type" aria-label="Block type: ${esc(t.label)}">${ic(t.icon)}<span>${esc(t.label)}</span></button>
       <div class="sc-cell">${inner(b, c)}</div>${tools(b, c)}</div>`;
   }
 
   function addBar(c) {
     if (c.locked) return "";
-    return `<div class="sc-add" data-testid="sc-add-bar"><span class="eyebrow" title="Enter: khối mới · Tab: đổi loại · Backspace: xóa khối trống">Thêm khối</span>${c.cfg.types.map((t) => `<button type="button" class="btn btn-sm" data-testid="sc-add-${t}" data-act="sc-add" data-t="${t}" data-tip="${esc(T[t].hint)}">${ic(T[t].icon)}${esc(T[t].label)}</button>`).join("")}</div>`;
+    return `<div class="sc-add" data-testid="sc-add-bar"><span class="eyebrow" title="Enter: new block · Tab: change type · Backspace: delete empty block">Add block</span>${c.cfg.types.map((t) => `<button type="button" class="btn btn-sm" data-testid="sc-add-${t}" data-act="sc-add" data-t="${t}" data-tip="${esc(T[t].hint)}">${ic(T[t].icon)}${esc(T[t].label)}</button>`).join("")}</div>`;
   }
 
   const srcCell = (q, c, stale) => `<div class="sc-src ${stale ? "is-stale" : ""}" data-testid="sc-src-${q.id}"><span class="sc-pno mono">${c.cfg.ranges ? `${q.id.split(".")[0]}.` : ""}¶${q.id.split(".")[1]}</span><p>${esc(c.src.map[q.id])}</p></div>`;
   function staleBar(ref, snap, now, c) {
-    return `<div class="sc-stale" data-testid="sc-stale-${ref}">${ic("alert")}<div class="sc-stale-b"><b>Đoạn nguồn đã đổi sau khi lập kịch bản.</b>
-        <div class="t-sm t-mute"><span class="sc-was">Trước:</span> ${esc(snap)}</div><div class="t-sm"><span class="sc-was">Hiện tại:</span> ${esc(now)}</div></div>
-      <div class="sc-stale-a"><button class="btn btn-sm" data-testid="sc-regen-${ref}" data-act="sc-regen" data-ref="${ref}" ${c.locked ? `disabled title="Mở khóa để cập nhật"` : ""}>${ic("refresh")}Tạo lại</button>
-        <button class="btn btn-sm btn-ghost" data-testid="sc-keep-${ref}" data-act="sc-keep" data-ref="${ref}" ${c.locked ? "disabled" : ""}>Giữ nguyên</button></div></div>`;
+    return `<div class="sc-stale" data-testid="sc-stale-${ref}">${ic("alert")}<div class="sc-stale-b"><b>The source paragraph changed after the script was made.</b>
+        <div class="t-sm t-mute"><span class="sc-was">Before:</span> ${esc(snap)}</div><div class="t-sm"><span class="sc-was">Now:</span> ${esc(now)}</div></div>
+      <div class="sc-stale-a"><button class="btn btn-sm" data-testid="sc-regen-${ref}" data-act="sc-regen" data-ref="${ref}" ${c.locked ? `disabled title="Unlock to update"` : ""}>${ic("refresh")}Regenerate</button>
+        <button class="btn btn-sm btn-ghost" data-testid="sc-keep-${ref}" data-act="sc-keep" data-ref="${ref}" ${c.locked ? "disabled" : ""}>Keep as is</button></div></div>`;
   }
-  const missCell = (q, c) => `<div class="sc-miss" data-testid="sc-miss-${q.id}">${ic("alert")}<span class="t-sm">Đoạn này chưa có lời đọc.</span>${c.locked ? "" : `<button class="btn btn-sm" data-testid="sc-cover-${q.id}" data-act="sc-cover" data-ref="${q.id}">${ic("plus")}Tạo từ đoạn</button>`}</div>`;
+  const missCell = (q, c) => `<div class="sc-miss" data-testid="sc-miss-${q.id}">${ic("alert")}<span class="t-sm">This paragraph has no narration yet.</span>${c.locked ? "" : `<button class="btn btn-sm" data-testid="sc-cover-${q.id}" data-act="sc-cover" data-ref="${q.id}">${ic("plus")}Generate from paragraph</button>`}</div>`;
 
   function pairRows(c) {
     const { u, src } = c;
@@ -284,7 +284,7 @@
     const text = c.src.map[ref];
     const collapsed = !!c.x.collapsed[ref];
     const stale = r.blocks && r.blocks.some((b) => isStale(c, b));
-    const head = `<header class="sc-grp-h" tabindex="0" role="button" aria-expanded="${!collapsed}" data-testid="sc-grp-h-${ref}" data-act="sc-grp-toggle" data-ref="${ref}">${ic(collapsed ? "chev-r" : "chev-d")}<span class="sc-pno mono">¶${ref.split(".")[1]}</span><span class="sc-grp-t">${collapsed ? esc(text) : "Đoạn nguồn"}</span>${stale ? `<span class="sc-mk is-warn" title="Nguồn đã đổi">${ic("alert")}</span>` : ""}<span class="badge">${r.blocks ? `${r.blocks.length} KHỐI` : "CHƯA CÓ LỜI ĐỌC"}</span></header>`;
+    const head = `<header class="sc-grp-h" tabindex="0" role="button" aria-expanded="${!collapsed}" data-testid="sc-grp-h-${ref}" data-act="sc-grp-toggle" data-ref="${ref}">${ic(collapsed ? "chev-r" : "chev-d")}<span class="sc-pno mono">¶${ref.split(".")[1]}</span><span class="sc-grp-t">${collapsed ? esc(text) : "Source paragraph"}</span>${stale ? `<span class="sc-mk is-warn" title="Source changed">${ic("alert")}</span>` : ""}<span class="badge">${r.blocks ? `${r.blocks.length} BLOCKS` : "NO NARRATION"}</span></header>`;
     const body = collapsed ? "" : `<div class="sc-grp-b">${r.blocks
       ? `<p class="sc-grp-src t-sm" data-testid="sc-grp-src-${ref}">${esc(text)}</p>${stale ? staleBar(ref, r.blocks.find((b) => b.snap != null).snap, text, c) : ""}${r.blocks.map((b) => blk(b, c)).join("")}`
       : missCell(r.para, c)}</div>`;
@@ -295,21 +295,21 @@
     const { u, cfg } = c;
     const rows = pairRows(c).map((r) => (r.para ? groupHtml(r, c) : r.blocks.map((b) => blk(b, c)).join(""))).join("");
     return `<div class="sc-pagewrap"><div class="sc-page sc-page-ab" data-testid="sc-page">
-      <header class="sc-ptitle" data-testid="sc-page-title"><span class="mono">${esc(cfg.unit.toUpperCase())} ${pad(u.no)}</span><h2>${esc(u.title || "Chưa đặt tên")}</h2></header>${rows}</div></div>`;
+      <header class="sc-ptitle" data-testid="sc-page-title"><span class="mono">${esc(cfg.unit.toUpperCase())} ${pad(u.no)}</span><h2>${esc(u.title || "Unnamed")}</h2></header>${rows}</div></div>`;
   }
 
   function emptyUnit(c) {
     const { u, cfg, locked } = c;
     if (u.meta) {
-      return U.empty(`Prototype chưa có nội dung mẫu cho ${cfg.unit.toLowerCase()} này`, `Bản đã chốt gồm ${u.meta.blocks} khối, ${fmt(u.meta.words)} từ. Prototype chỉ có nội dung đầy đủ cho các chương 1–3 của “The Lantern Keeper of Harrowmere”.`,
-        locked ? `<div class="empty-act"><button class="btn" data-testid="sc-empty-unlock-btn" data-act="sc-unlock">${ic("unlock")}Mở khóa để viết lại</button></div>` : `<div class="empty-act"><button class="btn" data-testid="sc-empty-start-btn" data-act="sc-start">Bắt đầu viết lại</button></div>`);
+      return U.empty(`The prototype has no sample content for this ${cfg.unit.toLowerCase()} yet`, `The locked version has ${u.meta.blocks} blocks, ${fmt(u.meta.words)} words. The prototype only has full content for chapters 1–3 of “The Lantern Keeper of Harrowmere”.`,
+        locked ? `<div class="empty-act"><button class="btn" data-testid="sc-empty-unlock-btn" data-act="sc-unlock">${ic("unlock")}Unlock to rewrite</button></div>` : `<div class="empty-act"><button class="btn" data-testid="sc-empty-start-btn" data-act="sc-start">Start rewriting</button></div>`);
     }
     if (hasDefault(c)) {
-      return U.empty(`${cfg.unit} này chưa có kịch bản`, "Tạo bản mặc định từ nội dung nguồn (tiêu đề, một khoảng nghỉ, mỗi đoạn nguồn một khối dẫn chuyện), hoặc để AI dựng bản nháp có tách hội thoại và nhân vật.",
-        `<div class="empty-act"><button class="btn btn-primary" data-testid="sc-empty-draft-btn" data-act="sc-draft">${ic("spark")}Tạo bản nháp bằng AI</button><button class="btn" data-testid="sc-empty-default-btn" data-act="sc-default">${ic("refresh")}Tạo từ đoạn nguồn</button><button class="btn" data-testid="sc-empty-start-btn" data-act="sc-start">${ic("pen")}Bắt đầu viết</button></div>`);
+      return U.empty(`This ${cfg.unit} has no script yet`, "Generate the default from the source content (title, one pause, one narration block per source paragraph), or let the AI build a draft that separates dialogue and characters.",
+        `<div class="empty-act"><button class="btn btn-primary" data-testid="sc-empty-draft-btn" data-act="sc-draft">${ic("spark")}Generate a draft with AI</button><button class="btn" data-testid="sc-empty-default-btn" data-act="sc-default">${ic("refresh")}Generate from source paragraphs</button><button class="btn" data-testid="sc-empty-start-btn" data-act="sc-start">${ic("pen")}Start writing</button></div>`);
     }
     if (cfg.ranges) return window.SCR.emptyFilm(c);
-    return U.empty(`${cfg.unit} này chưa có kịch bản`, "Bắt đầu viết từ đầu.", `<div class="empty-act"><button class="btn" data-testid="sc-empty-start-btn" data-act="sc-start">${ic("pen")}Bắt đầu viết</button></div>`);
+    return U.empty(`This ${cfg.unit} has no script yet`, "Start writing from scratch.", `<div class="empty-act"><button class="btn" data-testid="sc-empty-start-btn" data-act="sc-start">${ic("pen")}Start writing</button></div>`);
   }
 
   function body(c) {
@@ -320,7 +320,7 @@
   function pick(c) {
     const cards = Object.entries(SC.PRESETS).map(([k, pr]) => `<button type="button" class="sc-preset" data-testid="sc-pick-${k}" data-act="sc-pick" data-v="${k}"><span class="sc-preset-h">${ic(pr.icon)}<b>${esc(pr.label)}</b></span><span class="t-sm t-mute">${esc(pr.blurb)}</span></button>`).join("");
     return `<div class="nv" data-testid="sc-root">${U.bar(`<button class="btn btn-sm" data-testid="sc-back-btn" data-act="pj-back" data-id="${c.p.id}">${ic("arrow-left")}${esc(c.p.name)}</button><span class="nv-ttl">${ic("pen")}<span class="t-ink">Scripting</span></span>`)}
-      <div class="nv-body"><div class="sc-pick" data-testid="sc-pick"><h2 class="t-display-xs">Bạn viết kịch bản cho loại sản phẩm nào?</h2><p class="t-sm t-mute">Project trống chưa có loại sản phẩm. Chọn một loại để bắt đầu; lựa chọn này quyết định cách trình bày kịch bản.</p><div class="sc-presets">${cards}</div></div></div></div>`;
+      <div class="nv-body"><div class="sc-pick" data-testid="sc-pick"><h2 class="t-display-xs">Which kind of product are you writing a script for?</h2><p class="t-sm t-mute">An empty project has no product type yet. Choose one to begin; this choice decides how the script is presented.</p><div class="sc-presets">${cards}</div></div></div></div>`;
   }
 
   function render(p) {
@@ -330,7 +330,7 @@
     return `<div class="nv" data-testid="sc-root">
       ${bar(c)}
       <div class="nv-body">
-        <aside class="sc-rail" id="sc-rail-in" data-testid="sc-rail" aria-label="Danh sách ${esc(c.cfg.unit.toLowerCase())}">${railInner(c)}</aside>
+        <aside class="sc-rail" id="sc-rail-in" data-testid="sc-rail" aria-label="${esc(c.cfg.unit.toLowerCase())} list">${railInner(c)}</aside>
         <div class="sc-main" data-testid="sc-main">${sub(c)}${banners(c)}<div class="sc-scroll" data-keep="sc" data-testid="sc-scroll">${body(c)}</div></div>${places}
       </div></div>`;
   }
@@ -435,7 +435,7 @@
       const c = activeCtx();
       const b = c && find(c.u, el.dataset.id);
       if (!b) return;
-      A.openMenu(el, [...c.s.cast.map((sp) => whoRow(b, sp)), "-", { label: "Quản lý nhân vật…", icon: "settings", act: "sc-manage-cast" }]);
+      A.openMenu(el, [...c.s.cast.map((sp) => whoRow(b, sp)), "-", { label: "Manage characters…", icon: "settings", act: "sc-manage-cast" }]);
     },
     "sc-who": (el) => { const c = activeCtx(); const [id, w] = el.dataset.v.split("|"); const b = c && find(c.u, id); if (b) { b.who = w; touch(c); refresh(); } },
     "sc-manage-cast": () => {
@@ -464,7 +464,7 @@
       c.u.blocks.filter((b) => b.ref === el.dataset.ref).forEach((b) => { b.snap = c.src.map[b.ref]; });
       touch(c);
       refresh();
-      A.toast("Đã giữ nguyên lời đọc, đoạn nguồn mới được ghi nhận.");
+      A.toast("Kept the narration as is, the new source paragraph is noted.");
     },
     "sc-regen": (el) => {
       const c = activeCtx();
@@ -479,7 +479,7 @@
       c.u.blocks.splice(at, 0, ...fresh);
       touch(c);
       refresh();
-      A.toast("Đã tạo lại lời đọc từ đoạn nguồn mới.");
+      A.toast("Regenerated the narration from the new source paragraph.");
     },
     "sc-cover": (el) => {
       const c = activeCtx();
@@ -501,7 +501,7 @@
       const u = SC.newUnit(c.s, { chs: from ? [from, from] : null });
       c.s.units.push(u);
       c.x.unit = u.id;
-      A.toast(`Đã thêm ${c.cfg.unit.toLowerCase()} ${u.no}.`);
+      A.toast(`Added ${c.cfg.unit.toLowerCase()} ${u.no}.`);
       refresh();
     },
   });

@@ -20,7 +20,7 @@
   function rightsRows(p) {
     const nv = window.NVU.novelById(p.novel);
     const rows = [];
-    if (nv) rows.unshift({ name: window.NVU.nameOf(nv), kind: "Văn bản gốc", rights: `Tác giả: ${nv.author} · do bạn xác nhận`, warn: false });
+    if (nv) rows.unshift({ name: window.NVU.nameOf(nv), kind: "Original text", rights: `Author: ${nv.author} · confirmed by you`, warn: false });
     return rows;
   }
 
@@ -32,9 +32,9 @@
     const errs = PK.check(k).filter((x) => x.level === "error");
     if (errs.length || !ref) {
       A.modal({
-        title: "Chưa thể đăng", eyebrow: CAP, testid: "pb-blocked-dialog",
-        body: `<p class="t-sm">Package còn ${errs.length} lỗi cần sửa trước khi đăng.</p><div class="pk-checks">${errs.map((x) => `<div class="pk-cr is-error">${ic("x-circle")}<span>${esc(x.text)}</span></div>`).join("")}</div>`,
-        foot: `<button class="btn btn-primary" data-act="close-modal">Đóng</button>`,
+        title: "Cannot publish yet", eyebrow: CAP, testid: "pb-blocked-dialog",
+        body: `<p class="t-sm">The package still has ${errs.length} errors to fix before publishing.</p><div class="pk-checks">${errs.map((x) => `<div class="pk-cr is-error">${ic("x-circle")}<span>${esc(x.text)}</span></div>`).join("")}</div>`,
+        foot: `<button class="btn btn-primary" data-act="close-modal">Close</button>`,
       });
       return;
     }
@@ -45,31 +45,31 @@
     const sends = [
       ["film", `Video ${ref.o.name}`, LB.bytes(ref.o.size)],
       ...(k.thumb ? [["image", `Thumbnail ${LB.state.assets.find((x) => x.id === k.thumb)?.name || ""}`, ""]] : []),
-      ["pen", "Tiêu đề, mô tả và tags", ""],
-      ...(k.chapters.trim() ? [["list", "Mốc thời gian (chapters)", ""]] : []),
-      ["shield", "Khai báo nhãn AI và đối tượng người xem", ""],
+      ["pen", "Title, description and tags", ""],
+      ...(k.chapters.trim() ? [["list", "Timestamps (chapters)", ""]] : []),
+      ["shield", "Declare the AI label and the audience", ""],
     ];
     A.modal({
-      title: "Xem lại và xác nhận đăng", eyebrow: CAP, cls: "modal-xl", testid: "pb-dialog",
+      title: "Review and confirm publishing", eyebrow: CAP, cls: "modal-xl", testid: "pb-dialog",
       body: `<div class="pb">
-        <section class="pb-sec"><span class="eyebrow">Sẽ đăng lên ${todo.length} kênh</span><div class="pb-tg">${todo.map((t) => {
+        <section class="pb-sec"><span class="eyebrow">Will publish to ${todo.length} channels</span><div class="pb-tg">${todo.map((t) => {
           const c = DT.chById(t.ch);
           return `<div class="pb-row" data-testid="pb-target-${t.ch}">${CH.avatar(c)}<div class="pb-b"><div class="t-ink">${esc(c.name)} <span class="t-mute t-sm">${esc(c.handle)} · ${esc(P[c.platform].label)}</span></div>
-              <div class="t-sm t-mute">${t.sched ? `Hẹn giờ ${esc(fmtWhen(t.sched))}` : "Đăng ngay"}${c.platform === "youtube" ? ` · ${t.kids === "yes" ? "Dành cho trẻ em" : "Không dành cho trẻ em"}` : ""} · Nhãn AI: ${t.ai ? "bật" : "tắt"}</div></div>
+              <div class="t-sm t-mute">${t.sched ? `Scheduled ${esc(fmtWhen(t.sched))}` : "Publish now"}${c.platform === "youtube" ? ` · ${t.kids === "yes" ? "Made for kids" : "Not made for kids"}` : ""} · AI label: ${t.ai ? "on" : "off"}</div></div>
             <span class="badge ${t.vis === "public" ? "badge-warning" : ""}">${esc(visLabel(c, t.vis).toUpperCase())}</span></div>`;
         }).join("")}</div>
-          ${anyPublicNow ? `<div class="ld-warn">${ic("alert")}<span>Video sẽ hiển thị công khai ngay khi đăng xong.</span></div>` : ""}</section>
-        <section class="pb-sec"><span class="eyebrow">Tiêu đề</span><div class="t-ink">${esc(k.title)}</div></section>
-        <section class="pb-sec" data-testid="pb-data-section"><span class="eyebrow">Dữ liệu sẽ rời máy tính của bạn</span><div class="pb-send">${sends.map(([i, t, n]) => `<div class="pb-send-r">${ic(i)}<span class="tree-label">${esc(t)}</span><span class="mono t-mute">${esc(n)}</span></div>`).join("")}</div>
-          <p class="t-sm t-mute">Nhận bởi: ${esc(plats.join(", "))}, qua tài khoản bạn đã kết nối. Dreamy Studio không lưu bản sao nội dung trên máy chủ.</p></section>
-        <section class="pb-sec" data-testid="pb-rights-section"><span class="eyebrow">Quyền sử dụng các tài nguyên trong video</span>
-          ${rows.length ? `<table class="table"><tbody>${rows.map((r) => `<tr><td class="t-ink">${esc(r.name)}</td><td class="t-mute">${esc(r.kind)}</td><td>${r.warn ? `<span class="badge badge-warning">${esc(r.rights.toUpperCase())}</span>` : `<span class="t-sm">${esc(r.rights)}</span>`}</td></tr>`).join("")}</tbody></table>` : `<p class="t-sm t-mute">Project không dùng tài nguyên từ thư viện hay novel.</p>`}
-          ${rows.some((r) => r.warn) ? `<div class="ld-warn">${ic("alert")}<span>Có tài nguyên chưa xác định quyền sử dụng. Hãy kiểm tra lại trước khi công bố.</span></div>` : ""}
-          <p class="t-sm t-mute">Dreamy Studio không xác minh bản quyền. Nếu video dùng giọng clone hoặc hình ảnh mô phỏng người thật, bạn cần có sự đồng ý phù hợp.</p></section>
-        ${k.reviewed ? "" : `<div class="ld-warn" data-testid="pb-unreviewed">${ic("alert")}<span>Bạn chưa xem lại thành phẩm. <button type="button" class="pk-link" data-testid="pb-review-btn" data-act="pk-review" data-id="${k.id}">Xem lại ngay</button> (hộp thoại này sẽ đóng, mở lại bằng nút Đăng).</span></div>`}
-        <label class="check pb-ok"><input type="checkbox" id="pb-ok" data-testid="pb-confirm-check" data-change="pb-ok"><span>Tôi xác nhận có quyền công bố tất cả tài nguyên trong video này lên ${esc(plats.join(" và "))}, và tôi chịu trách nhiệm về nội dung được đăng lên tài khoản của mình.</span></label>
+          ${anyPublicNow ? `<div class="ld-warn">${ic("alert")}<span>The video will be publicly visible as soon as it is published.</span></div>` : ""}</section>
+        <section class="pb-sec"><span class="eyebrow">Title</span><div class="t-ink">${esc(k.title)}</div></section>
+        <section class="pb-sec" data-testid="pb-data-section"><span class="eyebrow">Data will leave your computer</span><div class="pb-send">${sends.map(([i, t, n]) => `<div class="pb-send-r">${ic(i)}<span class="tree-label">${esc(t)}</span><span class="mono t-mute">${esc(n)}</span></div>`).join("")}</div>
+          <p class="t-sm t-mute">Received by: ${esc(plats.join(", "))}, via the account you connected. Dreamy Studio does not keep a copy of the content on a server.</p></section>
+        <section class="pb-sec" data-testid="pb-rights-section"><span class="eyebrow">Rights to use the resources in the video</span>
+          ${rows.length ? `<table class="table"><tbody>${rows.map((r) => `<tr><td class="t-ink">${esc(r.name)}</td><td class="t-mute">${esc(r.kind)}</td><td>${r.warn ? `<span class="badge badge-warning">${esc(r.rights.toUpperCase())}</span>` : `<span class="t-sm">${esc(r.rights)}</span>`}</td></tr>`).join("")}</tbody></table>` : `<p class="t-sm t-mute">The project does not use resources from the library or a novel.</p>`}
+          ${rows.some((r) => r.warn) ? `<div class="ld-warn">${ic("alert")}<span>Some resources have no usage rights specified. Please check again before publishing.</span></div>` : ""}
+          <p class="t-sm t-mute">Dreamy Studio does not verify copyright. If the video uses a cloned voice or imagery imitating a real person, you need appropriate consent.</p></section>
+        ${k.reviewed ? "" : `<div class="ld-warn" data-testid="pb-unreviewed">${ic("alert")}<span>You have not reviewed the finished video. <button type="button" class="pk-link" data-testid="pb-review-btn" data-act="pk-review" data-id="${k.id}">Review now</button> (this dialog will close, reopen it with the Publish button).</span></div>`}
+        <label class="check pb-ok"><input type="checkbox" id="pb-ok" data-testid="pb-confirm-check" data-change="pb-ok"><span>I confirm I have the right to publish all the resources in this video to ${esc(plats.join(" and "))}, and I am responsible for the content published to my account.</span></label>
       </div>`,
-      foot: `<button class="btn" data-act="close-modal">Hủy</button><button class="btn btn-primary" id="pb-go" data-testid="pb-confirm-btn" data-act="pb-confirm" disabled>${ic("send-up")}Xác nhận và đăng</button>`,
+      foot: `<button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" id="pb-go" data-testid="pb-confirm-btn" data-act="pb-confirm" disabled>${ic("send-up")}Confirm and publish</button>`,
     });
   }
 
@@ -101,7 +101,7 @@
     k.rights = true;
     k.status = "publishing";
     const pl = A.startPipeline({
-      kind: "publish", label: `Đăng “${PK.short(k.title, 36)}”`, detail: todo.map((t) => DT.chById(t.ch)?.name || t.ch).join(", "),
+      kind: "publish", label: `Publish “${PK.short(k.title, 36)}”`, detail: todo.map((t) => DT.chById(t.ch)?.name || t.ch).join(", "),
       tasks: todo.map((t) => ({ key: t.ch, label: DT.chById(t.ch)?.name || t.ch })),
       onTask: (task) => finishTarget(k, task.key),
       onDone: () => finalize(k),

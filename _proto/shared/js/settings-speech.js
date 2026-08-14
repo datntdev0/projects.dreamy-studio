@@ -5,20 +5,20 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const PROVIDERS = [
-    { id: "vieneu", name: "VieNeu.io", site: "vieneu.io", clone: true, billing: "usd", langs: "Tiếng Việt và tiếng Anh",
-      note: "Dịch vụ giọng nói của VieNeu. Điền endpoint theo tài liệu API của dịch vụ.",
+    { id: "vieneu", name: "VieNeu.io", site: "vieneu.io", clone: true, billing: "usd", langs: "Vietnamese and English",
+      note: "VieNeu’s speech service. Fill in the endpoint per the service’s API documentation.",
       fields: [{ id: "endpoint", label: "Endpoint", ph: "https://…", required: true }] },
-    { id: "everai", name: "EverAI.vn", site: "everai.vn", clone: false, billing: "credit", langs: "7 ngôn ngữ, gồm tiếng Việt",
-      note: "Xác thực bằng Bearer token tạo ở trang API của EverAI. Kết quả trả về bất đồng bộ: ứng dụng gửi yêu cầu, chờ rồi tải audio về.",
+    { id: "everai", name: "EverAI.vn", site: "everai.vn", clone: false, billing: "credit", langs: "7 languages, including Vietnamese",
+      note: "Authenticates with a Bearer token created on the EverAI API page. Results come back asynchronously: the app sends a request, waits, then downloads the audio.",
       fields: [{ id: "endpoint", label: "Endpoint", value: "https://www.everai.vn/api/v1/tts", readonly: true }] },
-    { id: "elevenlabs", name: "ElevenLabs", site: "elevenlabs.io", clone: true, billing: "usd", langs: "Nhiều ngôn ngữ, gồm tiếng Việt",
-      note: "Hỗ trợ clone giọng từ mẫu ngắn. Mẫu giọng sẽ được tải lên tài khoản ElevenLabs của bạn.", fields: [] },
-    { id: "google", name: "Google AI Studio", site: "aistudio.google.com", clone: false, billing: "usd", langs: "Nhiều ngôn ngữ, gồm tiếng Việt",
-      note: "Dùng API key tạo trong Google AI Studio để gọi Gemini API sinh giọng nói.",
-      fields: [{ id: "model", label: "Mô hình TTS", options: [["gemini-2.5-flash-preview-tts", "gemini-2.5-flash-preview-tts"], ["gemini-2.5-pro-preview-tts", "gemini-2.5-pro-preview-tts"]], value: "gemini-2.5-flash-preview-tts" }] },
-    { id: "openai", name: "OpenAI", site: "platform.openai.com", clone: false, billing: "usd", langs: "Nhiều ngôn ngữ",
-      note: "Dùng endpoint audio/speech. Có thể đổi Base URL nếu bạn dùng cổng tương thích OpenAI.",
-      fields: [{ id: "baseUrl", label: "Base URL", value: "https://api.openai.com/v1" }, { id: "model", label: "Mô hình TTS", options: [["gpt-4o-mini-tts", "gpt-4o-mini-tts"], ["tts-1", "tts-1"], ["tts-1-hd", "tts-1-hd"]], value: "gpt-4o-mini-tts" }] },
+    { id: "elevenlabs", name: "ElevenLabs", site: "elevenlabs.io", clone: true, billing: "usd", langs: "Many languages, including Vietnamese",
+      note: "Supports voice cloning from a short sample. The voice sample will be uploaded to your ElevenLabs account.", fields: [] },
+    { id: "google", name: "Google AI Studio", site: "aistudio.google.com", clone: false, billing: "usd", langs: "Many languages, including Vietnamese",
+      note: "Use an API key created in Google AI Studio to call the Gemini API to generate speech.",
+      fields: [{ id: "model", label: "TTS model", options: [["gemini-2.5-flash-preview-tts", "gemini-2.5-flash-preview-tts"], ["gemini-2.5-pro-preview-tts", "gemini-2.5-pro-preview-tts"]], value: "gemini-2.5-flash-preview-tts" }] },
+    { id: "openai", name: "OpenAI", site: "platform.openai.com", clone: false, billing: "usd", langs: "Many languages",
+      note: "Uses the audio/speech endpoint. You can change the Base URL if you use an OpenAI-compatible gateway.",
+      fields: [{ id: "baseUrl", label: "Base URL", value: "https://api.openai.com/v1" }, { id: "model", label: "TTS model", options: [["gpt-4o-mini-tts", "gpt-4o-mini-tts"], ["tts-1", "tts-1"], ["tts-1-hd", "tts-1-hd"]], value: "gpt-4o-mini-tts" }] },
   ];
 
   const S = () => LB.state.speech.providers;
@@ -40,15 +40,15 @@
 
   const statusBadge = (p) => {
     const s = P(p.id);
-    if (!s.enabled) return `<span class="badge">ĐÃ TẮT</span>`;
-    return { none: `<span class="badge">CHƯA CẤU HÌNH</span>`, checking: `<span class="badge badge-running">ĐANG KIỂM TRA</span>`, ok: `<span class="badge badge-success">ĐÃ KẾT NỐI</span>`, error: `<span class="badge badge-danger">LỖI KẾT NỐI</span>` }[s.status];
+    if (!s.enabled) return `<span class="badge">DISABLED</span>`;
+    return { none: `<span class="badge">NOT CONFIGURED</span>`, checking: `<span class="badge badge-running">CHECKING</span>`, ok: `<span class="badge badge-success">CONNECTED</span>`, error: `<span class="badge badge-danger">CONNECTION ERROR</span>` }[s.status];
   };
   const msg = (p) => {
     const s = P(p.id);
-    if (s.status === "checking") return `<span class="dot dot-running"></span><span class="t-sm">Đang kiểm tra kết nối tới ${esc(p.name)}…</span>`;
-    if (s.status === "ok") return `${ic("check")}<span class="t-sm">Kết nối thành công · ${s.latency} ms · <span class="mono">${esc(s.at)}</span></span>`;
+    if (s.status === "checking") return `<span class="dot dot-running"></span><span class="t-sm">Checking the connection to ${esc(p.name)}…</span>`;
+    if (s.status === "ok") return `${ic("check")}<span class="t-sm">Connected successfully · ${s.latency} ms · <span class="mono">${esc(s.at)}</span></span>`;
     if (s.status === "error") return `${ic("alert")}<span class="t-sm">${esc(s.error)}</span>`;
-    return `<span class="t-sm t-mute">${s.saved ? "Đã lưu khóa, chưa kiểm tra." : "Nhập API key rồi bấm kiểm tra kết nối."}</span>`;
+    return `<span class="t-sm t-mute">${s.saved ? "Key saved, not checked yet." : "Enter an API key then click check connection."}</span>`;
   };
 
   function field(p, f) {
@@ -64,20 +64,20 @@
     return `<article class="spc-card ${s.enabled ? "" : "is-off"}">
       <header class="spc-h">
         <div class="spc-t"><span class="t-ink spc-name">${esc(p.name)}</span>${statusBadge(p)}</div>
-        <label class="check spc-on"><input type="checkbox" data-change="sp-enable" data-p="${p.id}" ${s.enabled ? "checked" : ""}><span>Bật</span></label>
+        <label class="check spc-on"><input type="checkbox" data-change="sp-enable" data-p="${p.id}" ${s.enabled ? "checked" : ""}><span>Enable</span></label>
       </header>
-      <div class="tts-m-meta"><span class="path t-mute">${esc(p.site)}</span><span class="badge badge-primary">TTS</span>${p.clone ? `<span class="badge badge-primary">CLONE VOICE</span>` : `<span class="badge">KHÔNG CLONE</span>`}<span class="t-sm t-mute">${esc(p.langs)}</span></div>
+      <div class="tts-m-meta"><span class="path t-mute">${esc(p.site)}</span><span class="badge badge-primary">TTS</span>${p.clone ? `<span class="badge badge-primary">CLONE VOICE</span>` : `<span class="badge">NO CLONING</span>`}<span class="t-sm t-mute">${esc(p.langs)}</span></div>
       <p class="t-sm t-mute">${esc(p.note)}</p>
       <div class="spc-fields">
         <div class="field spc-key ${p.fields.length ? "" : "is-solo"}"><label for="sp-${p.id}-key">API key</label>
-          <div class="spc-keyrow"><input id="sp-${p.id}-key" class="input mono-in" type="password" value="${esc(s.draft || "")}" placeholder="${s.saved ? "•••••••••••• (đã lưu, nhập để thay)" : "Dán API key"}" data-on="sp-key" data-p="${p.id}" autocomplete="off" spellcheck="false">
-            <button type="button" class="btn btn-icon" data-act="sp-eye" data-p="${p.id}" aria-label="Hiện / ẩn khóa" data-tip="Hiện / ẩn">${ic("eye")}</button></div></div>
+          <div class="spc-keyrow"><input id="sp-${p.id}-key" class="input mono-in" type="password" value="${esc(s.draft || "")}" placeholder="${s.saved ? "•••••••••••• (saved, enter to replace)" : "Paste API key"}" data-on="sp-key" data-p="${p.id}" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn btn-icon" data-act="sp-eye" data-p="${p.id}" aria-label="Show / hide key" data-tip="Show / hide">${ic("eye")}</button></div></div>
         ${p.fields.map((f) => field(p, f)).join("")}
       </div>
       <div class="spc-foot">
         <div class="spc-msg ${s.status === "ok" ? "is-ok" : s.status === "error" ? "is-err" : ""}">${msg(p)}</div>
-        <button class="btn btn-sm btn-primary" data-act="sp-test" data-p="${p.id}" ${busy ? "disabled" : ""}>${ic("refresh")}Lưu và kiểm tra</button>
-        <button class="btn btn-sm" data-act="sp-clear" data-p="${p.id}" ${s.saved ? "" : "disabled"}>Xóa khóa</button>
+        <button class="btn btn-sm btn-primary" data-act="sp-test" data-p="${p.id}" ${busy ? "disabled" : ""}>${ic("refresh")}Save and check</button>
+        <button class="btn btn-sm" data-act="sp-clear" data-p="${p.id}" ${s.saved ? "" : "disabled"}>Delete key</button>
       </div>
     </article>`;
   }
@@ -85,10 +85,10 @@
   function render() {
     return `<div class="tts">
       <header class="tts-head"><div><h3 class="t-display-xs">Speech providers</h3></div></header>
-      <p class="t-sm t-mute">Kết nối các dịch vụ giọng nói cloud để đọc và clone giọng khi không dùng mô hình Local. ${LB.speech.count()} / ${PROVIDERS.length} provider đang kết nối.</p>
-      <div class="spc-note">${ic("lock")}<span>API key chỉ lưu trên máy này, không nằm trong workspace và không đi cùng project khi xuất. Khi dùng provider, văn bản cần đọc (và mẫu giọng khi clone) được gửi tới chính provider đó; chi phí do provider tính trực tiếp trên tài khoản của bạn.</span></div>
+      <p class="t-sm t-mute">Connect cloud speech services to read and clone voices when not using a Local model. ${LB.speech.count()} / ${PROVIDERS.length} providers connected.</p>
+      <div class="spc-note">${ic("lock")}<span>API keys are stored only on this machine, not in the workspace, and do not travel with the project when exported. When you use a provider, the text to read (and the voice sample when cloning) is sent to that provider itself; costs are charged by the provider directly to your account.</span></div>
       <section class="tts-list">${PROVIDERS.map(card).join("")}</section>
-      <p class="t-sm t-mute tts-foot">${ic("info")}<span>Prototype: việc kiểm tra kết nối là mô phỏng, không gọi mạng. Khóa ngắn hơn 8 ký tự hoặc bắt đầu bằng “bad” sẽ bị từ chối để bạn thấy trạng thái lỗi.</span></p>
+      <p class="t-sm t-mute tts-foot">${ic("info")}<span>Prototype: connection checks are simulated, no network calls. A key shorter than 8 characters or starting with “bad” will be rejected so you can see the error state.</span></p>
     </div>`;
   }
   A.SETTINGS_VIEWS.speech = { cls: "modal-xl", render };
@@ -97,9 +97,9 @@
     const p = prov(id);
     const s = P(id);
     const key = (s.draft || s.key || "").trim();
-    if (!key) { A.toast(`Nhập API key của ${p.name}.`, "warning"); A.$(`#sp-${id}-key`)?.focus(); return; }
+    if (!key) { A.toast(`Enter the API key of ${p.name}.`, "warning"); A.$(`#sp-${id}-key`)?.focus(); return; }
     const miss = p.fields.find((f) => f.required && !String(fieldVal(p, f)).trim());
-    if (miss) { A.toast(`Nhập ${miss.label} của ${p.name}.`, "warning"); A.$(`#sp-${id}-${miss.id}`)?.focus(); return; }
+    if (miss) { A.toast(`Enter the ${miss.label} of ${p.name}.`, "warning"); A.$(`#sp-${id}-${miss.id}`)?.focus(); return; }
     s.key = key;
     s.draft = "";
     s.saved = true;
@@ -108,12 +108,12 @@
     await sleep(900);
     if (key.length < 8 || /^bad/i.test(key)) {
       s.status = "error";
-      s.error = id === "google" ? "400 API_KEY_INVALID: khóa không hợp lệ hoặc đã bị thu hồi trong Google AI Studio." : "401 Unauthorized: API key không hợp lệ hoặc đã bị thu hồi.";
+      s.error = id === "google" ? "400 API_KEY_INVALID: the key is invalid or was revoked in Google AI Studio." : "401 Unauthorized: the API key is invalid or was revoked.";
     } else {
       s.status = "ok";
       s.latency = 120 + (LB.hash(id + key) % 280);
       s.at = A.stamp();
-      A.toast(`Đã kết nối ${p.name}.`);
+      A.toast(`Connected ${p.name}.`);
     }
     A.refreshSettings("speech");
     sync();
@@ -124,7 +124,7 @@
       const s = P(el.dataset.p);
       Object.assign(s, { saved: false, key: "", draft: "", status: "none", error: "" });
       A.refreshSettings("speech");
-      A.toast(`Đã xóa khóa ${prov(el.dataset.p).name}.`);
+      A.toast(`Deleted the ${prov(el.dataset.p).name} key.`);
       sync();
     },
     "sp-eye": (el) => { const i = A.$(`#sp-${el.dataset.p}-key`); if (i) i.type = i.type === "password" ? "text" : "password"; },

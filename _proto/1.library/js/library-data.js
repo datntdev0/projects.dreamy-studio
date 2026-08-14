@@ -9,11 +9,11 @@ window.LB = (function () {
     image: { key: "image", id: "IMG", tab: "images", label: "Images", noun: "images", icon: "image", exts: ["png", "jpg"], max: 25 * MB, hint: "PNG, JPG · up to 25 MB per image" },
     sound: { key: "sound", id: "SND", tab: "sounds", label: "Sounds", noun: "sounds", icon: "music", exts: ["mp3", "wav", "m4a", "flac", "ogg"], max: 200 * MB, hint: "MP3, WAV, M4A, FLAC, OGG · up to 200 MB per file" },
     video: { key: "video", id: "VID", tab: "videos", label: "Videos", noun: "video", icon: "film", exts: ["mp4", "mov", "webm", "mkv"], max: 2 * GB, hint: "MP4, MOV, WEBM, MKV · up to 2 GB per file" },
-    prompt: { key: "prompt", id: "PRM", tab: "prompts", label: "Prompts", noun: "prompt", icon: "prompt", exts: ["txt", "md"], max: 256 * 1024, hint: "TXT, MD · up to 256 KB per file, or write directly" },
+    prompt: { key: "prompt", id: "PRM", tab: "prompts", label: "Prompts", noun: "prompts", icon: "prompt", exts: ["txt", "md"], max: 256 * 1024, hint: "TXT, MD · up to 256 KB per file, or write directly" },
   };
   const TAB = Object.fromEntries(Object.values(TYPES).map((t) => [t.tab, t.key]));
   const RIGHTS = { own: "I created or own it", licensed: "Licensed for use", free: "Royalty-free (CC0, public domain)", other: "Other / unspecified" };
-  const PROMPT_KINDS = { image: "Image", video: "Video", voice: "Voice", general: "Chung" };
+  const PROMPT_KINDS = { image: "Image", video: "Video", voice: "Voice", general: "General" };
 
   const hash = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
   const rng = (seed) => {

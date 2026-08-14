@@ -389,6 +389,8 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 
 /* explorer Filters: pill list, multi-select */
 .nf-pills { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px var(--sp-sm) var(--sp-sm); min-width: 0; }
+.nf-sel { padding: 2px var(--sp-sm) var(--sp-sm); }
+.nf-sel .select { width: 100%; }
 .nf-pill { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 22px; padding: 0 var(--sp-sm); border: 1px solid var(--hairline); border-radius: var(--r-full); background: none; color: var(--body); font: 400 12px/1 var(--font); cursor: pointer; }
 .nf-pill:hover { background: var(--canvas-soft); color: var(--ink); }
 .nf-pill.is-on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-text); }

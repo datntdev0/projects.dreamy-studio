@@ -197,8 +197,8 @@
 
   function renderCrumbs() {
     const parts = [`<span>${esc(S.workspace.name)}</span>`];
-    if (S.active === "home") parts.push("Home");
-    else parts.push(esc(ITEMS[S.active].section), esc(ITEMS[S.active].title));
+    if (S.active === "home") parts.push("<span>Home</span>");
+    else parts.push(`<span>${esc(ITEMS[S.active].section)}</span>`, `<span>${esc(ITEMS[S.active].title)}</span>`);
     $("#crumbs").innerHTML = parts.join(ic("chev-r"));
   }
 

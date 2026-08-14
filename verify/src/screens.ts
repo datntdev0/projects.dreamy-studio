@@ -50,7 +50,6 @@ export const LAYOUT_PANELS: readonly PanelSpec[] = [
 
 export const PANELS: readonly PanelSpec[] = [
   { name: "explorer", selector: ".explorer" },
-  { name: "tabbar", selector: ".tabbar" },
   { name: "crumbs", selector: ".crumbs" },
   { name: "toolbar", selector: ".editor .nv-bar" },
   { name: "content", selector: ".editor", below: ".nv-bar", aria: ".editor .nv-body" },

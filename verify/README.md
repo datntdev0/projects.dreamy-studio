@@ -2,7 +2,7 @@
 
 Visual verification of the desktop app against the prototype, using Playwright.
 
-The prototype in `_proto/1.library` rendered with its mock data is the **baseline**. The real app, started with a fixture built from the same mock data, is compared against it **per layout panel**. The common components (titlebar, railbar, statusbar) have one spec each (`tests/layout-{titlebar,railbar,statusbar}.spec.ts`, baseline `baseline/layout/<panel>.png`); every screen spec compares only its own panels (explorer, tabbar, crumbs, toolbar, content, inspector). A failing panel names the component that differs, and the reporter ranks them.
+The prototype in `_proto/1.library` rendered with its mock data is the **baseline**. The real app, started with a fixture built from the same mock data, is compared against it **per layout panel**. The common components (titlebar, railbar, statusbar) have one spec each (`tests/layout-{titlebar,railbar,statusbar}.spec.ts`, baseline `baseline/layout/<panel>.png`); every screen spec compares only its own panels (explorer, crumbs, toolbar, content, inspector). The tab bar is not compared: the prototype starts with the Images tab, while the app always starts with Home and Collections & tags, so the two tab sets differ by design of the harness. A failing panel names the component that differs, and the reporter ranks them.
 
 ## How it works
 
@@ -46,3 +46,4 @@ The prototype and the app are compared in English: the prototype's default langu
 
 - The prototype videos are fragmented MP4 files with no `mehd` box, so `video_probe.rs` cannot read their duration. The fixture patches the `mvhd` duration of its staged copies and sets `fps` from the prototype data.
 - The status bar shows the workspace path, which differs per machine. The path text is hidden (`visibility: hidden`) before every comparison, so it is neither in the screenshot nor in the aria snapshot.
+- The prototype runs in headless Edge, where Playwright hides scrollbars; the app run uses CDP `Emulation.setScrollbarsHidden` in `src/studio.ts`, so both sides lay out without a scrollbar gutter.

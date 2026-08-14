@@ -1,5 +1,5 @@
 <div class="divider resizer-v divider-inspector" role="separator" aria-orientation="vertical" [attr.aria-label]="'main.panel.resize.inspector' | t" tabindex="0" [attr.aria-valuenow]="layout.inspectorSize()" [attr.aria-valuemin]="layout.panelLimits.inspector.min" [attr.aria-valuemax]="layout.panelLimits.inspector.max" data-testid="inspector-divider" (pointerdown)="layout.beginResize('inspector', $event)" (keydown)="layout.handleResizeKey('inspector', $event)" (dblclick)="layout.resetSize('inspector')"></div>
-<aside class="inspector" data-testid="inspector">
+<aside class="inspector" [attr.aria-label]="'main.inspector.landmark' | t" data-testid="inspector">
   <header class="ins-head" data-testid="inspector-head">
     @for (tab of tabs; track tab.id) {
       <button type="button" class="ins-tab" [class.is-active]="layout.rightTab() === tab.id" [attr.aria-pressed]="layout.rightTab() === tab.id" [attr.data-tab]="tab.id" data-testid="inspector-tab" (click)="layout.selectRightTab(tab.id)">{{ tab.labelKey | t }}</button>

@@ -17,5 +17,4 @@ app-library-explorer, app-library-collections, app-library-collection, app-libra
 .lb .nv-bar .search .input { width: 150px; }
 app-library-prompts .lb-th.is-ic { display: inline-grid; width: 40px; aspect-ratio: 4 / 3; place-items: center; border: 1px solid var(--hairline-strong); border-radius: var(--r-xs); background: var(--canvas-soft); color: var(--mute); }
 app-library-prompts .table td { white-space: nowrap; }
-app-library-prompts .table td:first-child { width: 100%; max-width: 0; }
 app-library-prompts .table td .lb-rname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

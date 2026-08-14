@@ -176,6 +176,7 @@ class AppStudio extends BaseStudio {
   private async pinViewport(): Promise<void> {
     this.session ??= await this.page.context().newCDPSession(this.page);
     await this.session.send("Emulation.setDeviceMetricsOverride", { ...VIEWPORT, deviceScaleFactor: 1, mobile: false });
+    await this.session.send("Emulation.setScrollbarsHidden", { hidden: true });
   }
 }
 

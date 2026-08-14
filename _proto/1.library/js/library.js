@@ -22,6 +22,7 @@
   const filtActive = () => !!(filt().col || filt().tags.length);
   const byId = (id) => st().assets.find((x) => x.id === id);
   const colById = (id) => st().collections.find((c) => c.id === id);
+  const colsSorted = () => [...st().collections].sort((a, b) => a.name.localeCompare(b.name));
   const scope = (id) => (String(id).startsWith("collection:") ? { id, col: id.split(":")[1], type: null } : { id, type: LB.TAB[id], col: null });
   const view = () => A.store.get("lb.view", "grid");
   const RATIOS = [["1/1", "1:1"], ["16/9", "16:9"], ["9/16", "9:16"]];
@@ -380,7 +381,7 @@
     return typeof value === "string" && byId(value) ? value : null;
   };
   const emptyBox = (title, text, cta = "") => `<div class="empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">${title}</h3><p class="t-sm t-mute">${text}</p>${cta}</div></div>`;
-  const seg = (act, list, cur) => `<div class="seg" role="group">${list.map(([v, label, tip]) => `<button type="button" class="${String(v) === String(cur) ? "is-active" : ""}" data-act="${act}" data-v="${esc(v)}" ${tip ? `data-tip="${esc(tip)}" aria-label="${esc(tip)}"` : ""} aria-pressed="${String(v) === String(cur)}">${label}</button>`).join("")}</div>`;
+  const seg = (act, list, cur, groupLabel = "") => `<div class="seg" role="group"${groupLabel ? ` aria-label="${esc(groupLabel)}"` : ""}>${list.map(([v, label, tip]) => `<button type="button" class="${String(v) === String(cur) ? "is-active" : ""}" data-act="${act}" data-v="${esc(v)}" ${tip ? `data-tip="${esc(tip)}" aria-label="${esc(tip)}"` : ""} aria-pressed="${String(v) === String(cur)}">${label}</button>`).join("")}</div>`;
   const opts = (list, cur) => list.map(([v, label]) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(label)}</option>`).join("");
   const bar = (left, right = "") => `<div class="nv-bar"><div class="nv-bar-l">${left}</div><span class="spacer"></span><div class="nv-bar-r">${right}</div></div>`;
   const kv = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
@@ -430,7 +431,7 @@
         `${title}<label class="search"><span class="sr-only">Search resources</span><input id="lb-q" class="input" type="search" value="${esc(u.q)}" placeholder="${sc.type === "prompt" ? "Search by name, tag or content…" : "Search by name or tag…"}" data-on="lb-q"></label>
          <span class="t-sm t-mute" id="lb-count">${count(list, type ? type.noun : "resources")}${base.length !== list.length ? ` / ${base.length}` : ""}</span>${chips}`,
         `${hasRatio(sc.type) && view() === "grid" ? `<span class="lb-size" data-tip="Preview size">${ic("image")}<input type="range" class="range" min="110" max="360" step="10" value="${gridPref(sc.type).size}" data-on="lb-size" aria-label="Preview size"></span>${seg("lb-ratio", RATIOS.map(([v, label]) => [v, ic(`ratio-${v.replace("/", "-")}`), `${label} ratio`]), gridPref(sc.type).ratio)}` : ""}<select class="select" data-change="lb-sort" aria-label="Sort">${opts([["new", "Newest"], ["name", "Name A–Z"], ["size", "File size"]], u.sort)}</select>
-         ${seg("lb-view", [["grid", ic("frames"), "Grid view"], ["list", ic("list"), "List view"]], view())}
+         ${seg("lb-view", [["grid", ic("frames"), "Grid view"], ["list", ic("list"), "List view"]], view(), "View mode")}
          ${sc.type === "prompt" ? `<button class="btn btn-sm" data-act="lb-upload" data-v="prompt" data-w="write">${ic("pen")}Write prompt</button>` : ""}
          ${type ? `<button class="btn btn-sm btn-primary" data-act="lb-upload" data-v="${type.key}">${ic("upload")}Upload</button>` : `<button class="btn btn-sm btn-primary" data-act="lb-upload-menu">${ic("upload")}Upload…</button>`}`,
       )}
@@ -446,13 +447,13 @@
     const sug = st().tagList.filter((t) => !tags.includes(t));
     const one = ids.length === 1;
     return `<div class="field"><label for="lb-tag-in">Tags${one ? ` <span class="t-mute mono">${tags.length}/${MAX_TAGS}</span>` : ""}</label>
-      ${one ? `<div class="tags">${tags.map((t) => `<span class="tag">${esc(t)}<button type="button" class="tag-x" data-act="lb-tag-del" data-id="${ids[0]}" data-t="${esc(t)}" aria-label="Remove tag ${esc(t)}">${ic("x")}</button></span>`).join("") || `<span class="t-sm t-mute">No tags yet.</span>`}</div>` : ""}
+      ${one ? `<div class="tags">${[...tags].sort((a, b) => a.localeCompare(b)).map((t) => `<span class="tag">${esc(t)}<button type="button" class="tag-x" data-act="lb-tag-del" data-id="${ids[0]}" data-t="${esc(t)}" aria-label="Remove tag ${esc(t)}">${ic("x")}</button></span>`).join("") || `<span class="t-sm t-mute">No tags yet.</span>`}</div>` : ""}
       <input id="lb-tag-in" class="input tag-in" list="lb-tag-sug" placeholder="${bulk ? "Add a tag to all, press Enter…" : "Add a tag, press Enter…"}" data-enter="lb-tag-add" autocomplete="off" ${one && tags.length >= MAX_TAGS ? "disabled" : ""}>
       <datalist id="lb-tag-sug">${sug.map((t) => `<option value="${esc(t)}"></option>`).join("")}</datalist></div>`;
   }
   function colEditor(x) {
     return `<div class="field"><label for="lb-col-add">Collection</label>
-      <select id="lb-col-add" class="select" data-change="lb-col-add"><option value="" ${x.collectionId ? "" : "selected"}>Not in any collection</option>${st().collections.map((c) => `<option value="${c.id}" ${x.collectionId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="__new">＋ New collection…</option></select></div>`;
+      <select id="lb-col-add" class="select" data-change="lb-col-add"><option value="" ${x.collectionId ? "" : "selected"}>Not in any collection</option>${colsSorted().map((c) => `<option value="${c.id}" ${x.collectionId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="__new">＋ New collection…</option></select></div>`;
   }
   function assetPanel(x) {
     const t = T[x.type];
@@ -541,7 +542,7 @@
       title: x.name, eyebrow: `${T[x.type].label} · ${PV.i + 1} / ${n}`, cls: "modal-xl lbp-modal",
       body: `<div class="lbp"><div class="lbp-stage">${stage(x)}<button type="button" class="btn btn-icon lbp-nav is-prev" data-act="lb-pv-prev" aria-label="Previous" ${PV.i <= 0 ? "disabled" : ""}>${ic("chev-l")}</button><button type="button" class="btn btn-icon lbp-nav is-next" data-act="lb-pv-next" aria-label="Next" ${PV.i >= n - 1 ? "disabled" : ""}>${ic("chev-r")}</button></div>
         <aside class="lbp-side">${kv([["ID", `<span class="mono">${esc(x.id)}</span>`], ["Specs", esc(metaText(x))], ["File size", LB.bytes(x.size)], ["Added at", `<span class="mono">${esc(x.added || "—")}</span>`], ["Usage rights", esc(LB.RIGHTS[x.rights])]])}
-          ${x.tags.length ? `<div><span class="eyebrow">Tags</span><div class="tags lb-pt">${x.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></div>` : ""}
+          ${x.tags.length ? `<div><span class="eyebrow">Tags</span><div class="tags lb-pt">${[...x.tags].sort((a, b) => a.localeCompare(b)).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></div>` : ""}
           ${collectionOf(x) ? `<div><span class="eyebrow">Collection</span><div class="tags lb-pt"><span class="tag lb-ctag">${ic("folder")}${esc(collectionOf(x).name)}</span></div></div>` : ""}</aside></div>`,
     });
     player.paint();
@@ -556,7 +557,7 @@
   function ctView() {
     const u = CT();
     const sel = u.sel || null;
-    const cols = st().collections;
+    const cols = colsSorted();
     const needle = (u.q || "").trim().toLowerCase();
     const tags = tagStats().filter((r) => !needle || r.t.includes(needle)).sort((a, b) => b.n - a.n || a.t.localeCompare(b.t));
     const unfiled = st().assets.filter((x) => !x.collectionId).length;
@@ -665,7 +666,7 @@
     const f = filt();
     const cnt = (pred) => st().assets.filter(pred).length;
     const pill = (act, v, label, n, on) => `<button type="button" class="nf-pill ${on ? "is-on" : ""}" data-act="${act}" data-v="${esc(v)}" aria-pressed="${on}" title="${esc(label)} · ${n}"><span class="nf-t">${esc(label)}</span><span class="nf-n mono">${n}</span></button>`;
-    const colOpts = [["", `All collections (${st().assets.length})`], ["none", `Uncategorized (${cnt((x) => !x.collectionId)})`], ...st().collections.map((c) => [c.id, `${c.name} (${cnt((x) => x.collectionId === c.id)})`])];
+    const colOpts = [["", `All collections (${st().assets.length})`], ["none", `Uncategorized (${cnt((x) => !x.collectionId)})`], ...colsSorted().map((c) => [c.id, `${c.name} (${cnt((x) => x.collectionId === c.id)})`])];
     const pool = poolOf(scope(A.S.active));
     const tags = st().tagList.map((t) => [t, pool.filter((x) => x.tags.includes(t)).length]).filter(([, n]) => n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     return `<div class="nf-label">Collection</div><div class="nf-sel"><select class="select" data-change="lb-fcol-sel" aria-label="Filter by collection">${opts(colOpts, f.col)}</select></div>
@@ -675,7 +676,7 @@
 
   A.EXPLORER_EXTRA.organize = () => {
     const active = A.S.active;
-    const rows = st().collections.map((c) => {
+    const rows = colsSorted().map((c) => {
       const n = st().assets.filter((x) => x.collectionId === c.id).length;
       return `<div class="tree-row nx-child lb-xcol ${active === `collection:${c.id}` ? "is-selected" : ""}" tabindex="0" role="treeitem" data-act="lb-open-col" data-id="${c.id}">${ic("folder")}<span class="tree-label">${esc(c.name)}</span><span class="nx-n mono">${n}</span></div>`;
     }).join("");

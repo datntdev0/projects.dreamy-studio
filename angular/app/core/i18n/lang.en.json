@@ -198,6 +198,7 @@
   "project.delete.toast.one": "Deleted project “{name}”.",
   "project.delete.toast.other": "Deleted {count} projects.",
   "main.inspector.tab.inspector": "Inspector",
+  "main.inspector.landmark": "Inspector",
   "main.inspector.tab.assistant": "Assistant",
   "main.inspector.collapse": "Collapse",
   "main.inspector.empty": "Properties of the selected item will appear here.",
@@ -442,14 +443,14 @@
   "library.kind.sound": "Sounds",
   "library.kind.video": "Videos",
   "library.kind.prompt": "Prompts",
-  "library.explorer.organize": "Organize",
+  "library.explorer.organize": "Classification",
   "library.explorer.collectionsTags": "Collections & tags",
   "library.explorer.images": "Images",
   "library.explorer.filters.title": "Filters",
   "library.explorer.filters.collection": "Collection",
   "library.explorer.filters.collectionLabel": "Filter by collection",
   "library.explorer.filters.allCollections": "All collections",
-  "library.explorer.filters.unfiled": "Unfiled",
+  "library.explorer.filters.unfiled": "Uncategorized",
   "library.explorer.filters.tags": "Tags",
   "library.explorer.filters.noTags": "No tags yet",
   "library.explorer.filters.clear": "Clear filters",
@@ -529,11 +530,11 @@
   "library.image.column.collection": "Collection",
   "library.image.column.added": "Added",
   "library.image.info": "Information",
-  "library.image.info.code": "Code",
+  "library.image.info.code": "ID",
   "library.image.info.format": "Format",
   "library.image.info.dimensions": "Dimensions",
   "library.image.info.size": "File size",
-  "library.image.info.added": "Added",
+  "library.image.info.added": "Added at",
   "library.image.info.origin": "Source",
   "library.image.info.rights": "Usage rights",
   "library.image.field.name": "Name",
@@ -663,7 +664,7 @@
   ,"library.rights.own": "I created or own it"
   ,"library.rights.licensed": "Licensed for use"
   ,"library.rights.free": "Royalty-free (CC0, public domain)"
-  ,"library.rights.other": "Other / unknown"
+  ,"library.rights.other": "Other / unspecified"
   ,"library.sound.title": "Sound library"
   ,"library.sound.search": "Search sounds"
   ,"library.sound.searchPlaceholder": "Search by name or tag…"
@@ -825,6 +826,7 @@
   ,"library.collection.uploadVideo": "Upload video…"
   ,"tabs.prompts.title": "Prompts"
   ,"library.explorer.prompts": "Prompts"
+  ,"library.explorer.voices": "Voices"
   ,"library.noun.prompt": "prompt"
   ,"library.origin.app": "Created in app"
   ,"library.upload.hint.prompt": "TXT, MD · up to 256 KB per file, or write directly"
@@ -848,6 +850,9 @@
   ,"library.prompt.search": "Search prompts"
   ,"library.prompt.searchPlaceholder": "Search by name, tag, or content…"
   ,"library.prompt.count": "{count} prompts"
+  ,"library.prompt.sort.size": "File size"
+  ,"library.prompt.column.size": "File size"
+  ,"library.prompt.column.added": "Added at"
   ,"library.prompt.upload": "Upload"
   ,"library.prompt.write": "Write prompt"
   ,"library.prompt.writeNew": "Write new prompt"
@@ -859,19 +864,19 @@
   ,"library.prompt.viewMode": "View mode"
   ,"library.prompt.column.length": "Length"
   ,"library.prompt.field.name": "Name"
-  ,"library.prompt.field.kind": "Prompt kind"
+  ,"library.prompt.field.kind": "Prompt type"
   ,"library.prompt.field.text": "Content"
-  ,"library.prompt.field.textHint": "Use {{variable_name}} for the part to replace when applying this prompt."
+  ,"library.prompt.field.textHint": "Use {{variable_name}} for the parts to replace when applying the prompt."
   ,"library.prompt.field.tags": "Tags"
   ,"library.prompt.field.tagRemove": "Remove tag {tag}"
   ,"library.prompt.field.tagsEmpty": "No tags yet."
   ,"library.prompt.field.tagsPlaceholder": "Add a tag, press Enter…"
   ,"library.prompt.field.collection": "Collection"
-  ,"library.prompt.field.collectionNone": "No collection"
+  ,"library.prompt.field.collectionNone": "Not in any collection"
   ,"library.prompt.field.collectionNew": "＋ New collection…"
   ,"library.prompt.field.rights": "Usage rights"
-  ,"library.prompt.field.rightsHint": "You are responsible for ensuring you have permission to use this resource for its intended purpose."
-  ,"library.prompt.chars": "{count} chars"
+  ,"library.prompt.field.rightsHint": "You are responsible for ensuring you have the right to use this resource for its intended purpose."
+  ,"library.prompt.chars": "{count} characters"
   ,"library.prompt.info": "Information"
   ,"library.prompt.info.length": "Length"
   ,"library.prompt.info.variables": "Variables"
@@ -880,7 +885,7 @@
   ,"library.prompt.kind.video": "Video"
   ,"library.prompt.kind.voice": "Voice"
   ,"library.prompt.kind.general": "General"
-  ,"library.prompt.panel.empty": "Select a resource to see its properties."
+  ,"library.prompt.panel.empty": "Choose a resource to see its properties."
   ,"library.prompt.panel": "Prompt"
   ,"library.prompt.toast.copied": "Prompt copied."
   ,"library.prompt.toast.copyFailed": "Could not copy prompt."

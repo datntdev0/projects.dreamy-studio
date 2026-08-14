@@ -198,6 +198,7 @@
   "project.delete.toast.one": "Đã xóa project “{name}”.",
   "project.delete.toast.other": "Đã xóa {count} project.",
   "main.inspector.tab.inspector": "Inspector",
+  "main.inspector.landmark": "Inspector",
   "main.inspector.tab.assistant": "Assistant",
   "main.inspector.collapse": "Thu gọn",
   "main.inspector.empty": "Thuộc tính của mục đang chọn sẽ hiển thị ở đây.",
@@ -825,6 +826,7 @@
   ,"library.collection.uploadVideo": "Upload video…"
   ,"tabs.prompts.title": "Prompts"
   ,"library.explorer.prompts": "Prompts"
+  ,"library.explorer.voices": "Giọng đọc"
   ,"library.noun.prompt": "prompt"
   ,"library.origin.app": "Tạo trong app"
   ,"library.upload.hint.prompt": "TXT, MD · tối đa 256 KB mỗi file, hoặc viết trực tiếp"
@@ -848,6 +850,9 @@
   ,"library.prompt.search": "Tìm prompt"
   ,"library.prompt.searchPlaceholder": "Tìm theo tên, tag hoặc nội dung…"
   ,"library.prompt.count": "{count} prompt"
+  ,"library.prompt.sort.size": "Dung lượng"
+  ,"library.prompt.column.size": "Dung lượng"
+  ,"library.prompt.column.added": "Thêm lúc"
   ,"library.prompt.upload": "Upload"
   ,"library.prompt.write": "Viết prompt"
   ,"library.prompt.writeNew": "Viết prompt mới"

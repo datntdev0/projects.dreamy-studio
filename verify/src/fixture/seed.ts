@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { enterWorkspace, invoke } from "../app/ipc.ts";
+import { invoke } from "../app/ipc.ts";
 import { join } from "node:path";
 import { stageMedia } from "./media.ts";
 import { posterPath, type ProtoAsset, type PrototypeData } from "./prototype.ts";
@@ -84,8 +84,7 @@ async function seedAsset(page: Page, asset: ProtoAsset, collections: readonly Se
   return id;
 }
 
-export async function seedLibrary(page: Page, workspacePath: string, data: PrototypeData, stagingRoot: string): Promise<SeedResult> {
-  await enterWorkspace(page, workspacePath);
+export async function seedLibrary(page: Page, data: PrototypeData, stagingRoot: string): Promise<SeedResult> {
   const collections = await createCollections(page, data);
   const assets: SeededAsset[] = [];
   for (const proto of data.assets) {

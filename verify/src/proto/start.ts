@@ -1,33 +1,13 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { rm, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { freePort } from "../app/launch.ts";
-import { seedAppRoot } from "../fixture/build.ts";
-import { appExecutable, protoRoot, repoRoot } from "../paths.ts";
+import { protoRoot, repoRoot } from "../paths.ts";
 
-const RESET_FLAG = "--reset";
-
-function seeded(): boolean {
-  return existsSync(join(protoRoot, "data", "application.dreamydb"));
-}
-
-function pnpm(args: string[]): number {
-  return spawnSync("pnpm", args, { cwd: repoRoot, stdio: "inherit", shell: true }).status ?? 1;
-}
-
-async function prepare(reset: boolean): Promise<void> {
-  if (reset) {
-    await rm(protoRoot, { recursive: true, force: true });
-  }
-  if (seeded()) {
-    return;
-  }
-  if (!existsSync(appExecutable()) && pnpm(["run", "build", "--debug", "--no-bundle"]) !== 0) {
-    throw new Error("cannot build the app used to seed the prototype data");
-  }
-  console.log(`Seeding the prototype data into ${protoRoot}`);
-  await seedAppRoot(protoRoot);
+if (!existsSync(join(protoRoot, "data", "application.dreamydb"))) {
+  console.error(`No seeded prototype data in ${protoRoot}. Run \`pnpm seed:proto\` first.`);
+  process.exit(1);
 }
 
 async function devConfig(port: number): Promise<string> {
@@ -40,7 +20,6 @@ async function devConfig(port: number): Promise<string> {
   return path;
 }
 
-await prepare(process.argv.includes(RESET_FLAG));
 const dataDir = join(protoRoot, "data");
 const port = await freePort();
 const config = await devConfig(port);

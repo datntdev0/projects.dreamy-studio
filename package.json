@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "scripts": {
     "start": "tauri dev",
+    "seed:proto": "pnpm --filter dreamy-studio-verify run seed:proto",
     "start:proto": "pnpm --filter dreamy-studio-verify run start:proto",
     "build": "tauri build",
-    "watch": "tauri dev",
     "tauri": "tauri",
     "test": "cargo test --manifest-path desktop/Cargo.toml --target-dir _output/desktop/target",
     "angular:serve": "pnpm --filter dreamy-studio-angular run serve",

@@ -5,6 +5,7 @@ import type { Target } from "./src/screens.ts";
 
 export default defineConfig<{ target: Target }>({
   testDir: "tests",
+  globalSetup: "./src/global-setup.ts",
   outputDir: join(outputRoot, "results"),
   snapshotDir: baselineRoot,
   snapshotPathTemplate: "{snapshotDir}/{arg}{ext}",

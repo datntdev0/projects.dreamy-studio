@@ -1,11 +1,14 @@
 import { existsSync } from "node:fs";
 import { cp, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { enterWorkspace } from "../app/ipc.ts";
 import { launchApp } from "../app/launch.ts";
 import { fixtureRoot, fixtureWorkspace, seedRoot, WORKSPACE_NAME } from "../paths.ts";
 import { loadPrototype } from "./prototype.ts";
 import { seedLibrary } from "./seed.ts";
 import { pinMetadata } from "./metadata.ts";
+import { writeCorpus } from "./corpus.ts";
+import { loadNovels, pinNovels, seedNovels } from "./novels.ts";
 
 export function fixtureExists(): boolean {
   return existsSync(join(fixtureWorkspace, "workspace.dreamydb"));
@@ -16,18 +19,24 @@ export function seededWorkspace(root: string): string {
 }
 
 export async function seedAppRoot(root: string): Promise<void> {
+  await writeCorpus();
   const data = await loadPrototype();
+  const novels = await loadNovels();
   const workspace = seededWorkspace(root);
   await rm(root, { recursive: true, force: true });
   await mkdir(workspace, { recursive: true });
   const app = await launchApp({ dataDir: join(root, "data"), webviewDir: join(root, "webview") });
   let seeded;
+  let seededNovels;
   try {
-    seeded = await seedLibrary(app.page, workspace, data, join(root, "media"));
+    await enterWorkspace(app.page, workspace);
+    seeded = await seedLibrary(app.page, data, join(root, "media"));
+    seededNovels = await seedNovels(app.page, novels, join(root, "media"));
   } finally {
     await app.stop();
   }
   pinMetadata(workspace, data, seeded);
+  pinNovels(workspace, novels, seededNovels);
   await rm(join(root, "media"), { recursive: true, force: true });
 }
 

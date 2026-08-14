@@ -12,6 +12,7 @@
     "test:prototype": "playwright test --project=prototype",
     "report": "playwright show-report ../_output/verify/report",
     "typecheck": "tsc --noEmit",
+    "seed:proto": "node src/proto/seed.ts",
     "start:proto": "node src/proto/start.ts"
   },
   "devDependencies": {

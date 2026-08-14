@@ -15,6 +15,9 @@ export const runRoot = join(outputRoot, "run");
 export const prototypeRoot = join(repoRoot, "_proto");
 export const prototypeData = join(prototypeRoot, "1.library", "js", "library-data.js");
 export const prototypeMedia = join(prototypeRoot, "shared", "assets", "library");
+export const prototypeNovelData = join(prototypeRoot, "shared", "js", "novel-data.js");
+export const prototypeNovelCorpus = join(prototypeRoot, "shared", "js", "novel-corpus.js");
+export const prototypeNovels = join(prototypeRoot, "shared", "assets", "novel");
 export const defaultExecutable = join(repoRoot, "_output", "desktop", "target", "debug", "dreamy-studio.exe");
 
 export function appExecutable(): string {
@@ -22,4 +25,5 @@ export function appExecutable(): string {
 }
 
 export const prototypeLibraryPage = join(prototypeRoot, "1.library", "1.library.html");
+export const prototypeNovelPage = join(prototypeRoot, "2.novel", "2.novel.html");
 export const baselineRoot = join(verifyRoot, "baseline");

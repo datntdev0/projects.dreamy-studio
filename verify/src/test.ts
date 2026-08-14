@@ -1,8 +1,9 @@
 import { test as base, expect } from "@playwright/test";
-import type { Target } from "./screens.ts";
+import { LIBRARY_SUITE, type SuiteSpec, type Target } from "./screens.ts";
 import { startRuntime, type Runtime, type Studio } from "./studio.ts";
 
 interface TestFixtures {
+  suite: SuiteSpec;
   studio: Studio;
 }
 
@@ -21,8 +22,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { scope: "worker", timeout: 240_000 },
   ],
-  studio: async ({ runtime }, use) => {
-    await runtime.studio.reset();
+  suite: [LIBRARY_SUITE, { option: true }],
+  studio: async ({ runtime, suite }, use) => {
+    await runtime.studio.reset(suite);
     await use(runtime.studio);
   },
 });

@@ -5,13 +5,14 @@ import { chromium, type Browser, type CDPSession, type Locator, type Page } from
 import { enterWorkspace } from "./app/ipc.ts";
 import { launchApp, type RunningApp } from "./app/launch.ts";
 import { buildFixture, fixtureExists } from "./fixture/build.ts";
-import { fixtureWorkspace, prototypeLibraryPage, runRoot, WORKSPACE_NAME } from "./paths.ts";
-import type { PanelSpec, ScreenSpec, Target } from "./screens.ts";
+import { fixtureWorkspace, runRoot, WORKSPACE_NAME } from "./paths.ts";
+import type { ListSpec, PanelSpec, ScreenSpec, SuiteSpec, Target } from "./screens.ts";
 
 const VIEWPORT = { width: 1440, height: 900 };
 const THEME = "dark";
 const LANGUAGE = "vi";
 const READY_SELECTOR = ".editor .nv-bar";
+const PROTOTYPE_WORKSPACE_NAME = '[data-testid="main-workspace-name"]';
 
 export interface Region {
   readonly x: number;
@@ -23,9 +24,12 @@ export interface Region {
 export interface Studio {
   readonly target: Target;
   readonly page: Page;
-  reset(): Promise<void>;
+  reset(suite: SuiteSpec): Promise<void>;
   open(screen: ScreenSpec): Promise<void>;
   select(screen: ScreenSpec): Promise<void>;
+  showList(screen: ScreenSpec): Promise<void>;
+  showPreview(screen: ScreenSpec): Promise<void>;
+  selectInList(screen: ScreenSpec): Promise<void>;
   panel(spec: PanelSpec): Locator;
   region(spec: PanelSpec): Promise<Region | null>;
   outline(spec: PanelSpec): Promise<string>;
@@ -36,21 +40,53 @@ export interface Runtime {
   stop(): Promise<void>;
 }
 
+function listOf(screen: ScreenSpec): ListSpec {
+  if (!screen.list) {
+    throw new Error(`screen ${screen.id} has no list view`);
+  }
+  return screen.list;
+}
+
 abstract class BaseStudio implements Studio {
   constructor(
     readonly page: Page,
     readonly target: Target,
   ) {}
 
-  abstract reset(): Promise<void>;
+  abstract reset(suite: SuiteSpec): Promise<void>;
 
   async open(screen: ScreenSpec): Promise<void> {
     await this.page.locator(screen.open[this.target]).first().click();
     await this.settle();
+    for (const step of screen.prepare ?? []) {
+      await this.page.locator(step[this.target]).first().click();
+      await this.settle();
+    }
   }
 
   async select(screen: ScreenSpec): Promise<void> {
+    if (!screen.select) {
+      throw new Error(`screen ${screen.id} has nothing to select`);
+    }
     await this.page.locator(screen.select[this.target]).first().click();
+    await this.settle();
+  }
+
+  async showList(screen: ScreenSpec): Promise<void> {
+    await this.page.locator(listOf(screen).toggle[this.target]).first().click();
+    await this.settle();
+  }
+
+  async showPreview(screen: ScreenSpec): Promise<void> {
+    if (!screen.preview) {
+      throw new Error(`screen ${screen.id} has no preview`);
+    }
+    await this.page.locator(screen.preview[this.target]).first().dblclick();
+    await this.settle();
+  }
+
+  async selectInList(screen: ScreenSpec): Promise<void> {
+    await this.page.locator(listOf(screen).select[this.target]).first().click();
     await this.settle();
   }
 
@@ -104,12 +140,19 @@ abstract class BaseStudio implements Studio {
 }
 
 class PrototypeStudio extends BaseStudio {
-  async reset(): Promise<void> {
-    const url = pathToFileURL(prototypeLibraryPage).href;
+  async reset(suite: SuiteSpec): Promise<void> {
+    const url = pathToFileURL(suite.page).href;
     await this.page.goto(url);
     await this.page.evaluate(() => localStorage.clear());
     await this.page.goto(url);
     await this.page.locator(READY_SELECTOR).first().waitFor();
+    await this.page.evaluate(
+      ([selector, name]) => {
+        (window as unknown as { DSApp: { S: { workspace: { name: string } } } }).DSApp.S.workspace.name = name as string;
+        document.querySelector(selector as string)!.textContent = name as string;
+      },
+      [PROTOTYPE_WORKSPACE_NAME, WORKSPACE_NAME],
+    );
     await this.requireFonts();
     await this.settle();
   }
@@ -118,7 +161,7 @@ class PrototypeStudio extends BaseStudio {
 class AppStudio extends BaseStudio {
   private session: CDPSession | null = null;
 
-  async reset(): Promise<void> {
+  async reset(suite: SuiteSpec): Promise<void> {
     const origin = new URL(this.page.url()).origin;
     await this.page.evaluate(
       ([theme, language]) => {
@@ -131,7 +174,7 @@ class AppStudio extends BaseStudio {
     await this.page.goto(`${origin}/home`);
     await this.page.locator('[data-testid="main-page"]').waitFor();
     await this.pinViewport();
-    await this.page.locator('[data-testid="railbar-item"][data-rail="library"]').click();
+    await this.page.locator(`[data-testid="railbar-item"][data-rail="${suite.rail}"]`).click();
     await this.requireFonts();
   }
 

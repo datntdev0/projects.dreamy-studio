@@ -126,7 +126,7 @@ window.DS = (function () {
       icon: "library",
       sections: [
         {
-          id: "assets", title: "Tài nguyên", headless: true,
+          id: "assets", title: "Thư viện", headless: true,
           items: [
             {
               id: "images", title: "Images", icon: "image", cap: CAP["05"],

@@ -69,7 +69,7 @@ export class Editor {
       return this.i18n.translate("library.collections");
     }
     if (tab.kind === "images" || tab.kind === "sounds" || tab.kind === "videos" || tab.kind === "prompts") {
-      return this.i18n.translate("main.rail.library");
+      return this.i18n.translate("library.crumb");
     }
     return tab.kind === "novel" ? tab.title : null;
   }

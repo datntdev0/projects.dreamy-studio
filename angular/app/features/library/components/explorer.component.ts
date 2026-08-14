@@ -1,9 +1,10 @@
 import { Component, inject, signal } from "@angular/core";
 import { Icon } from "../../../../components/icon";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { LibraryKind, LibraryTag } from "../library.models";
 import { LibraryService } from "../library.service";
 import { TabsService } from "../../../../layout/tabs.service";
-import { sumCounts } from "../library.rules";
+import { sumCounts, tagsForKind } from "../library.rules";
 import { collectionTabId } from "../../../../layout/layout.models";
 
 @Component({ selector: "app-library-explorer", standalone: true, imports: [Icon, I18nPipe], templateUrl: "./explorer.component.html", host: { "data-testid": "library-explorer" } })
@@ -19,6 +20,10 @@ export class LibraryExplorer {
   isSoundsActive(): boolean { return this.tabs.isActive("sounds"); }
   isVideosActive(): boolean { return this.tabs.isActive("videos"); }
   isPromptsActive(): boolean { return this.tabs.isActive("prompts"); }
+  activeKind(): LibraryKind | null { const active = this.tabs.activeId(); if (active === "images") return "image"; if (active === "sounds") return "sound"; if (active === "videos") return "video"; if (active === "prompts") return "prompt"; return null; }
+  filterTags(): LibraryTag[] { const kind = this.activeKind(); return kind ? tagsForKind(this.library.tags(), kind) : this.library.tags(); }
+  tagCount(tag: LibraryTag): number { const kind = this.activeKind(); return kind ? tag.counts[kind] : this.count(tag.counts); }
+  assetCount(kind: LibraryKind): number { return this.library.summary().assets[kind]; }
   isTagOn(tag: string): boolean { return this.library.filterTags().includes(tag); }
   openCollections(): void { this.tabs.openCollections(); }
   openImages(): void { this.tabs.openImages(); }

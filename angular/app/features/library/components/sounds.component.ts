@@ -11,7 +11,6 @@ import { LibrarySound, SoundSort } from "../library.sounds.models";
 import { durationText } from "../library.sounds.rules";
 import { LibrarySoundService } from "../library.sounds.service";
 import { LibrarySoundMedia } from "./sound-media.component";
-import { LibrarySoundPlay } from "./sound-play.component";
 
 const FIELD_SELECTOR = "input,textarea,select";
 
@@ -26,7 +25,7 @@ function toAssetRef(sound: LibrarySound): AssetRef {
 @Component({
   selector: "app-library-sounds",
   standalone: true,
-  imports: [Icon, I18nPipe, LibrarySoundMedia, LibrarySoundPlay],
+  imports: [Icon, I18nPipe, LibrarySoundMedia],
   templateUrl: "./sounds.component.html",
   host: { "data-testid": "library-sounds" },
 })
@@ -119,14 +118,6 @@ export class LibrarySounds implements OnInit, OnDestroy {
 
   size(sound: LibrarySound): string {
     return formatBytes(sound.size);
-  }
-
-  firstTags(sound: LibrarySound): string[] {
-    return sound.tags.slice(0, 2);
-  }
-
-  moreTags(sound: LibrarySound): number {
-    return Math.max(0, sound.tags.length - 2);
   }
 
   isSelected(sound: LibrarySound): boolean {

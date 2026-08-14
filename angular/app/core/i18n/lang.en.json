@@ -596,7 +596,7 @@
   "library.upload.toast.success": "Uploaded {count} images to the library.",
   "library.upload.toast.partial": "Uploaded {success}/{total} images; {failed} files failed.",
   "library.preview.title": "Image preview",
-  "library.preview.position": "Images · {current} / {total}",
+  "library.preview.position": "{kind} · {current} / {total}",
   "library.preview.previous": "Previous",
   "library.preview.next": "Next",
   "library.preview.close": "Close (Esc)",
@@ -647,7 +647,7 @@
   "library.tag.mergeVerb": "Merge",
   "library.tag.mergeJoin": "into",
   "library.tag.merge": "Merge tag"
-  ,"tabs.sounds.title": "Sound library"
+  ,"tabs.sounds.title": "Sounds"
   ,"library.explorer.sounds": "Sounds"
   ,"library.noun.image": "images"
   ,"library.noun.sound": "sounds"
@@ -657,14 +657,16 @@
   ,"library.rights.free": "Royalty-free (CC0, public domain)"
   ,"library.rights.other": "Other / unspecified"
   ,"library.sound.title": "Sound library"
-  ,"library.sound.search": "Search sounds"
+  ,"library.sound.search": "Search resources"
   ,"library.sound.searchPlaceholder": "Search by name or tag…"
   ,"library.sound.count": "{shown}/{total} sounds"
+  ,"library.sound.countAll": "{count} sounds"
+  ,"library.sound.countFiltered": "{shown} sounds / {total}"
   ,"library.sound.upload": "Upload"
   ,"library.sound.uploadSounds": "Upload sound…"
   ,"library.sound.play": "Play"
   ,"library.sound.pause": "Pause"
-  ,"library.sound.seek": "Seek"
+  ,"library.sound.seek": "Waveform, click to seek"
   ,"library.sound.view": "View"
   ,"library.sound.delete": "Delete"
   ,"library.sound.empty.title": "No sounds yet"
@@ -676,11 +678,14 @@
   ,"library.sound.sort": "Sort"
   ,"library.sound.sort.new": "Newest"
   ,"library.sound.sort.name": "Name A–Z"
-  ,"library.sound.sort.size": "Size"
+  ,"library.sound.sort.size": "File size"
+  ,"library.sound.viewMode": "View mode"
   ,"library.sound.view.grid": "Grid view"
   ,"library.sound.view.list": "List view"
+  ,"library.sound.preview.spectrum": "Spectrum"
+  ,"library.sound.preview.waveform": "Waveform"
   ,"library.sound.column.name": "Name"
-  ,"library.sound.column.spec": "Details"
+  ,"library.sound.column.spec": "Specs"
   ,"library.sound.column.size": "Size"
   ,"library.sound.column.tags": "Tags"
   ,"library.sound.column.collection": "Collection"

@@ -6,14 +6,11 @@ import { I18nService } from "../../../core/i18n/i18n.service";
 import { ToastService } from "../../../core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetPatch, AssetRights, ASSET_RIGHTS } from "../library.models";
-import { formatBytes, libraryErrorKey, normalizeTag } from "../library.rules";
+import { formatBytes, formatIsoMinute, libraryErrorKey, normalizeTag } from "../library.rules";
 import { LibraryService } from "../library.service";
 import { LibrarySound } from "../library.sounds.models";
 import { audioText, durationText, soundCode } from "../library.sounds.rules";
 import { LibrarySoundService } from "../library.sounds.service";
-import { LibrarySoundPlay } from "./sound-play.component";
-import { LibrarySoundTime } from "./sound-time.component";
-import { LibrarySoundWave } from "./sound-wave.component";
 
 const MAX_TAGS = 12;
 
@@ -24,7 +21,7 @@ const RIGHTS_KEYS: Record<AssetRights, I18nKey> = {
   other: "library.rights.other",
 };
 
-@Component({ selector: "app-library-sound-panel", standalone: true, imports: [Icon, I18nPipe, LibrarySoundPlay, LibrarySoundTime, LibrarySoundWave], templateUrl: "./sound.panel.html", host: { "data-testid": "library-sound-panel" } })
+@Component({ selector: "app-library-sound-panel", standalone: true, imports: [Icon, I18nPipe], templateUrl: "./sound.panel.html", host: { "data-testid": "library-sound-panel" } })
 export class LibrarySoundPanel {
   readonly soundId = input<number | undefined>();
   readonly sounds = inject(LibrarySoundService);
@@ -39,6 +36,8 @@ export class LibrarySoundPanel {
   duration(sound: LibrarySound): string { return durationText(sound.durationMs); }
   audio(sound: LibrarySound): string { return audioText(sound); }
   size(sound: LibrarySound): string { return formatBytes(sound.size); }
+  addedAt(sound: LibrarySound): string { return formatIsoMinute(sound.createdAt); }
+  originKey(sound: LibrarySound): I18nKey { return sound.origin === "app" ? "library.origin.app" : "library.origin.upload"; }
   nameKeydown(event: KeyboardEvent): void { if (event.key === "Enter") { event.preventDefault(); (event.target as HTMLInputElement).blur(); } }
   nameBlur(sound: LibrarySound, event: Event): void {
     const field = event.target as HTMLInputElement;
@@ -68,7 +67,6 @@ export class LibrarySoundPanel {
     const rights = (event.target as HTMLSelectElement).value as AssetRights;
     if (rights !== sound.rights) { void this.save(sound, { rights }); }
   }
-  view(sound: LibrarySound): void { this.dialogs.openSoundPreview(sound.id); }
   remove(sound: LibrarySound): void { this.dialogs.openDeleteSounds([sound.id]); }
   private async rename(sound: LibrarySound, name: string): Promise<void> {
     try {

@@ -1,6 +1,6 @@
 import { Component, HostListener, computed, inject } from "@angular/core";
-import { Button } from "../../../../components/button";
 import { Dialog } from "../../../../components/dialog";
+import { Icon } from "../../../../components/icon";
 import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
@@ -9,14 +9,15 @@ import { LibrarySound } from "../library.sounds.models";
 import { LibrarySoundPlayer } from "../library.sounds.player";
 import { audioText, durationText, soundCode } from "../library.sounds.rules";
 import { LibrarySoundService } from "../library.sounds.service";
-import { formatBytes } from "../library.rules";
+import { formatBytes, formatIsoMinute } from "../library.rules";
+import { LibrarySoundEq } from "./sound-eq.component";
 import { LibrarySoundPlay } from "./sound-play.component";
 import { LibrarySoundTime } from "./sound-time.component";
 import { LibrarySoundWave } from "./sound-wave.component";
 
 function sameId(id: number, sound: LibrarySound): boolean { return sound.id === id; }
 
-@Component({ selector: "app-library-sound-preview-dialog", standalone: true, imports: [Button, Dialog, I18nPipe, LibrarySoundPlay, LibrarySoundTime, LibrarySoundWave], templateUrl: "./sound-preview.dialog.html", host: { "data-testid": "library-sound-preview-dialog" } })
+@Component({ selector: "app-library-sound-preview-dialog", standalone: true, imports: [Dialog, Icon, I18nPipe, LibrarySoundEq, LibrarySoundPlay, LibrarySoundTime, LibrarySoundWave], templateUrl: "./sound-preview.dialog.html", host: { "data-testid": "library-sound-preview-dialog" } })
 export class LibrarySoundPreviewDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly sounds = inject(LibrarySoundService);
@@ -33,6 +34,7 @@ export class LibrarySoundPreviewDialog {
   duration(sound: LibrarySound): string { return durationText(sound.durationMs); }
   audio(sound: LibrarySound): string { return audioText(sound); }
   size(sound: LibrarySound): string { return formatBytes(sound.size); }
+  added(sound: LibrarySound): string { return formatIsoMinute(sound.createdAt); }
   collection(sound: LibrarySound): string { return sound.collectionId === null ? "" : this.library.collectionById(sound.collectionId)?.name ?? "—"; }
   rightsKey(sound: LibrarySound): I18nKey { return `library.rights.${sound.rights}` as I18nKey; }
   @HostListener("document:keydown", ["$event"]) onKeydown(event: KeyboardEvent): void { if (!this.sound()) return; if (event.key === "Escape") { event.preventDefault(); this.close(); } else if (event.key === "ArrowLeft") { event.preventDefault(); this.previous(); } else if (event.key === "ArrowRight") { event.preventDefault(); this.next(); } }

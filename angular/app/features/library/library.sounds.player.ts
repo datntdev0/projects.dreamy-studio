@@ -14,6 +14,7 @@ export class LibrarySoundPlayer {
   private audio: HTMLAudioElement | null = null;
   private context: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
+  private bins: Uint8Array | null = null;
   private frame = 0;
 
   readonly currentId = signal<number | null>(null);
@@ -56,11 +57,12 @@ export class LibrarySoundPlayer {
     this.stopClock();
   }
 
+  currentTime(): number { return this.audio && this.playing() ? this.audio.currentTime : this.position(); }
+
   spectrum(count: number): number[] | null {
-    if (!this.analyser || !this.context) return null;
-    const data = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteFrequencyData(data);
-    return spectrumBands(data, count, this.context.sampleRate);
+    if (!this.analyser || !this.context || !this.bins) return null;
+    this.analyser.getByteFrequencyData(this.bins as Uint8Array<ArrayBuffer>);
+    return spectrumBands(this.bins, count, this.context.sampleRate);
   }
 
   private ensureAudio(): HTMLAudioElement {
@@ -94,6 +96,7 @@ export class LibrarySoundPlayer {
       analyser.connect(context.destination);
       this.context = context;
       this.analyser = analyser;
+      this.bins = new Uint8Array(analyser.frequencyBinCount);
       this.analysing.set(true);
       void context.resume();
     } catch { this.analysing.set(false); }

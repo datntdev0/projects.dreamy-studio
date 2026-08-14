@@ -100,7 +100,7 @@
             @if (sounds.selected()) {
               <app-library-sound-panel data-testid="inspector-sound-panel" />
             } @else {
-              <app-library-sounds-panel data-testid="inspector-sounds-panel" />
+              <div class="ins-empty" data-testid="inspector-sounds-empty"><p class="t-sm t-mute" data-testid="inspector-sounds-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
             }
           </div>
         }

@@ -596,7 +596,7 @@
   "library.upload.toast.success": "Đã upload {count} ảnh vào thư viện.",
   "library.upload.toast.partial": "Đã upload {success}/{total} ảnh, {failed} file lỗi.",
   "library.preview.title": "Xem ảnh",
-  "library.preview.position": "Images · {current} / {total}",
+  "library.preview.position": "{kind} · {current} / {total}",
   "library.preview.previous": "Trước",
   "library.preview.next": "Sau",
   "library.preview.close": "Đóng (Esc)",
@@ -647,7 +647,7 @@
   "library.tag.mergeVerb": "Gộp",
   "library.tag.mergeJoin": "vào",
   "library.tag.merge": "Gộp tag"
-  ,"tabs.sounds.title": "Thư viện âm thanh"
+  ,"tabs.sounds.title": "Sounds"
   ,"library.explorer.sounds": "Âm thanh"
   ,"library.noun.image": "ảnh"
   ,"library.noun.sound": "âm thanh"
@@ -657,14 +657,16 @@
   ,"library.rights.free": "Miễn phí bản quyền (CC0, public domain)"
   ,"library.rights.other": "Khác / chưa xác định"
   ,"library.sound.title": "Thư viện âm thanh"
-  ,"library.sound.search": "Tìm âm thanh"
+  ,"library.sound.search": "Tìm tài nguyên"
   ,"library.sound.searchPlaceholder": "Tìm theo tên hoặc tag…"
   ,"library.sound.count": "{shown}/{total} âm thanh"
+  ,"library.sound.countAll": "{count} âm thanh"
+  ,"library.sound.countFiltered": "{shown} âm thanh / {total}"
   ,"library.sound.upload": "Upload"
   ,"library.sound.uploadSounds": "Upload âm thanh…"
   ,"library.sound.play": "Phát"
   ,"library.sound.pause": "Tạm dừng"
-  ,"library.sound.seek": "Tua"
+  ,"library.sound.seek": "Waveform, click to seek"
   ,"library.sound.view": "Xem"
   ,"library.sound.delete": "Xóa"
   ,"library.sound.empty.title": "Chưa có âm thanh nào"
@@ -677,8 +679,11 @@
   ,"library.sound.sort.new": "Mới nhất"
   ,"library.sound.sort.name": "Tên A–Z"
   ,"library.sound.sort.size": "Dung lượng"
+  ,"library.sound.viewMode": "Chế độ xem"
   ,"library.sound.view.grid": "Dạng lưới"
   ,"library.sound.view.list": "Dạng danh sách"
+  ,"library.sound.preview.spectrum": "Phổ tần"
+  ,"library.sound.preview.waveform": "Dạng sóng"
   ,"library.sound.column.name": "Tên"
   ,"library.sound.column.spec": "Thông số"
   ,"library.sound.column.size": "Dung lượng"

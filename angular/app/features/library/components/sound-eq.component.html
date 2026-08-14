@@ -1,1 +1,1 @@
-<div class="lb-eq" [class.is-live]="isLive()" aria-hidden="true" data-testid="library-sound-eq-bars">@for (bar of bars(); track $index) { <i [style.--h]="idle($index)" [style.--l]="height(bar)" data-testid="library-sound-eq-bar"></i> }</div>
+<div class="lb-eq" [class.is-live]="live()" aria-hidden="true" data-testid="library-sound-eq-bars">@for (bar of bars(); track $index) { <i [style.--h]="idle($index)" [style.--l]="live() ? level(bar) : null" data-testid="library-sound-eq-bar"></i> }</div>

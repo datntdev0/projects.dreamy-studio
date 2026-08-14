@@ -12,9 +12,15 @@ import { LibraryImageService } from "../library.images.service";
 export class LibraryImageThumb {
   private readonly images = inject(LibraryImageService);
   readonly image = input.required<LibraryImage>();
+  readonly variant = input<"media" | "row">("media");
   readonly source = computed(this.resolveSource.bind(this));
+  readonly background = computed(this.resolveBackground.bind(this));
 
   private resolveSource(): string {
     return this.images.thumb(this.image().id) ?? "";
+  }
+
+  private resolveBackground(): string {
+    return `url("${this.source()}") center / cover no-repeat`;
   }
 }

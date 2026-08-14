@@ -5,7 +5,7 @@ import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { IMAGE_RATIOS, ImageSort, ImageViewMode, LibraryImage } from "../library.images.models";
-import { dimensionsText, formatBytes, imageCode } from "../library.images.rules";
+import { dimensionsText, formatBytes } from "../library.images.rules";
 import { LibraryImageService } from "../library.images.service";
 import { LibraryService } from "../library.service";
 import { LibraryImageThumb } from "./image-thumb.component";
@@ -125,16 +125,8 @@ export class LibraryImages implements OnInit, OnDestroy {
     return dimensionsText(image);
   }
 
-  code(image: LibraryImage): string {
-    return imageCode(image.id);
-  }
-
   ratioIcon(value: string): string {
     return `ratio-${value.replace("/", "-")}`;
-  }
-
-  ratioLabel(value: string): I18nKey {
-    return `library.image.ratio` as I18nKey;
   }
 
   isSelected(image: LibraryImage): boolean {

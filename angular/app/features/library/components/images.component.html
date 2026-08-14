@@ -5,7 +5,7 @@
         <span class="sr-only" data-testid="library-images-search-label-text">{{ "library.image.search" | t }}</span>
         <input class="input" type="search" [value]="images.query()" [attr.placeholder]="'library.image.searchPlaceholder' | t" data-testid="library-images-search" (input)="onQuery($event)" />
       </label>
-      <span class="t-sm t-mute" data-testid="library-images-count">{{ "library.image.count" | t: { shown: images.visible().length, total: images.items().length } }}</span>
+      <span class="t-sm t-mute" data-testid="library-images-count">@if (images.visible().length === images.items().length) { {{ "library.image.countAll" | t: { count: images.visible().length } }} } @else { {{ "library.image.countFiltered" | t: { shown: images.visible().length, total: images.items().length } }} }</span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-images-filter-chips">
           @if (library.filterCollection() !== null) {
@@ -29,9 +29,9 @@
     <div class="nv-bar-r" data-testid="library-images-toolbar-right">
       @if (images.viewMode() === "grid") {
         <span class="lb-size" data-testid="library-images-grid-size"><ds-icon name="image" [size]="14" data-testid="library-images-grid-size-icon" /><input class="range" type="range" min="110" max="360" step="10" [value]="images.gridSize()" [attr.aria-label]="'library.image.previewSize' | t" data-testid="library-images-grid-size-input" (input)="onGridSize($event)" /></span>
-        <div class="seg" role="group" [attr.aria-label]="'library.image.ratio' | t: { ratio: images.gridRatio() }" data-testid="library-images-ratio">
+        <div class="seg" role="group" data-testid="library-images-ratio">
           @for (ratio of ratioOptions; track ratio[0]) {
-            <button type="button" [class.is-active]="images.gridRatio() === ratio[0]" [attr.aria-label]="ratioLabel(ratio[0]) | t: { ratio: ratio[1] }" [attr.aria-pressed]="images.gridRatio() === ratio[0]" data-testid="library-images-ratio-option" (click)="setRatio(ratio[0])"><ds-icon [name]="ratioIcon(ratio[0])" [size]="14" data-testid="library-images-ratio-icon" /></button>
+            <button type="button" [class.is-active]="images.gridRatio() === ratio[0]" [attr.aria-label]="'library.image.ratio' | t: { ratio: ratio[1] }" [attr.aria-pressed]="images.gridRatio() === ratio[0]" data-testid="library-images-ratio-option" (click)="setRatio(ratio[0])"><ds-icon [name]="ratioIcon(ratio[0])" [size]="14" data-testid="library-images-ratio-icon" /></button>
           }
         </div>
       }
@@ -44,7 +44,7 @@
         <button type="button" [class.is-active]="images.viewMode() === 'grid'" [attr.aria-label]="'library.image.view.grid' | t" [attr.aria-pressed]="images.viewMode() === 'grid'" data-testid="library-images-view-grid" (click)="setView('grid')"><ds-icon name="frames" [size]="14" data-testid="library-images-view-grid-icon" /></button>
         <button type="button" [class.is-active]="images.viewMode() === 'list'" [attr.aria-label]="'library.image.view.list' | t" [attr.aria-pressed]="images.viewMode() === 'list'" data-testid="library-images-view-list" (click)="setView('list')"><ds-icon name="list" [size]="14" data-testid="library-images-view-list-icon" /></button>
       </div>
-      <button type="button" class="btn btn-sm btn-primary" data-testid="library-images-upload" (click)="openUpload()"><ds-icon name="plus" [size]="16" data-testid="library-images-upload-icon" />{{ "library.image.upload" | t }}</button>
+      <button type="button" class="btn btn-sm btn-primary" data-testid="library-images-upload" (click)="openUpload()"><ds-icon name="upload" [size]="16" data-testid="library-images-upload-icon" />{{ "library.image.upload" | t }}</button>
     </div>
   </div>
   <div class="nv-body" data-testid="library-images-body">
@@ -63,10 +63,10 @@
         </div>
       } @else {
         <table class="table" data-testid="library-images-table">
-          <thead data-testid="library-images-table-head"><tr data-testid="library-images-table-head-row"><th data-testid="library-images-table-head-name">{{ "library.image.column.name" | t }}</th><th data-testid="library-images-table-head-dimensions">{{ "library.image.column.dimensions" | t }}</th><th data-testid="library-images-table-head-size">{{ "library.image.column.size" | t }}</th><th data-testid="library-images-table-head-tags">{{ "library.image.column.tags" | t }}</th><th data-testid="library-images-table-head-collection">{{ "library.image.column.collection" | t }}</th><th data-testid="library-images-table-head-added">{{ "library.image.column.added" | t }}</th></tr></thead>
+          <thead data-testid="library-images-table-head"><tr data-testid="library-images-table-head-row"><th data-testid="library-images-table-head-name">{{ "library.image.column.name" | t }}</th><th data-testid="library-images-table-head-dimensions">{{ "library.image.column.dimensions" | t }}</th><th data-testid="library-images-table-head-size">{{ "library.image.column.size" | t }}</th><th data-testid="library-images-table-head-collection">{{ "library.image.column.collection" | t }}</th><th data-testid="library-images-table-head-added">{{ "library.image.column.added" | t }}</th></tr></thead>
           <tbody data-testid="library-images-table-body">
             @for (image of images.visible(); track image.id) {
-              <tr [class.is-selected]="isSelected(image)" tabindex="0" data-testid="library-images-table-row" (click)="select(image)" (dblclick)="open(image)" (keydown)="onImageKeydown(image, $event)"><td data-testid="library-images-table-name"><div class="nm-title" data-testid="library-images-table-name-wrap"><app-library-image-thumb [image]="image" data-testid="library-images-table-thumb" /><div class="lb-rname" data-testid="library-images-table-name-content"><div class="t-ink" data-testid="library-images-table-name-text">{{ image.name }}</div><div class="t-sm t-mute" data-testid="library-images-table-code">{{ code(image) }}</div></div></div></td><td class="mono t-mute" data-testid="library-images-table-dimensions">{{ dimensions(image) }}</td><td class="num" data-testid="library-images-table-size">{{ formatBytes(image.size) }}</td><td data-testid="library-images-table-tags"><span class="lb-cols" data-testid="library-images-table-tags-text">{{ image.tags.join(", ") || "—" }}</span></td><td data-testid="library-images-table-collection">{{ collectionName(image) }}</td><td class="mono t-mute" data-testid="library-images-table-added">{{ image.createdAt.slice(0, 10) }}</td></tr>
+              <tr [class.is-selected]="isSelected(image)" tabindex="0" data-testid="library-images-table-row" (click)="select(image)" (dblclick)="open(image)" (keydown)="onImageKeydown(image, $event)"><td data-testid="library-images-table-name"><div class="nm-title" data-testid="library-images-table-name-wrap"><app-library-image-thumb [image]="image" variant="row" data-testid="library-images-table-thumb" /><div class="lb-rname" data-testid="library-images-table-name-content"><div class="t-ink" data-testid="library-images-table-name-text">{{ image.name }}</div></div></div></td><td class="mono t-mute" data-testid="library-images-table-dimensions">{{ dimensions(image) }}</td><td class="num" data-testid="library-images-table-size">{{ formatBytes(image.size) }}</td><td data-testid="library-images-table-collection">{{ collectionName(image) }}</td><td class="mono t-mute" data-testid="library-images-table-added">{{ image.createdAt.slice(0, 10) }}</td></tr>
             }
           </tbody>
         </table>

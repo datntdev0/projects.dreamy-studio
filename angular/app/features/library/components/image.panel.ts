@@ -8,15 +8,16 @@ import { ImagePatch } from "../library.images.models";
 import { ImageRights } from "../library.images.models";
 import { IMAGE_RIGHTS } from "../library.images.models";
 import { LibraryImage } from "../library.images.models";
-import { dimensionsText } from "../library.images.rules";
+import { imageInspectorDimensionsText } from "../library.images.rules";
+import { imageInspectorFormatText } from "../library.images.rules";
 import { formatBytes } from "../library.images.rules";
 import { imageCode } from "../library.images.rules";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryImageService } from "../library.images.service";
 import { normalizeTag } from "../library.rules";
 import { libraryErrorKey } from "../library.rules";
+import { formatIsoMinute } from "../library.rules";
 import { LibraryService } from "../library.service";
-import { LibraryImageThumb } from "./image-thumb.component";
 
 const MAX_TAGS = 12;
 
@@ -30,7 +31,7 @@ const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
 @Component({
   selector: "app-library-image-panel",
   standalone: true,
-  imports: [Icon, I18nPipe, LibraryImageThumb],
+  imports: [Icon, I18nPipe],
   templateUrl: "./image.panel.html",
   host: { "data-testid": "library-image-panel" },
 })
@@ -53,7 +54,19 @@ export class LibraryImagePanel {
   }
 
   dimensions(image: LibraryImage): string {
-    return dimensionsText(image);
+    return imageInspectorDimensionsText(image);
+  }
+
+  format(image: LibraryImage): string {
+    return imageInspectorFormatText(image);
+  }
+
+  addedAt(image: LibraryImage): string {
+    return formatIsoMinute(image.createdAt);
+  }
+
+  originKey(image: LibraryImage): I18nKey {
+    return image.origin === "app" ? "library.origin.app" : "library.origin.upload";
   }
 
   size(image: LibraryImage): string {
@@ -120,10 +133,6 @@ export class LibraryImagePanel {
     if (rights !== image.rights) {
       void this.save(image, { rights });
     }
-  }
-
-  view(image: LibraryImage): void {
-    this.dialogs.openPreview(image.id);
   }
 
   remove(image: LibraryImage): void {

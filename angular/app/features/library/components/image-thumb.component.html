@@ -1,8 +1,10 @@
-<span class="lb-media" data-testid="library-image-thumb">
-  @if (source(); as url) {
-    <img [src]="url" [alt]="image().name" />
-  } @else {
-    <ds-icon name="image" [size]="32" />
-  }
-  <span class="badge lb-ext">{{ image().ext }}</span>
-</span>
+@if (variant() === "row") {
+  <span class="lb-th" [style.background]="background()" data-testid="library-image-thumb-row"></span>
+} @else {
+  <span class="lb-media" [class.is-empty]="!source()" [style.background]="source() ? background() : null" data-testid="library-image-thumb-media">
+    @if (!source()) {
+      <ds-icon name="image" [size]="32" data-testid="library-image-thumb-placeholder-icon" />
+    }
+    <span class="badge lb-ext" data-testid="library-image-thumb-extension">{{ image().ext.toUpperCase() }}</span>
+  </span>
+}

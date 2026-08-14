@@ -1,5 +1,4 @@
 import { Component, HostListener, computed, effect, inject, signal, untracked } from "@angular/core";
-import { Button } from "../../../../components/button";
 import { Dialog } from "../../../../components/dialog";
 import { Icon } from "../../../../components/icon";
 import { I18nKey } from "../../../core/i18n/i18n.models";
@@ -10,6 +9,7 @@ import { dimensionsText, formatBytes, imageCode } from "../library.images.rules"
 import { LibraryImageService } from "../library.images.service";
 import { LibraryService } from "../library.service";
 import { AssetRef } from "../library.models";
+import { formatIsoMinute } from "../library.rules";
 
 const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
   own: "library.rights.own",
@@ -25,7 +25,7 @@ function sameId(id: number, image: LibraryImage): boolean {
 @Component({
   selector: "app-library-image-preview-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe],
+  imports: [Dialog, Icon, I18nPipe],
   templateUrl: "./image-preview.dialog.html",
   host: { "data-testid": "library-image-preview-dialog" },
 })
@@ -78,7 +78,7 @@ export class LibraryImagePreviewDialog {
   }
 
   added(image: LibraryImage): string {
-    return image.createdAt.slice(0, 10);
+    return formatIsoMinute(image.createdAt);
   }
 
   rightsKey(rights: ImageRights): I18nKey {

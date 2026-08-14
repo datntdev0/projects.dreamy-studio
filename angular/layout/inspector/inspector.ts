@@ -15,7 +15,6 @@ import { LibraryService } from "../../app/features/library/library.service";
 import { LibraryTaxonomyPanel } from "../../app/features/library/components/taxonomy.panel";
 import { LibraryCollectionPanel } from "../../app/features/library/components/collection.panel";
 import { LibraryImagePanel } from "../../app/features/library/components/image.panel";
-import { LibraryImagesPanel } from "../../app/features/library/components/images.panel";
 import { LibraryTagPanel } from "../../app/features/library/components/tag.panel";
 import { LibraryImageService } from "../../app/features/library/library.images.service";
 import { LibrarySoundPanel } from "../../app/features/library/components/sound.panel";
@@ -34,7 +33,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-inspector",
   standalone: true,
-  imports: [Button, Icon, I18nPipe, NovelLibraryPanel, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryImagesPanel, LibraryTagPanel, LibrarySoundPanel, LibrarySoundsPanel, LibraryVideoPanel, LibraryVideosPanel, LibraryPromptPanel, LibraryPromptsPanel],
+  imports: [Button, Icon, I18nPipe, NovelLibraryPanel, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryTagPanel, LibrarySoundPanel, LibrarySoundsPanel, LibraryVideoPanel, LibraryVideosPanel, LibraryPromptPanel, LibraryPromptsPanel],
   templateUrl: "./inspector.html",
 })
 export class Inspector {

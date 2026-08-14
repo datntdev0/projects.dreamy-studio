@@ -68,6 +68,14 @@ export function dimensionsText(image: LibraryImage): string {
   return `${image.width}×${image.height}`;
 }
 
+export function imageInspectorDimensionsText(image: LibraryImage): string {
+  return `${image.width} × ${image.height} px`;
+}
+
+export function imageInspectorFormatText(image: LibraryImage): string {
+  return image.ext ? image.ext.toLocaleUpperCase() : "—";
+}
+
 export function searchImages(items: LibraryImage[], query: string): LibraryImage[] {
   const needle = query.trim().toLocaleLowerCase();
   return items.filter(matchesQuery.bind(null, needle));

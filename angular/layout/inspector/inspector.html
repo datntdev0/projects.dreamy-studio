@@ -91,7 +91,7 @@
             @if (images.selected()) {
               <app-library-image-panel data-testid="inspector-image-panel" />
             } @else {
-              <app-library-images-panel data-testid="inspector-images-panel" />
+              <div class="ins-empty" data-testid="inspector-images-empty"><p class="t-sm t-mute" data-testid="inspector-images-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
             }
           </div>
         }

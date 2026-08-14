@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.datntdev.dreamy-studio",
   "build": {
-    "beforeDevCommand": "npm run angular:serve",
+    "beforeDevCommand": "pnpm run angular:serve",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run angular:build",
+    "beforeBuildCommand": "pnpm run angular:build",
     "frontendDist": "../_output/angular/dist/browser"
   },
   "app": {

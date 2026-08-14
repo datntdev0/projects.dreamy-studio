@@ -16,21 +16,24 @@ The prototype in `_proto/1.library` rendered with its mock data is the **baselin
 - Windows with the WebView2 runtime and Microsoft Edge.
 - `backend/.venv` set up, because opening a workspace starts the Python backend.
 - Network access: the UI loads the Geist font from Google Fonts. The run fails early if it did not load.
-- A debug app build with the frontend embedded: `npm run build:app`. Set `DREAMY_EXE` to use another executable.
+- A debug app build with the frontend embedded: `pnpm build:app`. Set `DREAMY_EXE` to use another executable.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `npm install` | Installs Playwright (no browser download is needed). |
-| `npm run build:app` | Builds `_output/desktop/target/debug/dreamy-studio.exe`. |
-| `npm run fixture` | Rebuilds the fixture. Run it after a schema or prototype data change. |
-| `npm run baseline` | Renders the prototype and writes `baseline/` (only changed images). |
-| `npm test` | Compares the app with `baseline/` and prints the ranking. |
-| `npm run test:prototype` | Compares the prototype with its own baseline, to prove the baseline is stable. |
-| `npm run report` | Opens the HTML report with expected, actual and diff images. |
+| `pnpm install` (repo root) | Installs Playwright (no browser download is needed). |
+| `pnpm build:app` | Builds `_output/desktop/target/debug/dreamy-studio.exe`. |
+| `pnpm fixture` | Rebuilds the fixture. Run it after a schema or prototype data change. |
+| `pnpm baseline` | Renders the prototype and writes `baseline/` (only changed images). |
+| `pnpm test` | Compares the app with `baseline/` and prints the ranking. |
+| `pnpm test:prototype` | Compares the prototype with its own baseline, to prove the baseline is stable. |
+| `pnpm start:proto` (repo root) | Runs the app in dev mode on a persistent data dir seeded with the prototype data (`_output/verify/proto`). Add `--reset` to reseed. |
+| `pnpm report` | Opens the HTML report with expected, actual and diff images. |
 
 `baseline/<screen>/<state>/<panel>.png` is committed. `_output/verify/diff-summary.json` holds the ranking of the last run.
+
+`start:proto` seeds with the embedded debug build, so run `pnpm build:app` first if `tauri dev` was the last thing to write the executable. It starts the Angular dev server on port 1420, so stop any other `pnpm start` first. Open the "Library prototype" entry in the recent list.
 
 ## Known gaps
 

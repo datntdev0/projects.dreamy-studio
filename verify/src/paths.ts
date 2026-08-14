@@ -10,6 +10,7 @@ export const outputRoot = join(repoRoot, "_output", "verify");
 export const fixtureRoot = join(outputRoot, "fixture");
 export const fixtureWorkspace = join(fixtureRoot, WORKSPACE_NAME);
 export const seedRoot = join(outputRoot, "seed");
+export const protoRoot = join(outputRoot, "proto");
 export const runRoot = join(outputRoot, "run");
 export const prototypeRoot = join(repoRoot, "_proto");
 export const prototypeData = join(prototypeRoot, "1.library", "js", "library-data.js");

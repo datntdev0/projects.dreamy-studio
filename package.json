@@ -3,36 +3,19 @@
   "version": "0.1.0",
   "scripts": {
     "start": "tauri dev",
+    "start:proto": "pnpm --filter dreamy-studio-verify run start:proto",
     "build": "tauri build",
     "watch": "tauri dev",
     "tauri": "tauri",
     "test": "cargo test --manifest-path desktop/Cargo.toml --target-dir _output/desktop/target",
-    "angular:serve": "ng serve",
-    "angular:build": "ng build",
-    "story": "storybook dev -p 6006",
-    "story:build": "storybook build -o _output/storybook"
+    "angular:serve": "pnpm --filter dreamy-studio-angular run serve",
+    "angular:build": "pnpm --filter dreamy-studio-angular run build",
+    "story": "pnpm --filter dreamy-studio-angular run story",
+    "story:build": "pnpm --filter dreamy-studio-angular run story:build"
   },
   "private": true,
-  "dependencies": {
-    "@angular/common": "^22.0.1",
-    "@angular/compiler": "^22.0.1",
-    "@angular/core": "^22.0.1",
-    "@angular/forms": "^22.0.1",
-    "@angular/platform-browser": "^22.0.1",
-    "@angular/router": "^22.0.1",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
-    "rxjs": "~7.8.2",
-    "tslib": "^2.8.1"
-  },
   "devDependencies": {
-    "@angular/build": "^22.0.1",
-    "@angular/cli": "^22.0.1",
-    "@angular/compiler-cli": "^22.0.1",
-    "@storybook/angular-vite": "^10.6.7",
-    "@tauri-apps/cli": "^2",
-    "sass": "^1.108.1",
-    "storybook": "^10.6.7",
-    "typescript": "~6.0.3"
-  }
+    "@tauri-apps/cli": "^2"
+  },
+  "packageManager": "pnpm@12.16.1"
 }

@@ -5,13 +5,14 @@
   "type": "module",
   "description": "Visual verification of the Dreamy Studio desktop app with Playwright",
   "scripts": {
-    "build:app": "npm --prefix .. run build -- --debug --no-bundle",
+    "build:app": "pnpm --dir .. run build --debug --no-bundle",
     "fixture": "node src/fixture/cli.ts",
     "baseline": "playwright test --project=prototype --update-snapshots=changed",
     "test": "playwright test --project=app",
     "test:prototype": "playwright test --project=prototype",
     "report": "playwright show-report ../_output/verify/report",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start:proto": "node src/proto/start.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

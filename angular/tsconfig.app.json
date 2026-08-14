@@ -6,6 +6,6 @@
   "compilerOptions": {
     "types": []
   },
-  "include": ["angular/**/*.ts", "angular/app/core/i18n/*.json"],
-  "exclude": ["angular/**/*.spec.ts", "angular/stories/**"]
+  "include": ["**/*.ts", "app/core/i18n/*.json"],
+  "exclude": ["**/*.spec.ts", "stories/**"]
 }

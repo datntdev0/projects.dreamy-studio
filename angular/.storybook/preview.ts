@@ -1,5 +1,5 @@
 import type { Preview } from "@storybook/angular-vite";
-import "../angular/styles.scss";
+import "../styles.scss";
 
 const preview: Preview = {
   initialGlobals: { theme: "dark" },

@@ -44,7 +44,7 @@ __pycache__/
 .history/*
 
 # Miscellaneous
-/.angular/cache
+/angular/.angular/cache
 .sass-cache/
 .playwright-cli/
 /connect.lock

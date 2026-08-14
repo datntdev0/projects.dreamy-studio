@@ -21,7 +21,7 @@ export interface LaunchOptions {
   readonly webviewDir: string;
 }
 
-function freePort(): Promise<number> {
+export function freePort(): Promise<number> {
   return new Promise((resolvePort, reject) => {
     const server = createServer();
     server.once("error", reject);

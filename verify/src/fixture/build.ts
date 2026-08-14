@@ -11,21 +11,30 @@ export function fixtureExists(): boolean {
   return existsSync(join(fixtureWorkspace, "workspace.dreamydb"));
 }
 
-export async function buildFixture(): Promise<void> {
+export function seededWorkspace(root: string): string {
+  return join(root, "workspaces", WORKSPACE_NAME);
+}
+
+export async function seedAppRoot(root: string): Promise<void> {
   const data = await loadPrototype();
-  const workspace = join(seedRoot, "workspaces", WORKSPACE_NAME);
-  await rm(seedRoot, { recursive: true, force: true });
+  const workspace = seededWorkspace(root);
+  await rm(root, { recursive: true, force: true });
   await mkdir(workspace, { recursive: true });
-  const app = await launchApp({ dataDir: join(seedRoot, "data"), webviewDir: join(seedRoot, "webview") });
+  const app = await launchApp({ dataDir: join(root, "data"), webviewDir: join(root, "webview") });
   let seeded;
   try {
-    seeded = await seedLibrary(app.page, workspace, data, join(seedRoot, "media"));
+    seeded = await seedLibrary(app.page, workspace, data, join(root, "media"));
   } finally {
     await app.stop();
   }
   pinMetadata(workspace, data, seeded);
+  await rm(join(root, "media"), { recursive: true, force: true });
+}
+
+export async function buildFixture(): Promise<void> {
+  await seedAppRoot(seedRoot);
   await rm(fixtureRoot, { recursive: true, force: true });
   await mkdir(fixtureRoot, { recursive: true });
-  await cp(workspace, fixtureWorkspace, { recursive: true });
+  await cp(seededWorkspace(seedRoot), fixtureWorkspace, { recursive: true });
   await rm(seedRoot, { recursive: true, force: true });
 }

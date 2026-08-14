@@ -2,6 +2,7 @@ import { Component, inject, signal } from "@angular/core";
 import { Icon } from "../../../../components/icon";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibraryKind, LibraryTag } from "../library.models";
+import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
 import { LibraryService } from "../library.service";
 import { TabsService } from "../../../../layout/tabs.service";
 import { sumCounts, tagsForKind } from "../library.rules";
@@ -11,6 +12,7 @@ import { collectionTabId } from "../../../../layout/layout.models";
 export class LibraryExplorer {
   readonly library = inject(LibraryService);
   readonly tabs = inject(TabsService);
+  private readonly collectionAssets = inject(LibraryCollectionAssetsService);
   readonly open = signal(true);
   readonly filtersOpen = signal(true);
   toggle(): void { this.open.set(!this.open()); }
@@ -21,7 +23,8 @@ export class LibraryExplorer {
   isVideosActive(): boolean { return this.tabs.isActive("videos"); }
   isPromptsActive(): boolean { return this.tabs.isActive("prompts"); }
   activeKind(): LibraryKind | null { const active = this.tabs.activeId(); if (active === "images") return "image"; if (active === "sounds") return "sound"; if (active === "videos") return "video"; if (active === "prompts") return "prompt"; return null; }
-  filterTags(): LibraryTag[] { const kind = this.activeKind(); return kind ? tagsForKind(this.library.tags(), kind) : this.library.tags(); }
+  activeCollectionId(): number | null { const tab = this.tabs.active(); return tab.kind === "collection" ? tab.collectionId : null; }
+  filterTags(): LibraryTag[] { const collection = this.activeCollectionId(); if (collection !== null) return this.collectionAssets.tags(collection); const kind = this.activeKind(); return kind ? tagsForKind(this.library.tags(), kind) : this.library.tags(); }
   tagCount(tag: LibraryTag): number { const kind = this.activeKind(); return kind ? tag.counts[kind] : this.count(tag.counts); }
   assetCount(kind: LibraryKind): number { return this.library.summary().assets[kind]; }
   isTagOn(tag: string): boolean { return this.library.filterTags().includes(tag); }

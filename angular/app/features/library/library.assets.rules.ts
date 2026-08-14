@@ -1,4 +1,5 @@
 import { AssetRow } from "./library.assets.models";
+import { LibraryTag } from "./library.models";
 import { VideoSort } from "./library.videos.models";
 
 export interface AssetFilters { query: string; sort: VideoSort; collection: number; tags: string[]; }
@@ -13,3 +14,8 @@ function compareSize(a: AssetRow, b: AssetRow): number { return b.size - a.size 
 function compareFor(sort: VideoSort, a: AssetRow, b: AssetRow): number { return sort === "name" ? compareName(a, b) : sort === "size" ? compareSize(a, b) : compareNew(a, b); }
 
 export function filterAssetRows(rows: AssetRow[], filters: AssetFilters): AssetRow[] { const needle = filters.query.trim().toLocaleLowerCase(); return [...rows].filter(inCollection.bind(null, filters.collection)).filter(matchesQuery.bind(null, needle)).filter(hasTags.bind(null, filters.tags)).sort(compareFor.bind(null, filters.sort)); }
+function addRowTags(counts: Map<string, LibraryTag>, row: AssetRow): void { for (const tag of row.tags) { const entry = counts.get(tag) ?? { tag, counts: { image: 0, sound: 0, video: 0, prompt: 0 } }; entry.counts[row.ref.kind] += 1; counts.set(tag, entry); } }
+function compareTagUse(a: LibraryTag, b: LibraryTag): number { return sumKinds(b) - sumKinds(a) || a.tag.localeCompare(b.tag); }
+function sumKinds(tag: LibraryTag): number { return tag.counts.image + tag.counts.sound + tag.counts.video + tag.counts.prompt; }
+
+export function collectionTags(rows: AssetRow[], collection: number): LibraryTag[] { const counts = new Map<string, LibraryTag>(); rows.filter(inCollection.bind(null, collection)).forEach(addRowTags.bind(null, counts)); return [...counts.values()].sort(compareTagUse); }

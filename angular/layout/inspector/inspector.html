@@ -81,7 +81,7 @@
                   <app-library-prompt-panel [promptId]="selected.id" data-testid="inspector-collection-prompt-panel" />
                 }
               } @else {
-                <app-library-collection-panel [collectionId]="collectionId" data-testid="inspector-collection-panel" />
+                <div class="ins-empty" data-testid="inspector-collection-empty"><p class="t-sm t-mute" data-testid="inspector-collection-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
               }
             }
           </div>

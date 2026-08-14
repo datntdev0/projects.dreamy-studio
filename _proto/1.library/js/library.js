@@ -568,7 +568,7 @@
         <td><span class="tag">${esc(r.t)}</span></td><td>${cntRow(r.c)}</td><td class="num mono t-mute">${r.n}</td></tr>`).join("");
     return `<div class="nv lb">
       ${bar(`<span class="nv-ttl">${ic("tag")}<span class="t-ink">Collections &amp; tags</span></span><span class="t-sm t-mute">${cols.length} collections · ${st().tagList.length} tags · ${unfiled} uncategorized resources</span>`,
-        `<button class="btn btn-sm" data-act="ct-new-tag">${ic("plus")}Tag</button><button class="btn btn-sm btn-primary" data-act="ct-new-col">${ic("plus")}Collection</button>`)}
+        `<button class="btn btn-sm btn-primary" data-act="ct-new-col">${ic("plus")}Collection</button>`)}
       <div class="nv-body lb-ct">
         <section class="lb-ct-pane"><header class="lb-ct-h"><span class="eyebrow">Collections</span><span class="t-sm t-mute">Each resource belongs to at most one collection; a collection can hold every type.</span></header>
           <div class="nv-scroll" data-keep="ct-col">${cols.length ? `<table class="table"><thead><tr><th>Collection</th><th>Resources</th></tr></thead><tbody>${colRows}</tbody></table>`
@@ -616,13 +616,6 @@
         <div class="field"><label for="nc-desc">Description</label><textarea id="nc-desc" class="textarea" rows="3" placeholder="Optional"></textarea></div>
         ${assign.length ? `<p class="t-sm t-mute">${assign.length} selected resources will be moved into this collection.</p>` : ""}`,
       foot: `<button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" data-act="ct-new-col-submit" data-ids="${esc(assign.join(","))}">Create collection</button>`,
-    });
-  }
-  function openNewTag() {
-    A.modal({
-      title: "Create tag", eyebrow: CAP,
-      body: `<div class="field"><label for="nt-name">Tag name</label><input id="nt-name" class="input" placeholder="Example: ambience" autocomplete="off"><span class="field-hint">Lowercase, no spaces (converted to hyphens automatically), up to 24 characters.</span><p class="field-err" id="nt-err" hidden></p></div>`,
-      foot: `<button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" data-act="ct-new-tag-submit">Create tag</button>`,
     });
   }
   let pendingCol = null;
@@ -796,19 +789,6 @@
       A.closeModal();
       refresh();
       A.toast(`Deleted collection “${c?.name}”.`);
-    },
-    "ct-new-tag": openNewTag,
-    "ct-new-tag-submit": () => {
-      const raw = A.$("#nt-name").value;
-      const t = LB.normTag(raw);
-      const err = A.$("#nt-err");
-      if (!t || st().tagList.includes(t)) { err.textContent = t ? `Tag “${t}” already exists.` : "Enter a tag name."; err.hidden = false; A.$("#nt-name").classList.add("is-invalid"); return; }
-      st().tagList.push(t);
-      st().tagList.sort();
-      CT().sel = { k: "tag", id: t };
-      A.closeModal();
-      refresh();
-      A.toast(`Created tag “${t}”.`);
     },
     "ct-tag-confirm": () => {
       const { kind, t, target } = pendingTag;

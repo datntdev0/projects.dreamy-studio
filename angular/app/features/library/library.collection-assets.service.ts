@@ -1,8 +1,8 @@
 import { Injectable, Signal, WritableSignal, computed, inject, signal } from "@angular/core";
 import { LibraryImageService } from "./library.images.service";
 import { AssetRow, toAssetRows } from "./library.assets.models";
-import { filterAssetRows } from "./library.assets.rules";
-import { AssetRef } from "./library.models";
+import { collectionTags, filterAssetRows } from "./library.assets.rules";
+import { AssetRef, LibraryTag } from "./library.models";
 import { LibraryService } from "./library.service";
 import { LibrarySoundService } from "./library.sounds.service";
 import { LibraryPromptService } from "./library.prompts.service";
@@ -32,6 +32,10 @@ export class LibraryCollectionAssetsService {
     const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items(), this.prompts.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
     this.rowsByCollection.set(collectionId, rows);
     return rows;
+  }
+
+  tags(collectionId: number): LibraryTag[] {
+    return collectionTags(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items(), this.prompts.items()), collectionId);
   }
 
   selectedRef(collectionId: number): AssetRef | null {

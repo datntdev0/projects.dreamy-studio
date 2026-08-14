@@ -4,7 +4,7 @@ import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { LibraryCollection, LibraryKind, LIBRARY_KINDS } from "../library.models";
-import { sumCounts } from "../library.rules";
+import { formatIsoMinute, sumCounts } from "../library.rules";
 import { TabsService } from "../../../../layout/tabs.service";
 
 @Component({ selector: "app-library-collection-panel", standalone: true, imports: [Icon, I18nPipe], templateUrl: "./collection.panel.html", host: { "data-testid": "library-collection-panel" } })
@@ -16,6 +16,7 @@ export class LibraryCollectionPanel {
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly tabs = inject(TabsService);
   collection() { return this.library.collectionById(this.collectionId()); }
+  created(item: LibraryCollection): string { return formatIsoMinute(item.createdAt); }
   total(item: LibraryCollection): number { return sumCounts(item.counts); }
   count(item: LibraryCollection, kind: LibraryKind): number { return item.counts[kind]; }
   editName(event: Event): void { const item = this.collection(); const field = event.target as HTMLInputElement; const name = field.value.trim(); if (!item) return; if (!name || this.library.isDuplicateCollection(name, item.id)) { field.value = item.name; return; } if (name !== item.name) void this.save(item, { name }); }

@@ -474,6 +474,7 @@
   "library.tagsEmpty.description": "Tag là nhãn tự do để lọc nhanh tài nguyên. Thêm tag khi upload hoặc ở Inspector.",
   "library.taxonomy.title": "Phân loại tài nguyên",
   "library.unfiled": "Chưa phân loại",
+  "library.notInCollection": "Không thuộc collection nào",
   "library.howto.title": "Cách phân loại",
   "library.howto.description": "Collection gom tài nguyên theo chủ đề, mỗi tài nguyên chỉ thuộc một collection và có thể thuộc mọi loại. Tag là nhãn tự do dùng chung cho cả bốn loại để lọc nhanh.",
   "library.create.title": "Tạo collection",

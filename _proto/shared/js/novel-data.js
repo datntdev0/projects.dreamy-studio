@@ -1,35 +1,17 @@
 window.NV = (function () {
   const chOf = (p) => parseInt(String(p).split(".")[0], 10);
 
-  const titles = [
-    "The Last Lamp", "A Clerk from the Quay", "What the Tide Returned", "The Ledger of Names", "Salt and Glass", "The Bell That Wasn't Rung",
-    "Nine Windows, One Shutter", "The Salt Merchant's Debt", "A Light Under the Water", "The Council Counts Back", "Low Tide Arithmetic", "The Keeper's Answer",
-  ];
-  const words = [2140, 1980, 2310, 2450, 2020, 2760, 2190, 2600, 2330, 2880, 2410, 3050];
+  const CORPUS = window.NVC;
+  const PACK = { lantern: "the-lantern-keeper-of-harrowmere", glass: "ash-under-the-glass-sea", pine: "gio-muon-tren-doi-thong" };
+  const ART = { waves: "nhung-con-song-khong-ten" }; // cover-only folder of a novel created in the app (no package)
+  const NOVEL_ASSETS = `${(typeof document !== "undefined" && document.body?.dataset.sharedRoot) || "../shared"}/assets/novel/`; // relative to the page that hosts the shell
+  const corpusOf = (pack) => (CORPUS[pack] ? CORPUS[pack].chapters : []);
+  const lantern = corpusOf(PACK.lantern);
+  const titles = lantern.map((c) => c.title);
+  const words = lantern.map((c) => c.words);
+  const SAMPLE_CHAPTERS = 3; // chỉ ba chương đầu có bản dịch và tri thức mẫu
 
-  const SRC = {
-    1: [
-      "Every evening at dusk, Wren Aldous climbed the three hundred and twelve steps of the Lantern Tower and lit the last lamp of Harrowmere.",
-      "The other lamps had gone dark years ago, when the fog took the harbor and the ships stopped coming. Only Wren remembered what the lamps had been for.",
-      "\"You are wasting oil,\" said a voice behind her. The harbor clerk had climbed the stairs without a sound, a thin man in a grey coat with a ledger pressed to his chest. \"The Council has not paid for it in six winters.\"",
-      "Wren did not turn around. \"The Council does not light the lamp,\" she said. \"I do.\"",
-      "The clerk introduced himself as Maro Quill, and said he had been sent to count what remained of Harrowmere. He did not say who had sent him.",
-      "Below them the fog lay thick over the Drowned Quay, and for a moment the lamp's light seemed to reach all the way down to the water.",
-    ],
-    2: [
-      "Maro Quill slept badly in the room above the salt merchant's shop. In the morning he found Lady Sevrin's letter folded inside his ledger, though he had not put it there.",
-      "\"Count the lamps,\" the letter said. \"Count the keeper. Tell me whether the light still answers.\" It was signed with a single sunburst, the mark of the Council's chair.",
-      "He walked the empty streets until noon. Every window was shuttered, yet he felt watched from behind each one, as if the town were holding its breath.",
-      "At the Drowned Quay an old woman sold him tea and a warning. \"The keeper does not light the lamp for the ships,\" she said. \"She lights it for what is still under the water.\"",
-      "Maro wrote nothing in his ledger that day. For the first time in his career, he did not know what to count.",
-    ],
-    3: [
-      "On the seventh night the tide went out farther than anyone alive had seen, and the Drowned Quay lay bare under the moon.",
-      "Among the black stones lay a ship's bell, green with age, its rope still tied in a knot Wren recognised. It was her father's knot.",
-      "She carried the bell up the three hundred and twelve steps and hung it beside the lamp. It did not ring, but the flame bent toward it.",
-      "Below, Maro Quill stood at the foot of the tower with his ledger open, and for once he was not counting.",
-    ],
-  };
+  const SRC = Object.fromEntries(lantern.slice(0, SAMPLE_CHAPTERS).map((c, i) => [i + 1, c.paras]));
 
   const VI = {
     "1.1": "Mỗi buổi chiều chạng vạng, Wren Aldous leo ba trăm mười hai bậc thang của Tháp Đèn và thắp ngọn đèn cuối cùng của Harrowmere.",
@@ -203,10 +185,13 @@ window.NV = (function () {
       { id: "R11", kind: "relation", pred: "located_in", from: "E04", to: "E06", label: "nằm trong", cert: "inferred", status: "proposed", ev: ev([["2.4", "At the Drowned Quay an old woman sold him tea"]]) },
       { id: "V08", kind: "event", name: "Wren thắp đèn mỗi đêm", summary: "Wren thắp ngọn đèn cuối cùng vào mỗi đêm.", when: "Mỗi đêm", order: 8, cert: "text", status: "proposed", ev: ev([["1.1", "Wren lit the lamp every night."]]) },
     );
+    // Newest first, as the app lists them (and as the prototype adds new ones). Seeding runs in reverse so ids ascend in creation order.
+    const sumWords = (pack) => corpusOf(pack).reduce((a, c) => a + c.words, 0);
     const novels = [
-      { id: "NOV-0001", title: "The Lantern Keeper of Harrowmere", display: "Người Giữ Đèn Harrowmere", author: "Isolde Verran", lang: "EN", langName: "Tiếng Anh", chapters: 12, words: words.reduce((a, b) => a + b, 0), updated: "2026-11-09 09:15", origin: "Nhập từ package", desc: "Người giữ đèn cuối cùng của một thị trấn cảng bị sương mù bao phủ, và viên thư lại được cử đến để đếm những gì còn lại.", cover: ["var(--acc-midnight)", "var(--primary)", "var(--acc-sunset)"], tags: ["fantasy", "dark", "harbor"] },
-      { id: "NOV-0002", title: "Ash Under the Glass Sea", display: "Tro Dưới Biển Thủy Tinh", author: "Tomas Hale", lang: "EN", langName: "Tiếng Anh", chapters: 24, words: 61400, updated: "2026-10-30 18:02", origin: "Nhập từ package", desc: "Một thành phố xây trên đáy biển đã hóa thủy tinh.", cover: ["var(--acc-midnight)", "var(--acc-breeze)", "var(--acc-twilight)"], tags: ["sci-fi", "dystopia"] },
-      { id: "NOV-0003", title: "Gió Muộn Trên Đồi Thông", author: "Nguyễn Hạ", lang: "VI", langName: "Tiếng Việt", chapters: 8, words: 17850, updated: "2026-11-04 21:30", origin: "Tạo mới", desc: "Bản thảo đang viết dở.", cover: ["var(--acc-sunset)", "var(--secondary)", "var(--acc-midnight)"], tags: ["drama", "draft"] },
+      { id: "NOV-0004", pack: null, title: "Những Con Sóng Không Tên", author: "Nguyễn Hạ", lang: "VI", langName: "Tiếng Việt", chapters: 0, words: 0, updated: "2026-11-12 08:20", origin: "Tạo mới", desc: "Ý tưởng mới, chưa có chương nào.", cover: ["var(--acc-breeze)", "var(--primary)", "var(--acc-midnight)"], coverImg: `${NOVEL_ASSETS}${ART.waves}/cover.png`, coverFile: `${ART.waves}/cover.png`, tags: ["idea"] },
+      { id: "NOV-0003", pack: PACK.pine, title: "Gió Muộn Trên Đồi Thông", author: "Nguyễn Hạ", lang: "VI", langName: "Tiếng Việt", chapters: corpusOf(PACK.pine).length, words: sumWords(PACK.pine), updated: "2026-11-04 21:30", origin: "Nhập từ package", desc: "Bản thảo đang viết dở.", cover: ["var(--acc-sunset)", "var(--secondary)", "var(--acc-midnight)"], coverImg: `${NOVEL_ASSETS}${PACK.pine}/cover.png`, tags: ["drama", "draft"] },
+      { id: "NOV-0002", pack: PACK.glass, title: "Ash Under the Glass Sea", display: "Tro Dưới Biển Thủy Tinh", author: "Tomas Hale", lang: "EN", langName: "Tiếng Anh", chapters: corpusOf(PACK.glass).length, words: sumWords(PACK.glass), updated: "2026-10-30 18:02", origin: "Nhập từ package", desc: "Một thành phố xây trên đáy biển đã hóa thủy tinh.", cover: ["var(--acc-midnight)", "var(--acc-breeze)", "var(--acc-twilight)"], coverImg: `${NOVEL_ASSETS}${PACK.glass}/cover.png`, tags: ["sci-fi", "dystopia"] },
+      { id: "NOV-0001", pack: PACK.lantern, title: "The Lantern Keeper of Harrowmere", display: "Người Giữ Đèn Harrowmere", author: "Isolde Verran", lang: "EN", langName: "Tiếng Anh", chapters: lantern.length, words: sumWords(PACK.lantern), updated: "2026-11-09 09:15", origin: "Nhập từ package", desc: "Người giữ đèn cuối cùng của một thị trấn cảng bị sương mù bao phủ, và viên thư lại được cử đến để đếm những gì còn lại.", cover: ["var(--acc-midnight)", "var(--primary)", "var(--acc-sunset)"], coverImg: `${NOVEL_ASSETS}${PACK.lantern}/cover.png`, tags: ["fantasy", "dark", "harbor"] },
     ];
 
     return { novels, chapters, tr, kb, reader: { novel: "NOV-0001", ch: 1, mode: "read", size: 15, edit: null } };

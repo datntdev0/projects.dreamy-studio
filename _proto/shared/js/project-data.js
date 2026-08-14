@@ -100,9 +100,9 @@ window.PJ = (function () {
         created: day(8, "21:00"), updated: day(4, "17:20"), opened: day(4, "17:25"),
       }),
       P("PRJ-0004", "Gió Muộn — Audiobook thử", {
-        template: "audiobook", desc: "Bản thử giọng đọc cho bản thảo đang viết.", novel: "NOV-0003", src: { kind: "original", lang: "VI" }, range: [1, 8],
+        template: "audiobook", desc: "Bản thử giọng đọc cho bản thảo đang viết.", novel: "NOV-0003", src: { kind: "original", lang: "VI" }, range: [1, 5],
         modules: ["scripting", "audiobook"],
-        prog: { scripting: prog("done", 8, 8, "8/8 chương"), audiobook: prog("doing", 3, 8, "3/8 chương") },
+        prog: { scripting: prog("done", 5, 5, "5/5 chương"), audiobook: prog("doing", 3, 5, "3/5 chương") },
         activity: [[day(5, "20:40"), "Tạo audio chương 3"], [day(7, "08:20"), "Tạo project từ template Audiobook"]],
         created: day(7, "08:20"), updated: day(5, "20:40"), opened: day(5, "20:41"),
       }),

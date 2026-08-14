@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "title": "Ash Under the Glass Sea",
+  "author": "Tomas Hale",
+  "lang": "en",
+  "cover": "cover.png",
+  "chapters": [
+    { "file": "chapters/001.txt", "title": "The Humming Plain" },
+    { "file": "chapters/002.txt", "title": "A Loaf of Black Glass" },
+    { "file": "chapters/003.txt", "title": "The Last Hydrologist" },
+    { "file": "chapters/004.txt", "title": "Night Drilling" },
+    { "file": "chapters/005.txt", "title": "Inspectors in White" },
+    { "file": "chapters/006.txt", "title": "The Valve" }
+  ]
+}

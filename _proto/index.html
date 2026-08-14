@@ -157,16 +157,33 @@
 
   <script src="shared/js/data.js"></script>
   <script src="shared/js/workspace.js"></script>
+  <script src="shared/js/novel-corpus.js"></script>
   <script src="shared/js/novel-data.js"></script>
   <script src="shared/js/app.js"></script>
   <script src="shared/js/novel-common.js"></script>
-  <script src="shared/js/novel-mgmt.js"></script>
-  <script src="shared/js/novel-import.js"></script>
-  <script src="shared/js/novel-translation.js"></script>
-  <script src="shared/js/novel-kb-check.js"></script>
-  <script src="shared/js/novel-kb-graph.js"></script>
-  <script src="shared/js/novel-kb-edit.js"></script>
-  <script src="shared/js/novel-knowledge.js"></script>
+  <script>
+    // Novel management is now a dedicated prototype page. Keep its navigation in the
+    // default shell, but hand off to that page instead of mounting its UI here.
+    (function () {
+      const app = window.DSApp;
+      const U = window.NVU;
+      const renderNovelEmpty = () => `
+        <div class="empty" data-testid="novel-standalone-empty">
+          <div class="empty-inner">
+            ${app.ic("book", "cs-ico")}
+            <h1 class="t-display-sm">Novels</h1>
+            <p class="t-sm t-mute">Quản lý novel, dịch thuật và knowledgebase được mở trong một trang prototype riêng.</p>
+            <div class="empty-act"><a class="btn btn-primary" href="2.novel/2.novel.html">Mở Novels</a></div>
+          </div>
+        </div>`;
+      ["novels", "novel", "translation", "knowledge"].forEach((id) => {
+        app.VIEWS[id] = { fill: true, render: renderNovelEmpty };
+      });
+      U.openReader = (novelId) => U.openNovelTab("novel", novelId);
+      U.openTranslation = () => U.openNovelTab("translation", U.N().reader.novel);
+      U.openKnowledge = () => U.openNovelTab("knowledge", U.N().reader.novel);
+    })();
+  </script>
   <script src="1.library/js/library-data.js"></script>
   <script>
     // Library is now a dedicated prototype page. Keep its navigation in the

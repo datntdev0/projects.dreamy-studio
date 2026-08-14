@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "title": "Gió Muộn Trên Đồi Thông",
+  "author": "Nguyễn Hạ",
+  "lang": "vi",
+  "cover": "cover.png",
+  "chapters": [
+    { "file": "chapters/001.txt", "title": "Con dốc cuối thu" },
+    { "file": "chapters/002.txt", "title": "Xấp thư không địa chỉ" },
+    { "file": "chapters/003.txt", "title": "Người đưa thư" },
+    { "file": "chapters/004.txt", "title": "Tấm bản đồ bút chì" },
+    { "file": "chapters/005.txt", "title": "Chiếc hộp thiếc" }
+  ]
+}

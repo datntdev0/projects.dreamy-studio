@@ -728,8 +728,8 @@
     const standalone = document.body.dataset.standalone === "true";
     const workspace = WS.current() || (standalone ? {
       ...D.seedWorkspaces[0],
-      name: "Library prototype",
-      path: "Prototype / Library",
+      name: document.body.dataset.workspaceName || "Library prototype",
+      path: document.body.dataset.workspacePath || "Prototype / Library",
     } : WS.requireCurrent());
     if (workspace) enterShell(workspace);
   });

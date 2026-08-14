@@ -26,8 +26,9 @@ window.NVU = (function () {
   const ref = (pid, view = "src") => `<button type="button" class="chip" data-act="jump-src" data-p="${pid}" data-view="${view}">${refLabel(pid)}</button>`;
 
   /** Danh sách chương của novel: novel mẫu có nội dung thật, novel khác chỉ có siêu dữ liệu. */
+  const packChapters = (n) => (n.pack && window.NVC?.[n.pack]?.chapters) || [];
   const chaptersFor = (n) => (n.id === SAMPLE ? N().chapters
-    : Array.from({ length: n.chapters }, (_, i) => ({ n: i + 1, title: `Chương ${i + 1}`, words: Math.round(n.words / Math.max(1, n.chapters)), paras: null })));
+    : Array.from({ length: n.chapters }, (_, i) => ({ n: i + 1, title: packChapters(n)[i]?.title || `Chương ${i + 1}`, words: packChapters(n)[i]?.words ?? Math.round(n.words / Math.max(1, n.chapters)), paras: null })));
   const analyzedCount = () => Object.values(N().kb.analyzed).filter((v) => v === "done").length;
   const progress = (n) => (n.id === SAMPLE
     ? { tr: Object.keys(N().tr.chapters).length, kb: analyzedCount(), total: n.chapters }

@@ -190,6 +190,14 @@ impl<'a> NovelRepository<'a> {
         rows.collect()
     }
 
+    pub fn max_seq(&self, novel_id: i64) -> rusqlite::Result<i64> {
+        self.conn.query_row(
+            "SELECT COALESCE(MAX(seq), 0) FROM ws_novel_chapters WHERE novel_id = ?1",
+            [novel_id],
+            |row| row.get(0),
+        )
+    }
+
     pub fn find_chapter(
         &self,
         novel_id: i64,
@@ -210,6 +218,28 @@ impl<'a> NovelRepository<'a> {
         self.conn.execute(
             "UPDATE ws_novel_chapters SET word_count = ?2, updated_at = ?3 WHERE id = ?1",
             params![chapter_id, word_count, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn rename_chapter(&self, chapter_id: &str, title: &str, now: &str) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE ws_novel_chapters SET title = ?2, updated_at = ?3 WHERE id = ?1",
+            params![chapter_id, title, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_chapter(&self, chapter_id: &str) -> rusqlite::Result<()> {
+        self.conn
+            .execute("DELETE FROM ws_novel_chapters WHERE id = ?1", [chapter_id])?;
+        Ok(())
+    }
+
+    pub fn set_chapter_seq(&self, chapter_id: &str, seq: i64, now: &str) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE ws_novel_chapters SET seq = ?2, updated_at = ?3 WHERE id = ?1",
+            params![chapter_id, seq, now],
         )?;
         Ok(())
     }

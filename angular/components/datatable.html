@@ -10,7 +10,7 @@
       <colgroup>@for (column of columns; track column.key) { <col [style.width]="column.width || null"> }</colgroup>
       <tbody>
         @for (row of rows; track trackRow($index, row); let index = $index) {
-          <tr tabindex="0" [ngClass]="rowClasses(row)" [class.is-selected]="selectedIndex === index || rowClasses(row)['is-selected']" [attr.data-testid]="rowTestId" [attr.aria-selected]="selectedIndex === index || rowClasses(row)['is-selected'] || null" (click)="onRowClick(row, index, $event)" (dblclick)="onRowDblClick(row, $event)" (keydown.enter)="onRowEnter(row, index, $event)" (keydown.space)="onRowSpace(index, $event)">
+          <tr tabindex="0" [ngClass]="rowClasses(row)" [class.is-selected]="selectedIndex === index || rowClasses(row)['is-selected']" [attr.data-testid]="rowTestId" [attr.aria-selected]="selectedIndex === index || rowClasses(row)['is-selected'] || null" (click)="onRowClick(row, index, $event)" (dblclick)="onRowDblClick(row, $event)" (keydown.enter)="onRowEnter(row, index, $event)" (keydown.space)="onRowSpace(index, $event)" [attr.draggable]="isDraggable(row) ? 'true' : null" (dragstart)="onDragStart(row, $event)" (dragover)="onDragOver(row, $event)" (drop)="onDrop(row, $event)" (dragend)="onDragEnd(row, $event)">
             @for (column of columns; track column.key) {
               <td [class.num]="column.align === 'right'" [class.cen]="column.align === 'center'" [class.cell-ellipsis]="column.ellipsis">
                 @if (cellTemplate(column.key); as cell) {

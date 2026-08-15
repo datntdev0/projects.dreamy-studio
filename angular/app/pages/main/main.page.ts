@@ -11,6 +11,8 @@ import { Titlebar } from "../../../layout/titlebar/titlebar";
 import { ToastHost } from "../../core/toast/toast-host.component";
 import { NovelCreateDialog } from "../../features/novel/components/create.dialog";
 import { NovelDeleteDialog } from "../../features/novel/components/delete.dialog";
+import { NovelChapterAddDialog } from "../../features/novel/components/chapter-add.dialog";
+import { NovelChapterDeleteDialog } from "../../features/novel/components/chapter-delete.dialog";
 import { NovelImportDialog } from "../../features/novel/components/import.dialog";
 import { ProjectCreateDialog } from "../../features/project/components/create.dialog";
 import { ProjectDeleteDialog } from "../../features/project/components/delete.dialog";
@@ -35,7 +37,7 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog, LibraryCollectionDialog, LibraryCollectionDeleteDialog, LibraryImageDeleteDialog, LibraryImagePreviewDialog, LibrarySoundDeleteDialog, LibrarySoundPreviewDialog, LibraryVideoDeleteDialog, LibraryVideoPreviewDialog, LibraryPromptDeleteDialog, LibraryPromptPreviewDialog, LibraryTagConfirmDialog, LibraryUploadDialog],
+  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelChapterAddDialog, NovelChapterDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog, LibraryCollectionDialog, LibraryCollectionDeleteDialog, LibraryImageDeleteDialog, LibraryImagePreviewDialog, LibrarySoundDeleteDialog, LibrarySoundPreviewDialog, LibraryVideoDeleteDialog, LibraryVideoPreviewDialog, LibraryPromptDeleteDialog, LibraryPromptPreviewDialog, LibraryTagConfirmDialog, LibraryUploadDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {

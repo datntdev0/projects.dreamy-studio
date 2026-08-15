@@ -11,6 +11,7 @@ import { ReaderPrefs } from "./novel.models";
 import { NovelService } from "./novel.service";
 import { READER_PREF_DEFAULT } from "./novel.rules";
 import { clampSeq } from "./novel.rules";
+import { isChapterLocked } from "./novel.rules";
 import { normalizeParagraphText } from "./novel.rules";
 import { readerPageStyle } from "./novel.rules";
 import { sanitizePrefs } from "./novel.rules";
@@ -38,6 +39,15 @@ function storePrefs(prefs: ReaderPrefs): void {
 function findChapter(rows: ChapterRow[], seq: number): ChapterRow | null {
   for (const row of rows) {
     if (row.seq === seq) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function findChapterById(rows: ChapterRow[], id: string | null): ChapterRow | null {
+  for (const row of rows) {
+    if (row.id === id) {
       return row;
     }
   }
@@ -81,6 +91,8 @@ export class NovelReaderService {
   readonly hasPrev = computed(this.buildHasPrev.bind(this));
   readonly hasNext = computed(this.buildHasNext.bind(this));
   readonly canEdit = computed(this.buildCanEdit.bind(this));
+  readonly canAdd = computed(this.buildCanAdd.bind(this));
+  readonly adding = computed(this.buildAdding.bind(this));
   readonly pageStyle = computed(this.buildPageStyle.bind(this));
 
   constructor() {
@@ -150,6 +162,51 @@ export class NovelReaderService {
     this.editing.set(null);
   }
 
+  startAddPassage(): void {
+    if (this.canAdd()) {
+      this.editing.set(this.paragraphs().length + 1);
+    }
+  }
+
+  async renameChapter(title: string): Promise<ParagraphSaveResult> {
+    const novelId = this.novelId();
+    const chapter = this.current();
+    const value = title.trim();
+    if (novelId === null || chapter === null) {
+      return "idle";
+    }
+    if (!value) {
+      return "empty";
+    }
+    if (value === chapter.title) {
+      return "unchanged";
+    }
+    const row = await this.ipc.invoke<ChapterRow>("novel_chapter_rename", {
+      novelId,
+      chapterId: chapter.id,
+      title: value,
+    });
+    this.novels.applyChapterUpdate(row);
+    return "saved";
+  }
+
+  async moveChapter(novelId: number, chapterId: string, toSeq: number): Promise<void> {
+    const resume = this.resumeChapterId(novelId);
+    const rows = await this.novels.moveChapter(novelId, chapterId, toSeq);
+    this.followChapter(novelId, resume, rows);
+  }
+
+  async deleteChapter(novelId: number, chapterId: string): Promise<void> {
+    const resume = this.resumeChapterId(novelId);
+    const seq = this.resumeSeq(novelId);
+    const rows = await this.novels.deleteChapter(novelId, chapterId);
+    const kept = resume === chapterId ? null : resume;
+    this.followChapter(novelId, kept, rows, seq);
+    if (this.novelId() === novelId) {
+      await this.syncOpenChapter(novelId, rows.length);
+    }
+  }
+
   consumeFocus(): number | null {
     const target = this.focus();
     this.focus.set(null);
@@ -166,6 +223,10 @@ export class NovelReaderService {
     const value = normalizeParagraphText(text);
     if (!value) {
       return "empty";
+    }
+    if (this.adding()) {
+      await this.appendParagraph(novelId, chapter.id, value);
+      return "saved";
     }
     if (findParagraph(this.paragraphs(), n)?.text === value) {
       this.editing.set(null);
@@ -269,6 +330,42 @@ export class NovelReaderService {
     }
   }
 
+  private resumeChapterId(novelId: number): string | null {
+    return findChapter(this.novels.chaptersOf(novelId), this.resumeSeq(novelId))?.id ?? null;
+  }
+
+  private followChapter(novelId: number, id: string | null, rows: ChapterRow[], fallback = 1): void {
+    const moved = findChapterById(rows, id);
+    const seq = moved ? moved.seq : clampSeq(fallback, rows.length);
+    this.positions.set({ ...this.positions(), [novelId]: seq });
+  }
+
+  private async syncOpenChapter(novelId: number, total: number): Promise<void> {
+    this.editing.set(null);
+    if (total === 0) {
+      this.setScreen(novelId, "chapters");
+      this.paragraphs.set([]);
+      return;
+    }
+    await this.showChapter(novelId, this.resumeSeq(novelId), total);
+  }
+
+  private async appendParagraph(novelId: number, chapterId: string, text: string): Promise<void> {
+    this.saving.set(true);
+    try {
+      const row = await this.ipc.invoke<ChapterRow>("novel_paragraph_add", {
+        novelId,
+        chapterId,
+        text,
+      });
+      this.novels.applyChapterUpdate(row);
+      this.editing.set(null);
+      await this.readParagraphs(novelId, chapterId);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   private async writeParagraph(
     novelId: number,
     chapterId: string,
@@ -330,6 +427,16 @@ export class NovelReaderService {
 
   private buildCanEdit(): boolean {
     return this.mode() === "edit";
+  }
+
+  private buildCanAdd(): boolean {
+    const chapter = this.current();
+    return this.canEdit() && chapter !== null && !isChapterLocked(chapter);
+  }
+
+  private buildAdding(): boolean {
+    const n = this.editing();
+    return n !== null && n === this.paragraphs().length + 1;
   }
 
   private buildPageStyle(): string {

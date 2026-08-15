@@ -132,6 +132,10 @@ impl NovelFiles {
         Ok(())
     }
 
+    pub fn remove_chapter(&self, novel_id: i64, chapter_id: &str) -> NovelResult<()> {
+        remove_file_quietly(&self.novel_dir(novel_id).join(chapter_name(chapter_id)?))
+    }
+
     pub fn read_chapter(&self, novel_id: i64, chapter_id: &str) -> NovelResult<String> {
         let path = self.novel_dir(novel_id).join(chapter_name(chapter_id)?);
         match fs::read(&path) {

@@ -39,6 +39,7 @@ use std::sync::MutexGuard;
 use uuid::Uuid;
 
 pub const LANGS: [&str; 5] = ["EN", "VI", "ZH", "JA", "KO"];
+pub const MAX_TITLE_CHARS: usize = 200;
 
 const ORIGIN_CREATED: &str = "created";
 const ORIGIN_IMPORTED: &str = "imported";
@@ -237,6 +238,11 @@ fn require_title(raw: &str) -> NovelResult<String> {
     if title.is_empty() {
         return Err(NovelError::invalid("title must not be empty"));
     }
+    if title.chars().count() > MAX_TITLE_CHARS {
+        return Err(NovelError::invalid(format!(
+            "title must be at most {MAX_TITLE_CHARS} characters"
+        )));
+    }
     Ok(title.to_string())
 }
 
@@ -295,6 +301,34 @@ fn require_summary(repo: &NovelRepository, id: i64) -> NovelResult<NovelSummary>
         Some(summary) => Ok(summary),
         None => Err(NovelError::not_found(format!("novel {id} does not exist"))),
     }
+}
+
+fn chapter_is_locked(chapter: &ChapterRow) -> bool {
+    chapter.translation_status != "none" || chapter.analysis_status != "none"
+}
+
+fn require_unlocked_chapter(chapter: &ChapterRow) -> NovelResult<()> {
+    if chapter_is_locked(chapter) {
+        return Err(NovelError::new(
+            NovelErrorCode::ChapterLocked,
+            format!("chapter {} is locked", chapter.id),
+        ));
+    }
+    Ok(())
+}
+
+fn resequence_chapters(
+    repo: &NovelRepository,
+    chapters: &[ChapterRow],
+    now: &str,
+) -> NovelResult<()> {
+    for chapter in chapters {
+        repo.set_chapter_seq(&chapter.id, -chapter.seq, now)?;
+    }
+    for (index, chapter) in chapters.iter().enumerate() {
+        repo.set_chapter_seq(&chapter.id, index as i64 + 1, now)?;
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, Default)]
@@ -442,6 +476,121 @@ impl NovelWorkspace {
         let files = self.files();
         let current = files.read_chapter(novel_id, chapter_id)?;
         let updated = replace_paragraph(&current, n, text)?;
+        files.write_chapter(novel_id, chapter_id, &updated)?;
+        let now = now_text();
+        repo.update_chapter_text(chapter_id, word_count(&updated), &now)?;
+        repo.touch_novel(novel_id, &now)?;
+        require_chapter(&repo, novel_id, chapter_id)
+    }
+
+    pub fn chapter_add(&self, novel_id: i64, title: &str) -> NovelResult<ChapterRow> {
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        require_novel(&repo, novel_id)?;
+        let seq = repo.max_seq(novel_id)? + 1;
+        let title = if title.trim().is_empty() {
+            format!("Chapter {seq}")
+        } else {
+            require_title(title)?
+        };
+        let id = new_chapter_id();
+        let now = now_text();
+        self.files().write_chapter(novel_id, &id, "")?;
+        repo.insert_chapter(&NewChapter {
+            id: &id,
+            novel_id,
+            seq,
+            title: &title,
+            word_count: 0,
+            now: &now,
+        })?;
+        repo.touch_novel(novel_id, &now)?;
+        require_chapter(&repo, novel_id, &id)
+    }
+
+    pub fn chapter_rename(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        title: &str,
+    ) -> NovelResult<ChapterRow> {
+        let _gate = lock(&self.gate);
+        let title = require_title(title)?;
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        require_chapter(&repo, novel_id, chapter_id)?;
+        let now = now_text();
+        repo.rename_chapter(chapter_id, &title, &now)?;
+        repo.touch_novel(novel_id, &now)?;
+        require_chapter(&repo, novel_id, chapter_id)
+    }
+
+    pub fn chapter_delete(&self, novel_id: i64, chapter_id: &str) -> NovelResult<Vec<ChapterRow>> {
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        let chapter = require_chapter(&repo, novel_id, chapter_id)?;
+        require_unlocked_chapter(&chapter)?;
+        let now = now_text();
+        repo.delete_chapter(chapter_id)?;
+        let chapters = repo.list_chapters(novel_id)?;
+        resequence_chapters(&repo, &chapters, &now)?;
+        self.files().remove_chapter(novel_id, chapter_id)?;
+        repo.touch_novel(novel_id, &now)?;
+        Ok(repo.list_chapters(novel_id)?)
+    }
+
+    pub fn chapter_move(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        to_seq: i64,
+    ) -> NovelResult<Vec<ChapterRow>> {
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        let chapter = require_chapter(&repo, novel_id, chapter_id)?;
+        let mut chapters = repo.list_chapters(novel_id)?;
+        if to_seq < 1 || to_seq > chapters.len() as i64 {
+            return Err(NovelError::invalid("chapter position is out of range"));
+        }
+        require_unlocked_chapter(&chapter)?;
+        let target = &chapters[to_seq as usize - 1];
+        require_unlocked_chapter(target)?;
+        let now = now_text();
+        if chapter.seq == to_seq {
+            repo.touch_novel(novel_id, &now)?;
+            return Ok(chapters);
+        }
+        let from = chapters
+            .iter()
+            .position(|row| row.id == chapter_id)
+            .ok_or_else(|| NovelError::not_found(format!("chapter {chapter_id} does not exist")))?;
+        let moving = chapters.remove(from);
+        chapters.insert(to_seq as usize - 1, moving);
+        resequence_chapters(&repo, &chapters, &now)?;
+        repo.touch_novel(novel_id, &now)?;
+        Ok(repo.list_chapters(novel_id)?)
+    }
+
+    pub fn paragraph_add(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        text: &str,
+    ) -> NovelResult<ChapterRow> {
+        let _gate = lock(&self.gate);
+        let text = normalize_paragraph(text)?;
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        let chapter = require_chapter(&repo, novel_id, chapter_id)?;
+        require_unlocked_chapter(&chapter)?;
+        let files = self.files();
+        let current = files.read_chapter(novel_id, chapter_id)?;
+        let mut paragraphs = split_paragraphs(&current);
+        paragraphs.push(text);
+        let updated = join_paragraphs(&paragraphs);
         files.write_chapter(novel_id, chapter_id, &updated)?;
         let now = now_text();
         repo.update_chapter_text(chapter_id, word_count(&updated), &now)?;
@@ -638,6 +787,30 @@ mod tests {
 
     fn data_url(mime: &str, bytes: &[u8]) -> String {
         format!("data:{mime};base64,{}", STANDARD.encode(bytes))
+    }
+
+    fn chapter_file(fixture: &Fixture, novel_id: i64, chapter_id: &str) -> PathBuf {
+        fixture
+            .dir
+            .path()
+            .join("novels")
+            .join(novel_id.to_string())
+            .join(format!("chapter_{chapter_id}.txt"))
+    }
+
+    fn set_chapter_status(
+        fixture: &Fixture,
+        chapter_id: &str,
+        translation_status: &str,
+        analysis_status: &str,
+    ) {
+        let db = Database::open_read_write(&fixture.dir.path().join(WORKSPACE_DB_FILE)).unwrap();
+        db.connection()
+            .execute(
+                "UPDATE ws_novel_chapters SET translation_status = ?2, analysis_status = ?3 WHERE id = ?1",
+                rusqlite::params![chapter_id, translation_status, analysis_status],
+            )
+            .unwrap();
     }
 
     #[test]
@@ -974,6 +1147,208 @@ mod tests {
         let novel = fixture.workspace.list().unwrap().remove(0);
         assert!(novel.updated_at >= book.updated_at);
         assert_eq!(novel.word_count, edited.word_count + chapters[1].word_count);
+    }
+
+    #[test]
+    fn adds_chapters_with_empty_files_and_default_titles() {
+        let fixture = fixture();
+        let novel = fixture.workspace.create(input("Title")).unwrap();
+
+        let first = fixture.workspace.chapter_add(novel.id, "  One  ").unwrap();
+        let second = fixture.workspace.chapter_add(novel.id, " ").unwrap();
+        let chapters = fixture.workspace.chapters(novel.id).unwrap();
+
+        assert_eq!(
+            (first.seq, first.title.as_str(), first.word_count),
+            (1, "One", 0)
+        );
+        assert_eq!((second.seq, second.title.as_str()), (2, "Chapter 2"));
+        assert_eq!(
+            chapters
+                .iter()
+                .map(|chapter| chapter.seq)
+                .collect::<Vec<_>>(),
+            [1, 2]
+        );
+        assert_eq!(
+            fs::read_to_string(chapter_file(&fixture, novel.id, &second.id)).unwrap(),
+            ""
+        );
+    }
+
+    #[test]
+    fn renames_chapters_with_the_same_title_validation_as_novels() {
+        let fixture = fixture();
+        let novel = imported(&fixture, 1);
+        let chapter = fixture.workspace.chapters(novel.id).unwrap().remove(0);
+
+        let renamed = fixture
+            .workspace
+            .chapter_rename(novel.id, &chapter.id, "  Renamed  ")
+            .unwrap();
+        let empty = fixture
+            .workspace
+            .chapter_rename(novel.id, &chapter.id, " ")
+            .unwrap_err();
+        let long = fixture
+            .workspace
+            .chapter_rename(novel.id, &chapter.id, &"x".repeat(MAX_TITLE_CHARS + 1))
+            .unwrap_err();
+
+        assert_eq!(renamed.title, "Renamed");
+        assert_eq!(empty.code, NovelErrorCode::InvalidInput);
+        assert_eq!(long.code, NovelErrorCode::InvalidInput);
+    }
+
+    #[test]
+    fn deletes_chapters_and_resequences_the_remaining_files() {
+        let fixture = fixture();
+        let novel = imported(&fixture, 3);
+        let chapters = fixture.workspace.chapters(novel.id).unwrap();
+        let deleted = &chapters[1];
+
+        let remaining = fixture
+            .workspace
+            .chapter_delete(novel.id, &deleted.id)
+            .unwrap();
+
+        assert_eq!(
+            remaining
+                .iter()
+                .map(|chapter| chapter.seq)
+                .collect::<Vec<_>>(),
+            [1, 2]
+        );
+        assert_eq!(
+            remaining
+                .iter()
+                .map(|chapter| chapter.title.as_str())
+                .collect::<Vec<_>>(),
+            ["Chapter 1", "Chapter 3"]
+        );
+        assert!(!chapter_file(&fixture, novel.id, &deleted.id).exists());
+    }
+
+    #[test]
+    fn moves_chapters_up_down_same_position_and_rejects_bad_positions() {
+        let fixture = fixture();
+        let novel = imported(&fixture, 4);
+        let original = fixture.workspace.chapters(novel.id).unwrap();
+
+        let moved_up = fixture
+            .workspace
+            .chapter_move(novel.id, &original[3].id, 1)
+            .unwrap();
+        let moved_down = fixture
+            .workspace
+            .chapter_move(novel.id, &original[0].id, 3)
+            .unwrap();
+        let same = fixture
+            .workspace
+            .chapter_move(novel.id, &original[0].id, 3)
+            .unwrap();
+        let before = fixture.workspace.chapters(novel.id).unwrap();
+        let low = fixture
+            .workspace
+            .chapter_move(novel.id, &original[0].id, 0)
+            .unwrap_err();
+        let high = fixture
+            .workspace
+            .chapter_move(novel.id, &original[0].id, 5)
+            .unwrap_err();
+
+        assert_eq!(
+            moved_up
+                .iter()
+                .map(|chapter| chapter.title.as_str())
+                .collect::<Vec<_>>(),
+            ["Chapter 4", "Chapter 1", "Chapter 2", "Chapter 3"]
+        );
+        assert_eq!(
+            moved_down
+                .iter()
+                .map(|chapter| chapter.title.as_str())
+                .collect::<Vec<_>>(),
+            ["Chapter 4", "Chapter 2", "Chapter 1", "Chapter 3"]
+        );
+        assert_eq!(same, before);
+        assert_eq!(low.code, NovelErrorCode::InvalidInput);
+        assert_eq!(high.code, NovelErrorCode::InvalidInput);
+    }
+
+    #[test]
+    fn rejects_changes_to_locked_chapters_and_moves_onto_locked_positions() {
+        let fixture = fixture();
+        let novel = imported(&fixture, 3);
+        let chapters = fixture.workspace.chapters(novel.id).unwrap();
+        set_chapter_status(&fixture, &chapters[0].id, "draft", "none");
+        set_chapter_status(&fixture, &chapters[1].id, "none", "done");
+
+        let delete = fixture
+            .workspace
+            .chapter_delete(novel.id, &chapters[0].id)
+            .unwrap_err();
+        let move_locked = fixture
+            .workspace
+            .chapter_move(novel.id, &chapters[0].id, 2)
+            .unwrap_err();
+        let add = fixture
+            .workspace
+            .paragraph_add(novel.id, &chapters[0].id, "new paragraph")
+            .unwrap_err();
+        let move_onto_locked = fixture
+            .workspace
+            .chapter_move(novel.id, &chapters[2].id, 2)
+            .unwrap_err();
+
+        assert_eq!(delete.code, NovelErrorCode::ChapterLocked);
+        assert_eq!(move_locked.code, NovelErrorCode::ChapterLocked);
+        assert_eq!(add.code, NovelErrorCode::ChapterLocked);
+        assert_eq!(move_onto_locked.code, NovelErrorCode::ChapterLocked);
+    }
+
+    #[test]
+    fn adds_normalized_paragraphs_and_exports_in_sequence_order() {
+        let fixture = fixture();
+        let novel = imported(&fixture, 3);
+        let chapters = fixture.workspace.chapters(novel.id).unwrap();
+        let added = fixture
+            .workspace
+            .paragraph_add(novel.id, &chapters[0].id, "  new\n paragraph ")
+            .unwrap();
+        let read = fixture
+            .workspace
+            .chapter_read(novel.id, &chapters[0].id)
+            .unwrap();
+        fixture
+            .workspace
+            .chapter_move(novel.id, &chapters[2].id, 1)
+            .unwrap();
+        let destination = fixture.dir.path().join("ordered");
+        let exported = fixture
+            .workspace
+            .export_package(novel.id, &destination)
+            .unwrap();
+        let copy = fixture
+            .workspace
+            .import_package(Path::new(&exported.path), input("Copy"))
+            .unwrap();
+        let copied = fixture.workspace.chapters(copy.id).unwrap();
+
+        assert_eq!(read.last().unwrap().text, "new paragraph");
+        assert_eq!(
+            added.word_count,
+            word_count(&join_paragraphs(
+                &read.iter().map(|row| row.text.clone()).collect::<Vec<_>>()
+            ))
+        );
+        assert_eq!(
+            copied
+                .iter()
+                .map(|chapter| chapter.title.as_str())
+                .collect::<Vec<_>>(),
+            ["Chapter 3", "Chapter 1", "Chapter 2"]
+        );
     }
 
     #[test]

@@ -141,6 +141,60 @@ pub fn update_paragraph(
         .paragraph_update(novel_id, chapter_id, n, text)
 }
 
+pub fn add_chapter(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    title: &str,
+) -> NovelResult<ChapterRow> {
+    service.open(session)?.chapter_add(novel_id, title)
+}
+
+pub fn rename_chapter(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    chapter_id: &str,
+    title: &str,
+) -> NovelResult<ChapterRow> {
+    service
+        .open(session)?
+        .chapter_rename(novel_id, chapter_id, title)
+}
+
+pub fn delete_chapter(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    chapter_id: &str,
+) -> NovelResult<Vec<ChapterRow>> {
+    service.open(session)?.chapter_delete(novel_id, chapter_id)
+}
+
+pub fn move_chapter(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    chapter_id: &str,
+    to_seq: i64,
+) -> NovelResult<Vec<ChapterRow>> {
+    service
+        .open(session)?
+        .chapter_move(novel_id, chapter_id, to_seq)
+}
+
+pub fn add_paragraph(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    chapter_id: &str,
+    text: &str,
+) -> NovelResult<ChapterRow> {
+    service
+        .open(session)?
+        .paragraph_add(novel_id, chapter_id, text)
+}
+
 pub fn inspect_package(path: &str, sink: &dyn InspectSink) -> NovelResult<PackageSummary> {
     let (mut reader, package) = inspect_path(Path::new(path), sink)?;
     let mut summary = package.summary();
@@ -298,6 +352,69 @@ pub async fn novel_paragraph_update(
 }
 
 #[tauri::command]
+pub async fn novel_chapter_add(
+    app: AppHandle,
+    novel_id: i64,
+    title: String,
+) -> NovelResult<ChapterRow> {
+    run_blocking(app, move |service, session| {
+        add_chapter(service, session, novel_id, &title)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn novel_chapter_rename(
+    app: AppHandle,
+    novel_id: i64,
+    chapter_id: String,
+    title: String,
+) -> NovelResult<ChapterRow> {
+    run_blocking(app, move |service, session| {
+        rename_chapter(service, session, novel_id, &chapter_id, &title)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn novel_chapter_delete(
+    app: AppHandle,
+    novel_id: i64,
+    chapter_id: String,
+) -> NovelResult<Vec<ChapterRow>> {
+    run_blocking(app, move |service, session| {
+        delete_chapter(service, session, novel_id, &chapter_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn novel_chapter_move(
+    app: AppHandle,
+    novel_id: i64,
+    chapter_id: String,
+    to_seq: i64,
+) -> NovelResult<Vec<ChapterRow>> {
+    run_blocking(app, move |service, session| {
+        move_chapter(service, session, novel_id, &chapter_id, to_seq)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn novel_paragraph_add(
+    app: AppHandle,
+    novel_id: i64,
+    chapter_id: String,
+    text: String,
+) -> NovelResult<ChapterRow> {
+    run_blocking(app, move |service, session| {
+        add_paragraph(service, session, novel_id, &chapter_id, &text)
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn novel_package_pick(app: AppHandle) -> Option<String> {
     let task = spawn_blocking(move || pick_package(&app));
     task.await.unwrap_or_default()
@@ -437,7 +554,12 @@ mod tests {
         let summary = inspect_package(path.to_str().unwrap(), &sink).unwrap();
 
         assert_eq!(summary.chapter_count, 2);
-        assert!(summary.cover.as_deref().is_some_and(|url| url.starts_with("data:image/jpeg;base64,")));
+        assert!(
+            summary
+                .cover
+                .as_deref()
+                .is_some_and(|url| url.starts_with("data:image/jpeg;base64,"))
+        );
         let events = target.events.lock().unwrap();
         assert_eq!(events[0].step, InspectStep::Format);
         assert_eq!(events[0].status, InspectStatus::Running);
@@ -635,6 +757,52 @@ mod tests {
     }
 
     #[test]
+    fn chapter_management_commands_flow_through_the_current_workspace() {
+        let fixture = entered_fixture();
+        let created = create_novel(&fixture.service, &fixture.session, input("Title")).unwrap();
+
+        let first = add_chapter(&fixture.service, &fixture.session, created.id, " One ").unwrap();
+        let second = add_chapter(&fixture.service, &fixture.session, created.id, "").unwrap();
+        let renamed = rename_chapter(
+            &fixture.service,
+            &fixture.session,
+            created.id,
+            &second.id,
+            "Two",
+        )
+        .unwrap();
+        let grown = add_paragraph(
+            &fixture.service,
+            &fixture.session,
+            created.id,
+            &first.id,
+            "Some words here",
+        )
+        .unwrap();
+        let moved = move_chapter(
+            &fixture.service,
+            &fixture.session,
+            created.id,
+            &second.id,
+            1,
+        )
+        .unwrap();
+        let remaining =
+            delete_chapter(&fixture.service, &fixture.session, created.id, &second.id).unwrap();
+
+        assert_eq!((first.seq, first.title.as_str()), (1, "One"));
+        assert_eq!((second.seq, second.title.as_str()), (2, "Chapter 2"));
+        assert_eq!(renamed.title, "Two");
+        assert_eq!(grown.word_count, 3);
+        let order: Vec<_> = moved.iter().map(|row| row.title.as_str()).collect();
+        assert_eq!(order, ["Two", "One"]);
+        assert_eq!(remaining.len(), 1);
+        assert_eq!((remaining[0].seq, remaining[0].title.as_str()), (1, "One"));
+        let value = serde_json::to_value(&grown).unwrap();
+        assert!(value.get("wordCount").is_some());
+    }
+
+    #[test]
     fn export_serializes_the_camel_case_contract_and_reimports() {
         let fixture = entered_fixture();
         let path = package_file(&fixture, 2);
@@ -657,7 +825,12 @@ mod tests {
 
         let value = serde_json::to_value(&summary).unwrap();
         assert_eq!(value["chapterCount"], 2);
-        assert!(value["path"].as_str().unwrap().ends_with("exported.dsnovel"));
+        assert!(
+            value["path"]
+                .as_str()
+                .unwrap()
+                .ends_with("exported.dsnovel")
+        );
         let again = import_package(
             &fixture.service,
             &fixture.session,

@@ -25,7 +25,13 @@
       <div class="rd-col" data-testid="novel-reader-column">
         <span class="eyebrow" data-testid="novel-reader-eyebrow">{{ "novel.reader.eyebrow" | t: { n: reader.seq(), total: reader.total() } }}</span>
         @if (reader.current(); as chapter) {
-          <h1 class="rd-h" data-testid="novel-reader-title">{{ chapter.title }}</h1>
+          <h1 class="rd-h" data-testid="novel-reader-title">
+            @if (reader.canEdit()) {
+              <input id="rd-title" class="input rd-h-in" [value]="chapter.title" [attr.aria-label]="'novel.reader.titleInput' | t" autocomplete="off" data-testid="novel-reader-title-input" (change)="rename($event)" />
+            } @else {
+              {{ chapter.title }}
+            }
+          </h1>
           <div class="t-sm rd-meta" data-testid="novel-reader-meta">{{ "novel.reader.meta" | t: { words: count(chapter.wordCount), lang: langName() } }}</div>
         }
         @if (reader.error(); as error) {
@@ -44,6 +50,21 @@
             } @else {
               <p class="rd-para" data-testid="novel-reader-para" [class.is-editable]="reader.canEdit()" [class.is-flash]="flash() === paragraph.n" [attr.id]="'rp-' + paragraph.n" [attr.tabindex]="reader.canEdit() ? 0 : null" (click)="edit(paragraph.n)" (keydown.enter)="edit(paragraph.n)"><span class="rd-no">{{ paragraph.n }}</span><span class="rd-tx">{{ paragraph.text }}</span></p>
             }
+          }
+          @if (reader.adding()) {
+            <div class="rd-edit" data-testid="novel-reader-edit" [attr.id]="'rp-' + reader.editing()">
+              <textarea #editor class="textarea" rows="5" data-testid="novel-reader-textarea"></textarea>
+              <div class="rd-edit-foot">
+                <span class="spacer"></span>
+                <button type="button" class="btn btn-sm" data-testid="novel-reader-cancel" (click)="cancel()">{{ "novel.reader.cancel" | t }}</button>
+                <button type="button" class="btn btn-sm btn-primary" data-testid="novel-reader-save" [disabled]="reader.saving()" (click)="save(editor.value)">{{ "novel.reader.save" | t }}</button>
+              </div>
+            </div>
+          } @else if (reader.paragraphs().length === 0 && !reader.loading()) {
+            <div class="empty" data-testid="novel-reader-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-reader-empty-title">{{ "novel.reader.emptyChapter.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-reader-empty-description">{{ (reader.canEdit() ? "novel.reader.emptyChapter.edit" : "novel.reader.emptyChapter.read") | t }}</p></div></div>
+          }
+          @if (reader.canAdd()) {
+            <div class="rd-add" data-testid="novel-reader-add"><button type="button" class="btn btn-sm" data-testid="novel-reader-add-passage" (click)="addPassage()"><ds-icon name="plus" [size]="16" />{{ "novel.reader.addPassage" | t }}</button></div>
           }
         }
         <div class="rd-end" data-testid="novel-reader-end">

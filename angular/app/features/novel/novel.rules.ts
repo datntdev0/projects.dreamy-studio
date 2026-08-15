@@ -381,6 +381,10 @@ function isNovelError(value: unknown): value is NovelError {
   return typeof value["code"] === "string" && typeof value["detail"] === "string";
 }
 
+export function isChapterLocked(row: ChapterRow): boolean {
+  return row.translationStatus !== "none" || row.analysisStatus !== "none";
+}
+
 export function toNovelError(error: unknown): NovelError {
   const payload = error instanceof DesktopIpcError ? error.cause : error;
   if (isNovelError(payload)) {

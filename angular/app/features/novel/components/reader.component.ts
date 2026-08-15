@@ -89,6 +89,26 @@ export class NovelReader {
     this.reader.cancelEdit();
   }
 
+  addPassage(): void {
+    this.reader.startAddPassage();
+  }
+
+  async rename(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    try {
+      const result = await this.reader.renameChapter(input.value);
+      if (result === "empty") {
+        input.value = this.reader.current()?.title ?? "";
+        this.notify(this.i18n.translate("novel.error.titleEmpty"), "warning");
+      } else if (result === "saved") {
+        this.notify(this.i18n.translate("novel.toast.chapterRenamed"), "success");
+      }
+    } catch (cause) {
+      const detail = toNovelError(cause).detail;
+      this.notify(this.i18n.translate("novel.error.generic", { detail }), "danger");
+    }
+  }
+
   async save(text: string): Promise<void> {
     try {
       this.announce(await this.reader.saveParagraph(text));

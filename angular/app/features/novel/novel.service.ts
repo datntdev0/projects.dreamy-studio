@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal, untracked } from "@angula
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ChapterRow } from "./novel.models";
+import { ParagraphRow } from "./novel.models";
 import { CoverEntry } from "./novel.models";
 import { ExportSummary } from "./novel.models";
 import { InspectEvent } from "./novel.models";
@@ -89,6 +90,16 @@ function sumWords(rows: ChapterRow[]): number {
   let total = 0;
   for (const row of rows) {
     total += row.wordCount;
+  }
+  return total;
+}
+
+function countStatus(rows: ChapterRow[], key: "translationStatus" | "analysisStatus"): number {
+  let total = 0;
+  for (const row of rows) {
+    if (row[key] !== "none") {
+      total += 1;
+    }
   }
   return total;
 }
@@ -273,6 +284,29 @@ export class NovelService {
     }
   }
 
+  async addChapter(novelId: number, title: string): Promise<ChapterRow> {
+    const row = await this.ipc.invoke<ChapterRow>("novel_chapter_add", { novelId, title });
+    this.storeChapters(novelId, [...this.chaptersOf(novelId), row], row.updatedAt);
+    return row;
+  }
+
+  async deleteChapter(novelId: number, chapterId: string): Promise<ChapterRow[]> {
+    const rows = await this.ipc.invoke<ChapterRow[]>("novel_chapter_delete", { novelId, chapterId });
+    this.storeChapters(novelId, rows, new Date().toISOString());
+    return rows;
+  }
+
+  async moveChapter(novelId: number, chapterId: string, toSeq: number): Promise<ChapterRow[]> {
+    const rows = await this.ipc.invoke<ChapterRow[]>("novel_chapter_move", { novelId, chapterId, toSeq });
+    this.storeChapters(novelId, rows, new Date().toISOString());
+    return rows;
+  }
+
+  async paragraphCount(novelId: number, chapterId: string): Promise<number> {
+    const rows = await this.ipc.invoke<ParagraphRow[]>("novel_chapter_read", { novelId, chapterId });
+    return rows.length;
+  }
+
   packagePick(): Promise<string | null> {
     return this.ipc.invoke<string | null>("novel_package_pick");
   }
@@ -394,6 +428,16 @@ export class NovelService {
   private storeCover(novel: NovelSummary, url: string | null): void {
     const entry: CoverEntry = { updatedAt: novel.updatedAt, url };
     this.covers.set({ ...this.covers(), [novel.id]: entry });
+  }
+
+  private storeChapters(novelId: number, rows: ChapterRow[], stamp: string): void {
+    this.chapterCache.set({ ...this.chapterCache(), [novelId]: rows });
+    const novel = this.novelById(novelId);
+    if (novel) {
+      const touched = { ...novel, chapterCount: rows.length, wordCount: sumWords(rows), translatedCount: countStatus(rows, "translationStatus"), analyzedCount: countStatus(rows, "analysisStatus"), updatedAt: stamp };
+      this.items.set(replaceById(this.items(), touched));
+      this.carryCover(novel, stamp);
+    }
   }
 
   private carryCover(before: NovelSummary, updatedAt: string): void {

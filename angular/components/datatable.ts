@@ -43,12 +43,17 @@ export class Datatable {
   @Input() emptyMessage = "No data";
   @Input() rowClass: ((row: DatatableRow) => Record<string, boolean>) | null = null;
   @Input() rowTestId = "datatable-row";
+  @Input() rowDraggable: ((row: DatatableRow) => boolean) | null = null;
   @Input() minWidth = "";
   @Input() variant: DatatableVariant = "card";
   @Output() rowSelected = new EventEmitter<number>();
   @Output() rowClick = new EventEmitter<DatatableRowEvent>();
   @Output() rowDblClick = new EventEmitter<DatatableRowEvent>();
   @Output() rowEnter = new EventEmitter<DatatableRowEvent>();
+  @Output() rowDragStart = new EventEmitter<DatatableRowEvent>();
+  @Output() rowDragOver = new EventEmitter<DatatableRowEvent>();
+  @Output() rowDrop = new EventEmitter<DatatableRowEvent>();
+  @Output() rowDragEnd = new EventEmitter<DatatableRowEvent>();
 
   @ViewChild("header") private header?: ElementRef<HTMLElement>;
 
@@ -83,6 +88,27 @@ export class Datatable {
 
   rowClasses(row: DatatableRow): Record<string, boolean> {
     return this.rowClass?.(row) ?? {};
+  }
+
+  isDraggable(row: DatatableRow): boolean {
+    return this.rowDraggable?.(row) ?? false;
+  }
+
+  onDragStart(row: DatatableRow, event: DragEvent): void {
+    event.dataTransfer?.setData("text/plain", "");
+    this.rowDragStart.emit({ row, event });
+  }
+
+  onDragOver(row: DatatableRow, event: DragEvent): void {
+    this.rowDragOver.emit({ row, event });
+  }
+
+  onDrop(row: DatatableRow, event: DragEvent): void {
+    this.rowDrop.emit({ row, event });
+  }
+
+  onDragEnd(row: DatatableRow, event: DragEvent): void {
+    this.rowDragEnd.emit({ row, event });
   }
 
   select(index: number): void {

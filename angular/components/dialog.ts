@@ -24,14 +24,19 @@ export class Dialog implements AfterViewInit, OnDestroy {
   @Input() title = "";
   @Input() eyebrow = "";
   @Input() size: "default" | "large" | "xl" = "default";
+  @Input() titleClass = "t-display-xs";
   @Input() closeLabel = "Close";
   @Output() closed = new EventEmitter<void>();
   @ViewChild("panel", { static: true }) panel!: ElementRef<HTMLElement>;
+  @ViewChild("foot", { static: true }) foot!: ElementRef<HTMLElement>;
 
   readonly titleId = `ds-dialog-title-${nextDialogId++}`;
   private readonly previousFocus = document.activeElement as HTMLElement | null;
 
   ngAfterViewInit(): void {
+    if (this.foot.nativeElement.childElementCount > 0) {
+      this.foot.nativeElement.setAttribute("role", "contentinfo");
+    }
     this.panel.nativeElement.focus();
   }
 

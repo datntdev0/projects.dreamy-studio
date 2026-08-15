@@ -47,7 +47,7 @@
       <dt>{{ "novel.reader.info.words" | t }}</dt><dd data-testid="novel-chapter-info-words">{{ count(chapter.wordCount) }}</dd>
       <dt>{{ "novel.reader.info.paragraphs" | t }}</dt><dd data-testid="novel-chapter-info-paragraphs">{{ reader.paragraphs().length }}</dd>
       <dt>{{ "novel.reader.info.translation" | t }}</dt><dd><span class="badge" [class.badge-success]="chapter.translationStatus !== 'none'" data-testid="novel-chapter-info-translation">{{ (chapter.translationStatus === "none" ? "novel.reader.info.none" : "novel.reader.info.draft") | t }}</span></dd>
-      <dt>{{ "novel.reader.info.knowledge" | t }}</dt><dd><span class="badge" [class.badge-success]="chapter.analysisStatus === 'done'" data-testid="novel-chapter-info-knowledge">{{ (chapter.analysisStatus === "done" ? "novel.reader.info.analyzed" : "novel.reader.info.none") | t }}</span></dd>
+      <dt>{{ "novel.reader.info.knowledge" | t }}</dt><dd><span class="badge" [class.badge-success]="chapter.analysisStatus !== 'none'" data-testid="novel-chapter-info-knowledge">{{ (chapter.analysisStatus !== "none" ? "novel.reader.info.analyzed" : "novel.reader.info.none") | t }}</span></dd>
     </dl>
   </section>
 }

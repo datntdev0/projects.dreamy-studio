@@ -38,7 +38,7 @@
       } @else if (novels.view() === "grid") {
         <div class="nm-grid" data-testid="novel-list-grid">
           @for (novel of novels.visible(); track novel.id) {
-            <div class="nm-card is-clickable" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect(novel.id)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
+            <div class="nm-card is-clickable" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect(novel.id, $event)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
               <div class="nm-cover" [class.has-img]="hasImage(novel)" [class.is-empty]="!hasImage(novel)" [style.background]="backgroundOf(novel)">
                 <span class="badge nm-lang">{{ novel.lang }}</span>
                 @if (!hasImage(novel)) {
@@ -50,7 +50,7 @@
           }
         </div>
       } @else {
-        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="720px" variant="fill" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
+        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="720px" variant="fill" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id, $event.event)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
           <ng-template dsCell="title" let-row>
             @let novel = novelOf(row);
             <div class="nm-title"><ds-cover [image]="imageOf(novel)" /><div><div class="t-ink">{{ nameOf(novel) }}</div><div class="t-sm t-mute">{{ subtitleOf(novel) }}</div></div></div>

@@ -110,7 +110,7 @@
     return `<div class="nv">
       ${U.bar(
         `<label class="search"><span class="sr-only">Search novels</span><input id="nm-q" class="input" type="search" value="${esc(q.q)}" placeholder="Search by name or author…" data-on="nm-q"></label>
-         <span class="t-sm t-mute">${list.length} novel</span>${activeChips()}`,
+         <span class="t-sm t-mute">${list.length} ${list.length === 1 ? "novel" : "novels"}</span>${activeChips()}`,
         `${U.seg("nm-view", [["grid", ic("frames"), "Grid view"], ["list", ic("list"), "List view"]], view())}
          <button class="btn btn-sm" data-act="nm-import" data-tip="Import from a .dsnovel / .zip package">${ic("upload")}Import…</button><button class="btn btn-sm btn-primary" data-act="nm-new">${ic("plus")}New</button>`,
       )}
@@ -121,7 +121,11 @@
   /** Updates the selection in place (does not re-render the list so a double click still hits the element). */
   function applySel() {
     const id = selIds()[0];
-    A.$$("#editor [data-open]").forEach((el) => el.classList.toggle("is-selected", id === el.dataset.id));
+    A.$$("#editor [data-open]").forEach((el) => {
+      const on = id === el.dataset.id;
+      el.classList.toggle("is-selected", on);
+      if (el.matches("tr")) { if (on) el.setAttribute("aria-selected", "true"); else el.removeAttribute("aria-selected"); }
+    });
     A.renderInspector();
   }
 
@@ -200,7 +204,7 @@
       ${U.bar(U.novelTitle(), `<button class="btn btn-sm" data-act="nx-open" data-k="translation" data-id="${novel.id}">${ic("lang")}Translation</button>
         <button class="btn btn-sm" data-act="nx-open" data-k="knowledge" data-id="${novel.id}">${ic("graph")}Knowledgebase</button>
         <button class="btn btn-sm" data-testid="novel-chapter-add" data-act="ch-add">${ic("plus")}Add chapter</button>
-        <button class="btn btn-sm btn-primary" data-act="ch-open" data-n="${readFrom}" ${all.length ? "" : "disabled"}>${ic("book")}${sample ? "Continue reading" : "Read"}</button>`)}
+        <button class="btn btn-sm btn-primary" data-act="ch-open" data-n="${readFrom}" ${all.length ? "" : "disabled"}>${ic("book")}${readFrom > 1 ? "Continue reading" : "Read"}</button>`)}
       <div class="tl-sub"><label class="search"><span class="sr-only">Search chapters</span><input id="ch-q" class="input" type="search" value="${esc(q.q)}" placeholder="Search chapters…" data-on="ch-q"></label>
         <span class="t-sm t-mute">${list.length}/${all.length} chapters</span><span class="spacer"></span>
         <span class="legend-dots">${frac("lang", pg.tr, pg.total, "Translated chapters")}${frac("graph", pg.kb, pg.total, "Analyzed chapters")}</span></div>
@@ -433,7 +437,7 @@
         <div class="tags">${tags.map((t) => `<span class="tag">${esc(t)}<button type="button" class="tag-x" data-act="nv-tag-del" data-id="${n.id}" data-t="${esc(t)}" aria-label="Remove tag ${esc(t)}">${ic("x")}</button></span>`).join("") || `<span class="t-sm t-mute">No tags yet.</span>`}</div>
         <input id="nv-tag-in" class="input tag-in" list="nv-tag-sug" placeholder="Add a tag, press Enter…" data-enter="nv-tag-add" data-id="${n.id}" ${tags.length >= MAX_TAGS ? "disabled" : ""} autocomplete="off">
         <datalist id="nv-tag-sug">${sug.map((t) => `<option value="${esc(t)}"></option>`).join("")}</datalist></div>
-      ${U.kv([["Source", esc(n.origin)], ["Update", `<span class="mono">${esc(n.updated)}</span>`]])}</section>`;
+      ${U.kv([["Source", esc(n.origin)], ["Updated", `<span class="mono">${esc(n.updated)}</span>`]])}</section>`;
   }
   const MAX_TAGS = 12;
 
@@ -445,12 +449,8 @@
       const c = cur;
       const sample = novel.id === U.SAMPLE;
       const tr = sample ? N().tr.chapters[c.n] : null;
-      const warns = sample ? U.openWarnings().filter((w) => w.ch === c.n).length : 0;
-      const stale = sample ? U.staleItems().filter((i) => i.ev.some((e) => NV.chOf(e.p) === c.n)).length : 0;
       return `${displayPanel()}
-        ${U.insSec(`Ch.${c.n}`, U.kv([["Title", esc(c.title)], ["Words", fmt(c.words)], ["Passage", U.parasOf(c).length], ...(sample ? [["Translate", tr ? `<span class="badge badge-success">HAS DRAFT</span>` : `<span class="badge">NOT YET</span>`], ["Knowledge", N().kb.analyzed[c.n] === "done" ? `<span class="badge badge-success">ANALYZED</span>` : `<span class="badge">NOT YET</span>`]] : [])]))}
-        ${warns || stale ? `<section class="ins-sec"><span class="eyebrow">Needs review</span>
-          ${warns ? `<div class="t-sm warn-line">${ic("alert")} ${warns} translation warnings</div>` : ""}${stale ? `<div class="t-sm warn-line">${ic("alert")} ${stale} knowledge claims tied to a changed source</div>` : ""}</section>` : ""}`;
+        ${U.insSec(`Ch.${c.n}`, U.kv([["Title", esc(c.title)], ["Words", fmt(c.words)], ["Passage", U.parasOf(c).length], ...(sample ? [["Translate", tr ? `<span class="badge badge-success">HAS DRAFT</span>` : `<span class="badge">NOT YET</span>`], ["Knowledge", N().kb.analyzed[c.n] === "done" ? `<span class="badge badge-success">ANALYZED</span>` : `<span class="badge">NOT YET</span>`]] : [])]))}`;
     }
     return novelPanel(novel, false);
   }
@@ -461,7 +461,9 @@
       <button type="button" class="cover-action" data-act="nv-cover-pick" data-tip="${has ? "Change cover" : "Choose cover image"}" aria-label="${has ? "Change cover" : "Choose cover image"}">${ic("image")}</button><input type="file" accept="image/*" hidden data-change="nv-cover" data-id="${novel.id}">
       <button class="cover-action" data-act="nv-cover-del" data-id="${novel.id}" data-tip="Remove cover image" aria-label="Remove cover image" ${has ? "" : "disabled"}>${ic("x")}</button>
     </span>`;
+    const exportTip = novel.chapters ? "Export as a .dsnovel package" : "Add chapters before exporting";
     return `<section class="ins-panel-actions">
+        <button class="btn btn-sm" data-act="nm-export" data-id="${novel.id}" data-tip="${exportTip}" aria-label="${exportTip}" ${novel.chapters ? "" : "disabled"}>${ic("download")}Export</button>
         <button class="btn btn-sm btn-danger" data-act="nm-del" data-id="${novel.id}" data-tip="Delete novel" aria-label="Delete novel">${ic("trash")}Delete</button>
         ${withOpen ? `<button class="btn btn-sm btn-primary" data-act="nm-open" data-id="${novel.id}">${ic("book")}Open</button>` : ""}
       </section>
@@ -546,6 +548,7 @@
       nm.selected = !dbl && nm.selected === el.dataset.id ? null : el.dataset.id;
       applySel();
     },
+    "nm-export": (el) => { const n = U.novelById(el.dataset.id); if (n) A.toast(`Exported “${U.nameOf(n)}” as a .dsnovel package.`); },
     "nm-del": (el) => openDelete(el.dataset.id ? [el.dataset.id] : selIds()),
     "nm-del-confirm": () => {
       const ids = new Set(pendingDel);

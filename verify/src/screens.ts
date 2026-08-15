@@ -25,6 +25,7 @@ export interface ScreenSpec {
   readonly select?: TargetSelectors;
   readonly list?: ListSpec;
   readonly preview?: TargetSelectors;
+  readonly previewGesture?: "click" | "dblclick";
   readonly selectedPanels: readonly string[];
 }
 
@@ -150,7 +151,14 @@ export const NOVEL_SCREENS: readonly ScreenSpec[] = [
     select: { prototype: `#editor [data-act="nm-sel"][data-id="${SAMPLE_NOVEL.proto}"]`, app: '[data-testid="novel-list-row"] >> nth=3' },
     selectedPanels: SELECTED_PANELS,
   },
-  { id: "chapters", folder: ["novel", "chapters"], open: openChapters(SAMPLE_NOVEL), selectedPanels: SELECTED_PANELS },
+  {
+    id: "chapters",
+    folder: ["novel", "chapters"],
+    open: openChapters(SAMPLE_NOVEL),
+    preview: { prototype: '#editor [data-testid="novel-chapter-add"]', app: '[data-testid="novel-chapters-add"]' },
+    previewGesture: "click",
+    selectedPanels: SELECTED_PANELS,
+  },
   { id: "reader", folder: ["novel", "reader"], open: openChapters(SAMPLE_NOVEL), prepare: [FIRST_CHAPTER], selectedPanels: SELECTED_PANELS },
 ];
 

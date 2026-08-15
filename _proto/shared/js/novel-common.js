@@ -75,7 +75,7 @@ window.NVU = (function () {
       for (const key of Object.keys(rowClasses)) {
         if (rowClasses[key]) classes += `${classes ? " " : ""}${key}`;
       }
-      const attrs = options.rowAttrs ? options.rowAttrs(row) : "";
+      const attrs = `${options.rowAttrs ? options.rowAttrs(row) : ""}${rowClasses["is-selected"] ? ' aria-selected="true"' : ""}`;
       let cells = "";
       for (const column of columns) {
         const value = column.render ? column.render(row) : esc(row[column.key] ?? "");
@@ -109,7 +109,7 @@ window.NVU = (function () {
   const chapterJump = (id, cur, total, title, suffix) => `<select id="${id}" class="select ch-select" data-change="${id}" aria-label="Chapters">${options(chaptersFor(current()).map((c) => [c.n, `Ch.${c.n} · ${c.title}${suffix ? suffix(c.n) : ""}`]), cur)}</select>`;
 
   /* ---- tags + novel filters (shared by explorer Filters and the Novel management screen) ---- */
-  const tagsOf = (n) => n.tags || [];
+  const tagsOf = (n) => [...(n.tags || [])].sort((a, b) => a.localeCompare(b));
   const allTags = () => {
     const m = new Map();
     N().novels.forEach((n) => tagsOf(n).forEach((t) => m.set(t, (m.get(t) || 0) + 1)));

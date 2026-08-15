@@ -8,6 +8,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .nv-bar-l, .nv-bar-r { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; }
 .nv-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .nv-body.is-col { flex-direction: column; }
+.nv-body > .empty { flex: 1; min-width: 0; }
 .nv-scroll { flex: 1; min-width: 0; min-height: 0; overflow: auto; }
 .nv-scroll.table-view { display: flex; flex-direction: column; overflow: hidden; }
 .bar-field { display: inline-flex; align-items: center; gap: var(--sp-sm); font-size: 12.5px; color: var(--mute); }
@@ -140,7 +141,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .rd-h { margin: 0; font-size: calc(var(--rd-fs, 17px) * 1.7); line-height: 1.2; font-weight: 600; color: var(--rd-fg, var(--ink)); }
 .rd-h .rd-h-in { width: 100%; height: auto; padding: var(--sp-xs) var(--sp-sm); font: inherit; line-height: 1.2; color: inherit; background: transparent; }
 .rd-add { display: flex; padding: var(--sp-xs) var(--sp-sm); font-family: var(--font); }
-.table td .row-actions { display: inline-flex; gap: 2px; }
+.table td .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
 .table tbody tr[draggable="true"] { cursor: grab; }
 .table tbody tr.is-dragging { opacity: 0.45; }
 .table tbody tr.is-drop-before td { box-shadow: inset 0 2px 0 var(--primary); }
@@ -157,6 +158,8 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .rd-edit .textarea { font: 400 var(--rd-fs, 17px)/var(--rd-lh, 1.75) var(--rd-font, var(--font-serif)); }
 .rd-edit-foot { display: flex; align-items: center; gap: var(--sp-sm); }
 .rd-end { padding-top: var(--sp-xl); display: flex; justify-content: center; font-family: var(--font); }
+.rd-col > .empty { height: auto; padding: var(--sp-lg) 0; place-items: start; text-align: left; font-family: var(--font); }
+.rd-col > .empty .empty-inner { justify-items: start; max-width: none; }
 
 /* translation flow */
 .flow { flex: none; display: flex; align-items: center; gap: var(--sp-xs); padding: var(--sp-sm) var(--sp-md); background: var(--canvas-card); border-bottom: 1px solid var(--hairline); overflow-x: auto; scrollbar-width: thin; }
@@ -472,3 +475,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .table td .ellip { max-width: 300px; }
 .nm-recent .tree-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 app-novel-create-dialog .dialog-heading, app-novel-delete-dialog .dialog-heading, app-novel-import-dialog .dialog-heading { display: flex; align-items: center; gap: var(--sp-sm); }
+app-novel-chapter-add-dialog .dialog-heading, app-novel-chapter-delete-dialog .dialog-heading { display: flex; align-items: center; min-width: 0; }
+app-novel-chapter-add-dialog .dialog-heading > span.eyebrow, app-novel-chapter-delete-dialog .dialog-heading > span.eyebrow { white-space: nowrap; }
+app-novel-chapter-add-dialog .modal-title, app-novel-chapter-delete-dialog .modal-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
+app-novel-chapter-add-dialog .dialog-heading > span.eyebrow + .modal-title::before, app-novel-chapter-delete-dialog .dialog-heading > span.eyebrow + .modal-title::before { content: ""; display: inline-block; width: 1px; height: 12px; margin: 0 var(--sp-lg) 0 var(--sp-sm); background: var(--hairline-strong); vertical-align: -2px; }

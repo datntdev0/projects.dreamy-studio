@@ -81,7 +81,12 @@ abstract class BaseStudio implements Studio {
     if (!screen.preview) {
       throw new Error(`screen ${screen.id} has no preview`);
     }
-    await this.page.locator(screen.preview[this.target]).first().dblclick();
+    const target = this.page.locator(screen.preview[this.target]).first();
+    if (screen.previewGesture === "click") {
+      await target.click();
+    } else {
+      await target.dblclick();
+    }
     await this.settle();
   }
 

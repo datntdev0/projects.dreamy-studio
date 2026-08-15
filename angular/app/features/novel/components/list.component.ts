@@ -102,8 +102,9 @@ export class NovelList {
     this.novels.setQuery((event.target as HTMLInputElement).value);
   }
 
-  onSelect(id: number): void {
-    this.novels.select(id);
+  onSelect(id: number, event: Event): void {
+    const second = event instanceof MouseEvent && event.detail >= 2;
+    this.novels.select(!second && this.novels.selectedId() === id ? null : id);
   }
 
   novelOf(row: object): NovelSummary {

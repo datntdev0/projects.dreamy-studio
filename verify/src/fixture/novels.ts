@@ -11,7 +11,9 @@ const PACKAGE_EXTENSION = "dsnovel";
 const WORKSPACE_DB_FILE = "workspace.dreamydb";
 const SAMPLE_NOVEL = "NOV-0001";
 const TRANSLATED = "draft";
+const REVIEW = "review";
 const ANALYZED = "done";
+const STALE = "stale";
 
 export interface ProtoNovel {
   readonly id: string;
@@ -28,16 +30,16 @@ export interface ProtoNovel {
 
 export interface NovelData {
   readonly novels: readonly ProtoNovel[];
-  readonly translated: readonly number[];
-  readonly analyzed: readonly number[];
+  readonly translated: Readonly<Record<number, string>>;
+  readonly analyzed: Readonly<Record<number, string>>;
 }
 
 interface NovelWindow {
   NV?: {
     state: {
       novels: ProtoNovel[];
-      tr: { chapters: Record<string, unknown> };
-      kb: { analyzed: Record<string, string> };
+      tr: { chapters: Record<string, { noSample?: boolean; paras: Record<string, { st: string }> }> };
+      kb: { analyzed: Record<string, string>; items: { stale?: string; ev: { p: string }[] }[] };
     };
   };
 }
@@ -83,8 +85,19 @@ export async function loadNovels(): Promise<NovelData> {
   if (!state) {
     throw new Error(`${prototypeNovelData} did not define window.NV`);
   }
-  const analyzed = Object.entries(state.kb.analyzed).filter(([, status]) => status === ANALYZED).map(([chapter]) => Number(chapter));
-  return { novels: state.novels, translated: Object.keys(state.tr.chapters).map(Number), analyzed };
+  const stale = new Set(state.kb.items.filter((item) => item.stale).flatMap((item) => item.ev.map((evidence) => Number(evidence.p.split(".")[0]))));
+  const analyzed: Record<number, string> = {};
+  for (const [chapter, status] of Object.entries(state.kb.analyzed)) {
+    if (status === ANALYZED) {
+      analyzed[Number(chapter)] = stale.has(Number(chapter)) ? STALE : ANALYZED;
+    }
+  }
+  const translated: Record<number, string> = {};
+  for (const [chapter, entry] of Object.entries(state.tr.chapters)) {
+    const reviewing = Object.values(entry.paras).some((para) => para.st === "review");
+    translated[Number(chapter)] = reviewing ? REVIEW : TRANSLATED;
+  }
+  return { novels: state.novels, translated, analyzed };
 }
 
 function inputOf(novel: ProtoNovel): Record<string, unknown> {
@@ -139,8 +152,8 @@ export function pinNovels(workspacePath: string, data: NovelData, seeded: readon
     }
     const sample = seeded.find((entry) => entry.proto.id === SAMPLE_NOVEL);
     if (sample) {
-      pinProgress(db, sample.id, "translation_status", TRANSLATED, data.translated);
-      pinProgress(db, sample.id, "analysis_status", ANALYZED, data.analyzed);
+      pinProgress(db, sample.id, "translation_status", data.translated);
+      pinProgress(db, sample.id, "analysis_status", data.analyzed);
     }
     db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   } finally {
@@ -148,8 +161,8 @@ export function pinNovels(workspacePath: string, data: NovelData, seeded: readon
   }
 }
 
-function pinProgress(db: DatabaseSync, novelId: number, column: string, status: string, chapters: readonly number[]): void {
-  for (const seq of chapters) {
-    db.prepare(`UPDATE ws_novel_chapters SET ${column} = ? WHERE novel_id = ? AND seq = ?`).run(status, novelId, seq);
+function pinProgress(db: DatabaseSync, novelId: number, column: string, statuses: Readonly<Record<number, string>>): void {
+  for (const [seq, status] of Object.entries(statuses)) {
+    db.prepare(`UPDATE ws_novel_chapters SET ${column} = ? WHERE novel_id = ? AND seq = ?`).run(status, novelId, Number(seq));
   }
 }

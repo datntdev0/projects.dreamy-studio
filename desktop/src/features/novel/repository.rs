@@ -11,7 +11,7 @@ pub const TAG_TYPE_NOVEL: &str = "novel";
 const SUMMARY_SELECT: &str = "SELECT n.id, n.title, n.name, n.author, n.lang, n.description, \
     n.origin, n.created_at, n.updated_at, COUNT(c.id), COALESCE(SUM(c.word_count), 0), \
     COALESCE(SUM(c.translation_status != 'none'), 0), \
-    COALESCE(SUM(c.analysis_status = 'done'), 0) \
+    COALESCE(SUM(c.analysis_status != 'none'), 0) \
     FROM ws_novels n LEFT JOIN ws_novel_chapters c ON c.novel_id = n.id";
 
 const CHAPTER_SELECT: &str = "SELECT id, novel_id, seq, title, word_count, translation_status, \

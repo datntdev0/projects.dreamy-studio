@@ -374,7 +374,7 @@ export class NovelService {
     this.clearFilters();
   }
 
-  select(id: number): void {
+  select(id: number | null): void {
     this.selectedNovelId.set(id);
   }
 

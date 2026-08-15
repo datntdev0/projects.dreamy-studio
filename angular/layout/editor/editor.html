@@ -53,6 +53,20 @@
           }
         </div>
       }
+      @case ("translation") {
+        <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-translation-host">
+          @if (tabs.active().novelId; as novelId) {
+            <app-novel-tool-placeholder kind="translation" [novelId]="novelId" />
+          }
+        </div>
+      }
+      @case ("knowledge") {
+        <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-knowledge-host">
+          @if (tabs.active().novelId; as novelId) {
+            <app-novel-tool-placeholder kind="knowledge" [novelId]="novelId" />
+          }
+        </div>
+      }
       @case ("collections") {
         <div class="nv-host" data-testid="editor-collections-host"><app-library-collections /></div>
       }

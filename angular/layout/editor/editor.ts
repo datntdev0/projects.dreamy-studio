@@ -4,6 +4,7 @@ import { I18nPipe } from "../../app/core/i18n/i18n.pipe";
 import { I18nService } from "../../app/core/i18n/i18n.service";
 import { NovelView } from "../../app/features/novel/components/novel-view.component";
 import { WorkspaceService } from "../../app/features/workspace/workspace.service";
+import { NovelToolPlaceholder } from "../../app/features/novel/components/tool-placeholder.component";
 import { NovelList } from "../../app/features/novel/components/list.component";
 import { ProjectList } from "../../app/features/project/components/list.component";
 import { ProjectView } from "../../app/features/project/components/project-view.component";
@@ -21,7 +22,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts],
+  imports: [Icon, I18nPipe, Bottom, NovelView, NovelToolPlaceholder, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts],
   templateUrl: "./editor.html",
 })
 export class Editor {
@@ -34,6 +35,12 @@ export class Editor {
   readonly crumbCurrent = computed(this.currentOf.bind(this));
 
   tabLabel(tab: EditorTab): string {
+    if (tab.kind === "translation") {
+      return this.i18n.translate("tabs.novel.translation", { name: tab.title });
+    }
+    if (tab.kind === "knowledge") {
+      return this.i18n.translate("tabs.novel.knowledge", { name: tab.title });
+    }
     return tab.labelKey ? this.i18n.translate(tab.labelKey) : tab.title;
   }
 
@@ -71,13 +78,19 @@ export class Editor {
     if (tab.kind === "images" || tab.kind === "sounds" || tab.kind === "videos" || tab.kind === "prompts") {
       return this.i18n.translate("library.crumb");
     }
-    return tab.kind === "novel" ? tab.title : null;
+    return tab.kind === "novel" || tab.kind === "translation" || tab.kind === "knowledge" ? tab.title : null;
   }
 
   private currentOf(): string {
     const tab = this.tabs.active();
     if (tab.kind === "project" || tab.kind === "collection") {
       return tab.title;
+    }
+    if (tab.kind === "translation") {
+      return this.i18n.translate("novel.tool.translation.title");
+    }
+    if (tab.kind === "knowledge") {
+      return this.i18n.translate("novel.tool.knowledge.title");
     }
     return tab.kind === "novel" ? this.i18n.translate("tabs.novel.title") : this.tabLabel(tab);
   }

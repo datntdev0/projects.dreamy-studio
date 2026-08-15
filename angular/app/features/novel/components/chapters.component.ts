@@ -3,6 +3,8 @@ import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nService } from "../../../core/i18n/i18n.service";
 import { Datatable, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "../../../../components/datatable";
 import { Icon } from "../../../../components/icon";
+import { NovelToolKind } from "../../../../layout/layout.models";
+import { TabsService } from "../../../../layout/tabs.service";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { ToastService } from "../../../core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
@@ -35,6 +37,7 @@ export class NovelChapters {
   private readonly novels = inject(NovelService);
   private readonly reader = inject(NovelReaderService);
   private readonly i18n = inject(I18nService);
+  private readonly tabs = inject(TabsService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly toasts = inject(ToastService);
 
@@ -91,6 +94,13 @@ export class NovelChapters {
 
   read(): void {
     void this.reader.openReader(this.novelId(), this.resumeSeq());
+  }
+
+  openTool(kind: NovelToolKind): void {
+    const novel = this.novel();
+    if (novel) {
+      this.tabs.openNovelTool(kind, novel.id, displayName(novel));
+    }
   }
 
   open(seq: number): void {

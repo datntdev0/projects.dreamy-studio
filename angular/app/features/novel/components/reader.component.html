@@ -13,11 +13,22 @@
     </div>
     <span class="spacer"></span>
     <div class="nv-bar-r" data-testid="novel-reader-bar-right">
+      <span class="rd-seg-off-false" data-testid="novel-reader-lang-host">
+        <div class="seg" role="group" data-testid="novel-reader-lang">
+          <button type="button" class="is-active" aria-pressed="true" [attr.aria-label]="'novel.reader.lang.original' | t: { lang: langName() }" [attr.data-tip]="'novel.reader.lang.original' | t: { lang: langName() }" data-testid="novel-reader-lang-src">{{ novel()?.lang }}</button>
+          <button type="button" aria-pressed="false" [attr.aria-label]="'novel.reader.lang.translation' | t: { lang: targetName() }" [attr.data-tip]="'novel.reader.lang.translation' | t: { lang: targetName() }" data-testid="novel-reader-lang-tr">{{ targetCode }}</button>
+        </div>
+      </span>
+      <div class="seg" role="group" data-testid="novel-reader-layout">
+        <button type="button" class="is-active" aria-pressed="true" data-testid="novel-reader-layout-single">{{ "novel.reader.layout.single" | t }}</button>
+        <button type="button" aria-pressed="false" data-testid="novel-reader-layout-parallel">{{ "novel.reader.layout.parallel" | t }}</button>
+      </div>
       <div class="seg" role="group" data-testid="novel-reader-mode">
         @for (mode of modes; track mode) {
           <button type="button" [class.is-active]="reader.mode() === mode" [attr.aria-pressed]="reader.mode() === mode" [attr.data-testid]="'novel-reader-mode-' + mode" (click)="setMode(mode)">{{ modeKey(mode) | t }}</button>
         }
       </div>
+      <button type="button" class="btn btn-sm" data-testid="novel-reader-translate"><ds-icon name="lang" [size]="16" />{{ "novel.reader.translate" | t }}</button>
     </div>
   </div>
   <div class="nv-body" data-testid="novel-reader-body">

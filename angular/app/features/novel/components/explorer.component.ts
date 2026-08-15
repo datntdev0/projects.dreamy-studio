@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from "@angular/core";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { novelTabId } from "../../../../layout/layout.models";
+import { NovelToolKind, novelTabId, novelToolTabId } from "../../../../layout/layout.models";
 import { TabsService } from "../../../../layout/tabs.service";
 import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
@@ -42,6 +42,10 @@ export class NovelExplorer {
     return this.tabs.isActive(novelTabId(novel.id));
   }
 
+  isToolActive(kind: NovelToolKind, novel: NovelSummary): boolean {
+    return this.tabs.isActive(novelToolTabId(kind, novel.id));
+  }
+
   isTagOn(tag: string): boolean {
     return this.novels.filters().tags.includes(tag);
   }
@@ -57,6 +61,10 @@ export class NovelExplorer {
   openNovel(novel: NovelSummary): void {
     this.tabs.openNovel(novel.id, displayName(novel));
     void this.reader.openNovel(novel.id);
+  }
+
+  openTool(kind: NovelToolKind, novel: NovelSummary): void {
+    this.tabs.openNovelTool(kind, novel.id, displayName(novel));
   }
 
   toggleGroup(novel: NovelSummary): void {

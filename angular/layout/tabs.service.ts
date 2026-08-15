@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from "@angular/core";
 import { WorkspaceService } from "../app/features/workspace/workspace.service";
-import { COLLECTIONS_TAB, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, PROJECTS_TAB, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, collectionTab, collectionTabId, novelTab, novelTabId, projectTab, projectTabId } from "./layout.models";
+import { COLLECTIONS_TAB, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, NovelToolKind, PROJECTS_TAB, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, collectionTab, collectionTabId, novelTab, novelTabId, novelToolTab, novelToolTabId, projectTab, projectTabId } from "./layout.models";
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -86,13 +86,25 @@ export class TabsService {
     this.open(novelTab(novelId, title));
   }
 
-  renameNovel(novelId: number, title: string): void {
-    const tabs = [...this.tabs()];
-    const index = indexOfTab(tabs, novelTabId(novelId));
-    if (index < 0) {
+  openNovelTool(kind: NovelToolKind, novelId: number, title: string): void {
+    const id = novelToolTabId(kind, novelId);
+    if (indexOfTab(this.tabs(), id) >= 0) {
+      this.renameNovel(novelId, title);
+      this.activate(id);
       return;
     }
-    tabs[index] = { ...tabs[index], title };
+    this.open(novelToolTab(kind, novelId, title));
+  }
+
+  renameNovel(novelId: number, title: string): void {
+    const ids = [novelTabId(novelId), novelToolTabId("translation", novelId), novelToolTabId("knowledge", novelId)];
+    const tabs = [...this.tabs()];
+    for (const id of ids) {
+      const index = indexOfTab(tabs, id);
+      if (index >= 0) {
+        tabs[index] = { ...tabs[index], title };
+      }
+    }
     this.tabs.set(tabs);
   }
 
@@ -128,6 +140,8 @@ export class TabsService {
 
   closeNovel(novelId: number): void {
     this.close(novelTabId(novelId));
+    this.close(novelToolTabId("translation", novelId));
+    this.close(novelToolTabId("knowledge", novelId));
   }
 
   closeNovels(novelIds: number[]): void {

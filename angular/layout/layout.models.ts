@@ -6,7 +6,7 @@ export type PanelId = "explorer" | "inspector" | "bottom";
 
 export type RightTabId = "inspector" | "assistant";
 
-export type EditorTabKind = "home" | "novels" | "novel" | "projects" | "project" | "images" | "sounds" | "videos" | "prompts" | "collections" | "collection";
+export type EditorTabKind = "home" | "novels" | "novel" | "translation" | "knowledge" | "projects" | "project" | "images" | "sounds" | "videos" | "prompts" | "collections" | "collection";
 
 export interface RailItem {
   id: RailId;
@@ -159,6 +159,27 @@ export function novelTab(novelId: number, title: string): EditorTab {
     id: novelTabId(novelId),
     kind: "novel",
     icon: "book",
+    labelKey: null,
+    title,
+    novelId,
+    projectId: null,
+    collectionId: null,
+    rail: "novels",
+    closable: true,
+  };
+}
+
+export type NovelToolKind = "translation" | "knowledge";
+
+export function novelToolTabId(kind: NovelToolKind, novelId: number): string {
+  return `${kind}:${novelId}`;
+}
+
+export function novelToolTab(kind: NovelToolKind, novelId: number, title: string): EditorTab {
+  return {
+    id: novelToolTabId(kind, novelId),
+    kind,
+    icon: kind === "translation" ? "lang" : "graph",
     labelKey: null,
     title,
     novelId,

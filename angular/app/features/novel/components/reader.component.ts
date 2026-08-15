@@ -5,6 +5,7 @@ import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { I18nService } from "../../../core/i18n/i18n.service";
 import { ToastService } from "../../../core/toast/toast.service";
 import { ToastTone } from "../../../core/toast/toast.models";
+import { NovelLang } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { ParagraphSaveResult } from "../novel.models";
 import { ReaderMode } from "../novel.models";
@@ -40,12 +41,14 @@ export class NovelReader {
   readonly novelId = input.required<number>();
   readonly count = formatCount;
   readonly flash = signal<number | null>(null);
+  readonly targetCode: NovelLang = "VI";
   readonly modes: ReaderMode[] = ["read", "edit"];
   readonly page = viewChild<ElementRef<HTMLElement>>("page");
   readonly editorRef = viewChild<ElementRef<HTMLTextAreaElement>>("editor");
 
   readonly novel = computed(this.findNovel.bind(this));
   readonly langName = computed(this.buildLangName.bind(this));
+  readonly targetName = computed(this.buildTargetName.bind(this));
 
   constructor() {
     effect(this.syncFocus.bind(this));
@@ -136,6 +139,10 @@ export class NovelReader {
   private buildLangName(): string {
     const novel = this.novel();
     return novel ? this.i18n.translate(`novel.lang.${novel.lang}`) : "";
+  }
+
+  private buildTargetName(): string {
+    return this.i18n.translate(`novel.lang.${this.targetCode}`);
   }
 
   private syncFocus(): void {

@@ -61,7 +61,7 @@
 .lbp-sound .lbp-bar { display: flex; align-items: center; gap: var(--sp-md); }
 .lbp-part { display: grid; gap: var(--sp-xs); }
 app-library-sound-eq { display: block; }
-app-library-sound-eq.is-big .lb-eq { height: 120px; min-height: 0; gap: 3px; }
+app-library-sound-eq.is-big .lb-eq { height: 120px; min-height: 0; gap: 2px; }
 app-library-sound-eq.is-big .lb-eq i { border-radius: 2px; }
 .lb-th.is-ic { width: 34px; }
 app-library-sounds .nm-title .lb-th.is-ic { width: 40px; aspect-ratio: 4 / 3; }

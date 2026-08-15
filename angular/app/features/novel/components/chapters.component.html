@@ -19,7 +19,7 @@
       <span class="legend-dots" data-testid="novel-chapters-legend"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></span>
     </div>
     <div class="nv-body" data-testid="novel-chapters-body">
-      <ds-datatable [columns]="tableColumns" [rows]="rows()" trackKey="id" variant="fill" rowTestId="novel-chapter-row" [rowClass]="tableRowClass" [rowDraggable]="tableRowDraggable" data-testid="novel-chapters-table" (rowClick)="open(chapterOf($event.row).seq)" (rowEnter)="onTableEnter($event)" (rowDragStart)="onDragStart($event)" (rowDragOver)="onDragOver($event)" (rowDrop)="onDrop($event)" (rowDragEnd)="onDragEnd()">
+      <ds-datatable [columns]="tableColumns" [rows]="rows()" trackKey="id" variant="fill" rowTestId="novel-chapter-row" [rowClass]="tableRowClass" data-testid="novel-chapters-table" (rowClick)="onRowClick($event)" (rowEnter)="onTableEnter($event)" (rowPointerDown)="onPointerDown($event)">
         <ng-template dsCell="seq" let-row><span class="mono t-mute">{{ numberOf(chapterOf(row)) }}</span></ng-template>
         <ng-template dsCell="wordCount" let-row>{{ count(chapterOf(row).wordCount) }}</ng-template>
         <ng-template dsCell="translationStatus" let-row>
@@ -41,8 +41,6 @@
         <ng-template dsCell="actions" let-row>
           @let chapter = chapterOf(row);
           <span class="row-actions" data-testid="novel-chapter-actions" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">
-            <button type="button" class="btn btn-icon btn-sm btn-ghost" [attr.title]="'novel.chapters.up' | t" [attr.aria-label]="'novel.chapters.up' | t" [attr.data-tip]="(upOff(chapter) ? tipKey(chapter) : 'novel.chapters.up') | t" [disabled]="upOff(chapter)" data-testid="novel-chapter-up" (click)="moveUp(chapter, $event)"><ds-icon name="arrow-up" [size]="17" /></button>
-            <button type="button" class="btn btn-icon btn-sm btn-ghost" [attr.title]="'novel.chapters.down' | t" [attr.aria-label]="'novel.chapters.down' | t" [attr.data-tip]="(downOff(chapter) ? tipKey(chapter) : 'novel.chapters.down') | t" [disabled]="downOff(chapter)" data-testid="novel-chapter-down" (click)="moveDown(chapter, $event)"><ds-icon name="arrow-down" [size]="17" /></button>
             <button type="button" class="btn btn-icon btn-sm btn-ghost" [attr.title]="'novel.chapters.delete' | t" [attr.aria-label]="'novel.chapters.delete' | t" [attr.data-tip]="(isLocked(chapter) ? 'novel.chapters.locked' : 'novel.chapters.delete') | t" [disabled]="isLocked(chapter)" data-testid="novel-chapter-delete" (click)="remove(chapter, $event)"><ds-icon name="trash" [size]="17" /></button>
           </span>
         </ng-template>

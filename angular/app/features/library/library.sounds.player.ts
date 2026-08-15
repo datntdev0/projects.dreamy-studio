@@ -90,8 +90,8 @@ export class LibrarySoundPlayer {
       const context = new AudioContext();
       const source = context.createMediaElementSource(audio);
       const analyser = context.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.55;
       source.connect(analyser);
       analyser.connect(context.destination);
       this.context = context;

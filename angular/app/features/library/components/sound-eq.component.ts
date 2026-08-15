@@ -3,7 +3,7 @@ import { LibrarySound } from "../library.sounds.models";
 import { LibrarySoundPlayer } from "../library.sounds.player";
 import { LibrarySoundService } from "../library.sounds.service";
 
-const BAR_COUNT = 32;
+const BAR_COUNT = 64;
 const IDLE_LEVEL = .14;
 const LIVE_LEVEL = .08;
 

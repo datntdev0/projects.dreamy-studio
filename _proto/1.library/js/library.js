@@ -51,7 +51,24 @@
      Both need http(s) or blob: (fetch + CORS); on file:// or for assets without a file they fall
      back to the seeded synthetic data. */
   const PEAK_RATE = 12;
-  const BANDS = 32;
+  const BARS = 64;
+  /* Same tuning as the app (library.sounds.audio.ts): loud masters keep waveform peaks near full scale and
+     analyser bytes high, so both are stretched to widen the swing. */
+  const WAVE_LOW = 0.05;
+  const WAVE_HIGH = 0.98;
+  const WAVE_GAMMA = 1.25;
+  const WAVE_MIN = 0.06;
+  const SPEC_FLOOR = 0.35;
+  const SPEC_GAMMA = 1.7;
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const peakScale = (p) => {
+    const sorted = Uint8Array.from(p).sort();
+    const at = (f) => sorted[Math.min(sorted.length - 1, Math.floor(f * (sorted.length - 1)))] || 0;
+    const lo = at(WAVE_LOW);
+    return { lo, hi: Math.max(lo + 24, at(WAVE_HIGH)) };
+  };
+  const waveShape = (v, sc) => WAVE_MIN + (1 - WAVE_MIN) * clamp01((v - sc.lo) / (sc.hi - sc.lo)) ** WAVE_GAMMA;
+  const specContrast = (v) => clamp01((v - SPEC_FLOOR) / (1 - SPEC_FLOOR)) ** SPEC_GAMMA;
   const CORS_OK = /^https?:$/.test(location.protocol);
   const PK = new Map();
   async function decodePeaks(url) {
@@ -69,9 +86,9 @@
     }
     return out;
   }
-  const overviewOf = (p) => Array.from({ length: BANDS }, (_, k) => {
-    const a = Math.floor((k * p.length) / BANDS);
-    const b = Math.max(a + 1, Math.floor(((k + 1) * p.length) / BANDS));
+  const overviewOf = (p) => Array.from({ length: BARS }, (_, k) => {
+    const a = Math.floor((k * p.length) / BARS);
+    const b = Math.max(a + 1, Math.floor(((k + 1) * p.length) / BARS));
     let s = 0;
     for (let i = a; i < b; i++) s += p[i];
     return s / (b - a) / 255;
@@ -89,7 +106,7 @@
     if (!raw) return null;
     if (!PRE.has(name)) {
       const p = b64(raw.peaks);
-      PRE.set(name, { p, ov: overviewOf(p), gain: 255 / Math.max(64, ...p), err: false, bands: b64(raw.bands), rate: raw.rate, nb: raw.nb });
+      PRE.set(name, { p, ov: overviewOf(p), sc: peakScale(p), err: false, bands: b64(raw.bands), rate: raw.rate, nb: raw.nb });
     }
     return PRE.get(name);
   }
@@ -101,7 +118,7 @@
     const i = Math.floor(x);
     const f = x - i;
     const j = Math.min(frames - 1, i + 1);
-    return Array.from({ length: e.nb }, (_, k) => (e.bands[i * e.nb + k] * (1 - f) + e.bands[j * e.nb + k] * f) / 255);
+    return Array.from({ length: e.nb }, (_, k) => specContrast((e.bands[i * e.nb + k] * (1 - f) + e.bands[j * e.nb + k] * f) / 255));
   }
   function peaksOf(id) {
     const pre = preOf(id);
@@ -110,10 +127,10 @@
     if (!url || !CORS_OK && !url.startsWith("blob:")) return null;
     let e = PK.get(id);
     if (!e || e.url !== url) {
-      e = { url, p: null, ov: null, gain: 1, err: false };
+      e = { url, p: null, ov: null, sc: { lo: 0, hi: 255 }, err: false };
       PK.set(id, e);
       decodePeaks(url)
-        .then((p) => { e.p = p; e.ov = overviewOf(p); e.gain = 255 / Math.max(64, ...p); })
+        .then((p) => { e.p = p; e.ov = overviewOf(p); e.sc = peakScale(p); })
         .catch(() => { e.err = true; })
         .finally(() => { if (PK.get(id) === e) paint(); });
     }
@@ -124,15 +141,15 @@
     try {
       PL.ctx ||= new (window.AudioContext || window.webkitAudioContext)();
       const an = PL.ctx.createAnalyser();
-      an.fftSize = 256;
-      an.smoothingTimeConstant = 0.8;
+      an.fftSize = 2048;
+      an.smoothingTimeConstant = 0.55;
       PL.ctx.createMediaElementSource(PL.audio).connect(an);
       an.connect(PL.ctx.destination);
       PL.an = an;
       PL.freq = new Uint8Array(an.frequencyBinCount);
     } catch { PL.anFail = true; }
   }
-  function spectrumBands(count = BANDS) {
+  function spectrumBands(count = BARS) {
     PL.an.getByteFrequencyData(PL.freq);
     const f = PL.freq;
     const per = PL.ctx.sampleRate / 2 / f.length;
@@ -143,10 +160,10 @@
       const b = lo * (hi / lo) ** ((k + 1) / count);
       const i0 = Math.min(f.length - 1, Math.floor(a / per));
       const i1 = Math.min(f.length, Math.max(i0 + 1, Math.ceil(b / per)));
-      if (i1 - i0 > 1) { let s = 0; for (let i = i0; i < i1; i++) s += f[i]; return s / (i1 - i0) / 255; }
+      if (i1 - i0 > 1) { let s = 0; let m = 0; for (let i = i0; i < i1; i++) { s += f[i]; if (f[i] > m) m = f[i]; } return specContrast(((s / (i1 - i0)) * 0.4 + m * 0.6) / 255); }
       const x = Math.max(0, Math.min(f.length - 1, Math.sqrt(a * b) / per - 0.5));
       const j = Math.floor(x);
-      return (f[j] * (1 - (x - j)) + f[Math.min(f.length - 1, j + 1)] * (x - j)) / 255;
+      return specContrast((f[j] * (1 - (x - j)) + f[Math.min(f.length - 1, j + 1)] * (x - j)) / 255);
     });
   }
 
@@ -191,10 +208,12 @@
       if (!pk || pk.err) return LB.level(seed, t);
       if (!pk.p) return 0;
       const last = pk.p.length - 1;
-      if (slice <= 1.5 / PEAK_RATE) return Math.min(1, peakAt(pk.p, t) * pk.gain);
+      if (slice <= 1.5 / PEAK_RATE) return waveShape(peakAt(pk.p, t) * 255, pk.sc);
       let m = 0;
-      for (let i = Math.max(0, Math.floor((t - slice / 2) * PEAK_RATE)); i <= Math.min(last, Math.floor((t + slice / 2) * PEAK_RATE)); i++) if (pk.p[i] > m) m = pk.p[i];
-      return Math.min(1, (m / 255) * pk.gain);
+      let sum = 0;
+      let cnt = 0;
+      for (let i = Math.max(0, Math.floor((t - slice / 2) * PEAK_RATE)); i <= Math.min(last, Math.floor((t + slice / 2) * PEAK_RATE)); i++) { sum += pk.p[i]; cnt++; if (pk.p[i] > m) m = pk.p[i]; }
+      return waveShape((cnt ? sum / cnt : 0) * 0.5 + m * 0.5, pk.sc);
     };
     for (let i = 0; i < n; i++) {
       const t = start + ((i + 0.5) / n) * win;
@@ -218,7 +237,7 @@
     if (pk?.ov && el._ov !== pk) {
       el._ov = pk;
       const m = Math.max(...pk.ov) || 1;
-      bars.forEach((i, k) => i.style.setProperty("--h", `${Math.max(14, Math.round((pk.ov[Math.floor((k * BANDS) / bars.length)] / m) * 100))}%`));
+      bars.forEach((i, k) => i.style.setProperty("--h", `${Math.max(14, Math.round((pk.ov[Math.floor((k * pk.ov.length) / bars.length)] / m) * 100))}%`));
     }
     if (!live) { if (el._was) { el._was = false; bars.forEach((i) => i.style.removeProperty("--l")); } return; }
     el._was = true;
@@ -226,7 +245,8 @@
     const seed = el.dataset.seed;
     const b = PL.bands;
     bars.forEach((i, k) => {
-      const v = b ? b[Math.floor((k * b.length) / bars.length)] : LB.band(seed, k, t);
+      let v;
+      if (b) { const x = Math.max(0, Math.min(b.length - 1, ((k + 0.5) * b.length) / bars.length - 0.5)); const j = Math.floor(x); v = b[j] * (1 - (x - j)) + b[Math.min(b.length - 1, j + 1)] * (x - j); } else v = LB.band(seed, k, t);
       i.style.setProperty("--l", `${Math.max(8, Math.round(v * 100))}%`);
     });
   }
@@ -531,7 +551,7 @@
       return `<div class="lbp-img is-art is-video" style="background:${esc(bgOf(x))}" role="img" aria-label="${esc(x.name)}"><button type="button" class="lb-pbtn is-lg" data-act="lb-play" data-lb-play="${x.id}" data-id="${x.id}" aria-label="Play">${ic("play")}</button>
         ${vbar(x)}</div><div class="lbp-bar">${timeLabel(x)}<span class="t-sm t-mute">Prototype: video is simulated, no real picture.</span></div>`;
     }
-    return `<div class="lbp-sound"><div class="lbp-part"><span class="eyebrow">Spectrum</span>${eq(x, BANDS, "is-big")}</div><div class="lbp-part"><span class="eyebrow">Waveform</span>${scroller(x, 10, "is-big is-paged")}</div><div class="lbp-bar">${playBtn(x, "is-lg")}${timeLabel(x)}<span class="t-sm t-mute">${esc(x.meta.rate)} · ${esc(x.meta.ch)}</span></div></div>`;
+    return `<div class="lbp-sound"><div class="lbp-part"><span class="eyebrow">Spectrum</span>${eq(x, BARS, "is-big")}</div><div class="lbp-part"><span class="eyebrow">Waveform</span>${scroller(x, 10, "is-big is-paged")}</div><div class="lbp-bar">${playBtn(x, "is-lg")}${timeLabel(x)}<span class="t-sm t-mute">${esc(x.meta.rate)} · ${esc(x.meta.ch)}</span></div></div>`;
   }
   function drawPreview() {
     const x = byId(PV.ids[PV.i]);
@@ -547,7 +567,15 @@
     });
     player.paint();
   }
-  const pvGo = (d) => { const i = PV.i + d; if (i >= 0 && i < PV.ids.length) { PV.i = i; drawPreview(); } };
+  const pvGo = (d) => {
+    const i = PV.i + d;
+    if (i < 0 || i >= PV.ids.length) return;
+    PV.i = i;
+    drawPreview();
+    const x = byId(PV.ids[i]);
+    const tr = x?.type === "sound" ? player.track(x.id) : null;
+    if (tr) player.toggle(x.id, tr); else player.stop();
+  };
 
   const CT = () => ui("ct");
   const counts = (pred) => Object.fromEntries(typeCounts(st().assets.filter(pred)));

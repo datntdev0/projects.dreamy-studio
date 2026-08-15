@@ -3,7 +3,7 @@ import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { LibrarySound } from "../library.sounds.models";
 import { LibrarySoundPlayer } from "../library.sounds.player";
 import { LibrarySoundService } from "../library.sounds.service";
-import { overviewLevel, pageStart, peakGain, peakLevel, slideStart } from "../library.sounds.audio";
+import { PeakScale, overviewLevel, pageStart, peakLevel, peakScale, slideStart } from "../library.sounds.audio";
 
 interface WaveView { duration: number; window: number; start: number; position: number; active: boolean; }
 interface WaveLayout { pad: number; step: number; barWidth: number; usable: number; count: number; offset: number; }
@@ -19,7 +19,7 @@ export class LibrarySoundWave {
   private readonly sounds = inject(LibrarySoundService);
   private readonly player = inject(LibrarySoundPlayer);
   private readonly peaks = computed(() => this.sounds.peaks(this.sound().id));
-  private readonly gain = computed(this.buildGain.bind(this));
+  private readonly scale = computed(this.buildScale.bind(this));
   constructor() { effect(this.paint.bind(this)); effect(this.observeSize.bind(this)); }
   seek(event: MouseEvent): void {
     if (this.overview()) return;
@@ -37,7 +37,7 @@ export class LibrarySoundWave {
     const canvas = this.canvas().nativeElement;
     const view = this.view();
     const peaks = this.peaks();
-    const gain = this.gain();
+    const scale = this.scale();
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     if (!width || !height) return;
@@ -57,7 +57,7 @@ export class LibrarySoundWave {
     for (let index = 0; index < layout.count; index++) {
       const seconds = view.start + (index + .5) / layout.count * view.window;
       if (seconds > view.duration) break;
-      const level = peaks?.length ? peakLevel(peaks, seconds, slice, gain) : overviewLevel(overview, view.duration, seconds);
+      const level = peaks?.length ? peakLevel(peaks, seconds, slice, scale) : overviewLevel(overview, view.duration, seconds);
       const barHeight = Math.max(2, level * (height - 6));
       context.fillStyle = view.active && seconds <= view.position ? played : rest;
       context.fillRect(layout.offset + index * layout.step, (height - barHeight) / 2, layout.barWidth, barHeight);
@@ -85,5 +85,5 @@ export class LibrarySoundWave {
     const count = Math.max(1, Math.floor(usable / step));
     return { pad, step, barWidth: overview ? 2 : 3, usable, count, offset: pad + (usable - count * step) / 2 };
   }
-  private buildGain(): number { const peaks = this.peaks(); return peaks?.length ? peakGain(peaks) : 1; }
+  private buildScale(): PeakScale { const peaks = this.peaks(); return peaks?.length ? peakScale(peaks) : { low: 0, high: 255 }; }
 }

@@ -1,5 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from "@angular/core";
-import { I18nKey } from "../../../core/i18n/i18n.models";
+import { Component, OnDestroy, computed, effect, inject, input, signal } from "@angular/core";
 import { I18nService } from "../../../core/i18n/i18n.service";
 import { Datatable, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "../../../../components/datatable";
 import { Icon } from "../../../../components/icon";
@@ -20,6 +19,8 @@ import { toNovelError } from "../novel.rules";
 import { Cover } from "../../../../components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
+const DRAG_THRESHOLD = 5;
+
 type DropSide = "before" | "after";
 
 interface DropTarget {
@@ -33,7 +34,7 @@ interface DropTarget {
   imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelProgressFrac],
   templateUrl: "./chapters.component.html",
 })
-export class NovelChapters {
+export class NovelChapters implements OnDestroy {
   private readonly novels = inject(NovelService);
   private readonly reader = inject(NovelReaderService);
   private readonly i18n = inject(I18nService);
@@ -50,6 +51,11 @@ export class NovelChapters {
   readonly rows = computed(this.buildRows.bind(this));
   readonly resumeSeq = computed(this.buildResumeSeq.bind(this));
   readonly cover = computed(this.buildCover.bind(this));
+  private pressed: { id: string; y: number } | null = null;
+  private suppressClick = false;
+  private readonly moveListener = this.onPointerMove.bind(this);
+  private readonly releaseListener = this.onPointerRelease.bind(this);
+
   readonly dragId = signal<string | null>(null);
   readonly dropTarget = signal<DropTarget | null>(null);
   readonly filtered = computed(this.buildFiltered.bind(this));
@@ -58,12 +64,12 @@ export class NovelChapters {
     const drop = this.dropTarget();
     return {
       "is-current": this.resumeSeq() === this.chapterOf(row).seq,
+      "is-reorderable": this.canMove(this.chapterOf(row)),
       "is-dragging": this.dragId() === id,
       "is-drop-before": drop?.id === id && drop.side === "before",
       "is-drop-after": drop?.id === id && drop.side === "after",
     };
   };
-  readonly tableRowDraggable = (row: object): boolean => this.canMove(this.chapterOf(row));
 
   get tableColumns(): DatatableColumn[] {
     return [
@@ -72,7 +78,7 @@ export class NovelChapters {
       { key: "wordCount", label: this.i18n.translate("novel.chapters.col.words"), align: "right", width: "80px" },
       { key: "translationStatus", label: this.i18n.translate("novel.chapters.col.translation"), align: "center", width: "104px" },
       { key: "analysisStatus", label: this.i18n.translate("novel.chapters.col.knowledge"), align: "center", width: "104px" },
-      { key: "actions", label: "", align: "right", width: "112px" },
+      { key: "actions", label: "", align: "right", width: "48px" },
     ];
   }
 
@@ -119,66 +125,31 @@ export class NovelChapters {
     return !this.filtered() && !isChapterLocked(row);
   }
 
-  upOff(row: ChapterRow): boolean {
-    const previous = this.all()[row.seq - 2];
-    return !this.canMove(row) || row.seq === 1 || (previous !== undefined && isChapterLocked(previous));
-  }
-
-  downOff(row: ChapterRow): boolean {
-    return !this.canMove(row) || row.seq === this.all().length;
-  }
-
-  tipKey(row: ChapterRow): I18nKey {
-    return isChapterLocked(row) ? "novel.chapters.locked" : "novel.chapters.reorderBlocked";
-  }
-
-  moveUp(row: ChapterRow, event: Event): void {
-    event.stopPropagation();
-    void this.moveTo(row, row.seq - 1);
-  }
-
-  moveDown(row: ChapterRow, event: Event): void {
-    event.stopPropagation();
-    void this.moveTo(row, row.seq + 1);
-  }
-
   remove(row: ChapterRow, event: Event): void {
     event.stopPropagation();
     this.dialogs.openDeleteChapter(this.novelId(), row.id);
   }
 
-  onDragStart(event: DatatableRowEvent): void {
-    const effect = (event.event as DragEvent).dataTransfer;
-    if (effect) {
-      effect.effectAllowed = "move";
+  onRowClick(event: DatatableRowEvent): void {
+    if (!this.suppressClick) {
+      this.open(this.chapterOf(event.row).seq);
     }
-    this.dragId.set(this.chapterOf(event.row).id);
   }
 
-  onDragOver(event: DatatableRowEvent): void {
-    const target = this.chapterOf(event.row);
-    if (this.dragId() === null || !this.canMove(target)) {
+  onPointerDown(event: DatatableRowEvent): void {
+    const pointer = event.event as PointerEvent;
+    const row = this.chapterOf(event.row);
+    if (pointer.button !== 0 || !this.canMove(row) || (pointer.target as Element).closest("button")) {
       return;
     }
-    event.event.preventDefault();
-    this.dropTarget.set(this.dragId() === target.id ? null : { id: target.id, side: this.sideOf(event.event as DragEvent) });
+    this.pressed = { id: row.id, y: pointer.clientY };
+    document.addEventListener("pointermove", this.moveListener);
+    document.addEventListener("pointerup", this.releaseListener);
+    document.addEventListener("pointercancel", this.releaseListener);
   }
 
-  onDrop(event: DatatableRowEvent): void {
-    const target = this.chapterOf(event.row);
-    const dragged = this.draggedRow();
-    const side = this.sideOf(event.event as DragEvent);
-    this.clearDrag();
-    if (!dragged || dragged.id === target.id || !this.canMove(target)) {
-      return;
-    }
-    event.event.preventDefault();
-    const before = side === "after" ? target.seq + 1 : target.seq;
-    void this.moveTo(dragged, before > dragged.seq ? before - 1 : before);
-  }
-
-  onDragEnd(): void {
-    this.clearDrag();
+  ngOnDestroy(): void {
+    this.stopTracking();
   }
 
   chapterOf(row: object): ChapterRow {
@@ -190,12 +161,8 @@ export class NovelChapters {
   }
 
   private draggedRow(): ChapterRow | null {
-    for (const row of this.all()) {
-      if (row.id === this.dragId()) {
-        return row;
-      }
-    }
-    return null;
+    const id = this.dragId();
+    return id === null ? null : this.rowById(id);
   }
 
   private async moveTo(row: ChapterRow, toSeq: number): Promise<void> {
@@ -207,9 +174,68 @@ export class NovelChapters {
     }
   }
 
-  private sideOf(event: DragEvent): DropSide {
-    const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    return event.clientY > bounds.top + bounds.height / 2 ? "after" : "before";
+  private onPointerMove(event: PointerEvent): void {
+    if (this.pressed === null) {
+      return;
+    }
+    if (this.dragId() === null) {
+      if (Math.abs(event.clientY - this.pressed.y) < DRAG_THRESHOLD) {
+        return;
+      }
+      this.dragId.set(this.pressed.id);
+    }
+    this.dropTarget.set(this.targetAt(event.clientX, event.clientY));
+  }
+
+  private onPointerRelease(): void {
+    const dragged = this.draggedRow();
+    const drop = this.dropTarget();
+    const moved = dragged !== null && drop !== null;
+    this.stopTracking();
+    this.clearDrag();
+    if (moved) {
+      this.suppressClick = true;
+      setTimeout(this.allowClick.bind(this), 0);
+      this.dropRow(dragged, drop);
+    }
+  }
+
+  private dropRow(dragged: ChapterRow, drop: DropTarget): void {
+    const target = this.rowById(drop.id);
+    if (target) {
+      const before = drop.side === "after" ? target.seq + 1 : target.seq;
+      void this.moveTo(dragged, before > dragged.seq ? before - 1 : before);
+    }
+  }
+
+  private targetAt(x: number, y: number): DropTarget | null {
+    const element = document.elementFromPoint(x, y)?.closest("tr[data-row-key]");
+    const target = element ? this.rowById(element.getAttribute("data-row-key") ?? "") : null;
+    if (!element || !target || target.id === this.dragId() || !this.canMove(target)) {
+      return null;
+    }
+    const bounds = element.getBoundingClientRect();
+    return { id: target.id, side: y > bounds.top + bounds.height / 2 ? "after" : "before" };
+  }
+
+  private rowById(id: string): ChapterRow | null {
+    for (const row of this.all()) {
+      if (row.id === id) {
+        return row;
+      }
+    }
+    return null;
+  }
+
+  private allowClick(): void {
+    this.suppressClick = false;
+  }
+
+  private stopTracking(): void {
+    this.pressed = null;
+    document.removeEventListener("pointermove", this.moveListener);
+    document.removeEventListener("pointerup", this.releaseListener);
+    document.removeEventListener("pointercancel", this.releaseListener);
   }
 
   private clearDrag(): void {

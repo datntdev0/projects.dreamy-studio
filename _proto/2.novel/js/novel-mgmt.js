@@ -26,7 +26,7 @@
   const PREF_DEFAULT = { font: "serif", size: 17, lh: 1.75, width: 680, paper: "default", nums: true, justify: false };
   const prefs = () => (R().prefs ||= { ...PREF_DEFAULT, ...A.store.get("rd.prefs", {}) });
   const savePrefs = () => A.store.set("rd.prefs", prefs());
-  /** Reading language (`src` original / `tr` translation) and layout (`single` single language / `parallel` song song). */
+  /** Reading language (`src` original / `tr` translation) and layout (`single` single language / `parallel` side by side). */
   const viewOpts = () => (R().view ||= { lang: "src", layout: "single", ...A.store.get("rd.view", {}) });
   const saveView = () => A.store.set("rd.view", viewOpts());
   const trCode = () => ({ "Vietnamese": "VI", "English": "EN" }[N().tr.lang] || String(N().tr.lang).slice(0, 2).toUpperCase());
@@ -177,8 +177,7 @@
     const rowBtn = (c, act, icon, label, off, tip) => `<button type="button" class="btn btn-icon btn-sm btn-ghost" data-testid="novel-chapter-${act}" data-act="${act}" data-n="${c.n}" title="${esc(label)}" aria-label="${esc(label)}" data-tip="${esc(off ? tip || label : label)}" ${off ? "disabled" : ""}>${ic(icon)}</button>`;
     const rowActions = (c) => {
       const locked = isLocked(novel, c);
-      const why = locked ? LOCK_TIP : "Clear the search to reorder chapters";
-      return `<span class="row-actions">${rowBtn(c, "ch-up", "arrow-up", "Move up", !canMove(c) || c.n === 1 || isLocked(novel, all[c.n - 2]), why)}${rowBtn(c, "ch-down", "arrow-down", "Move down", !canMove(c) || c.n === all.length, why)}${rowBtn(c, "ch-del", "trash", "Delete chapter", locked, LOCK_TIP)}</span>`;
+      return `<span class="row-actions">${rowBtn(c, "ch-del", "trash", "Delete chapter", locked, LOCK_TIP)}</span>`;
     };
     const readFrom = sample ? Math.max(1, Math.min(all.length, R().ch || 1)) : 1;
     const tableMarkup = datatable({
@@ -188,7 +187,7 @@
         { key: "words", label: "Words", align: "right", width: "80px", render: (c) => fmt(c.words) },
         { key: "translation", label: "Translation", align: "center", width: "104px", render: (c) => sample ? trCell(c.n) : `<span class="dot-o"></span>` },
         { key: "knowledge", label: "Knowledge", align: "center", width: "104px", render: (c) => sample ? kbCell(c.n) : `<span class="dot-o"></span>` },
-        { key: "actions", label: "", align: "right", width: "112px", render: rowActions },
+        { key: "actions", label: "", align: "right", width: "48px", render: rowActions },
       ],
       rows: list,
       variant: "fill",
@@ -268,7 +267,7 @@
          ${U.chapterJump("rd-ch", r.ch, chapters.length, c.title)}
          <button class="btn btn-icon btn-sm" data-act="rd-next" ${r.ch >= chapters.length ? "disabled" : ""} aria-label="Next chapter" data-tip="Next chapter">${ic("chev-r")}</button>`,
         `${sample ? `<span class="rd-seg-off-${parallel}">${U.seg("rd-lang", [["src", novel.lang, `Original · ${novel.langName}`], ["tr", trCode(), `Translation · ${N().tr.lang}`]], vo.lang)}</span>
-         ${U.seg("rd-layout", [["single", "Single language"], ["parallel", "Song song"]], vo.layout)}` : ""}
+         ${U.seg("rd-layout", [["single", "Single language"], ["parallel", "Side by side"]], vo.layout)}` : ""}
          ${canEdit ? U.seg("rd-mode", [["read", "Read"], ["edit", "Edit"]], r.mode) : ""}
          ${sample ? `<button class="btn btn-sm" data-act="rd-tool" data-v="translation">${ic("lang")}Translate chapter</button>` : ""}`,
       )}
@@ -644,8 +643,6 @@
       refreshChapters();
       A.toast(`Added chapter ${list.length}: “${title}”.`);
     },
-    "ch-up": (el) => moveChapter(+el.dataset.n, +el.dataset.n - 1),
-    "ch-down": (el) => moveChapter(+el.dataset.n, +el.dataset.n + 1),
     "ch-del": (el) => openDeleteChapter(+el.dataset.n),
     "ch-del-confirm": () => {
       const nv = U.bind(A.S.active);

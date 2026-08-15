@@ -41,5 +41,11 @@ export class LibrarySoundPreviewDialog {
   private findSound(): LibrarySound | null { const id = this.dialogs.previewSoundId(); return id === null ? null : this.sounds.items().find(sameId.bind(null, id)) ?? null; }
   private sequence() { return this.dialogs.previewSequence() ?? this.sounds.visible().map((sound) => ({ kind: "sound" as const, id: sound.id })); }
   private buildPosition(): { index: number; total: number } { const sound = this.sound(); const sequence = this.sequence(); return { index: sound ? sequence.findIndex((ref) => ref.kind === "sound" && ref.id === sound.id) : -1, total: sequence.length }; }
-  private move(offset: number): void { const ref = this.sequence()[this.position().index + offset]; if (ref) this.dialogs.openPreviewRef(ref, this.sequence()); }
+  private move(offset: number): void {
+    const ref = this.sequence()[this.position().index + offset];
+    if (!ref) return;
+    this.dialogs.openPreviewRef(ref, this.sequence());
+    const target = ref.kind === "sound" ? this.sounds.items().find(sameId.bind(null, ref.id)) : undefined;
+    if (target) void this.player.toggle(target); else this.player.stop();
+  }
 }

@@ -32,6 +32,7 @@ use crate::features::library::sounds;
 use crate::features::library::sounds::NewSound;
 use crate::features::library::sounds::SoundFiles;
 use crate::features::library::sounds::SoundFormat;
+use crate::features::library::video_frame;
 use crate::features::library::video_probe;
 use crate::features::library::videos;
 use crate::features::library::videos::NewVideo;
@@ -510,6 +511,7 @@ impl LibraryWorkspace {
         let name = assets::file_name(source)?;
         let files = VideoFiles::new(self.dir.clone());
         let staged = files.stage(source)?;
+        let poster = poster_frame(&staged, &name, info.duration_ms);
         let _guard = self.lock();
         let result = (|| -> LibraryResult<LibraryVideo> {
             let mut db = self.database()?;
@@ -534,6 +536,11 @@ impl LibraryWorkspace {
                 &format_timestamp(Utc::now()),
             )?;
             files.commit(&staged, id, format)?;
+            if let Some(bytes) = poster.as_deref() {
+                if files.write_poster(id, bytes).is_ok() {
+                    videos::mark_poster(&tx, id)?;
+                }
+            }
             tx.commit()?;
             videos::get(db.connection(), id)
         })();
@@ -580,19 +587,6 @@ impl LibraryWorkspace {
         Ok(VideoFiles::new(self.dir.clone())
             .read_poster(id)?
             .map(|bytes| assets::data_url("image/jpeg", &bytes)))
-    }
-
-    pub fn video_poster_set(&self, id: i64, data: &str) -> LibraryResult<()> {
-        let bytes = base64::engine::general_purpose::STANDARD
-            .decode(data)
-            .map_err(|error| {
-                LibraryError::new(LibraryErrorCode::InvalidInput, error.to_string())
-            })?;
-        let _guard = self.lock();
-        videos::get(self.database()?.connection(), id)?;
-        let files = VideoFiles::new(self.dir.clone());
-        files.write_poster(id, &bytes)?;
-        videos::mark_poster(self.database()?.connection(), id)
     }
 
     pub fn stream(
@@ -967,6 +961,16 @@ fn sound_format_from_extension(extension: &str) -> LibraryResult<SoundFormat> {
             format!("unsupported sound extension: {extension}"),
         )
     })
+}
+
+fn poster_frame(staged: &Path, name: &str, duration_ms: i64) -> Option<Vec<u8>> {
+    match video_frame::extract_poster(staged, duration_ms) {
+        Ok(bytes) => Some(bytes),
+        Err(error) => {
+            eprintln!("video poster skipped for {name}: {error}");
+            None
+        }
+    }
 }
 
 fn video_format(path: &Path) -> LibraryResult<video_probe::VideoFormat> {
@@ -1677,7 +1681,8 @@ mod tests {
     #[test]
     fn uploads_lists_posters_and_deletes_videos() {
         let (dir, workspace) = fixture();
-        let path = write_mp4(&dir, "harbor.mp4");
+        let path = dir.path().join("harbor.mp4");
+        video_frame::write_sample_clip(&path, "3");
         let checks = workspace
             .video_inspect(&[path.to_string_lossy().to_string()])
             .unwrap();
@@ -1702,8 +1707,6 @@ mod tests {
             .join("videos")
             .join("posters")
             .join(format!("{}.jpg", first.id));
-        let jpeg = base64::engine::general_purpose::STANDARD.encode([0xff, 0xd8, 0xff, 0xdb]);
-        workspace.video_poster_set(first.id, &jpeg).unwrap();
         assert!(
             workspace
                 .video_poster(first.id)
@@ -1717,6 +1720,36 @@ mod tests {
         assert_eq!(workspace.video_delete(&[first.id]).unwrap(), 1);
         assert!(!original.exists());
         assert!(!poster.exists());
+    }
+
+    #[test]
+    fn video_upload_extracts_the_poster_with_ffmpeg() {
+        let (dir, workspace) = fixture();
+        let path = dir.path().join("real.mp4");
+        video_frame::write_sample_clip(&path, "3");
+        let video = workspace
+            .video_upload(path.to_str().unwrap(), video_input(None))
+            .unwrap();
+        assert!(video.has_poster);
+        assert!(workspace.video_list().unwrap()[0].has_poster);
+        assert!(
+            workspace
+                .video_poster(video.id)
+                .unwrap()
+                .unwrap()
+                .starts_with("data:image/jpeg;base64,")
+        );
+    }
+
+    #[test]
+    fn video_upload_succeeds_without_a_poster_when_ffmpeg_cannot_decode() {
+        let (dir, workspace) = fixture();
+        let path = write_mp4(&dir, "synthetic.mp4");
+        let video = workspace
+            .video_upload(path.to_str().unwrap(), video_input(None))
+            .unwrap();
+        assert!(!video.has_poster);
+        assert_eq!(workspace.video_poster(video.id).unwrap(), None);
     }
 
     #[test]

@@ -1,9 +1,8 @@
-import { Injectable, Injector, computed, effect, inject, signal, untracked } from "@angular/core";
+import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { AssetCheck, AssetPatch, AssetUploadInput, LibraryError } from "./library.models";
 import { LibraryService } from "./library.service";
-import { LibraryVideoPoster } from "./library.videos.poster";
 import { LibraryVideo, VIDEO_STREAM_SCHEME, VideoSort } from "./library.videos.models";
 import { filterVideos } from "./library.videos.rules";
 import { readGridRatio, readGridSize, writeStored } from "./library.grid.prefs";
@@ -27,7 +26,6 @@ export class LibraryVideoService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly workspace = inject(WorkspaceService);
   private readonly library = inject(LibraryService);
-  private readonly injector = inject(Injector);
   private readonly workspacePath = computed(this.currentPath.bind(this));
   private readonly posters = signal<Record<number, string>>({});
   private readonly pendingPosters = new Set<number>();
@@ -100,11 +98,6 @@ export class LibraryVideoService {
   setGridSize(value: number): void { this.gridSize.set(value); writeStored(GRID_SIZE_STORAGE_KEY, String(value)); }
   setGridRatio(value: string): void { this.gridRatio.set(value); writeStored(GRID_RATIO_STORAGE_KEY, value); }
 
-  posterReady(id: number, dataUrl: string): void {
-    this.posters.set({ ...this.posters(), [id]: dataUrl });
-    this.items.set(this.items().map(this.markPoster.bind(null, id)));
-  }
-
   private async load(): Promise<void> {
     const epoch = this.epoch;
     this.loading.set(true);
@@ -114,7 +107,6 @@ export class LibraryVideoService {
       if (epoch === this.epoch) {
         this.items.set(videos);
         this.loaded.set(true);
-        for (const video of videos) this.enqueuePoster(video);
       }
     } catch (cause) {
       if (epoch === this.epoch) this.error.set(toLibraryError(cause));
@@ -126,7 +118,6 @@ export class LibraryVideoService {
   private async uploadOne(path: string, input: AssetUploadInput): Promise<LibraryVideo> {
     const video = await this.ipc.invoke<LibraryVideo>("library_video_upload", { path, input });
     this.items.set([video, ...this.items()]);
-    this.enqueuePoster(video);
     await this.library.refreshTaxonomy();
     return video;
   }
@@ -141,10 +132,6 @@ export class LibraryVideoService {
     } finally {
       this.pendingPosters.delete(id);
     }
-  }
-
-  private enqueuePoster(video: LibraryVideo): void {
-    if (!video.hasPoster) this.injector.get(LibraryVideoPoster).enqueue(video);
   }
 
   private reset(): void {
@@ -169,7 +156,6 @@ export class LibraryVideoService {
     return filterVideos(this.items(), { query: this.query(), sort: this.sort(), collection: this.library.filterCollection(), tags: this.library.filterTags() });
   }
 
-  private markPoster(id: number, video: LibraryVideo): LibraryVideo { return video.id === id ? { ...video, hasPoster: true } : video; }
   private hasId(id: number, video: LibraryVideo): boolean { return video.id === id; }
   private currentPath(): string | null { return this.workspace.current()?.path ?? null; }
   private syncWorkspace(): void { untracked(this.applyWorkspace.bind(this, this.workspacePath())); }

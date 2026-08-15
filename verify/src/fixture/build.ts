@@ -6,7 +6,7 @@ import { launchApp } from "../app/launch.ts";
 import { fixtureRoot, fixtureWorkspace, seedRoot, WORKSPACE_NAME } from "../paths.ts";
 import { loadPrototype } from "./prototype.ts";
 import { seedLibrary } from "./seed.ts";
-import { pinMetadata } from "./metadata.ts";
+import { pinMetadata, pinPosters } from "./metadata.ts";
 import { writeCorpus } from "./corpus.ts";
 import { loadNovels, pinNovels, seedNovels } from "./novels.ts";
 
@@ -36,6 +36,7 @@ export async function seedAppRoot(root: string): Promise<void> {
     await app.stop();
   }
   pinMetadata(workspace, data, seeded);
+  pinPosters(workspace, seeded);
   pinNovels(workspace, novels, seededNovels);
   await rm(join(root, "media"), { recursive: true, force: true });
 }

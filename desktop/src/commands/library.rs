@@ -261,14 +261,6 @@ pub fn video_poster(
 ) -> LibraryResult<Option<String>> {
     service.open(session)?.video_poster(id)
 }
-pub fn video_poster_set(
-    service: &LibraryService,
-    session: &WorkspaceSession,
-    id: i64,
-    data: String,
-) -> LibraryResult<()> {
-    service.open(session)?.video_poster_set(id, &data)
-}
 
 pub fn pick_prompts(app: &AppHandle) -> Vec<String> {
     app.dialog()
@@ -636,14 +628,6 @@ pub async fn library_video_poster(app: AppHandle, id: i64) -> LibraryResult<Opti
     })
     .await
 }
-#[tauri::command]
-pub async fn library_video_poster_set(app: AppHandle, id: i64, data: String) -> LibraryResult<()> {
-    run_blocking(app, move |service, session| {
-        video_poster_set(service, session, id, data)
-    })
-    .await
-}
-
 #[tauri::command]
 pub async fn library_prompt_pick(app: AppHandle) -> Vec<String> {
     spawn_blocking(move || pick_prompts(&app))

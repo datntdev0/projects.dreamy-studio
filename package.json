@@ -2,6 +2,7 @@
   "name": "dreamy-studio",
   "version": "0.1.0",
   "scripts": {
+    "ffmpeg:fetch": "powershell -NoProfile -ExecutionPolicy Bypass -File desktop/scripts/fetch-ffmpeg.ps1",
     "start": "tauri dev",
     "seed:proto": "pnpm --filter dreamy-studio-verify run seed:proto",
     "start:proto": "pnpm --filter dreamy-studio-verify run start:proto",

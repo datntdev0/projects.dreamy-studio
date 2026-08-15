@@ -1,9 +1,8 @@
-import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { invoke } from "../app/ipc.ts";
 import { join } from "node:path";
 import { stageMedia } from "./media.ts";
-import { posterPath, type ProtoAsset, type PrototypeData } from "./prototype.ts";
+import type { ProtoAsset, PrototypeData } from "./prototype.ts";
 
 interface Created {
   readonly id: number;
@@ -63,25 +62,12 @@ async function createPrompt(page: Page, asset: ProtoAsset, collectionId: number 
   return row.id;
 }
 
-async function attachPoster(page: Page, asset: ProtoAsset, id: number): Promise<void> {
-  const path = posterPath(asset);
-  if (path === null) {
-    return;
-  }
-  const data = (await readFile(path)).toString("base64");
-  await invoke(page, "library_video_poster_set", { id, data });
-}
-
 async function seedAsset(page: Page, asset: ProtoAsset, collections: readonly SeededCollection[], staging: string): Promise<number> {
   const collectionId = collectionOf(asset, collections);
   if (asset.type === "prompt") {
     return createPrompt(page, asset, collectionId);
   }
-  const id = await uploadFile(page, asset, collectionId, staging);
-  if (asset.type === "video") {
-    await attachPoster(page, asset, id);
-  }
-  return id;
+  return uploadFile(page, asset, collectionId, staging);
 }
 
 export async function seedLibrary(page: Page, data: PrototypeData, stagingRoot: string): Promise<SeedResult> {

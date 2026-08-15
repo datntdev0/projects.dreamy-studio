@@ -91,7 +91,9 @@ window.NV = (function () {
   const PRED = { R01: "keeps_at", R02: "works_for", R03: "chair_of", R04: "sent_by", R05: "distrusts", R06: "located_in", R07: "located_in", R08: "present_at", R09: "made_by", R10: "handles" };
 
   function seed() {
-    const chapters = titles.map((t, i) => ({ n: i + 1, title: t, words: words[i], paras: SRC[i + 1] ? SRC[i + 1].map((tx, j) => ({ id: `${i + 1}.${j + 1}`, t: tx })) : null }));
+    const chapters = titles.map((t, i) => ({ n: i + 1, title: t, words: words[i], paras: SRC[i + 1] ? SRC[i + 1].map((tx, j) => ({ id: `${i + 1}.${j + 1}`, t: tx })) : null,
+      // Chapters beyond the sample translation/knowledge keep their text here so the reader can still show and edit them without the other modules treating them as analysed.
+      body: SRC[i + 1] ? undefined : (lantern[i].paras || []).map((tx, j) => ({ id: `${i + 1}.${j + 1}`, t: tx })) }));
 
     const trParas = (ch) => Object.fromEntries(SRC[ch].map((_, j) => {
       const id = `${ch}.${j + 1}`;

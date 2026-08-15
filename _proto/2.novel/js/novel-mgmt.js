@@ -121,22 +121,13 @@
   /** Updates the selection in place (does not re-render the list so a double click still hits the element). */
   function applySel() {
     const id = selIds()[0];
-    A.$("#editor [data-open]").forEach((el) => el.classList.toggle("is-selected", id === el.dataset.id));
+    A.$$("#editor [data-open]").forEach((el) => el.classList.toggle("is-selected", id === el.dataset.id));
     A.renderInspector();
-  }
-
-  function libraryPanel() {
-    const all = N().novels;
-    const tot = all.reduce((a, n) => { const p = U.progress(n); return { ch: a.ch + n.chapters, tr: a.tr + p.tr, kb: a.kb + p.kb, w: a.w + n.words }; }, { ch: 0, tr: 0, kb: 0, w: 0 });
-    return `${U.insSec("Novel library", U.kv([["Novel", all.length], ["Chapters", fmt(tot.ch)], ["Words", fmt(tot.w)], ["Translated", frac("lang", tot.tr, tot.ch, "Translated chapters")], ["Analyzed", frac("graph", tot.kb, tot.ch, "Analyzed chapters")]]))}
-      ${U.allTags().length ? `<section class="ins-sec"><span class="eyebrow">Tags</span><span class="tags">${U.allTags().map(([t, n]) => `<span class="tag">${esc(t)} <span class="mono t-mute">${n}</span></span>`).join("")}</span></section>` : ""}
-      ${all.length ? `<section class="ins-sec"><span class="eyebrow">Recent</span>${[...all].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 3).map((n) =>
-        `<button type="button" class="nm-recent" data-act="nm-sel" data-id="${n.id}">${cover(n, "cover-xs")}<span class="tree-label">${esc(U.nameOf(n))}</span><span class="mono t-mute">${esc(n.updated.slice(5, 10))}</span></button>`).join("")}</section>` : ""}`;
   }
 
   function mgmtInspector() {
     const list = selIds().map(U.novelById);
-    return list.length ? novelPanel(list[0], true) : libraryPanel();
+    return list.length ? novelPanel(list[0], true) : `<div class="ins-empty"><p>Choose a novel to see its properties.</p></div>`;
   }
 
   /* ---------------- Novel: Chapters → Reading ---------------- */
@@ -167,6 +158,9 @@
     return `<span class="dot ${stale ? "dot-warning" : "dot-info"}" title="${stale ? "Source changed after analysis" : "Analyzed"}"></span>`;
   };
 
+  const isLocked = (novel, c) => novel.id === U.SAMPLE && !!c && (!!U.trChapter(c.n) || !!N().kb.analyzed[c.n]);
+  const LOCK_TIP = "Has a translation or knowledge, so it cannot be moved or deleted";
+
   function chaptersScreen(novel) {
     const q = ui("ch", { q: "" });
     const needle = q.q.trim().toLowerCase();
@@ -174,6 +168,15 @@
     const list = all.filter((c) => !needle || `${c.n} ${c.title}`.toLowerCase().includes(needle));
     const sample = novel.id === U.SAMPLE;
     const pg = U.progress(novel);
+    const filtered = !!needle;
+    const canMove = (c) => !filtered && !isLocked(novel, c);
+    const rowBtn = (c, act, icon, label, off, tip) => `<button type="button" class="btn btn-icon btn-sm btn-ghost" data-testid="novel-chapter-${act}" data-act="${act}" data-n="${c.n}" title="${esc(label)}" aria-label="${esc(label)}" data-tip="${esc(off ? tip || label : label)}" ${off ? "disabled" : ""}>${ic(icon)}</button>`;
+    const rowActions = (c) => {
+      const locked = isLocked(novel, c);
+      const why = locked ? LOCK_TIP : "Clear the search to reorder chapters";
+      return `<span class="row-actions">${rowBtn(c, "ch-up", "arrow-up", "Move up", !canMove(c) || c.n === 1 || isLocked(novel, all[c.n - 2]), why)}${rowBtn(c, "ch-down", "arrow-down", "Move down", !canMove(c) || c.n === all.length, why)}${rowBtn(c, "ch-del", "trash", "Delete chapter", locked, LOCK_TIP)}</span>`;
+    };
+    const readFrom = sample ? Math.max(1, Math.min(all.length, R().ch || 1)) : 1;
     const tableMarkup = datatable({
       columns: [
         { key: "n", label: "#", width: "56px", render: (c) => `<span class="mono t-mute">${String(c.n).padStart(2, "0")}</span>` },
@@ -181,6 +184,7 @@
         { key: "words", label: "Words", align: "right", width: "80px", render: (c) => fmt(c.words) },
         { key: "translation", label: "Translation", align: "center", width: "104px", render: (c) => sample ? trCell(c.n) : `<span class="dot-o"></span>` },
         { key: "knowledge", label: "Knowledge", align: "center", width: "104px", render: (c) => sample ? kbCell(c.n) : `<span class="dot-o"></span>` },
+        { key: "actions", label: "", align: "right", width: "112px", render: rowActions },
       ],
       rows: list,
       variant: "fill",
@@ -188,13 +192,15 @@
       keep: "ch",
       rowTestId: "novel-chapter-row",
       rowClass: (c) => ({ "is-current": R().ch === c.n && sample }),
-      rowAttrs: (c) => `data-act="ch-open" data-n="${c.n}"`,
-      emptyHTML: U.empty("No chapters match", "Try another keyword."),
+      rowAttrs: (c) => `data-act="ch-open" data-n="${c.n}" ${canMove(c) ? `draggable="true" data-drag="${c.n}"` : ""}`,
+      emptyHTML: all.length ? U.empty("No chapters match", "Try another keyword.")
+        : U.empty("No chapters yet", "Add the first chapter, then open it to write or paste the text.", `<button class="btn btn-primary" data-act="ch-add">${ic("plus")}Add chapter</button>`),
     });
     return `<div class="nv">
       ${U.bar(U.novelTitle(), `<button class="btn btn-sm" data-act="nx-open" data-k="translation" data-id="${novel.id}">${ic("lang")}Translation</button>
         <button class="btn btn-sm" data-act="nx-open" data-k="knowledge" data-id="${novel.id}">${ic("graph")}Knowledgebase</button>
-        <button class="btn btn-sm btn-primary" data-act="ch-open" data-n="${R().ch || 1}">${ic("book")}${sample ? "Continue reading" : "Read"}</button>`)}
+        <button class="btn btn-sm" data-testid="novel-chapter-add" data-act="ch-add">${ic("plus")}Add chapter</button>
+        <button class="btn btn-sm btn-primary" data-act="ch-open" data-n="${readFrom}" ${all.length ? "" : "disabled"}>${ic("book")}${sample ? "Continue reading" : "Read"}</button>`)}
       <div class="tl-sub"><label class="search"><span class="sr-only">Search chapters</span><input id="ch-q" class="input" type="search" value="${esc(q.q)}" placeholder="Search chapters…" data-on="ch-q"></label>
         <span class="t-sm t-mute">${list.length}/${all.length} chapters</span><span class="spacer"></span>
         <span class="legend-dots">${frac("lang", pg.tr, pg.total, "Translated chapters")}${frac("graph", pg.kb, pg.total, "Analyzed chapters")}</span></div>
@@ -204,18 +210,23 @@
 
   function readingScreen(novel) {
     const back = `<button class="btn btn-sm" data-act="rd-back">${ic("arrow-left")}Chapters</button>`;
-    if (!U.hasText()) return `<div class="nv">${U.bar(`${back}${U.novelTitle()}`)}<div class="nv-body">${U.empty("This chapter has no sample content yet", "The prototype only has chapter content for “The Lantern Keeper of Harrowmere”.", `<button class="btn btn-primary" data-act="nv-sample">Open the sample novel</button>`)}</div></div>`;
     const r = R();
     const p = prefs();
-    const chapters = N().chapters;
-    const c = U.chapter(r.ch);
-    const vo = viewOpts();
+    const sample = novel.id === U.SAMPLE;
+    const chapters = U.chaptersFor(novel);
+    if (!chapters.length) return chaptersScreen(novel);
+    r.ch = Math.max(1, Math.min(chapters.length, r.ch || 1));
+    const c = chapters[r.ch - 1];
+    const ps = U.parasOf(c);
+    // Translation and the parallel layout only exist for the sample novel; other novels read and edit the original text.
+    const vo = sample ? viewOpts() : { lang: "src", layout: "single" };
     const parallel = vo.layout === "parallel";
     const showSrc = parallel || vo.lang === "src";
     const showTr = parallel || vo.lang === "tr";
     const canEdit = showSrc;
-    const tr = N().tr.chapters[c.n];
+    const tr = sample ? N().tr.chapters[c.n] : null;
     const hasTr = !!tr && !tr.noSample;
+    const editMode = canEdit && r.mode === "edit";
     const srcPara = (x, i) => {
       const editing = r.edit === x.id;
       const flash = r.focus === x.id ? "is-flash" : "";
@@ -226,24 +237,25 @@
       }
       const editable = canEdit && r.mode === "edit";
       const attr = editable ? `data-act="rd-edit" data-p="${x.id}" tabindex="0"` : "";
-      return `<p class="rd-para ${editable ? "is-editable" : ""} ${flash}" id="rp-${x.id}" ${attr}><span class="rd-no">${i + 1}</span><span class="rd-tx">${esc(x.t)}${x.edited ? `<span class="rd-bd"><span class="badge badge-warning">EDITED</span></span>` : ""}</span></p>`;
+      return `<p class="rd-para ${editable ? "is-editable" : ""} ${flash}" id="rp-${x.id}" ${attr}><span class="rd-no">${i + 1}</span><span class="rd-tx">${esc(x.t)}</span></p>`;
     };
     const trPara = (x, i) => {
       const t = tr.paras[x.id];
       if (!t) return `<p class="rd-para is-tr is-empty"></p>`;
-      const st = { review: ["badge-warning", "NEEDS REVIEW"], edited: ["badge-primary", "EDITED"] }[t.st];
+      const st = { review: ["badge-warning", "NEEDS REVIEW"] }[t.st];
       return `<p class="rd-para is-tr" id="rt-${x.id}">${parallel ? "" : `<span class="rd-no">${i + 1}</span>`}<span class="rd-tx">${esc(t.t)}${st ? `<span class="rd-bd"><span class="badge ${st[0]}">${st[1]}</span></span>` : ""}</span></p>`;
     };
     const note = showTr && !hasTr
       ? `<div class="rd-note">${ic("alert")}<span>Chapter ${c.n} has no ${esc(N().tr.lang)} translation yet.</span><button class="btn btn-sm" data-act="rd-tool">${ic("lang")}Translate chapter</button></div>` : "";
     let paras;
-    if (!c.paras) paras = U.empty("This chapter has no sample content yet", "The prototype only has sample passages for chapters 1–3.");
+    if (!ps.length) paras = U.empty("This chapter has no text yet", canEdit ? "Switch to Edit, then add the first passage." : "There is no original text to show.");
     else if (parallel) {
       paras = `<div class="rd-pair rd-langhead"><span>${esc(novel.lang)} · Original</span><span>${esc(trCode())} · Translation</span></div>${note}`
-        + c.paras.map((x, i) => `<div class="rd-pair">${srcPara(x, i)}${hasTr ? trPara(x, i) : `<p class="rd-para is-tr is-empty"></p>`}</div>`).join("");
+        + ps.map((x, i) => `<div class="rd-pair">${srcPara(x, i)}${hasTr ? trPara(x, i) : `<p class="rd-para is-tr is-empty"></p>`}</div>`).join("");
     } else if (showTr) {
-      paras = note + (hasTr ? c.paras.map(trPara).join("") : "");
-    } else paras = c.paras.map(srcPara).join("");
+      paras = note + (hasTr ? ps.map(trPara).join("") : "");
+    } else paras = ps.map(srcPara).join("");
+    const addPassage = editMode && !isLocked(novel, c) ? `<div class="rd-add"><button class="btn btn-sm" data-testid="novel-reader-add-passage" data-act="rd-add-p">${ic("plus")}Add passage</button></div>` : "";
     const langLabel = parallel ? `${esc(novel.langName)} ⇄ ${esc(N().tr.lang)}` : showTr ? `${esc(N().tr.lang)} (translation)` : esc(novel.langName);
     return `<div class="nv">
       ${U.bar(
@@ -251,22 +263,131 @@
          <button class="btn btn-icon btn-sm" data-act="rd-prev" ${r.ch <= 1 ? "disabled" : ""} aria-label="Previous chapter" data-tip="Previous chapter">${ic("chev-l")}</button>
          ${U.chapterJump("rd-ch", r.ch, chapters.length, c.title)}
          <button class="btn btn-icon btn-sm" data-act="rd-next" ${r.ch >= chapters.length ? "disabled" : ""} aria-label="Next chapter" data-tip="Next chapter">${ic("chev-r")}</button>`,
-        `<span class="rd-seg-off-${parallel}">${U.seg("rd-lang", [["src", novel.lang, `Original · ${novel.langName}`], ["tr", trCode(), `Translation · ${N().tr.lang}`]], vo.lang)}</span>
-         ${U.seg("rd-layout", [["single", "Single language"], ["parallel", "Song song"]], vo.layout)}
+        `${sample ? `<span class="rd-seg-off-${parallel}">${U.seg("rd-lang", [["src", novel.lang, `Original · ${novel.langName}`], ["tr", trCode(), `Translation · ${N().tr.lang}`]], vo.lang)}</span>
+         ${U.seg("rd-layout", [["single", "Single language"], ["parallel", "Song song"]], vo.layout)}` : ""}
          ${canEdit ? U.seg("rd-mode", [["read", "Read"], ["edit", "Edit"]], r.mode) : ""}
-         <button class="btn btn-sm" data-act="rd-tool" data-v="translation">${ic("lang")}Translate chapter</button>`,
+         ${sample ? `<button class="btn btn-sm" data-act="rd-tool" data-v="translation">${ic("lang")}Translate chapter</button>` : ""}`,
       )}
       <div class="nv-body">
         <article class="rd-page ${p.nums ? "" : "no-nums"} ${p.justify ? "is-justify" : ""} ${parallel ? "is-par" : ""}" data-paper="${p.paper}" style="${pageStyle()}" data-keep="rd-page"><div class="rd-col">
           <span class="eyebrow">Chapter ${c.n} / ${chapters.length}</span>
-          <h1 class="rd-h">${esc(c.title)}</h1>
+          <h1 class="rd-h">${editMode ? `<input id="rd-title" class="input rd-h-in" data-testid="novel-reader-title-input" value="${esc(c.title)}" data-change="rd-title" aria-label="Chapter title" autocomplete="off">` : esc(c.title)}</h1>
           <div class="t-sm rd-meta">${fmt(c.words)} words · ${langLabel}</div>
-          ${paras}
+          ${paras}${addPassage}
           <div class="rd-end">${r.ch < chapters.length ? `<button class="btn btn-sm" data-act="rd-next">Next chapter: ${esc(chapters[r.ch].title)}${ic("chev-r")}</button>` : `<span class="t-sm">End of the last chapter.</span>`}</div>
         </div></article>
       </div>
     </div>`;
   }
+
+  /* ---------------- Chapters: add / delete / reorder ---------------- */
+  const refreshChapters = () => { A.renderExplorer(); A.renderInspector(); A.rerender(); };
+
+  const remapRef = (p, oldToNew) => {
+    const old = NV.chOf(p);
+    const next = oldToNew[old];
+    return next ? `${next}.${U.paraNo(p)}` : p;
+  };
+
+  function remapRefs(oldToNew) {
+    const kb = N().kb;
+    const remapItem = (item) => {
+      (item.ev || []).forEach((e) => { e.p = remapRef(e.p, oldToNew); });
+      (item.attrs || []).forEach((a) => { if (a.p) a.p = remapRef(a.p, oldToNew); });
+    };
+    kb.items.forEach(remapItem);
+    kb.ch3.forEach(remapItem);
+    N().tr.warnings.forEach((w) => { w.p = remapRef(w.p, oldToNew); w.ch = NV.chOf(w.p); });
+    N().tr.suggestions.forEach((s) => { s.p = remapRef(s.p, oldToNew); s.ch = NV.chOf(s.p); });
+  }
+
+  /** Gives every chapter its position as number and rebuilds passage ids (`<chapter>.<passage>`). Locked sample chapters never move, so their ids stay. */
+  function renumberChapters(list, novel) {
+    const oldToNew = {};
+    list.forEach((c, i) => {
+      const n = i + 1;
+      if (c.n !== n) oldToNew[c.n] = n;
+    });
+    list.forEach((c, i) => {
+      const n = i + 1;
+      if (c.n === n) return;
+      c.n = n;
+      U.parasOf(c).forEach((p, j) => { p.id = `${n}.${j + 1}`; });
+    });
+    if (novel.id === U.SAMPLE) remapRefs(oldToNew);
+  }
+
+  /** Moves chapter `from` so that it is inserted before position `at` of the original order (1-based; `at` = length + 1 means the end). */
+  function reorderChapter(from, at) {
+    const nv = U.bind(A.S.active);
+    const list = U.chaptersFor(nv);
+    const c = list[from - 1];
+    if (!c || isLocked(nv, c) || at < 1 || at > list.length + 1) return;
+    const target = list[at - 1];
+    if (target && isLocked(nv, target)) return;
+    const cur = list[R().ch - 1];
+    list.splice(from - 1, 1);
+    list.splice(at > from ? at - 2 : at - 1, 0, c);
+    renumberChapters(list, nv);
+    R().ch = Math.max(1, list.indexOf(cur) + 1);
+    nv.updated = A.stamp();
+    refreshChapters();
+  }
+  const moveChapter = (from, to) => reorderChapter(from, to > from ? to + 1 : to);
+
+  function openAddChapter() {
+    const nv = U.bind(A.S.active);
+    A.modal({
+      title: "Add chapter", eyebrow: CAP,
+      body: `<div class="field"><label for="ch-new-title">Chapter title</label><input id="ch-new-title" class="input" data-testid="novel-chapter-new-title" data-enter="ch-add-submit" placeholder="Chapter ${U.chaptersFor(nv).length + 1}" autocomplete="off"><span class="field-hint">The chapter is added at the end. Open it to write the text, and reorder it from the chapter list.</span></div>`,
+      foot: `<button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-primary" data-act="ch-add-submit">${ic("plus")}Add chapter</button>`,
+    });
+  }
+
+  let pendingCh = 0;
+  function openDeleteChapter(n) {
+    const nv = U.bind(A.S.active);
+    const c = U.chapterIn(nv, n);
+    if (!c || isLocked(nv, c)) return;
+    pendingCh = n;
+    A.modal({
+      title: "Delete chapter", eyebrow: CAP,
+      body: `<div class="t-ink">Ch.${c.n} · ${esc(c.title)}</div><div class="t-sm t-mute">${fmt(c.words)} words · ${U.parasOf(c).length} passages</div>
+        <div class="ld-warn">${ic("alert")}<span>The chapter and its text will be removed from this novel. The chapters after it move up by one. This cannot be undone.</span></div>`,
+      foot: `<button class="btn" data-act="close-modal">Cancel</button><button class="btn btn-danger" data-testid="novel-chapter-del-confirm" data-act="ch-del-confirm">${ic("trash")}Delete chapter</button>`,
+    });
+  }
+
+  // Drag a chapter row to a new place (only unlocked rows, only while the list is not filtered).
+  let dragN = 0;
+  const dropSide = (tr, e) => { const b = tr.getBoundingClientRect(); return e.clientY > b.top + b.height / 2 ? "after" : "before"; };
+  const clearDrop = () => A.$$("#editor tr.is-drop-before, #editor tr.is-drop-after, #editor tr.is-dragging").forEach((t) => t.classList.remove("is-drop-before", "is-drop-after", "is-dragging"));
+  document.addEventListener("dragstart", (e) => {
+    const tr = e.target.closest?.("tr[data-drag]");
+    if (!tr) return;
+    dragN = +tr.dataset.drag;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(dragN));
+    tr.classList.add("is-dragging");
+  });
+  document.addEventListener("dragover", (e) => {
+    const tr = dragN && e.target.closest?.("tr[data-drag]");
+    if (!tr) return;
+    e.preventDefault();
+    A.$$("#editor tr.is-drop-before, #editor tr.is-drop-after").forEach((t) => t.classList.remove("is-drop-before", "is-drop-after"));
+    if (+tr.dataset.drag !== dragN) tr.classList.add(`is-drop-${dropSide(tr, e)}`);
+  });
+  document.addEventListener("drop", (e) => {
+    const tr = dragN && e.target.closest?.("tr[data-drag]");
+    if (!tr) return;
+    e.preventDefault();
+    const from = dragN;
+    const to = +tr.dataset.drag;
+    dragN = 0;
+    clearDrop();
+    if (to !== from) reorderChapter(from, dropSide(tr, e) === "after" ? to + 1 : to);
+  });
+  document.addEventListener("dragend", () => { dragN = 0; clearDrop(); });
 
   function novelView(id) {
     const novel = U.bind(id);
@@ -319,13 +440,15 @@
   function novelInspector(id) {
     const novel = U.bind(id);
     const pg = U.progress(novel);
-    if (screenOf(novel.id) === "reading" && U.hasText()) {
-      const c = U.chapter(R().ch);
-      const tr = N().tr.chapters[c.n];
-      const warns = U.openWarnings().filter((w) => w.ch === c.n).length;
-      const stale = U.staleItems().filter((i) => i.ev.some((e) => NV.chOf(e.p) === c.n)).length;
+    const cur = screenOf(novel.id) === "reading" ? U.chapterIn(novel, R().ch) : null;
+    if (cur) {
+      const c = cur;
+      const sample = novel.id === U.SAMPLE;
+      const tr = sample ? N().tr.chapters[c.n] : null;
+      const warns = sample ? U.openWarnings().filter((w) => w.ch === c.n).length : 0;
+      const stale = sample ? U.staleItems().filter((i) => i.ev.some((e) => NV.chOf(e.p) === c.n)).length : 0;
       return `${displayPanel()}
-        ${U.insSec(`Ch.${c.n}`, U.kv([["Title", esc(c.title)], ["Words", fmt(c.words)], ["Passage", c.paras ? c.paras.length : "—"], ["Translate", tr ? `<span class="badge badge-success">HAS DRAFT</span>` : `<span class="badge">NOT YET</span>`], ["Knowledge", N().kb.analyzed[c.n] === "done" ? `<span class="badge badge-success">ANALYZED</span>` : `<span class="badge">NOT YET</span>`]]))}
+        ${U.insSec(`Ch.${c.n}`, U.kv([["Title", esc(c.title)], ["Words", fmt(c.words)], ["Passage", U.parasOf(c).length], ...(sample ? [["Translate", tr ? `<span class="badge badge-success">HAS DRAFT</span>` : `<span class="badge">NOT YET</span>`], ["Knowledge", N().kb.analyzed[c.n] === "done" ? `<span class="badge badge-success">ANALYZED</span>` : `<span class="badge">NOT YET</span>`]] : [])]))}
         ${warns || stale ? `<section class="ins-sec"><span class="eyebrow">Needs review</span>
           ${warns ? `<div class="t-sm warn-line">${ic("alert")} ${warns} translation warnings</div>` : ""}${stale ? `<div class="t-sm warn-line">${ic("alert")} ${stale} knowledge claims tied to a changed source</div>` : ""}</section>` : ""}`;
     }
@@ -398,7 +521,7 @@
 
   function gotoChapter(n) {
     const r = R();
-    r.ch = Math.max(1, Math.min(N().chapters.length, n));
+    r.ch = Math.max(1, Math.min(U.chaptersFor(U.bind(A.S.active)).length, n));
     r.edit = null;
     A.rerender();
   }
@@ -416,7 +539,13 @@
       else U.openNovelTab(k, id);
     },
     "nm-open": (el) => openNovel(el.dataset.id, "chapters"),
-    "nm-sel": (el) => { NM().selected = el.dataset.id; applySel(); },
+    // like the library: click selects, clicking the selected one again clears it (the 2nd click of a double click keeps it)
+    "nm-sel": (el, e) => {
+      const nm = NM();
+      const dbl = e?.detail >= 2;
+      nm.selected = !dbl && nm.selected === el.dataset.id ? null : el.dataset.id;
+      applySel();
+    },
     "nm-del": (el) => openDelete(el.dataset.id ? [el.dataset.id] : selIds()),
     "nm-del-confirm": () => {
       const ids = new Set(pendingDel);
@@ -479,7 +608,56 @@
     "rd-layout": (el) => { viewOpts().layout = el.dataset.v; saveView(); R().edit = null; A.rerender(); },
     "rd-mode": (el) => { R().mode = el.dataset.v; R().edit = null; A.rerender(); },
     "rd-edit": (el) => { R().edit = el.dataset.p; A.rerender(); },
-    "rd-cancel": () => { R().edit = null; A.rerender(); },
+    "rd-cancel": () => {
+      // a passage that was just added and never filled in is discarded
+      const nv = U.bind(A.S.active);
+      const c = U.chapterIn(nv, R().ch);
+      const ps = c ? U.parasOf(c) : [];
+      const i = ps.findIndex((x) => x.id === R().edit && x.t === "");
+      if (i >= 0) ps.splice(i, 1);
+      R().edit = null;
+      A.rerender();
+    },
+    "rd-add-p": () => {
+      const nv = U.bind(A.S.active);
+      const c = U.chapterIn(nv, R().ch);
+      if (!c || isLocked(nv, c)) return;
+      const ps = U.parasOf(c);
+      const open = ps.find((x) => x.t === "");
+      const p = open || { id: `${c.n}.${ps.length + 1}`, t: "" };
+      if (!open) ps.push(p);
+      R().edit = p.id;
+      A.rerender();
+    },
+    "ch-add": () => openAddChapter(),
+    "ch-add-submit": () => {
+      const nv = U.bind(A.S.active);
+      const list = U.chaptersFor(nv);
+      const title = A.$("#ch-new-title").value.trim() || `Chapter ${list.length + 1}`;
+      const sample = nv.id === U.SAMPLE;
+      list.push({ n: list.length + 1, title, words: 0, paras: sample ? null : [], ...(sample ? { body: [] } : {}) });
+      U.syncNovel(nv);
+      A.closeModal();
+      refreshChapters();
+      A.toast(`Added chapter ${list.length}: “${title}”.`);
+    },
+    "ch-up": (el) => moveChapter(+el.dataset.n, +el.dataset.n - 1),
+    "ch-down": (el) => moveChapter(+el.dataset.n, +el.dataset.n + 1),
+    "ch-del": (el) => openDeleteChapter(+el.dataset.n),
+    "ch-del-confirm": () => {
+      const nv = U.bind(A.S.active);
+      const list = U.chaptersFor(nv);
+      const c = list[pendingCh - 1];
+      if (!c || isLocked(nv, c)) { A.closeModal(); return; }
+      const cur = list[R().ch - 1];
+      list.splice(pendingCh - 1, 1);
+      renumberChapters(list, nv);
+      R().ch = Math.max(1, Math.min(list.length, cur === c ? pendingCh : list.indexOf(cur) + 1));
+      U.syncNovel(nv);
+      A.closeModal();
+      refreshChapters();
+      A.toast(`Deleted chapter “${c.title}”.`);
+    },
     "rd-save": (el) => {
       const text = A.$("#rd-ta").value.trim();
       if (!text) { A.toast("The passage cannot be empty.", "warning"); return; }
@@ -559,6 +737,19 @@
     },
     "ch-q": (el) => { ui("ch", {}).q = el.value; A.rerender(); },
     "rd-ch": (el) => gotoChapter(Math.floor(+el.value) || 1),
+    "rd-title": (el) => {
+      const nv = U.bind(A.S.active);
+      const c = U.chapterIn(nv, R().ch);
+      const title = el.value.trim();
+      if (!c) return;
+      if (!title) { A.toast("The chapter title cannot be empty.", "warning"); A.rerender(); return; }
+      if (title === c.title) return;
+      c.title = title;
+      nv.updated = A.stamp();
+      A.rerender();
+      A.renderInspector();
+      A.toast("Renamed the chapter.");
+    },
     "pf-size": (el) => {
       prefs().size = +el.value;
       savePrefs();

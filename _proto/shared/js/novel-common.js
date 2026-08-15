@@ -27,8 +27,16 @@ window.NVU = (function () {
 
   /** The novel’s chapter list: the sample novel has real content, other novels only have metadata. */
   const packChapters = (n) => (n.pack && window.NVC?.[n.pack]?.chapters) || [];
-  const chaptersFor = (n) => (n.id === SAMPLE ? N().chapters
-    : Array.from({ length: n.chapters }, (_, i) => ({ n: i + 1, title: packChapters(n)[i]?.title || `Chapter ${i + 1}`, words: packChapters(n)[i]?.words ?? Math.round(n.words / Math.max(1, n.chapters)), paras: null })));
+  /** Passages of a chapter: the sample chapters linked to a translation / knowledge keep them in `paras`, every other chapter in `body`. */
+  const parasOf = (c) => c.paras || (c.body ||= []);
+  const wordCount = (t) => (String(t).trim().match(/\S+/g) || []).length;
+  /** Editable chapter list of a novel. The sample novel uses the shared state; any other novel copies its package once and is then edited in place. */
+  const chaptersFor = (n) => (n.id === SAMPLE ? N().chapters : (n.chs ||= (packChapters(n).length
+    ? packChapters(n).map((c, i) => ({ n: i + 1, title: c.title, words: c.words, paras: c.paras.map((t, j) => ({ id: `${i + 1}.${j + 1}`, t })) }))
+    : Array.from({ length: n.chapters }, (_, i) => ({ n: i + 1, title: `Chapter ${i + 1}`, words: Math.round(n.words / Math.max(1, n.chapters)), paras: [] })))));
+  const chapterIn = (n, num) => chaptersFor(n)[num - 1];
+  /** Keeps the novel record in step with its chapter list. */
+  const syncNovel = (n) => { const list = chaptersFor(n); n.chapters = list.length; n.words = list.reduce((a, c) => a + c.words, 0); n.updated = A.stamp(); };
   const analyzedCount = () => Object.values(N().kb.analyzed).filter((v) => v === "done").length;
   const progress = (n) => (n.id === SAMPLE
     ? { tr: Object.keys(N().tr.chapters).length, kb: analyzedCount(), total: n.chapters }
@@ -179,11 +187,15 @@ window.NVU = (function () {
   };
 
   const applySourceEdit = (pid, text) => {
-    const para = findPara(pid);
+    const nv = current();
+    const ch = chapterIn(nv, NV.chOf(pid));
+    const para = parasOf(ch).find((p) => p.id === pid);
     const before = para.t;
     if (before === text) return null;
     para.t = text;
-    para.edited = true;
+    ch.words = parasOf(ch).reduce((a, p) => a + wordCount(p.t), 0);
+    syncNovel(nv);
+    if (nv.id !== SAMPLE) return { warned: 0, stale: 0 };
     const s = N();
     const tp = s.tr.chapters[NV.chOf(pid)]?.paras[pid];
     let warned = 0;
@@ -229,7 +241,7 @@ window.NVU = (function () {
   };
 
   const NVU = {
-    SAMPLE, N, ui, fmt, chapter, novelById, current, bind, hasText, findPara, paraNo, refLabel, ref, seg, options, bar, datatable, empty, noSample, insSec, kv, novelTitle,
+    SAMPLE, N, ui, fmt, chapter, chapterIn, parasOf, wordCount, syncNovel, novelById, current, bind, hasText, findPara, paraNo, refLabel, ref, seg, options, bar, datatable, empty, noSample, insSec, kv, novelTitle,
     nameOf, chaptersFor, progress, analyzedCount, cover, coverBg, frac, rangeText, chapterJump, nextNovelId, tagsOf, allTags, normTag, filters, filterActive, passes, tagChips, refreshTabs,
     certBadge, CERT, estimate, money, provider, providerSelect, runningTask, taskRef, trChapter, trParaList, trStatus, openWarnings, staleItems,
     addWarning, applySourceEdit, inspectorNovel, openNovelTab,

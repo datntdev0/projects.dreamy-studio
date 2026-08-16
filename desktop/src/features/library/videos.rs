@@ -5,7 +5,6 @@ use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibraryVideo;
-use crate::features::library::video_probe::VideoFormat;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::params;
@@ -16,6 +15,9 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+use std::process::Output;
+use std::process::Stdio;
 use uuid::Uuid;
 
 pub const VIDEO_MAX_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -258,136 +260,548 @@ fn video_unreadable(detail: impl Into<String>) -> LibraryError {
     LibraryError::new(LibraryErrorCode::VideoUnreadable, detail)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::infra::storage::migrator::Migrator;
-    use crate::infra::storage::migrator::workspace_scripts;
-    use std::sync::atomic::AtomicBool;
-    use tempfile::TempDir;
+const MAX_MOOV_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_EBML_BYTES: usize = 64 * 1024 * 1024;
 
-    fn test_connection() -> Connection {
-        let mut conn = Connection::open_in_memory().unwrap();
-        Migrator::migrate(
-            &mut conn,
-            &workspace_scripts().unwrap(),
-            &AtomicBool::new(false),
-        )
-        .unwrap();
-        conn
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VideoFormat {
+    Mp4,
+    Mov,
+    Webm,
+    Mkv,
+}
 
-    fn new_video(name: &str) -> NewVideo {
-        NewVideo {
-            name: name.to_string(),
-            ext: "mp4".to_string(),
-            size: 12,
-            duration_ms: 2_000,
-            width: 1_920,
-            height: 1_080,
-            fps: None,
-            rights: AssetRights::Own,
-            collection_id: None,
-            tags: vec!["Example".to_string()],
+impl VideoFormat {
+    pub fn from_extension(extension: &str) -> Option<Self> {
+        match extension.to_ascii_lowercase().as_str() {
+            "mp4" => Some(Self::Mp4),
+            "mov" => Some(Self::Mov),
+            "webm" => Some(Self::Webm),
+            "mkv" => Some(Self::Mkv),
+            _ => None,
         }
     }
 
-    #[test]
-    fn stages_commits_discards_and_reads_video_files() {
-        let directory = TempDir::new().unwrap();
-        let source = directory.path().join("source.mp4");
-        let bytes = b"video data";
-        fs::write(&source, bytes).unwrap();
-        let files = VideoFiles::new(directory.path().to_path_buf());
-        let staged = files.stage(&source).unwrap();
-        assert!(staged.exists());
-        files.commit(&staged, 7, VideoFormat::Mp4).unwrap();
-        assert!(!staged.exists());
-        assert_eq!(files.len(7, VideoFormat::Mp4).unwrap(), bytes.len() as u64);
-        assert_eq!(
-            files.read_range(7, VideoFormat::Mp4, 2, 5).unwrap(),
-            bytes[2..7]
-        );
-        files.discard(&staged).unwrap();
-        files.discard(&staged).unwrap();
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::Mp4 => "mp4",
+            Self::Mov => "mov",
+            Self::Webm => "webm",
+            Self::Mkv => "mkv",
+        }
     }
 
-    #[test]
-    fn stores_and_removes_posters_and_videos() {
-        let directory = TempDir::new().unwrap();
-        let source = directory.path().join("source.mp4");
-        fs::write(&source, b"video").unwrap();
-        let files = VideoFiles::new(directory.path().to_path_buf());
-        let staged = files.stage(&source).unwrap();
-        files.commit(&staged, 4, VideoFormat::Mp4).unwrap();
-        assert_eq!(files.read_poster(4).unwrap(), None);
-        assert_eq!(
-            files.write_poster(4, b"not-jpeg").unwrap_err().code,
-            LibraryErrorCode::VideoUnreadable
-        );
-        let oversized = vec![0xff; POSTER_MAX_BYTES + 1];
-        assert_eq!(
-            files.write_poster(4, &oversized).unwrap_err().code,
-            LibraryErrorCode::VideoUnreadable
-        );
-        let poster = vec![0xff, 0xd8, 0xff, 0xdb];
-        files.write_poster(4, &poster).unwrap();
-        assert_eq!(files.read_poster(4).unwrap(), Some(poster));
-        files.remove(4, VideoFormat::Mp4).unwrap();
-        files.remove(4, VideoFormat::Mp4).unwrap();
-        assert_eq!(files.read_poster(4).unwrap(), None);
+    pub fn mime(self) -> &'static str {
+        match self {
+            Self::Mp4 => "video/mp4",
+            Self::Mov => "video/quicktime",
+            Self::Webm => "video/webm",
+            Self::Mkv => "video/x-matroska",
+        }
     }
 
-    #[test]
-    fn stores_updates_marks_and_deletes_videos() {
-        let conn = test_connection();
-        let id = insert(&conn, &new_video("clip.mp4"), "2026-01-01T00:00:00Z").unwrap();
-        let duplicate = unique_name(&conn, "CLIP.mp4", None).unwrap();
-        let patch = AssetPatch {
-            name: Some("renamed.mp4".to_string()),
-            rights: Some(AssetRights::Licensed),
-            collection_id: None,
-            tags: Some((0..12).map(|index| format!("tag-{index}")).collect()),
-        };
-        let videos = list(&conn).unwrap();
-        assert_eq!(videos[0].tags, vec!["example"]);
-        assert_eq!(videos[0].fps, None);
-        assert_eq!(duplicate, "CLIP (2).mp4");
-        let tag_limit = AssetPatch {
-            tags: Some((0..13).map(|index| format!("too-many-{index}")).collect()),
-            ..AssetPatch::default()
-        };
-        assert_eq!(
-            update(&conn, id, &tag_limit, "2026-01-02T00:00:00Z")
-                .unwrap_err()
-                .code,
-            LibraryErrorCode::TagLimit
-        );
-        let updated = update(&conn, id, &patch, "2026-01-02T00:00:00Z").unwrap();
-        assert_eq!(updated.name, "renamed.mp4");
-        assert_eq!(updated.rights, AssetRights::Licensed);
-        assert_eq!(updated.tags.len(), 12);
-        let missing_collection = AssetPatch {
-            collection_id: Some(Some(99)),
-            ..AssetPatch::default()
-        };
-        assert_eq!(
-            update(&conn, id, &missing_collection, "2026-01-02T00:00:00Z")
-                .unwrap_err()
-                .code,
-            LibraryErrorCode::CollectionNotFound
-        );
-        mark_poster(&conn, id).unwrap();
-        assert!(get(&conn, id).unwrap().has_poster);
-        assert_eq!(delete(&conn, &[id]).unwrap(), vec![(id, "mp4".to_string())]);
-        assert_eq!(
-            conn.query_row(
-                "SELECT COUNT(*) FROM ws_tags WHERE type = 'library_video'",
-                [],
-                |row| row.get::<_, i64>(0)
-            )
-            .unwrap(),
-            0
-        );
+    pub fn matches(self, bytes: &[u8]) -> bool {
+        match self {
+            Self::Mp4 | Self::Mov => {
+                bytes.len() >= 8
+                    && matches!(
+                        &bytes[4..8],
+                        b"ftyp" | b"moov" | b"mdat" | b"free" | b"skip" | b"wide" | b"pnot"
+                    )
+            }
+            Self::Webm | Self::Mkv => bytes.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]),
+        }
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VideoInfo {
+    pub duration_ms: i64,
+    pub width: u32,
+    pub height: u32,
+    pub fps: Option<f64>,
+}
+
+pub fn probe(path: &Path, format: VideoFormat) -> LibraryResult<VideoInfo> {
+    let mut file = File::open(path)?;
+    let mut header = [0_u8; 16];
+    let count = file.read(&mut header)?;
+    if !format.matches(&header[..count]) {
+        return Err(video_unreadable(
+            "video extension and file content do not match",
+        ));
+    }
+    let info = match format {
+        VideoFormat::Mp4 | VideoFormat::Mov => probe_iso(&mut file)?,
+        VideoFormat::Webm | VideoFormat::Mkv => probe_ebml(&mut file)?,
+    };
+    validate(info)
+}
+
+fn validate(info: VideoInfo) -> LibraryResult<VideoInfo> {
+    if info.duration_ms <= 0
+        || !(1..=16_384).contains(&info.width)
+        || !(1..=16_384).contains(&info.height)
+    {
+        return Err(video_unreadable(
+            "video is missing valid duration or dimensions",
+        ));
+    }
+    Ok(info)
+}
+
+fn probe_iso(file: &mut File) -> LibraryResult<VideoInfo> {
+    let length = file.metadata()?.len();
+    let mut offset = 0_u64;
+    let mut moov = None;
+    while offset < length {
+        file.seek(SeekFrom::Start(offset))?;
+        let Some((size, kind, header)) = read_box_header(file, length - offset)? else {
+            break;
+        };
+        if size < header || size > length - offset {
+            return Err(video_unreadable("invalid ISO box size"));
+        }
+        if &kind == b"moov" {
+            let payload_len = size - header;
+            if payload_len > MAX_MOOV_BYTES {
+                return Err(video_unreadable("moov box is too large"));
+            }
+            let mut data = vec![0; payload_len as usize];
+            file.read_exact(&mut data)?;
+            moov = Some(data);
+            break;
+        }
+        offset = offset
+            .checked_add(size)
+            .ok_or_else(|| video_unreadable("invalid ISO box offset"))?;
+    }
+    let moov = moov.ok_or_else(|| video_unreadable("video has no moov box"))?;
+    parse_moov(&moov)
+}
+
+fn read_box_header(file: &mut File, remaining: u64) -> LibraryResult<Option<(u64, [u8; 4], u64)>> {
+    if remaining < 8 {
+        return Ok(None);
+    }
+    let mut header = [0_u8; 8];
+    file.read_exact(&mut header)?;
+    let mut size = u64::from(u32::from_be_bytes(header[..4].try_into().unwrap()));
+    let kind: [u8; 4] = header[4..8].try_into().unwrap();
+    let mut header_len = 8;
+    if size == 1 {
+        if remaining < 16 {
+            return Err(video_unreadable("truncated large ISO box"));
+        }
+        let mut large = [0_u8; 8];
+        file.read_exact(&mut large)?;
+        size = u64::from_be_bytes(large);
+        header_len = 16;
+    } else if size == 0 {
+        size = remaining;
+    }
+    Ok(Some((size, kind, header_len)))
+}
+
+#[derive(Clone, Copy)]
+struct IsoBox<'a> {
+    kind: [u8; 4],
+    payload: &'a [u8],
+}
+
+fn iso_children(mut data: &[u8]) -> LibraryResult<Vec<IsoBox<'_>>> {
+    let mut output = Vec::new();
+    while !data.is_empty() {
+        if data.len() < 8 {
+            return Err(video_unreadable("truncated ISO child box"));
+        }
+        let mut size = u64::from(u32::from_be_bytes(data[..4].try_into().unwrap()));
+        let kind = data[4..8].try_into().unwrap();
+        let mut header = 8_usize;
+        if size == 1 {
+            if data.len() < 16 {
+                return Err(video_unreadable("truncated large ISO child box"));
+            }
+            size = u64::from_be_bytes(data[8..16].try_into().unwrap());
+            header = 16;
+        } else if size == 0 {
+            size = data.len() as u64;
+        }
+        if size < header as u64 || size > data.len() as u64 {
+            return Err(video_unreadable("invalid ISO child size"));
+        }
+        output.push(IsoBox {
+            kind,
+            payload: &data[header..size as usize],
+        });
+        data = &data[size as usize..];
+    }
+    Ok(output)
+}
+
+fn iso_find<'a>(data: &'a [u8], wanted: &[u8; 4]) -> LibraryResult<Option<&'a [u8]>> {
+    for entry in iso_children(data)? {
+        if &entry.kind == wanted {
+            return Ok(Some(entry.payload));
+        }
+    }
+    Ok(None)
+}
+
+fn parse_moov(data: &[u8]) -> LibraryResult<VideoInfo> {
+    let mvhd = iso_find(data, b"mvhd")?.ok_or_else(|| video_unreadable("video has no mvhd"))?;
+    let (movie_scale, mut duration) = iso_time(mvhd)?;
+    if duration == 0 {
+        if let Some(mvex) = iso_find(data, b"mvex")? {
+            if let Some(mehd) = iso_find(mvex, b"mehd")? {
+                duration = mehd_duration(mehd)?;
+            }
+        }
+    }
+    let mut video = None;
+    for track in iso_children(data)?
+        .into_iter()
+        .filter(|entry| &entry.kind == b"trak")
+    {
+        if let Some(info) = parse_track(track.payload)? {
+            video = Some(info);
+            break;
+        }
+    }
+    let (mut width, mut height, track_scale, track_duration, samples) =
+        video.ok_or_else(|| video_unreadable("video has no video track"))?;
+    if duration == 0 {
+        duration = track_duration;
+    }
+    let duration_ms = duration
+        .checked_mul(1000)
+        .ok_or_else(|| video_unreadable("video duration overflows"))?
+        / movie_scale.max(1);
+    let fps = samples.and_then(|count| fps(count, track_scale, track_duration));
+    if width == 0 || height == 0 {
+        return Err(video_unreadable("video has invalid dimensions"));
+    }
+    if track_scale == 0 {
+        width = 0;
+        height = 0;
+    }
+    Ok(VideoInfo {
+        duration_ms: duration_ms as i64,
+        width,
+        height,
+        fps,
+    })
+}
+
+fn iso_time(data: &[u8]) -> LibraryResult<(u64, u64)> {
+    let version = *data
+        .first()
+        .ok_or_else(|| video_unreadable("truncated ISO time box"))?;
+    match version {
+        0 if data.len() >= 20 => Ok((
+            u64::from(u32::from_be_bytes(data[12..16].try_into().unwrap())),
+            u64::from(u32::from_be_bytes(data[16..20].try_into().unwrap())),
+        )),
+        1 if data.len() >= 32 => Ok((
+            u64::from(u32::from_be_bytes(data[20..24].try_into().unwrap())),
+            u64::from_be_bytes(data[24..32].try_into().unwrap()),
+        )),
+        _ => Err(video_unreadable("truncated ISO time box")),
+    }
+}
+
+fn mehd_duration(data: &[u8]) -> LibraryResult<u64> {
+    match data.first().copied() {
+        Some(0) if data.len() >= 8 => Ok(u64::from(u32::from_be_bytes(
+            data[4..8].try_into().unwrap(),
+        ))),
+        Some(1) if data.len() >= 12 => Ok(u64::from_be_bytes(data[4..12].try_into().unwrap())),
+        _ => Err(video_unreadable("truncated mehd box")),
+    }
+}
+
+fn parse_track(data: &[u8]) -> LibraryResult<Option<(u32, u32, u64, u64, Option<u64>)>> {
+    let mdia = match iso_find(data, b"mdia")? {
+        Some(value) => value,
+        None => return Ok(None),
+    };
+    let hdlr = iso_find(mdia, b"hdlr")?.ok_or_else(|| video_unreadable("track has no handler"))?;
+    if hdlr.len() < 12 || &hdlr[8..12] != b"vide" {
+        return Ok(None);
+    }
+    let tkhd =
+        iso_find(data, b"tkhd")?.ok_or_else(|| video_unreadable("video track has no tkhd"))?;
+    let (width, height, rotated) = tkhd_dimensions(tkhd)?;
+    let mdhd =
+        iso_find(mdia, b"mdhd")?.ok_or_else(|| video_unreadable("video track has no mdhd"))?;
+    let (scale, duration) = iso_time(mdhd)?;
+    let samples = iso_find(mdia, b"minf")?
+        .and_then(|minf| iso_find(minf, b"stbl").ok().flatten())
+        .and_then(|stbl| iso_find(stbl, b"stts").ok().flatten())
+        .map(stts_samples)
+        .transpose()?;
+    let (width, height) = if rotated {
+        (height, width)
+    } else {
+        (width, height)
+    };
+    Ok(Some((width, height, scale, duration, samples)))
+}
+
+fn tkhd_dimensions(data: &[u8]) -> LibraryResult<(u32, u32, bool)> {
+    let version = *data
+        .first()
+        .ok_or_else(|| video_unreadable("truncated tkhd"))?;
+    let (matrix, dimensions) = match version {
+        0 => (40, 76),
+        1 => (52, 88),
+        _ => return Err(video_unreadable("unknown tkhd version")),
+    };
+    if data.len() < dimensions + 8 {
+        return Err(video_unreadable("truncated tkhd"));
+    }
+    let a = i32::from_be_bytes(data[matrix..matrix + 4].try_into().unwrap());
+    let b = i32::from_be_bytes(data[matrix + 4..matrix + 8].try_into().unwrap());
+    let c = i32::from_be_bytes(data[matrix + 12..matrix + 16].try_into().unwrap());
+    let d = i32::from_be_bytes(data[matrix + 16..matrix + 20].try_into().unwrap());
+    let rotated = a == 0 && d == 0 && (b.abs() == 0x0001_0000 || c.abs() == 0x0001_0000);
+    Ok((
+        u32::from_be_bytes(data[dimensions..dimensions + 4].try_into().unwrap()) >> 16,
+        u32::from_be_bytes(data[dimensions + 4..dimensions + 8].try_into().unwrap()) >> 16,
+        rotated,
+    ))
+}
+
+fn stts_samples(data: &[u8]) -> LibraryResult<u64> {
+    if data.len() < 8 {
+        return Err(video_unreadable("truncated stts"));
+    }
+    let count = u32::from_be_bytes(data[4..8].try_into().unwrap()) as usize;
+    if data.len() < 8 + count.saturating_mul(8) {
+        return Err(video_unreadable("truncated stts entries"));
+    }
+    Ok((0..count)
+        .map(|index| {
+            u64::from(u32::from_be_bytes(
+                data[8 + index * 8..12 + index * 8].try_into().unwrap(),
+            ))
+        })
+        .sum())
+}
+
+fn fps(samples: u64, scale: u64, duration: u64) -> Option<f64> {
+    if samples == 0 || scale == 0 || duration == 0 {
+        return None;
+    }
+    let value = ((samples as f64 * scale as f64 / duration as f64) * 100.0).round() / 100.0;
+    (value.is_finite() && value > 0.0 && value <= 1000.0).then_some(value)
+}
+
+fn probe_ebml(file: &mut File) -> LibraryResult<VideoInfo> {
+    file.seek(SeekFrom::Start(0))?;
+    let mut data = Vec::new();
+    file.take(MAX_EBML_BYTES as u64).read_to_end(&mut data)?;
+    let segment =
+        ebml_find(&data, 0x1853_8067)?.ok_or_else(|| video_unreadable("video has no Segment"))?;
+    let info =
+        ebml_find(segment, 0x1549_a966)?.ok_or_else(|| video_unreadable("video has no Info"))?;
+    let tracks =
+        ebml_find(segment, 0x1654_ae6b)?.ok_or_else(|| video_unreadable("video has no Tracks"))?;
+    let scale = ebml_uint(ebml_find(info, 0x002a_d7b1)?.unwrap_or(&[])).unwrap_or(1_000_000);
+    let duration = ebml_float(
+        ebml_find(info, 0x4489)?.ok_or_else(|| video_unreadable("video has no Duration"))?,
+    )?;
+    let track = ebml_children(tracks)?
+        .into_iter()
+        .find(|entry| entry.0 == 0xae)
+        .map(|entry| entry.1)
+        .ok_or_else(|| video_unreadable("video has no track"))?;
+    if ebml_uint(ebml_find(track, 0x83)?.unwrap_or(&[])) != Some(1) {
+        return Err(video_unreadable("video has no video track"));
+    }
+    let video =
+        ebml_find(track, 0xe0)?.ok_or_else(|| video_unreadable("video track has no dimensions"))?;
+    let width =
+        ebml_uint(ebml_find(video, 0xb0)?.ok_or_else(|| video_unreadable("video has no width"))?)
+            .ok_or_else(|| video_unreadable("invalid video width"))? as u32;
+    let height =
+        ebml_uint(ebml_find(video, 0xba)?.ok_or_else(|| video_unreadable("video has no height"))?)
+            .ok_or_else(|| video_unreadable("invalid video height"))? as u32;
+    let fps = ebml_find(track, 0x23e3_83)?
+        .and_then(ebml_uint)
+        .and_then(|nanos| {
+            let value = ((1_000_000_000_f64 / nanos as f64) * 100.0).round() / 100.0;
+            (value.is_finite() && value > 0.0 && value <= 1000.0).then_some(value)
+        });
+    Ok(VideoInfo {
+        duration_ms: (duration * scale as f64 / 1_000_000.0).round() as i64,
+        width,
+        height,
+        fps,
+    })
+}
+
+fn ebml_children(data: &[u8]) -> LibraryResult<Vec<(u32, &[u8])>> {
+    let mut offset = 0;
+    let mut output = Vec::new();
+    while offset < data.len() {
+        let (id, id_len) = ebml_vint(&data[offset..], false)
+            .ok_or_else(|| video_unreadable("truncated EBML id"))?;
+        offset += id_len;
+        let (size, size_len) = ebml_vint(&data[offset..], true)
+            .ok_or_else(|| video_unreadable("truncated EBML size"))?;
+        offset += size_len;
+        let end = if size == u64::MAX {
+            data.len()
+        } else {
+            offset
+                .checked_add(size as usize)
+                .filter(|end| *end <= data.len())
+                .ok_or_else(|| video_unreadable("invalid EBML size"))?
+        };
+        output.push((id as u32, &data[offset..end]));
+        offset = end;
+    }
+    Ok(output)
+}
+
+fn ebml_find(data: &[u8], wanted: u32) -> LibraryResult<Option<&[u8]>> {
+    for (id, value) in ebml_children(data)? {
+        if id == wanted {
+            return Ok(Some(value));
+        }
+    }
+    Ok(None)
+}
+
+fn ebml_vint(data: &[u8], clear_marker: bool) -> Option<(u64, usize)> {
+    let first = *data.first()?;
+    let length = (first.leading_zeros() + 1) as usize;
+    if length > 8 || data.len() < length {
+        return None;
+    }
+    let mut value = if clear_marker {
+        u64::from(first & (0xff >> length))
+    } else {
+        u64::from(first)
+    };
+    for byte in &data[1..length] {
+        value = value << 8 | u64::from(*byte);
+    }
+    if clear_marker && value == (1_u64 << (7 * length)) - 1 {
+        value = u64::MAX;
+    }
+    Some((value, length))
+}
+
+fn ebml_uint(data: &[u8]) -> Option<u64> {
+    if data.is_empty() || data.len() > 8 {
+        return None;
+    }
+    Some(
+        data.iter()
+            .fold(0_u64, |value, byte| value << 8 | u64::from(*byte)),
+    )
+}
+
+fn ebml_float(data: &[u8]) -> LibraryResult<f64> {
+    match data.len() {
+        4 => Ok(f32::from_be_bytes(data.try_into().unwrap()) as f64),
+        8 => Ok(f64::from_be_bytes(data.try_into().unwrap())),
+        _ => Err(video_unreadable("invalid EBML duration")),
+    }
+}
+
+pub const FRAME_SECOND: i64 = 1;
+const JPEG_MAGIC: [u8; 3] = [0xff, 0xd8, 0xff];
+const JPEG_QUALITY: &str = "3";
+const SCALE_FILTER: &str =
+    "scale=w='if(gt(iw,ih),min(480,iw),-2)':h='if(gt(iw,ih),-2,min(480,ih))'";
+const STDERR_DETAIL_LIMIT: usize = 400;
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+pub fn extract_poster(video: &Path, duration_ms: i64) -> LibraryResult<Vec<u8>> {
+    let ffmpeg = sidecar_path()?;
+    let mut failure = video_unreadable("ffmpeg produced no frame");
+    for seconds in seek_candidates(duration_ms) {
+        match run_ffmpeg(&ffmpeg, video, seconds) {
+            Ok(bytes) => return Ok(bytes),
+            Err(error) => failure = error,
+        }
+    }
+    Err(failure)
+}
+
+fn seek_candidates(duration_ms: i64) -> Vec<i64> {
+    if duration_ms > FRAME_SECOND * 1_000 {
+        vec![FRAME_SECOND, 0]
+    } else {
+        vec![0]
+    }
+}
+
+pub fn sidecar_path() -> LibraryResult<PathBuf> {
+    let executable = std::env::current_exe()?;
+    let name = if cfg!(windows) {
+        "ffmpeg.exe"
+    } else {
+        "ffmpeg"
+    };
+    executable
+        .ancestors()
+        .skip(1)
+        .take(2)
+        .map(|directory| directory.join(name))
+        .find(|candidate| candidate.is_file())
+        .ok_or_else(|| video_unreadable("ffmpeg sidecar is missing"))
+}
+
+fn run_ffmpeg(ffmpeg: &Path, video: &Path, seconds: i64) -> LibraryResult<Vec<u8>> {
+    let mut command = Command::new(ffmpeg);
+    command
+        .args(["-v", "error", "-nostdin", "-ss"])
+        .arg(seconds.to_string())
+        .arg("-i")
+        .arg(video)
+        .args(["-frames:v", "1", "-an", "-sn", "-vf", SCALE_FILTER])
+        .args([
+            "-q:v",
+            JPEG_QUALITY,
+            "-f",
+            "image2pipe",
+            "-c:v",
+            "mjpeg",
+            "pipe:1",
+        ])
+        .stdin(Stdio::null());
+    hide_window(&mut command);
+    let output = command.output()?;
+    if output.status.success() && output.stdout.starts_with(&JPEG_MAGIC) {
+        return Ok(output.stdout);
+    }
+    Err(video_unreadable(failure_detail(&output)))
+}
+
+fn failure_detail(output: &Output) -> String {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let detail: String = stderr.trim().chars().take(STDERR_DETAIL_LIMIT).collect();
+    if detail.is_empty() {
+        format!("ffmpeg returned no frame ({})", output.status)
+    } else {
+        format!("ffmpeg failed: {detail}")
+    }
+}
+
+#[cfg(windows)]
+fn hide_window(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn hide_window(_command: &mut Command) {}
+
+#[cfg(test)]
+#[path = "../../../test/features/library/videos.test.rs"]
+mod tests;

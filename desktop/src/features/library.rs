@@ -6,6 +6,4 @@ pub mod prompts;
 pub mod service;
 pub mod sounds;
 pub mod tags;
-pub mod video_frame;
-pub mod video_probe;
 pub mod videos;

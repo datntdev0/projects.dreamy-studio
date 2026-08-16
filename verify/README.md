@@ -44,6 +44,6 @@ The prototype and the app are compared in English: the prototype's default langu
 
 ## Known gaps
 
-- The prototype videos are fragmented MP4 files with no `mehd` box, so `video_probe.rs` cannot read their duration. The fixture patches the `mvhd` duration of its staged copies and sets `fps` from the prototype data.
+- The prototype videos are fragmented MP4 files with no `mehd` box, so `videos.rs` cannot read their duration. The fixture patches the `mvhd` duration of its staged copies and sets `fps` from the prototype data.
 - The status bar shows the workspace path, which differs per machine. The path text is hidden (`visibility: hidden`) before every comparison, so it is neither in the screenshot nor in the aria snapshot.
 - The prototype runs in headless Edge, where Playwright hides scrollbars; the app run uses CDP `Emulation.setScrollbarsHidden` in `src/studio.ts`, so both sides lay out without a scrollbar gutter.

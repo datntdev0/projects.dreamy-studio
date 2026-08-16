@@ -11,5 +11,6 @@ fn derives_paths_from_root_without_creating_them() {
     assert_eq!(container.directories.root, root);
     assert_eq!(container.directories.logs, root.join("logs"));
     assert_eq!(container.database_path, root.join("application.dreamydb"));
+    assert_eq!(container.settings_path, root.join("settings.json"));
     assert!(!root.exists());
 }

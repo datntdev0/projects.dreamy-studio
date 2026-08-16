@@ -6,10 +6,14 @@ use tauri::RunEvent;
 use crate::commands;
 use crate::container::AppContainer;
 use crate::features::novel::service::NovelService;
+use crate::features::settings::models::Theme;
+use crate::features::settings::repository::SettingsRepository;
+use crate::features::settings::service::SettingsService;
 use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
+use crate::infra::window_state;
 
 pub fn run() {
     let app = tauri::Builder::default()
@@ -37,6 +41,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_info,
+            commands::settings::settings_get,
+            commands::settings::settings_general_save,
+            commands::settings::settings_folder_open,
+            commands::settings::settings_layout_save,
+            commands::settings::window_background_set,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
             commands::workspace::workspace_delete,
@@ -136,13 +145,27 @@ fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     log_startup(app, &container);
     manage_workspace(app, &container);
     app.manage(container);
+    prepare_window(app);
     Ok(())
+}
+
+fn prepare_window(app: &App) {
+    let Some(window) = app.get_webview_window(commands::workspace::MAIN_WINDOW_LABEL) else {
+        return;
+    };
+    let service = app.state::<SettingsService>();
+    let theme = service.general().theme.unwrap_or(Theme::Dark);
+    window_state::apply_background(&window, theme);
+    window_state::prepare(&window, app.handle(), service.window());
 }
 
 fn manage_workspace(app: &App, container: &AppContainer) {
     let repository = WorkspaceRepository::new(container.database_path.clone());
     let service = WorkspaceService::new(repository);
     let loader = WorkspaceLoader::from_container(container, service.clone());
+    app.manage(SettingsService::new(SettingsRepository::new(
+        container.settings_path.clone(),
+    )));
     app.manage(WorkspaceSession::new());
     app.manage(service);
     app.manage(loader);
@@ -166,6 +189,7 @@ fn log_startup(app: &App, container: &AppContainer) {
             "application database: {}",
             container.database_path.display()
         ),
+        format!("settings file: {}", container.settings_path.display()),
     ];
     for line in &lines {
         logger.info("app", line);

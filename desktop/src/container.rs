@@ -5,6 +5,7 @@ use tauri::App;
 use tauri::Manager;
 use tauri::Runtime;
 
+use crate::features::settings::repository::SETTINGS_FILE;
 use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendLaunch;
 use crate::infra::backend::BackendProcess;
@@ -25,11 +26,16 @@ impl AppDirectories {
     pub fn database_path(&self) -> PathBuf {
         self.root.join("application.dreamydb")
     }
+
+    pub fn settings_path(&self) -> PathBuf {
+        self.root.join(SETTINGS_FILE)
+    }
 }
 
 pub struct AppContainer {
     pub directories: AppDirectories,
     pub database_path: PathBuf,
+    pub settings_path: PathBuf,
     pub logger: Logger,
     pub backend: Arc<dyn BackendHost>,
 }
@@ -52,11 +58,13 @@ impl AppContainer {
     pub fn with_backend(root: PathBuf, backend: Arc<dyn BackendHost>) -> Self {
         let directories = AppDirectories::new(root);
         let database_path = directories.database_path();
+        let settings_path = directories.settings_path();
         let logger = Logger::new(directories.logs.clone());
 
         Self {
             directories,
             database_path,
+            settings_path,
             logger,
             backend,
         }

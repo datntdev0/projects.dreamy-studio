@@ -11,6 +11,4 @@ mod shared;
 #[path = "../test/shared/mod.rs"]
 mod testing;
 
-fn main() {
-    bootstrap::run();
-}
+fn main() { bootstrap::run(); }

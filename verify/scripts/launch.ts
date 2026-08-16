@@ -12,7 +12,6 @@ const CONNECT_RETRY_MS = 500;
 export interface RunningApp {
   readonly browser: Browser;
   readonly page: Page;
-  readonly dataDir: string;
   stop(): Promise<void>;
 }
 
@@ -79,14 +78,14 @@ async function firstPage(browser: Browser): Promise<Page> {
 
 export async function launchApp(options: LaunchOptions): Promise<RunningApp> {
   const executable = appExecutable();
-  await mkdir(options.dataDir, { recursive: true });
   await mkdir(options.webviewDir, { recursive: true });
   const port = await freePort();
-  const child = spawn(executable, ["--data-dir", options.dataDir], {
+  const child = spawn(executable, [], {
     stdio: "ignore",
     windowsHide: false,
     env: {
       ...process.env,
+      DREAMYSTUDIO_DATA_DIR: options.dataDir,
       WEBVIEW2_USER_DATA_FOLDER: join(options.webviewDir),
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
     },
@@ -97,7 +96,6 @@ export async function launchApp(options: LaunchOptions): Promise<RunningApp> {
     return {
       browser,
       page,
-      dataDir: options.dataDir,
       stop: async () => {
         await browser.close().catch(() => undefined);
         await killTree(child);

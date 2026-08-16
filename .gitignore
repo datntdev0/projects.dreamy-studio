@@ -2,8 +2,8 @@
 
 # Compiled output
 /_output/
-/desktop/target/
 /desktop/binaries/
+/desktop/resources/
 /storybook-static/
 /tmp
 /bazel-out

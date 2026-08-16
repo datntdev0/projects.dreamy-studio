@@ -42,7 +42,7 @@ pub struct AppContainer {
 
 impl AppContainer {
     pub fn new<R: Runtime>(app: &App<R>) -> tauri::Result<Self> {
-        let root = match env::data_dir() {
+        let root = match env::data_dir().or_else(env::portable_data_dir) {
             Some(root) => root,
             None => app.path().local_data_dir()?.join("DreamyStudio"),
         };

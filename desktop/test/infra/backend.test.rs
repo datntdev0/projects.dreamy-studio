@@ -76,7 +76,9 @@ fn launch_resolves_to_the_expected_mode() {
         assert!(launch.program.ends_with(venv_python(Path::new("backend"))));
     } else {
         assert_eq!(launch.run_mode, "prod");
-        assert!(launch.program.ends_with(SIDECAR_FILE));
+        assert!(launch.program.ends_with(bundled_python(Path::new(""))));
+        assert_eq!(launch.args, vec!["-E", "-s", "-m", "app"]);
+        assert!(launch.working_dir.unwrap().ends_with(BACKEND_DIR));
     }
 }
 

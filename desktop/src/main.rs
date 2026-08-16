@@ -11,4 +11,7 @@ mod shared;
 #[path = "../test/shared/mod.rs"]
 mod testing;
 
-fn main() { bootstrap::run(); }
+fn main() {
+    shared::env::isolate_webview_data();
+    bootstrap::run();
+}

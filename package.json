@@ -2,9 +2,11 @@
   "name": "dreamy-studio",
   "version": "0.1.0",
   "scripts": {
-    "ffmpeg:fetch": "powershell -NoProfile -ExecutionPolicy Bypass -File desktop/scripts/fetch-ffmpeg.ps1",
+    "build:prepare": "node _scripts/build_prepare.mjs",
     "start": "tauri dev",
     "build": "tauri build",
+    "build:portable": "node _scripts/build_portable.mjs",
+    "build:installer": "node _scripts/build_installer.mjs",
     "tauri": "tauri",
     "test": "cargo test --manifest-path desktop/Cargo.toml --target-dir _output/desktop/target",
     "verify": "pnpm --filter dreamy-studio-verify run test",

@@ -28,10 +28,8 @@ const STDERR_FILE: &str = "backend-stderr.log";
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-#[cfg(windows)]
-const SIDECAR_FILE: &str = "dreamy-backend.exe";
-#[cfg(not(windows))]
-const SIDECAR_FILE: &str = "dreamy-backend";
+const BACKEND_DIR: &str = "backend";
+const PYTHON_DIR: &str = "python";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BackendError {
@@ -102,10 +100,11 @@ impl BackendLaunch {
     }
 
     fn packaged(log_dir: PathBuf) -> Self {
+        let root = install_dir();
         Self {
-            program: sidecar_path(),
-            args: Vec::new(),
-            working_dir: None,
+            program: bundled_python(&root),
+            args: ["-E", "-s", "-m", "app"].map(String::from).to_vec(),
+            working_dir: Some(root.join(BACKEND_DIR)),
             run_mode: "prod",
             log_dir,
             ready_timeout: READY_TIMEOUT,
@@ -127,12 +126,22 @@ fn venv_python(backend: &Path) -> PathBuf {
     backend.join(".venv").join("bin").join("python")
 }
 
-fn sidecar_path() -> PathBuf {
+#[cfg(windows)]
+fn bundled_python(root: &Path) -> PathBuf {
+    root.join(PYTHON_DIR).join("python.exe")
+}
+
+#[cfg(not(windows))]
+fn bundled_python(root: &Path) -> PathBuf {
+    root.join(PYTHON_DIR).join("bin").join("python3")
+}
+
+fn install_dir() -> PathBuf {
     let mut path = match current_exe() {
         Ok(path) => path,
         Err(_) => PathBuf::new(),
     };
-    path.set_file_name(SIDECAR_FILE);
+    path.pop();
     path
 }
 

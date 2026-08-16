@@ -3,7 +3,7 @@ import { Theme } from "./theme.models";
 
 const STORAGE_KEY = "dreamy-studio.theme";
 
-const DEFAULT_THEME: Theme = "dark";
+export const DEFAULT_THEME: Theme = "dark";
 
 export const THEMES: Theme[] = ["dark", "light"];
 

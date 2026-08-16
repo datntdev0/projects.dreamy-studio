@@ -10,6 +10,7 @@
   @if (switchNotice(); as message) {
     <ds-toast class="main-notice" tone="danger" [message]="message" data-testid="main-switch-notice" (dismissed)="dismissSwitchNotice()" />
   }
+  <app-settings-dialog />
   <app-switch-workspace-dialog />
   <app-novel-create-dialog />
   <app-novel-delete-dialog />

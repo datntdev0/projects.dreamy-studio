@@ -28,6 +28,8 @@ import { LibraryPromptDeleteDialog } from "../../features/library/components/pro
 import { LibraryPromptPreviewDialog } from "../../features/library/components/prompt-preview.dialog";
 import { LibraryTagConfirmDialog } from "../../features/library/components/tag-confirm.dialog";
 import { LibraryUploadDialog } from "../../features/library/components/upload.dialog";
+import { SettingsDialog } from "../../features/settings/components/settings.dialog";
+import { SettingsService } from "../../features/settings/settings.service";
 import { SwitchWorkspaceDialog } from "../../features/workspace/components/switch.dialog";
 import { WorkspaceService } from "../../features/workspace/workspace.service";
 import { CurrentWorkspace } from "../../features/workspace/workspace.models";
@@ -37,12 +39,13 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelChapterAddDialog, NovelChapterDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog, LibraryCollectionDialog, LibraryCollectionDeleteDialog, LibraryImageDeleteDialog, LibraryImagePreviewDialog, LibrarySoundDeleteDialog, LibrarySoundPreviewDialog, LibraryVideoDeleteDialog, LibraryVideoPreviewDialog, LibraryPromptDeleteDialog, LibraryPromptPreviewDialog, LibraryTagConfirmDialog, LibraryUploadDialog],
+  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelDeleteDialog, NovelChapterAddDialog, NovelChapterDeleteDialog, NovelImportDialog, ProjectCreateDialog, ProjectDeleteDialog, LibraryCollectionDialog, LibraryCollectionDeleteDialog, LibraryImageDeleteDialog, LibraryImagePreviewDialog, LibrarySoundDeleteDialog, LibrarySoundPreviewDialog, LibraryVideoDeleteDialog, LibraryVideoPreviewDialog, LibraryPromptDeleteDialog, LibraryPromptPreviewDialog, LibraryTagConfirmDialog, LibraryUploadDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {
   private readonly title = inject(Title);
   private readonly workspaceService = inject(WorkspaceService);
+  private readonly settings = inject(SettingsService);
 
   readonly layout = inject(LayoutService);
   readonly workspace = this.workspaceService.current;
@@ -54,6 +57,12 @@ export class MainPage {
 
   dismissSwitchNotice(): void {
     this.workspaceService.switchNotice.set(null);
+  }
+
+  @HostListener("window:keydown.control.,", ["$event"])
+  openSettings(event: Event): void {
+    event.preventDefault();
+    this.settings.openDialog();
   }
 
   @HostListener("window:pointermove", ["$event"])

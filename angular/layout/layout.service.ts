@@ -1,4 +1,6 @@
-import { Injectable, computed, effect, inject, signal } from "@angular/core";
+import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
+import { LayoutSettings } from "../app/features/settings/settings.models";
+import { SettingsService } from "../app/features/settings/settings.service";
 import { PanelId, RailId, RightTabId } from "./layout.models";
 import { TabsService } from "./tabs.service";
 
@@ -8,54 +10,43 @@ export const PANEL_LIMITS: Record<PanelId, { min: number; max: number; initial: 
   bottom: { min: 120, max: 520, initial: 200 },
 };
 
-const PANEL_SIZES_STORAGE_KEY = "ds.layout.panelSizes";
-const STORED_PANEL_SIZES = readPanelSizes();
+const SAVE_DELAY_MS = 300;
 
-function readPanelSizes(): Partial<Record<PanelId, number>> {
-  try {
-    if (typeof localStorage === "undefined") {
-      return {};
-    }
-    const raw = localStorage.getItem(PANEL_SIZES_STORAGE_KEY);
-    const stored = raw === null ? null : JSON.parse(raw) as Partial<Record<PanelId, unknown>>;
-    if (!stored) {
-      return {};
-    }
-    const sizes: Partial<Record<PanelId, number>> = {};
-    for (const panel of Object.keys(PANEL_LIMITS) as PanelId[]) {
-      const size = stored[panel];
-      if (typeof size === "number" && Number.isFinite(size)) {
-        sizes[panel] = Math.max(PANEL_LIMITS[panel].min, Math.min(PANEL_LIMITS[panel].max, size));
-      }
-    }
-    return sizes;
-  } catch {
-    return {};
+function clampSize(panel: PanelId, size: number | undefined): number {
+  const limits = PANEL_LIMITS[panel];
+  if (size === undefined || !Number.isFinite(size)) {
+    return limits.initial;
   }
+  return Math.max(limits.min, Math.min(limits.max, Math.round(size)));
 }
 
 @Injectable({ providedIn: "root" })
 export class LayoutService {
   private readonly tabs = inject(TabsService);
+  private readonly settings = inject(SettingsService);
+  private readonly stored = this.settings.layout();
 
   readonly rail = signal<RailId>("projects");
-  readonly explorerOpen = signal(true);
-  readonly inspectorOpen = signal(true);
-  readonly bottomOpen = signal(false);
-  readonly explorerSize = signal(STORED_PANEL_SIZES.explorer ?? PANEL_LIMITS.explorer.initial);
-  readonly inspectorSize = signal(STORED_PANEL_SIZES.inspector ?? PANEL_LIMITS.inspector.initial);
-  readonly bottomSize = signal(STORED_PANEL_SIZES.bottom ?? PANEL_LIMITS.bottom.initial);
+  readonly explorerOpen = signal(this.stored.explorerOpen ?? true);
+  readonly inspectorOpen = signal(this.stored.inspectorOpen ?? true);
+  readonly bottomOpen = signal(this.stored.bottomOpen ?? false);
+  readonly explorerSize = signal(clampSize("explorer", this.stored.explorerSize));
+  readonly inspectorSize = signal(clampSize("inspector", this.stored.inspectorSize));
+  readonly bottomSize = signal(clampSize("bottom", this.stored.bottomSize));
   readonly resizing = signal(false);
-  readonly rightTab = signal<RightTabId>("inspector");
+  readonly rightTab = signal<RightTabId>(this.stored.rightTab ?? "inspector");
   readonly assistantActive = computed(this.isAssistantActive.bind(this));
   readonly panelLimits = PANEL_LIMITS;
   private readonly sizes = { explorer: this.explorerSize, inspector: this.inspectorSize, bottom: this.bottomSize };
   private resizingPanel: PanelId | null = null;
   private resizeStart = 0;
   private resizeSize = 0;
+  private savedLayout = JSON.stringify(this.snapshot());
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(this.syncRailWithActiveTab.bind(this));
+    effect(this.scheduleSave.bind(this));
   }
 
   isRailActive(id: RailId): boolean {
@@ -182,12 +173,39 @@ export class LayoutService {
   }
 
   private setSize(panel: PanelId, size: number): void {
-    const limits = PANEL_LIMITS[panel];
-    this.sizeOf(panel).set(Math.max(limits.min, Math.min(limits.max, size)));
-    try {
-      localStorage.setItem(PANEL_SIZES_STORAGE_KEY, JSON.stringify({ explorer: this.explorerSize(), inspector: this.inspectorSize(), bottom: this.bottomSize() }));
-    } catch {
-      return;
+    this.sizeOf(panel).set(clampSize(panel, size));
+  }
+
+  private snapshot(): LayoutSettings {
+    return {
+      explorerOpen: this.explorerOpen(),
+      inspectorOpen: this.inspectorOpen(),
+      bottomOpen: this.bottomOpen(),
+      rightTab: this.rightTab(),
+      explorerSize: this.explorerSize(),
+      inspectorSize: this.inspectorSize(),
+      bottomSize: this.bottomSize(),
+    };
+  }
+
+  private scheduleSave(): void {
+    const layout = this.snapshot();
+    untracked(this.queueSave.bind(this, layout));
+  }
+
+  private queueSave(layout: LayoutSettings): void {
+    if (this.saveTimer !== null) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
     }
+    if (JSON.stringify(layout) !== this.savedLayout) {
+      this.saveTimer = setTimeout(this.flushSave.bind(this, layout), SAVE_DELAY_MS);
+    }
+  }
+
+  private flushSave(layout: LayoutSettings): void {
+    this.saveTimer = null;
+    this.savedLayout = JSON.stringify(layout);
+    this.settings.saveLayout(layout);
   }
 }

@@ -5,7 +5,7 @@ import VI from "./lang.vi.json";
 
 const STORAGE_KEY = "dreamy-studio.language";
 
-const DEFAULT_LANGUAGE: Language = "vi";
+export const DEFAULT_LANGUAGE: Language = "vi";
 
 export const LANGUAGES: Language[] = ["vi", "en"];
 

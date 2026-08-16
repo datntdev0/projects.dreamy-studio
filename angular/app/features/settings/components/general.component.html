@@ -1,0 +1,36 @@
+<div class="st" data-testid="settings-general-content">
+  <header class="st-head" data-testid="settings-general-head"><h3 class="t-display-xs" data-testid="settings-general-title">{{ "settings.section.general" | t }}</h3></header>
+  <p class="t-sm t-mute" data-testid="settings-general-intro">{{ "settings.general.intro" | t }}</p>
+  <section class="st-card" data-testid="settings-general-interface">
+    <header class="st-card-h"><span class="eyebrow">{{ "settings.general.interface" | t }}</span></header>
+    <div class="st-rows">
+      <div class="st-row" data-testid="settings-general-language-row">
+        <div class="field"><span class="t-ink">{{ "settings.general.language" | t }}</span><span class="field-hint">{{ "settings.general.language.hint" | t }}</span></div>
+        <ds-segments data-testid="settings-general-language" [label]="'settings.general.language' | t" [options]="languageOptions" [value]="language()" (valueChange)="onLanguage($event)" />
+      </div>
+      <div class="st-row" data-testid="settings-general-theme-row">
+        <div class="field"><span class="t-ink">{{ "settings.general.theme" | t }}</span><span class="field-hint">{{ "settings.general.theme.hint" | t }}</span></div>
+        <ds-segments data-testid="settings-general-theme" [label]="'settings.general.theme' | t" [options]="themeOptions()" [value]="theme()" (valueChange)="onTheme($event)" />
+      </div>
+    </div>
+  </section>
+  <section class="st-card" data-testid="settings-general-storage">
+    <header class="st-card-h"><span class="eyebrow">{{ "settings.general.storage" | t }}</span></header>
+    @if (workspace(); as ws) {
+      <div class="field" data-testid="settings-general-workspace-field">
+        <span class="st-label" id="settings-workspace-label">{{ "settings.general.workspace" | t }}</span>
+        <div class="st-path" role="group" aria-labelledby="settings-workspace-label" data-testid="settings-general-workspace"><span class="path" [attr.title]="ws.path" data-testid="settings-general-workspace-path">{{ ws.path }}</span><button type="button" class="btn btn-sm" [attr.aria-label]="'settings.general.openWorkspace' | t" data-testid="settings-general-workspace-open" (click)="openFolder('workspace')"><ds-icon name="folder-open" [size]="16" />{{ "settings.general.open" | t }}</button></div>
+        <span class="field-hint">{{ "settings.general.workspace.hint" | t }}</span>
+      </div>
+    }
+    <div class="field" data-testid="settings-general-data-field">
+      <span class="st-label" id="settings-data-label">{{ "settings.general.data" | t }}</span>
+      <div class="st-path" role="group" aria-labelledby="settings-data-label" data-testid="settings-general-data"><span class="path" [attr.title]="dataDir()" data-testid="settings-general-data-path">{{ dataDir() }}</span><button type="button" class="btn btn-sm" [attr.aria-label]="'settings.general.openData' | t" data-testid="settings-general-data-open" (click)="openFolder('appData')"><ds-icon name="folder-open" [size]="16" />{{ "settings.general.open" | t }}</button></div>
+      <span class="field-hint">{{ "settings.general.data.hint" | t: { file: "settings.json" } }}</span>
+    </div>
+  </section>
+  <footer class="st-foot" data-testid="settings-general-foot">
+    <div class="st-note" data-testid="settings-general-note"><ds-icon name="info" [size]="15" /><span>{{ "settings.general.note" | t }}</span></div>
+    <button type="button" class="btn btn-sm btn-ghost" data-testid="settings-general-reset" (click)="reset()">{{ "settings.general.reset" | t }}</button>
+  </footer>
+</div>

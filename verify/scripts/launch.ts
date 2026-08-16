@@ -4,7 +4,7 @@ import { mkdir } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { chromium, type Browser, type Page } from "@playwright/test";
-import { appExecutable } from "../paths.ts";
+import { appExecutable } from "./paths.ts";
 
 const CONNECT_TIMEOUT_MS = 60_000;
 const CONNECT_RETRY_MS = 500;
@@ -79,9 +79,6 @@ async function firstPage(browser: Browser): Promise<Page> {
 
 export async function launchApp(options: LaunchOptions): Promise<RunningApp> {
   const executable = appExecutable();
-  if (!existsSync(executable)) {
-    throw new Error(`app executable not found: ${executable}. Run "npm run build:app" first or set DREAMY_EXE.`);
-  }
   await mkdir(options.dataDir, { recursive: true });
   await mkdir(options.webviewDir, { recursive: true });
   const port = await freePort();

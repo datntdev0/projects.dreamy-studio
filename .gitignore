@@ -58,5 +58,3 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Verify (Playwright)
-/verify/baseline/

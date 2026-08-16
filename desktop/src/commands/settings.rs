@@ -1,8 +1,11 @@
 use crate::commands::workspace::MAIN_WINDOW_LABEL;
+use crate::features::settings::llm::CliSettings;
+use crate::features::settings::llm::LlmView;
 use crate::features::settings::models::GeneralSettings;
 use crate::features::settings::models::LayoutSettings;
 use crate::features::settings::models::SettingsView;
 use crate::features::settings::models::Theme;
+use crate::features::settings::probe::CliProbe;
 use crate::features::settings::service::SettingsService;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::window_state;
@@ -56,6 +59,57 @@ pub async fn settings_layout_save(
 ) -> Result<LayoutSettings, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().save_layout(layout));
     task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_get(app: AppHandle) -> Result<LlmView, String> {
+    let task = spawn_blocking(move || app.state::<SettingsService>().llm_view());
+    task.await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn llm_provider_save(
+    app: AppHandle,
+    id: String,
+    provider: CliSettings,
+) -> Result<LlmView, String> {
+    let task = spawn_blocking(move || {
+        app.state::<SettingsService>()
+            .save_llm_provider(&id, provider)
+    });
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_default_save(app: AppHandle, id: Option<String>) -> Result<LlmView, String> {
+    let task = spawn_blocking(move || app.state::<SettingsService>().save_llm_default(id));
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_probe(app: AppHandle, id: String) -> Result<CliProbe, String> {
+    let task = spawn_blocking(move || app.state::<SettingsService>().probe_llm(&id));
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_login(app: AppHandle, id: String) -> Result<(), String> {
+    let task = spawn_blocking(move || app.state::<SettingsService>().login_llm(&id));
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_logout(app: AppHandle, id: String) -> Result<(), String> {
+    let task = spawn_blocking(move || app.state::<SettingsService>().logout_llm(&id));
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_profile_open(app: AppHandle, id: String) -> Result<(), String> {
+    let path = app.state::<SettingsService>().llm_profile_dir(&id)?;
+    app.opener()
+        .open_path(path.to_string_lossy().into_owned(), None::<&str>)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

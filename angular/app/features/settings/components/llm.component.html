@@ -1,0 +1,111 @@
+<div class="st llm" data-testid="settings-llm-content">
+  <header class="st-head" data-testid="settings-llm-head"><h3 class="t-display-xs" data-testid="settings-llm-title">{{ "settings.section.llm" | t }}</h3></header>
+  <p class="t-sm t-mute" data-testid="settings-llm-intro">{{ "settings.llm.intro" | t }}</p>
+  <div class="st-note" data-testid="settings-llm-note"><ds-icon name="shield" [size]="15" /><span>{{ "settings.llm.note" | t }}</span></div>
+  <section class="st-card" data-testid="settings-llm-default">
+    <header class="st-card-h"><span class="eyebrow">{{ "settings.llm.default" | t }}</span><ds-badge [tone]="ready().length ? 'success' : 'warning'" data-testid="settings-llm-ready-count">{{ ready().length ? ("settings.llm.readyCount" | t: { ready: ready().length, total: providers().length }) : ("settings.llm.noneReady" | t) }}</ds-badge></header>
+    <div class="field">
+      <label for="settings-llm-default-select">{{ "settings.llm.default.label" | t }}</label>
+      <span class="field-hint">{{ "settings.llm.default.hint" | t }}</span>
+      <select #choice id="settings-llm-default-select" class="select" data-testid="settings-llm-default-select" [disabled]="!ready().length" (change)="onDefault(choice.value)">
+        @for (item of ready(); track item.id) {
+          <option [value]="item.id" [selected]="item.id === defaultId()">{{ item.name }}</option>
+        } @empty {
+          <option value="">{{ "settings.llm.noneReady" | t }}</option>
+        }
+      </select>
+    </div>
+  </section>
+  <header class="llm-sec-h" data-testid="settings-llm-cli-head"><span class="eyebrow">{{ "settings.llm.cli" | t }}</span><button type="button" class="btn btn-sm" data-testid="settings-llm-rescan" [disabled]="scanning()" (click)="scan()"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.rescan" | t }}</button></header>
+  <section class="llm-list" [attr.aria-label]="'settings.llm.cli.label' | t" data-testid="settings-llm-cli">
+    @for (p of providers(); track p.id) {
+      <article class="llm-card" [class]="mode(p)" [class.is-off]="!p.enabled" [attr.data-testid]="'settings-llm-' + p.id">
+        <header class="llm-card-h">
+          <div class="llm-card-t"><span class="t-ink llm-name" [attr.data-testid]="'settings-llm-' + p.id + '-name'">{{ p.name }}</span><ds-badge [tone]="statusTone(p)" [attr.data-testid]="'settings-llm-' + p.id + '-badge'">{{ statusKey(p) | t }}</ds-badge>@if (isDefault(p)) {<ds-badge tone="primary" [attr.data-testid]="'settings-llm-' + p.id + '-default-badge'">{{ "settings.llm.status.default" | t }}</ds-badge>}</div>
+          <label class="check llm-on"><input type="checkbox" [attr.data-testid]="'settings-llm-' + p.id + '-enable'" [checked]="p.found && p.enabled" [disabled]="!p.found" #enable (change)="onEnable(p, enable.checked)"><span>{{ "settings.llm.enable" | t }}</span></label>
+        </header>
+        <div class="llm-meta"><span class="path t-mute">{{ p.command }}</span>@if (p.version) {<ds-badge>{{ p.version }}</ds-badge>}@for (cap of p.caps; track cap) {<ds-badge tone="primary">{{ capKey(cap) | t }}</ds-badge>}</div>
+        <div class="llm-steps">
+          <div class="llm-step" [class.is-done]="p.found" [class.is-todo]="!p.found" [attr.data-testid]="'settings-llm-' + p.id + '-install'">
+            <span class="llm-n">@if (p.found) {<ds-icon name="check" [size]="13" />} @else {1}</span>
+            <div class="llm-step-b">
+              <div class="llm-step-t"><b>{{ "settings.llm.install" | t }}</b>@if (p.found) {<ds-badge tone="success">{{ "settings.llm.install.found" | t }}</ds-badge>} @else {<ds-badge tone="warning">{{ "settings.llm.install.notFound" | t }}</ds-badge><span class="t-sm t-mute">{{ "settings.llm.install.notInPath" | t: { command: p.command } }}</span>}</div>
+              @if (p.found) {
+                <div class="field"><label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-path'">{{ "settings.llm.path" | t }}</label>
+                  <div class="llm-row"><input #pathInput [id]="'settings-llm-' + p.id + '-path'" class="input mono-in" [attr.data-testid]="'settings-llm-' + p.id + '-path'" [value]="p.path || p.resolvedPath" autocomplete="off" spellcheck="false" (change)="onPath(p, pathInput.value)"><button type="button" class="btn btn-sm btn-icon" [attr.aria-label]="'settings.llm.copyPath' | t" [attr.data-testid]="'settings-llm-' + p.id + '-copy'" (click)="copyPath(p)"><ds-icon name="copy" [size]="16" /></button></div></div>
+              } @else {
+                <div class="llm-guide"><span>{{ "settings.llm.install.guide" | t }}</span>
+                  <div class="field"><label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-manual'">{{ "settings.llm.path" | t }}</label>
+                    <div class="llm-row"><input #manual [id]="'settings-llm-' + p.id + '-manual'" class="input mono-in" [attr.data-testid]="'settings-llm-' + p.id + '-manual'" [value]="p.path" [placeholder]="'C:\\...\\' + p.command + '.cmd'" autocomplete="off" spellcheck="false" (keydown.enter)="onPath(p, manual.value)"><button type="button" class="btn btn-sm" [attr.data-testid]="'settings-llm-' + p.id + '-usepath'" (click)="onPath(p, manual.value)">{{ "settings.llm.usePath" | t }}</button></div></div>
+                  @if (p.error) {<span class="field-err" [attr.data-testid]="'settings-llm-' + p.id + '-path-error'">{{ p.error }}</span>}
+                </div>
+              }
+            </div>
+          </div>
+          @if (!p.found) {
+            <div class="llm-step is-locked" [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'"><span class="llm-n"><ds-icon name="lock" [size]="13" /></span><div class="llm-step-b"><div class="llm-step-t"><b>{{ "settings.llm.signin" | t }}</b><span class="t-sm t-mute">{{ "settings.llm.signin.locked" | t }}</span></div></div></div>
+          } @else {
+            <div class="llm-step" [class.is-done]="p.signedIn === true" [class.is-todo]="p.signedIn === false" [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'">
+              <span class="llm-n">@if (p.signedIn === true) {<ds-icon name="check" [size]="13" />} @else {2}</span>
+              <div class="llm-step-b">
+                <div class="llm-step-t"><b>{{ "settings.llm.signin" | t }}</b>
+                  @if (p.signedIn === true) {<ds-badge tone="success">{{ "settings.llm.signin.done" | t }}</ds-badge>@if (p.account) {<span class="t-sm t-mute" [attr.data-testid]="'settings-llm-' + p.id + '-account'">{{ p.account }}</span>}}
+                  @else if (p.signedIn === false) {<ds-badge tone="warning">{{ p.signing ? ("settings.llm.signin.waiting" | t) : ("settings.llm.status.notSignedIn" | t) }}</ds-badge>}
+                  @else {<span class="t-sm t-mute">{{ "settings.llm.signin.unknown" | t }}</span>}
+                </div>
+                @if (p.signedIn === false) {
+                  <div class="llm-guide"><span>{{ (p.profileDir ? "settings.llm.signin.guide" : "settings.llm.signin.guidePlain") | t: { command: p.loginCommand } }}</span></div>
+                } @else if (p.signedIn === null && p.status !== "checking") {
+                  <div class="llm-guide"><span>{{ "settings.llm.signin.guideUnknown" | t: { command: p.loginCommand } }}</span></div>
+                }
+                @if (p.profileDir) {
+                  <div class="field"><label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-profile'">{{ "settings.llm.profile" | t }}</label>
+                    <div class="llm-row"><input [id]="'settings-llm-' + p.id + '-profile'" class="input mono-in" readonly [value]="p.profileDir" [attr.data-testid]="'settings-llm-' + p.id + '-profile'"><button type="button" class="btn btn-sm btn-icon" [attr.aria-label]="'settings.llm.profile.open' | t" [attr.data-testid]="'settings-llm-' + p.id + '-profile-open'" (click)="openProfile(p)"><ds-icon name="folder-open" [size]="16" /></button></div>
+                    <span class="field-hint">{{ "settings.llm.profile.hint" | t: { env: p.profileEnv ?? "" } }}</span></div>
+                } @else {
+                  <span class="field-hint">{{ "settings.llm.profile.shared" | t }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+        @if (p.status === "error" && p.error) {
+          <div class="llm-err" role="alert" [attr.data-testid]="'settings-llm-' + p.id + '-error'"><ds-icon name="alert" [size]="14" /><span>{{ p.error }}</span></div>
+        }
+        @if (p.found) {
+          <div class="field"><label [attr.for]="'settings-llm-' + p.id + '-args'">{{ "settings.llm.args" | t }}</label>
+            <input #argsInput [id]="'settings-llm-' + p.id + '-args'" class="input mono-in" [attr.data-testid]="'settings-llm-' + p.id + '-args'" [value]="p.args" [placeholder]="'settings.llm.args.placeholder' | t" autocomplete="off" spellcheck="false" (change)="onArgs(p, argsInput.value)">
+            <span class="field-hint">{{ "settings.llm.args.hint" | t }}</span></div>
+        }
+        <footer class="llm-foot">
+          @let msg = message(p);
+          <div class="llm-msg t-sm" [class.is-ok]="msg.tone === 'ok'" [class.is-warn]="msg.tone === 'warn'" role="status" [attr.data-testid]="'settings-llm-' + p.id + '-status'">
+            @switch (msg.tone) { @case ("ok") {<ds-icon name="check" [size]="14" />} @case ("warn") {<ds-icon name="alert" [size]="14" />} @default { @if (p.status === "checking" || p.signing) {<span class="dot dot-running"></span>} } }
+            <span>{{ msg.key | t: msg.params }}</span>
+          </div>
+          @if (p.found) {
+            @if (p.signedIn === true && p.canLogout) {<button type="button" class="btn btn-sm" [attr.data-testid]="'settings-llm-' + p.id + '-signout'" (click)="logout(p)">{{ "settings.llm.signout" | t }}</button>}
+            <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== true && p.signedIn !== null" [disabled]="p.signing" [attr.data-testid]="'settings-llm-' + p.id + '-signin'" (click)="login(p)"><ds-icon name="terminal" [size]="16" />{{ (p.signedIn === true ? "settings.llm.signinAgain" : "settings.llm.signin") | t }}</button>
+            <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== false" [disabled]="!canCheck(p)" [attr.data-testid]="'settings-llm-' + p.id + '-check'" (click)="check(p)"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.check" | t }}</button>
+            <button type="button" class="btn btn-sm" [disabled]="!canDefault(p)" [attr.data-testid]="'settings-llm-' + p.id + '-set-default'" (click)="makeDefault(p)">{{ "settings.llm.setDefault" | t }}</button>
+          }
+        </footer>
+      </article>
+    }
+  </section>
+  <header class="llm-sec-h" data-testid="settings-llm-cloud-head"><span class="eyebrow">{{ "settings.llm.cloud" | t }}</span><ds-badge tone="info" data-testid="settings-llm-cloud-soon">{{ "settings.llm.soon" | t }}</ds-badge></header>
+  <p class="t-sm t-mute" data-testid="settings-llm-cloud-intro">{{ "settings.llm.cloud.intro" | t }}</p>
+  <section class="llm-list" [attr.aria-label]="'settings.llm.cloud.label' | t" data-testid="settings-llm-cloud">
+    @for (c of cloud; track c.id) {
+      <article class="llm-card llm-cloud" aria-disabled="true" [attr.data-testid]="'settings-llm-cloud-' + c.id">
+        <header class="llm-card-h"><div class="llm-card-t"><span class="t-ink llm-name">{{ c.name }}</span><ds-badge tone="info">{{ "settings.llm.soon" | t }}</ds-badge></div><label class="check llm-on"><input type="checkbox" disabled [attr.data-testid]="'settings-llm-cloud-' + c.id + '-enable'"><span>{{ "settings.llm.enable" | t }}</span></label></header>
+        <div class="llm-meta">@if (c.site) {<span class="path t-mute">{{ c.site }}</span>}</div>
+        <p class="t-sm t-mute">{{ c.note | t }}</p>
+        <div class="llm-fields">
+          <div class="field"><label [attr.for]="'settings-llm-cloud-' + c.id + '-key'">{{ "settings.llm.cloud.key" | t }}</label><input [id]="'settings-llm-cloud-' + c.id + '-key'" class="input mono-in" type="password" disabled [placeholder]="'settings.llm.cloud.key.placeholder' | t" [attr.data-testid]="'settings-llm-cloud-' + c.id + '-key'"></div>
+          @if (c.baseUrl !== null) {<div class="field"><label [attr.for]="'settings-llm-cloud-' + c.id + '-url'">{{ "settings.llm.cloud.url" | t }}</label><input [id]="'settings-llm-cloud-' + c.id + '-url'" class="input mono-in" disabled [value]="c.baseUrl" placeholder="http://localhost:11434/v1" [attr.data-testid]="'settings-llm-cloud-' + c.id + '-url'"></div>}
+        </div>
+      </article>
+    }
+  </section>
+</div>

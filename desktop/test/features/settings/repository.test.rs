@@ -53,7 +53,7 @@ fn keeps_sections_it_does_not_know() {
     let repo = repository(&dir);
     fs::write(
         repo.path(),
-        r#"{"llm":{"provider":"x"},"general":{"theme":"dark"}}"#,
+        r#"{"backend":{"provider":"x"},"general":{"theme":"dark"}}"#,
     )
     .unwrap();
     let mut settings = repo.load().unwrap();
@@ -61,7 +61,7 @@ fn keeps_sections_it_does_not_know() {
     repo.save(&settings).unwrap();
     let value: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(repo.path()).unwrap()).unwrap();
-    assert_eq!(value["llm"], json!({ "provider": "x" }));
+    assert_eq!(value["backend"], json!({ "provider": "x" }));
     assert_eq!(
         value["general"],
         json!({ "language": "vi", "theme": "dark" })

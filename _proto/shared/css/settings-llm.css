@@ -26,3 +26,21 @@
 .cl-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); }
 .cl-cloud .spc-keyrow .input { min-width: 0; flex: 1; }
 .cl-cloud .spc-keyrow .ic { width: 16px; height: 16px; }
+
+.cl-card.is-ready { border-left: 3px solid var(--success); }
+.cl-card.is-login { border-left: 3px solid var(--warning); }
+.cl-card.is-error { border-left: 3px solid var(--danger); }
+.cl-card.is-soon { opacity: 0.6; }
+.cl-steps { display: grid; border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
+.cl-step { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--sp-md); padding: var(--sp-md); }
+.cl-step + .cl-step { border-top: 1px solid var(--hairline); }
+.cl-step.is-locked { opacity: 0.5; }
+.cl-n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r-full); background: var(--canvas-soft); color: var(--mute); font-size: 11px; font-weight: 500; line-height: 1; }
+.cl-n .ic { width: 13px; height: 13px; }
+.cl-step.is-done .cl-n { background: var(--success-soft); color: var(--success); }
+.cl-step.is-todo .cl-n { background: var(--warning-soft); color: var(--warning); }
+.cl-step-b { display: grid; gap: var(--sp-sm); min-width: 0; }
+.cl-step-t { display: flex; align-items: center; gap: var(--sp-sm); flex-wrap: wrap; min-height: 22px; }
+.cl-step-t b { color: var(--ink); font-weight: 500; }
+.cl-guide { display: grid; gap: var(--sp-sm); padding: var(--sp-sm) var(--sp-md); border-radius: var(--r-sm); background: var(--canvas-soft); font-size: 12.5px; line-height: 17px; color: var(--body); }
+.cl-view .tts-err { word-break: break-word; }

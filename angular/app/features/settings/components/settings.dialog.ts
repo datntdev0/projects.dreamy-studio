@@ -7,11 +7,12 @@ import { SettingsSection, SettingsSectionId } from "../settings.models";
 import { SETTINGS_SECTIONS } from "../settings.sections";
 import { SettingsService } from "../settings.service";
 import { SettingsGeneralComponent } from "./general.component";
+import { SettingsLlmComponent } from "./llm.component";
 
 @Component({
   selector: "app-settings-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe, SettingsGeneralComponent],
+  imports: [Button, Dialog, Icon, I18nPipe, SettingsGeneralComponent, SettingsLlmComponent],
   templateUrl: "./settings.dialog.html",
   host: { "data-testid": "settings-dialog" },
 })

@@ -1,3 +1,4 @@
+use crate::features::settings::llm::LlmSettings;
 use crate::features::settings::window::WindowSettings;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -119,6 +120,12 @@ pub struct AppSettings {
     #[serde(
         default,
         deserialize_with = "lenient",
+        skip_serializing_if = "LlmSettings::is_empty"
+    )]
+    pub llm: LlmSettings,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
         skip_serializing_if = "Option::is_none"
     )]
     pub window: Option<WindowSettings>,
@@ -135,7 +142,7 @@ pub struct SettingsView {
     pub file: String,
 }
 
-fn lenient<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+pub fn lenient<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
     T: DeserializeOwned + Default,

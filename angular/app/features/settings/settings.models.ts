@@ -33,3 +33,66 @@ export interface SettingsView {
   dataDir: string;
   file: string;
 }
+
+export type LlmCapability = "translation" | "knowledge" | "assistant";
+
+export type LlmCheckStatus = "none" | "checking" | "ok" | "error";
+
+export interface LlmCliView {
+  id: string;
+  name: string;
+  command: string;
+  caps: LlmCapability[];
+  profileEnv: string | null;
+  profileDir: string | null;
+  loginCommand: string;
+  canLogout: boolean;
+  canDetectLogin: boolean;
+  enabled: boolean;
+  path: string;
+  args: string;
+}
+
+export interface LlmView {
+  default: string | null;
+  providers: LlmCliView[];
+}
+
+export interface LlmCliSettings {
+  enabled: boolean;
+  path: string;
+  args: string;
+}
+
+export interface LlmProbe {
+  id: string;
+  found: boolean;
+  path: string;
+  version: string;
+  ok: boolean;
+  signedIn: boolean | null;
+  account: string;
+  error: string;
+  latencyMs: number;
+}
+
+export interface LlmProvider extends LlmCliView {
+  found: boolean;
+  resolvedPath: string;
+  version: string;
+  signedIn: boolean | null;
+  account: string;
+  signing: boolean;
+  status: LlmCheckStatus;
+  error: string;
+  latencyMs: number;
+  checkedAt: string;
+}
+
+export interface CloudProvider {
+  id: string;
+  name: string;
+  site: string;
+  note: I18nKey;
+  baseUrl: string | null;
+}

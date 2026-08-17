@@ -1,6 +1,6 @@
 {
   "name": "dreamy-studio",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "scripts": {
     "build:prepare": "node _scripts/build_prepare.mjs",
     "start": "tauri dev",

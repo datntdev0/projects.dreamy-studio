@@ -231,5 +231,5 @@ window.DS = (function () {
     { path: "E:\\Private\\Dreamy", name: "Dreamy", lastOpened: "2026-05-27 14:20", projects: 2, size: "—", status: "not_found", reason: "no_access" },
   ];
 
-  return { version: "0.1.0", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, seedWorkspaces };
+  return { version: "0.0.0", CAP, NAV, ASSISTANT, SETTINGS, STARTUP_STEPS, seedWorkspaces };
 })();

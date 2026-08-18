@@ -5,13 +5,42 @@ import { TabOption, Tabs } from "../../../../components/tabs";
 import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { I18nService } from "../../../core/i18n/i18n.service";
-import { CLOUD_PROVIDERS } from "../llm.providers";
+import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from "../llm.providers";
 import { LlmService, isReady } from "../llm.service";
-import { LlmProvider } from "../settings.models";
+import { LlmCapability, LlmEffort, LlmFeature, LlmProvider } from "../settings.models";
 
-type LlmTab = "cli" | "cloud";
+type LlmTab = "cli" | "cloud" | "features";
 
-const LLM_TABS: LlmTab[] = ["cli", "cloud"];
+const LLM_TABS: LlmTab[] = ["cli", "cloud", "features"];
+
+const FEATURE_NAME_KEYS: Record<LlmCapability, I18nKey> = {
+  translation: "settings.llm.feature.translation",
+  knowledge: "settings.llm.feature.knowledge",
+  assistant: "settings.llm.feature.assistant",
+};
+
+const FEATURE_HINT_KEYS: Record<LlmCapability, I18nKey> = {
+  translation: "settings.llm.feature.translation.hint",
+  knowledge: "settings.llm.feature.knowledge.hint",
+  assistant: "settings.llm.feature.assistant.hint",
+};
+
+export interface EffortOption {
+  value: LlmEffort | "";
+  key: I18nKey;
+}
+
+const EFFORT_OPTIONS: EffortOption[] = [
+  { value: "", key: "settings.llm.feature.effort.default" },
+  { value: "low", key: "settings.llm.feature.effort.low" },
+  { value: "medium", key: "settings.llm.feature.effort.medium" },
+  { value: "high", key: "settings.llm.feature.effort.high" },
+];
+
+function toEffort(value: string): LlmEffort | null {
+  const option = EFFORT_OPTIONS.find((item) => item.value === value);
+  return option && option.value !== "" ? option.value : null;
+}
 
 type Tone = "default" | "primary" | "running" | "success" | "warning" | "danger" | "info";
 
@@ -34,6 +63,8 @@ export class SettingsLlmComponent {
 
   readonly providers = this.llm.providers;
   readonly scanning = this.llm.scanning;
+  readonly features = this.llm.features;
+  readonly efforts = EFFORT_OPTIONS;
   readonly cloud = CLOUD_PROVIDERS;
   readonly tab = signal<LlmTab>("cli");
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
@@ -134,6 +165,48 @@ export class SettingsLlmComponent {
     void this.llm.openProfile(provider.id);
   }
 
+  featureNameKey(feature: LlmFeature): I18nKey {
+    return FEATURE_NAME_KEYS[feature.id];
+  }
+
+  featureHintKey(feature: LlmFeature): I18nKey {
+    return FEATURE_HINT_KEYS[feature.id];
+  }
+
+  providersFor(feature: LlmFeature): LlmProvider[] {
+    return this.providers().filter((provider) => provider.caps.includes(feature.id) && (provider.found || provider.id === feature.provider));
+  }
+
+  modelsFor(feature: LlmFeature): string[] {
+    return MODEL_SUGGESTIONS[feature.provider ?? ""] ?? [];
+  }
+
+  onFeatureProvider(feature: LlmFeature, value: string): void {
+    const provider = value || null;
+    if (provider !== feature.provider) {
+      void this.llm.setFeature(feature.id, { provider, model: "" });
+    }
+  }
+
+  onFeatureModel(feature: LlmFeature, value: string): void {
+    if (value.trim() !== feature.model) {
+      void this.llm.setFeature(feature.id, { model: value.trim() });
+    }
+  }
+
+  onFeatureEffort(feature: LlmFeature, value: string): void {
+    const effort = toEffort(value);
+    if (effort !== feature.effort) {
+      void this.llm.setFeature(feature.id, { effort });
+    }
+  }
+
+  onFeatureArgs(feature: LlmFeature, value: string): void {
+    if (value.trim() !== feature.args) {
+      void this.llm.setFeature(feature.id, { args: value.trim() });
+    }
+  }
+
   canCheck(provider: LlmProvider): boolean {
     return provider.status !== "checking";
   }
@@ -142,6 +215,7 @@ export class SettingsLlmComponent {
     return [
       { value: "cli", label: this.i18n.translate("settings.llm.cli"), icon: "terminal" },
       { value: "cloud", label: this.i18n.translate("settings.llm.cloud"), icon: "cloud" },
+      { value: "features", label: this.i18n.translate("settings.llm.features"), icon: "spark" },
     ];
   }
 }

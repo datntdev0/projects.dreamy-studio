@@ -1,5 +1,7 @@
 use super::*;
 use crate::features::settings::llm::CliSettings;
+use crate::features::settings::llm::Effort;
+use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::models::Language;
 use crate::features::settings::models::RightTab;
 use crate::features::settings::models::Theme;
@@ -204,6 +206,104 @@ fn ignores_the_removed_default_enabled_and_args_keys_in_a_stored_file() {
     .unwrap();
     let view = service(&dir).llm_view();
     assert_eq!(view.providers[0].path, "x");
+}
+
+#[test]
+fn lists_every_feature_with_nothing_chosen_before_anything_is_saved() {
+    let dir = TempDir::new().unwrap();
+    let view = service(&dir).llm_view();
+    let ids: Vec<_> = view.features.iter().map(|feature| feature.id).collect();
+    assert_eq!(ids, ["translation", "knowledge", "assistant"]);
+    assert!(
+        view.features
+            .iter()
+            .all(|feature| feature.provider.is_none()
+                && feature.model.is_empty()
+                && feature.effort.is_none()
+                && feature.args.is_empty())
+    );
+}
+
+#[test]
+fn persists_a_feature_and_trims_what_was_typed() {
+    let dir = TempDir::new().unwrap();
+    let config = FeatureSettings {
+        provider: Some("claude".to_string()),
+        model: Some("  sonnet ".to_string()),
+        effort: Some(Effort::High),
+        args: Some(" --max-turns 5 ".to_string()),
+    };
+    service(&dir)
+        .save_llm_feature("translation", config)
+        .unwrap();
+    let view = service(&dir).llm_view();
+    let translation = &view.features[0];
+    assert_eq!(translation.provider.as_deref(), Some("claude"));
+    assert_eq!(translation.model, "sonnet");
+    assert_eq!(translation.effort, Some(Effort::High));
+    assert_eq!(translation.args, "--max-turns 5");
+    assert!(view.features[1].provider.is_none());
+}
+
+#[test]
+fn clears_a_feature_when_every_field_is_empty() {
+    let dir = TempDir::new().unwrap();
+    let service = service(&dir);
+    let config = FeatureSettings {
+        provider: Some("claude".to_string()),
+        model: Some("opus".to_string()),
+        ..FeatureSettings::default()
+    };
+    service.save_llm_feature("assistant", config).unwrap();
+    let blank = FeatureSettings {
+        provider: Some(" ".to_string()),
+        model: Some(String::new()),
+        ..FeatureSettings::default()
+    };
+    let view = service.save_llm_feature("assistant", blank).unwrap();
+    assert_eq!(view.features[2], service.llm_view().features[2]);
+    assert!(view.features[2].provider.is_none());
+    assert!(view.features[2].model.is_empty());
+}
+
+#[test]
+fn rejects_an_unknown_feature_and_an_unknown_provider() {
+    let dir = TempDir::new().unwrap();
+    let service = service(&dir);
+    let with_provider = |id: &str| FeatureSettings {
+        provider: Some(id.to_string()),
+        ..FeatureSettings::default()
+    };
+    assert!(
+        service
+            .save_llm_feature("music", FeatureSettings::default())
+            .is_err()
+    );
+    assert!(
+        service
+            .save_llm_feature("translation", with_provider("gemini"))
+            .is_err()
+    );
+    assert!(
+        service
+            .save_llm_feature("translation", with_provider("codex"))
+            .is_ok()
+    );
+}
+
+#[test]
+fn ignores_a_stored_feature_provider_that_is_not_a_known_cli() {
+    let dir = TempDir::new().unwrap();
+    std::fs::write(
+        dir.path().join(SETTINGS_FILE),
+        r#"{"llm":{"features":{"translation":{"provider":"gemini","model":"x","effort":"high"},"knowledge":{"provider":"codex","effort":"extreme"}}}}"#,
+    )
+    .unwrap();
+    let view = service(&dir).llm_view();
+    assert_eq!(view.features[0].provider, None);
+    assert_eq!(view.features[0].model, "x");
+    assert_eq!(view.features[1].provider.as_deref(), Some("codex"));
+    assert_eq!(view.features[1].effort, None);
 }
 
 #[test]

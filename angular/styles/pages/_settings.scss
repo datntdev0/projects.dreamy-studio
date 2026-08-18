@@ -59,6 +59,10 @@
 .llm-row .btn-icon { border-color: var(--hairline); }
 .llm-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-md); }
 .llm-fields .field { min-width: 0; }
+.llm-field-wide { grid-column: 1 / -1; }
+.llm-feature { gap: var(--sp-md); }
+.llm-feature .llm-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.llm-feature-h { display: flex; align-items: baseline; gap: var(--sp-md); flex-wrap: wrap; }
 .llm-err { display: flex; align-items: flex-start; gap: var(--sp-sm); padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-sm); background: var(--danger-soft); font-size: 12.5px; line-height: 17px; color: var(--body); overflow-wrap: anywhere; }
 .llm-err .ic { margin-top: 1px; color: var(--danger); flex: none; }
 .llm-foot { display: flex; align-items: center; gap: var(--sp-sm); flex-wrap: wrap; }
@@ -68,6 +72,6 @@
 .llm-msg.is-warn .ic { color: var(--warning); }
 .llm-msg .ic { flex: none; }
 @media (max-width: 760px) {
-  .llm-fields { grid-template-columns: minmax(0, 1fr); }
+  .llm-fields, .llm-feature .llm-fields { grid-template-columns: minmax(0, 1fr); }
   .llm-msg { flex-basis: 100%; }
 }

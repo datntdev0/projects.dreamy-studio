@@ -1,5 +1,9 @@
 import { CloudProvider } from "./settings.models";
 
+export const MODEL_SUGGESTIONS: Record<string, string[]> = {
+  claude: ["opus", "sonnet", "haiku"],
+};
+
 export const CLOUD_PROVIDERS: CloudProvider[] = [
   { id: "anthropic", name: "Anthropic API", site: "console.anthropic.com", note: "settings.llm.cloud.anthropic", baseUrl: null },
   { id: "openai", name: "OpenAI", site: "platform.openai.com", note: "settings.llm.cloud.openai", baseUrl: "https://api.openai.com/v1" },

@@ -7,6 +7,8 @@ use std::path::PathBuf;
 
 pub const LLM_DIR: &str = "llm";
 
+pub const FEATURES: [&str; 3] = ["translation", "knowledge", "assistant"];
+
 pub struct CliSpec {
     pub id: &'static str,
     pub command: &'static str,
@@ -56,7 +58,7 @@ pub const CLI_SPECS: [CliSpec; 3] = [
         id: "codex",
         command: "codex",
         name: "Codex CLI",
-        caps: &["knowledge", "assistant"],
+        caps: &["translation", "knowledge", "assistant"],
         profile_env: Some("CODEX_HOME"),
         login_args: &["login"],
         logout_args: Some(&["logout"]),
@@ -91,10 +93,66 @@ impl CliSettings {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Effort {
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FeatureSettings {
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub provider: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub model: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub effort: Option<Effort>,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub args: Option<String>,
+}
+
+fn clean(value: Option<String>) -> Option<String> {
+    value
+        .map(|text| text.trim().to_string())
+        .filter(|text| !text.is_empty())
+}
+
+impl FeatureSettings {
+    pub fn normalized(self) -> Self {
+        Self {
+            provider: clean(self.provider),
+            model: clean(self.model),
+            effort: self.effort,
+            args: clean(self.args),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LlmSettings {
     #[serde(default, deserialize_with = "lenient")]
     pub providers: BTreeMap<String, CliSettings>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub features: BTreeMap<String, FeatureSettings>,
 }
 
 impl LlmSettings {
@@ -104,6 +162,24 @@ impl LlmSettings {
 
     pub fn provider(&self, id: &str) -> CliSettings {
         self.providers.get(id).cloned().unwrap_or_default()
+    }
+
+    pub fn feature(&self, id: &str) -> FeatureSettings {
+        self.features.get(id).cloned().unwrap_or_default()
+    }
+
+    fn feature_view(&self, id: &'static str) -> FeatureView {
+        let settings = self.feature(id);
+        let provider = settings
+            .provider
+            .filter(|provider| spec(provider).is_some_and(|spec| spec.caps.contains(&id)));
+        FeatureView {
+            id,
+            provider,
+            model: settings.model.unwrap_or_default(),
+            effort: settings.effort,
+            args: settings.args.unwrap_or_default(),
+        }
     }
 
     pub fn view(&self, data_dir: &Path) -> LlmView {
@@ -127,7 +203,11 @@ impl LlmSettings {
                 }
             })
             .collect();
-        LlmView { providers }
+        let features = FEATURES.iter().map(|id| self.feature_view(id)).collect();
+        LlmView {
+            providers,
+            features,
+        }
     }
 }
 
@@ -150,4 +230,15 @@ pub struct CliView {
 #[serde(rename_all = "camelCase")]
 pub struct LlmView {
     pub providers: Vec<CliView>,
+    pub features: Vec<FeatureView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FeatureView {
+    pub id: &'static str,
+    pub provider: Option<String>,
+    pub model: String,
+    pub effort: Option<Effort>,
+    pub args: String,
 }

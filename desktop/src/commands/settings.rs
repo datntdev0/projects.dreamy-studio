@@ -1,5 +1,6 @@
 use crate::commands::workspace::MAIN_WINDOW_LABEL;
 use crate::features::settings::llm::CliSettings;
+use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::llm::LlmView;
 use crate::features::settings::models::GeneralSettings;
 use crate::features::settings::models::LayoutSettings;
@@ -76,6 +77,19 @@ pub async fn llm_provider_save(
     let task = spawn_blocking(move || {
         app.state::<SettingsService>()
             .save_llm_provider(&id, provider)
+    });
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_feature_save(
+    app: AppHandle,
+    feature: String,
+    config: FeatureSettings,
+) -> Result<LlmView, String> {
+    let task = spawn_blocking(move || {
+        app.state::<SettingsService>()
+            .save_llm_feature(&feature, config)
     });
     task.await.map_err(|error| error.to_string())?
 }

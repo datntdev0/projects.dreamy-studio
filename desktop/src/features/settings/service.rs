@@ -1,5 +1,7 @@
 use crate::features::settings::llm::CliSettings;
 use crate::features::settings::llm::CliSpec;
+use crate::features::settings::llm::FEATURES;
+use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::llm::LlmSettings;
 use crate::features::settings::llm::LlmView;
 use crate::features::settings::llm::spec;
@@ -91,6 +93,32 @@ impl SettingsService {
             .llm
             .providers
             .insert(id.to_string(), provider.normalized());
+        self.repository
+            .save(&settings)
+            .map_err(|error| error.to_string())?;
+        Ok(settings.llm.view(&self.data_dir()))
+    }
+
+    pub fn save_llm_feature(
+        &self,
+        feature: &str,
+        config: FeatureSettings,
+    ) -> Result<LlmView, String> {
+        let Some(id) = FEATURES.iter().find(|id| **id == feature) else {
+            return Err(format!("Unknown LLM feature: {feature}"));
+        };
+        let config = config.normalized();
+        if let Some(provider) = &config.provider {
+            let Some(cli) = spec(provider) else {
+                return Err(format!("Unknown LLM provider: {provider}"));
+            };
+            if !cli.caps.contains(id) {
+                return Err(format!("{provider} does not support {feature}"));
+            }
+        }
+        let _guard = self.lock();
+        let mut settings = self.repository.load().map_err(|error| error.to_string())?;
+        settings.llm.features.insert(id.to_string(), config);
         self.repository
             .save(&settings)
             .map_err(|error| error.to_string())?;

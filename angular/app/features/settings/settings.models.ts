@@ -51,8 +51,22 @@ export interface LlmCliView {
   path: string;
 }
 
+export type LlmEffort = "low" | "medium" | "high";
+
+export interface LlmFeatureSettings {
+  provider: string | null;
+  model: string;
+  effort: LlmEffort | null;
+  args: string;
+}
+
+export interface LlmFeature extends LlmFeatureSettings {
+  id: LlmCapability;
+}
+
 export interface LlmView {
   providers: LlmCliView[];
+  features: LlmFeature[];
 }
 
 export interface LlmCliSettings {

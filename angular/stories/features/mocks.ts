@@ -4,7 +4,7 @@ import type { Decorator } from "@storybook/angular-vite";
 import { I18nService } from "../../app/core/i18n/i18n.service";
 import { ThemeService } from "../../app/core/theme/theme.service";
 import { LlmService } from "../../app/features/settings/llm.service";
-import { LlmProvider, SettingsSectionId } from "../../app/features/settings/settings.models";
+import { LlmCapability, LlmFeature, LlmFeatureSettings, LlmProvider, SettingsSectionId } from "../../app/features/settings/settings.models";
 import { SettingsService } from "../../app/features/settings/settings.service";
 import { AppInfo, CurrentWorkspace, LoadState, RecentWorkspace } from "../../app/features/workspace/workspace.models";
 import { WorkspaceService } from "../../app/features/workspace/workspace.service";
@@ -112,16 +112,31 @@ export function llmProvider(overrides: Partial<LlmProvider> & Pick<LlmProvider, 
   };
 }
 
+const PROFILE_ROOT = "C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio\\llm";
+
 export const LLM_PROVIDERS: LlmProvider[] = [
-  llmProvider({ id: "claude", name: "Claude Code", command: "claude", version: "2.1.0" }),
-  llmProvider({ id: "codex", name: "Codex CLI", command: "codex", version: "0.9.3", signedIn: false, account: "", status: "none" }),
-  llmProvider({ id: "antigravity", name: "Antigravity", command: "antigravity", status: "error", error: "Process exited with code 1" }),
+  llmProvider({ id: "claude", name: "Claude Code", command: "claude", version: "2.1.0", profileEnv: "CLAUDE_CONFIG_DIR", profileDir: `${PROFILE_ROOT}\\claude` }),
+  llmProvider({ id: "codex", name: "Codex CLI", command: "codex", version: "0.9.3", caps: ["knowledge", "assistant"], profileEnv: "CODEX_HOME", profileDir: `${PROFILE_ROOT}\\codex`, signedIn: false, account: "", status: "none" }),
+  llmProvider({ id: "antigravity", name: "Antigravity", command: "agy", profileEnv: null, profileDir: null, loginCommand: "agy", canLogout: false, canDetectLogin: false, signedIn: null, account: "", status: "error", error: "Process exited with code 1" }),
   llmProvider({ id: "gemini", name: "Gemini CLI", command: "gemini", found: false, resolvedPath: "", version: "", signedIn: null, account: "", status: "none" }),
 ];
 
-export function llmServiceProvider(providers: LlmProvider[]): Provider {
+export const LLM_FEATURES: LlmFeature[] = [
+  { id: "translation", provider: "claude", model: "sonnet", effort: "medium", args: "" },
+  { id: "knowledge", provider: "claude", model: "opus", effort: "high", args: "--max-turns 5" },
+  { id: "assistant", provider: null, model: "", effort: null, args: "" },
+];
+
+export function llmServiceProvider(providers: LlmProvider[], features: LlmFeature[] = LLM_FEATURES): Provider {
+  const list = signal(features);
+  const setFeature = (id: LlmCapability, change: Partial<LlmFeatureSettings>): Promise<void> => {
+    list.update((items) => items.map((item) => (item.id === id ? { ...item, ...change } : item)));
+    return Promise.resolve();
+  };
   const mock: Partial<LlmService> = {
     providers: signal(providers),
+    features: list,
+    setFeature,
     scanning: signal(false),
     ensureLoaded: () => Promise.resolve(),
     scan: () => Promise.resolve(),

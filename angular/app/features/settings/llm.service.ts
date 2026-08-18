@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from "@angular/core";
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { I18nService } from "../../core/i18n/i18n.service";
 import { ToastService } from "../../core/toast/toast.service";
-import { LlmCliSettings, LlmCliView, LlmProbe, LlmProvider, LlmView } from "./settings.models";
+import { LlmCapability, LlmCliSettings, LlmCliView, LlmFeature, LlmFeatureSettings, LlmProbe, LlmProvider, LlmView } from "./settings.models";
 
 const SIGN_IN_POLL_MS = 3000;
 const SIGN_IN_POLL_LIMIT = 100;
@@ -39,6 +39,7 @@ export class LlmService {
   private loaded = false;
 
   readonly providers = signal<LlmProvider[]>([]);
+  readonly features = signal<LlmFeature[]>([]);
   readonly scanning = signal(false);
 
   async ensureLoaded(): Promise<void> {
@@ -89,6 +90,23 @@ export class LlmService {
     this.patch(id, { path: value, status: "none", error: "" });
     if (await this.saveProvider(id)) {
       await this.check(id);
+    }
+  }
+
+  async setFeature(id: LlmCapability, change: Partial<LlmFeatureSettings>): Promise<void> {
+    const previous = this.features();
+    const current = previous.find((feature) => feature.id === id);
+    if (!current) {
+      return;
+    }
+    const next: LlmFeature = { ...current, ...change };
+    this.features.set(previous.map((feature) => (feature.id === id ? next : feature)));
+    const config: LlmFeatureSettings = { provider: next.provider, model: next.model, effort: next.effort, args: next.args };
+    try {
+      await this.ipc.invoke<LlmView>("llm_feature_save", { feature: id, config });
+    } catch {
+      this.features.set(previous);
+      this.toasts.show(this.i18n.translate("settings.general.saveFailed"), "danger");
     }
   }
 
@@ -150,6 +168,7 @@ export class LlmService {
 
   private apply(view: LlmView): void {
     this.providers.set(view.providers.map(fresh));
+    this.features.set(view.features);
   }
 
   private patch(id: string, change: Partial<LlmProvider>): void {

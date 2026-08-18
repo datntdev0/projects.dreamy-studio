@@ -1,5 +1,4 @@
 <div class="st llm" data-testid="settings-llm-content">
-  <header class="st-head" data-testid="settings-llm-head"><h3 class="t-display-xs" data-testid="settings-llm-title">{{ "settings.section.llm" | t }}</h3></header>
   <p class="t-sm t-mute" data-testid="settings-llm-intro">{{ "settings.llm.intro" | t }}</p>
   <div class="st-note" data-testid="settings-llm-note"><ds-icon name="shield" [size]="15" /><span>{{ "settings.llm.note" | t }}</span></div>
   <ds-tabs data-testid="settings-llm-tabs" idPrefix="settings-llm" [label]="'settings.llm.tabs' | t" [options]="tabOptions()" [value]="tab()" (valueChange)="onTab($event)" />
@@ -72,6 +71,45 @@
             <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== false" [disabled]="!canCheck(p)" [attr.data-testid]="'settings-llm-' + p.id + '-check'" (click)="check(p)"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.check" | t }}</button>
           }
         </footer>
+      </article>
+    }
+  </section>
+  }
+  @case ("features") {
+  <p class="t-sm t-mute" data-testid="settings-llm-features-intro">{{ "settings.llm.features.intro" | t }}</p>
+  <section class="llm-list" role="tabpanel" id="settings-llm-panel-features" aria-labelledby="settings-llm-tab-features" [attr.aria-label]="'settings.llm.features.label' | t" data-testid="settings-llm-features">
+    @for (f of features(); track f.id) {
+      <article class="st-card llm-feature" [attr.data-testid]="'settings-llm-feature-' + f.id">
+        <header class="llm-feature-h"><span class="t-ink llm-name" [attr.data-testid]="'settings-llm-feature-' + f.id + '-name'">{{ featureNameKey(f) | t }}</span><span class="t-sm t-mute" [attr.data-testid]="'settings-llm-feature-' + f.id + '-hint'">{{ featureHintKey(f) | t }}</span></header>
+        <div class="llm-fields">
+          <div class="field"><label [attr.for]="'settings-llm-feature-' + f.id + '-provider'">{{ "settings.llm.feature.provider" | t }}</label>
+            <select #provider [id]="'settings-llm-feature-' + f.id + '-provider'" class="select" [attr.data-testid]="'settings-llm-feature-' + f.id + '-provider'" (change)="onFeatureProvider(f, provider.value)">
+              <option value="" [selected]="!f.provider">{{ "settings.llm.feature.provider.none" | t }}</option>
+              @for (p of providersFor(f); track p.id) {
+                <option [value]="p.id" [selected]="p.id === f.provider">{{ p.name }}</option>
+              }
+            </select>
+            @if (!providersFor(f).length) {<span class="field-hint" [attr.data-testid]="'settings-llm-feature-' + f.id + '-provider-empty'">{{ "settings.llm.feature.provider.empty" | t }}</span>}
+          </div>
+          <div class="field"><label [attr.for]="'settings-llm-feature-' + f.id + '-model'">{{ "settings.llm.feature.model" | t }}</label>
+            <input #model [id]="'settings-llm-feature-' + f.id + '-model'" class="input mono-in" [attr.list]="'settings-llm-feature-' + f.id + '-models'" [attr.data-testid]="'settings-llm-feature-' + f.id + '-model'" [value]="f.model" [placeholder]="'settings.llm.feature.model.placeholder' | t" autocomplete="off" spellcheck="false" (change)="onFeatureModel(f, model.value)">
+            <datalist [id]="'settings-llm-feature-' + f.id + '-models'">
+              @for (m of modelsFor(f); track m) {
+                <option [value]="m"></option>
+              }
+            </datalist>
+          </div>
+          <div class="field"><label [attr.for]="'settings-llm-feature-' + f.id + '-effort'">{{ "settings.llm.feature.effort" | t }}</label>
+            <select #effort [id]="'settings-llm-feature-' + f.id + '-effort'" class="select" [attr.data-testid]="'settings-llm-feature-' + f.id + '-effort'" (change)="onFeatureEffort(f, effort.value)">
+              @for (option of efforts; track option.value) {
+                <option [value]="option.value" [selected]="option.value === (f.effort ?? '')">{{ option.key | t }}</option>
+              }
+            </select>
+          </div>
+          <div class="field llm-field-wide"><label [attr.for]="'settings-llm-feature-' + f.id + '-args'">{{ "settings.llm.feature.args" | t }}</label>
+            <input #args [id]="'settings-llm-feature-' + f.id + '-args'" class="input mono-in" [attr.data-testid]="'settings-llm-feature-' + f.id + '-args'" [value]="f.args" [placeholder]="'settings.llm.feature.args.placeholder' | t" autocomplete="off" spellcheck="false" (change)="onFeatureArgs(f, args.value)">
+            <span class="field-hint">{{ "settings.llm.feature.args.hint" | t }}</span></div>
+        </div>
       </article>
     }
   </section>

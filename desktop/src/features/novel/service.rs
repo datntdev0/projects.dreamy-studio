@@ -10,6 +10,7 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelResult;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::NullSink;
+use crate::features::novel::models::Paragraph;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::novel::package::PackageReader;
 use crate::features::novel::package::ValidatedPackage;
@@ -30,6 +31,8 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use chrono::Utc;
 use rusqlite::TransactionBehavior;
+use sha2::Digest;
+use sha2::Sha256;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
@@ -125,21 +128,51 @@ pub fn normalize_paragraph(text: &str) -> NovelResult<String> {
     Ok(single_line)
 }
 
-pub fn paragraph_rows(text: &str) -> Vec<ParagraphRow> {
-    let paragraphs = split_paragraphs(text);
+pub fn paragraph_hash(text: &str) -> String {
+    Sha256::digest(text.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+pub fn make_paragraph(text: String) -> Paragraph {
+    let hashcheck = paragraph_hash(&text);
+    Paragraph { text, hashcheck }
+}
+
+pub fn paragraphs_from_text(text: &str) -> Vec<Paragraph> {
+    split_paragraphs(text)
+        .into_iter()
+        .map(make_paragraph)
+        .collect()
+}
+
+pub fn paragraphs_text(paragraphs: &[Paragraph]) -> String {
+    let texts: Vec<String> = paragraphs
+        .iter()
+        .map(|paragraph| paragraph.text.clone())
+        .collect();
+    join_paragraphs(&texts)
+}
+
+pub fn paragraph_rows(paragraphs: &[Paragraph]) -> Vec<ParagraphRow> {
     let mut rows = Vec::with_capacity(paragraphs.len());
-    for (index, paragraph) in paragraphs.into_iter().enumerate() {
+    for (index, paragraph) in paragraphs.iter().enumerate() {
         rows.push(ParagraphRow {
             n: index + 1,
-            text: paragraph,
+            text: paragraph.text.clone(),
+            hashcheck: paragraph.hashcheck.clone(),
         });
     }
     rows
 }
 
-pub fn replace_paragraph(text: &str, n: usize, replacement: &str) -> NovelResult<String> {
+pub fn replace_paragraph(
+    paragraphs: &mut [Paragraph],
+    n: usize,
+    replacement: &str,
+) -> NovelResult<()> {
     let replacement = normalize_paragraph(replacement)?;
-    let mut paragraphs = split_paragraphs(text);
     if n == 0 || n > paragraphs.len() {
         return Err(NovelError::new(
             NovelErrorCode::ParagraphOutOfRange,
@@ -149,8 +182,8 @@ pub fn replace_paragraph(text: &str, n: usize, replacement: &str) -> NovelResult
             ),
         ));
     }
-    paragraphs[n - 1] = replacement;
-    Ok(join_paragraphs(&paragraphs))
+    paragraphs[n - 1] = make_paragraph(replacement);
+    Ok(())
 }
 
 pub fn new_chapter_id() -> String {
@@ -458,8 +491,8 @@ impl NovelWorkspace {
         let db = self.database()?;
         let repo = NovelRepository::new(db.connection());
         require_chapter(&repo, novel_id, chapter_id)?;
-        let text = self.files().read_chapter(novel_id, chapter_id)?;
-        Ok(paragraph_rows(&text))
+        let paragraphs = self.files().read_chapter(novel_id, chapter_id)?;
+        Ok(paragraph_rows(&paragraphs))
     }
 
     pub fn paragraph_update(
@@ -474,11 +507,11 @@ impl NovelWorkspace {
         let repo = NovelRepository::new(db.connection());
         require_chapter(&repo, novel_id, chapter_id)?;
         let files = self.files();
-        let current = files.read_chapter(novel_id, chapter_id)?;
-        let updated = replace_paragraph(&current, n, text)?;
-        files.write_chapter(novel_id, chapter_id, &updated)?;
+        let mut paragraphs = files.read_chapter(novel_id, chapter_id)?;
+        replace_paragraph(&mut paragraphs, n, text)?;
+        files.write_chapter(novel_id, chapter_id, &paragraphs)?;
         let now = now_text();
-        repo.update_chapter_text(chapter_id, word_count(&updated), &now)?;
+        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(&paragraphs)), &now)?;
         repo.touch_novel(novel_id, &now)?;
         require_chapter(&repo, novel_id, chapter_id)
     }
@@ -496,7 +529,7 @@ impl NovelWorkspace {
         };
         let id = new_chapter_id();
         let now = now_text();
-        self.files().write_chapter(novel_id, &id, "")?;
+        self.files().write_chapter(novel_id, &id, &[])?;
         repo.insert_chapter(&NewChapter {
             id: &id,
             novel_id,
@@ -587,13 +620,11 @@ impl NovelWorkspace {
         let chapter = require_chapter(&repo, novel_id, chapter_id)?;
         require_unlocked_chapter(&chapter)?;
         let files = self.files();
-        let current = files.read_chapter(novel_id, chapter_id)?;
-        let mut paragraphs = split_paragraphs(&current);
-        paragraphs.push(text);
-        let updated = join_paragraphs(&paragraphs);
-        files.write_chapter(novel_id, chapter_id, &updated)?;
+        let mut paragraphs = files.read_chapter(novel_id, chapter_id)?;
+        paragraphs.push(make_paragraph(text));
+        files.write_chapter(novel_id, chapter_id, &paragraphs)?;
         let now = now_text();
-        repo.update_chapter_text(chapter_id, word_count(&updated), &now)?;
+        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(&paragraphs)), &now)?;
         repo.touch_novel(novel_id, &now)?;
         require_chapter(&repo, novel_id, chapter_id)
     }
@@ -660,7 +691,7 @@ impl NovelWorkspace {
         for (index, chapter) in package.chapters.iter().enumerate() {
             let id = new_chapter_id();
             let text = reader.read_chapter_text(&chapter.file)?;
-            files.write_chapter(novel_id, &id, &text)?;
+            files.write_chapter(novel_id, &id, &paragraphs_from_text(&text))?;
             repo.insert_chapter(&NewChapter {
                 id: &id,
                 novel_id,

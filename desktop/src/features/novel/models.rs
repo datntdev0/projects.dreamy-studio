@@ -73,12 +73,20 @@ pub struct ChapterRow {
 pub struct ParagraphRow {
     pub n: usize,
     pub text: String,
+    pub hashcheck: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Paragraph {
+    pub text: String,
+    pub hashcheck: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageSummary {
     pub title: String,
+    pub name: String,
     pub author: String,
     pub lang: String,
     pub chapter_count: usize,

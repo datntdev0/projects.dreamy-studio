@@ -12,6 +12,7 @@ use crate::features::novel::models::NovelResult;
 use crate::features::novel::models::PackageSummary;
 use crate::features::novel::repository::NovelRow;
 use crate::features::novel::service::normalize_chapter_text;
+use crate::features::novel::service::paragraphs_text;
 use crate::features::novel::service::word_count;
 use serde::Deserialize;
 use serde::Serialize;
@@ -54,6 +55,8 @@ struct Manifest {
     format_version: u32,
     title: String,
     #[serde(default)]
+    name: String,
+    #[serde(default)]
     author: String,
     lang: String,
     #[serde(default)]
@@ -83,6 +86,7 @@ pub struct PackageCover {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatedPackage {
     pub title: String,
+    pub name: String,
     pub author: String,
     pub lang: String,
     pub chapters: Vec<PackageChapter>,
@@ -93,6 +97,7 @@ impl ValidatedPackage {
     pub fn summary(&self) -> PackageSummary {
         PackageSummary {
             title: self.title.clone(),
+            name: self.name.clone(),
             author: self.author.clone(),
             lang: self.lang.clone(),
             chapter_count: self.chapters.len(),
@@ -243,6 +248,7 @@ pub fn inspect_reader<R: Read + Seek>(
 
     let package = ValidatedPackage {
         title: manifest.title.trim().to_string(),
+        name: manifest.name.trim().to_string(),
         author: manifest.author.trim().to_string(),
         lang: map_lang(&manifest.lang)?,
         chapters,
@@ -554,6 +560,7 @@ fn inspect_cover<R: Read + Seek>(
 struct ExportManifest {
     format_version: u32,
     title: String,
+    name: String,
     author: String,
     lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -618,8 +625,13 @@ fn write_entries(
         add_entry(&mut writer, options, &cover_entry(*kind), bytes)?;
     }
     for (chapter, name) in chapters.iter().zip(&names) {
-        let text = files.read_chapter(novel.id, &chapter.id)?;
-        add_entry(&mut writer, options, name, text.as_bytes())?;
+        let paragraphs = files.read_chapter(novel.id, &chapter.id)?;
+        add_entry(
+            &mut writer,
+            options,
+            name,
+            paragraphs_text(&paragraphs).as_bytes(),
+        )?;
     }
     writer.finish().map_err(zip_failure)?;
     Ok(())
@@ -641,6 +653,7 @@ fn build_manifest(
     ExportManifest {
         format_version: FORMAT_VERSION,
         title: novel.title.clone(),
+        name: novel.name.clone(),
         author: novel.author.clone(),
         lang: novel.lang.to_lowercase(),
         cover: cover.map(cover_entry),

@@ -56,6 +56,7 @@ export interface ChapterRow {
 export interface ParagraphRow {
   n: number;
   text: string;
+  hashcheck: string;
 }
 
 export type InspectStep =
@@ -82,6 +83,7 @@ export interface InspectCheck {
 
 export interface PackageSummary {
   title: string;
+  name: string;
   author: string;
   lang: NovelLang;
   chapterCount: number;

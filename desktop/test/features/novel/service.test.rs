@@ -67,7 +67,7 @@ fn chapter_file(fixture: &Fixture, novel_id: i64, chapter_id: &str) -> PathBuf {
         .path()
         .join("novels")
         .join(novel_id.to_string())
-        .join(format!("chapter_{chapter_id}.txt"))
+        .join(format!("chapter_{chapter_id}.json"))
 }
 
 fn set_chapter_status(
@@ -134,20 +134,53 @@ fn splits_paragraphs_trimming_and_dropping_empty_lines() {
 }
 
 #[test]
+fn paragraph_hash_is_the_sha256_hex_of_the_text() {
+    assert_eq!(
+        paragraph_hash("abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+    assert_eq!(paragraph_hash("a"), paragraph_hash("a"));
+    assert_ne!(paragraph_hash("a"), paragraph_hash("b"));
+}
+
+#[test]
+fn paragraphs_carry_a_hashcheck_of_their_text() {
+    let paragraphs = paragraphs_from_text("a\n\n b \n");
+
+    assert_eq!(
+        paragraphs,
+        vec![
+            Paragraph {
+                text: "a".to_string(),
+                hashcheck: paragraph_hash("a")
+            },
+            Paragraph {
+                text: "b".to_string(),
+                hashcheck: paragraph_hash("b")
+            },
+        ]
+    );
+    assert_eq!(paragraphs_text(&paragraphs), "a\nb\n");
+    assert_eq!(paragraphs_text(&[]), "");
+}
+
+#[test]
 fn paragraph_rows_are_one_based() {
-    let rows = paragraph_rows("a\nb\n");
+    let rows = paragraph_rows(&paragraphs_from_text("a\nb\n"));
     assert_eq!(
         rows[0],
         ParagraphRow {
             n: 1,
-            text: "a".to_string()
+            text: "a".to_string(),
+            hashcheck: paragraph_hash("a")
         }
     );
     assert_eq!(
         rows[1],
         ParagraphRow {
             n: 2,
-            text: "b".to_string()
+            text: "b".to_string(),
+            hashcheck: paragraph_hash("b")
         }
     );
 }
@@ -159,16 +192,19 @@ fn paragraph_edit_keeps_numbering_stable() {
         normalize_paragraph(" \n ").unwrap_err().code,
         NovelErrorCode::InvalidInput
     );
+    let mut paragraphs = paragraphs_from_text("a\nb\nc\n");
+    replace_paragraph(&mut paragraphs, 2, "x\ny").unwrap();
+    assert_eq!(paragraphs_text(&paragraphs), "a\nx y\nc\n");
+    assert_eq!(paragraphs[1].hashcheck, paragraph_hash("x y"));
+    assert_eq!(paragraphs[0].hashcheck, paragraph_hash("a"));
+    assert_eq!(paragraphs[2].hashcheck, paragraph_hash("c"));
+    let mut single = paragraphs_from_text("a\n");
     assert_eq!(
-        replace_paragraph("a\nb\nc\n", 2, "x\ny").unwrap(),
-        "a\nx y\nc\n"
-    );
-    assert_eq!(
-        replace_paragraph("a\n", 2, "x").unwrap_err().code,
+        replace_paragraph(&mut single, 2, "x").unwrap_err().code,
         NovelErrorCode::ParagraphOutOfRange
     );
     assert_eq!(
-        replace_paragraph("a\n", 0, "x").unwrap_err().code,
+        replace_paragraph(&mut single, 0, "x").unwrap_err().code,
         NovelErrorCode::ParagraphOutOfRange
     );
 }
@@ -442,9 +478,17 @@ fn adds_chapters_with_empty_files_and_default_titles() {
             .collect::<Vec<_>>(),
         [1, 2]
     );
+    let stored = fs::read(chapter_file(&fixture, novel.id, &second.id)).unwrap();
     assert_eq!(
-        fs::read_to_string(chapter_file(&fixture, novel.id, &second.id)).unwrap(),
-        ""
+        serde_json::from_slice::<serde_json::Value>(&stored).unwrap(),
+        serde_json::json!({ "paragraphs": [] })
+    );
+    assert!(
+        fixture
+            .workspace
+            .chapter_read(novel.id, &second.id)
+            .unwrap()
+            .is_empty()
     );
 }
 
@@ -659,7 +703,7 @@ fn missing_chapter_file_is_reported_for_that_chapter() {
         .path()
         .join("novels")
         .join(book.id.to_string())
-        .join(format!("chapter_{}.txt", chapters[0].id));
+        .join(format!("chapter_{}.json", chapters[0].id));
     fs::remove_file(path).unwrap();
 
     let read = fixture
@@ -865,6 +909,45 @@ fn export_round_trips_through_import() {
 }
 
 #[test]
+fn export_writes_the_display_name_into_the_manifest() {
+    let fixture = fixture();
+    let book = imported(&fixture, 1);
+    fixture
+        .workspace
+        .update(
+            book.id,
+            NovelPatch {
+                name: Some("  Display Name  ".to_string()),
+                ..NovelPatch::default()
+            },
+        )
+        .unwrap();
+    let dest = fixture.dir.path().join("named");
+
+    let summary = fixture.workspace.export_package(book.id, &dest).unwrap();
+
+    let file = fs::File::open(&summary.path).unwrap();
+    let mut archive = zip::ZipArchive::new(file).unwrap();
+    let manifest: serde_json::Value =
+        serde_json::from_reader(archive.by_name("manifest.json").unwrap()).unwrap();
+    assert_eq!(manifest["name"], "Display Name");
+    assert_eq!(manifest["title"], "Imported");
+    let (_, package) = inspect_path(Path::new(&summary.path), &NullSink).unwrap();
+    assert_eq!(package.name, "Display Name");
+    assert_eq!(package.summary().name, "Display Name");
+}
+
+#[test]
+fn a_package_without_a_name_imports_with_an_empty_display_name() {
+    let fixture = fixture();
+    let path = write_package_file(&fixture, "plain.dsnovel", &sample_package(1));
+
+    let (_, package) = inspect_path(&path, &NullSink).unwrap();
+
+    assert_eq!(package.name, "");
+}
+
+#[test]
 fn export_without_chapters_or_novel_is_rejected() {
     let fixture = fixture();
     let empty = fixture.workspace.create(input("Empty")).unwrap();
@@ -892,7 +975,7 @@ fn failed_export_leaves_no_partial_file() {
             .path()
             .join("novels")
             .join(book.id.to_string())
-            .join(format!("chapter_{}.txt", chapters[1].id)),
+            .join(format!("chapter_{}.json", chapters[1].id)),
     )
     .unwrap();
     let dest = fixture.dir.path().join("broken.dsnovel");

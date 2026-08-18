@@ -1,6 +1,9 @@
 use crate::features::novel::models::NovelError;
 use crate::features::novel::models::NovelErrorCode;
 use crate::features::novel::models::NovelResult;
+use crate::features::novel::models::Paragraph;
+use serde::Deserialize;
+use serde::Serialize;
 use std::fs;
 use std::io::ErrorKind;
 use std::io::Write;
@@ -13,6 +16,16 @@ pub const COVER_MAX_BYTES: usize = 8 * 1024 * 1024;
 const COVER_STEM: &str = "cover";
 const JPEG_MAGIC: [u8; 3] = [0xFF, 0xD8, 0xFF];
 const PNG_MAGIC: [u8; 4] = [0x89, 0x50, 0x4E, 0x47];
+
+#[derive(Serialize)]
+struct ChapterWrite<'a> {
+    paragraphs: &'a [Paragraph],
+}
+
+#[derive(Deserialize)]
+struct ChapterRead {
+    paragraphs: Vec<Paragraph>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CoverKind {
@@ -126,9 +139,16 @@ impl NovelFiles {
         Ok(())
     }
 
-    pub fn write_chapter(&self, novel_id: i64, chapter_id: &str, text: &str) -> NovelResult<()> {
+    pub fn write_chapter(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        paragraphs: &[Paragraph],
+    ) -> NovelResult<()> {
+        let name = chapter_name(chapter_id)?;
+        let bytes = encode_chapter(paragraphs)?;
         let dir = self.ensure_dir(novel_id)?;
-        write_atomic(&dir.join(chapter_name(chapter_id)?), text.as_bytes())?;
+        write_atomic(&dir.join(name), &bytes)?;
         Ok(())
     }
 
@@ -136,7 +156,7 @@ impl NovelFiles {
         remove_file_quietly(&self.novel_dir(novel_id).join(chapter_name(chapter_id)?))
     }
 
-    pub fn read_chapter(&self, novel_id: i64, chapter_id: &str) -> NovelResult<String> {
+    pub fn read_chapter(&self, novel_id: i64, chapter_id: &str) -> NovelResult<Vec<Paragraph>> {
         let path = self.novel_dir(novel_id).join(chapter_name(chapter_id)?);
         match fs::read(&path) {
             Ok(bytes) => decode_chapter(&path, bytes),
@@ -149,13 +169,23 @@ impl NovelFiles {
     }
 }
 
-fn decode_chapter(path: &Path, bytes: Vec<u8>) -> NovelResult<String> {
-    String::from_utf8(bytes).map_err(|_| {
+fn encode_chapter(paragraphs: &[Paragraph]) -> NovelResult<Vec<u8>> {
+    serde_json::to_vec_pretty(&ChapterWrite { paragraphs }).map_err(|error| {
         NovelError::new(
             NovelErrorCode::Io,
-            format!("chapter file {} is not valid UTF-8", path.display()),
+            format!("cannot encode chapter file: {error}"),
         )
     })
+}
+
+fn decode_chapter(path: &Path, bytes: Vec<u8>) -> NovelResult<Vec<Paragraph>> {
+    match serde_json::from_slice::<ChapterRead>(&bytes) {
+        Ok(chapter) => Ok(chapter.paragraphs),
+        Err(error) => Err(NovelError::new(
+            NovelErrorCode::Io,
+            format!("chapter file {} is not valid: {error}", path.display()),
+        )),
+    }
 }
 
 fn cover_name(kind: CoverKind) -> String {
@@ -166,7 +196,7 @@ fn chapter_name(chapter_id: &str) -> NovelResult<String> {
     if !is_chapter_id(chapter_id) {
         return Err(NovelError::invalid("chapter id is malformed"));
     }
-    Ok(format!("chapter_{chapter_id}.txt"))
+    Ok(format!("chapter_{chapter_id}.json"))
 }
 
 fn is_chapter_id(value: &str) -> bool {

@@ -3,20 +3,81 @@ use tempfile::tempdir;
 
 const CHAPTER: &str = "0123456789abcdef0123456789abcdef";
 
+fn paragraph(text: &str, hashcheck: &str) -> Paragraph {
+    Paragraph {
+        text: text.to_string(),
+        hashcheck: hashcheck.to_string(),
+    }
+}
+
 #[test]
 fn writes_and_reads_a_chapter_without_leaving_temp_files() {
     let dir = tempdir().unwrap();
     let files = NovelFiles::new(dir.path().to_path_buf());
+    let first = vec![paragraph("one", "h1"), paragraph("two", "h2")];
+    let second = vec![paragraph("three", "h3")];
 
-    files.write_chapter(7, CHAPTER, "one\ntwo\n").unwrap();
-    files.write_chapter(7, CHAPTER, "three\n").unwrap();
+    files.write_chapter(7, CHAPTER, &first).unwrap();
+    files.write_chapter(7, CHAPTER, &second).unwrap();
 
-    assert_eq!(files.read_chapter(7, CHAPTER).unwrap(), "three\n");
+    assert_eq!(files.read_chapter(7, CHAPTER).unwrap(), second);
     let names: Vec<_> = fs::read_dir(files.novel_dir(7))
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
-    assert_eq!(names, vec![format!("chapter_{CHAPTER}.txt")]);
+    assert_eq!(names, vec![format!("chapter_{CHAPTER}.json")]);
+}
+
+#[test]
+fn stores_paragraphs_with_their_hashcheck_as_json() {
+    let dir = tempdir().unwrap();
+    let files = NovelFiles::new(dir.path().to_path_buf());
+
+    files
+        .write_chapter(
+            7,
+            CHAPTER,
+            &[paragraph("one", "h1"), paragraph("two", "h2")],
+        )
+        .unwrap();
+
+    let bytes = fs::read(files.novel_dir(7).join(format!("chapter_{CHAPTER}.json"))).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(
+        value,
+        serde_json::json!({
+            "paragraphs": [
+                { "text": "one", "hashcheck": "h1" },
+                { "text": "two", "hashcheck": "h2" }
+            ]
+        })
+    );
+}
+
+#[test]
+fn an_empty_chapter_round_trips() {
+    let dir = tempdir().unwrap();
+    let files = NovelFiles::new(dir.path().to_path_buf());
+
+    files.write_chapter(7, CHAPTER, &[]).unwrap();
+
+    assert!(files.read_chapter(7, CHAPTER).unwrap().is_empty());
+}
+
+#[test]
+fn a_chapter_file_that_is_not_valid_json_is_a_typed_error() {
+    let dir = tempdir().unwrap();
+    let files = NovelFiles::new(dir.path().to_path_buf());
+    files.ensure_dir(7).unwrap();
+    fs::write(
+        files.novel_dir(7).join(format!("chapter_{CHAPTER}.json")),
+        b"one\ntwo\n",
+    )
+    .unwrap();
+
+    let error = files.read_chapter(7, CHAPTER).unwrap_err();
+
+    assert_eq!(error.code, NovelErrorCode::Io);
 }
 
 #[test]
@@ -74,14 +135,16 @@ fn detects_cover_kinds_by_magic_bytes_and_names() {
 fn reset_and_remove_novel_dir() {
     let dir = tempdir().unwrap();
     let files = NovelFiles::new(dir.path().to_path_buf());
-    files.write_chapter(5, CHAPTER, "x").unwrap();
+    files
+        .write_chapter(5, CHAPTER, &[paragraph("x", "h")])
+        .unwrap();
 
     files.reset_dir(5).unwrap();
     assert!(files.novel_dir(5).is_dir());
     assert!(
         !files
             .novel_dir(5)
-            .join(format!("chapter_{CHAPTER}.txt"))
+            .join(format!("chapter_{CHAPTER}.json"))
             .exists()
     );
 

@@ -354,7 +354,7 @@ export class NovelImportDialog {
       this.formSource = path;
       this.form.set({
         title: summary.title,
-        name: "",
+        name: summary.name,
         author: summary.author,
         lang: summary.lang,
         description: "",

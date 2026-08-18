@@ -96,7 +96,7 @@ function novelSummary(chapters: number, words: number, translated: number): Nove
 function sourceOf(chapterIdValue: string): ParagraphRow[] {
   const seq = Number(chapterIdValue.slice(3));
   const chapter = seq <= SAMPLE_CHAPTERS ? LANTERN_CHAPTERS[seq - 1] : undefined;
-  return (chapter?.paragraphs ?? []).map((text, index) => ({ n: index + 1, text }));
+  return (chapter?.paragraphs ?? []).map((text, index) => ({ n: index + 1, text, hashcheck: `mock-${seq}-${index + 1}` }));
 }
 
 function viText(seq: number, n: number, fresh: boolean): string {

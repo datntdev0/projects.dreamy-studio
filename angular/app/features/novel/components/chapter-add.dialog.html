@@ -1,5 +1,5 @@
 @if (open()) {
-  <ds-dialog titleClass="modal-title eyebrow" [title]="'novel.chapters.add.title' | t" [eyebrow]="'novel.cap' | t" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-chapter-add-dialog-panel" (closed)="close()">
+  <ds-dialog [title]="'novel.chapters.add.title' | t" [eyebrow]="'novel.cap' | t" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-chapter-add-dialog-panel" (closed)="close()">
     <div class="field" data-testid="novel-chapter-add-field">
       <label for="ch-new-title">{{ "novel.chapters.add.field" | t }}</label>
       <input #titleInput id="ch-new-title" class="input" [placeholder]="'novel.chapters.add.placeholder' | t: { n: nextSeq() }" [value]="title()" autocomplete="off" data-testid="novel-chapter-add-title" (input)="onInput($event)" (keydown.enter)="submit()" />

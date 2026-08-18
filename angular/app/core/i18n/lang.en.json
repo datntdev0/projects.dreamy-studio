@@ -913,7 +913,6 @@
   ,"settings.section.general": "General"
   ,"settings.section.llm": "LLM providers"
   ,"settings.section.backend": "Python backend"
-  ,"settings.section.analysis": "Analysis providers"
   ,"settings.section.tts": "Local TTS models"
   ,"settings.section.speech": "Speech providers"
   ,"settings.empty.description": "There is nothing to configure here yet. It will be added in a later version."

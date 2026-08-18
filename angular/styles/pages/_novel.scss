@@ -475,8 +475,3 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .modal-body .field > .select { width: 100%; }
 .table td .ellip { max-width: 300px; }
 .nm-recent .tree-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-app-novel-create-dialog .dialog-heading, app-novel-delete-dialog .dialog-heading, app-novel-import-dialog .dialog-heading { display: flex; align-items: center; gap: var(--sp-sm); }
-app-novel-chapter-add-dialog .dialog-heading, app-novel-chapter-delete-dialog .dialog-heading { display: flex; align-items: center; min-width: 0; }
-app-novel-chapter-add-dialog .dialog-heading > span.eyebrow, app-novel-chapter-delete-dialog .dialog-heading > span.eyebrow { white-space: nowrap; }
-app-novel-chapter-add-dialog .modal-title, app-novel-chapter-delete-dialog .modal-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
-app-novel-chapter-add-dialog .dialog-heading > span.eyebrow + .modal-title::before, app-novel-chapter-delete-dialog .dialog-heading > span.eyebrow + .modal-title::before { content: ""; display: inline-block; width: 1px; height: 12px; margin: 0 var(--sp-lg) 0 var(--sp-sm); background: var(--hairline-strong); vertical-align: -2px; }

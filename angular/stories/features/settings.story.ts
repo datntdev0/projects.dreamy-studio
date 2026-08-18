@@ -23,6 +23,6 @@ type Story = StoryObj<SettingsDialog>;
 
 export const General: Story = settings("general");
 
-export const Llm: Story = settings("llm");
+export const LlmProviders: Story = settings("llm");
 
 export const ComingSoon: Story = settings("backend");

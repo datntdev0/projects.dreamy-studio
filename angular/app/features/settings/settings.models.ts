@@ -2,7 +2,7 @@ import { Language } from "../../core/i18n/i18n.models";
 import { I18nKey } from "../../core/i18n/i18n.models";
 import { Theme } from "../../core/theme/theme.models";
 
-export type SettingsSectionId = "general" | "llm" | "backend" | "analysis" | "tts" | "speech";
+export type SettingsSectionId = "general" | "llm" | "backend" | "tts" | "speech";
 
 export type SettingsFolderTarget = "workspace" | "appData";
 

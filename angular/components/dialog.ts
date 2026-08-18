@@ -24,7 +24,6 @@ export class Dialog implements AfterViewInit, OnDestroy {
   @Input() title = "";
   @Input() eyebrow = "";
   @Input() size: "default" | "large" | "xl" = "default";
-  @Input() titleClass = "t-display-xs";
   @Input() closeLabel = "Close";
   @Output() closed = new EventEmitter<void>();
   @ViewChild("panel", { static: true }) panel!: ElementRef<HTMLElement>;

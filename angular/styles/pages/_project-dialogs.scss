@@ -1,4 +1,3 @@
-app-project-create-dialog .dialog-heading, app-project-delete-dialog .dialog-heading { display: flex; align-items: center; gap: var(--sp-sm); }
 .pjc { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: var(--sp-xl); align-items: start; }
 .pjc-l { display: grid; gap: var(--sp-sm); }
 .pjc-r { display: grid; gap: var(--sp-lg); min-width: 0; }

@@ -1,5 +1,4 @@
 <div class="st" data-testid="settings-general-content">
-  <header class="st-head" data-testid="settings-general-head"><h3 class="t-display-xs" data-testid="settings-general-title">{{ "settings.section.general" | t }}</h3></header>
   <p class="t-sm t-mute" data-testid="settings-general-intro">{{ "settings.general.intro" | t }}</p>
   <ds-tabs data-testid="settings-general-tabs" idPrefix="settings-general" [label]="'settings.general.tabs' | t" [options]="tabOptions()" [value]="tab()" (valueChange)="onTab($event)" />
   @if (tab() === "interface") {

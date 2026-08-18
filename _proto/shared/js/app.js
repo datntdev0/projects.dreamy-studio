@@ -1,6 +1,6 @@
 /*
  * Dreamy Studio prototype.
- *  - Entry pages declare their splash route and initial view through data attributes/configuration.
+ *  - Entry pages declare their initial view through data attributes/configuration.
  *  - Main layout: title bar, activity rail, explorer, editor tabs, inspector / assistant, pipelines panel, status bar.
  *  - Functional screens are "coming soon": each lists the requirements it will cover.
  * Everything is mock; no backend.
@@ -726,7 +726,7 @@
       ...D.seedWorkspaces[0],
       name: document.body.dataset.workspaceName || "Dreamy Studio",
       path: document.body.dataset.workspacePath || "Prototype / Library",
-    } : WS.current() || WS.requireCurrent();
+    } : WS.requireCurrent();
     if (workspace) enterShell(workspace);
   });
 })();

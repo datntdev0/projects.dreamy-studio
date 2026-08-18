@@ -1,28 +1,9 @@
 /*
- * App layout: splash, title bar, activity rail, explorer, editor tabs, inspector, bottom panel, status bar.
+ * App layout: title bar, activity rail, explorer, editor tabs, inspector, bottom panel, status bar.
  * Colours / type / base components come from tokens.css (CSS variables only, no hex).
  */
 
-/* ---------------- splash ---------------- */
-.splash {
-  position: fixed; inset: 0; display: grid; place-items: center; padding: var(--sp-xl); overflow: auto;
-  background:
-    radial-gradient(900px 520px at 12% -5%, var(--primary-soft), transparent 65%),
-    radial-gradient(700px 420px at 100% 105%, var(--secondary-soft), transparent 65%),
-    var(--canvas);
-}
-.sp-card {
-  width: min(960px, 100%); min-height: 520px; display: grid; grid-template-columns: 340px minmax(0, 1fr);
-  background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-float);
-}
-.sp-left { padding: var(--sp-2xl); display: flex; flex-direction: column; gap: var(--sp-md); border-right: 1px solid var(--hairline); }
-.sp-left .logo { width: 56px; height: 56px; }
-.sp-actions { display: grid; gap: var(--sp-sm); margin-top: var(--sp-sm); }
-.sp-note { display: flex; gap: var(--sp-sm); align-items: flex-start; color: var(--mute); font-size: 12.5px; line-height: 17px; }
-.sp-note .ic { width: 15px; height: 15px; margin-top: 1px; }
-.sp-right { padding: var(--sp-xl); overflow: auto; display: flex; flex-direction: column; min-width: 0; }
-.sp-head { display: flex; align-items: center; gap: var(--sp-sm); margin-bottom: var(--sp-md); }
-
+/* workspace list */
 .ws-list { border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
 .ws-row { display: flex; align-items: center; gap: var(--sp-md); padding: var(--sp-md) var(--sp-lg); border-bottom: 1px solid var(--hairline); cursor: pointer; }
 .ws-row:last-child { border-bottom: 0; }
@@ -36,13 +17,9 @@
 .ws-name .badge { flex: none; }
 .ws-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .ws-name { color: var(--ink); font-size: 14px; display: flex; align-items: center; gap: var(--sp-sm); }
-.ws-first { margin: auto; display: grid; justify-items: center; text-align: center; gap: var(--sp-sm); max-width: 420px; }
-.ws-first pre { text-align: left; margin: var(--sp-sm) 0 0; }
 .tree-block { font: 400 12px/18px var(--font-mono); color: var(--body); background: var(--canvas-soft); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: var(--sp-sm) var(--sp-md); white-space: pre; overflow: auto; }
 
-/* splash tools, switch overlay */
-.sp-tools { position: absolute; top: var(--sp-xl); right: var(--sp-xl); display: flex; align-items: center; gap: var(--sp-md); }
-.sp-right > .ld-warn { margin-bottom: var(--sp-md); }
+/* switch overlay */
 .switch-note { margin: 0; }
 .ld-overlay {
   position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--sp-xl); overflow: auto;
@@ -218,8 +195,6 @@ button.sb-item:hover { background: var(--canvas-soft); color: var(--body); }
 .form-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); }
 
 @media (max-width: 900px) {
-  .sp-card { grid-template-columns: 1fr; }
-  .sp-left { border-right: 0; border-bottom: 1px solid var(--hairline); }
   .home-grid { grid-template-columns: 1fr; }
 }
 

@@ -2,7 +2,7 @@
  * Dreamy Studio prototype — static data.
  * Navigation model mirrors _docs/1.Product-Capabilities.md (capabilities + high-level requirements).
  * Every functional screen is "coming soon" for now; each one lists the requirements it will cover.
- * Workspaces below are fake and only exist so the splash screen has something to show.
+ * Workspaces below are fake and only exist so the workspace switch dialog has something to show.
  */
 window.DS = (function () {
   const CAP = {

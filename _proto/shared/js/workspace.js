@@ -10,9 +10,6 @@ window.WS = (function () {
 
   const D = window.DS;
   const sharedRoot = document.body.dataset.sharedRoot || "shared";
-  const SPLASH_PAGE = document.body.dataset.splashPage || "../0.splash/0.splash.html";
-  const MAIN_PAGE = document.body.dataset.mainPage || "../1.library/1.library.html";
-  const FIRST_RUN = /[?&]first-run\b/.test(location.search);
   const FAILURE_HOLD_MS = 1200;
   const RECENT_WORKSPACE_LIMIT = 5;
   const STEP_ORDER = ["application", "backend", "workspace"];
@@ -74,7 +71,7 @@ window.WS = (function () {
   const session = keyed(() => sessionStorage);
 
   const normalize = (w) => ({ ...w, status: w.status || (w.missing ? "not_found" : "ok"), reason: w.reason || (w.missing ? "missing" : undefined) });
-  let recent = FIRST_RUN ? [] : local.get("ws.recent", D.seedWorkspaces).map(normalize);
+  let recent = local.get("ws.recent", D.seedWorkspaces).map(normalize);
   const saveRecent = () => local.set("ws.recent", recent);
 
   const current = () => session.get("current", null);
@@ -102,7 +99,7 @@ window.WS = (function () {
 
   function requireCurrent() {
     const cur = current();
-    if (!cur) location.replace(SPLASH_PAGE);
+    if (!cur) return commit(D.seedWorkspaces[0]);
     return cur;
   }
 
@@ -251,7 +248,7 @@ window.WS = (function () {
   const pickFolder = () => toast(PICK_FOLDER_NOTICE, "info");
 
   return {
-    SPLASH_PAGE, MAIN_PAGE, FIRST_RUN, esc, ic, stamp, local, current, list, deleteWorkspace, requireCurrent,
+    esc, ic, stamp, local, current, list, deleteWorkspace, requireCurrent,
     rowsHtml, lastUsedPath, hydrateSizes, start, cancel, toast, pickFolder,
   };
 })();

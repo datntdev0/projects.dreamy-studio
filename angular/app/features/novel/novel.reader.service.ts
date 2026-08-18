@@ -6,9 +6,15 @@ import { NovelError } from "./novel.models";
 import { NovelScreen } from "./novel.models";
 import { ParagraphRow } from "./novel.models";
 import { ParagraphSaveResult } from "./novel.models";
+import { ReaderLang } from "./novel.models";
+import { ReaderLayout } from "./novel.models";
 import { ReaderMode } from "./novel.models";
 import { ReaderPrefs } from "./novel.models";
+import { TargetLang } from "./novel.models";
+import { ReaderView } from "./novel.models";
 import { NovelService } from "./novel.service";
+import { targetsOf } from "./novel.translation.rules";
+import { NovelTranslationService } from "./novel.translation.service";
 import { READER_PREF_DEFAULT } from "./novel.rules";
 import { clampSeq } from "./novel.rules";
 import { isChapterLocked } from "./novel.rules";
@@ -18,6 +24,8 @@ import { sanitizePrefs } from "./novel.rules";
 import { toNovelError } from "./novel.rules";
 
 const PREFS_STORAGE_KEY = "ds.rd.prefs";
+
+const DEFAULT_VIEW: ReaderView = { lang: "src", layout: "single" };
 
 function readPrefs(): ReaderPrefs {
   try {
@@ -68,6 +76,8 @@ export class NovelReaderService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly novels = inject(NovelService);
   private readonly workspace = inject(WorkspaceService);
+  private readonly translation = inject(NovelTranslationService);
+  private readonly views = signal<Record<number, ReaderView>>({});
   private readonly screens = signal<Record<number, NovelScreen>>({});
   private readonly positions = signal<Record<number, number>>({});
   private token = 0;
@@ -90,6 +100,8 @@ export class NovelReaderService {
   readonly nextChapter = computed(this.buildNextChapter.bind(this));
   readonly hasPrev = computed(this.buildHasPrev.bind(this));
   readonly hasNext = computed(this.buildHasNext.bind(this));
+  readonly view = computed(this.buildView.bind(this));
+  readonly showSource = computed(this.buildShowSource.bind(this));
   readonly canEdit = computed(this.buildCanEdit.bind(this));
   readonly canAdd = computed(this.buildCanAdd.bind(this));
   readonly adding = computed(this.buildAdding.bind(this));
@@ -101,6 +113,30 @@ export class NovelReaderService {
 
   screenOf(novelId: number): NovelScreen {
     return this.screens()[novelId] ?? "chapters";
+  }
+
+  viewOf(novelId: number): ReaderView {
+    return this.views()[novelId] ?? DEFAULT_VIEW;
+  }
+
+  setLang(novelId: number, lang: ReaderLang): void {
+    this.patchView(novelId, { lang });
+  }
+
+  setLayout(novelId: number, layout: ReaderLayout): void {
+    this.patchView(novelId, { layout });
+  }
+
+  titleOf(novelId: number, chapter: ChapterRow): string {
+    if (this.viewOf(novelId).lang === "src") {
+      return chapter.title;
+    }
+    return this.translation.titleOf(novelId, chapter.id, this.readerTarget(novelId)) ?? chapter.title;
+  }
+
+  readerTarget(novelId: number): TargetLang {
+    const lang = this.viewOf(novelId).lang;
+    return lang === "src" ? (targetsOf(this.novels.novelById(novelId)?.lang)[0] ?? "VI") : lang;
   }
 
   resumeSeq(novelId: number): number {
@@ -253,19 +289,34 @@ export class NovelReaderService {
     }
     const screens = { ...this.screens() };
     const positions = { ...this.positions() };
+    const views = { ...this.views() };
     for (const id of ids) {
       delete screens[id];
       delete positions[id];
+      delete views[id];
     }
     this.screens.set(screens);
     this.positions.set(positions);
+    this.views.set(views);
   }
 
   reset(): void {
     this.clearOpen();
     this.screens.set({});
     this.positions.set({});
+    this.views.set({});
     this.mode.set("read");
+  }
+
+  private patchView(novelId: number, patch: Partial<ReaderView>): void {
+    const next = { ...this.viewOf(novelId), ...patch };
+    this.views.set({ ...this.views(), [novelId]: next });
+    if (next.lang !== "src" || next.layout === "parallel") {
+      void this.translation.ensure(novelId, this.readerTarget(novelId));
+    }
+    if (this.novelId() === novelId && !this.buildShowSource()) {
+      this.editing.set(null);
+    }
   }
 
   private activate(novelId: number): number {
@@ -425,8 +476,18 @@ export class NovelReaderService {
     return this.seq() < this.total();
   }
 
+  private buildView(): ReaderView {
+    const novelId = this.novelId();
+    return novelId === null ? DEFAULT_VIEW : this.viewOf(novelId);
+  }
+
+  private buildShowSource(): boolean {
+    const view = this.view();
+    return view.lang === "src" || view.layout === "parallel";
+  }
+
   private buildCanEdit(): boolean {
-    return this.mode() === "edit";
+    return this.mode() === "edit" && this.showSource();
   }
 
   private buildCanAdd(): boolean {

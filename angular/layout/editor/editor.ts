@@ -5,6 +5,7 @@ import { I18nService } from "@app/core/i18n/i18n.service";
 import { NovelView } from "@app/features/novel/components/novel-view.component";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { NovelToolPlaceholder } from "@app/features/novel/components/tool-placeholder.component";
+import { NovelTranslation } from "@app/features/novel/components/translation.component";
 import { NovelList } from "@app/features/novel/components/list.component";
 import { ProjectList } from "@app/features/project/components/list.component";
 import { ProjectView } from "@app/features/project/components/project-view.component";
@@ -22,7 +23,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelToolPlaceholder, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts],
+  imports: [Icon, I18nPipe, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts],
   templateUrl: "./editor.html",
 })
 export class Editor {

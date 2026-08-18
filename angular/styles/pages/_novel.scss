@@ -1,4 +1,5 @@
-ds-cover, app-novel-progress-frac, app-novel-view, app-novel-chapters, app-novel-reader, app-novel-display-panel { display: contents; }
+ds-cover, app-novel-lang-switch, app-novel-progress-frac, app-novel-view, app-novel-chapters, app-novel-reader, app-novel-display-panel { display: contents; }
+app-novel-translation, app-novel-translation-dictionary, app-novel-translation-guidelines, app-novel-translation-pipeline, app-novel-translation-result, app-novel-translation-warnings { display: contents; }
 app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents; }
 .nv-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
@@ -48,7 +49,6 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .tl-fill { flex: 1; display: grid; place-items: center; min-height: 220px; }
 .w-card { display: grid; gap: var(--sp-sm); }
 .w-top { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
-.w-diff { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); }
 .w-act { display: flex; gap: var(--sp-sm); flex-wrap: wrap; }
 
 .tl-readwrap { flex: 1; min-height: 0; display: flex; }
@@ -61,7 +61,6 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .tl-src { display: flex; gap: var(--sp-lg); color: var(--body); }
 .tl-dst { border-left: 1px solid var(--hairline); display: grid; gap: var(--sp-sm); align-content: start; background: var(--canvas-card); }
 .tl-pair.is-review .tl-dst { box-shadow: inset 2px 0 0 var(--warning); }
-.tl-pair.is-edited .tl-dst { box-shadow: inset 2px 0 0 var(--primary); }
 .tl-text { cursor: text; padding: var(--sp-xxs) var(--sp-sm); margin: 0 calc(var(--sp-sm) * -1); border-radius: var(--r-sm); color: var(--ink); }
 .tl-text:hover { background: var(--canvas-soft); }
 .tl-edit-foot { display: flex; gap: var(--sp-sm); }
@@ -71,6 +70,8 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .tl-note .ic, .tl-warn .ic { width: 14px; height: 14px; margin-top: 1px; color: var(--warning); flex: none; }
 .tl-note span:first-of-type, .tl-warn span { flex: 1; }
 .tl-warn { align-items: center; }
+.tl-note { cursor: text; }
+.tl-note:hover { filter: brightness(0.97); }
 .tl-note-in { display: flex; gap: var(--sp-sm); }
 .tl-ai-head { display: flex; align-items: center; min-height: 28px; }
 .ai-card { display: grid; gap: var(--sp-sm); }
@@ -140,6 +141,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .rd-page .eyebrow, .rd-page .rd-meta { color: var(--rd-mute, var(--mute)); font-family: var(--font); }
 .rd-h { margin: 0; font-size: calc(var(--rd-fs, 17px) * 1.7); line-height: 1.2; font-weight: 600; color: var(--rd-fg, var(--ink)); }
 .rd-h .rd-h-in { width: 100%; height: auto; padding: var(--sp-xs) var(--sp-sm); font: inherit; line-height: 1.2; color: inherit; background: transparent; }
+.rd-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); min-height: 22px; font-family: var(--font); }
 .rd-add { display: flex; padding: var(--sp-xs) var(--sp-sm); font-family: var(--font); }
 .table td .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
 .table tbody tr.is-reorderable { cursor: grab; -webkit-user-select: none; user-select: none; }
@@ -434,8 +436,6 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .ins-panel-actions .btn { cursor: pointer; }
 
 /* reading: ngôn ngữ + song song */
-.rd-seg-off-true { opacity: 0.45; pointer-events: none; }
-.rd-seg-off-false, .rd-seg-off-true { display: inline-flex; }
 .rd-page.is-par .rd-col { max-width: calc(var(--rd-w, 680px) * 2 + 6 * var(--sp-2xl)); }
 .rd-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-2xl); align-items: start; }
 .rd-pair > .rd-edit { min-width: 0; }

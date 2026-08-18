@@ -302,8 +302,12 @@ export class NovelService {
     return rows;
   }
 
+  readChapter(novelId: number, chapterId: string): Promise<ParagraphRow[]> {
+    return this.ipc.invoke<ParagraphRow[]>("novel_chapter_read", { novelId, chapterId });
+  }
+
   async paragraphCount(novelId: number, chapterId: string): Promise<number> {
-    const rows = await this.ipc.invoke<ParagraphRow[]>("novel_chapter_read", { novelId, chapterId });
+    const rows = await this.readChapter(novelId, chapterId);
     return rows.length;
   }
 

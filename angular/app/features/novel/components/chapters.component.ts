@@ -2,21 +2,21 @@ import { Component, OnDestroy, computed, effect, inject, input, signal } from "@
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { Datatable, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
-import { NovelToolKind } from "@layout/layout.models";
-import { TabsService } from "@layout/tabs.service";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { ChapterRow } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
+import { NovelTranslationService } from "../novel.translation.service";
 import { NovelService } from "../novel.service";
 import { displayName } from "../novel.rules";
-import { filterChapters } from "../novel.rules";
+import { matchesChapter } from "../novel.rules";
 import { formatCount } from "../novel.rules";
 import { isChapterLocked } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
 import { Cover } from "@components/cover";
+import { NovelLangSwitch } from "./lang-switch.component";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 const DRAG_THRESHOLD = 5;
@@ -31,14 +31,14 @@ interface DropTarget {
 @Component({
   selector: "app-novel-chapters",
   standalone: true,
-  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelProgressFrac],
+  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelLangSwitch, NovelProgressFrac],
   templateUrl: "./chapters.component.html",
 })
 export class NovelChapters implements OnDestroy {
   private readonly novels = inject(NovelService);
   private readonly reader = inject(NovelReaderService);
   private readonly i18n = inject(I18nService);
-  private readonly tabs = inject(TabsService);
+  private readonly translation = inject(NovelTranslationService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly toasts = inject(ToastService);
 
@@ -48,6 +48,7 @@ export class NovelChapters implements OnDestroy {
 
   readonly novel = computed(this.findNovel.bind(this));
   readonly all = computed(this.buildAll.bind(this));
+  readonly translated = computed(this.buildTranslated.bind(this));
   readonly rows = computed(this.buildRows.bind(this));
   readonly resumeSeq = computed(this.buildResumeSeq.bind(this));
   readonly cover = computed(this.buildCover.bind(this));
@@ -102,11 +103,12 @@ export class NovelChapters implements OnDestroy {
     void this.reader.openReader(this.novelId(), this.resumeSeq());
   }
 
-  openTool(kind: NovelToolKind): void {
-    const novel = this.novel();
-    if (novel) {
-      this.tabs.openNovelTool(kind, novel.id, displayName(novel));
-    }
+  titleOf(row: ChapterRow): string {
+    return this.reader.titleOf(this.novelId(), row);
+  }
+
+  isUntranslated(row: ChapterRow): boolean {
+    return this.translated() && this.translation.titleOf(this.novelId(), row.id, this.reader.readerTarget(this.novelId())) === null;
   }
 
   open(seq: number): void {
@@ -255,8 +257,19 @@ export class NovelChapters implements OnDestroy {
     return this.novels.chaptersOf(this.novelId());
   }
 
+  private buildTranslated(): boolean {
+    return this.reader.viewOf(this.novelId()).lang !== "src";
+  }
+
   private buildRows(): ChapterRow[] {
-    return filterChapters(this.all(), this.novels.chapterQuery());
+    const query = this.novels.chapterQuery();
+    const out: ChapterRow[] = [];
+    for (const row of this.all()) {
+      if (matchesChapter(row, query) || (this.translated() && matchesChapter({ ...row, title: this.titleOf(row) }, query))) {
+        out.push(row);
+      }
+    }
+    return out;
   }
 
   private buildResumeSeq(): number {

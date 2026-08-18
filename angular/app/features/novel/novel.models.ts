@@ -157,6 +157,17 @@ export type NovelScreen = "chapters" | "reading";
 
 export type ReaderMode = "read" | "edit";
 
+export type TargetLang = "EN" | "VI";
+
+export type ReaderLang = "src" | TargetLang;
+
+export type ReaderLayout = "single" | "parallel";
+
+export interface ReaderView {
+  lang: ReaderLang;
+  layout: ReaderLayout;
+}
+
 export type ReaderFont = "serif" | "sans" | "mono";
 
 export type ReaderPaper = "default" | "sepia" | "night";

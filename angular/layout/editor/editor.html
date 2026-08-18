@@ -56,7 +56,7 @@
       @case ("translation") {
         <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-translation-host">
           @if (tabs.active().novelId; as novelId) {
-            <app-novel-tool-placeholder kind="translation" [novelId]="novelId" />
+            <app-novel-translation [novelId]="novelId" />
           }
         </div>
       }

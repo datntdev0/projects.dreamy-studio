@@ -50,6 +50,7 @@ export function workspaceProvider(scenario: WorkspaceScenario = {}): Provider {
   const mock: Partial<WorkspaceService> = {
     state: signal<LoadState | null>(scenario.state ?? null),
     notice: signal<string | null>(scenario.notice ?? null),
+    switchNotice: signal<string | null>(null),
     current: signal<CurrentWorkspace | null>(scenario.current ?? null),
     appInfo: () => Promise.resolve(APP_INFO),
     recentList: () => Promise.resolve(recent),

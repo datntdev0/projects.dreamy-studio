@@ -6,8 +6,7 @@
       </div>
       <span class="spacer"></span>
       <div class="nv-bar-r" data-testid="novel-chapters-bar-right">
-        <button type="button" class="btn btn-sm" data-testid="novel-chapters-translation" (click)="openTool('translation')"><ds-icon name="lang" [size]="16" />{{ "novel.chapters.translationTool" | t }}</button>
-        <button type="button" class="btn btn-sm" data-testid="novel-chapters-knowledge" (click)="openTool('knowledge')"><ds-icon name="graph" [size]="16" />{{ "novel.chapters.knowledgeTool" | t }}</button>
+        <app-novel-lang-switch [novelId]="novelId()" />
         <button type="button" class="btn btn-sm" data-testid="novel-chapters-add" (click)="add()"><ds-icon name="plus" [size]="16" />{{ "novel.chapters.add" | t }}</button>
         <button type="button" class="btn btn-sm btn-primary" data-testid="novel-chapters-read" [disabled]="all().length === 0" (click)="read()"><ds-icon name="book" [size]="16" />{{ (resumeSeq() > 1 ? "novel.chapters.continue" : "novel.chapters.read") | t }}</button>
       </div>
@@ -20,6 +19,7 @@
     </div>
     <div class="nv-body" data-testid="novel-chapters-body">
       <ds-datatable [columns]="tableColumns" [rows]="rows()" trackKey="id" variant="fill" rowTestId="novel-chapter-row" [rowClass]="tableRowClass" data-testid="novel-chapters-table" (rowClick)="onRowClick($event)" (rowEnter)="onTableEnter($event)" (rowPointerDown)="onPointerDown($event)">
+        <ng-template dsCell="title" let-row><span [class.t-mute]="isUntranslated(chapterOf(row))" [attr.title]="isUntranslated(chapterOf(row)) ? ('novel.chapters.translation.none' | t) : null" data-testid="novel-chapter-title">{{ titleOf(chapterOf(row)) }}</span></ng-template>
         <ng-template dsCell="seq" let-row><span class="mono t-mute">{{ numberOf(chapterOf(row)) }}</span></ng-template>
         <ng-template dsCell="wordCount" let-row>{{ count(chapterOf(row).wordCount) }}</ng-template>
         <ng-template dsCell="translationStatus" let-row>

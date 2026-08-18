@@ -1,0 +1,58 @@
+<div class="tl-sub" data-testid="novel-translation-dict-sub">
+  <label class="search"><span class="sr-only">{{ "novel.translation.dict.search.label" | t }}</span><input class="input" type="search" data-testid="novel-translation-dict-search" [value]="query()" [attr.placeholder]="'novel.translation.dict.search.placeholder' | t" (input)="onQuery($event)"></label>
+  <span class="t-sm t-mute" data-testid="novel-translation-dict-count">{{ "novel.translation.dict.count" | t: { shown: rows().length, total: all().length } }}</span>
+  <span class="spacer"></span>
+  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-dict-new" (click)="startDraft()"><ds-icon name="plus" [size]="16" />{{ "novel.translation.dict.new" | t }}</button>
+</div>
+<div class="tl-main is-flat" data-testid="novel-translation-dict">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ "novel.translation.dict.col.src" | t }}</th>
+        <th>{{ "novel.translation.dict.col.dst" | t }}</th>
+        <th>{{ "novel.translation.dict.col.type" | t }}</th>
+        <th>{{ "novel.translation.dict.col.note" | t }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (draft(); as entry) {
+        <tr class="is-draft" data-testid="novel-translation-dict-draft">
+          <td><input #draftSource class="input is-inline" [value]="entry.src" [attr.placeholder]="'novel.translation.dict.col.src' | t" [attr.aria-label]="'novel.translation.dict.col.src' | t" autocomplete="off" data-testid="novel-translation-dict-draft-src" (input)="onDraft('src', $event)" (keydown.enter)="addDraft()" /></td>
+          <td><input class="input is-inline" [value]="entry.dst" [attr.placeholder]="'novel.translation.dict.col.dst' | t" [attr.aria-label]="'novel.translation.dict.col.dst' | t" autocomplete="off" data-testid="novel-translation-dict-draft-dst" (input)="onDraft('dst', $event)" (keydown.enter)="addDraft()" /></td>
+          <td>
+            <select class="select is-inline" [attr.aria-label]="'novel.translation.dict.col.type' | t" data-testid="novel-translation-dict-draft-type" (change)="onDraftType($event)">
+              @for (type of types; track type) {
+                <option [value]="type" [selected]="entry.type === type">{{ typeKey(type) | t }}</option>
+              }
+            </select>
+          </td>
+          <td><input class="input is-inline" [value]="entry.note" [attr.placeholder]="'novel.translation.dict.col.note' | t" [attr.aria-label]="'novel.translation.dict.col.note' | t" autocomplete="off" data-testid="novel-translation-dict-draft-note" (input)="onDraft('note', $event)" (keydown.enter)="addDraft()" /></td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.translation.dict.add' | t" [attr.data-tip]="'novel.translation.dict.addTip' | t" data-testid="novel-translation-dict-add" (click)="addDraft()"><ds-icon name="check" [size]="17" /></button>
+            <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.translation.dict.cancel' | t" [attr.data-tip]="'novel.translation.dict.cancel' | t" data-testid="novel-translation-dict-cancel" (click)="cancelDraft()"><ds-icon name="x" [size]="17" /></button>
+          </td>
+        </tr>
+      }
+      @for (entry of rows(); track entry.id) {
+        <tr data-testid="novel-translation-dict-row">
+          <td><input class="input is-inline" [value]="entry.src" [attr.aria-label]="'novel.translation.dict.col.src' | t" autocomplete="off" data-testid="novel-translation-dict-src" (change)="onField(entry, 'src', $event)" /></td>
+          <td><input class="input is-inline" [value]="entry.dst" [attr.aria-label]="'novel.translation.dict.col.dst' | t" autocomplete="off" data-testid="novel-translation-dict-dst" (change)="onField(entry, 'dst', $event)" /></td>
+          <td>
+            <select class="select is-inline" [attr.aria-label]="'novel.translation.dict.col.type' | t" data-testid="novel-translation-dict-type" (change)="onType(entry, $event)">
+              @for (type of types; track type) {
+                <option [value]="type" [selected]="entry.type === type">{{ typeKey(type) | t }}</option>
+              }
+            </select>
+          </td>
+          <td><input class="input is-inline" [value]="entry.note" [attr.aria-label]="'novel.translation.dict.col.note' | t" autocomplete="off" data-testid="novel-translation-dict-note" (change)="onField(entry, 'note', $event)" /></td>
+          <td class="row-actions"><button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.translation.dict.delete' | t" [attr.data-tip]="'novel.translation.dict.delete' | t" data-testid="novel-translation-dict-delete" (click)="remove(entry)"><ds-icon name="x" [size]="17" /></button></td>
+        </tr>
+      } @empty {
+        @if (!draft()) {
+          <tr><td colspan="5"><div class="empty" data-testid="novel-translation-dict-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "novel.translation.dict.empty.title" | t }}</h3><p class="t-sm t-mute">{{ "novel.translation.dict.empty.description" | t }}</p></div></div></td></tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

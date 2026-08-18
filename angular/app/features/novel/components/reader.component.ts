@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from "@angular/common";
 import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
 import { Icon } from "@components/icon";
 import { I18nKey } from "@app/core/i18n/i18n.models";
@@ -5,14 +6,19 @@ import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ToastTone } from "@app/core/toast/toast.models";
-import { NovelLang } from "../novel.models";
+import { ChapterRow } from "../novel.models";
 import { NovelSummary } from "../novel.models";
+import { ReaderLayout } from "../novel.models";
 import { ParagraphSaveResult } from "../novel.models";
 import { ReaderMode } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
+import { PassageTranslation, ChapterTranslation } from "../novel.translation.models";
+import { NOVEL_LANG_KEYS } from "../novel.rules";
+import { NovelTranslationService } from "../novel.translation.service";
 import { formatCount } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
+import { NovelLangSwitch } from "./lang-switch.component";
 
 interface ResultNotice {
   key: I18nKey;
@@ -29,19 +35,19 @@ const RESULT_NOTICES: Record<ParagraphSaveResult, ResultNotice | null> = {
 @Component({
   selector: "app-novel-reader",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [NgTemplateOutlet, Icon, I18nPipe, NovelLangSwitch],
   templateUrl: "./reader.component.html",
 })
 export class NovelReader {
   private readonly novels = inject(NovelService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
+  private readonly translation = inject(NovelTranslationService);
 
   readonly reader = inject(NovelReaderService);
   readonly novelId = input.required<number>();
   readonly count = formatCount;
   readonly flash = signal<number | null>(null);
-  readonly targetCode: NovelLang = "VI";
   readonly modes: ReaderMode[] = ["read", "edit"];
   readonly page = viewChild<ElementRef<HTMLElement>>("page");
   readonly editorRef = viewChild<ElementRef<HTMLTextAreaElement>>("editor");
@@ -49,6 +55,11 @@ export class NovelReader {
   readonly novel = computed(this.findNovel.bind(this));
   readonly langName = computed(this.buildLangName.bind(this));
   readonly targetName = computed(this.buildTargetName.bind(this));
+  readonly parallel = computed(this.buildParallel.bind(this));
+  readonly showTranslation = computed(this.buildShowTranslation.bind(this));
+  readonly chapterTranslation = computed(this.buildChapterTranslation.bind(this));
+  readonly heading = computed(this.buildHeading.bind(this));
+  readonly label = computed(this.buildLabel.bind(this));
 
   constructor() {
     effect(this.syncFocus.bind(this));
@@ -74,6 +85,18 @@ export class NovelReader {
     const value = Number((event.target as HTMLSelectElement).value);
     this.flash.set(null);
     void this.reader.gotoChapter(Math.floor(value) || 1);
+  }
+
+  setLayout(layout: ReaderLayout): void {
+    this.reader.setLayout(this.novelId(), layout);
+  }
+
+  titleOf(chapter: ChapterRow): string {
+    return this.parallel() ? chapter.title : this.reader.titleOf(this.novelId(), chapter);
+  }
+
+  passageOf(n: number): PassageTranslation | null {
+    return this.chapterTranslation()?.passages[n] ?? null;
   }
 
   setMode(mode: ReaderMode): void {
@@ -142,7 +165,35 @@ export class NovelReader {
   }
 
   private buildTargetName(): string {
-    return this.i18n.translate(`novel.lang.${this.targetCode}`);
+    return this.i18n.translate(NOVEL_LANG_KEYS[this.reader.readerTarget(this.novelId())]);
+  }
+
+  private buildParallel(): boolean {
+    return this.reader.view().layout === "parallel";
+  }
+
+  private buildShowTranslation(): boolean {
+    return this.parallel() || this.reader.view().lang !== "src";
+  }
+
+  private buildChapterTranslation(): ChapterTranslation | null {
+    const chapter = this.reader.current();
+    return chapter ? (this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).chapters[chapter.id] ?? null) : null;
+  }
+
+  private buildHeading(): string {
+    const chapter = this.reader.current();
+    if (!chapter) {
+      return "";
+    }
+    return this.titleOf(chapter);
+  }
+
+  private buildLabel(): string {
+    if (this.parallel()) {
+      return `${this.langName()} ⇄ ${this.targetName()}`;
+    }
+    return this.showTranslation() ? this.i18n.translate("novel.reader.langLabel.translated", { lang: this.targetName() }) : this.langName();
   }
 
   private syncFocus(): void {

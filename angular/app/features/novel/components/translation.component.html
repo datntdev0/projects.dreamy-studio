@@ -1,0 +1,60 @@
+@if (novel(); as novel) {
+  <div class="nv" data-testid="novel-translation">
+    <div class="nv-bar" data-testid="novel-translation-bar">
+      <div class="nv-bar-l" data-testid="novel-translation-bar-left">
+        <span class="nv-ttl" data-testid="novel-translation-title"><ds-cover size="xs" [image]="cover()" /><span class="t-ink">{{ nameOf(novel) }}</span><span class="badge">{{ novel.lang }}</span></span>
+        <span class="bar-sep"></span>
+        <label class="bar-field"><span>{{ "novel.translation.target.label" | t }}</span>
+          <select class="select" data-testid="novel-translation-target" [attr.aria-label]="'novel.translation.target.aria' | t" (change)="onTarget($event)">
+            @for (lang of targets(); track lang) {
+              <option [value]="lang" [selected]="lang === target()">{{ langKey(lang) | t }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <span class="spacer"></span>
+      <div class="nv-bar-r" data-testid="novel-translation-bar-right"></div>
+    </div>
+    @if (hasChapters()) {
+      <nav class="flow" data-testid="novel-translation-flow" [attr.aria-label]="'novel.translation.flow' | t">
+        @for (step of steps; track step; let i = $index; let last = $last) {
+          <button type="button" class="fs" data-testid="novel-translation-step" [attr.data-step]="step" [class.is-active]="step === view().step" [class.is-past]="i < index()" [class.is-warn]="isWarn(step)" [class.is-run]="isRunning(step)" [attr.aria-current]="step === view().step" (click)="go(step)">
+            <span class="fs-n">@if (i < index()) { <ds-icon name="check" [size]="13" /> } @else { {{ i + 1 }} }</span>
+            <span class="fs-t"><b>{{ labelKey(step) | t }}</b><small>{{ summary(step) }}</small></span>
+          </button>
+          @if (!last) {
+            <span class="fs-sep"><ds-icon name="chev-r" [size]="14" /></span>
+          }
+        }
+      </nav>
+    }
+    <div class="nv-body is-col" data-testid="novel-translation-body">
+      @if (!hasChapters()) {
+        <div class="empty" data-testid="novel-translation-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-translation-empty-title">{{ "novel.translation.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-translation-empty-description">{{ "novel.translation.empty.description" | t }}</p></div></div>
+      } @else {
+        @switch (view().step) {
+          @case ("dict") { <app-novel-translation-dictionary [novelId]="novelId()" /> }
+          @case ("guide") { <app-novel-translation-guidelines [novelId]="novelId()" /> }
+          @case ("trans") { <app-novel-translation-pipeline [novelId]="novelId()" /> }
+          @case ("result") { <app-novel-translation-result [novelId]="novelId()" /> }
+          @case ("warn") { <app-novel-translation-warnings [novelId]="novelId()" /> }
+        }
+      }
+    </div>
+    @if (hasChapters()) {
+      <footer class="flow-foot" data-testid="novel-translation-foot">
+        @if (previous(); as prev) {
+          <button type="button" class="btn btn-sm" data-testid="novel-translation-prev" (click)="go(prev)"><ds-icon name="chev-l" [size]="16" />{{ labelKey(prev) | t }}</button>
+        } @else {
+          <span></span>
+        }
+        <span class="t-sm t-mute flow-hint" data-testid="novel-translation-hint">{{ hintKey(view().step) | t }}</span>
+        @if (following(); as next) {
+          <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-next" (click)="go(next)">{{ labelKey(next) | t }}<ds-icon name="chev-r" [size]="16" /></button>
+        } @else {
+          <span></span>
+        }
+      </footer>
+    }
+  </div>
+}

@@ -1,11 +1,17 @@
-import { Component, inject } from "@angular/core";
+import { Component, computed, inject, signal } from "@angular/core";
 import { Badge } from "../../../../components/badge";
 import { Icon } from "../../../../components/icon";
+import { TabOption, Tabs } from "../../../../components/tabs";
 import { I18nKey } from "../../../core/i18n/i18n.models";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { I18nService } from "../../../core/i18n/i18n.service";
 import { CLOUD_PROVIDERS } from "../llm.providers";
 import { LlmService, isReady } from "../llm.service";
 import { LlmProvider } from "../settings.models";
+
+type LlmTab = "cli" | "cloud";
+
+const LLM_TABS: LlmTab[] = ["cli", "cloud"];
 
 type Tone = "default" | "primary" | "running" | "success" | "warning" | "danger" | "info";
 
@@ -18,25 +24,27 @@ export interface LlmMessage {
 @Component({
   selector: "app-settings-llm",
   standalone: true,
-  imports: [Badge, Icon, I18nPipe],
+  imports: [Badge, Icon, I18nPipe, Tabs],
   templateUrl: "./llm.component.html",
   host: { "data-testid": "settings-llm" },
 })
 export class SettingsLlmComponent {
   private readonly llm = inject(LlmService);
+  private readonly i18n = inject(I18nService);
 
   readonly providers = this.llm.providers;
-  readonly defaultId = this.llm.defaultId;
-  readonly ready = this.llm.ready;
   readonly scanning = this.llm.scanning;
   readonly cloud = CLOUD_PROVIDERS;
+  readonly tab = signal<LlmTab>("cli");
+  readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
   constructor() {
     void this.llm.ensureLoaded();
   }
 
-  isDefault(provider: LlmProvider): boolean {
-    return provider.id === this.defaultId();
+  onTab(value: string): void {
+    const tab = LLM_TABS.find((item) => item === value);
+    this.tab.set(tab ?? "cli");
   }
 
   mode(provider: LlmProvider): string {
@@ -56,9 +64,6 @@ export class SettingsLlmComponent {
     if (!provider.found || provider.signedIn === false) {
       return "warning";
     }
-    if (!provider.enabled) {
-      return "default";
-    }
     const tones: Record<string, Tone> = { none: "default", checking: "running", ok: "success", error: "danger" };
     return tones[provider.status];
   }
@@ -70,9 +75,6 @@ export class SettingsLlmComponent {
     if (provider.signedIn === false) {
       return "settings.llm.status.notSignedIn";
     }
-    if (!provider.enabled) {
-      return "settings.llm.status.disabled";
-    }
     const keys: Record<string, I18nKey> = {
       none: "settings.llm.status.notChecked",
       checking: "settings.llm.status.checking",
@@ -80,10 +82,6 @@ export class SettingsLlmComponent {
       error: "settings.llm.status.error",
     };
     return keys[provider.status];
-  }
-
-  capKey(cap: string): I18nKey {
-    return `settings.llm.cap.${cap}` as I18nKey;
   }
 
   message(provider: LlmProvider): LlmMessage {
@@ -124,26 +122,8 @@ export class SettingsLlmComponent {
     void this.llm.logout(provider.id);
   }
 
-  makeDefault(provider: LlmProvider): void {
-    void this.llm.setDefault(provider.id);
-  }
-
-  onDefault(id: string): void {
-    if (id) {
-      void this.llm.setDefault(id);
-    }
-  }
-
-  onEnable(provider: LlmProvider, enabled: boolean): void {
-    void this.llm.setEnabled(provider.id, enabled);
-  }
-
   onPath(provider: LlmProvider, value: string): void {
     void this.llm.setPath(provider.id, value);
-  }
-
-  onArgs(provider: LlmProvider, value: string): void {
-    void this.llm.setArgs(provider.id, value);
   }
 
   copyPath(provider: LlmProvider): void {
@@ -155,10 +135,13 @@ export class SettingsLlmComponent {
   }
 
   canCheck(provider: LlmProvider): boolean {
-    return provider.enabled && provider.status !== "checking";
+    return provider.status !== "checking";
   }
 
-  canDefault(provider: LlmProvider): boolean {
-    return isReady(provider) && !this.isDefault(provider);
+  private buildTabOptions(): TabOption[] {
+    return [
+      { value: "cli", label: this.i18n.translate("settings.llm.cli"), icon: "terminal" },
+      { value: "cloud", label: this.i18n.translate("settings.llm.cloud"), icon: "cloud" },
+    ];
   }
 }

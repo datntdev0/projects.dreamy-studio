@@ -2,29 +2,17 @@
   <header class="st-head" data-testid="settings-llm-head"><h3 class="t-display-xs" data-testid="settings-llm-title">{{ "settings.section.llm" | t }}</h3></header>
   <p class="t-sm t-mute" data-testid="settings-llm-intro">{{ "settings.llm.intro" | t }}</p>
   <div class="st-note" data-testid="settings-llm-note"><ds-icon name="shield" [size]="15" /><span>{{ "settings.llm.note" | t }}</span></div>
-  <section class="st-card" data-testid="settings-llm-default">
-    <header class="st-card-h"><span class="eyebrow">{{ "settings.llm.default" | t }}</span><ds-badge [tone]="ready().length ? 'success' : 'warning'" data-testid="settings-llm-ready-count">{{ ready().length ? ("settings.llm.readyCount" | t: { ready: ready().length, total: providers().length }) : ("settings.llm.noneReady" | t) }}</ds-badge></header>
-    <div class="field">
-      <label for="settings-llm-default-select">{{ "settings.llm.default.label" | t }}</label>
-      <span class="field-hint">{{ "settings.llm.default.hint" | t }}</span>
-      <select #choice id="settings-llm-default-select" class="select" data-testid="settings-llm-default-select" [disabled]="!ready().length" (change)="onDefault(choice.value)">
-        @for (item of ready(); track item.id) {
-          <option [value]="item.id" [selected]="item.id === defaultId()">{{ item.name }}</option>
-        } @empty {
-          <option value="">{{ "settings.llm.noneReady" | t }}</option>
-        }
-      </select>
-    </div>
-  </section>
-  <header class="llm-sec-h" data-testid="settings-llm-cli-head"><span class="eyebrow">{{ "settings.llm.cli" | t }}</span><button type="button" class="btn btn-sm" data-testid="settings-llm-rescan" [disabled]="scanning()" (click)="scan()"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.rescan" | t }}</button></header>
-  <section class="llm-list" [attr.aria-label]="'settings.llm.cli.label' | t" data-testid="settings-llm-cli">
+  <ds-tabs data-testid="settings-llm-tabs" idPrefix="settings-llm" [label]="'settings.llm.tabs' | t" [options]="tabOptions()" [value]="tab()" (valueChange)="onTab($event)" />
+  @switch (tab()) {
+  @case ("cli") {
+  <header class="llm-sec-h llm-sec-end" data-testid="settings-llm-cli-head"><button type="button" class="btn btn-sm" data-testid="settings-llm-rescan" [disabled]="scanning()" (click)="scan()"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.rescan" | t }}</button></header>
+  <section class="llm-list" role="tabpanel" id="settings-llm-panel-cli" aria-labelledby="settings-llm-tab-cli" [attr.aria-label]="'settings.llm.cli.label' | t" data-testid="settings-llm-cli">
     @for (p of providers(); track p.id) {
-      <article class="llm-card" [class]="mode(p)" [class.is-off]="!p.enabled" [attr.data-testid]="'settings-llm-' + p.id">
+      <article class="llm-card" [class]="mode(p)" [attr.data-testid]="'settings-llm-' + p.id">
         <header class="llm-card-h">
-          <div class="llm-card-t"><span class="t-ink llm-name" [attr.data-testid]="'settings-llm-' + p.id + '-name'">{{ p.name }}</span><ds-badge [tone]="statusTone(p)" [attr.data-testid]="'settings-llm-' + p.id + '-badge'">{{ statusKey(p) | t }}</ds-badge>@if (isDefault(p)) {<ds-badge tone="primary" [attr.data-testid]="'settings-llm-' + p.id + '-default-badge'">{{ "settings.llm.status.default" | t }}</ds-badge>}</div>
-          <label class="check llm-on"><input type="checkbox" [attr.data-testid]="'settings-llm-' + p.id + '-enable'" [checked]="p.found && p.enabled" [disabled]="!p.found" #enable (change)="onEnable(p, enable.checked)"><span>{{ "settings.llm.enable" | t }}</span></label>
+          <div class="llm-card-t"><span class="t-ink llm-name" [attr.data-testid]="'settings-llm-' + p.id + '-name'">{{ p.name }}</span><ds-badge [tone]="statusTone(p)" [attr.data-testid]="'settings-llm-' + p.id + '-badge'">{{ statusKey(p) | t }}</ds-badge></div>
         </header>
-        <div class="llm-meta"><span class="path t-mute">{{ p.command }}</span>@if (p.version) {<ds-badge>{{ p.version }}</ds-badge>}@for (cap of p.caps; track cap) {<ds-badge tone="primary">{{ capKey(cap) | t }}</ds-badge>}</div>
+        <div class="llm-meta"><span class="path t-mute">{{ p.command }}</span></div>
         <div class="llm-steps">
           <div class="llm-step" [class.is-done]="p.found" [class.is-todo]="!p.found" [attr.data-testid]="'settings-llm-' + p.id + '-install'">
             <span class="llm-n">@if (p.found) {<ds-icon name="check" [size]="13" />} @else {1}</span>
@@ -72,11 +60,6 @@
         @if (p.status === "error" && p.error) {
           <div class="llm-err" role="alert" [attr.data-testid]="'settings-llm-' + p.id + '-error'"><ds-icon name="alert" [size]="14" /><span>{{ p.error }}</span></div>
         }
-        @if (p.found) {
-          <div class="field"><label [attr.for]="'settings-llm-' + p.id + '-args'">{{ "settings.llm.args" | t }}</label>
-            <input #argsInput [id]="'settings-llm-' + p.id + '-args'" class="input mono-in" [attr.data-testid]="'settings-llm-' + p.id + '-args'" [value]="p.args" [placeholder]="'settings.llm.args.placeholder' | t" autocomplete="off" spellcheck="false" (change)="onArgs(p, argsInput.value)">
-            <span class="field-hint">{{ "settings.llm.args.hint" | t }}</span></div>
-        }
         <footer class="llm-foot">
           @let msg = message(p);
           <div class="llm-msg t-sm" [class.is-ok]="msg.tone === 'ok'" [class.is-warn]="msg.tone === 'warn'" role="status" [attr.data-testid]="'settings-llm-' + p.id + '-status'">
@@ -87,18 +70,19 @@
             @if (p.signedIn === true && p.canLogout) {<button type="button" class="btn btn-sm" [attr.data-testid]="'settings-llm-' + p.id + '-signout'" (click)="logout(p)">{{ "settings.llm.signout" | t }}</button>}
             <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== true && p.signedIn !== null" [disabled]="p.signing" [attr.data-testid]="'settings-llm-' + p.id + '-signin'" (click)="login(p)"><ds-icon name="terminal" [size]="16" />{{ (p.signedIn === true ? "settings.llm.signinAgain" : "settings.llm.signin") | t }}</button>
             <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== false" [disabled]="!canCheck(p)" [attr.data-testid]="'settings-llm-' + p.id + '-check'" (click)="check(p)"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.check" | t }}</button>
-            <button type="button" class="btn btn-sm" [disabled]="!canDefault(p)" [attr.data-testid]="'settings-llm-' + p.id + '-set-default'" (click)="makeDefault(p)">{{ "settings.llm.setDefault" | t }}</button>
           }
         </footer>
       </article>
     }
   </section>
-  <header class="llm-sec-h" data-testid="settings-llm-cloud-head"><span class="eyebrow">{{ "settings.llm.cloud" | t }}</span><ds-badge tone="info" data-testid="settings-llm-cloud-soon">{{ "settings.llm.soon" | t }}</ds-badge></header>
+  }
+  @case ("cloud") {
+  <header class="llm-sec-h" data-testid="settings-llm-cloud-head"><ds-badge tone="info" data-testid="settings-llm-cloud-soon">{{ "settings.llm.soon" | t }}</ds-badge></header>
   <p class="t-sm t-mute" data-testid="settings-llm-cloud-intro">{{ "settings.llm.cloud.intro" | t }}</p>
-  <section class="llm-list" [attr.aria-label]="'settings.llm.cloud.label' | t" data-testid="settings-llm-cloud">
+  <section class="llm-list" role="tabpanel" id="settings-llm-panel-cloud" aria-labelledby="settings-llm-tab-cloud" [attr.aria-label]="'settings.llm.cloud.label' | t" data-testid="settings-llm-cloud">
     @for (c of cloud; track c.id) {
       <article class="llm-card llm-cloud" aria-disabled="true" [attr.data-testid]="'settings-llm-cloud-' + c.id">
-        <header class="llm-card-h"><div class="llm-card-t"><span class="t-ink llm-name">{{ c.name }}</span><ds-badge tone="info">{{ "settings.llm.soon" | t }}</ds-badge></div><label class="check llm-on"><input type="checkbox" disabled [attr.data-testid]="'settings-llm-cloud-' + c.id + '-enable'"><span>{{ "settings.llm.enable" | t }}</span></label></header>
+        <header class="llm-card-h"><div class="llm-card-t"><span class="t-ink llm-name">{{ c.name }}</span><ds-badge tone="info">{{ "settings.llm.soon" | t }}</ds-badge></div></header>
         <div class="llm-meta">@if (c.site) {<span class="path t-mute">{{ c.site }}</span>}</div>
         <p class="t-sm t-mute">{{ c.note | t }}</p>
         <div class="llm-fields">
@@ -108,4 +92,6 @@
       </article>
     }
   </section>
+  }
+  }
 </div>

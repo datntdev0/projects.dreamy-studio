@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from "@angular/core";
+import { Injectable, inject, signal } from "@angular/core";
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { I18nService } from "../../core/i18n/i18n.service";
 import { ToastService } from "../../core/toast/toast.service";
@@ -8,7 +8,7 @@ const SIGN_IN_POLL_MS = 3000;
 const SIGN_IN_POLL_LIMIT = 100;
 
 export function isReady(provider: LlmProvider): boolean {
-  return provider.found && provider.enabled && provider.status === "ok" && provider.signedIn !== false;
+  return provider.found && provider.status === "ok" && provider.signedIn !== false;
 }
 
 function pause(ms: number): Promise<void> {
@@ -39,9 +39,7 @@ export class LlmService {
   private loaded = false;
 
   readonly providers = signal<LlmProvider[]>([]);
-  readonly defaultId = signal<string | null>(null);
   readonly scanning = signal(false);
-  readonly ready = computed(this.readyProviders.bind(this));
 
   async ensureLoaded(): Promise<void> {
     if (this.loaded) {
@@ -68,7 +66,6 @@ export class LlmService {
     } finally {
       this.scanning.set(false);
     }
-    await this.reconcileDefault();
   }
 
   async check(id: string): Promise<void> {
@@ -77,13 +74,6 @@ export class LlmService {
       return;
     }
     await this.probeProvider(provider);
-    await this.reconcileDefault();
-  }
-
-  async setEnabled(id: string, enabled: boolean): Promise<void> {
-    this.patch(id, { enabled });
-    await this.saveProvider(id);
-    await this.reconcileDefault();
   }
 
   async setPath(id: string, path: string): Promise<void> {
@@ -100,24 +90,6 @@ export class LlmService {
     if (await this.saveProvider(id)) {
       await this.check(id);
     }
-  }
-
-  async setArgs(id: string, args: string): Promise<void> {
-    const provider = this.find(id);
-    const value = args.trim();
-    if (!provider || value === provider.args) {
-      return;
-    }
-    this.patch(id, { args: value });
-    await this.saveProvider(id);
-  }
-
-  async setDefault(id: string): Promise<void> {
-    const provider = this.find(id);
-    if (!provider || !isReady(provider)) {
-      return;
-    }
-    await this.saveDefault(id);
   }
 
   async login(id: string): Promise<void> {
@@ -172,17 +144,12 @@ export class LlmService {
     }
   }
 
-  private readyProviders(): LlmProvider[] {
-    return this.providers().filter(isReady);
-  }
-
   private find(id: string): LlmProvider | undefined {
     return this.providers().find((provider) => provider.id === id);
   }
 
   private apply(view: LlmView): void {
     this.providers.set(view.providers.map(fresh));
-    this.defaultId.set(view.default);
   }
 
   private patch(id: string, change: Partial<LlmProvider>): void {
@@ -235,7 +202,6 @@ export class LlmService {
         return false;
       }
       this.patch(provider.id, { ...this.fromProbe(probe), signing: false });
-      await this.reconcileDefault();
       return true;
     } catch {
       return false;
@@ -247,32 +213,13 @@ export class LlmService {
     if (!provider) {
       return false;
     }
-    const settings: LlmCliSettings = { enabled: provider.enabled, path: provider.path, args: provider.args };
+    const settings: LlmCliSettings = { path: provider.path };
     try {
       await this.ipc.invoke<LlmView>("llm_provider_save", { id, provider: settings });
       return true;
     } catch {
       this.toasts.show(this.i18n.translate("settings.general.saveFailed"), "danger");
       return false;
-    }
-  }
-
-  private async saveDefault(id: string | null): Promise<void> {
-    const previous = this.defaultId();
-    this.defaultId.set(id);
-    try {
-      await this.ipc.invoke<LlmView>("llm_default_save", { id });
-    } catch {
-      this.defaultId.set(previous);
-      this.toasts.show(this.i18n.translate("settings.general.saveFailed"), "danger");
-    }
-  }
-
-  private async reconcileDefault(): Promise<void> {
-    const current = this.find(this.defaultId() ?? "");
-    const first = this.ready()[0];
-    if (first && (!current || !isReady(current))) {
-      await this.saveDefault(first.id);
     }
   }
 

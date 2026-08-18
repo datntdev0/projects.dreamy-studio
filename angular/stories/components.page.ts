@@ -9,18 +9,20 @@ import { Dialog } from "../components/dialog";
 import { Form, FormOption } from "../components/form";
 import { Icon } from "../components/icon";
 import { Segments, SegmentOption } from "../components/segments";
+import { Tabs, TabOption } from "../components/tabs";
 import { Toast } from "../components/toast";
 import { Tooltip } from "../components/tooltip";
 
 @Component({
   selector: "app-components-page",
   standalone: true,
-  imports: [Icon, Button, Form, Segments, Chip, Card, Badge, Toast, Tooltip, Breadcrumbs, Datatable, DatatableCell, Dialog],
+  imports: [Icon, Button, Form, Segments, Tabs, Chip, Card, Badge, Toast, Tooltip, Breadcrumbs, Datatable, DatatableCell, Dialog],
   templateUrl: "./components.page.html",
 })
 export class ComponentsPage {
   view = "grid";
   density = "compact";
+  tab = "interface";
   chipSelected = true;
   selectedRow = 1;
   lastBreadcrumb = "";
@@ -34,6 +36,11 @@ export class ComponentsPage {
     { value: "compact", label: "Gọn" },
     { value: "comfortable", label: "Thoáng" },
     { value: "unavailable", label: "Đã khóa", disabled: true },
+  ];
+  readonly tabOptions: TabOption[] = [
+    { value: "interface", label: "Giao diện", icon: "settings" },
+    { value: "storage", label: "Dữ liệu và lưu trữ", icon: "hdd" },
+    { value: "locked", label: "Đã khóa", disabled: true },
   ];
   readonly languageOptions: FormOption[] = [
     { value: "vi", label: "Tiếng Việt" },

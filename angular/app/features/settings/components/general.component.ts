@@ -1,5 +1,6 @@
-import { Component, computed, inject } from "@angular/core";
+import { Component, computed, inject, signal } from "@angular/core";
 import { SegmentOption, Segments } from "../../../../components/segments";
+import { TabOption, Tabs } from "../../../../components/tabs";
 import { Icon } from "../../../../components/icon";
 import { I18nPipe } from "../../../core/i18n/i18n.pipe";
 import { I18nService, isLanguage } from "../../../core/i18n/i18n.service";
@@ -7,6 +8,8 @@ import { ThemeService, isTheme } from "../../../core/theme/theme.service";
 import { WorkspaceService } from "../../workspace/workspace.service";
 import { SettingsFolderTarget } from "../settings.models";
 import { SettingsService } from "../settings.service";
+
+type GeneralTab = "interface" | "storage";
 
 const LANGUAGE_OPTIONS: SegmentOption[] = [
   { value: "vi", label: "Tiếng Việt" },
@@ -16,7 +19,7 @@ const LANGUAGE_OPTIONS: SegmentOption[] = [
 @Component({
   selector: "app-settings-general",
   standalone: true,
-  imports: [Icon, I18nPipe, Segments],
+  imports: [Icon, I18nPipe, Segments, Tabs],
   templateUrl: "./general.component.html",
   host: { "data-testid": "settings-general" },
 })
@@ -33,6 +36,8 @@ export class SettingsGeneralComponent {
   readonly file = this.settings.file;
   readonly languageOptions = LANGUAGE_OPTIONS;
   readonly themeOptions = computed(this.buildThemeOptions.bind(this));
+  readonly tab = signal<GeneralTab>("interface");
+  readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
   onLanguage(value: string): void {
     if (isLanguage(value)) {
@@ -46,12 +51,19 @@ export class SettingsGeneralComponent {
     }
   }
 
-  reset(): void {
-    this.settings.resetGeneral();
+  onTab(value: string): void {
+    this.tab.set(value === "storage" ? "storage" : "interface");
   }
 
   openFolder(target: SettingsFolderTarget): void {
     void this.settings.openFolder(target);
+  }
+
+  private buildTabOptions(): TabOption[] {
+    return [
+      { value: "interface", label: this.i18n.translate("settings.general.interface"), icon: "eye" },
+      { value: "storage", label: this.i18n.translate("settings.general.storage"), icon: "hdd" },
+    ];
   }
 
   private buildThemeOptions(): SegmentOption[] {

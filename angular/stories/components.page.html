@@ -53,6 +53,14 @@
   </section>
 
   <section>
+    <div class="section-head"><h2>Tabs</h2><code>ds-tabs</code></div>
+    <div class="demo">
+      <ds-tabs label="Mục cài đặt" idPrefix="demo" [options]="tabOptions" [(value)]="tab" />
+      <span class="note">Đang chọn: {{ tab }} · ← → Home End để chuyển tab</span>
+    </div>
+  </section>
+
+  <section>
     <div class="section-head"><h2>Chip</h2><code>ds-chip</code></div>
     <div class="demo row">
       <ds-chip label="Default" />

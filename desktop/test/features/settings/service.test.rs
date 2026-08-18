@@ -129,8 +129,6 @@ fn lists_every_cli_with_defaults_before_anything_is_saved() {
     let view = service(&dir).llm_view();
     let ids: Vec<_> = view.providers.iter().map(|provider| provider.id).collect();
     assert_eq!(ids, ["claude", "antigravity", "codex"]);
-    assert_eq!(view.default, None);
-    assert!(view.providers.iter().all(|provider| provider.enabled));
     assert!(
         view.providers
             .iter()
@@ -159,16 +157,12 @@ fn gives_each_isolated_cli_a_profile_directory_in_the_data_directory() {
 fn persists_a_cli_and_trims_what_was_typed() {
     let dir = TempDir::new().unwrap();
     let provider = CliSettings {
-        enabled: Some(false),
         path: Some("  C:/tools/claude.cmd ".to_string()),
-        args: Some(" --max-turns 5 ".to_string()),
     };
     service(&dir).save_llm_provider("claude", provider).unwrap();
     let view = service(&dir).llm_view();
-    assert!(!view.providers[0].enabled);
     assert_eq!(view.providers[0].path, "C:/tools/claude.cmd");
-    assert_eq!(view.providers[0].args, "--max-turns 5");
-    assert!(view.providers[2].enabled);
+    assert!(view.providers[2].path.is_empty());
 }
 
 #[test]
@@ -180,24 +174,9 @@ fn rejects_an_unknown_cli() {
             .save_llm_provider("gemini", CliSettings::default())
             .is_err()
     );
-    assert!(
-        service
-            .save_llm_default(Some("gemini".to_string()))
-            .is_err()
-    );
     assert!(service.probe_llm("gemini").is_err());
     assert!(service.login_llm("gemini").is_err());
     assert!(service.logout_llm("gemini").is_err());
-}
-
-#[test]
-fn persists_the_default_cli_and_can_clear_it() {
-    let dir = TempDir::new().unwrap();
-    let service = service(&dir);
-    let view = service.save_llm_default(Some("codex".to_string())).unwrap();
-    assert_eq!(view.default.as_deref(), Some("codex"));
-    assert_eq!(service.llm_view().default.as_deref(), Some("codex"));
-    assert_eq!(service.save_llm_default(None).unwrap().default, None);
 }
 
 #[test]
@@ -210,22 +189,20 @@ fn saving_the_llm_settings_keeps_the_other_sections() {
     };
     service.save_general(general.clone()).unwrap();
     service
-        .save_llm_default(Some("claude".to_string()))
+        .save_llm_provider("claude", CliSettings::default())
         .unwrap();
     assert_eq!(service.general(), general);
 }
 
 #[test]
-fn ignores_a_stored_default_that_is_not_a_known_cli() {
+fn ignores_the_removed_default_enabled_and_args_keys_in_a_stored_file() {
     let dir = TempDir::new().unwrap();
     std::fs::write(
         dir.path().join(SETTINGS_FILE),
-        r#"{"llm":{"default":"gemini","providers":{"claude":{"enabled":"yes","path":"x"}}}}"#,
+        r#"{"llm":{"default":"claude","providers":{"claude":{"enabled":false,"args":"--x","path":"x"}}}}"#,
     )
     .unwrap();
     let view = service(&dir).llm_view();
-    assert_eq!(view.default, None);
-    assert!(view.providers[0].enabled);
     assert_eq!(view.providers[0].path, "x");
 }
 

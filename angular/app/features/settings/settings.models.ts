@@ -48,20 +48,15 @@ export interface LlmCliView {
   loginCommand: string;
   canLogout: boolean;
   canDetectLogin: boolean;
-  enabled: boolean;
   path: string;
-  args: string;
 }
 
 export interface LlmView {
-  default: string | null;
   providers: LlmCliView[];
 }
 
 export interface LlmCliSettings {
-  enabled: boolean;
   path: string;
-  args: string;
 }
 
 export interface LlmProbe {

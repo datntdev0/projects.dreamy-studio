@@ -81,12 +81,6 @@ pub async fn llm_provider_save(
 }
 
 #[tauri::command]
-pub async fn llm_default_save(app: AppHandle, id: Option<String>) -> Result<LlmView, String> {
-    let task = spawn_blocking(move || app.state::<SettingsService>().save_llm_default(id));
-    task.await.map_err(|error| error.to_string())?
-}
-
-#[tauri::command]
 pub async fn llm_probe(app: AppHandle, id: String) -> Result<CliProbe, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().probe_llm(&id));
     task.await.map_err(|error| error.to_string())?

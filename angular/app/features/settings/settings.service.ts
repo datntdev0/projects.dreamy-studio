@@ -1,9 +1,9 @@
 import { Injectable, inject, signal } from "@angular/core";
 import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
 import { Language } from "../../core/i18n/i18n.models";
-import { DEFAULT_LANGUAGE, I18nService } from "../../core/i18n/i18n.service";
+import { I18nService } from "../../core/i18n/i18n.service";
 import { Theme } from "../../core/theme/theme.models";
-import { DEFAULT_THEME, ThemeService } from "../../core/theme/theme.service";
+import { ThemeService } from "../../core/theme/theme.service";
 import { ToastService } from "../../core/toast/toast.service";
 import { GeneralSettings, LayoutSettings, SettingsFolderTarget, SettingsSectionId, SettingsView } from "./settings.models";
 
@@ -54,12 +54,6 @@ export class SettingsService {
 
   setTheme(theme: Theme): void {
     this.themes.setTheme(theme);
-    this.persistGeneral();
-  }
-
-  resetGeneral(): void {
-    this.i18n.setLanguage(DEFAULT_LANGUAGE);
-    this.themes.setTheme(DEFAULT_THEME);
     this.persistGeneral();
   }
 

@@ -97,21 +97,6 @@ impl SettingsService {
         Ok(settings.llm.view(&self.data_dir()))
     }
 
-    pub fn save_llm_default(&self, id: Option<String>) -> Result<LlmView, String> {
-        if let Some(id) = &id
-            && spec(id).is_none()
-        {
-            return Err(format!("Unknown LLM provider: {id}"));
-        }
-        let _guard = self.lock();
-        let mut settings = self.repository.load().map_err(|error| error.to_string())?;
-        settings.llm.default = id;
-        self.repository
-            .save(&settings)
-            .map_err(|error| error.to_string())?;
-        Ok(settings.llm.view(&self.data_dir()))
-    }
-
     pub fn probe_llm(&self, id: &str) -> Result<CliProbe, String> {
         let (spec, provider) = self.llm_target(id)?;
         Ok(probe(spec, provider.path(), &self.data_dir()))

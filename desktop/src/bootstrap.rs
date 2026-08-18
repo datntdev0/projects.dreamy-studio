@@ -47,7 +47,6 @@ pub fn run() {
             commands::settings::settings_layout_save,
             commands::settings::llm_get,
             commands::settings::llm_provider_save,
-            commands::settings::llm_default_save,
             commands::settings::llm_probe,
             commands::settings::llm_login,
             commands::settings::llm_logout,

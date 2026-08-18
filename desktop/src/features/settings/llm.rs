@@ -76,51 +76,23 @@ pub struct CliSettings {
         deserialize_with = "lenient",
         skip_serializing_if = "Option::is_none"
     )]
-    pub enabled: Option<bool>,
-    #[serde(
-        default,
-        deserialize_with = "lenient",
-        skip_serializing_if = "Option::is_none"
-    )]
     pub path: Option<String>,
-    #[serde(
-        default,
-        deserialize_with = "lenient",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub args: Option<String>,
 }
 
 impl CliSettings {
     pub fn normalized(self) -> Self {
         Self {
-            enabled: self.enabled,
             path: self.path.map(|path| path.trim().to_string()),
-            args: self.args.map(|args| args.trim().to_string()),
         }
-    }
-
-    pub fn is_enabled(&self) -> bool {
-        self.enabled.unwrap_or(true)
     }
 
     pub fn path(&self) -> &str {
         self.path.as_deref().unwrap_or("")
     }
-
-    pub fn args(&self) -> &str {
-        self.args.as_deref().unwrap_or("")
-    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LlmSettings {
-    #[serde(
-        default,
-        deserialize_with = "lenient",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub default: Option<String>,
     #[serde(default, deserialize_with = "lenient")]
     pub providers: BTreeMap<String, CliSettings>,
 }
@@ -151,16 +123,11 @@ impl LlmSettings {
                     login_command: spec.login_command(),
                     can_logout: spec.logout_args.is_some(),
                     can_detect_login: spec.status_args.is_some(),
-                    enabled: settings.is_enabled(),
                     path: settings.path().to_string(),
-                    args: settings.args().to_string(),
                 }
             })
             .collect();
-        LlmView {
-            default: self.default.clone().filter(|id| spec(id).is_some()),
-            providers,
-        }
+        LlmView { providers }
     }
 }
 
@@ -176,14 +143,11 @@ pub struct CliView {
     pub login_command: String,
     pub can_logout: bool,
     pub can_detect_login: bool,
-    pub enabled: bool,
     pub path: String,
-    pub args: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LlmView {
-    pub default: Option<String>,
     pub providers: Vec<CliView>,
 }

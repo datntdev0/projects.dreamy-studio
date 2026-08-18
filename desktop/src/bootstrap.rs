@@ -170,9 +170,10 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     let repository = WorkspaceRepository::new(container.database_path.clone());
     let service = WorkspaceService::new(repository);
     let loader = WorkspaceLoader::from_container(container, service.clone());
-    app.manage(SettingsService::new(SettingsRepository::new(
-        container.settings_path.clone(),
-    )));
+    app.manage(
+        SettingsService::new(SettingsRepository::new(container.settings_path.clone()))
+            .with_status(container.llm_status.clone()),
+    );
     app.manage(WorkspaceSession::new());
     app.manage(service);
     app.manage(loader);

@@ -5,7 +5,12 @@ use tauri::App;
 use tauri::Manager;
 use tauri::Runtime;
 
+use crate::features::settings::check::LlmCheck;
+use crate::features::settings::check::LlmChecker;
+use crate::features::settings::check::LlmStatus;
+use crate::features::settings::check::NoLlmCheck;
 use crate::features::settings::repository::SETTINGS_FILE;
+use crate::features::settings::repository::SettingsRepository;
 use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendLaunch;
 use crate::infra::backend::BackendProcess;
@@ -38,6 +43,8 @@ pub struct AppContainer {
     pub settings_path: PathBuf,
     pub logger: Logger,
     pub backend: Arc<dyn BackendHost>,
+    pub llm_status: LlmStatus,
+    pub llm: Arc<dyn LlmChecker>,
 }
 
 impl AppContainer {
@@ -52,7 +59,15 @@ impl AppContainer {
     pub fn from_root(root: PathBuf) -> Self {
         let logs = root.join("logs");
         let backend = BackendProcess::new(BackendLaunch::resolve(logs));
-        Self::with_backend(root, Arc::new(backend))
+        let mut container = Self::with_backend(root, Arc::new(backend));
+        let repository = SettingsRepository::new(container.settings_path.clone());
+        let data_dir = container.directories.root.clone();
+        container.llm = Arc::new(LlmCheck::new(
+            repository,
+            data_dir,
+            container.llm_status.clone(),
+        ));
+        container
     }
 
     pub fn with_backend(root: PathBuf, backend: Arc<dyn BackendHost>) -> Self {
@@ -67,6 +82,8 @@ impl AppContainer {
             settings_path,
             logger,
             backend,
+            llm_status: LlmStatus::default(),
+            llm: Arc::new(NoLlmCheck),
         }
     }
 }

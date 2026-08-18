@@ -9,6 +9,8 @@ use std::process::Command;
 use std::process::Stdio;
 use std::time::Duration;
 use std::time::Instant;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 const POLL_INTERVAL: Duration = Duration::from_millis(25);
@@ -31,6 +33,7 @@ pub struct CliProbe {
     pub account: String,
     pub error: String,
     pub latency_ms: u64,
+    pub checked_at_ms: u64,
 }
 
 impl CliProbe {
@@ -45,6 +48,7 @@ impl CliProbe {
             account: String::new(),
             error: String::new(),
             latency_ms: 0,
+            checked_at_ms: 0,
         }
     }
 }
@@ -57,6 +61,19 @@ struct Captured {
 }
 
 pub fn probe(spec: &CliSpec, configured: &str, data_dir: &Path) -> CliProbe {
+    let mut result = run_probe(spec, configured, data_dir);
+    result.checked_at_ms = now_ms();
+    result
+}
+
+fn now_ms() -> u64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(elapsed) => u64::try_from(elapsed.as_millis()).unwrap_or(0),
+        Err(_) => 0,
+    }
+}
+
+fn run_probe(spec: &CliSpec, configured: &str, data_dir: &Path) -> CliProbe {
     let Some(path) = locate(spec, configured) else {
         let mut result = CliProbe::new(spec, false, configured.to_string());
         if !configured.is_empty() {

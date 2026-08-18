@@ -1,4 +1,5 @@
 use crate::container::AppContainer;
+use crate::features::settings::check::LlmChecker;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::load::EnterOutcome;
 use crate::features::workspace::load::ErrorCode;
@@ -66,6 +67,7 @@ pub struct WorkspaceLoader {
     logger: Logger,
     service: WorkspaceService,
     backend: Arc<dyn BackendHost>,
+    llm: Arc<dyn LlmChecker>,
     probe: WriteProbe,
 }
 
@@ -76,6 +78,7 @@ impl WorkspaceLoader {
         logger: Logger,
         service: WorkspaceService,
         backend: Arc<dyn BackendHost>,
+        llm: Arc<dyn LlmChecker>,
     ) -> Self {
         Self {
             root,
@@ -83,6 +86,7 @@ impl WorkspaceLoader {
             logger,
             service,
             backend,
+            llm,
             probe: default_write_probe,
         }
     }
@@ -94,6 +98,7 @@ impl WorkspaceLoader {
             container.logger.clone(),
             service,
             container.backend.clone(),
+            container.llm.clone(),
         )
     }
 
@@ -331,6 +336,7 @@ impl LoadRun<'_> {
             LoadStep::Application => self.start_application(),
             LoadStep::Backend => self.start_backend(),
             LoadStep::Workspace => self.start_workspace(),
+            LoadStep::Llm => self.check_llms(),
         }
     }
 
@@ -352,6 +358,15 @@ impl LoadRun<'_> {
         storage_stop(LoadStep::Workspace, workspace_db)?;
         self.checked("workspace_db");
         Ok(())
+    }
+
+    fn check_llms(&mut self) -> Result<(), Stop> {
+        if self.loader.llm.check(&self.cancel) {
+            self.checked("llm");
+            Ok(())
+        } else {
+            Err(Stop::Cancelled)
+        }
     }
 
     fn checked(&mut self, name: &str) {

@@ -119,7 +119,7 @@ fn load_pipeline_streams_events_through_the_sink() {
         })
     ));
     assert_eq!(events.last(), Some(&LoadEvent::Progress { percent: 100 }));
-    assert_eq!(events.iter().filter(is_done_step).count(), 3);
+    assert_eq!(events.iter().filter(is_done_step).count(), 4);
     assert!(matches!(outcome, Ok(LoadOutcome::Ready { .. })));
 }
 

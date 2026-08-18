@@ -49,6 +49,7 @@ export interface LlmCliView {
   canLogout: boolean;
   canDetectLogin: boolean;
   path: string;
+  probe: LlmProbe | null;
 }
 
 export type LlmEffort = "low" | "medium" | "high";
@@ -83,9 +84,10 @@ export interface LlmProbe {
   account: string;
   error: string;
   latencyMs: number;
+  checkedAtMs: number;
 }
 
-export interface LlmProvider extends LlmCliView {
+export interface LlmProvider extends Omit<LlmCliView, "probe"> {
   found: boolean;
   resolvedPath: string;
   version: string;

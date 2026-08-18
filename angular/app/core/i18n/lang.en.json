@@ -33,9 +33,11 @@
   "loading.step.application": "Prepare the application: application.dreamydb and logs",
   "loading.step.backend": "Start the local backend",
   "loading.step.workspace": "Prepare the workspace: folder and workspace.dreamydb",
+  "loading.step.llm": "Check the LLM CLIs on this machine",
   "loading.stepName.application": "application startup",
   "loading.stepName.backend": "local backend",
   "loading.stepName.workspace": "workspace startup",
+  "loading.stepName.llm": "LLM check",
   "loading.cause.folder_missing": "the workspace folder does not exist",
   "loading.cause.folder_not_directory": "the selected path is not a folder",
   "loading.cause.folder_not_readable": "no permission to read the workspace folder",
@@ -961,7 +963,6 @@
   ,"settings.llm.note": "Each CLI runs in the app's own sign-in profile, stored next to the application database and separate from the session you use in a terminal. You sign in once per CLI. The content to process is sent to the respective provider's service; costs and limits are determined by your account."
   ,"settings.llm.cli": "CLI on this machine"
   ,"settings.llm.cli.label": "CLI providers"
-  ,"settings.llm.rescan": "Rescan"
   ,"settings.llm.status.notInstalled": "Not installed"
   ,"settings.llm.status.notSignedIn": "Not signed in"
   ,"settings.llm.status.notChecked": "Not checked"

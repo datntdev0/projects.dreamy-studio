@@ -307,6 +307,32 @@ fn ignores_a_stored_feature_provider_that_is_not_a_known_cli() {
 }
 
 #[test]
+fn shows_the_saved_probe_of_each_cli_in_the_view() {
+    let dir = TempDir::new().unwrap();
+    let status = LlmStatus::default();
+    let service = service(&dir).with_status(status.clone());
+    assert!(
+        service
+            .llm_view()
+            .providers
+            .iter()
+            .all(|provider| provider.probe.is_none())
+    );
+    let missing = dir.path().join("missing").join("claude.cmd");
+    let provider = CliSettings {
+        path: Some(missing.to_string_lossy().into_owned()),
+    };
+    service.save_llm_provider("claude", provider).unwrap();
+    service.probe_llm("claude").unwrap();
+    let view = service.llm_view();
+    let claude = view.providers[0].probe.as_ref().unwrap();
+    assert!(!claude.found);
+    assert!(claude.checked_at_ms > 0);
+    assert!(view.providers[1].probe.is_none());
+    assert!(status.snapshot().contains_key("claude"));
+}
+
+#[test]
 fn only_isolated_clis_have_a_profile_directory_to_open() {
     let dir = TempDir::new().unwrap();
     let service = service(&dir);

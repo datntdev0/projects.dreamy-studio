@@ -19,7 +19,7 @@ export interface RecentWorkspace {
 
 export type LoadMode = "create" | "open";
 
-export type LoadStepId = "application" | "backend" | "workspace";
+export type LoadStepId = "application" | "backend" | "workspace" | "llm";
 
 export type LoadStepState = "running" | "done" | "error";
 

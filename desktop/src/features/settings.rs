@@ -1,3 +1,4 @@
+pub mod check;
 pub mod llm;
 pub mod models;
 pub mod probe;

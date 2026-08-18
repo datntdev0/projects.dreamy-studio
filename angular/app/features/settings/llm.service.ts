@@ -15,7 +15,7 @@ function pause(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function fresh(view: LlmCliView): LlmProvider {
+function fresh(view: Omit<LlmCliView, "probe">): LlmProvider {
   return {
     ...view,
     found: false,
@@ -36,36 +36,15 @@ export class LlmService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
-  private loaded = false;
 
   readonly providers = signal<LlmProvider[]>([]);
   readonly features = signal<LlmFeature[]>([]);
-  readonly scanning = signal(false);
 
-  async ensureLoaded(): Promise<void> {
-    if (this.loaded) {
-      return;
-    }
-    this.loaded = true;
+  async load(): Promise<void> {
     try {
       this.apply(await this.ipc.invoke<LlmView>("llm_get"));
     } catch {
-      this.loaded = false;
       this.toasts.show(this.i18n.translate("settings.llm.loadFailed"), "danger");
-      return;
-    }
-    await this.scan();
-  }
-
-  async scan(): Promise<void> {
-    if (this.scanning()) {
-      return;
-    }
-    this.scanning.set(true);
-    try {
-      await Promise.all(this.providers().map(this.probeProvider.bind(this)));
-    } finally {
-      this.scanning.set(false);
     }
   }
 
@@ -167,8 +146,19 @@ export class LlmService {
   }
 
   private apply(view: LlmView): void {
-    this.providers.set(view.providers.map(fresh));
+    this.providers.set(view.providers.map(this.toProvider.bind(this)));
     this.features.set(view.features);
+  }
+
+  private toProvider(view: LlmCliView): LlmProvider {
+    const { probe, ...rest } = view;
+    const provider = fresh(rest);
+    return probe ? { ...provider, ...this.fromProbe(probe) } : provider;
+  }
+
+  private timeOf(ms: number): string {
+    const date = ms > 0 ? new Date(ms) : new Date();
+    return date.toLocaleTimeString(this.i18n.locale());
   }
 
   private patch(id: string, change: Partial<LlmProvider>): void {
@@ -196,7 +186,7 @@ export class LlmService {
       status,
       error: probe.error,
       latencyMs: probe.latencyMs,
-      checkedAt: new Date().toLocaleTimeString(this.i18n.locale()),
+      checkedAt: this.timeOf(probe.checkedAtMs),
     };
   }
 

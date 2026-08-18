@@ -32,8 +32,9 @@ export const LOADING_STATE: LoadState = {
     { id: "application", state: "done" },
     { id: "backend", state: "running" },
     { id: "workspace", state: "pending" },
+    { id: "llm", state: "pending" },
   ],
-  percent: 42,
+  percent: 25,
   status: "running",
 };
 
@@ -137,9 +138,7 @@ export function llmServiceProvider(providers: LlmProvider[], features: LlmFeatur
     providers: signal(providers),
     features: list,
     setFeature,
-    scanning: signal(false),
-    ensureLoaded: () => Promise.resolve(),
-    scan: () => Promise.resolve(),
+    load: () => Promise.resolve(),
     check: () => Promise.resolve(),
     login: () => Promise.resolve(),
     logout: () => Promise.resolve(),

@@ -1,4 +1,5 @@
 use crate::features::settings::models::lenient;
+use crate::features::settings::probe::CliProbe;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -182,7 +183,7 @@ impl LlmSettings {
         }
     }
 
-    pub fn view(&self, data_dir: &Path) -> LlmView {
+    pub fn view(&self, data_dir: &Path, probes: &BTreeMap<String, CliProbe>) -> LlmView {
         let providers = CLI_SPECS
             .iter()
             .map(|spec| {
@@ -200,6 +201,7 @@ impl LlmSettings {
                     can_logout: spec.logout_args.is_some(),
                     can_detect_login: spec.status_args.is_some(),
                     path: settings.path().to_string(),
+                    probe: probes.get(spec.id).cloned(),
                 }
             })
             .collect();
@@ -224,6 +226,7 @@ pub struct CliView {
     pub can_logout: bool,
     pub can_detect_login: bool,
     pub path: String,
+    pub probe: Option<CliProbe>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

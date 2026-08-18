@@ -209,6 +209,8 @@ fn cancel_triggers() -> Vec<LoadEvent> {
         done(LoadStep::Backend),
         running(LoadStep::Workspace),
         done(LoadStep::Workspace),
+        running(LoadStep::Llm),
+        done(LoadStep::Llm),
         progress(100),
     ]
 }
@@ -308,7 +310,7 @@ fn reopen_existing_workspace_uses_open_mode() {
 }
 
 #[test]
-fn events_follow_the_three_step_order_with_thirds_progress() {
+fn events_follow_the_four_step_order_with_quarter_progress() {
     let fixture = fixture();
     let (result, events) = run_load(&fixture, None);
     assert!(result.is_ok());
@@ -320,15 +322,103 @@ fn events_follow_the_three_step_order_with_thirds_progress() {
         },
         running(LoadStep::Application),
         done(LoadStep::Application),
-        progress(33),
+        progress(25),
         running(LoadStep::Backend),
         done(LoadStep::Backend),
-        progress(66),
+        progress(50),
         running(LoadStep::Workspace),
         done(LoadStep::Workspace),
+        progress(75),
+        running(LoadStep::Llm),
+        done(LoadStep::Llm),
         progress(100),
     ];
     assert_eq!(events, expected);
+}
+
+struct StubLlm {
+    calls: std::sync::atomic::AtomicUsize,
+    completes: bool,
+}
+
+impl StubLlm {
+    fn new(completes: bool) -> Arc<Self> {
+        Arc::new(Self {
+            calls: std::sync::atomic::AtomicUsize::new(0),
+            completes,
+        })
+    }
+
+    fn calls(&self) -> usize {
+        self.calls.load(Ordering::SeqCst)
+    }
+}
+
+impl LlmChecker for StubLlm {
+    fn check(&self, _cancel: &AtomicBool) -> bool {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        self.completes
+    }
+}
+
+fn loader_checking(fixture: &Fixture, llm: Arc<StubLlm>) -> WorkspaceLoader {
+    WorkspaceLoader::new(
+        fixture.container.directories.root.clone(),
+        fixture.container.database_path.clone(),
+        fixture.container.logger.clone(),
+        fixture.service.clone(),
+        fixture.backend.clone(),
+        llm,
+    )
+}
+
+#[test]
+fn checks_the_llm_clis_once_after_the_workspace_is_prepared() {
+    let fixture = fixture();
+    let llm = StubLlm::new(true);
+    let loader = loader_checking(&fixture, llm.clone());
+    let request = LoadRequest::new(text(&fixture.folder), None);
+    let (result, events) = run_request_on(&loader, &fixture, request, None);
+    assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
+    assert_eq!(llm.calls(), 1);
+    let finished: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            matches!(
+                event,
+                LoadEvent::Step {
+                    state: StepState::Done,
+                    ..
+                }
+            )
+        })
+        .cloned()
+        .collect();
+    assert_eq!(finished.last(), Some(&done(LoadStep::Llm)));
+}
+
+#[test]
+fn does_not_check_the_llm_clis_when_an_earlier_step_fails() {
+    let fixture = fixture();
+    let llm = StubLlm::new(true);
+    let loader = loader_checking(&fixture, llm.clone());
+    let missing = fixture.folder.join("missing");
+    let request = LoadRequest::new(text(&missing), None);
+    let (result, _) = run_request_on(&loader, &fixture, request, None);
+    assert!(result.is_err());
+    assert_eq!(llm.calls(), 0);
+}
+
+#[test]
+fn abandons_the_load_when_the_llm_check_is_cancelled() {
+    let fixture = fixture();
+    let llm = StubLlm::new(false);
+    let loader = loader_checking(&fixture, llm.clone());
+    let request = LoadRequest::new(text(&fixture.folder), None);
+    let (result, _) = run_request_on(&loader, &fixture, request, None);
+    assert_eq!(result.unwrap(), LoadOutcome::Cancelled);
+    assert_eq!(llm.calls(), 1);
+    assert_nothing_recorded(&fixture);
 }
 
 #[test]
@@ -507,6 +597,8 @@ fn cancel_keeps_application_db_once_it_exists() {
         done(LoadStep::Backend),
         running(LoadStep::Workspace),
         done(LoadStep::Workspace),
+        running(LoadStep::Llm),
+        done(LoadStep::Llm),
         progress(100),
     ];
     for trigger in late {
@@ -957,6 +1049,7 @@ fn switch_fails_on_backend_error_and_keeps_the_open_workspace() {
         fixture.container.logger.clone(),
         fixture.service.clone(),
         failing.clone(),
+        fixture.container.llm.clone(),
     );
     let request = LoadRequest::new(text(&second), None);
     let (result, events) = run_request_on(&loader, &fixture, request, None);

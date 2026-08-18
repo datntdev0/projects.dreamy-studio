@@ -15,13 +15,15 @@ pub enum LoadStep {
     Application,
     Backend,
     Workspace,
+    Llm,
 }
 
 impl LoadStep {
-    pub const ALL: [LoadStep; 3] = [
+    pub const ALL: [LoadStep; 4] = [
         LoadStep::Application,
         LoadStep::Backend,
         LoadStep::Workspace,
+        LoadStep::Llm,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -29,6 +31,7 @@ impl LoadStep {
             LoadStep::Application => "application",
             LoadStep::Backend => "backend",
             LoadStep::Workspace => "workspace",
+            LoadStep::Llm => "llm",
         }
     }
 }

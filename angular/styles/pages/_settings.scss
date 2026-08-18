@@ -29,7 +29,6 @@
 }
 
 .llm-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); flex-wrap: wrap; }
-.llm-sec-end { justify-content: flex-end; }
 .llm-list { display: grid; gap: var(--sp-sm); }
 .llm-card { display: grid; gap: var(--sp-sm); padding: var(--sp-md) var(--sp-lg); border: 1px solid var(--hairline); border-left-width: 3px; border-radius: var(--r-md); background: var(--canvas-card); min-width: 0; }
 .llm-card p { margin: 0; }

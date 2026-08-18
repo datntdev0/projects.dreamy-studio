@@ -4,7 +4,6 @@
   <ds-tabs data-testid="settings-llm-tabs" idPrefix="settings-llm" [label]="'settings.llm.tabs' | t" [options]="tabOptions()" [value]="tab()" (valueChange)="onTab($event)" />
   @switch (tab()) {
   @case ("cli") {
-  <header class="llm-sec-h llm-sec-end" data-testid="settings-llm-cli-head"><button type="button" class="btn btn-sm" data-testid="settings-llm-rescan" [disabled]="scanning()" (click)="scan()"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.rescan" | t }}</button></header>
   <section class="llm-list" role="tabpanel" id="settings-llm-panel-cli" aria-labelledby="settings-llm-tab-cli" [attr.aria-label]="'settings.llm.cli.label' | t" data-testid="settings-llm-cli">
     @for (p of providers(); track p.id) {
       <article class="llm-card" [class]="mode(p)" [attr.data-testid]="'settings-llm-' + p.id">

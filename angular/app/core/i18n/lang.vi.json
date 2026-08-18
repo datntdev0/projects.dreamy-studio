@@ -33,9 +33,11 @@
   "loading.step.application": "Chuẩn bị ứng dụng: application.dreamydb và nhật ký",
   "loading.step.backend": "Khởi động backend cục bộ",
   "loading.step.workspace": "Chuẩn bị workspace: thư mục và workspace.dreamydb",
+  "loading.step.llm": "Kiểm tra các CLI LLM trên máy",
   "loading.stepName.application": "khởi động ứng dụng",
   "loading.stepName.backend": "backend cục bộ",
   "loading.stepName.workspace": "khởi động workspace",
+  "loading.stepName.llm": "LLM check",
   "loading.cause.folder_missing": "thư mục workspace không tồn tại",
   "loading.cause.folder_not_directory": "đường dẫn đã chọn không phải là thư mục",
   "loading.cause.folder_not_readable": "không có quyền đọc thư mục workspace",
@@ -961,7 +963,6 @@
   ,"settings.llm.note": "Mỗi CLI chạy trong profile đăng nhập riêng của app, nằm cạnh cơ sở dữ liệu ứng dụng và tách biệt với phiên bạn dùng ở terminal. Bạn đăng nhập một lần cho từng CLI. Nội dung cần xử lý được gửi tới dịch vụ của nhà cung cấp tương ứng; chi phí và giới hạn theo tài khoản của bạn."
   ,"settings.llm.cli": "CLI trên máy này"
   ,"settings.llm.cli.label": "CLI providers"
-  ,"settings.llm.rescan": "Quét lại"
   ,"settings.llm.status.notInstalled": "Chưa cài"
   ,"settings.llm.status.notSignedIn": "Chưa đăng nhập"
   ,"settings.llm.status.notChecked": "Chưa kiểm tra"

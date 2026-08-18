@@ -1,3 +1,4 @@
+use crate::features::settings::check::LlmStatus;
 use crate::features::settings::llm::CliSettings;
 use crate::features::settings::llm::CliSpec;
 use crate::features::settings::llm::FEATURES;
@@ -20,6 +21,7 @@ use std::sync::Mutex;
 pub struct SettingsService {
     repository: SettingsRepository,
     gate: Mutex<()>,
+    status: LlmStatus,
 }
 
 impl SettingsService {
@@ -27,7 +29,13 @@ impl SettingsService {
         Self {
             repository,
             gate: Mutex::new(()),
+            status: LlmStatus::default(),
         }
+    }
+
+    pub fn with_status(mut self, status: LlmStatus) -> Self {
+        self.status = status;
+        self
     }
 
     pub fn view(&self) -> SettingsView {
@@ -80,7 +88,11 @@ impl SettingsService {
     }
 
     pub fn llm_view(&self) -> LlmView {
-        self.llm().view(&self.data_dir())
+        self.llm_view_of(&self.llm())
+    }
+
+    fn llm_view_of(&self, llm: &LlmSettings) -> LlmView {
+        llm.view(&self.data_dir(), &self.status.snapshot())
     }
 
     pub fn save_llm_provider(&self, id: &str, provider: CliSettings) -> Result<LlmView, String> {
@@ -96,7 +108,7 @@ impl SettingsService {
         self.repository
             .save(&settings)
             .map_err(|error| error.to_string())?;
-        Ok(settings.llm.view(&self.data_dir()))
+        Ok(self.llm_view_of(&settings.llm))
     }
 
     pub fn save_llm_feature(
@@ -122,12 +134,14 @@ impl SettingsService {
         self.repository
             .save(&settings)
             .map_err(|error| error.to_string())?;
-        Ok(settings.llm.view(&self.data_dir()))
+        Ok(self.llm_view_of(&settings.llm))
     }
 
     pub fn probe_llm(&self, id: &str) -> Result<CliProbe, String> {
         let (spec, provider) = self.llm_target(id)?;
-        Ok(probe(spec, provider.path(), &self.data_dir()))
+        let result = probe(spec, provider.path(), &self.data_dir());
+        self.status.store(result.clone());
+        Ok(result)
     }
 
     pub fn login_llm(&self, id: &str) -> Result<(), String> {

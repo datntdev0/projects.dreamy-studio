@@ -12,6 +12,7 @@ const STEP_KEYS: Record<LoadStepId, I18nKey> = {
   application: "loading.step.application",
   backend: "loading.step.backend",
   workspace: "loading.step.workspace",
+  llm: "loading.step.llm",
 };
 
 const MODE_KEYS: Record<LoadMode, I18nKey> = {

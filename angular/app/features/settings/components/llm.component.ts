@@ -62,7 +62,6 @@ export class SettingsLlmComponent {
   private readonly i18n = inject(I18nService);
 
   readonly providers = this.llm.providers;
-  readonly scanning = this.llm.scanning;
   readonly features = this.llm.features;
   readonly efforts = EFFORT_OPTIONS;
   readonly cloud = CLOUD_PROVIDERS;
@@ -70,7 +69,7 @@ export class SettingsLlmComponent {
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
   constructor() {
-    void this.llm.ensureLoaded();
+    void this.llm.load();
   }
 
   onTab(value: string): void {
@@ -135,10 +134,6 @@ export class SettingsLlmComponent {
       return { key: "settings.llm.msg.failed", tone: "warn" };
     }
     return { key: "settings.llm.msg.unchecked", tone: "mute" };
-  }
-
-  scan(): void {
-    void this.llm.scan();
   }
 
   check(provider: LlmProvider): void {

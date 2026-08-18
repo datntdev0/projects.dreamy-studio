@@ -1,9 +1,9 @@
 import { Component, computed, inject, signal } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { projectTabId } from "../../../../layout/layout.models";
-import { TabsService } from "../../../../layout/tabs.service";
+import { Icon } from "@components/icon";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { projectTabId } from "@layout/layout.models";
+import { TabsService } from "@layout/tabs.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "../project.models";
 import { ProjectService } from "../project.service";

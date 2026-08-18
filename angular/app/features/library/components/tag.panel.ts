@@ -1,6 +1,6 @@
 import { Component, inject, input } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { Icon } from "@components/icon";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { LIBRARY_KINDS, LibraryKind, LibraryTag } from "../library.models";

@@ -1,11 +1,11 @@
 import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
-import { Button } from "../../../../components/button";
-import { Dialog } from "../../../../components/dialog";
-import { Icon } from "../../../../components/icon";
-import { TabsService } from "../../../../layout/tabs.service";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService } from "../../../core/i18n/i18n.service";
-import { ToastService } from "../../../core/toast/toast.service";
+import { Button } from "@components/button";
+import { Dialog } from "@components/dialog";
+import { Icon } from "@components/icon";
+import { TabsService } from "@layout/tabs.service";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { ToastService } from "@app/core/toast/toast.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectSummary, ProjectTemplate } from "../project.models";

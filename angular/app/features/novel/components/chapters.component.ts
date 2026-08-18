@@ -1,11 +1,11 @@
 import { Component, OnDestroy, computed, effect, inject, input, signal } from "@angular/core";
-import { I18nService } from "../../../core/i18n/i18n.service";
-import { Datatable, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "../../../../components/datatable";
-import { Icon } from "../../../../components/icon";
-import { NovelToolKind } from "../../../../layout/layout.models";
-import { TabsService } from "../../../../layout/tabs.service";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { ToastService } from "../../../core/toast/toast.service";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { Datatable, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
+import { Icon } from "@components/icon";
+import { NovelToolKind } from "@layout/layout.models";
+import { TabsService } from "@layout/tabs.service";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { ChapterRow } from "../novel.models";
 import { NovelSummary } from "../novel.models";
@@ -16,7 +16,7 @@ import { filterChapters } from "../novel.rules";
 import { formatCount } from "../novel.rules";
 import { isChapterLocked } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
-import { Cover } from "../../../../components/cover";
+import { Cover } from "@components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 const DRAG_THRESHOLD = 5;

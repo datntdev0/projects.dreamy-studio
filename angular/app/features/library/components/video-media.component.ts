@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "../../../../components/icon";
+import { Icon } from "@components/icon";
 import { LibraryVideo } from "../library.videos.models";
 import { LibraryVideoService } from "../library.videos.service";
 import { durationText } from "../library.rules";

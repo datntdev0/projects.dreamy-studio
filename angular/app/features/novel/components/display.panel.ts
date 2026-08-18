@@ -1,6 +1,6 @@
 import { Component, inject } from "@angular/core";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { ReaderFont } from "../novel.models";
 import { ReaderPaper } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";

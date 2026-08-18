@@ -1,5 +1,5 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { LibraryService } from "./library.service";
 import { ImageCheck, ImagePatch, ImageSort, ImageUploadInput, ImageViewMode, LibraryImage } from "./library.images.models";

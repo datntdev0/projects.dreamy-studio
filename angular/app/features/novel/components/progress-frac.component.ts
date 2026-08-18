@@ -1,5 +1,5 @@
 import { Component, Input } from "@angular/core";
-import { Icon } from "../../../../components/icon";
+import { Icon } from "@components/icon";
 
 @Component({
   selector: "app-novel-progress-frac",

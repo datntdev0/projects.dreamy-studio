@@ -1,4 +1,4 @@
-import { DesktopIpcError } from "../../core/desktop/desktop-ipc-error";
+import { DesktopIpcError } from "@app/core/desktop/desktop-ipc-error";
 import { KindCounts, LibraryCollection, LibraryError, LibraryKind, LibraryTag } from "./library.models";
 
 export function normalizeTag(value: string): string { return value.toLocaleLowerCase().replace(/[#,]/g, " ").trim().replace(/\s+/g, "-").slice(0, 24); }

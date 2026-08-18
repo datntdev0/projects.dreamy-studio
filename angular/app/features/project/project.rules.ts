@@ -1,4 +1,4 @@
-import { DesktopIpcError } from "../../core/desktop/desktop-ipc-error";
+import { DesktopIpcError } from "@app/core/desktop/desktop-ipc-error";
 import { DirEntry } from "./project.models";
 import { ProjectError } from "./project.models";
 import { ProjectFilters } from "./project.models";

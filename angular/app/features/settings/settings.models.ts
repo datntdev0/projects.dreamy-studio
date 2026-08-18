@@ -1,6 +1,6 @@
-import { Language } from "../../core/i18n/i18n.models";
-import { I18nKey } from "../../core/i18n/i18n.models";
-import { Theme } from "../../core/theme/theme.models";
+import { Language } from "@app/core/i18n/i18n.models";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { Theme } from "@app/core/theme/theme.models";
 
 export type SettingsSectionId = "general" | "llm" | "backend" | "tts" | "speech";
 

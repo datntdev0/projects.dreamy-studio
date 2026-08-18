@@ -1,7 +1,7 @@
 import { Component, computed, inject } from "@angular/core";
-import { Dialog } from "../../../../components/dialog";
-import { Icon } from "../../../../components/icon";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { Dialog } from "@components/dialog";
+import { Icon } from "@components/icon";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { SettingsSection, SettingsSectionId } from "../settings.models";
 import { SETTINGS_SECTIONS } from "../settings.sections";
 import { SettingsService } from "../settings.service";

@@ -1,6 +1,6 @@
 import { Component, inject } from "@angular/core";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { TabsService } from "../../../../layout/tabs.service";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { TabsService } from "@layout/tabs.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectSummary } from "../project.models";
 import { ProjectService } from "../project.service";

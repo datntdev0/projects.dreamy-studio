@@ -1,4 +1,4 @@
-import { I18nKey } from "../../core/i18n/i18n.models";
+import { I18nKey } from "@app/core/i18n/i18n.models";
 
 export type LibraryKind = "image" | "sound" | "video" | "prompt";
 export type KindCounts = Record<LibraryKind, number>;

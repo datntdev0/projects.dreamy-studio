@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from "@angular/core";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
-import { I18nService } from "../../core/i18n/i18n.service";
-import { ToastService } from "../../core/toast/toast.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { ToastService } from "@app/core/toast/toast.service";
 import { LlmCapability, LlmCliSettings, LlmCliView, LlmFeature, LlmFeatureSettings, LlmProbe, LlmProvider, LlmView } from "./settings.models";
 
 const SIGN_IN_POLL_MS = 3000;

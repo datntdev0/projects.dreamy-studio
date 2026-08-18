@@ -1,14 +1,14 @@
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
-import { Button } from "../../../../components/button";
-import { Dialog } from "../../../../components/dialog";
-import { Icon } from "../../../../components/icon";
-import { DesktopDragDropEvent } from "../../../core/desktop/desktop-ipc.service";
-import { DesktopIpcService } from "../../../core/desktop/desktop-ipc.service";
-import { DesktopUnlisten } from "../../../core/desktop/desktop-ipc.service";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService } from "../../../core/i18n/i18n.service";
-import { ToastService } from "../../../core/toast/toast.service";
+import { Button } from "@components/button";
+import { Dialog } from "@components/dialog";
+import { Icon } from "@components/icon";
+import { DesktopDragDropEvent } from "@app/core/desktop/desktop-ipc.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
+import { DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { ToastService } from "@app/core/toast/toast.service";
 import { InspectCheck } from "../novel.models";
 import { InspectEvent } from "../novel.models";
 import { InspectStep } from "../novel.models";
@@ -24,7 +24,7 @@ import { toNovelError } from "../novel.rules";
 import { toNovelInput } from "../novel.rules";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelService } from "../novel.service";
-import { Cover } from "../../../../components/cover";
+import { Cover } from "@components/cover";
 
 type ImportStep = 1 | 2 | 3;
 

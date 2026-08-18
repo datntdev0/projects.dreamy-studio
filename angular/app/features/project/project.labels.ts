@@ -1,6 +1,6 @@
 import { Injectable, inject } from "@angular/core";
-import { I18nKey } from "../../core/i18n/i18n.models";
-import { I18nService } from "../../core/i18n/i18n.service";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nService } from "@app/core/i18n/i18n.service";
 import { NovelService } from "../novel/novel.service";
 import { displayName, formatMonthDay, formatStamp } from "../novel/novel.rules";
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "./project.models";

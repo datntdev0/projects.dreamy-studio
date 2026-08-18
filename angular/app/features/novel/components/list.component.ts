@@ -1,15 +1,15 @@
 import { Component, HostListener, effect, inject } from "@angular/core";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService } from "../../../core/i18n/i18n.service";
-import { TabsService } from "../../../../layout/tabs.service";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "../../../../components/datatable";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { TabsService } from "@layout/tabs.service";
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
 import { displayName, formatCount, formatStamp, hasCustomName } from "../novel.rules";
-import { Cover, coverBackground } from "../../../../components/cover";
-import { Icon } from "../../../../components/icon";
+import { Cover, coverBackground } from "@components/cover";
+import { Icon } from "@components/icon";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 const INTERACTIVE_SELECTOR = "button";

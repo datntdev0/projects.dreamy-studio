@@ -1,8 +1,8 @@
 import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "../../../core/desktop/desktop-ipc.service";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { Icon } from "@components/icon";
+import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { IMAGE_RATIOS, ImageSort, ImageViewMode, LibraryImage } from "../library.images.models";
 import { dimensionsText, formatBytes } from "../library.images.rules";

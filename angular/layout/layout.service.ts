@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { LayoutSettings } from "../app/features/settings/settings.models";
-import { SettingsService } from "../app/features/settings/settings.service";
+import { LayoutSettings } from "@app/features/settings/settings.models";
+import { SettingsService } from "@app/features/settings/settings.service";
 import { PanelId, RailId, RightTabId } from "./layout.models";
 import { TabsService } from "./tabs.service";
 

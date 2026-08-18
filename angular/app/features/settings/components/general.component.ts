@@ -1,11 +1,11 @@
 import { Component, computed, inject, signal } from "@angular/core";
-import { SegmentOption, Segments } from "../../../../components/segments";
-import { TabOption, Tabs } from "../../../../components/tabs";
-import { Icon } from "../../../../components/icon";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService, isLanguage } from "../../../core/i18n/i18n.service";
-import { ThemeService, isTheme } from "../../../core/theme/theme.service";
-import { WorkspaceService } from "../../workspace/workspace.service";
+import { SegmentOption, Segments } from "@components/segments";
+import { TabOption, Tabs } from "@components/tabs";
+import { Icon } from "@components/icon";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService, isLanguage } from "@app/core/i18n/i18n.service";
+import { ThemeService, isTheme } from "@app/core/theme/theme.service";
+import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { SettingsFolderTarget } from "../settings.models";
 import { SettingsService } from "../settings.service";
 

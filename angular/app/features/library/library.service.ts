@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { TabsService } from "../../../layout/tabs.service";
+import { TabsService } from "@layout/tabs.service";
 import { KindCounts, LibraryCollection, LibraryError, LibraryKind, LibrarySummary, LibraryTag, TaxonomySelection } from "./library.models";
 import { hasCollectionName, searchTags, sortTags, toLibraryError } from "./library.rules";
 

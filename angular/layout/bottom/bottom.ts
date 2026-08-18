@@ -1,8 +1,8 @@
 import { Component, inject, signal } from "@angular/core";
-import { Button } from "../../components/button";
-import { Icon } from "../../components/icon";
-import { I18nKey } from "../../app/core/i18n/i18n.models";
-import { I18nPipe } from "../../app/core/i18n/i18n.pipe";
+import { Button } from "@components/button";
+import { Icon } from "@components/icon";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LayoutService } from "../layout.service";
 
 type BottomTabId = "pipelines" | "output";

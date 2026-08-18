@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, input } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { coverBackground } from "../../../../components/cover";
+import { Icon } from "@components/icon";
+import { coverBackground } from "@components/cover";
 import { ProjectSummary } from "../project.models";
 import { ProjectService } from "../project.service";
 

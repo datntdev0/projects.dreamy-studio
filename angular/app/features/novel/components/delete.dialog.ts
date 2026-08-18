@@ -1,11 +1,11 @@
 import { Component, computed, effect, inject, signal } from "@angular/core";
-import { Dialog } from "../../../../components/dialog";
-import { Button } from "../../../../components/button";
-import { Icon } from "../../../../components/icon";
-import { TabsService } from "../../../../layout/tabs.service";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService } from "../../../core/i18n/i18n.service";
-import { ToastService } from "../../../core/toast/toast.service";
+import { Dialog } from "@components/dialog";
+import { Button } from "@components/button";
+import { Icon } from "@components/icon";
+import { TabsService } from "@layout/tabs.service";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelSummary } from "../novel.models";
 import { displayName } from "../novel.rules";
@@ -13,7 +13,7 @@ import { formatCount } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
-import { Cover } from "../../../../components/cover";
+import { Cover } from "@components/cover";
 import { NovelProgressFrac } from "./progress-frac.component";
 
 @Component({

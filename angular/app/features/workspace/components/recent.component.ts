@@ -1,11 +1,11 @@
 import { Component, EventEmitter, Input, OnChanges, Output, inject, signal } from "@angular/core";
-import { Badge } from "../../../../components/badge";
-import { Button } from "../../../../components/button";
-import { Dialog } from "../../../../components/dialog";
-import { Icon } from "../../../../components/icon";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService } from "../../../core/i18n/i18n.service";
+import { Badge } from "@components/badge";
+import { Button } from "@components/button";
+import { Dialog } from "@components/dialog";
+import { Icon } from "@components/icon";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
 import { WorkspaceService } from "../workspace.service";
 import { RecentWorkspace } from "../workspace.models";
 import { RecentWorkspaceReason } from "../workspace.models";

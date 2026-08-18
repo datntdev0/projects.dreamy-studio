@@ -1,17 +1,17 @@
 import { Component, OnInit, computed, inject, signal } from "@angular/core";
-import { Badge } from "../../../components/badge";
-import { Button } from "../../../components/button";
-import { Icon } from "../../../components/icon";
-import { Segments, SegmentOption } from "../../../components/segments";
-import { I18nPipe } from "../../core/i18n/i18n.pipe";
-import { I18nService, isLanguage } from "../../core/i18n/i18n.service";
-import { ThemeService } from "../../core/theme/theme.service";
-import { SettingsService } from "../../features/settings/settings.service";
-import { WorkspaceLoading } from "../../features/workspace/components/loading.component";
-import { RecentWorkspaceList } from "../../features/workspace/components/recent.component";
-import { WorkspaceService } from "../../features/workspace/workspace.service";
-import { AppInfo } from "../../features/workspace/workspace.models";
-import { RecentWorkspace } from "../../features/workspace/workspace.models";
+import { Badge } from "@components/badge";
+import { Button } from "@components/button";
+import { Icon } from "@components/icon";
+import { Segments, SegmentOption } from "@components/segments";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService, isLanguage } from "@app/core/i18n/i18n.service";
+import { ThemeService } from "@app/core/theme/theme.service";
+import { SettingsService } from "@app/features/settings/settings.service";
+import { WorkspaceLoading } from "@app/features/workspace/components/loading.component";
+import { RecentWorkspaceList } from "@app/features/workspace/components/recent.component";
+import { WorkspaceService } from "@app/features/workspace/workspace.service";
+import { AppInfo } from "@app/features/workspace/workspace.models";
+import { RecentWorkspace } from "@app/features/workspace/workspace.models";
 
 const LANGUAGE_OPTIONS: SegmentOption[] = [
   { value: "vi", label: "VI" },

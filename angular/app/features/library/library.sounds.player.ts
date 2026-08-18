@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from "@angular/core";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
-import { ToastService } from "../../core/toast/toast.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
+import { ToastService } from "@app/core/toast/toast.service";
 import { LibrarySound } from "./library.sounds.models";
 import { SOUND_STREAM_SCHEME } from "./library.sounds.models";
 import { spectrumBands } from "./library.sounds.audio";

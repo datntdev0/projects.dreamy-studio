@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { SettingsDialog } from "../../app/features/settings/components/settings.dialog";
-import { SettingsSectionId } from "../../app/features/settings/settings.models";
+import { SettingsDialog } from "@app/features/settings/components/settings.dialog";
+import { SettingsSectionId } from "@app/features/settings/settings.models";
 import { CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider, settingsProvider, withProviders, workspaceProvider } from "./mocks";
 
 function settings(section: SettingsSectionId): StoryObj<SettingsDialog> {

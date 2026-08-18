@@ -1,11 +1,11 @@
 import { Component, inject, input } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { Icon } from "@components/icon";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { LibraryCollection, LibraryKind, LIBRARY_KINDS } from "../library.models";
 import { formatIsoMinute, sumCounts } from "../library.rules";
-import { TabsService } from "../../../../layout/tabs.service";
+import { TabsService } from "@layout/tabs.service";
 
 @Component({ selector: "app-library-collection-panel", standalone: true, imports: [Icon, I18nPipe], templateUrl: "./collection.panel.html", host: { "data-testid": "library-collection-panel" } })
 export class LibraryCollectionPanel {

@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "../../../../components/icon";
+import { Icon } from "@components/icon";
 import { LibraryImage } from "../library.images.models";
 import { LibraryImageService } from "../library.images.service";
 

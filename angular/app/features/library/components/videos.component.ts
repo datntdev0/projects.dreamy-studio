@@ -6,14 +6,14 @@ import {
   inject,
   signal,
 } from "@angular/core";
-import { Icon } from "../../../../components/icon";
+import { Icon } from "@components/icon";
 import {
   DesktopDragDropEvent,
   DesktopIpcService,
   DesktopUnlisten,
-} from "../../../core/desktop/desktop-ipc.service";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+} from "@app/core/desktop/desktop-ipc.service";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRef, ASSET_RATIOS } from "../library.models";
 import { formatBytes } from "../library.rules";

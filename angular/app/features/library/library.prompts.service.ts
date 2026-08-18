@@ -1,5 +1,5 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { AssetCheck, AssetUploadInput, LibraryError } from "./library.models";
 import { PromptCreateInput, LibraryPrompt, PromptPatch, PromptSort } from "./library.prompts.models";

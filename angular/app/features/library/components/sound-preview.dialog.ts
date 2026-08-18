@@ -1,8 +1,8 @@
 import { Component, HostListener, computed, inject } from "@angular/core";
-import { Dialog } from "../../../../components/dialog";
-import { Icon } from "../../../../components/icon";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { Dialog } from "@components/dialog";
+import { Icon } from "@components/icon";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { LibrarySound } from "../library.sounds.models";

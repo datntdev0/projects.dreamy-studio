@@ -1,17 +1,17 @@
 import { Component } from "@angular/core";
-import { Badge } from "../components/badge";
-import { Breadcrumbs, BreadcrumbItem } from "../components/breadcrumbs";
-import { Button } from "../components/button";
-import { Card } from "../components/card";
-import { Chip } from "../components/chip";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRow } from "../components/datatable";
-import { Dialog } from "../components/dialog";
-import { Form, FormOption } from "../components/form";
-import { Icon } from "../components/icon";
-import { Segments, SegmentOption } from "../components/segments";
-import { Tabs, TabOption } from "../components/tabs";
-import { Toast } from "../components/toast";
-import { Tooltip } from "../components/tooltip";
+import { Badge } from "@components/badge";
+import { Breadcrumbs, BreadcrumbItem } from "@components/breadcrumbs";
+import { Button } from "@components/button";
+import { Card } from "@components/card";
+import { Chip } from "@components/chip";
+import { Datatable, DatatableCell, DatatableColumn, DatatableRow } from "@components/datatable";
+import { Dialog } from "@components/dialog";
+import { Form, FormOption } from "@components/form";
+import { Icon } from "@components/icon";
+import { Segments, SegmentOption } from "@components/segments";
+import { Tabs, TabOption } from "@components/tabs";
+import { Toast } from "@components/toast";
+import { Tooltip } from "@components/tooltip";
 
 @Component({
   selector: "app-components-page",

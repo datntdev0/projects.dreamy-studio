@@ -1,5 +1,5 @@
 import { Component, ElementRef, computed, effect, inject, input, viewChild } from "@angular/core";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibrarySound } from "../library.sounds.models";
 import { LibrarySoundPlayer } from "../library.sounds.player";
 import { LibrarySoundService } from "../library.sounds.service";

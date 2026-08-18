@@ -1,10 +1,10 @@
 import { Injectable, inject, signal } from "@angular/core";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
-import { Language } from "../../core/i18n/i18n.models";
-import { I18nService } from "../../core/i18n/i18n.service";
-import { Theme } from "../../core/theme/theme.models";
-import { ThemeService } from "../../core/theme/theme.service";
-import { ToastService } from "../../core/toast/toast.service";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
+import { Language } from "@app/core/i18n/i18n.models";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { Theme } from "@app/core/theme/theme.models";
+import { ThemeService } from "@app/core/theme/theme.service";
+import { ToastService } from "@app/core/toast/toast.service";
 import { GeneralSettings, LayoutSettings, SettingsFolderTarget, SettingsSectionId, SettingsView } from "./settings.models";
 
 @Injectable({ providedIn: "root" })

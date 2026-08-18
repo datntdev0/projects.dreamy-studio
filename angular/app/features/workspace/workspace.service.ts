@@ -1,10 +1,10 @@
 import { Injectable, inject, signal } from "@angular/core";
 import { Router } from "@angular/router";
 import { Channel } from "@tauri-apps/api/core";
-import { DesktopIpcError } from "../../core/desktop/desktop-ipc-error";
-import { DesktopIpcService } from "../../core/desktop/desktop-ipc.service";
-import { I18nKey } from "../../core/i18n/i18n.models";
-import { I18nService } from "../../core/i18n/i18n.service";
+import { DesktopIpcError } from "@app/core/desktop/desktop-ipc-error";
+import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nService } from "@app/core/i18n/i18n.service";
 import { AppInfo } from "./workspace.models";
 import { CancelOutcome } from "./workspace.models";
 import { CurrentWorkspace } from "./workspace.models";

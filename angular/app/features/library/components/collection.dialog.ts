@@ -1,8 +1,8 @@
 import { Component, inject, signal } from "@angular/core";
-import { Button } from "../../../../components/button";
-import { Dialog } from "../../../../components/dialog";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nKey } from "../../../core/i18n/i18n.models";
+import { Button } from "@components/button";
+import { Dialog } from "@components/dialog";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nKey } from "@app/core/i18n/i18n.models";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { libraryErrorKey } from "../library.rules";

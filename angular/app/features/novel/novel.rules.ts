@@ -1,4 +1,5 @@
-import { DesktopIpcError } from "../../core/desktop/desktop-ipc-error";
+import { DesktopIpcError } from "@app/core/desktop/desktop-ipc-error";
+import { I18nKey } from "@app/core/i18n/i18n.models";
 import { ChapterRow } from "./novel.models";
 import { FracState } from "./novel.models";
 import { InspectCheck } from "./novel.models";
@@ -32,6 +33,14 @@ export const COVER_MAX_HEIGHT = 640;
 export const RECENT_LIMIT = 3;
 
 export const NOVEL_LANGS: NovelLang[] = ["EN", "VI", "ZH", "JA", "KO"];
+
+export const NOVEL_LANG_KEYS: Record<NovelLang, I18nKey> = {
+  EN: "novel.lang.EN",
+  VI: "novel.lang.VI",
+  ZH: "novel.lang.ZH",
+  JA: "novel.lang.JA",
+  KO: "novel.lang.KO",
+};
 
 export const INSPECT_STEPS: InspectStep[] = [
   "format",

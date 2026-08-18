@@ -1,10 +1,10 @@
 import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { I18nService } from "../../../core/i18n/i18n.service";
-import { ToastService } from "../../../core/toast/toast.service";
-import { ToastTone } from "../../../core/toast/toast.models";
+import { Icon } from "@components/icon";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
+import { ToastService } from "@app/core/toast/toast.service";
+import { ToastTone } from "@app/core/toast/toast.models";
 import { NovelLang } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { ParagraphSaveResult } from "../novel.models";

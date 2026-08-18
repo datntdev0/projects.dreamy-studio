@@ -1,12 +1,12 @@
 import { Component, computed, effect, inject, signal } from "@angular/core";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { NovelToolKind, novelTabId, novelToolTabId } from "../../../../layout/layout.models";
-import { TabsService } from "../../../../layout/tabs.service";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { NovelToolKind, novelTabId, novelToolTabId } from "@layout/layout.models";
+import { TabsService } from "@layout/tabs.service";
 import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
 import { displayName, passesFilters } from "../novel.rules";
-import { Cover } from "../../../../components/cover";
+import { Cover } from "@components/cover";
 
 @Component({
   selector: "app-novel-explorer",

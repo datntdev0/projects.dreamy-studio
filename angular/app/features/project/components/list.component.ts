@@ -1,8 +1,8 @@
 import { Component, HostListener, inject } from "@angular/core";
-import { Icon } from "../../../../components/icon";
-import { I18nKey } from "../../../core/i18n/i18n.models";
-import { I18nPipe } from "../../../core/i18n/i18n.pipe";
-import { TabsService } from "../../../../layout/tabs.service";
+import { Icon } from "@components/icon";
+import { I18nKey } from "@app/core/i18n/i18n.models";
+import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { TabsService } from "@layout/tabs.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectStatus } from "../project.models";
 import { ProjectSummary } from "../project.models";

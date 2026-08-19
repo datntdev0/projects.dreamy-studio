@@ -82,6 +82,14 @@ pub fn run() {
             commands::novel::novel_package_import,
             commands::novel::novel_package_save_pick,
             commands::novel::novel_package_export,
+            commands::translation::translation_get,
+            commands::translation::translation_warnings,
+            commands::translation::translation_guidelines_save,
+            commands::translation::translation_dict_add,
+            commands::translation::translation_dict_update,
+            commands::translation::translation_dict_delete,
+            commands::translation::translation_passage_save,
+            commands::translation::translation_note_save,
             commands::project::project_list,
             commands::project::project_create,
             commands::project::project_update,
@@ -178,6 +186,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(service);
     app.manage(loader);
     app.manage(NovelService::new());
+    app.manage(crate::features::translation::service::TranslationService::new());
     app.manage(crate::features::project::service::ProjectService::new());
     app.manage(crate::features::library::service::LibraryService::new());
 }

@@ -80,7 +80,7 @@ export class NovelTranslation {
     const id = this.novelId();
     const total = this.novels.chaptersOf(id).length;
     const review = this.translation.reviewCountOf(id);
-    const open = this.translation.openWarningsOf(id).length;
+    const warnings = this.translation.warningsOf(id).length;
     switch (step) {
       case "dict":
         return this.i18n.translate("novel.translation.summary.dict", { count: this.translation.of(id).dict.length });
@@ -91,13 +91,13 @@ export class NovelTranslation {
       case "result":
         return review ? this.i18n.translate("novel.translation.summary.review", { count: review }) : this.i18n.translate("novel.translation.summary.reviewed");
       case "warn":
-        return open ? this.i18n.translate("novel.translation.summary.warn", { count: open }) : this.i18n.translate("novel.translation.summary.none");
+        return warnings ? this.i18n.translate("novel.translation.summary.warn", { count: warnings }) : this.i18n.translate("novel.translation.summary.none");
     }
   }
 
   isWarn(step: TranslationStep): boolean {
     const id = this.novelId();
-    return (step === "warn" && this.translation.openWarningsOf(id).length > 0) || (step === "result" && this.translation.reviewCountOf(id) > 0);
+    return (step === "warn" && this.translation.warningsOf(id).length > 0) || (step === "result" && this.translation.reviewCountOf(id) > 0);
   }
 
   isRunning(step: TranslationStep): boolean {

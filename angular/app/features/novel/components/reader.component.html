@@ -108,7 +108,7 @@
 <ng-template #translated let-paragraph let-pair="pair">
   @let passage = passageOf(paragraph.n);
   @if (passage) {
-    <p class="rd-para is-tr" data-testid="novel-reader-para-tr" [attr.id]="(pair ? 'rt-' : 'rp-') + paragraph.n">@if (!pair) { <span class="rd-no">{{ paragraph.n }}</span> }<span class="rd-tx">{{ passage.text }}@if (passage.state === "review") { <span class="rd-bd"><span class="badge badge-warning">{{ "novel.translation.passage.review" | t }}</span></span> }</span></p>
+    <p class="rd-para is-tr" data-testid="novel-reader-para-tr" [attr.id]="(pair ? 'rt-' : 'rp-') + paragraph.n">@if (!pair) { <span class="rd-no">{{ paragraph.n }}</span> }<span class="rd-tx">{{ passage.text }}@if (isReview(paragraph.n)) { <span class="rd-bd"><span class="badge badge-warning">{{ "novel.translation.passage.review" | t }}</span></span> }</span></p>
   } @else {
     <p class="rd-para is-tr is-empty" data-testid="novel-reader-para-tr"></p>
   }

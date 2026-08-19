@@ -465,6 +465,8 @@
   "novel.toast.chapterRenamed": "Renamed the chapter.",
   "novel.toast.chapterDeleted": "Deleted chapter “{title}”.",
   "novel.error.chapterLocked": "This chapter has a translation or knowledge, so it cannot be changed this way.",
+  "novel.error.pipelineBusy": "A translation pipeline is already running. Wait for it to finish or cancel it.",
+  "novel.error.dictionaryDuplicate": "The dictionary already has an entry with this source term.",
   "novel.error.titleEmpty": "The chapter title cannot be empty.",
   "novel.dialog.close": "Close (Esc)",
   "tabs.collections.title": "Collections & tags",
@@ -1026,7 +1028,7 @@
   ,"novel.translation.hint.guide": "Write the prompt the AI follows when translating: purpose, readers, tone, forms of address and conventions."
   ,"novel.translation.hint.trans": "Choose the chapters, then press Translate."
   ,"novel.translation.hint.result": "Read side by side, edit in place, take notes per passage."
-  ,"novel.translation.hint.warn": "The source, guidelines or dictionary changed after translating. Once handled you can start a new round."
+  ,"novel.translation.hint.warn": "The source or the dictionary changed after translating. Once handled you can start a new round."
   ,"novel.translation.summary.dict": "{count} entries"
   ,"novel.translation.summary.running": "Translating…"
   ,"novel.translation.summary.trans": "{done}/{total} chapters"
@@ -1101,28 +1103,21 @@
   ,"novel.translation.result.none.title": "Ch.{n} has no translation yet"
   ,"novel.translation.result.none.description": "Select this chapter in the Translate step to create a draft."
   ,"novel.translation.result.none.action": "Translate this chapter"
-  ,"novel.translation.warn.filter.open": "Open"
-  ,"novel.translation.warn.filter.done": "Handled"
   ,"novel.translation.warn.filter.all": "All"
   ,"novel.translation.warn.kind.source": "Source changed"
   ,"novel.translation.warn.kind.dict": "Dictionary"
-  ,"novel.translation.warn.kind.guideline": "Guidelines"
   ,"novel.translation.warn.passage": "Ch.{seq} ¶{n}"
-  ,"novel.translation.warn.chapter": "Ch.{seq} · whole chapter"
-  ,"novel.translation.warn.handled": "HANDLED"
   ,"novel.translation.warn.openDict": "Open dictionary"
-  ,"novel.translation.warn.openGuide": "Open guidelines"
   ,"novel.translation.warn.viewPassage": "View passage"
   ,"novel.translation.warn.retranslatePassage": "Re-translate passage"
-  ,"novel.translation.warn.retranslateChapter": "Re-translate chapter"
-  ,"novel.translation.warn.reopen": "Reopen"
   ,"novel.translation.warn.empty.title": "No warnings"
-  ,"novel.translation.warn.empty.description": "When the source, guidelines or dictionary change after translating, the affected passages will appear here."
-  ,"novel.translation.warn.by.edit": "Edit in place"
-  ,"novel.translation.warn.by.retranslatePassage": "Re-translate the passage"
-  ,"novel.translation.warn.by.retranslateChapter": "Re-translate the whole chapter"
+  ,"novel.translation.warn.empty.description": "When the source or the dictionary changes after translating, the affected passages will appear here."
   ,"novel.translation.warn.reason.dict": "The source passage uses “{src}”, but the translated passage does not contain “{dst}” from the dictionary."
-  ,"novel.translation.warn.reason.guideline": "The translation guidelines changed after this chapter was translated. The translation may need adjusting."
+  ,"novel.translation.warn.reason.source": "The source passage was edited after it was translated."
+  ,"novel.translation.warn.filter.source": "Source changed"
+  ,"novel.translation.warn.filter.dict": "Dictionary"
+  ,"novel.translation.trans.cancel": "Cancel"
+  ,"novel.translation.trans.busy": "Another translation pipeline is running."
   ,"novel.translation.result.review": "Ask the Assistant to review"
   ,"novel.translation.result.reviewSoon": "Coming soon"
   ,"novel.translation.guide.prompt": "Prompt"

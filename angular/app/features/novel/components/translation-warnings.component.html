@@ -10,36 +10,20 @@
     <div class="card w-card" data-testid="novel-translation-warn-card">
       <div class="w-top">
         <span class="badge" [class]="kindBadge(warning.kind)">{{ kindKey(warning.kind) | t }}</span>
-        @if (warning.n !== null) {
+        @if (warning.kind === "source") {
           <button type="button" class="chip" data-testid="novel-translation-warn-source" (click)="openSource(warning)">{{ "novel.translation.warn.passage" | t: { seq: warning.seq, n: warning.n } }}</button>
         } @else {
-          <span class="chip is-static">{{ "novel.translation.warn.chapter" | t: { seq: warning.seq } }}</span>
+          <span class="chip is-static" data-testid="novel-translation-warn-passage">{{ "novel.translation.warn.passage" | t: { seq: warning.seq, n: warning.n } }}</span>
         }
         <span class="spacer"></span>
-        @if (warning.state !== "open") {
-          <span class="badge badge-success">{{ "novel.translation.warn.handled" | t }}</span>
-          @if (warning.by) {
-            <span class="t-sm t-mute">{{ warning.by }}</span>
-          }
-        }
-        <span class="mono t-mute">{{ warning.date }}</span>
       </div>
-      <p>{{ warning.reason }}</p>
+      <p>{{ reasonOf(warning) }}</p>
       <div class="w-act">
-        @if (warning.state === "open") {
-          @if (warning.kind === "dict") {
-            <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-dict" (click)="openDictionary()"><ds-icon name="book" [size]="16" />{{ "novel.translation.warn.openDict" | t }}</button>
-          }
-          @if (warning.kind === "guideline") {
-            <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-guide" (click)="openGuidelines()"><ds-icon name="pen" [size]="16" />{{ "novel.translation.warn.openGuide" | t }}</button>
-          }
-          @if (warning.n !== null) {
-            <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-view" (click)="view(warning)">{{ "novel.translation.warn.viewPassage" | t }}</button>
-          }
-          <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-retranslate" [disabled]="isBusy(warning)" (click)="retranslate(warning)"><ds-icon name="refresh" [size]="16" />{{ (warning.n !== null ? "novel.translation.warn.retranslatePassage" : "novel.translation.warn.retranslateChapter") | t }}</button>
-        } @else {
-          <button type="button" class="btn btn-sm btn-ghost" data-testid="novel-translation-warn-reopen" (click)="reopen(warning)">{{ "novel.translation.warn.reopen" | t }}</button>
+        @if (warning.kind === "dict") {
+          <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-dict" (click)="openDictionary()"><ds-icon name="book" [size]="16" />{{ "novel.translation.warn.openDict" | t }}</button>
         }
+        <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-view" (click)="view(warning)">{{ "novel.translation.warn.viewPassage" | t }}</button>
+        <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-retranslate" [disabled]="isBusy()" (click)="retranslate(warning)"><ds-icon name="refresh" [size]="16" />{{ "novel.translation.warn.retranslatePassage" | t }}</button>
       </div>
     </div>
   } @empty {

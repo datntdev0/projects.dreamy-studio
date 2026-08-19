@@ -1,21 +1,14 @@
 import { TargetLang } from "./novel.models";
 
 export type TranslationStep = "dict" | "guide" | "trans" | "result" | "warn";
-
 export type DictEntryType = "name" | "place" | "org" | "title" | "term";
-
 export type PassageState = "draft" | "review";
-
-export type WarningKind = "source" | "dict" | "guideline";
-
-export type WarningState = "open" | "resolved";
-
-export type WarningFilter = "open" | "done" | "all";
-
+export type WarningKind = "source" | "dict";
+export type WarningFilter = "all" | "source" | "dict";
 export type ChapterFilter = "all" | "none" | "draft" | "review";
 
 export interface DictEntry {
-  id: string;
+  id: number;
   src: string;
   dst: string;
   type: DictEntryType;
@@ -29,16 +22,9 @@ export interface DictDraft {
   note: string;
 }
 
-export interface PassageNote {
-  text: string;
-  date: string;
-}
-
 export interface PassageTranslation {
   text: string;
-  state: PassageState;
-  previous: PassageState;
-  note: PassageNote | null;
+  note: string;
 }
 
 export interface ChapterTranslation {
@@ -51,11 +37,8 @@ export interface TranslationWarning {
   kind: WarningKind;
   chapterId: string;
   seq: number;
-  n: number | null;
-  reason: string;
-  state: WarningState;
-  by: string;
-  date: string;
+  n: number;
+  entryId: number | null;
 }
 
 export interface NovelTranslation {
@@ -74,18 +57,72 @@ export interface TranslationView {
   newEntry: boolean;
 }
 
-export interface TranslatedPassage {
-  n: number;
-  text: string;
-}
-
-export interface TranslatedChapter {
-  title: string;
-  passages: TranslatedPassage[];
-}
-
 export interface DictChange {
   entry: DictEntry;
   flagged: number;
 }
 
+export interface WireWarning {
+  kind: WarningKind;
+  chapterId: string;
+  n: number;
+  entryId: number | null;
+}
+
+export interface WirePassage {
+  n: number;
+  originalHashcheck: string;
+  text: string;
+  note: string;
+}
+
+export interface WireChapter {
+  title: string;
+  paragraphs: WirePassage[];
+}
+
+export interface WireTranslation {
+  guidelines: string;
+  dict: DictEntry[];
+  chapters: Record<string, WireChapter>;
+  warnings: WireWarning[];
+}
+
+export type PipelineStatus = "running" | "completed" | "failed" | "cancelled";
+export type TaskStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+
+export interface TaskRequest {
+  chapterId: string;
+  passage: number | null;
+}
+
+export interface PipelineTask {
+  id: number;
+  chapterId: string;
+  passage: number | null;
+  status: TaskStatus;
+  progress: number;
+  error: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface PipelineSnapshot {
+  id: number;
+  novelId: number;
+  kind: string;
+  target: string;
+  status: PipelineStatus;
+  total: number;
+  done: number;
+  failed: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  tasks: PipelineTask[];
+}
+
+export type PipelineEvent =
+  | { type: "started"; pipeline: PipelineSnapshot }
+  | { type: "task"; pipelineId: number; task: PipelineTask }
+  | { type: "finished"; pipeline: PipelineSnapshot };

@@ -15,6 +15,7 @@ import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
 import { PassageTranslation, ChapterTranslation } from "../novel.translation.models";
 import { NOVEL_LANG_KEYS } from "../novel.rules";
+import { passageState } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
 import { formatCount } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
@@ -97,6 +98,12 @@ export class NovelReader {
 
   passageOf(n: number): PassageTranslation | null {
     return this.chapterTranslation()?.passages[n] ?? null;
+  }
+
+  isReview(n: number): boolean {
+    const chapter = this.reader.current();
+    const warnings = this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).warnings;
+    return chapter ? passageState(warnings, chapter.id, n) === "review" : false;
   }
 
   setMode(mode: ReaderMode): void {

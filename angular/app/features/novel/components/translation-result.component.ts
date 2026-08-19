@@ -8,7 +8,7 @@ import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../
 import { NovelService } from "../novel.service";
 import { NOVEL_LANG_KEYS, toNovelError } from "../novel.rules";
 import { ChapterTranslation, PassageState, PassageTranslation, TranslationView, TranslationWarning } from "../novel.translation.models";
-import { PASSAGE_STATE_BADGES, PASSAGE_STATE_KEYS } from "../novel.translation.rules";
+import { PASSAGE_STATE_BADGES, PASSAGE_STATE_KEYS, passageState, warningReason, warningsOfPassage } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
 
 const SAVE_NOTICES: Record<ParagraphSaveResult, I18nKey | null> = {
@@ -72,9 +72,19 @@ export class NovelTranslationResult {
     return this.translated()?.passages[n] ?? null;
   }
 
+  stateOf(n: number): PassageState {
+    const chapter = this.chapter();
+    return chapter ? passageState(this.translation.warningsOf(this.novelId()), chapter.id, n) : "draft";
+  }
+
   warningsOf(n: number): TranslationWarning[] {
     const chapter = this.chapter();
-    return this.translation.openWarningsOf(this.novelId()).filter((warning) => warning.chapterId === chapter?.id && warning.n === n);
+    return chapter ? warningsOfPassage(this.translation.warningsOf(this.novelId()), chapter.id, n) : [];
+  }
+
+  reasonOf(warning: TranslationWarning): string {
+    const reason = warningReason(warning, this.translation.of(this.novelId()).dict);
+    return this.i18n.translate(reason.key, reason.params);
   }
 
   indexOf(paragraph: ParagraphRow): number {
@@ -184,7 +194,7 @@ export class NovelTranslationResult {
 
   private buildRows(): ParagraphRow[] {
     const only = this.onlyReview();
-    return this.source().filter((paragraph) => !only || this.passageOf(paragraph.n)?.state === "review");
+    return this.source().filter((paragraph) => !only || this.stateOf(paragraph.n) === "review");
   }
 
   private syncSource(): void {

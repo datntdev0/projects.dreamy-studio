@@ -7,7 +7,10 @@
   </select>
   <span class="t-sm t-mute" data-testid="novel-translation-pipeline-count">{{ "novel.translation.trans.count" | t: { count: count(matching().length) } }}</span>
   <span class="spacer"></span>
-  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}@if (view().picks.length) { ({{ view().picks.length }}) }</button>
+  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [attr.data-tip]="translation.isBusyElsewhere(novelId()) ? ('novel.translation.trans.busy' | t) : null" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}@if (view().picks.length) { ({{ view().picks.length }}) }</button>
+  @if (translation.isTranslating(novelId())) {
+    <button type="button" class="btn btn-sm" data-testid="novel-translation-pipeline-cancel" (click)="cancel()">{{ "novel.translation.trans.cancel" | t }}</button>
+  }
 </div>
 <div class="tl-main is-flat" data-testid="novel-translation-pipeline">
   <table class="table" data-testid="novel-translation-pipeline-table">
@@ -24,12 +27,12 @@
     <tbody>
       @for (row of shown(); track row.id) {
         <tr data-testid="novel-translation-pipeline-row" [class.is-selected]="isPicked(row)">
-          <td class="chk"><input type="checkbox" data-testid="novel-translation-pipeline-pick" [checked]="isPicked(row)" [disabled]="statusOf(row) === 'running'" [attr.aria-label]="'novel.translation.trans.pick' | t: { n: row.seq }" (change)="onPick(row, $event)"></td>
+          <td class="chk"><input type="checkbox" data-testid="novel-translation-pipeline-pick" [checked]="isPicked(row)" [disabled]="hasProgress(row)" [attr.aria-label]="'novel.translation.trans.pick' | t: { n: row.seq }" (change)="onPick(row, $event)"></td>
           <td class="mono t-mute">{{ numberOf(row) }}</td>
           <td class="t-ink">{{ row.title }}</td>
           <td class="num">{{ count(row.wordCount) }}</td>
           <td class="tl-st">
-            @if (statusOf(row) === "running") {
+            @if (hasProgress(row)) {
               <div class="tl-prog" data-testid="novel-translation-pipeline-progress"><div class="progress"><i [style.width.%]="progressOf(row)"></i></div><span class="mono">{{ progressOf(row) }}%</span></div>
             } @else {
               <span class="badge" [class]="badgeOf(statusOf(row))" data-testid="novel-translation-pipeline-status">{{ statusKey(statusOf(row)) | t }}</span>

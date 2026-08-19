@@ -18,11 +18,11 @@
         @for (paragraph of rows(); track paragraph.n) {
           @let passage = passageOf(paragraph.n);
           @if (passage) {
-            <div class="tl-pair" data-testid="novel-translation-result-pair" [class]="'tl-pair is-' + passage.state" [class.is-flash]="flash() === paragraph.n" [attr.id]="'ntp-' + novelId() + '-' + paragraph.n">
+            <div class="tl-pair" data-testid="novel-translation-result-pair" [class]="'tl-pair is-' + stateOf(paragraph.n)" [class.is-flash]="flash() === paragraph.n" [attr.id]="'ntp-' + novelId() + '-' + paragraph.n">
               <div class="tl-src"><span class="rd-no">{{ indexOf(paragraph) }}</span><span>{{ paragraph.text }}</span></div>
               <div class="tl-dst">
                 @for (warning of warningsOf(paragraph.n); track warning.id) {
-                  <div class="tl-warn" data-testid="novel-translation-result-warning"><ds-icon name="alert" [size]="14" /><span>{{ warning.reason }}</span></div>
+                  <div class="tl-warn" data-testid="novel-translation-result-warning"><ds-icon name="alert" [size]="14" /><span>{{ reasonOf(warning) }}</span></div>
                 }
                 @if (editing() === paragraph.n) {
                   <textarea #editor class="textarea" rows="4" data-testid="novel-translation-result-textarea" [value]="passage.text"></textarea>
@@ -31,11 +31,11 @@
                   <div class="tl-text" tabindex="0" data-testid="novel-translation-result-text" [attr.title]="'novel.translation.result.edit' | t" (click)="edit(paragraph.n)" (keydown.enter)="edit(paragraph.n)">{{ passage.text }}</div>
                 }
                 @if (noteFor() === paragraph.n) {
-                  <div class="tl-note-in"><input #noteInput class="input" data-testid="novel-translation-result-note-input" [value]="passage.note?.text ?? ''" [attr.placeholder]="'novel.translation.result.notePlaceholder' | t" (keydown.enter)="saveNote(chapter, paragraph.n, noteInput.value)" (keydown.escape)="closeNote()"><button type="button" class="btn btn-icon btn-sm btn-primary" data-testid="novel-translation-result-note-save" [attr.aria-label]="'novel.translation.result.noteSave' | t" [attr.data-tip]="'novel.translation.result.noteSave' | t" (click)="saveNote(chapter, paragraph.n, noteInput.value)"><ds-icon name="check" [size]="16" /></button><button type="button" class="btn btn-icon btn-sm" data-testid="novel-translation-result-note-cancel" [attr.aria-label]="'novel.reader.cancel' | t" [attr.data-tip]="'novel.reader.cancel' | t" (click)="closeNote()"><ds-icon name="x" [size]="16" /></button></div>
-                } @else if (passage.note; as note) {
-                  <div class="tl-note" tabindex="0" data-testid="novel-translation-result-note" [attr.title]="'novel.translation.result.noteEdit' | t" (click)="openNote(paragraph.n)" (keydown.enter)="openNote(paragraph.n)"><ds-icon name="pen" [size]="14" /><span>{{ note.text }}</span><span class="mono t-mute">{{ note.date }}</span></div>
+                  <div class="tl-note-in"><input #noteInput class="input" data-testid="novel-translation-result-note-input" [value]="passage.note" [attr.placeholder]="'novel.translation.result.notePlaceholder' | t" (keydown.enter)="saveNote(chapter, paragraph.n, noteInput.value)" (keydown.escape)="closeNote()"><button type="button" class="btn btn-icon btn-sm btn-primary" data-testid="novel-translation-result-note-save" [attr.aria-label]="'novel.translation.result.noteSave' | t" [attr.data-tip]="'novel.translation.result.noteSave' | t" (click)="saveNote(chapter, paragraph.n, noteInput.value)"><ds-icon name="check" [size]="16" /></button><button type="button" class="btn btn-icon btn-sm" data-testid="novel-translation-result-note-cancel" [attr.aria-label]="'novel.reader.cancel' | t" [attr.data-tip]="'novel.reader.cancel' | t" (click)="closeNote()"><ds-icon name="x" [size]="16" /></button></div>
+                } @else if (passage.note) {
+                  <div class="tl-note" tabindex="0" data-testid="novel-translation-result-note" [attr.title]="'novel.translation.result.noteEdit' | t" (click)="openNote(paragraph.n)" (keydown.enter)="openNote(paragraph.n)"><ds-icon name="pen" [size]="14" /><span>{{ passage.note }}</span></div>
                 }
-                <div class="tl-tools"><span class="badge" [class]="badgeOf(passage.state)">{{ stateKey(passage.state) | t }}</span><span class="spacer"></span>
+                <div class="tl-tools"><span class="badge" [class]="badgeOf(stateOf(paragraph.n))">{{ stateKey(stateOf(paragraph.n)) | t }}</span><span class="spacer"></span>
                   @if (!passage.note && noteFor() !== paragraph.n) {
                     <button type="button" class="btn btn-sm btn-ghost" data-testid="novel-translation-result-note-open" (click)="openNote(paragraph.n)"><ds-icon name="plus" [size]="16" />{{ "novel.translation.result.note" | t }}</button>
                   }

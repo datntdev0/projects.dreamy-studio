@@ -465,6 +465,8 @@
   "novel.toast.chapterRenamed": "Đã đổi tên chương.",
   "novel.toast.chapterDeleted": "Đã xóa chương “{title}”.",
   "novel.error.chapterLocked": "Chương này đã có bản dịch hoặc knowledge nên không thể thay đổi theo cách này.",
+  "novel.error.pipelineBusy": "Đang có một pipeline dịch chạy. Hãy đợi nó xong hoặc hủy nó.",
+  "novel.error.dictionaryDuplicate": "Từ điển đã có mục với từ gốc này.",
   "novel.error.titleEmpty": "Tên chương không được để trống.",
   "novel.dialog.close": "Đóng (Esc)",
   "tabs.collections.title": "Collections & tags",
@@ -1026,7 +1028,7 @@
   ,"novel.translation.hint.guide": "Viết prompt để AI làm theo khi dịch: mục đích, độc giả, giọng văn, cách xưng hô và quy ước."
   ,"novel.translation.hint.trans": "Chọn các chương rồi bấm Dịch."
   ,"novel.translation.hint.result": "Đọc song song, sửa trực tiếp, ghi chú theo từng đoạn."
-  ,"novel.translation.hint.warn": "Nguồn, hướng dẫn hoặc từ điển đã thay đổi sau khi dịch. Xử lý xong có thể bắt đầu vòng mới."
+  ,"novel.translation.hint.warn": "Nguồn hoặc từ điển đã thay đổi sau khi dịch. Xử lý xong có thể bắt đầu vòng mới."
   ,"novel.translation.summary.dict": "{count} mục"
   ,"novel.translation.summary.running": "Đang dịch…"
   ,"novel.translation.summary.trans": "{done}/{total} chương"
@@ -1101,28 +1103,21 @@
   ,"novel.translation.result.none.title": "Ch.{n} chưa có bản dịch"
   ,"novel.translation.result.none.description": "Chọn chương này ở bước Dịch để tạo bản nháp."
   ,"novel.translation.result.none.action": "Dịch chương này"
-  ,"novel.translation.warn.filter.open": "Đang mở"
-  ,"novel.translation.warn.filter.done": "Đã xử lý"
   ,"novel.translation.warn.filter.all": "Tất cả"
   ,"novel.translation.warn.kind.source": "Nguồn đã đổi"
   ,"novel.translation.warn.kind.dict": "Từ điển"
-  ,"novel.translation.warn.kind.guideline": "Hướng dẫn dịch"
   ,"novel.translation.warn.passage": "Ch.{seq} ¶{n}"
-  ,"novel.translation.warn.chapter": "Ch.{seq} · cả chương"
-  ,"novel.translation.warn.handled": "ĐÃ XỬ LÝ"
   ,"novel.translation.warn.openDict": "Mở từ điển"
-  ,"novel.translation.warn.openGuide": "Mở hướng dẫn dịch"
   ,"novel.translation.warn.viewPassage": "Xem đoạn"
   ,"novel.translation.warn.retranslatePassage": "Dịch lại đoạn"
-  ,"novel.translation.warn.retranslateChapter": "Dịch lại chương"
-  ,"novel.translation.warn.reopen": "Mở lại"
   ,"novel.translation.warn.empty.title": "Không có cảnh báo"
-  ,"novel.translation.warn.empty.description": "Khi nguồn, hướng dẫn hoặc từ điển thay đổi sau khi dịch, các đoạn bị ảnh hưởng sẽ hiện ở đây."
-  ,"novel.translation.warn.by.edit": "Sửa trực tiếp"
-  ,"novel.translation.warn.by.retranslatePassage": "Dịch lại đoạn"
-  ,"novel.translation.warn.by.retranslateChapter": "Dịch lại cả chương"
+  ,"novel.translation.warn.empty.description": "Khi nguồn hoặc từ điển thay đổi sau khi dịch, các đoạn bị ảnh hưởng sẽ hiện ở đây."
   ,"novel.translation.warn.reason.dict": "Đoạn gốc có “{src}”, nhưng đoạn đã dịch không chứa “{dst}” theo từ điển."
-  ,"novel.translation.warn.reason.guideline": "Hướng dẫn dịch đã đổi sau khi chương này được dịch. Bản dịch có thể cần chỉnh lại."
+  ,"novel.translation.warn.reason.source": "Đoạn gốc đã được sửa sau khi dịch."
+  ,"novel.translation.warn.filter.source": "Bản gốc đã đổi"
+  ,"novel.translation.warn.filter.dict": "Từ điển"
+  ,"novel.translation.trans.cancel": "Hủy"
+  ,"novel.translation.trans.busy": "Đang có một pipeline dịch khác chạy."
   ,"novel.translation.result.review": "Nhờ Trợ lý rà soát"
   ,"novel.translation.result.reviewSoon": "Sắp ra mắt"
   ,"novel.translation.guide.prompt": "Prompt"

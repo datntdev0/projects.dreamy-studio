@@ -128,7 +128,12 @@ export class NovelTranslationDictionary {
   }
 
   private fail(cause: unknown): void {
-    const detail = toNovelError(cause).detail;
+    const error = toNovelError(cause);
+    if (error.code === "dictionary_duplicate") {
+      this.toasts.show(this.i18n.translate("novel.error.dictionaryDuplicate"), "warning");
+      return;
+    }
+    const detail = error.detail;
     this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
   }
 

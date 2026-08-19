@@ -1,11 +1,9 @@
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { NovelLang, ParagraphRow, TargetLang, TranslationStatus } from "./novel.models";
-import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WarningState } from "./novel.translation.models";
+import { I18nKey, I18nParams } from "@app/core/i18n/i18n.models";
+import { ChapterRow, NovelLang, TargetLang, TranslationStatus } from "./novel.models";
+import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
 
 export const TARGET_LANGS: TargetLang[] = ["VI", "EN"];
-
 export const TRANSLATION_STEPS: TranslationStep[] = ["dict", "guide", "trans", "result", "warn"];
-
 export const STEP_ICONS: Record<TranslationStep, string> = { dict: "book", guide: "pen", trans: "lang", result: "frames", warn: "alert" };
 
 export const STEP_LABEL_KEYS: Record<TranslationStep, I18nKey> = {
@@ -43,24 +41,22 @@ export const CHAPTER_FILTER_KEYS: Record<ChapterFilter, I18nKey> = {
   review: "novel.translation.status.review",
 };
 
-export const WARNING_FILTERS: WarningFilter[] = ["open", "done", "all"];
+export const WARNING_FILTERS: WarningFilter[] = ["all", "source", "dict"];
 
 export const WARNING_FILTER_KEYS: Record<WarningFilter, I18nKey> = {
-  open: "novel.translation.warn.filter.open",
-  done: "novel.translation.warn.filter.done",
   all: "novel.translation.warn.filter.all",
+  source: "novel.translation.warn.filter.source",
+  dict: "novel.translation.warn.filter.dict",
 };
 
 export const WARNING_KIND_KEYS: Record<WarningKind, I18nKey> = {
   source: "novel.translation.warn.kind.source",
   dict: "novel.translation.warn.kind.dict",
-  guideline: "novel.translation.warn.kind.guideline",
 };
 
 export const WARNING_KIND_BADGES: Record<WarningKind, string> = {
   source: "badge-warning",
   dict: "badge-info",
-  guideline: "badge-info",
 };
 
 export const STATUS_KEYS: Record<TranslationStatus, I18nKey> = {
@@ -88,7 +84,6 @@ export const PASSAGE_STATE_BADGES: Record<PassageState, string> = {
 };
 
 export const CHAPTER_ROW_LIMIT = 300;
-
 export const EMPTY_VIEW: TranslationView = { step: "dict", target: null, seq: 1, picks: [], focus: null, newEntry: false };
 
 export function targetsOf(source: NovelLang | undefined): TargetLang[] {
@@ -107,58 +102,92 @@ export function stepIndex(step: TranslationStep): number {
   return TRANSLATION_STEPS.indexOf(step);
 }
 
-export function reviewCountOf(chapter: ChapterTranslation | undefined): number {
-  let total = 0;
-  for (const passage of Object.values(chapter?.passages ?? {})) {
-    total += passage.state === "review" ? 1 : 0;
+export function fromWireChapter(wire: WireChapter): ChapterTranslation {
+  const passages: Record<number, { text: string; note: string }> = {};
+  for (const paragraph of wire.paragraphs) {
+    passages[paragraph.n] = { text: paragraph.text, note: paragraph.note };
   }
-  return total;
+  return { title: wire.title, passages };
 }
 
-export function reviewCount(translation: NovelTranslation): number {
-  let total = 0;
-  for (const chapter of Object.values(translation.chapters)) {
-    total += reviewCountOf(chapter);
-  }
-  return total;
-}
-
-export function chapterStatus(translation: NovelTranslation, chapterId: string, running: string[]): TranslationStatus {
-  if (running.includes(chapterId)) {
-    return "running";
-  }
-  const chapter = translation.chapters[chapterId];
-  if (!chapter) {
-    return "none";
-  }
-  return reviewCountOf(chapter) > 0 ? "review" : "draft";
-}
-
-export function translatedCount(translation: NovelTranslation): number {
-  return Object.keys(translation.chapters).length;
-}
-
-export function openWarnings(list: TranslationWarning[]): TranslationWarning[] {
+export function fromWireWarnings(list: WireWarning[], chapters: ChapterRow[]): TranslationWarning[] {
   const out: TranslationWarning[] = [];
   for (const warning of list) {
-    if (warning.state === "open") {
+    const chapter = chapters.find((item) => item.id === warning.chapterId);
+    out.push({
+      id: `${warning.kind}:${warning.chapterId}:${warning.n}:${warning.entryId ?? 0}`,
+      kind: warning.kind,
+      chapterId: warning.chapterId,
+      seq: chapter?.seq ?? 0,
+      n: warning.n,
+      entryId: warning.entryId,
+    });
+  }
+  return out;
+}
+
+export function fromWireTranslation(wire: WireTranslation, chapters: ChapterRow[]): NovelTranslation {
+  const translated: Record<string, ChapterTranslation> = {};
+  for (const [chapterId, chapter] of Object.entries(wire.chapters)) {
+    translated[chapterId] = fromWireChapter(chapter);
+  }
+  return { guidelines: wire.guidelines, dict: wire.dict, chapters: translated, warnings: fromWireWarnings(wire.warnings, chapters) };
+}
+
+export function warningsOfPassage(warnings: TranslationWarning[], chapterId: string, n: number): TranslationWarning[] {
+  const out: TranslationWarning[] = [];
+  for (const warning of warnings) {
+    if (warning.chapterId === chapterId && warning.n === n) {
       out.push(warning);
     }
   }
   return out;
 }
 
-export function matchesWarningFilter(state: WarningState, filter: WarningFilter): boolean {
-  if (filter === "all") {
-    return true;
+export function passageState(warnings: TranslationWarning[], chapterId: string, n: number): PassageState {
+  return warningsOfPassage(warnings, chapterId, n).length > 0 ? "review" : "draft";
+}
+
+export function reviewCountOf(warnings: TranslationWarning[], chapterId: string): number {
+  const passages = new Set<number>();
+  for (const warning of warnings) {
+    if (warning.chapterId === chapterId) {
+      passages.add(warning.n);
+    }
   }
-  return filter === "open" ? state === "open" : state !== "open";
+  return passages.size;
+}
+
+export function reviewCount(warnings: TranslationWarning[]): number {
+  const passages = new Set<string>();
+  for (const warning of warnings) {
+    passages.add(`${warning.chapterId}:${warning.n}`);
+  }
+  return passages.size;
+}
+
+export function chapterStatus(translation: NovelTranslation, chapterId: string, running: string[]): TranslationStatus {
+  if (running.includes(chapterId)) {
+    return "running";
+  }
+  if (!translation.chapters[chapterId]) {
+    return "none";
+  }
+  return reviewCountOf(translation.warnings, chapterId) > 0 ? "review" : "draft";
+}
+
+export function translatedCount(translation: NovelTranslation): number {
+  return Object.keys(translation.chapters).length;
+}
+
+export function matchesWarningFilter(kind: WarningKind, filter: WarningFilter): boolean {
+  return filter === "all" || kind === filter;
 }
 
 export function filterWarnings(list: TranslationWarning[], filter: WarningFilter): TranslationWarning[] {
   const out: TranslationWarning[] = [];
   for (const warning of list) {
-    if (matchesWarningFilter(warning.state, filter)) {
+    if (matchesWarningFilter(warning.kind, filter)) {
       out.push(warning);
     }
   }
@@ -187,22 +216,6 @@ export function matchesChapterFilter(status: TranslationStatus, filter: ChapterF
   return filter === "all" || status === filter;
 }
 
-export function nextEntryId(list: DictEntry[]): string {
-  let highest = 0;
-  for (const entry of list) {
-    highest = Math.max(highest, Number(entry.id.slice(1)) || 0);
-  }
-  return `D${String(highest + 1).padStart(2, "0")}`;
-}
-
-export function nextWarningId(list: TranslationWarning[]): string {
-  let highest = 0;
-  for (const warning of list) {
-    highest = Math.max(highest, Number(warning.id.slice(1)) || 0);
-  }
-  return `W${String(highest + 1).padStart(2, "0")}`;
-}
-
 export function replaceEntry(list: DictEntry[], next: DictEntry): DictEntry[] {
   const out: DictEntry[] = [];
   for (const entry of list) {
@@ -211,20 +224,12 @@ export function replaceEntry(list: DictEntry[], next: DictEntry): DictEntry[] {
   return out;
 }
 
-export function withoutEntry(list: DictEntry[], id: string): DictEntry[] {
+export function withoutEntry(list: DictEntry[], id: number): DictEntry[] {
   const out: DictEntry[] = [];
   for (const entry of list) {
     if (entry.id !== id) {
       out.push(entry);
     }
-  }
-  return out;
-}
-
-export function replaceWarning(list: TranslationWarning[], next: TranslationWarning): TranslationWarning[] {
-  const out: TranslationWarning[] = [];
-  for (const warning of list) {
-    out.push(warning.id === next.id ? next : warning);
   }
   return out;
 }
@@ -244,17 +249,10 @@ export function rangeText(numbers: number[]): string {
   return parts.join(", ");
 }
 
-export function usesTerm(text: string, term: string): boolean {
-  return text.toLowerCase().includes(term.toLowerCase());
-}
-
-export function flaggedPassages(entry: DictEntry, source: ParagraphRow[], chapter: ChapterTranslation): number[] {
-  const out: number[] = [];
-  for (const paragraph of source) {
-    const passage = chapter.passages[paragraph.n];
-    if (passage && usesTerm(paragraph.text, entry.src) && !usesTerm(passage.text, entry.dst)) {
-      out.push(paragraph.n);
-    }
+export function warningReason(warning: TranslationWarning, dict: DictEntry[]): { key: I18nKey; params: I18nParams } {
+  if (warning.kind === "source") {
+    return { key: "novel.translation.warn.reason.source", params: {} };
   }
-  return out;
+  const entry = dict.find((item) => item.id === warning.entryId);
+  return { key: "novel.translation.warn.reason.dict", params: { src: entry?.src ?? "", dst: entry?.dst ?? "" } };
 }

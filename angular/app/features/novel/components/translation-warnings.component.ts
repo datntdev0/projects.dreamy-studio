@@ -7,7 +7,7 @@ import { ToastService } from "@app/core/toast/toast.service";
 import { NovelReaderService } from "../novel.reader.service";
 import { toNovelError } from "../novel.rules";
 import { TranslationWarning, WarningFilter, WarningKind } from "../novel.translation.models";
-import { WARNING_FILTERS, WARNING_FILTER_KEYS, WARNING_KIND_BADGES, WARNING_KIND_KEYS, filterWarnings } from "../novel.translation.rules";
+import { WARNING_FILTERS, WARNING_FILTER_KEYS, WARNING_KIND_BADGES, WARNING_KIND_KEYS, filterWarnings, warningReason } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
 
 @Component({
@@ -24,7 +24,7 @@ export class NovelTranslationWarnings {
 
   readonly novelId = input.required<number>();
   readonly filters = WARNING_FILTERS;
-  readonly filter = signal<WarningFilter>("open");
+  readonly filter = signal<WarningFilter>("all");
 
   readonly all = computed(this.buildAll.bind(this));
   readonly rows = computed(this.buildRows.bind(this));
@@ -45,8 +45,13 @@ export class NovelTranslationWarnings {
     return WARNING_KIND_BADGES[kind];
   }
 
-  isBusy(warning: TranslationWarning): boolean {
-    return this.translation.progressOf(this.novelId())[warning.chapterId] !== undefined;
+  reasonOf(warning: TranslationWarning): string {
+    const reason = warningReason(warning, this.translation.of(this.novelId()).dict);
+    return this.i18n.translate(reason.key, reason.params);
+  }
+
+  isBusy(): boolean {
+    return this.translation.busy();
   }
 
   setFilter(filter: WarningFilter): void {
@@ -54,17 +59,11 @@ export class NovelTranslationWarnings {
   }
 
   openSource(warning: TranslationWarning): void {
-    if (warning.n !== null) {
-      void this.reader.openReader(this.novelId(), warning.seq, warning.n);
-    }
+    void this.reader.openReader(this.novelId(), warning.seq, warning.n);
   }
 
   openDictionary(): void {
     this.translation.setStep(this.novelId(), "dict");
-  }
-
-  openGuidelines(): void {
-    this.translation.setStep(this.novelId(), "guide");
   }
 
   view(warning: TranslationWarning): void {
@@ -75,15 +74,16 @@ export class NovelTranslationWarnings {
     await this.run(this.translation.retranslate(this.novelId(), warning.id));
   }
 
-  async reopen(warning: TranslationWarning): Promise<void> {
-    await this.run(this.translation.reopen(this.novelId(), warning.id));
-  }
-
   private async run(work: Promise<void>): Promise<void> {
     try {
       await work;
     } catch (cause) {
-      const detail = toNovelError(cause).detail;
+      const error = toNovelError(cause);
+      if (error.code === "pipeline_busy") {
+        this.toasts.show(this.i18n.translate("novel.error.pipelineBusy"), "warning");
+        return;
+      }
+      const detail = error.detail;
       this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
     }
   }

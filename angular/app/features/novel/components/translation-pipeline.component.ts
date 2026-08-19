@@ -21,7 +21,7 @@ export class NovelTranslationPipeline {
   private readonly novels = inject(NovelService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
-  private readonly translation = inject(NovelTranslationService);
+  readonly translation = inject(NovelTranslationService);
 
   readonly novelId = input.required<number>();
   readonly count = formatCount;
@@ -60,6 +60,10 @@ export class NovelTranslationPipeline {
     return Math.round(this.translation.progressOf(this.novelId())[row.id] ?? 0);
   }
 
+  hasProgress(row: ChapterRow): boolean {
+    return Object.hasOwn(this.translation.progressOf(this.novelId()), row.id);
+  }
+
   isPicked(row: ChapterRow): boolean {
     return this.view().picks.includes(row.id);
   }
@@ -95,6 +99,19 @@ export class NovelTranslationPipeline {
     try {
       await this.translation.translate(this.novelId(), this.view().picks);
     } catch (cause) {
+      const error = toNovelError(cause);
+      if (error.code === "pipeline_busy") {
+        this.toasts.show(this.i18n.translate("novel.error.pipelineBusy"), "warning");
+        return;
+      }
+      this.toasts.show(this.i18n.translate("novel.error.generic", { detail: error.detail }), "danger");
+    }
+  }
+
+  async cancel(): Promise<void> {
+    try {
+      await this.translation.cancelPipeline();
+    } catch (cause) {
       const detail = toNovelError(cause).detail;
       this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
     }
@@ -124,6 +141,6 @@ export class NovelTranslationPipeline {
   }
 
   private buildReady(): boolean {
-    return this.view().picks.length > 0 && !this.translation.isTranslating(this.novelId());
+    return this.view().picks.length > 0 && !this.translation.busy();
   }
 }

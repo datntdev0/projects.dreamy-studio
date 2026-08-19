@@ -128,7 +128,7 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 10);
+    assert_eq!(history_count(db.connection()), 13);
     for table in [
         "ws_novels",
         "ws_novel_chapters",
@@ -138,8 +138,107 @@ fn applies_embedded_workspace_scripts_from_empty() {
         "ws_library_sounds",
         "ws_library_videos",
         "ws_library_prompts",
+        "ws_novel_translation_dictionary",
+        "ws_pipeline_history",
+        "ws_pipeline_tasks",
     ] {
         assert!(table_exists(db.connection(), table), "{table}");
+    }
+}
+
+#[test]
+fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
+    let dir = TempDir::new().unwrap();
+    let (_, mut db) = open_new(&dir);
+    let cancel = AtomicBool::new(false);
+    let old_scripts: Vec<Script> = workspace_scripts()
+        .unwrap()
+        .into_iter()
+        .filter(|script| script.version.to_string() == "0.0.0")
+        .collect();
+    Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
+    db.connection()
+        .execute(
+            "INSERT INTO ws_novels (title, lang, origin, created_at, updated_at) \
+             VALUES ('Existing', 'EN', 'local', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+
+    Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
+
+    let row: (String, String, String) = db
+        .connection()
+        .query_row(
+            "SELECT title, lang, origin FROM ws_novels WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        row,
+        (
+            "Existing".to_string(),
+            "EN".to_string(),
+            "local".to_string()
+        )
+    );
+    assert_eq!(history_count(db.connection()), 13);
+    assert!(table_exists(
+        db.connection(),
+        "ws_novel_translation_dictionary"
+    ));
+    assert!(table_exists(db.connection(), "ws_pipeline_history"));
+    assert!(table_exists(db.connection(), "ws_pipeline_tasks"));
+}
+
+#[test]
+fn deleting_novel_cascades_to_translation_and_pipeline_rows() {
+    let dir = TempDir::new().unwrap();
+    let (_, mut db) = open_new(&dir);
+    let cancel = AtomicBool::new(false);
+    Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
+    let conn = db.connection();
+    conn.execute(
+        "INSERT INTO ws_novels (title, lang, origin, created_at, updated_at) \
+         VALUES ('Novel', 'EN', 'local', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO ws_novel_translation_dictionary \
+         (novel_id, target, src, dst, created_at, updated_at) \
+         VALUES (1, 'VI', 'source', 'target', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO ws_pipeline_history (novel_id, kind, target, status, total, created_at) \
+         VALUES (1, 'translation', 'VI', 'running', 1, '2026-01-01T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO ws_pipeline_tasks (pipeline_id, chapter_id, status) \
+         VALUES (1, '0123456789abcdef0123456789abcdef', 'queued')",
+        [],
+    )
+    .unwrap();
+
+    conn.execute("DELETE FROM ws_novels WHERE id = 1", [])
+        .unwrap();
+
+    for table in [
+        "ws_novel_translation_dictionary",
+        "ws_pipeline_history",
+        "ws_pipeline_tasks",
+    ] {
+        let count: i64 = conn
+            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(count, 0, "{table}");
     }
 }
 

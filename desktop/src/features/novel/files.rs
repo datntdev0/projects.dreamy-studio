@@ -206,7 +206,7 @@ fn is_chapter_id(value: &str) -> bool {
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
-fn remove_file_quietly(path: &Path) -> NovelResult<()> {
+pub(crate) fn remove_file_quietly(path: &Path) -> NovelResult<()> {
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
@@ -214,7 +214,7 @@ fn remove_file_quietly(path: &Path) -> NovelResult<()> {
     }
 }
 
-fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let temp = temp_path(path);
     let written = write_file(&temp, bytes);
     if written.is_err() {

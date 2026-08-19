@@ -1,0 +1,43 @@
+<section class="card tl-history" data-testid="novel-translation-history" aria-label="Translation pipeline history">
+  <h3 class="t-display-xs" data-testid="novel-translation-history-title">{{ "novel.translation.history.title" | t }}</h3>
+  @if (pipelines().length) {
+    <table class="table" data-testid="novel-translation-history-table">
+      <thead data-testid="novel-translation-history-head">
+        <tr data-testid="novel-translation-history-head-row">
+          <th data-testid="novel-translation-history-head-started">{{ "novel.translation.history.col.started" | t }}</th>
+          <th data-testid="novel-translation-history-head-target">{{ "novel.translation.history.col.target" | t }}</th>
+          <th data-testid="novel-translation-history-head-status">{{ "novel.translation.history.col.status" | t }}</th>
+          <th data-testid="novel-translation-history-head-tasks">{{ "novel.translation.history.col.tasks" | t }}</th>
+          <th data-testid="novel-translation-history-head-actions"></th>
+        </tr>
+      </thead>
+      <tbody data-testid="novel-translation-history-body">
+        @for (pipeline of pipelines(); track pipeline.id) {
+          @let row = snapshotOf(pipeline);
+          <tr class="tl-history-row" data-testid="novel-translation-history-row">
+            <td class="mono t-mute" data-testid="novel-translation-history-started">{{ stampOf(row) }}</td>
+            <td data-testid="novel-translation-history-target">{{ row.target }}</td>
+            <td data-testid="novel-translation-history-status-cell"><span class="badge" [class]="badgeOf(row.status)" data-testid="novel-translation-history-status">{{ statusKey(row.status) | t }}</span></td>
+            <td data-testid="novel-translation-history-tasks"><span class="t-sm t-mute" data-testid="novel-translation-history-progress">{{ "novel.translation.history.tasks" | t: { done: row.done, total: row.total } }}</span>@if (row.failed > 0) { <span class="badge badge-danger" data-testid="novel-translation-history-failed">{{ "novel.translation.history.failed" | t: { count: row.failed } }}</span> }</td>
+            <td class="row-actions" data-testid="novel-translation-history-actions">
+              @if (failedTasks(row).length) {
+                <button type="button" class="btn btn-sm" data-testid="novel-translation-history-toggle" [attr.aria-label]="'novel.translation.history.toggle' | t" [attr.data-tip]="'novel.translation.history.toggle' | t" [attr.aria-expanded]="isExpanded(row)" (click)="toggle(row)">{{ "novel.translation.history.toggle" | t }}</button>
+              }
+            </td>
+          </tr>
+          @if (isExpanded(row)) {
+            <tr class="tl-history-detail" data-testid="novel-translation-history-detail">
+              <td colspan="5" data-testid="novel-translation-history-detail-cell">
+                @for (task of failedTasks(row); track task.id) {
+                  <div class="t-sm t-mute" data-testid="novel-translation-history-task">{{ (task.passage === null ? "novel.translation.history.task.chapter" : "novel.translation.history.task.passage") | t: { seq: seqOf(task), n: passageOf(task), error: task.error } }}</div>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  } @else {
+    <div class="empty" data-testid="novel-translation-history-empty"><div class="empty-inner" data-testid="novel-translation-history-empty-inner"><div class="illus" data-testid="novel-translation-history-empty-illus"></div><p class="t-sm t-mute" data-testid="novel-translation-history-empty-text">{{ "novel.translation.history.empty" | t }}</p></div></div>
+  }
+</section>

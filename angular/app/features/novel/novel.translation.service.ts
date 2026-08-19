@@ -21,6 +21,20 @@ function replaceTask(tasks: PipelineTask[], next: PipelineTask): PipelineTask[] 
   return result;
 }
 
+function taskTotals(tasks: PipelineTask[]): { done: number; failed: number } {
+  let done = 0;
+  let failed = 0;
+  for (const task of tasks) {
+    if (task.status === "completed") {
+      done += 1;
+    }
+    if (task.status === "failed") {
+      failed += 1;
+    }
+  }
+  return { done, failed };
+}
+
 @Injectable({ providedIn: "root" })
 export class NovelTranslationService {
   private readonly ipc = inject(DesktopIpcService);
@@ -28,6 +42,7 @@ export class NovelTranslationService {
   private readonly workspace = inject(WorkspaceService);
   private readonly store = signal<Record<string, NovelTranslation>>({});
   private readonly views = signal<Record<number, TranslationView>>({});
+  private readonly history = signal<Record<number, PipelineSnapshot[]>>({});
   private readonly activePipeline = signal<PipelineSnapshot | null>(null);
   private workspacePath: string | null | undefined = undefined;
 
@@ -94,6 +109,15 @@ export class NovelTranslationService {
 
   warningsOf(novelId: number): TranslationWarning[] {
     return this.of(novelId).warnings;
+  }
+
+  historyOf(novelId: number): PipelineSnapshot[] {
+    return this.history()[novelId] ?? [];
+  }
+
+  async loadHistory(novelId: number): Promise<void> {
+    const history = await this.ipc.invoke<PipelineSnapshot[]>("pipeline_history_list", { novelId, limit: 20 });
+    this.history.set({ ...this.history(), [novelId]: history });
   }
 
   async ensure(novelId: number, target: TargetLang = this.targetOf(novelId)): Promise<void> {
@@ -263,6 +287,7 @@ export class NovelTranslationService {
   reset(): void {
     this.store.set({});
     this.views.set({});
+    this.history.set({});
     this.activePipeline.set(null);
     this.loading.set(false);
     this.error.set(null);
@@ -280,17 +305,20 @@ export class NovelTranslationService {
   private handlePipelineEvent(event: PipelineEvent): void {
     if (event.type === "started") {
       this.activePipeline.set(event.pipeline);
+      void this.loadHistory(event.pipeline.novelId);
       return;
     }
     if (event.type === "task") {
       const active = this.active();
       if (active?.id === event.pipelineId) {
-        this.activePipeline.set({ ...active, tasks: replaceTask(active.tasks, event.task) });
+        const tasks = replaceTask(active.tasks, event.task);
+        this.activePipeline.set({ ...active, ...taskTotals(tasks), tasks });
       }
       return;
     }
     this.activePipeline.set(null);
     void this.load(event.pipeline.novelId, event.pipeline.target as TargetLang);
+    void this.loadHistory(event.pipeline.novelId);
   }
 
   private async refreshWarnings(novelId: number, target: TargetLang): Promise<void> {

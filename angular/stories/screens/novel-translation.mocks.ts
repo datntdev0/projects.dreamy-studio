@@ -48,6 +48,7 @@ interface MockState {
   nextDictionaryId: number;
   nextPipelineId: number;
   activePipeline: MockPipeline | null;
+  pipelineHistory: PipelineSnapshot[];
 }
 
 interface MockPipeline {
@@ -230,6 +231,19 @@ function pause(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function historyTask(id: number, chapterIdValue: string, status: PipelineTask["status"], error = ""): PipelineTask {
+  const finishedAt = status === "completed" || status === "failed" || status === "cancelled" ? "2026-11-09T09:15:00Z" : null;
+  return { id, chapterId: chapterIdValue, passage: null, status, progress: status === "completed" ? 100 : 0, error, startedAt: "2026-11-09T09:10:00Z", finishedAt };
+}
+
+function pipelineHistory(): PipelineSnapshot[] {
+  return [
+    { id: 3, novelId: NOVEL_ID, kind: "translation", target: "VI", status: "completed", total: 3, done: 3, failed: 0, createdAt: "2026-11-09T09:00:00Z", startedAt: "2026-11-09T09:00:05Z", finishedAt: "2026-11-09T09:15:00Z", tasks: [historyTask(1, "ch-1", "completed"), historyTask(2, "ch-2", "completed"), historyTask(3, "ch-3", "completed")] },
+    { id: 2, novelId: NOVEL_ID, kind: "translation", target: "VI", status: "cancelled", total: 4, done: 2, failed: 0, createdAt: "2026-11-08T14:00:00Z", startedAt: "2026-11-08T14:00:03Z", finishedAt: "2026-11-08T14:10:00Z", tasks: [historyTask(1, "ch-1", "completed"), historyTask(2, "ch-2", "completed"), historyTask(3, "ch-3", "cancelled"), historyTask(4, "ch-4", "cancelled")] },
+    { id: 1, novelId: NOVEL_ID, kind: "translation", target: "VI", status: "failed", total: 3, done: 2, failed: 1, createdAt: "2026-11-07T08:00:00Z", startedAt: "2026-11-07T08:00:02Z", finishedAt: "2026-11-07T08:12:00Z", tasks: [historyTask(1, "ch-1", "completed"), historyTask(2, "ch-2", "failed", "Translator failed: quota exceeded"), historyTask(3, "ch-3", "completed")] },
+  ];
+}
+
 function emitTask(pipeline: MockPipeline, task: PipelineTask): void {
   pipeline.emit({ type: "task", pipelineId: pipeline.snapshot.id, task: { ...task } });
 }
@@ -372,6 +386,7 @@ function startPipeline(state: MockState, args: Record<string, unknown>): Pipelin
   };
   state.nextPipelineId += 1;
   const pipeline: MockPipeline = { snapshot, target: snapshot.target, emit, cancelled: false, finalized: false, nextTask: 0 };
+  state.pipelineHistory.unshift(snapshot);
   state.activePipeline = pipeline;
   setTimeout(runPipelineSafely, 0, state, pipeline);
   return clonePipeline(snapshot);
@@ -455,13 +470,17 @@ function ipcHandlers(state: MockState, rows: ChapterRow[]): Record<string, (args
     },
     pipeline_start: (args) => startPipeline(state, args),
     pipeline_cancel: () => cancelPipeline(state),
-    pipeline_history_list: () => [],
+    pipeline_history_list: (args) => {
+      const novelId = Number(args["novelId"]);
+      const limit = Number(args["limit"] ?? 20);
+      return state.pipelineHistory.filter((pipeline) => pipeline.novelId === novelId).slice(0, limit).map(clonePipeline);
+    },
   };
 }
 
 function ipcProvider(scenario: TranslationScenario): Provider {
   const rows = scenario.chapters === false ? [] : chapterRows(scenario.translated !== false);
-  const state: MockState = { scenario, translations: {}, nextDictionaryId: 11, nextPipelineId: 1, activePipeline: null };
+  const state: MockState = { scenario, translations: {}, nextDictionaryId: 11, nextPipelineId: 4, activePipeline: null, pipelineHistory: pipelineHistory() };
   const handlers = ipcHandlers(state, rows);
   const mock: Partial<DesktopIpcService> = {
     invoke: <TResult>(command: string, args: Record<string, unknown> = {}): Promise<TResult> => Promise.resolve((handlers[command]?.(args) ?? (command.endsWith("_list") ? [] : undefined)) as TResult),

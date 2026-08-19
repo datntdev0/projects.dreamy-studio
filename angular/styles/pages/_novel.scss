@@ -46,6 +46,9 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .tl-prog { display: grid; grid-template-columns: minmax(70px, 1fr) 36px; gap: var(--sp-sm); align-items: center; min-width: 120px; }
 .onto { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-xs) var(--sp-md); }
 .tl-list { flex: 1; overflow: auto; padding: var(--sp-md); display: grid; gap: var(--sp-md); align-content: start; }
+.tl-history { display: grid; gap: var(--sp-sm); margin-top: var(--sp-md); padding: var(--sp-md); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
+.tl-history-row td:first-child { width: var(--ctl-h-sm); padding-inline: var(--sp-xs); }
+.tl-history-detail > td { padding: var(--sp-sm) var(--sp-md); background: var(--danger-soft); color: var(--danger); font: 400 12px/18px var(--font-mono); white-space: pre-wrap; }
 .tl-fill { flex: 1; display: grid; place-items: center; min-height: 220px; }
 .w-card { display: grid; gap: var(--sp-sm); }
 .w-top { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }

@@ -1,6 +1,6 @@
 import { I18nKey, I18nParams } from "@app/core/i18n/i18n.models";
 import { ChapterRow, NovelLang, TargetLang, TranslationStatus } from "./novel.models";
-import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
+import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, PipelineStatus, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
 
 export const TARGET_LANGS: TargetLang[] = ["VI", "EN"];
 export const TRANSLATION_STEPS: TranslationStep[] = ["dict", "guide", "trans", "result", "warn"];
@@ -71,6 +71,20 @@ export const STATUS_BADGES: Record<TranslationStatus, string> = {
   draft: "badge-info",
   review: "badge-warning",
   running: "badge-running",
+};
+
+export const PIPELINE_STATUS_KEYS: Record<PipelineStatus, I18nKey> = {
+  running: "novel.translation.history.status.running",
+  completed: "novel.translation.history.status.completed",
+  failed: "novel.translation.history.status.failed",
+  cancelled: "novel.translation.history.status.cancelled",
+};
+
+export const PIPELINE_STATUS_BADGES: Record<PipelineStatus, string> = {
+  running: "badge-running",
+  completed: "badge-success",
+  failed: "badge-danger",
+  cancelled: "badge-warning",
 };
 
 export const PASSAGE_STATE_KEYS: Record<PassageState, I18nKey> = {

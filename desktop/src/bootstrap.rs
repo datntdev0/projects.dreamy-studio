@@ -6,6 +6,8 @@ use tauri::RunEvent;
 use crate::commands;
 use crate::container::AppContainer;
 use crate::features::novel::service::NovelService;
+use crate::features::pipeline::executor::PipelineExecutor;
+use crate::features::pipeline::translator::PlaceholderTranslator;
 use crate::features::settings::models::Theme;
 use crate::features::settings::repository::SettingsRepository;
 use crate::features::settings::service::SettingsService;
@@ -90,6 +92,9 @@ pub fn run() {
             commands::translation::translation_dict_delete,
             commands::translation::translation_passage_save,
             commands::translation::translation_note_save,
+            commands::pipeline::pipeline_start,
+            commands::pipeline::pipeline_cancel,
+            commands::pipeline::pipeline_history_list,
             commands::project::project_list,
             commands::project::project_create,
             commands::project::project_update,
@@ -147,11 +152,14 @@ pub fn run() {
 }
 
 fn handle_run_event(app: &AppHandle, event: RunEvent) {
-    if let RunEvent::Exit = event
-        && let Some(container) = app.try_state::<AppContainer>()
-    {
-        container.backend.stop();
-        container.logger.info("app", "backend stopped on exit");
+    if let RunEvent::Exit = event {
+        if let Some(executor) = app.try_state::<PipelineExecutor>() {
+            executor.cancel();
+        }
+        if let Some(container) = app.try_state::<AppContainer>() {
+            container.backend.stop();
+            container.logger.info("app", "backend stopped on exit");
+        }
     }
 }
 
@@ -187,6 +195,9 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(loader);
     app.manage(NovelService::new());
     app.manage(crate::features::translation::service::TranslationService::new());
+    app.manage(PipelineExecutor::new(std::sync::Arc::new(
+        PlaceholderTranslator::default(),
+    )));
     app.manage(crate::features::project::service::ProjectService::new());
     app.manage(crate::features::library::service::LibraryService::new());
 }

@@ -73,6 +73,10 @@ impl TranslationWorkspace {
         Self { dir, gate }
     }
 
+    pub fn dir(&self) -> &std::path::Path {
+        &self.dir
+    }
+
     pub fn get(&self, novel_id: i64, target: &str) -> TranslationResult<NovelTranslation> {
         let target = self.target_for(novel_id, target)?;
         let db = self.database()?;
@@ -309,7 +313,7 @@ impl TranslationWorkspace {
         self.warnings(novel_id, target.as_str())
     }
 
-    fn target_for(&self, novel_id: i64, raw: &str) -> TranslationResult<TranslationTarget> {
+    pub fn target_for(&self, novel_id: i64, raw: &str) -> TranslationResult<TranslationTarget> {
         let target = TranslationTarget::parse(raw)
             .ok_or_else(|| TranslationError::invalid(format!("unsupported target '{raw}'")))?;
         let db = self.database()?;

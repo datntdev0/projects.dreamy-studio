@@ -1,3 +1,4 @@
+use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::workspace::load::CancelOutcome;
 use crate::features::workspace::load::EnterOutcome;
 use crate::features::workspace::load::ErrorCode;
@@ -173,6 +174,9 @@ pub async fn workspace_cancel(app: AppHandle) -> CancelOutcome {
 
 #[tauri::command]
 pub async fn workspace_enter(app: AppHandle) -> Result<EnterOutcome, LoadError> {
+    if let Some(executor) = app.try_state::<PipelineExecutor>() {
+        executor.cancel();
+    }
     let background = app.clone();
     let task = spawn_blocking(move || enter_workspace_blocking(&background));
     let outcome = match task.await {

@@ -1,10 +1,18 @@
 use super::*;
+use crate::features::novel::models::NovelInput;
+use crate::features::novel::service::NovelService;
+use crate::features::pipeline::models::PipelineStatus;
+use crate::features::pipeline::models::TaskRequest;
+use crate::features::pipeline::models::TaskStatus;
+use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::workspace::inspector::StatusKind;
 use crate::features::workspace::load::CancelOutcome;
 use crate::features::workspace::repository::WorkspaceRepository;
+use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::service::RecentWorkspaceView;
 use crate::features::workspace::session::CurrentWorkspace;
 use crate::testing::backend::StubBackend;
+use chrono::Utc;
 use rusqlite::Connection;
 use serde_json::Value;
 use serde_json::json;
@@ -178,6 +186,95 @@ fn read_logs(fixture: &Fixture) -> String {
         content.push_str(&fs::read_to_string(entry.unwrap().path()).unwrap());
     }
     content
+}
+
+#[test]
+fn loading_cancels_orphaned_pipelines_and_keeps_completed_rows() {
+    let fixture = fixture();
+    load_and_enter(&fixture);
+    let novels = NovelService::new();
+    let novel: NovelInput =
+        serde_json::from_value(json!({ "title": "Title", "lang": "ZH" })).unwrap();
+    let novel = novels
+        .open(&fixture.session)
+        .unwrap()
+        .create(novel)
+        .unwrap();
+    let database = Database::open_read_write(&db_file(&fixture)).unwrap();
+    let repo = PipelineRepository::new(database.connection());
+    let running = repo
+        .insert_pipeline_with_tasks(
+            novel.id,
+            "translation",
+            "VI",
+            &[
+                TaskRequest {
+                    chapter_id: "one".to_string(),
+                    passage: None,
+                },
+                TaskRequest {
+                    chapter_id: "two".to_string(),
+                    passage: None,
+                },
+            ],
+            &format_timestamp(Utc::now()),
+        )
+        .unwrap();
+    let running_task = repo.snapshot(running).unwrap().unwrap().tasks[0].id;
+    repo.set_task_running(running_task, &format_timestamp(Utc::now()))
+        .unwrap();
+    let completed = repo
+        .insert_pipeline_with_tasks(
+            novel.id,
+            "translation",
+            "EN",
+            &[TaskRequest {
+                chapter_id: "three".to_string(),
+                passage: None,
+            }],
+            &format_timestamp(Utc::now()),
+        )
+        .unwrap();
+    let completed_task = repo.snapshot(completed).unwrap().unwrap().tasks[0].id;
+    repo.finish_task(
+        completed_task,
+        TaskStatus::Completed,
+        "",
+        &format_timestamp(Utc::now()),
+    )
+    .unwrap();
+    repo.finish_pipeline(
+        completed,
+        PipelineStatus::Completed,
+        1,
+        0,
+        &format_timestamp(Utc::now()),
+    )
+    .unwrap();
+    drop(database);
+
+    let session = WorkspaceSession::new();
+    let outcome = fixture.loader.load(
+        &session,
+        LoadRequest::new(text(&fixture.folder), None),
+        &|_event| {},
+    );
+    assert!(matches!(outcome, Ok(LoadOutcome::Ready { .. })));
+    fixture.loader.enter(&session).unwrap();
+
+    let database = Database::open_read_only(&db_file(&fixture)).unwrap();
+    let repo = PipelineRepository::new(database.connection());
+    let running = repo.snapshot(running).unwrap().unwrap();
+    let completed = repo.snapshot(completed).unwrap().unwrap();
+    assert_eq!(running.status, PipelineStatus::Cancelled);
+    assert!(
+        running
+            .tasks
+            .iter()
+            .all(|task| task.status == TaskStatus::Cancelled)
+    );
+    assert_eq!(completed.status, PipelineStatus::Completed);
+    assert_eq!(completed.tasks[0].status, TaskStatus::Completed);
 }
 
 fn step_errors(events: &[LoadEvent]) -> Vec<LoadStep> {

@@ -2,6 +2,7 @@ pub mod app;
 pub mod library;
 pub mod library_stream;
 pub mod novel;
+pub mod pipeline;
 pub mod project;
 pub mod settings;
 pub mod translation;

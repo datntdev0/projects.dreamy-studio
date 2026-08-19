@@ -1,4 +1,5 @@
 use crate::container::AppContainer;
+use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::settings::check::LlmChecker;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::load::EnterOutcome;
@@ -11,6 +12,7 @@ use crate::features::workspace::load::LoadOutcome;
 use crate::features::workspace::load::LoadRequest;
 use crate::features::workspace::load::LoadStep;
 use crate::features::workspace::load::StepState;
+use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::backend::BackendError;
@@ -24,6 +26,7 @@ use crate::infra::storage::migrator::Script;
 use crate::infra::storage::migrator::app_scripts;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::shared::path::NormalizedPath;
+use chrono::Utc;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io;
@@ -415,7 +418,10 @@ impl LoadRun<'_> {
             self.session.mark_created();
             Database::create(&db_path)?
         };
-        self.migrate(&mut database, &scripts)
+        self.migrate(&mut database, &scripts)?;
+        PipelineRepository::new(database.connection())
+            .cancel_orphans(&format_timestamp(Utc::now()))?;
+        Ok(())
     }
 
     fn prepare_app_db(&mut self) -> StorageResult<()> {

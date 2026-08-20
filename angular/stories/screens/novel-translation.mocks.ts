@@ -61,7 +61,7 @@ function status(seq: number, translated: boolean): TranslationStatus {
   if (!translated || seq > TRANSLATED_CHAPTERS) {
     return "none";
   }
-  return seq === 2 ? "review" : "draft";
+  return "done";
 }
 
 function chapterRows(translated: boolean): ChapterRow[] {

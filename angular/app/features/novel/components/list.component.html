@@ -31,14 +31,14 @@
         <div class="empty" data-testid="novel-list-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "novel.error.loadFailed" | t: { detail: failure.detail } }}</p></div></div>
       } @else if (novels.visible().length === 0) {
         @if (novels.isEmpty()) {
-          <div class="empty" data-testid="novel-list-empty-none"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-list-empty-none-title">{{ "novel.list.empty.none.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-list-empty-none-description">{{ "novel.list.empty.none.description" | t }}</p><div class="empty-act"><button class="btn btn-primary" type="button" data-testid="novel-list-empty-create" (click)="openCreate()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus"/></svg>{{ "novel.list.empty.none.create" | t }}</button><button class="btn" type="button" data-testid="novel-list-empty-import" (click)="openImport()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload"/></svg>{{ "novel.list.empty.none.import" | t }}</button></div></div></div>
+          <div class="empty" data-testid="novel-list-empty-none"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-list-empty-none-title">{{ "novel.list.empty.none.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-list-empty-none-description">{{ "novel.list.empty.none.description" | t }}</p><div class="empty-act"><button class="btn btn-primary" type="button" data-testid="novel-list-empty-create" (click)="openCreate()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus"/></svg>{{ "novel.list.empty.none.create" | t }}</button><button class="btn" type="button" data-testid="novel-list-empty-import" (click)="openImport()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload"/></svg>{{ "novel.list.empty.none.import" | t }}</button></div></div></div>
         } @else if (novels.loaded()) {
-          <div class="empty" data-testid="novel-list-empty-nomatch"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-list-empty-nomatch-title">{{ "novel.list.empty.noMatch.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-list-empty-nomatch-description">{{ "novel.list.empty.noMatch.description" | t }}</p><button class="btn" type="button" data-testid="novel-list-empty-clear" (click)="novels.clearQueryAndFilters()">{{ "novel.list.empty.noMatch.clear" | t }}</button></div></div>
+          <div class="empty" data-testid="novel-list-empty-nomatch"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-list-empty-nomatch-title">{{ "novel.list.empty.noMatch.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-list-empty-nomatch-description">{{ "novel.list.empty.noMatch.description" | t }}</p><button class="btn" type="button" data-testid="novel-list-empty-clear" (click)="novels.clearQueryAndFilters()">{{ "novel.list.empty.noMatch.clear" | t }}</button></div></div>
         }
       } @else if (novels.view() === "grid") {
         <div class="nm-grid" data-testid="novel-list-grid">
           @for (novel of novels.visible(); track novel.id) {
-            <div class="nm-card is-clickable" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect(novel.id, $event)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
+            <div class="nm-card is-clickable is-dblclick" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect(novel.id, $event)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
               <div class="nm-cover" [class.has-img]="hasImage(novel)" [class.is-empty]="!hasImage(novel)" [style.background]="backgroundOf(novel)">
                 <span class="badge nm-lang">{{ novel.lang }}</span>
                 @if (!hasImage(novel)) {
@@ -50,7 +50,7 @@
           }
         </div>
       } @else {
-        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="496px" variant="fill" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id, $event.event)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
+        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="496px" variant="fill" [actions]="tableActions" [actionsLabel]="'novel.list.actions' | t" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id, $event.event)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
           <ng-template dsCell="title" let-row>
             @let novel = novelOf(row);
             <div class="nm-title"><ds-cover [image]="imageOf(novel)" /><div><div class="t-ink">{{ nameOf(novel) }}</div><div class="t-sm t-mute">{{ subtitleOf(novel) }}</div></div></div>

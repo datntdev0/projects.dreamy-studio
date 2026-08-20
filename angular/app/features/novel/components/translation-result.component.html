@@ -35,7 +35,7 @@
                 } @else if (passage.note) {
                   <div class="tl-note" tabindex="0" data-testid="novel-translation-result-note" [attr.title]="'novel.translation.result.noteEdit' | t" (click)="openNote(paragraph.n)" (keydown.enter)="openNote(paragraph.n)"><ds-icon name="pen" [size]="14" /><span>{{ passage.note }}</span></div>
                 }
-                <div class="tl-tools"><span class="badge" [class]="badgeOf(stateOf(paragraph.n))">{{ stateKey(stateOf(paragraph.n)) | t }}</span><span class="spacer"></span>
+                <div class="tl-tools">@if (stateOf(paragraph.n) === "review") { <span class="badge badge-warning" data-testid="novel-translation-result-state">{{ "novel.translation.passage.review" | t }}</span> }<span class="spacer"></span>
                   @if (!passage.note && noteFor() !== paragraph.n) {
                     <button type="button" class="btn btn-sm btn-ghost" data-testid="novel-translation-result-note-open" (click)="openNote(paragraph.n)"><ds-icon name="plus" [size]="16" />{{ "novel.translation.result.note" | t }}</button>
                   }
@@ -45,11 +45,11 @@
             </div>
           }
         } @empty {
-          <div class="tl-fill"><div class="empty" data-testid="novel-translation-result-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "novel.translation.result.noReview.title" | t }}</h3><p class="t-sm t-mute">{{ "novel.translation.result.noReview.description" | t }}</p></div></div></div>
+          <div class="tl-fill"><div class="empty" data-testid="novel-translation-result-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.translation.result.noReview.title" | t }}</h4><p class="t-sm t-mute">{{ "novel.translation.result.noReview.description" | t }}</p></div></div></div>
         }
       </div>
     </div>
   } @else {
-    <div class="tl-fill" data-testid="novel-translation-result-none"><div class="empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "novel.translation.result.none.title" | t: { n: chapter.seq } }}</h3><p class="t-sm t-mute">{{ "novel.translation.result.none.description" | t }}</p><button type="button" class="btn btn-primary" data-testid="novel-translation-result-translate" (click)="translateThis()">{{ "novel.translation.result.none.action" | t }}</button></div></div></div>
+    <div class="tl-fill" data-testid="novel-translation-result-none"><div class="empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.translation.result.none.title" | t: { n: chapter.seq } }}</h4><p class="t-sm t-mute">{{ "novel.translation.result.none.description" | t }}</p><button type="button" class="btn btn-primary" data-testid="novel-translation-result-translate" (click)="translateThis()">{{ "novel.translation.result.none.action" | t }}</button></div></div></div>
   }
 }

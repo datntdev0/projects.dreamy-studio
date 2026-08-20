@@ -30,7 +30,7 @@
     }
     <div class="nv-body is-col" data-testid="novel-translation-body">
       @if (!hasChapters()) {
-        <div class="empty" data-testid="novel-translation-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-translation-empty-title">{{ "novel.translation.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-translation-empty-description">{{ "novel.translation.empty.description" | t }}</p></div></div>
+        <div class="empty" data-testid="novel-translation-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-translation-empty-title">{{ "novel.translation.empty.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-translation-empty-description">{{ "novel.translation.empty.description" | t }}</p></div></div>
       } @else {
         @switch (view().step) {
           @case ("dict") { <app-novel-translation-dictionary [novelId]="novelId()" /> }

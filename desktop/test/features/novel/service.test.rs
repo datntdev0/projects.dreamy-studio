@@ -668,6 +668,44 @@ fn adds_normalized_paragraphs_and_exports_in_sequence_order() {
 }
 
 #[test]
+fn writes_full_chapter_text_and_splits_it_into_paragraphs() {
+    let fixture = fixture();
+    let novel = imported(&fixture, 1);
+    let chapter = fixture.workspace.chapters(novel.id).unwrap().remove(0);
+
+    let written = fixture
+        .workspace
+        .chapter_write(novel.id, &chapter.id, "\n  first line \r\n\r\n second\n\n\nthird  \n")
+        .unwrap();
+    let read = fixture.workspace.chapter_read(novel.id, &chapter.id).unwrap();
+    let empty = fixture
+        .workspace
+        .chapter_write(novel.id, &chapter.id, " \n\n ")
+        .unwrap_err();
+
+    let texts: Vec<&str> = read.iter().map(|row| row.text.as_str()).collect();
+    assert_eq!(texts, ["first line", "second", "third"]);
+    assert_eq!(written.word_count, word_count("first line\nsecond\nthird\n"));
+    assert_eq!(empty.code, NovelErrorCode::InvalidInput);
+}
+
+#[test]
+fn writing_a_translated_chapter_replaces_its_paragraphs() {
+    let fixture = fixture();
+    let novel = imported(&fixture, 1);
+    let chapter = fixture.workspace.chapters(novel.id).unwrap().remove(0);
+    set_chapter_status(&fixture, &chapter.id, "draft", "none");
+
+    fixture
+        .workspace
+        .chapter_write(novel.id, &chapter.id, "only one\n\nand two")
+        .unwrap();
+    let read = fixture.workspace.chapter_read(novel.id, &chapter.id).unwrap();
+
+    assert_eq!(read.len(), 2);
+}
+
+#[test]
 fn paragraph_edit_rejects_bad_requests() {
     let fixture = fixture();
     let book = imported(&fixture, 1);

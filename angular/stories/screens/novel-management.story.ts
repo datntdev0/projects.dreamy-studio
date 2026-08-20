@@ -19,7 +19,6 @@ async function openReader(root: HTMLElement, chapterId: string): Promise<void> {
   await openChapters(root);
   await click(root, `[data-testid="novel-chapter-row"][data-row-key="${chapterId}"]`);
   await choose(root, '[data-testid="novel-lang-switch"]', "src");
-  await click(root, '[data-testid="novel-reader-layout-single"]');
 }
 
 function translation(scenario: TranslationScenario): StoryObj<MainPage> {
@@ -67,5 +66,3 @@ export const ReadingNoContent: Story = {
 };
 
 export const TranslationFreshNovel: Story = translation({ translated: false, warnings: false });
-
-export const TranslationNoChapter: Story = translation({ chapters: false });

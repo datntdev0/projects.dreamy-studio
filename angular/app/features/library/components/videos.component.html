@@ -188,9 +188,9 @@
                 class="illus"
                 data-testid="library-videos-empty-illustration"
               ></div>
-              <h3 class="t-display-xs" data-testid="library-videos-empty-title">
+              <h4 class="t-display-xs" data-testid="library-videos-empty-title">
                 {{ "library.video.empty.title" | t }}
-              </h3>
+              </h4>
               <p
                 class="t-sm t-mute"
                 data-testid="library-videos-empty-description"
@@ -223,12 +223,12 @@
                 class="illus"
                 data-testid="library-videos-empty-filtered-illustration"
               ></div>
-              <h3
+              <h4
                 class="t-display-xs"
                 data-testid="library-videos-empty-filtered-title"
               >
                 {{ "library.video.emptyFiltered.title" | t }}
-              </h3>
+              </h4>
               <p
                 class="t-sm t-mute"
                 data-testid="library-videos-empty-filtered-description"
@@ -255,7 +255,7 @@
         >
           @for (video of videos.visible(); track video.id) {
             <div
-              class="lb-card"
+              class="lb-card is-dblclick"
               [class.is-selected]="isSelected(video)"
               tabindex="0"
               [attr.title]="video.name"

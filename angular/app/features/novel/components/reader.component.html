@@ -1,7 +1,7 @@
 <div class="nv" data-testid="novel-reader">
   <div class="nv-bar" data-testid="novel-reader-bar">
     <div class="nv-bar-l" data-testid="novel-reader-bar-left">
-      <button type="button" class="btn btn-sm" data-testid="novel-reader-back" (click)="back()"><ds-icon name="arrow-left" [size]="16" />{{ "novel.reader.back" | t }}</button>
+      <button type="button" class="btn btn-icon btn-sm" data-testid="novel-reader-back" [attr.aria-label]="'novel.reader.back' | t" [attr.data-tip]="'novel.reader.back' | t" (click)="back()"><ds-icon name="arrow-left" [size]="17" /></button>
       <span class="bar-sep"></span>
       <button type="button" class="btn btn-icon btn-sm" data-testid="novel-reader-prev" [disabled]="!reader.hasPrev()" [attr.aria-label]="'novel.reader.prev' | t" [attr.data-tip]="'novel.reader.prev' | t" (click)="prev()"><ds-icon name="chev-l" [size]="17" /></button>
       <select class="select ch-select" data-testid="novel-reader-jump" [attr.aria-label]="'novel.reader.jump' | t" (change)="onJump($event)">
@@ -13,11 +13,13 @@
     </div>
     <span class="spacer"></span>
     <div class="nv-bar-r" data-testid="novel-reader-bar-right">
+      @if (layoutOn()) {
+        <div class="seg" role="group" data-testid="novel-reader-layout">
+          <button type="button" [class.is-active]="!parallel()" [attr.aria-pressed]="!parallel()" [attr.aria-label]="'novel.reader.layout.single' | t" [attr.data-tip]="'novel.reader.layout.single' | t" data-testid="novel-reader-layout-single" (click)="setLayout('single')"><ds-icon name="page" [size]="14" /></button>
+          <button type="button" [class.is-active]="parallel()" [attr.aria-pressed]="parallel()" [attr.aria-label]="'novel.reader.layout.parallel' | t" [attr.data-tip]="'novel.reader.layout.parallel' | t" data-testid="novel-reader-layout-parallel" (click)="setLayout('parallel')"><ds-icon name="columns" [size]="14" /></button>
+        </div>
+      }
       <app-novel-lang-switch [novelId]="novelId()" />
-      <div class="seg" role="group" data-testid="novel-reader-layout">
-        <button type="button" [class.is-active]="!parallel()" [attr.aria-pressed]="!parallel()" data-testid="novel-reader-layout-single" (click)="setLayout('single')">{{ "novel.reader.layout.single" | t }}</button>
-        <button type="button" [class.is-active]="parallel()" [attr.aria-pressed]="parallel()" data-testid="novel-reader-layout-parallel" (click)="setLayout('parallel')">{{ "novel.reader.layout.parallel" | t }}</button>
-      </div>
     </div>
   </div>
   <div class="nv-body" data-testid="novel-reader-body">
@@ -49,19 +51,29 @@
           @if (showTranslation() && !chapterTranslation()) {
             <div class="rd-note" data-testid="novel-reader-no-translation"><ds-icon name="alert" [size]="15" /><span>{{ "novel.reader.noTranslation" | t: { n: reader.seq(), lang: targetName() } }}</span></div>
           }
+          @if (reader.writing()) {
+            <div class="rd-edit rd-write" data-testid="novel-reader-write">
+              <textarea #writer class="textarea" rows="24" [attr.aria-label]="'novel.reader.write.label' | t" [value]="reader.fullText()" data-testid="novel-reader-write-textarea"></textarea>
+              <div class="rd-edit-foot">
+                <span class="spacer"></span>
+                <button type="button" class="btn btn-sm" data-testid="novel-reader-write-cancel" (click)="stopWriting()">{{ "novel.reader.cancel" | t }}</button>
+                <button type="button" class="btn btn-sm btn-primary" data-testid="novel-reader-write-save" [disabled]="reader.saving()" (click)="saveWrite(writer.value)">{{ "novel.reader.write.save" | t }}</button>
+              </div>
+            </div>
+          } @else {
           @if (parallel()) {
             <div class="rd-pair rd-langhead" data-testid="novel-reader-langhead"><span>{{ "novel.reader.lang.original" | t: { lang: langName() } }}</span><span>{{ "novel.reader.lang.translation" | t: { lang: targetName() } }}</span></div>
           }
-          @for (paragraph of reader.paragraphs(); track paragraph.n) {
+          @for (row of rows(); track row.index) {
             @if (parallel()) {
               <div class="rd-pair" data-testid="novel-reader-pair">
-                <ng-container [ngTemplateOutlet]="source" [ngTemplateOutletContext]="{ $implicit: paragraph }" />
-                <ng-container [ngTemplateOutlet]="translated" [ngTemplateOutletContext]="{ $implicit: paragraph, pair: true }" />
+                <ng-container [ngTemplateOutlet]="source" [ngTemplateOutletContext]="{ $implicit: row.source }" />
+                <ng-container [ngTemplateOutlet]="translated" [ngTemplateOutletContext]="{ $implicit: row, pair: true }" />
               </div>
             } @else if (showTranslation()) {
-              <ng-container [ngTemplateOutlet]="translated" [ngTemplateOutletContext]="{ $implicit: paragraph, pair: false }" />
+              <ng-container [ngTemplateOutlet]="translated" [ngTemplateOutletContext]="{ $implicit: row, pair: false }" />
             } @else {
-              <ng-container [ngTemplateOutlet]="source" [ngTemplateOutletContext]="{ $implicit: paragraph }" />
+              <ng-container [ngTemplateOutlet]="source" [ngTemplateOutletContext]="{ $implicit: row.source }" />
             }
           }
           @if (reader.adding()) {
@@ -74,10 +86,11 @@
               </div>
             </div>
           } @else if (reader.paragraphs().length === 0 && !reader.loading()) {
-            <div class="empty" data-testid="novel-reader-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-reader-empty-title">{{ "novel.reader.emptyChapter.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-reader-empty-description">{{ (reader.canEdit() ? "novel.reader.emptyChapter.edit" : "novel.reader.emptyChapter.read") | t }}</p></div></div>
+            <div class="empty" data-testid="novel-reader-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-reader-empty-title">{{ "novel.reader.emptyChapter.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-reader-empty-description">{{ (reader.canEdit() ? "novel.reader.emptyChapter.edit" : "novel.reader.emptyChapter.read") | t }}</p></div></div>
           }
           @if (reader.canAdd()) {
             <div class="rd-add" data-testid="novel-reader-add"><button type="button" class="btn btn-sm" data-testid="novel-reader-add-passage" (click)="addPassage()"><ds-icon name="plus" [size]="16" />{{ "novel.reader.addPassage" | t }}</button></div>
+          }
           }
         }
         <div class="rd-end" data-testid="novel-reader-end">
@@ -92,7 +105,9 @@
   </div>
 </div>
 <ng-template #source let-paragraph>
-  @if (reader.editing() === paragraph.n) {
+  @if (!paragraph) {
+    <p class="rd-para is-empty" data-testid="novel-reader-para"></p>
+  } @else if (reader.editing() === paragraph.n) {
     <div class="rd-edit" data-testid="novel-reader-edit" [attr.id]="'rp-' + paragraph.n">
       <textarea #editor class="textarea" rows="5" data-testid="novel-reader-textarea" [value]="paragraph.text"></textarea>
       <div class="rd-edit-foot">
@@ -105,10 +120,10 @@
     <p class="rd-para" data-testid="novel-reader-para" [class.is-editable]="reader.canEdit()" [class.is-flash]="flash() === paragraph.n" [attr.id]="'rp-' + paragraph.n" [attr.tabindex]="reader.canEdit() ? 0 : null" (click)="edit(paragraph.n)" (keydown.enter)="edit(paragraph.n)"><span class="rd-no">{{ paragraph.n }}</span><span class="rd-tx">{{ paragraph.text }}</span></p>
   }
 </ng-template>
-<ng-template #translated let-paragraph let-pair="pair">
-  @let passage = passageOf(paragraph.n);
+<ng-template #translated let-row let-pair="pair">
+  @let passage = row.passage;
   @if (passage) {
-    <p class="rd-para is-tr" data-testid="novel-reader-para-tr" [attr.id]="(pair ? 'rt-' : 'rp-') + paragraph.n">@if (!pair) { <span class="rd-no">{{ paragraph.n }}</span> }<span class="rd-tx">{{ passage.text }}@if (isReview(paragraph.n)) { <span class="rd-bd"><span class="badge badge-warning">{{ "novel.translation.passage.review" | t }}</span></span> }</span></p>
+    <p class="rd-para is-tr" data-testid="novel-reader-para-tr" [attr.id]="(pair ? 'rt-' : 'rp-') + row.index">@if (!pair) { <span class="rd-no">{{ row.index }}</span> }<span class="rd-tx">{{ passage.text }}@if (isReview(row.key)) { <span class="rd-bd"><span class="badge badge-warning">{{ "novel.translation.passage.review" | t }}</span></span> }</span></p>
   } @else {
     <p class="rd-para is-tr is-empty" data-testid="novel-reader-para-tr"></p>
   }

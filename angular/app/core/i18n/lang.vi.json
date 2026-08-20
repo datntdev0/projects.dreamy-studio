@@ -222,7 +222,6 @@
   "main.bottom.tab.output": "Output",
   "main.bottom.close": "Đóng panel",
   "main.bottom.pipelines.title": "Chưa có pipeline nào chạy",
-  "main.bottom.pipelines.description": "Các tác vụ dài như dịch, phân tích, tạo audio hay render sẽ hiển thị tiến độ tại đây. Số pipeline và task chạy song song được cấu hình trong Settings.",
   "novel.cap": "CAP-02 · Novel Management",
   "novel.count": "{count} novel",
   "novel.chapterCount": "{count} chương",
@@ -252,6 +251,8 @@
   "novel.list.col.chapters": "Chương",
   "novel.list.col.words": "Số từ",
   "novel.list.col.progress": "Tiến độ",
+  "novel.list.actions": "Thao tác",
+  "novel.list.delete": "Xóa novel",
   "novel.list.empty.none.title": "Chưa có novel nào",
   "novel.list.empty.none.description": "Tạo novel mới hoặc nhập từ một package .dsnovel / .zip.",
   "novel.list.empty.none.create": "Tạo novel",
@@ -346,8 +347,7 @@
   "novel.chapters.delete.warn": "Chương và nội dung của nó sẽ bị xóa khỏi novel này. Các chương phía sau được dồn lên một chương. Không thể hoàn tác.",
   "novel.chapters.delete.submit": "Xóa chương",
   "novel.chapters.translation.none": "Chưa dịch",
-  "novel.chapters.translation.draft": "Đã có bản dịch",
-  "novel.chapters.translation.review": "Có đoạn cần xem lại",
+  "novel.chapters.translation.done": "Đã dịch",
   "novel.chapters.translation.running": "Đang dịch",
   "novel.chapters.analysis.none": "Chưa phân tích",
   "novel.chapters.analysis.done": "Đã phân tích",
@@ -360,6 +360,11 @@
   "novel.reader.jumpOption": "Ch.{n} · {title}",
   "novel.reader.mode.read": "Đọc",
   "novel.reader.mode.edit": "Sửa",
+  "novel.reader.mode.write": "Viết",
+  "novel.reader.write.label": "Nội dung chương",
+  "novel.reader.write.save": "Lưu chương",
+  "novel.reader.write.saved": "Đã lưu chương và tách lại thành các đoạn.",
+  "novel.reader.write.empty": "Nội dung chương không được để trống.",
   "novel.reader.lang.original": "Bản gốc · {lang}",
   "novel.reader.lang.translation": "Bản dịch · {lang}",
   "novel.reader.layout.single": "Một ngôn ngữ",
@@ -1033,10 +1038,8 @@
   ,"novel.translation.summary.warn": "{count} đang mở"
   ,"novel.translation.summary.none": "Không có"
   ,"novel.translation.status.none": "Chưa dịch"
-  ,"novel.translation.status.draft": "Bản nháp"
-  ,"novel.translation.status.review": "Cần rà soát"
+  ,"novel.translation.status.done": "Đã dịch"
   ,"novel.translation.status.running": "Đang dịch"
-  ,"novel.translation.passage.draft": "Bản nháp"
   ,"novel.translation.passage.review": "Cần rà soát"
   ,"novel.translation.dict.search.label": "Tìm trong từ điển"
   ,"novel.translation.dict.search.placeholder": "Tìm trong từ điển…"
@@ -1123,6 +1126,7 @@
   ,"novel.translation.summary.guideSet": "Đã viết"
   ,"novel.translation.summary.guideEmpty": "Trống"
   ,"novel.reader.lang.group": "Ngôn ngữ"
+  ,"novel.reader.lang.source": "Bản gốc"
   ,"novel.reader.langLabel.translated": "{lang} (bản dịch)"
   ,"novel.reader.noTranslation": "Chương {n} chưa có bản dịch {lang}."
   ,"main.rail.pipelines": "Pipeline history"
@@ -1175,7 +1179,6 @@
   ,"pipeline.list.label": "Pipelines"
   ,"pipeline.group.running": "Đang chạy · {count}"
   ,"pipeline.eta": "còn ~{time}"
-  ,"pipeline.openHistory": "Toàn bộ lịch sử"
   ,"pipeline.item.open": "Xem log pipeline #{id}"
   ,"pipeline.strip.label": "{done} of {total} tasks done"
 }

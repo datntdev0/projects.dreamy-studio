@@ -222,7 +222,6 @@
   "main.bottom.tab.output": "Output",
   "main.bottom.close": "Close panel",
   "main.bottom.pipelines.title": "No pipelines running",
-  "main.bottom.pipelines.description": "Long-running tasks such as translation, analysis, audio generation and rendering will show their progress here. The number of pipelines and tasks running in parallel is configured in Settings.",
   "novel.cap": "CAP-02 · Novel Management",
   "novel.count": "{count} novels",
   "novel.chapterCount": "{count} chapters",
@@ -252,6 +251,8 @@
   "novel.list.col.chapters": "Chapters",
   "novel.list.col.words": "Words",
   "novel.list.col.progress": "Progress",
+  "novel.list.actions": "Actions",
+  "novel.list.delete": "Delete novel",
   "novel.list.empty.none.title": "No novels yet",
   "novel.list.empty.none.description": "Create a new novel or import one from a .dsnovel / .zip package.",
   "novel.list.empty.none.create": "New novel",
@@ -346,8 +347,7 @@
   "novel.chapters.delete.warn": "The chapter and its text will be removed from this novel. The chapters after it move up by one. This cannot be undone.",
   "novel.chapters.delete.submit": "Delete chapter",
   "novel.chapters.translation.none": "Not translated",
-  "novel.chapters.translation.draft": "Translated",
-  "novel.chapters.translation.review": "Has passages to review",
+  "novel.chapters.translation.done": "Translated",
   "novel.chapters.translation.running": "Translating",
   "novel.chapters.analysis.none": "Not analyzed",
   "novel.chapters.analysis.done": "Analyzed",
@@ -360,6 +360,11 @@
   "novel.reader.jumpOption": "Ch.{n} · {title}",
   "novel.reader.mode.read": "Read",
   "novel.reader.mode.edit": "Edit",
+  "novel.reader.mode.write": "Write",
+  "novel.reader.write.label": "Chapter text",
+  "novel.reader.write.save": "Save chapter",
+  "novel.reader.write.saved": "Chapter saved and split into paragraphs.",
+  "novel.reader.write.empty": "The chapter cannot be empty.",
   "novel.reader.lang.original": "Original · {lang}",
   "novel.reader.lang.translation": "Translation · {lang}",
   "novel.reader.layout.single": "Single language",
@@ -1033,10 +1038,8 @@
   ,"novel.translation.summary.warn": "{count} open"
   ,"novel.translation.summary.none": "None"
   ,"novel.translation.status.none": "Not translated"
-  ,"novel.translation.status.draft": "Draft"
-  ,"novel.translation.status.review": "Needs review"
+  ,"novel.translation.status.done": "Translated"
   ,"novel.translation.status.running": "Translating"
-  ,"novel.translation.passage.draft": "Draft"
   ,"novel.translation.passage.review": "Needs review"
   ,"novel.translation.dict.search.label": "Search the dictionary"
   ,"novel.translation.dict.search.placeholder": "Search the dictionary…"
@@ -1123,6 +1126,7 @@
   ,"novel.translation.summary.guideSet": "Written"
   ,"novel.translation.summary.guideEmpty": "Empty"
   ,"novel.reader.lang.group": "Language"
+  ,"novel.reader.lang.source": "Original"
   ,"novel.reader.langLabel.translated": "{lang} (translation)"
   ,"novel.reader.noTranslation": "Chapter {n} has no {lang} translation yet."
   ,"main.rail.pipelines": "Pipeline history"
@@ -1175,7 +1179,6 @@
   ,"pipeline.list.label": "Pipelines"
   ,"pipeline.group.running": "Running · {count}"
   ,"pipeline.eta": "~{time} left"
-  ,"pipeline.openHistory": "Full history"
   ,"pipeline.item.open": "Open log of pipeline #{id}"
   ,"pipeline.strip.label": "{done} of {total} tasks done"
 }

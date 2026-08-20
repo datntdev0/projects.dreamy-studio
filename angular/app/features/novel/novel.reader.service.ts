@@ -27,6 +27,10 @@ const PREFS_STORAGE_KEY = "ds.rd.prefs";
 
 const DEFAULT_VIEW: ReaderView = { lang: "src", layout: "single" };
 
+function WRITE_TEXT_OF(row: ParagraphRow): string {
+  return row.text;
+}
+
 function readPrefs(): ReaderPrefs {
   try {
     const raw = localStorage.getItem(PREFS_STORAGE_KEY);
@@ -103,6 +107,8 @@ export class NovelReaderService {
   readonly view = computed(this.buildView.bind(this));
   readonly showSource = computed(this.buildShowSource.bind(this));
   readonly canEdit = computed(this.buildCanEdit.bind(this));
+  readonly writing = computed(this.buildWriting.bind(this));
+  readonly fullText = computed(this.buildFullText.bind(this));
   readonly canAdd = computed(this.buildCanAdd.bind(this));
   readonly adding = computed(this.buildAdding.bind(this));
   readonly pageStyle = computed(this.buildPageStyle.bind(this));
@@ -272,6 +278,33 @@ export class NovelReaderService {
     return "saved";
   }
 
+  async saveChapter(text: string): Promise<ParagraphSaveResult> {
+    const novelId = this.novelId();
+    const chapter = this.current();
+    if (novelId === null || chapter === null || !this.writing()) {
+      return "idle";
+    }
+    if (!text.trim()) {
+      return "empty";
+    }
+    if (text === this.fullText()) {
+      return "unchanged";
+    }
+    this.saving.set(true);
+    try {
+      const row = await this.ipc.invoke<ChapterRow>("novel_chapter_write", {
+        novelId,
+        chapterId: chapter.id,
+        text,
+      });
+      this.novels.applyChapterUpdate(row);
+      await this.readParagraphs(novelId, chapter.id);
+    } finally {
+      this.saving.set(false);
+    }
+    return "saved";
+  }
+
   setPref<K extends keyof ReaderPrefs>(key: K, value: ReaderPrefs[K]): void {
     this.prefs.set({ ...this.prefs(), [key]: value });
     storePrefs(this.prefs());
@@ -310,6 +343,9 @@ export class NovelReaderService {
 
   private patchView(novelId: number, patch: Partial<ReaderView>): void {
     const next = { ...this.viewOf(novelId), ...patch };
+    if (next.lang === "src") {
+      next.layout = "single";
+    }
     this.views.set({ ...this.views(), [novelId]: next });
     if (next.lang !== "src" || next.layout === "parallel") {
       void this.translation.ensure(novelId, this.readerTarget(novelId));
@@ -482,12 +518,20 @@ export class NovelReaderService {
   }
 
   private buildShowSource(): boolean {
-    const view = this.view();
-    return view.lang === "src" || view.layout === "parallel";
+    return this.view().lang === "src";
   }
 
   private buildCanEdit(): boolean {
     return this.mode() === "edit" && this.showSource();
+  }
+
+  private buildWriting(): boolean {
+    const chapter = this.current();
+    return this.mode() === "write" && this.showSource() && chapter !== null && !this.loading();
+  }
+
+  private buildFullText(): string {
+    return this.paragraphs().map(WRITE_TEXT_OF).join("\n\n");
   }
 
   private buildCanAdd(): boolean {

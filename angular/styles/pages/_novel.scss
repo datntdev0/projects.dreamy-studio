@@ -43,7 +43,6 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .tl-side { overflow: auto; padding: var(--sp-md); display: grid; gap: var(--sp-md); align-content: start; background: var(--canvas); }
 .side-card { display: grid; gap: var(--sp-md); }
 .side-btns { display: grid; gap: var(--sp-sm); }
-.tl-prog { display: grid; grid-template-columns: minmax(70px, 1fr) 36px; gap: var(--sp-sm); align-items: center; min-width: 120px; }
 .onto { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-xs) var(--sp-md); }
 .tl-list { flex: 1; overflow: auto; padding: var(--sp-md); display: grid; gap: var(--sp-md); align-content: start; }
 .tl-fill { flex: 1; display: grid; place-items: center; min-height: 220px; }
@@ -169,6 +168,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .rd-edit { display: grid; gap: var(--sp-sm); font-family: var(--font); }
 .rd-edit .textarea { font: 400 var(--rd-fs, 17px)/var(--rd-lh, 1.75) var(--rd-font, var(--font-serif)); }
 .rd-edit-foot { display: flex; align-items: center; gap: var(--sp-sm); }
+.rd-write .textarea { min-height: 50vh; }
 .rd-end { padding-top: var(--sp-xl); display: flex; justify-content: center; font-family: var(--font); }
 .rd-col > .empty { height: auto; padding: var(--sp-lg) 0; place-items: start; text-align: left; font-family: var(--font); }
 .rd-col > .empty .empty-inner { justify-items: start; max-width: none; }

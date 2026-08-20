@@ -1,5 +1,5 @@
 import { NgClass } from "@angular/common";
-import { Component, OnDestroy, computed, effect, inject, input, signal } from "@angular/core";
+import { Component, OnDestroy, computed, effect, inject, input, signal, untracked } from "@angular/core";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
@@ -7,7 +7,7 @@ import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
-import { AnalysisStatus, ChapterRow, TranslationStatus } from "../novel.models";
+import { AnalysisStatus, ChapterRow, TargetLang, TranslationStatus } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelTranslationService } from "../novel.translation.service";
@@ -27,8 +27,7 @@ type StatusView = { tone: string; title: I18nKey };
 
 const TRANSLATION_VIEWS: Record<TranslationStatus, StatusView> = {
   none: { tone: "none", title: "novel.chapters.translation.none" },
-  draft: { tone: "success", title: "novel.chapters.translation.draft" },
-  review: { tone: "warning", title: "novel.chapters.translation.review" },
+  done: { tone: "success", title: "novel.chapters.translation.done" },
   running: { tone: "running", title: "novel.chapters.translation.running" },
 };
 
@@ -70,6 +69,7 @@ export class NovelChapters implements OnDestroy {
   readonly rows = computed(this.buildRows.bind(this));
   readonly resumeSeq = computed(this.buildResumeSeq.bind(this));
   readonly cover = computed(this.buildCover.bind(this));
+  readonly translatedCount = computed(this.buildTranslatedCount.bind(this));
   private pressed: { id: string; y: number } | null = null;
   private suppressClick = false;
   private readonly moveListener = this.onPointerMove.bind(this);
@@ -108,6 +108,7 @@ export class NovelChapters implements OnDestroy {
 
   constructor() {
     effect(this.syncCover.bind(this));
+    effect(this.syncTranslation.bind(this));
   }
 
   nameOf(novel: NovelSummary): string {
@@ -151,7 +152,7 @@ export class NovelChapters implements OnDestroy {
   }
 
   translationView(row: ChapterRow): StatusView {
-    return TRANSLATION_VIEWS[row.translationStatus];
+    return TRANSLATION_VIEWS[this.translation.statusOf(this.novelId(), row.id, this.reader.readerTarget(this.novelId()))];
   }
 
   analysisView(row: ChapterRow): StatusView {
@@ -302,9 +303,22 @@ export class NovelChapters implements OnDestroy {
     return this.reader.resumeSeq(this.novelId());
   }
 
+  private buildTranslatedCount(): number {
+    return Object.keys(this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).chapters).length;
+  }
+
   private buildCover(): string {
     const novel = this.novel();
     return novel ? (this.novels.coverUrl(novel) ?? "") : "";
+  }
+
+  private syncTranslation(): void {
+    const target = this.reader.readerTarget(this.novelId());
+    untracked(this.loadTranslation.bind(this, target));
+  }
+
+  private loadTranslation(target: TargetLang): void {
+    void this.translation.ensure(this.novelId(), target);
   }
 
   private syncCover(): void {

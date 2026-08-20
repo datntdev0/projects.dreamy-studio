@@ -34,14 +34,14 @@
         <div class="empty" data-testid="project-list-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "project.error.generic" | t: { detail: failure.detail } }}</p></div></div>
       } @else if (projects.visible().length === 0) {
         @if (projects.isEmpty()) {
-          <div class="empty" data-testid="project-list-empty-none"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "project.catalog.empty.title" | t }}</h3><p class="t-sm t-mute">{{ "project.catalog.empty.description" | t }}</p><div class="empty-act"><button type="button" class="btn btn-primary" data-testid="project-list-empty-create" (click)="openCreate()"><ds-icon name="plus" [size]="16" />{{ "project.action.create" | t }}</button></div></div></div>
+          <div class="empty" data-testid="project-list-empty-none"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "project.catalog.empty.title" | t }}</h4><p class="t-sm t-mute">{{ "project.catalog.empty.description" | t }}</p><div class="empty-act"><button type="button" class="btn btn-primary" data-testid="project-list-empty-create" (click)="openCreate()"><ds-icon name="plus" [size]="16" />{{ "project.action.create" | t }}</button></div></div></div>
         } @else if (projects.loaded()) {
-          <div class="empty" data-testid="project-list-empty-nomatch"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "project.catalog.noMatch.title" | t }}</h3><p class="t-sm t-mute">{{ "project.catalog.noMatch.description" | t }}</p><button type="button" class="btn" data-testid="project-list-empty-clear" (click)="clearFilters()">{{ "project.catalog.clearFilters" | t }}</button></div></div>
+          <div class="empty" data-testid="project-list-empty-nomatch"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "project.catalog.noMatch.title" | t }}</h4><p class="t-sm t-mute">{{ "project.catalog.noMatch.description" | t }}</p><button type="button" class="btn" data-testid="project-list-empty-clear" (click)="clearFilters()">{{ "project.catalog.clearFilters" | t }}</button></div></div>
         }
       } @else if (projects.view() === "grid") {
         <div class="pj-grid" data-testid="project-list-grid">
           @for (project of projects.visible(); track project.id) {
-            <div class="pj-card" [class.is-selected]="isSelected(project.id)" [class.is-archived]="project.archived" tabindex="0" [attr.title]="project.name" [attr.data-project-id]="project.id" data-testid="project-list-card" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)">
+            <div class="pj-card is-dblclick" [class.is-selected]="isSelected(project.id)" [class.is-archived]="project.archived" tabindex="0" [attr.title]="project.name" [attr.data-project-id]="project.id" data-testid="project-list-card" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)">
               <app-project-thumb kind="card" [project]="project">
                 <span class="badge pj-tpl"><ds-icon [name]="labels.iconOf(project.template)" [size]="11" />{{ labels.templateKey(project.template) | t }}</span>
               </app-project-thumb>
@@ -64,7 +64,7 @@
           </thead>
           <tbody>
             @for (project of projects.visible(); track project.id) {
-              <tr [class.is-selected]="isSelected(project.id)" [class.is-muted]="project.archived" tabindex="0" [attr.data-project-id]="project.id" data-testid="project-list-row" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)">
+              <tr class="is-dblclick" [class.is-selected]="isSelected(project.id)" [class.is-muted]="project.archived" tabindex="0" [attr.data-project-id]="project.id" data-testid="project-list-row" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)">
                 <td><div class="nm-title"><app-project-thumb [project]="project" /><div><div class="t-ink">{{ project.name }}</div><div class="t-sm t-mute ellip">{{ labels.sourceLine(project) }}</div></div></div></td>
                 <td><span class="type-tag"><ds-icon [name]="labels.iconOf(project.template)" [size]="13" />{{ labels.templateKey(project.template) | t }}</span></td>
                 <td><span class="badge" [class.badge-running]="!project.archived">{{ labels.statusKey(project) | t }}</span></td>

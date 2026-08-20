@@ -8,7 +8,7 @@ import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../
 import { NovelService } from "../novel.service";
 import { NOVEL_LANG_KEYS, toNovelError } from "../novel.rules";
 import { ChapterTranslation, PassageState, PassageTranslation, TranslationView, TranslationWarning } from "../novel.translation.models";
-import { PASSAGE_STATE_BADGES, PASSAGE_STATE_KEYS, passageState, warningReason, warningsOfPassage } from "../novel.translation.rules";
+import { passageState, warningReason, warningsOfPassage } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
 
 const SAVE_NOTICES: Record<ParagraphSaveResult, I18nKey | null> = {
@@ -60,21 +60,13 @@ export class NovelTranslationResult {
     return `${this.i18n.translate("novel.translation.result.chapterOption", { n: row.seq, title: row.title })}${note}`;
   }
 
-  stateKey(state: PassageState): I18nKey {
-    return PASSAGE_STATE_KEYS[state];
-  }
-
-  badgeOf(state: PassageState): string {
-    return PASSAGE_STATE_BADGES[state];
-  }
-
   passageOf(n: number): PassageTranslation | null {
     return this.translated()?.passages[n] ?? null;
   }
 
   stateOf(n: number): PassageState {
     const chapter = this.chapter();
-    return chapter ? passageState(this.translation.warningsOf(this.novelId()), chapter.id, n) : "draft";
+    return chapter ? passageState(this.translation.warningsOf(this.novelId()), chapter.id, n) : "ok";
   }
 
   warningsOf(n: number): TranslationWarning[] {

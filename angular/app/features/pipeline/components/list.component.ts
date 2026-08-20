@@ -1,7 +1,6 @@
 import { Component, DestroyRef, OnInit, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { TabsService } from "@layout/tabs.service";
 import { PIPELINE_KINDS } from "../pipeline.rules";
 import { PipelineService } from "../pipeline.service";
 import { PipelineItem } from "./item.component";
@@ -17,7 +16,6 @@ const CLOCK_MS = 1000;
 export class PipelineList implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly tabs = inject(TabsService);
   readonly pipelines = inject(PipelineService);
   readonly kinds = Object.values(PIPELINE_KINDS);
   readonly now = signal(Date.now());

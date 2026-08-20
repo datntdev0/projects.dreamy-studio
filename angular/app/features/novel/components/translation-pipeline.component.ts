@@ -56,10 +56,6 @@ export class NovelTranslationPipeline {
     return this.translation.statusOf(this.novelId(), row.id);
   }
 
-  progressOf(row: ChapterRow): number {
-    return Math.round(this.translation.progressOf(this.novelId())[row.id] ?? 0);
-  }
-
   hasProgress(row: ChapterRow): boolean {
     return Object.hasOwn(this.translation.progressOf(this.novelId()), row.id);
   }

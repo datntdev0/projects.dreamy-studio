@@ -9,6 +9,7 @@ import { ToastTone } from "@app/core/toast/toast.models";
 import { ChapterRow } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { ReaderLayout } from "../novel.models";
+import { ParagraphRow } from "../novel.models";
 import { ParagraphSaveResult } from "../novel.models";
 import { ReaderMode } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
@@ -25,6 +26,34 @@ interface ResultNotice {
   key: I18nKey;
   tone: ToastTone;
 }
+
+interface ReaderRow {
+  index: number;
+  source: ParagraphRow | null;
+  passage: PassageTranslation | null;
+  key: number | null;
+}
+
+const MODE_KEYS: Record<ReaderMode, I18nKey> = {
+  read: "novel.reader.mode.read",
+  edit: "novel.reader.mode.edit",
+  write: "novel.reader.mode.write",
+};
+
+function SOURCE_ROW(paragraph: ParagraphRow): ReaderRow {
+  return { index: paragraph.n, source: paragraph, passage: null, key: null };
+}
+
+function BY_NUMBER(left: number, right: number): number {
+  return left - right;
+}
+
+const WRITE_NOTICES: Record<ParagraphSaveResult, ResultNotice | null> = {
+  saved: { key: "novel.reader.write.saved", tone: "success" },
+  empty: { key: "novel.reader.write.empty", tone: "warning" },
+  unchanged: { key: "novel.reader.unchanged", tone: "warning" },
+  idle: null,
+};
 
 const RESULT_NOTICES: Record<ParagraphSaveResult, ResultNotice | null> = {
   saved: { key: "novel.reader.saved", tone: "success" },
@@ -49,7 +78,7 @@ export class NovelReader {
   readonly novelId = input.required<number>();
   readonly count = formatCount;
   readonly flash = signal<number | null>(null);
-  readonly modes: ReaderMode[] = ["read", "edit"];
+  readonly modes: ReaderMode[] = ["read", "edit", "write"];
   readonly page = viewChild<ElementRef<HTMLElement>>("page");
   readonly editorRef = viewChild<ElementRef<HTMLTextAreaElement>>("editor");
 
@@ -59,6 +88,8 @@ export class NovelReader {
   readonly parallel = computed(this.buildParallel.bind(this));
   readonly showTranslation = computed(this.buildShowTranslation.bind(this));
   readonly chapterTranslation = computed(this.buildChapterTranslation.bind(this));
+  readonly rows = computed(this.buildRows.bind(this));
+  readonly layoutOn = computed(this.buildLayoutOn.bind(this));
   readonly heading = computed(this.buildHeading.bind(this));
   readonly label = computed(this.buildLabel.bind(this));
 
@@ -93,15 +124,14 @@ export class NovelReader {
   }
 
   titleOf(chapter: ChapterRow): string {
-    return this.parallel() ? chapter.title : this.reader.titleOf(this.novelId(), chapter);
+    return this.reader.titleOf(this.novelId(), chapter);
   }
 
-  passageOf(n: number): PassageTranslation | null {
-    return this.chapterTranslation()?.passages[n] ?? null;
-  }
-
-  isReview(n: number): boolean {
+  isReview(n: number | null): boolean {
     const chapter = this.reader.current();
+    if (n === null) {
+      return false;
+    }
     const warnings = this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).warnings;
     return chapter ? passageState(warnings, chapter.id, n) === "review" : false;
   }
@@ -111,7 +141,24 @@ export class NovelReader {
   }
 
   modeKey(mode: ReaderMode): I18nKey {
-    return mode === "read" ? "novel.reader.mode.read" : "novel.reader.mode.edit";
+    return MODE_KEYS[mode];
+  }
+
+  stopWriting(): void {
+    this.reader.setMode("read");
+  }
+
+  async saveWrite(text: string): Promise<void> {
+    try {
+      const result = await this.reader.saveChapter(text);
+      const entry = WRITE_NOTICES[result];
+      if (entry) {
+        this.notify(this.i18n.translate(entry.key), entry.tone);
+      }
+    } catch (cause) {
+      const detail = toNovelError(cause).detail;
+      this.notify(this.i18n.translate("novel.error.generic", { detail }), "danger");
+    }
   }
 
   edit(n: number): void {
@@ -186,6 +233,25 @@ export class NovelReader {
   private buildChapterTranslation(): ChapterTranslation | null {
     const chapter = this.reader.current();
     return chapter ? (this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).chapters[chapter.id] ?? null) : null;
+  }
+
+  private buildLayoutOn(): boolean {
+    return this.reader.view().lang !== "src";
+  }
+
+  private buildRows(): ReaderRow[] {
+    const source = this.reader.paragraphs();
+    if (!this.showTranslation()) {
+      return source.map(SOURCE_ROW);
+    }
+    const passages = this.chapterTranslation()?.passages ?? {};
+    const keys = Object.keys(passages).map(Number).sort(BY_NUMBER);
+    const rows: ReaderRow[] = [];
+    for (let index = 0; index < Math.max(source.length, keys.length); index += 1) {
+      const key = keys[index];
+      rows.push({ index: index + 1, source: source[index] ?? null, passage: key === undefined ? null : passages[key], key: key ?? null });
+    }
+    return rows;
   }
 
   private buildHeading(): string {

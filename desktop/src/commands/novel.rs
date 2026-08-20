@@ -141,6 +141,18 @@ pub fn update_paragraph(
         .paragraph_update(novel_id, chapter_id, n, text)
 }
 
+pub fn write_chapter(
+    service: &NovelService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    chapter_id: &str,
+    text: &str,
+) -> NovelResult<ChapterRow> {
+    service
+        .open(session)?
+        .chapter_write(novel_id, chapter_id, text)
+}
+
 pub fn add_chapter(
     service: &NovelService,
     session: &WorkspaceSession,
@@ -347,6 +359,19 @@ pub async fn novel_paragraph_update(
 ) -> NovelResult<ChapterRow> {
     run_blocking(app, move |service, session| {
         update_paragraph(service, session, novel_id, &chapter_id, n, &text)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn novel_chapter_write(
+    app: AppHandle,
+    novel_id: i64,
+    chapter_id: String,
+    text: String,
+) -> NovelResult<ChapterRow> {
+    run_blocking(app, move |service, session| {
+        write_chapter(service, session, novel_id, &chapter_id, &text)
     })
     .await
 }

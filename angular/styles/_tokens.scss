@@ -218,8 +218,11 @@ a:hover { text-decoration: underline; }
 .progress { height: 4px; background: var(--canvas-mid); border-radius: var(--r-xs); overflow: hidden; }
 .progress > i { display: block; height: 100%; background: var(--secondary); transition: width 0.3s ease; }
 
+.is-dblclick, .is-dblclick * { -webkit-user-select: none; user-select: none; }
+.is-dblclick input, .is-dblclick textarea, .is-dblclick select { -webkit-user-select: auto; user-select: auto; }
 .empty { display: grid; place-items: center; text-align: center; padding: var(--sp-xl); height: 100%; }
 .empty-inner { max-width: 400px; display: grid; justify-items: center; gap: var(--sp-sm); }
+.empty-inner > h4 { font-size: 16px; line-height: 22px; letter-spacing: -0.1px; }
 .illus { width: 64px; height: 64px; border-radius: var(--r-md); background: linear-gradient(135deg, var(--acc-twilight), var(--acc-sunset)); opacity: 0.35; }
 
 /* floating layers */

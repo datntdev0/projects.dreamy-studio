@@ -2,10 +2,10 @@ import { TargetLang } from "./novel.models";
 
 export type TranslationStep = "dict" | "guide" | "trans" | "result" | "warn";
 export type DictEntryType = "name" | "place" | "org" | "title" | "term";
-export type PassageState = "draft" | "review";
+export type PassageState = "ok" | "review";
 export type WarningKind = "source" | "dict";
 export type WarningFilter = "all" | "source" | "dict";
-export type ChapterFilter = "all" | "none" | "draft" | "review";
+export type ChapterFilter = "all" | "none" | "done";
 
 export interface DictEntry {
   id: number;

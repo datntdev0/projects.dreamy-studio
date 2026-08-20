@@ -516,6 +516,30 @@ impl NovelWorkspace {
         require_chapter(&repo, novel_id, chapter_id)
     }
 
+    pub fn chapter_write(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        text: &str,
+    ) -> NovelResult<ChapterRow> {
+        let _gate = lock(&self.gate);
+        let db = self.database()?;
+        let repo = NovelRepository::new(db.connection());
+        require_chapter(&repo, novel_id, chapter_id)?;
+        let paragraphs: Vec<Paragraph> = split_paragraphs(text)
+            .into_iter()
+            .map(make_paragraph)
+            .collect();
+        if paragraphs.is_empty() {
+            return Err(NovelError::invalid("chapter text must not be empty"));
+        }
+        self.files().write_chapter(novel_id, chapter_id, &paragraphs)?;
+        let now = now_text();
+        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(&paragraphs)), &now)?;
+        repo.touch_novel(novel_id, &now)?;
+        require_chapter(&repo, novel_id, chapter_id)
+    }
+
     pub fn chapter_add(&self, novel_id: i64, title: &str) -> NovelResult<ChapterRow> {
         let _gate = lock(&self.gate);
         let db = self.database()?;

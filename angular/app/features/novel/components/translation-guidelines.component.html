@@ -1,7 +1,7 @@
 <div class="tl-center" data-testid="novel-translation-guide">
   <div class="card side-card tl-form">
     <div class="ins-h"><span class="eyebrow" data-testid="novel-translation-guide-title">{{ "novel.translation.guide.title" | t }}</span></div>
-    <div class="field"><label for="ntg-prompt">{{ "novel.translation.guide.prompt" | t }}</label><textarea #prompt id="ntg-prompt" class="textarea" rows="12" data-testid="novel-translation-guide-prompt" [attr.placeholder]="'novel.translation.guide.placeholder' | t" [value]="guidelines()"></textarea></div>
+    <div class="field"><label for="ntg-prompt">{{ "novel.translation.guide.prompt" | t }}</label><textarea #prompt id="ntg-prompt" class="textarea" rows="5" data-testid="novel-translation-guide-prompt" [attr.placeholder]="'novel.translation.guide.placeholder' | t" [value]="guidelines()"></textarea></div>
     <p class="t-sm t-mute">{{ "novel.translation.guide.note" | t }}</p>
     <div><button type="button" class="btn btn-primary" data-testid="novel-translation-guide-save" (click)="save(prompt.value)">{{ "novel.translation.guide.save" | t }}</button></div>
   </div>

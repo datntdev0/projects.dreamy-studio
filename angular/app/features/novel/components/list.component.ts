@@ -2,7 +2,7 @@ import { Component, HostListener, effect, inject } from "@angular/core";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { TabsService } from "@layout/tabs.service";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
+import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelReaderService } from "../novel.reader.service";
@@ -37,13 +37,17 @@ export class NovelList {
     "is-selected": this.novels.selectedId() === this.novelOf(row).id,
   });
 
+  readonly tableActions = (): DatatableAction[] => [
+    { key: "delete", label: this.i18n.translate("novel.list.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
+  ];
+
   get tableColumns(): DatatableColumn[] {
     return [
       { key: "title", label: this.i18n.translate("novel.list.col.novel"), ellipsis: true },
       { key: "source", label: this.i18n.translate("novel.list.col.source"), width: "64px" },
       { key: "chapters", label: this.i18n.translate("novel.list.col.chapters"), align: "right", width: "80px" },
       { key: "words", label: this.i18n.translate("novel.list.col.words"), align: "right", width: "88px" },
-      { key: "progress", label: this.i18n.translate("novel.list.col.progress"), width: "120px" },
+      { key: "progress", label: this.i18n.translate("novel.list.col.progress"), width: "96px" },
     ];
   }
 
@@ -103,6 +107,10 @@ export class NovelList {
 
   novelOf(row: object): NovelSummary {
     return row as NovelSummary;
+  }
+
+  removeRow(row: object): void {
+    this.dialogs.openDelete([this.novelOf(row).id]);
   }
 
   onTableDoubleClick(event: DatatableRowEvent): void {

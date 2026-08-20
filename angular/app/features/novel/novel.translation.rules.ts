@@ -32,13 +32,12 @@ export const DICT_TYPE_KEYS: Record<DictEntryType, I18nKey> = {
   term: "novel.translation.dict.type.term",
 };
 
-export const CHAPTER_FILTERS: ChapterFilter[] = ["all", "none", "draft", "review"];
+export const CHAPTER_FILTERS: ChapterFilter[] = ["all", "none", "done"];
 
 export const CHAPTER_FILTER_KEYS: Record<ChapterFilter, I18nKey> = {
   all: "novel.translation.trans.filter.all",
   none: "novel.translation.status.none",
-  draft: "novel.translation.status.draft",
-  review: "novel.translation.status.review",
+  done: "novel.translation.status.done",
 };
 
 export const WARNING_FILTERS: WarningFilter[] = ["all", "source", "dict"];
@@ -61,26 +60,14 @@ export const WARNING_KIND_BADGES: Record<WarningKind, string> = {
 
 export const STATUS_KEYS: Record<TranslationStatus, I18nKey> = {
   none: "novel.translation.status.none",
-  draft: "novel.translation.status.draft",
-  review: "novel.translation.status.review",
+  done: "novel.translation.status.done",
   running: "novel.translation.status.running",
 };
 
 export const STATUS_BADGES: Record<TranslationStatus, string> = {
   none: "",
-  draft: "badge-info",
-  review: "badge-warning",
+  done: "badge-success",
   running: "badge-running",
-};
-
-export const PASSAGE_STATE_KEYS: Record<PassageState, I18nKey> = {
-  draft: "novel.translation.passage.draft",
-  review: "novel.translation.passage.review",
-};
-
-export const PASSAGE_STATE_BADGES: Record<PassageState, string> = {
-  draft: "",
-  review: "badge-warning",
 };
 
 export const CHAPTER_ROW_LIMIT = 300;
@@ -145,7 +132,7 @@ export function warningsOfPassage(warnings: TranslationWarning[], chapterId: str
 }
 
 export function passageState(warnings: TranslationWarning[], chapterId: string, n: number): PassageState {
-  return warningsOfPassage(warnings, chapterId, n).length > 0 ? "review" : "draft";
+  return warningsOfPassage(warnings, chapterId, n).length > 0 ? "review" : "ok";
 }
 
 export function reviewCountOf(warnings: TranslationWarning[], chapterId: string): number {
@@ -173,7 +160,7 @@ export function chapterStatus(translation: NovelTranslation, chapterId: string, 
   if (!translation.chapters[chapterId]) {
     return "none";
   }
-  return reviewCountOf(translation.warnings, chapterId) > 0 ? "review" : "draft";
+  return "done";
 }
 
 export function translatedCount(translation: NovelTranslation): number {

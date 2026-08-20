@@ -94,8 +94,8 @@ export class NovelTranslationService {
     return active !== null && active.novelId !== novelId;
   }
 
-  statusOf(novelId: number, chapterId: string): TranslationStatus {
-    return chapterStatus(this.of(novelId), chapterId, Object.keys(this.progressOf(novelId)));
+  statusOf(novelId: number, chapterId: string, target: TargetLang = this.targetOf(novelId)): TranslationStatus {
+    return chapterStatus(this.of(novelId, target), chapterId, Object.keys(this.progressOf(novelId, target)));
   }
 
   reviewCountOf(novelId: number): number {

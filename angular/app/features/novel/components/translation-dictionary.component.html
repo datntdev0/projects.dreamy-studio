@@ -43,7 +43,7 @@
       }
     </ng-template>
     <ng-template dsEmpty>
-      <div class="empty" data-testid="novel-translation-dict-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "novel.translation.dict.empty.title" | t }}</h3><p class="t-sm t-mute">{{ (all().length === 0 ? "novel.translation.dict.empty.none.description" : "novel.translation.dict.empty.description") | t }}</p>
+      <div class="empty" data-testid="novel-translation-dict-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.translation.dict.empty.title" | t }}</h4><p class="t-sm t-mute">{{ (all().length === 0 ? "novel.translation.dict.empty.none.description" : "novel.translation.dict.empty.description") | t }}</p>
         @if (all().length === 0) {
           <button type="button" class="btn btn-primary" data-testid="novel-translation-dict-empty-add" (click)="startDraft()"><ds-icon name="plus" [size]="16" />{{ "novel.translation.dict.new" | t }}</button>
         }

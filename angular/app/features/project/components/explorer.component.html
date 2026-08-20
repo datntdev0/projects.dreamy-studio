@@ -7,7 +7,7 @@
       <div class="nx-sep"></div>
       @for (project of shown(); track project.id) {
         <div class="nx-group" [class.is-archived]="project.archived" [attr.data-project-id]="project.id" data-testid="project-explorer-project">
-          <div class="tree-row nx-novel" [class.is-selected]="isSelected(project) || isActive(project)" role="treeitem" tabindex="0" [attr.aria-expanded]="isExpanded(project)" [attr.aria-selected]="isSelected(project)" [attr.title]="project.folder" data-testid="project-explorer-project-row" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)"><ds-icon [name]="isExpanded(project) ? 'chev-d' : 'chev-r'" [size]="14" data-testid="project-explorer-expand" (click)="toggleFromChevron(project, $event)" /><app-project-thumb size="xs" [project]="project" /><span class="tree-label">{{ project.name }}</span></div>
+          <div class="tree-row nx-novel is-dblclick" [class.is-selected]="isSelected(project) || isActive(project)" role="treeitem" tabindex="0" [attr.aria-expanded]="isExpanded(project)" [attr.aria-selected]="isSelected(project)" [attr.title]="project.folder" data-testid="project-explorer-project-row" (click)="select(project)" (dblclick)="open(project)" (keydown)="onKeydown(project, $event)"><ds-icon [name]="isExpanded(project) ? 'chev-d' : 'chev-r'" [size]="14" data-testid="project-explorer-expand" (click)="toggleFromChevron(project, $event)" /><app-project-thumb size="xs" [project]="project" /><span class="tree-label">{{ project.name }}</span></div>
           @if (isExpanded(project)) {
             <app-project-tree [projectId]="project.id" path="" [depth]="1" [indent]="24" />
           }

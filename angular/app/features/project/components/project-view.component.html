@@ -1,6 +1,6 @@
 <div class="nv pj-view" data-testid="project-view">
   @if (missing()) {
-    <div class="empty" data-testid="project-view-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">{{ "project.view.missing" | t }}</h3><button type="button" class="btn" data-testid="project-view-back" (click)="backToCatalog()">{{ "project.view.back" | t }}</button></div></div>
+    <div class="empty" data-testid="project-view-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "project.view.missing" | t }}</h4><button type="button" class="btn" data-testid="project-view-back" (click)="backToCatalog()">{{ "project.view.back" | t }}</button></div></div>
   } @else if (project(); as project) {
     <div class="nv-bar" data-testid="project-view-header">
       <div class="nv-bar-l" data-testid="project-view-heading">

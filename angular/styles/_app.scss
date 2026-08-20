@@ -186,7 +186,7 @@ button.menu-row { width: 100%; border: 0; background: transparent; font: 400 13p
 .asst-input { flex: none; display: flex; gap: var(--sp-sm); padding: var(--sp-md); border-top: 1px solid var(--hairline); }
 
 /* bottom panel */
-.bottom { flex: none; height: var(--bt-h, 240px); border-top: 1px solid var(--hairline); background: var(--canvas-card); display: flex; flex-direction: column; position: relative; }
+.bottom { flex: none; height: var(--bt-h, 160px); border-top: 1px solid var(--hairline); background: var(--canvas-card); display: flex; flex-direction: column; position: relative; }
 .resizer-h { position: absolute; left: 0; right: 0; top: -1px; height: 1px; cursor: row-resize; z-index: 4; touch-action: none; }
 .resizer-h::after { content: ""; position: absolute; inset: -3px 0; }
 .bottom-body { flex: 1; overflow: auto; min-height: 0; }

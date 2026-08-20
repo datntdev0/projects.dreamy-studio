@@ -37,7 +37,7 @@ export interface NovelPatch {
   tags?: string[];
 }
 
-export type TranslationStatus = "none" | "draft" | "review" | "running";
+export type TranslationStatus = "none" | "done" | "running";
 
 export type AnalysisStatus = "none" | "done" | "stale" | "running";
 
@@ -157,7 +157,7 @@ export type FracState = "" | "is-part" | "is-full";
 
 export type NovelScreen = "chapters" | "reading";
 
-export type ReaderMode = "read" | "edit";
+export type ReaderMode = "read" | "edit" | "write";
 
 export type TargetLang = "EN" | "VI";
 

@@ -14,7 +14,7 @@
       <label class="search"><span class="sr-only">{{ "novel.chapters.search.label" | t }}</span><input class="input" type="search" data-testid="novel-chapters-search" [value]="query()" [attr.placeholder]="'novel.chapters.search.placeholder' | t" (input)="onQuery($event)"></label>
       <span class="t-sm t-mute" data-testid="novel-chapters-count">{{ "novel.chapters.count" | t: { shown: rows().length, total: all().length } }}</span>
       <span class="spacer"></span>
-      <span class="legend-dots" data-testid="novel-chapters-legend"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></span>
+      <span class="legend-dots" data-testid="novel-chapters-legend"><app-novel-progress-frac icon="lang" [done]="translatedCount()" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></span>
     </div>
     <div class="nv-body" data-testid="novel-chapters-body">
       <ds-datatable [columns]="tableColumns" [rows]="rows()" trackKey="id" variant="fill" [actions]="tableActions" [actionsLabel]="'novel.chapters.actions' | t" rowTestId="novel-chapter-row" [rowClass]="tableRowClass" data-testid="novel-chapters-table" (rowClick)="onRowClick($event)" (rowEnter)="onTableEnter($event)" (rowPointerDown)="onPointerDown($event)">
@@ -32,9 +32,9 @@
         </ng-template>
         <ng-template dsEmpty>
           @if (all().length === 0) {
-            <div class="empty" data-testid="novel-chapters-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-chapters-empty-title">{{ "novel.chapters.empty.none.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-chapters-empty-description">{{ "novel.chapters.empty.none.description" | t }}</p><button type="button" class="btn btn-primary" data-testid="novel-chapters-empty-add" (click)="add()"><ds-icon name="plus" [size]="16" />{{ "novel.chapters.empty.none.add" | t }}</button></div></div>
+            <div class="empty" data-testid="novel-chapters-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-chapters-empty-title">{{ "novel.chapters.empty.none.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-chapters-empty-description">{{ "novel.chapters.empty.none.description" | t }}</p><button type="button" class="btn btn-primary" data-testid="novel-chapters-empty-add" (click)="add()"><ds-icon name="plus" [size]="16" />{{ "novel.chapters.empty.none.add" | t }}</button></div></div>
           } @else {
-            <div class="empty" data-testid="novel-chapters-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="novel-chapters-empty-title">{{ "novel.chapters.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="novel-chapters-empty-description">{{ "novel.chapters.empty.description" | t }}</p></div></div>
+            <div class="empty" data-testid="novel-chapters-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-chapters-empty-title">{{ "novel.chapters.empty.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-chapters-empty-description">{{ "novel.chapters.empty.description" | t }}</p></div></div>
           }
         </ng-template>
       </ds-datatable>

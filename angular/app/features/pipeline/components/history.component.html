@@ -25,9 +25,9 @@
         @if (!pipelines.loaded()) {
           <div class="empty" data-testid="pipeline-history-loading"><div class="empty-inner"><p class="t-sm t-mute">{{ "pipeline.loading" | t }}</p></div></div>
         } @else if (pipelines.history().length === 0) {
-          <div class="empty" data-testid="pipeline-history-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="pipeline-history-empty-title">{{ "pipeline.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="pipeline-history-empty-description">{{ "pipeline.empty.description" | t }}</p></div></div>
+          <div class="empty" data-testid="pipeline-history-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="pipeline-history-empty-title">{{ "pipeline.empty.title" | t }}</h4><p class="t-sm t-mute" data-testid="pipeline-history-empty-description">{{ "pipeline.empty.description" | t }}</p></div></div>
         } @else {
-          <div class="empty" data-testid="pipeline-history-nomatch"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="pipeline-history-nomatch-title">{{ "pipeline.noMatch.title" | t }}</h3><p class="t-sm t-mute" data-testid="pipeline-history-nomatch-description">{{ "pipeline.noMatch.description" | t }}</p><button type="button" class="btn" data-testid="pipeline-history-nomatch-clear" (click)="clearFilters()">{{ "pipeline.filter.clear" | t }}</button></div></div>
+          <div class="empty" data-testid="pipeline-history-nomatch"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="pipeline-history-nomatch-title">{{ "pipeline.noMatch.title" | t }}</h4><p class="t-sm t-mute" data-testid="pipeline-history-nomatch-description">{{ "pipeline.noMatch.description" | t }}</p><button type="button" class="btn" data-testid="pipeline-history-nomatch-clear" (click)="clearFilters()">{{ "pipeline.filter.clear" | t }}</button></div></div>
         }
       } @else {
         <ds-datatable [columns]="tableColumns" [rows]="visible()" trackKey="id" minWidth="520px" variant="fill" rowTestId="pipeline-history-row" [rowClass]="tableRowClass" data-testid="pipeline-history-table" (rowClick)="onRowClick($event)" (rowEnter)="onRowClick($event)">

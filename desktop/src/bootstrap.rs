@@ -74,6 +74,7 @@ pub fn run() {
             commands::novel::novel_chapters,
             commands::novel::novel_chapter_read,
             commands::novel::novel_paragraph_update,
+            commands::novel::novel_chapter_write,
             commands::novel::novel_chapter_add,
             commands::novel::novel_chapter_rename,
             commands::novel::novel_chapter_delete,

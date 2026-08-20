@@ -7,7 +7,6 @@ use crate::features::novel::service::NovelService;
 use crate::features::pipeline::models::PipelineEvent;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::repository::PipelineRepository;
-use crate::features::pipeline::translator::PlaceholderTranslator;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::load::LoadEvent;
@@ -19,6 +18,7 @@ use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
 use crate::testing::backend::StubBackend;
+use crate::testing::translator::FakeTranslator;
 use chrono::Utc;
 use serde_json::json;
 use std::sync::Arc;
@@ -103,8 +103,7 @@ fn database(fixture: &Fixture) -> Database {
 
 #[test]
 fn commands_without_a_workspace_return_no_workspace() {
-    let executor =
-        PipelineExecutor::new(Arc::new(PlaceholderTranslator::with_delay(Duration::ZERO)));
+    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(Duration::ZERO)));
     let translation = TranslationService::new();
     let session = WorkspaceSession::new();
     let sink: Arc<dyn PipelineTarget> = Arc::new(RecordingTarget::default());
@@ -128,8 +127,7 @@ fn commands_without_a_workspace_return_no_workspace() {
 
 #[test]
 fn cancel_on_an_idle_executor_is_false() {
-    let executor =
-        PipelineExecutor::new(Arc::new(PlaceholderTranslator::with_delay(Duration::ZERO)));
+    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(Duration::ZERO)));
 
     assert!(!cancel_pipeline(&executor));
 }
@@ -187,7 +185,7 @@ fn history_is_newest_first_and_clamps_the_limit() {
 fn start_forwards_started_and_finished_events() {
     let fixture = fixture();
     let (novel_id, chapter_id) = novel_with_chapter(&fixture);
-    let executor = PipelineExecutor::new(Arc::new(PlaceholderTranslator::with_delay(
+    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(
         Duration::from_millis(10),
     )));
     let recording = Arc::new(RecordingTarget::default());

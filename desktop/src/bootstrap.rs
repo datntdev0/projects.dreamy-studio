@@ -7,7 +7,7 @@ use crate::commands;
 use crate::container::AppContainer;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::executor::PipelineExecutor;
-use crate::features::pipeline::translator::PlaceholderTranslator;
+use crate::features::pipeline::llm::LlmTranslator;
 use crate::features::settings::models::Theme;
 use crate::features::settings::repository::SettingsRepository;
 use crate::features::settings::service::SettingsService;
@@ -196,7 +196,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(NovelService::new());
     app.manage(crate::features::translation::service::TranslationService::new());
     app.manage(PipelineExecutor::new(std::sync::Arc::new(
-        PlaceholderTranslator::default(),
+        LlmTranslator::new(SettingsRepository::new(container.settings_path.clone())),
     )));
     app.manage(crate::features::project::service::ProjectService::new());
     app.manage(crate::features::library::service::LibraryService::new());

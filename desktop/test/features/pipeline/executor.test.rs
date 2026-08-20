@@ -1,10 +1,10 @@
 use super::*;
 use crate::features::novel::models::NovelInput;
 use crate::features::novel::service::NovelWorkspace;
-use crate::features::pipeline::translator::PlaceholderTranslator;
 use crate::infra::storage::database::Database;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
+use crate::testing::translator::FakeTranslator;
 use std::sync::Condvar;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
@@ -101,7 +101,7 @@ fn fixture() -> Fixture {
 #[test]
 fn completes_a_translation_and_emits_lifecycle_events() {
     let fixture = fixture();
-    let executor = PipelineExecutor::new(Arc::new(PlaceholderTranslator::with_delay(
+    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(
         Duration::from_millis(10),
     )));
     let target = Arc::new(RecordingTarget::new());
@@ -151,7 +151,7 @@ fn completes_a_translation_and_emits_lifecycle_events() {
 #[test]
 fn rejects_invalid_requests_without_claiming_the_executor() {
     let fixture = fixture();
-    let executor = PipelineExecutor::new(Arc::new(PlaceholderTranslator::with_delay(
+    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(
         Duration::from_millis(10),
     )));
     let error = executor

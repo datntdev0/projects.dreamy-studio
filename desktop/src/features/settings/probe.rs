@@ -148,7 +148,7 @@ pub fn logout(spec: &CliSpec, configured: &str, data_dir: &Path) -> Result<(), S
     }
 }
 
-fn prepare(spec: &CliSpec, data_dir: &Path) -> Result<(), String> {
+pub fn prepare(spec: &CliSpec, data_dir: &Path) -> Result<(), String> {
     if spec.profile_env.is_none() {
         return Ok(());
     }
@@ -171,7 +171,7 @@ fn command(spec: &CliSpec, path: &Path, args: &[&str], data_dir: &Path) -> Comma
     command
 }
 
-fn locate(spec: &CliSpec, configured: &str) -> Option<PathBuf> {
+pub fn locate(spec: &CliSpec, configured: &str) -> Option<PathBuf> {
     if configured.is_empty() {
         let search = std::env::var_os("PATH")?;
         let extensions = std::env::var("PATHEXT").unwrap_or_default();
@@ -306,13 +306,13 @@ pub fn parse_version(output: &str) -> String {
 }
 
 #[cfg(windows)]
-fn hide_window(command: &mut Command) {
+pub fn hide_window(command: &mut Command) {
     use std::os::windows::process::CommandExt;
     command.creation_flags(CREATE_NO_WINDOW);
 }
 
 #[cfg(not(windows))]
-fn hide_window(_command: &mut Command) {}
+pub fn hide_window(_command: &mut Command) {}
 
 #[cfg(windows)]
 fn open_terminal(command: &mut Command) {

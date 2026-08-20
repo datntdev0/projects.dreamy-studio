@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, input, signal } from "@angular/cor
 import { Icon } from "@components/icon";
 import { TabsService } from "@layout/tabs.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { checkCoverFile } from "../novel.cover";
@@ -52,7 +52,7 @@ function fieldOf(patch: NovelPatch): NovelField {
 @Component({
   selector: "app-novel-panel",
   standalone: true,
-  imports: [Icon, LanguagePipe, Cover, NovelProgressFrac],
+  imports: [Icon, CoreModule, Cover, NovelProgressFrac],
   templateUrl: "./novel.panel.html",
   host: { "data-testid": "novel-panel" },
 })

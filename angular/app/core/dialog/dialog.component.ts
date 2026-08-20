@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, Output, ViewChild } from "@angular/core";
-import { Button } from "./button";
-import { Icon } from "./icon";
+import { Button } from "@components/button";
+import { Icon } from "@components/icon";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -18,7 +18,7 @@ function focusableIn(root: HTMLElement): HTMLElement[] {
   selector: "ds-dialog",
   standalone: true,
   imports: [Button, Icon],
-  templateUrl: "./dialog.html",
+  templateUrl: "./dialog.component.html",
 })
 export class Dialog implements AfterViewInit, OnDestroy {
   @Input() title = "";

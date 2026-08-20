@@ -1,12 +1,12 @@
 import { Component, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { LIBRARY_KINDS, KindCounts, LibraryTag } from "../library.models";
 import { sumCounts } from "../library.rules";
 
-@Component({ selector: "app-library-collections", standalone: true, imports: [Icon, LanguagePipe], templateUrl: "./collections.component.html", host: { "data-testid": "library-collections" } })
+@Component({ selector: "app-library-collections", standalone: true, imports: [Icon, CoreModule], templateUrl: "./collections.component.html", host: { "data-testid": "library-collections" } })
 export class LibraryCollections {
   readonly library = inject(LibraryService);
   readonly kinds = LIBRARY_KINDS;

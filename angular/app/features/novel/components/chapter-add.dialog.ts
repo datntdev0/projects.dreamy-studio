@@ -1,8 +1,7 @@
 import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
-import { Dialog } from "@components/dialog";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
@@ -12,7 +11,7 @@ import { NovelService } from "../novel.service";
 @Component({
   selector: "app-novel-chapter-add-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, LanguagePipe],
+  imports: [Button, Icon, CoreModule],
   templateUrl: "./chapter-add.dialog.html",
   host: { "data-testid": "novel-chapter-add-dialog" },
 })

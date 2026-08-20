@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from "@angular/common";
 import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ToastTone } from "@app/core/toast/toast.models";
@@ -65,7 +65,7 @@ const RESULT_NOTICES: Record<ParagraphSaveResult, ResultNotice | null> = {
 @Component({
   selector: "app-novel-reader",
   standalone: true,
-  imports: [NgTemplateOutlet, Icon, LanguagePipe, NovelLangSwitch],
+  imports: [NgTemplateOutlet, Icon, CoreModule, NovelLangSwitch],
   templateUrl: "./reader.component.html",
 })
 export class NovelReader {

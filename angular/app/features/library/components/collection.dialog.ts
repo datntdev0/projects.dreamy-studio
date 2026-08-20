@@ -1,13 +1,12 @@
 import { Component, inject, signal } from "@angular/core";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageKey } from "@app/core/language/language.models";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { libraryErrorKey } from "../library.rules";
 
-@Component({ selector: "app-library-collection-dialog", standalone: true, imports: [Button, Dialog, LanguagePipe], templateUrl: "./collection.dialog.html", host: { "data-testid": "library-collection-dialog" } })
+@Component({ selector: "app-library-collection-dialog", standalone: true, imports: [Button, CoreModule], templateUrl: "./collection.dialog.html", host: { "data-testid": "library-collection-dialog" } })
 export class LibraryCollectionDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly library = inject(LibraryService);

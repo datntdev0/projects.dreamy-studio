@@ -1,8 +1,7 @@
 import { Component, effect, inject, signal } from "@angular/core";
-import { Dialog } from "@components/dialog";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { WorkspaceService } from "../workspace.service";
 import { LoadRequest } from "../workspace.models";
@@ -12,7 +11,7 @@ import { RecentWorkspaceList } from "./recent.component";
 @Component({
   selector: "app-switch-workspace-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, LanguagePipe, RecentWorkspaceList],
+  imports: [Button, Icon, CoreModule, RecentWorkspaceList],
   templateUrl: "./switch.dialog.html",
   host: { "data-testid": "switch-workspace-dialog" },
 })

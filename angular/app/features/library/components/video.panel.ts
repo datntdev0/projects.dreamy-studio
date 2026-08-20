@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
@@ -25,7 +25,7 @@ const RIGHTS_KEYS: Record<AssetRights, LanguageKey> = {
 @Component({
   selector: "app-library-video-panel",
   standalone: true,
-  imports: [Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./video.panel.html",
   host: { "data-testid": "library-video-panel" },
 })

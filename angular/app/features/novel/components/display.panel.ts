@@ -1,6 +1,6 @@
 import { Component, inject } from "@angular/core";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { Slider } from "@components/slider";
 import { ReaderFont } from "../novel.models";
 import { ReaderPaper } from "../novel.models";
@@ -40,7 +40,7 @@ const PAPER_OPTIONS: DisplayOption<ReaderPaper>[] = [
 @Component({
   selector: "app-novel-display-panel",
   standalone: true,
-  imports: [LanguagePipe, Slider],
+  imports: [CoreModule, Slider],
   templateUrl: "./display.panel.html",
 })
 export class NovelDisplayPanel {

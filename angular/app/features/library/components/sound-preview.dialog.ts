@@ -1,8 +1,7 @@
 import { Component, HostListener, computed, inject } from "@angular/core";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryService } from "../library.service";
 import { LibrarySound } from "../library.sounds.models";
@@ -17,7 +16,7 @@ import { LibrarySoundWave } from "./sound-wave.component";
 
 function sameId(id: number, sound: LibrarySound): boolean { return sound.id === id; }
 
-@Component({ selector: "app-library-sound-preview-dialog", standalone: true, imports: [Dialog, Icon, LanguagePipe, LibrarySoundEq, LibrarySoundPlay, LibrarySoundTime, LibrarySoundWave], templateUrl: "./sound-preview.dialog.html", host: { "data-testid": "library-sound-preview-dialog" } })
+@Component({ selector: "app-library-sound-preview-dialog", standalone: true, imports: [Icon, CoreModule, LibrarySoundEq, LibrarySoundPlay, LibrarySoundTime, LibrarySoundWave], templateUrl: "./sound-preview.dialog.html", host: { "data-testid": "library-sound-preview-dialog" } })
 export class LibrarySoundPreviewDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly sounds = inject(LibrarySoundService);

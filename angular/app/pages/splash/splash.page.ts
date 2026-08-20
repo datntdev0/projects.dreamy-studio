@@ -3,7 +3,7 @@ import { Badge } from "@components/badge";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { Segments, SegmentOption } from "@components/segments";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService, isLanguage } from "@app/core/language/language.service";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { SettingsService } from "@app/features/settings/settings.service";
@@ -21,7 +21,7 @@ const LANGUAGE_OPTIONS: SegmentOption[] = [
 @Component({
   selector: "app-splash-page",
   standalone: true,
-  imports: [Badge, Button, Icon, Segments, LanguagePipe, RecentWorkspaceList, WorkspaceLoading],
+  imports: [Badge, Button, Icon, Segments, CoreModule, RecentWorkspaceList, WorkspaceLoading],
   templateUrl: "./splash.page.html",
 })
 export class SplashPage implements OnInit {

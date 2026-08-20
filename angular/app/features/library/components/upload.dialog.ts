@@ -1,13 +1,12 @@
 import { Component, DestroyRef, computed, effect, inject, signal, untracked } from "@angular/core";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { Segments, SegmentOption } from "@components/segments";
 import { DesktopDragDropEvent } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ImageCheck } from "../library.images.models";
@@ -76,7 +75,7 @@ function parseTags(value: string): string[] {
 @Component({
   selector: "app-library-upload-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, LanguagePipe, Segments],
+  imports: [Button, Icon, CoreModule, Segments],
   templateUrl: "./upload.dialog.html",
   host: { "data-testid": "library-upload-dialog" },
 })

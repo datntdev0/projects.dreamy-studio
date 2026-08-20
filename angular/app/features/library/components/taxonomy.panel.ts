@@ -1,11 +1,11 @@
 import { Component, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryService } from "../library.service";
 import { LIBRARY_KINDS, LibraryKind } from "../library.models";
 import { sumCounts } from "../library.rules";
 
-@Component({ selector: "app-library-taxonomy-panel", standalone: true, imports: [Icon, LanguagePipe], templateUrl: "./taxonomy.panel.html", host: { "data-testid": "library-taxonomy-panel" } })
+@Component({ selector: "app-library-taxonomy-panel", standalone: true, imports: [Icon, CoreModule], templateUrl: "./taxonomy.panel.html", host: { "data-testid": "library-taxonomy-panel" } })
 export class LibraryTaxonomyPanel {
   readonly library = inject(LibraryService);
   readonly kinds = LIBRARY_KINDS;

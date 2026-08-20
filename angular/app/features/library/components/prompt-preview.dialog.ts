@@ -1,9 +1,8 @@
 import { Component, HostListener, computed, inject } from "@angular/core";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
@@ -14,7 +13,7 @@ import { LibraryPrompt } from "../library.prompts.models";
 import { promptCode, promptMeta, promptSegments } from "../library.prompts.rules";
 import { LibraryPromptService } from "../library.prompts.service";
 const RIGHTS: Record<AssetRights, LanguageKey> = { own: "library.rights.own", licensed: "library.rights.licensed", free: "library.rights.free", other: "library.rights.other" };
-@Component({ selector: "app-library-prompt-preview-dialog", standalone: true, imports: [Button, Dialog, Icon, LanguagePipe], templateUrl: "./prompt-preview.dialog.html", host: { "data-testid": "library-prompt-preview-dialog" } })
+@Component({ selector: "app-library-prompt-preview-dialog", standalone: true, imports: [Button, Icon, CoreModule], templateUrl: "./prompt-preview.dialog.html", host: { "data-testid": "library-prompt-preview-dialog" } })
 export class LibraryPromptPreviewDialog {
   private readonly dialogs = inject(LibraryDialogsService); readonly prompts = inject(LibraryPromptService); readonly library = inject(LibraryService); private readonly languageService = inject(LanguageService); private readonly toasts = inject(ToastService);
   readonly prompt = computed(() => this.prompts.items().find(item => item.id === this.dialogs.previewPromptId()) ?? null);

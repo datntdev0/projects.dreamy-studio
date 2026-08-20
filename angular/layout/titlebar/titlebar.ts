@@ -1,7 +1,7 @@
 import { Component, HostListener, computed, inject, signal } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { Language } from "@app/core/language/language.models";
 import { ThemeService } from "@app/core/theme/theme.service";
@@ -17,7 +17,7 @@ const LANGUAGE_NAMES: Record<Language, string> = {
 @Component({
   selector: "app-titlebar",
   standalone: true,
-  imports: [Button, Icon, LanguagePipe],
+  imports: [Button, Icon, CoreModule],
   templateUrl: "./titlebar.html",
 })
 export class Titlebar {

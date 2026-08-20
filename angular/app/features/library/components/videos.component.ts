@@ -15,7 +15,7 @@ import {
   DesktopUnlisten,
 } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -40,7 +40,7 @@ function toAssetRef(video: LibraryVideo): AssetRef {
 @Component({
   selector: "app-library-videos",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibraryVideoMedia, LibraryVideoThumb, Slider],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryVideoMedia, LibraryVideoThumb, Slider],
   templateUrl: "./videos.component.html",
   host: { "data-testid": "library-videos" },
 })

@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, signal } from "@angular/core";
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus } from "@app/features/novel/novel.translation.models";
@@ -14,7 +14,7 @@ import { PipelineStrip } from "./strip.component";
 @Component({
   selector: "app-pipeline-history",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, LanguagePipe, PipelineStrip],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, PipelineStrip],
   templateUrl: "./history.component.html",
 })
 export class PipelineHistory implements OnInit {

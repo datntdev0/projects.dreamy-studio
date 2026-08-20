@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from "@angular/core";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { NovelToolKind, novelTabId, novelToolTabId } from "@layout/layout.models";
 import { TabsService } from "@layout/tabs.service";
 import { NovelSummary } from "../novel.models";
@@ -11,7 +11,7 @@ import { Cover } from "@components/cover";
 @Component({
   selector: "app-novel-explorer",
   standalone: true,
-  imports: [LanguagePipe, Cover],
+  imports: [CoreModule, Cover],
   templateUrl: "./explorer.component.html",
 })
 export class NovelExplorer {

@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
@@ -16,7 +16,7 @@ import { ProjectThumb } from "./thumb.component";
 @Component({
   selector: "app-project-panel",
   standalone: true,
-  imports: [Icon, LanguagePipe, ProjectThumb],
+  imports: [Icon, CoreModule, ProjectThumb],
   templateUrl: "./project.panel.html",
 })
 export class ProjectPanel {

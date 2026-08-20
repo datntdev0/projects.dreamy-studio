@@ -1,11 +1,11 @@
 import { Component, EventEmitter, Input, Output } from "@angular/core";
-import { Icon } from "./icon";
+import { Icon } from "@components/icon";
 
 @Component({
   selector: "ds-toast",
   standalone: true,
   imports: [Icon],
-  templateUrl: "./toast.html",
+  templateUrl: "./toast.component.html",
 })
 export class Toast {
   @Input() message = "";

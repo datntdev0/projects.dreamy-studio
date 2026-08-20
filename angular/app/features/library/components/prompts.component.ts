@@ -3,7 +3,7 @@ import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@c
 import { Icon } from "@components/icon";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -20,7 +20,7 @@ const FIELD_SELECTOR = "input,textarea,select";
 function isField(target: EventTarget | null): boolean { return target instanceof Element && target.closest(FIELD_SELECTOR) !== null; }
 function toRef(prompt: LibraryPrompt): AssetRef { return { kind: "prompt", id: prompt.id }; }
 
-@Component({ selector: "app-library-prompts", standalone: true, imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibraryPromptMedia], templateUrl: "./prompts.component.html", host: { "data-testid": "library-prompts" } })
+@Component({ selector: "app-library-prompts", standalone: true, imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryPromptMedia], templateUrl: "./prompts.component.html", host: { "data-testid": "library-prompts" } })
 export class LibraryPrompts implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
   readonly prompts = inject(LibraryPromptService);

@@ -3,7 +3,7 @@ import { Badge } from "@components/badge";
 import { Icon } from "@components/icon";
 import { TabOption, Tabs } from "@components/tabs";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from "../llm.providers";
 import { LlmService, isReady } from "../llm.service";
@@ -53,7 +53,7 @@ export interface LlmMessage {
 @Component({
   selector: "app-settings-llm",
   standalone: true,
-  imports: [Badge, Icon, LanguagePipe, Tabs],
+  imports: [Badge, Icon, CoreModule, Tabs],
   templateUrl: "./llm.component.html",
   host: { "data-testid": "settings-llm" },
 })

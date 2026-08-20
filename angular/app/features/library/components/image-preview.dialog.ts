@@ -1,8 +1,7 @@
 import { Component, HostListener, computed, effect, inject, signal, untracked } from "@angular/core";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { ImageRights, LibraryImage } from "../library.images.models";
 import { dimensionsText, formatBytes, imageCode } from "../library.images.rules";
@@ -25,7 +24,7 @@ function sameId(id: number, image: LibraryImage): boolean {
 @Component({
   selector: "app-library-image-preview-dialog",
   standalone: true,
-  imports: [Dialog, Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./image-preview.dialog.html",
   host: { "data-testid": "library-image-preview-dialog" },
 })

@@ -1,8 +1,7 @@
 import { Component, HostListener, QueryList, ViewChildren, computed, inject, signal } from "@angular/core";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRef, AssetRights } from "../library.models";
 import { formatBytes, formatIsoMinute } from "../library.rules";
@@ -28,7 +27,7 @@ function isVideoTarget(target: EventTarget | null): boolean {
 @Component({
   selector: "app-library-video-preview-dialog",
   standalone: true,
-  imports: [Dialog, Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./video-preview.dialog.html",
   host: { "data-testid": "library-video-preview-dialog" },
 })

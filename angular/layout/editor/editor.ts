@@ -1,6 +1,6 @@
 import { Component, HostListener, computed, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { NovelView } from "@app/features/novel/components/novel-view.component";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
@@ -24,7 +24,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, LanguagePipe, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
+  imports: [Icon, CoreModule, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
   templateUrl: "./editor.html",
 })
 export class Editor {

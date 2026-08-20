@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { PipelineService } from "@app/features/pipeline/pipeline.service";
 import { AppInfo } from "@app/features/workspace/workspace.models";
@@ -9,7 +9,7 @@ import { LayoutService } from "../layout.service";
 @Component({
   selector: "app-statusbar",
   standalone: true,
-  imports: [Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./statusbar.html",
 })
 export class Statusbar implements OnInit {

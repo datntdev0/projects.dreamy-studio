@@ -3,7 +3,7 @@ import { SegmentOption, Segments } from "@components/segments";
 import { Slider } from "@components/slider";
 import { TabOption, Tabs } from "@components/tabs";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService, isLanguage } from "@app/core/language/language.service";
 import { ThemeService, isTheme } from "@app/core/theme/theme.service";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
@@ -22,7 +22,7 @@ const LANGUAGE_OPTIONS: SegmentOption[] = [
 @Component({
   selector: "app-settings-general",
   standalone: true,
-  imports: [Icon, LanguagePipe, Segments, Slider, Tabs],
+  imports: [Icon, CoreModule, Segments, Slider, Tabs],
   templateUrl: "./general.component.html",
   host: { "data-testid": "settings-general" },
 })

@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, input, untracked } from "@angular/
 import { Cover } from "@components/cover";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { NovelLang, NovelSummary, TargetLang } from "../novel.models";
 import { NovelService } from "../novel.service";
@@ -19,7 +19,7 @@ import { NovelTranslationWarnings } from "./translation-warnings.component";
 @Component({
   selector: "app-novel-translation",
   standalone: true,
-  imports: [Cover, Icon, LanguagePipe, NovelTranslationDictionary, NovelTranslationGuidelines, NovelTranslationPipeline, NovelTranslationResult, NovelTranslationWarnings],
+  imports: [Cover, Icon, CoreModule, NovelTranslationDictionary, NovelTranslationGuidelines, NovelTranslationPipeline, NovelTranslationResult, NovelTranslationWarnings],
   templateUrl: "./translation.component.html",
 })
 export class NovelTranslation {

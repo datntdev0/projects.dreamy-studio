@@ -5,13 +5,13 @@ import { Button } from "@components/button";
 import { Card } from "@components/card";
 import { Chip } from "@components/chip";
 import { Datatable, DatatableCell, DatatableColumn, DatatableRow } from "@components/datatable";
-import { Dialog } from "@components/dialog";
+import { Dialog } from "@app/core/dialog/dialog.component";
 import { Form, FormOption } from "@components/form";
 import { Icon } from "@components/icon";
 import { Segments, SegmentOption } from "@components/segments";
 import { Slider } from "@components/slider";
 import { Tabs, TabOption } from "@components/tabs";
-import { Toast } from "@components/toast";
+import { Toast } from "@app/core/toast/toast.component";
 import { Tooltip } from "@components/tooltip";
 
 @Component({

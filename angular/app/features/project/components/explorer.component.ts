@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { projectTabId } from "@layout/layout.models";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectLabels } from "../project.labels";
@@ -17,7 +17,7 @@ function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
 @Component({
   selector: "app-project-explorer",
   standalone: true,
-  imports: [Icon, LanguagePipe, ProjectTree, ProjectThumb],
+  imports: [Icon, CoreModule, ProjectTree, ProjectThumb],
   templateUrl: "./explorer.component.html",
 })
 export class ProjectExplorer {

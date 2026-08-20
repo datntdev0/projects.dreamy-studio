@@ -1,7 +1,7 @@
 import { Component, Input, inject } from "@angular/core";
 import { Button } from "@components/button";
 import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { DialogHost } from "@app/core/dialog/dialog-host.component";
+import { CoreModule } from "@app/core/core.module";
 import { DialogItem, DialogOptions } from "@app/core/dialog/dialog.models";
 import { DialogService } from "@app/core/dialog/dialog.service";
 
@@ -45,7 +45,7 @@ function wait(ms: number): Promise<void> {
 @Component({
   selector: "app-dialog-story",
   standalone: true,
-  imports: [Button, DialogHost],
+  imports: [Button, CoreModule],
   template: `
     <div style="display: grid; gap: 12px; padding: 24px" data-testid="dialog-story">
       <div [style.display]="'flex'" [style.gap.px]="8" [style.flex-wrap]="'wrap'" data-testid="dialog-story-actions">

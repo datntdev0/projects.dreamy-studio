@@ -1,7 +1,7 @@
 import { Component, computed, inject } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
@@ -13,7 +13,7 @@ import { PipelineService } from "../pipeline.service";
 @Component({
   selector: "app-pipeline-log",
   standalone: true,
-  imports: [Icon, LanguagePipe, PipelineStrip],
+  imports: [Icon, CoreModule, PipelineStrip],
   templateUrl: "./log.component.html",
 })
 export class PipelineLog {

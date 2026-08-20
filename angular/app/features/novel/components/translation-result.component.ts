@@ -1,7 +1,7 @@
 import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../novel.models";
@@ -21,7 +21,7 @@ const SAVE_NOTICES: Record<ParagraphSaveResult, LanguageKey | null> = {
 @Component({
   selector: "app-novel-translation-result",
   standalone: true,
-  imports: [Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./translation-result.component.html",
 })
 export class NovelTranslationResult {

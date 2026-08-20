@@ -3,7 +3,7 @@ import { Datatable, DatatableAction, DatatableCell, DatatableCellEdit, Datatable
 import { FormOption } from "@components/form";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { toNovelError } from "../novel.rules";
@@ -18,7 +18,7 @@ type DraftField = "src" | "dst" | "note";
 @Component({
   selector: "app-novel-translation-dictionary",
   standalone: true,
-  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, LanguagePipe],
+  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, CoreModule],
   templateUrl: "./translation-dictionary.component.html",
 })
 export class NovelTranslationDictionary {

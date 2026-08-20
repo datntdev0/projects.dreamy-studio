@@ -3,7 +3,7 @@ import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@c
 import { Icon } from "@components/icon";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -28,7 +28,7 @@ function toAssetRef(sound: LibrarySound): AssetRef {
 @Component({
   selector: "app-library-sounds",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibrarySoundMedia],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, LibrarySoundMedia],
   templateUrl: "./sounds.component.html",
   host: { "data-testid": "library-sounds" },
 })

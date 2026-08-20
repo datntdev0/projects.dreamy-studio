@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { NovelLang, NovelSummary, ReaderLang, ReaderView } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
@@ -10,7 +10,7 @@ import { targetsOf } from "../novel.translation.rules";
 @Component({
   selector: "app-novel-lang-switch",
   standalone: true,
-  imports: [LanguagePipe],
+  imports: [CoreModule],
   templateUrl: "./lang-switch.component.html",
 })
 export class NovelLangSwitch {

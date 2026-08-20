@@ -1,6 +1,6 @@
 import { Component, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryKind, LibraryTag } from "../library.models";
 import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
 import { LibraryService } from "../library.service";
@@ -8,7 +8,7 @@ import { TabsService } from "@layout/tabs.service";
 import { sumCounts, tagsForKind } from "../library.rules";
 import { collectionTabId } from "@layout/layout.models";
 
-@Component({ selector: "app-library-explorer", standalone: true, imports: [Icon, LanguagePipe], templateUrl: "./explorer.component.html", host: { "data-testid": "library-explorer" } })
+@Component({ selector: "app-library-explorer", standalone: true, imports: [Icon, CoreModule], templateUrl: "./explorer.component.html", host: { "data-testid": "library-explorer" } })
 export class LibraryExplorer {
   readonly library = inject(LibraryService);
   readonly tabs = inject(TabsService);

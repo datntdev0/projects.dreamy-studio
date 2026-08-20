@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, input, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
@@ -18,7 +18,7 @@ type EditableElement = HTMLInputElement | HTMLTextAreaElement;
 @Component({
   selector: "app-project-view",
   standalone: true,
-  imports: [Icon, LanguagePipe, ProjectTree],
+  imports: [Icon, CoreModule, ProjectTree],
   templateUrl: "./project-view.component.html",
 })
 export class ProjectView {

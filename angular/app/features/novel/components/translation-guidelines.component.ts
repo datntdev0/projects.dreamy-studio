@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from "@angular/core";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { toNovelError } from "../novel.rules";
@@ -8,7 +8,7 @@ import { NovelTranslationService } from "../novel.translation.service";
 @Component({
   selector: "app-novel-translation-guidelines",
   standalone: true,
-  imports: [LanguagePipe],
+  imports: [CoreModule],
   templateUrl: "./translation-guidelines.component.html",
 })
 export class NovelTranslationGuidelines {

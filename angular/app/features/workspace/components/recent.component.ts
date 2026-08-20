@@ -4,7 +4,7 @@ import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { DialogService } from "@app/core/dialog/dialog.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { WorkspaceService } from "../workspace.service";
 import { RecentWorkspace } from "../workspace.models";
@@ -54,7 +54,7 @@ function isMeasurable(row: RecentWorkspace): boolean {
 @Component({
   selector: "app-recent-workspace-list",
   standalone: true,
-  imports: [Badge, Button, Icon, LanguagePipe],
+  imports: [Badge, Button, Icon, CoreModule],
   templateUrl: "./recent.component.html",
   host: { "data-testid": "recent-workspace-list" },
 })

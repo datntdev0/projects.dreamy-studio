@@ -1,7 +1,7 @@
 import { NgComponentOutlet } from "@angular/common";
 import { Component, Type, computed, inject } from "@angular/core";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
+import { Dialog } from "@app/core/dialog/dialog.component";
 import { Icon } from "@components/icon";
 import { LanguagePipe } from "@app/core/language/language.pipe";
 import { DialogItem, DialogRow } from "./dialog.models";

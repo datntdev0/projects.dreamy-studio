@@ -1,6 +1,6 @@
 import { Component, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { SettingsService } from "@app/features/settings/settings.service";
 import { LayoutService } from "../layout.service";
 import { PIPELINES_TAB_ID, RAIL_ITEMS } from "../layout.models";
@@ -9,7 +9,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-railbar",
   standalone: true,
-  imports: [Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./railbar.html",
 })
 export class Railbar {

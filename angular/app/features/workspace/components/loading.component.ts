@@ -2,7 +2,7 @@ import { Component, Input, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { WorkspaceService } from "../workspace.service";
 import { LoadMode } from "../workspace.models";
 import { LoadState } from "../workspace.models";
@@ -23,7 +23,7 @@ const MODE_KEYS: Record<LoadMode, LanguageKey> = {
 @Component({
   selector: "app-workspace-loading",
   standalone: true,
-  imports: [Button, Icon, LanguagePipe],
+  imports: [Button, Icon, CoreModule],
   templateUrl: "./loading.component.html",
   host: { "data-testid": "workspace-loading" },
 })

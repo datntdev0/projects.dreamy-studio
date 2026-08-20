@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ImagePatch } from "../library.images.models";
@@ -32,7 +32,7 @@ const RIGHTS_KEYS: Record<ImageRights, LanguageKey> = {
 @Component({
   selector: "app-library-image-panel",
   standalone: true,
-  imports: [Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./image.panel.html",
   host: { "data-testid": "library-image-panel" },
 })

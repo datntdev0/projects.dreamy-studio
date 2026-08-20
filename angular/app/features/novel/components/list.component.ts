@@ -1,5 +1,5 @@
 import { Component, HostListener, effect, inject } from "@angular/core";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { TabsService } from "@layout/tabs.service";
 import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
@@ -23,7 +23,7 @@ function isInside(target: EventTarget | null, selector: string): boolean {
 @Component({
   selector: "app-novel-list",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, LanguagePipe, Cover, NovelProgressFrac],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, Cover, NovelProgressFrac],
   templateUrl: "./list.component.html",
 })
 export class NovelList {

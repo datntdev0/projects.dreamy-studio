@@ -1,12 +1,11 @@
 import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { DesktopDragDropEvent } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { InspectCheck } from "../novel.models";
@@ -88,7 +87,7 @@ function langOption(value: NovelLang): LangOption {
 @Component({
   selector: "app-novel-import-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, LanguagePipe, Cover],
+  imports: [Button, Icon, CoreModule, Cover],
   templateUrl: "./import.dialog.html",
   host: { "data-testid": "novel-import-dialog" },
 })

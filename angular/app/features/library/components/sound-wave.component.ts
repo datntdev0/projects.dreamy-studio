@@ -1,5 +1,5 @@
 import { Component, ElementRef, computed, effect, inject, input, viewChild } from "@angular/core";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibrarySound } from "../library.sounds.models";
 import { LibrarySoundPlayer } from "../library.sounds.player";
 import { LibrarySoundService } from "../library.sounds.service";
@@ -8,7 +8,7 @@ import { PeakScale, overviewLevel, pageStart, peakLevel, peakScale, slideStart }
 interface WaveView { duration: number; window: number; start: number; position: number; active: boolean; }
 interface WaveLayout { pad: number; step: number; barWidth: number; usable: number; count: number; offset: number; }
 
-@Component({ selector: "app-library-sound-wave", standalone: true, imports: [LanguagePipe], templateUrl: "./sound-wave.component.html", host: { "data-testid": "library-sound-wave" } })
+@Component({ selector: "app-library-sound-wave", standalone: true, imports: [CoreModule], templateUrl: "./sound-wave.component.html", host: { "data-testid": "library-sound-wave" } })
 export class LibrarySoundWave {
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>("canvas");
   readonly sound = input.required<LibrarySound>();

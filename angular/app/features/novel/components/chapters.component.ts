@@ -4,7 +4,7 @@ import { LanguageKey } from "@app/core/language/language.models";
 import { LanguageService } from "@app/core/language/language.service";
 import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelConfirmService } from "../novel.confirm.service";
@@ -49,7 +49,7 @@ interface DropTarget {
 @Component({
   selector: "app-novel-chapters",
   standalone: true,
-  imports: [NgClass, Datatable, DatatableCell, DatatableEmpty, Icon, LanguagePipe, Cover, NovelLangSwitch, NovelProgressFrac],
+  imports: [NgClass, Datatable, DatatableCell, DatatableEmpty, Icon, CoreModule, Cover, NovelLangSwitch, NovelProgressFrac],
   templateUrl: "./chapters.component.html",
 })
 export class NovelChapters implements OnDestroy {

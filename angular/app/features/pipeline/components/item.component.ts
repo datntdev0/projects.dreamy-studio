@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
 import { PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, elapsedMs, etaMs, firstError, formatDuration, isActive, kindIcon, kindKey, kindSize, percentOf, queuedCount, runningTasks } from "../pipeline.rules";
@@ -19,7 +19,7 @@ import { PipelineStrip } from "./strip.component";
     "[attr.data-status]": "pipeline().status",
     "[attr.data-kind]": "pipeline().kind",
   },
-  imports: [Icon, LanguagePipe, PipelineStrip],
+  imports: [Icon, CoreModule, PipelineStrip],
   templateUrl: "./item.component.html",
 })
 export class PipelineItem {

@@ -1,7 +1,7 @@
 import { Component, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { NovelDisplayPanel } from "@app/features/novel/components/display.panel";
 import { NovelPanel } from "@app/features/novel/components/novel.panel";
 import { NovelReaderService } from "@app/features/novel/novel.reader.service";
@@ -30,7 +30,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-inspector",
   standalone: true,
-  imports: [Button, Icon, LanguagePipe, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryTagPanel, LibrarySoundPanel, LibraryVideoPanel, LibraryPromptPanel, LibraryPromptsPanel],
+  imports: [Button, Icon, CoreModule, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryTagPanel, LibrarySoundPanel, LibraryVideoPanel, LibraryPromptPanel, LibraryPromptsPanel],
   templateUrl: "./inspector.html",
 })
 export class Inspector {

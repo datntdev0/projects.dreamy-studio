@@ -1,5 +1,5 @@
 import { Component, inject } from "@angular/core";
-import { Toast } from "@components/toast";
+import { Toast } from "@app/core/toast/toast.component";
 import { ToastService } from "./toast.service";
 
 @Component({

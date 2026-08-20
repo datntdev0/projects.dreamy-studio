@@ -1,7 +1,6 @@
 import { Component, ElementRef, effect, inject, signal, untracked, viewChild } from "@angular/core";
-import { Dialog } from "@components/dialog";
 import { Button } from "@components/button";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
@@ -27,7 +26,7 @@ const EMPTY_FORM: NovelFormValue = {
 @Component({
   selector: "app-novel-create-dialog",
   standalone: true,
-  imports: [Button, Dialog, LanguagePipe],
+  imports: [Button, CoreModule],
   templateUrl: "./create.dialog.html",
   host: { "data-testid": "novel-create-dialog" },
 })

@@ -4,7 +4,7 @@ import { Icon } from "@components/icon";
 import { Slider } from "@components/slider";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -23,7 +23,7 @@ function isField(target: EventTarget | null): boolean {
 @Component({
   selector: "app-library-images",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibraryImageThumb, Slider],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryImageThumb, Slider],
   templateUrl: "./images.component.html",
 })
 export class LibraryImages implements OnInit, OnDestroy {

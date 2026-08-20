@@ -1,7 +1,7 @@
 import { Component, HostListener, inject } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectConfirmService } from "../project.confirm.service";
@@ -22,7 +22,7 @@ function isField(target: EventTarget | null): boolean {
 @Component({
   selector: "app-project-list",
   standalone: true,
-  imports: [Icon, LanguagePipe, ProjectThumb],
+  imports: [Icon, CoreModule, ProjectThumb],
   templateUrl: "./list.component.html",
 })
 export class ProjectList {

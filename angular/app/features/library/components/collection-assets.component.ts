@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit, computed, inject, input, signal } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -42,7 +42,7 @@ function inCollection(collectionId: number, row: AssetRow): boolean {
 @Component({
   selector: "app-library-collection-assets",
   standalone: true,
-  imports: [Icon, LanguagePipe, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay, LibraryVideoMedia, LibraryVideoThumb, LibraryPromptMedia],
+  imports: [Icon, CoreModule, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay, LibraryVideoMedia, LibraryVideoThumb, LibraryPromptMedia],
   templateUrl: "./collection-assets.component.html",
   host: { "data-testid": "library-collection-assets" },
 })

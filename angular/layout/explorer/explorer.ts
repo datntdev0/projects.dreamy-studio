@@ -2,7 +2,7 @@ import { Component, computed, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { NovelExplorer } from "@app/features/novel/components/explorer.component";
 import { ProjectExplorer } from "@app/features/project/components/explorer.component";
 import { LibraryExplorer } from "@app/features/library/components/explorer.component";
@@ -12,7 +12,7 @@ import { RAIL_ITEMS, RailItem } from "../layout.models";
 @Component({
   selector: "app-explorer",
   standalone: true,
-  imports: [Button, Icon, LanguagePipe, NovelExplorer, ProjectExplorer, LibraryExplorer],
+  imports: [Button, Icon, CoreModule, NovelExplorer, ProjectExplorer, LibraryExplorer],
   templateUrl: "./explorer.html",
 })
 export class Explorer {

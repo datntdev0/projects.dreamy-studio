@@ -1,5 +1,5 @@
 import { Component, inject } from "@angular/core";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectSummary } from "../project.models";
@@ -9,7 +9,7 @@ import { ProjectThumb } from "./thumb.component";
 @Component({
   selector: "app-project-library-panel",
   standalone: true,
-  imports: [LanguagePipe, ProjectThumb],
+  imports: [CoreModule, ProjectThumb],
   templateUrl: "./library.panel.html",
 })
 export class ProjectLibraryPanel {

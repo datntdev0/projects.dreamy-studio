@@ -1,10 +1,8 @@
 import { Component, HostListener, effect, inject } from "@angular/core";
 import { Title } from "@angular/platform-browser";
-import { Toast } from "@components/toast";
 import { LayoutModule } from "@layout/layout.module";
 import { LayoutService } from "@layout/layout.service";
-import { DialogHost } from "@app/core/dialog/dialog-host.component";
-import { ToastHost } from "@app/core/toast/toast-host.component";
+import { CoreModule } from "@app/core/core.module";
 import { NovelCreateDialog } from "@app/features/novel/components/create.dialog";
 import { NovelChapterAddDialog } from "@app/features/novel/components/chapter-add.dialog";
 import { NovelImportDialog } from "@app/features/novel/components/import.dialog";
@@ -26,7 +24,7 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [LayoutModule, Toast, ToastHost, DialogHost, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelChapterAddDialog, NovelImportDialog, ProjectCreateDialog, LibraryCollectionDialog, LibraryImagePreviewDialog, LibrarySoundPreviewDialog, LibraryVideoPreviewDialog, LibraryPromptPreviewDialog, LibraryUploadDialog],
+  imports: [CoreModule, LayoutModule, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelChapterAddDialog, NovelImportDialog, ProjectCreateDialog, LibraryCollectionDialog, LibraryImagePreviewDialog, LibrarySoundPreviewDialog, LibraryVideoPreviewDialog, LibraryPromptPreviewDialog, LibraryUploadDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {

@@ -1,9 +1,8 @@
 import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { TabsService } from "@layout/tabs.service";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LanguageKey } from "@app/core/language/language.models";
@@ -27,7 +26,7 @@ const EMPTY_FORM: CreateForm = { name: "", template: "audiobook", novelId: null,
 @Component({
   selector: "app-project-create-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, LanguagePipe],
+  imports: [Button, Icon, CoreModule],
   templateUrl: "./create.dialog.html",
   host: { "data-testid": "project-create-dialog" },
 })

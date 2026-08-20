@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, signal } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelReaderService } from "../novel.reader.service";
@@ -13,7 +13,7 @@ import { NovelTranslationService } from "../novel.translation.service";
 @Component({
   selector: "app-novel-translation-warnings",
   standalone: true,
-  imports: [Icon, LanguagePipe],
+  imports: [Icon, CoreModule],
   templateUrl: "./translation-warnings.component.html",
 })
 export class NovelTranslationWarnings {

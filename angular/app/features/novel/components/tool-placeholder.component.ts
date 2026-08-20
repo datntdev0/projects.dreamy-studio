@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from "@angular/core";
 import { Cover } from "@components/cover";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
-import { LanguagePipe } from "@app/core/language/language.pipe";
+import { CoreModule } from "@app/core/core.module";
 import { NovelToolKind } from "@layout/layout.models";
 import { NovelSummary } from "../novel.models";
 import { NovelService } from "../novel.service";
@@ -11,7 +11,7 @@ import { displayName } from "../novel.rules";
 @Component({
   selector: "app-novel-tool-placeholder",
   standalone: true,
-  imports: [Cover, Icon, LanguagePipe],
+  imports: [Cover, Icon, CoreModule],
   templateUrl: "./tool-placeholder.component.html",
 })
 export class NovelToolPlaceholder {

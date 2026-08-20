@@ -12,9 +12,18 @@ export interface SettingsSection {
   labelKey: I18nKey;
 }
 
+export const MAX_PIPELINES_LIMIT = 5;
+export const MAX_TASKS_LIMIT = 10;
+
+export interface PipelineSettings {
+  maxPipelines?: number;
+  maxTasks?: number;
+}
+
 export interface GeneralSettings {
   language?: Language;
   theme?: Theme;
+  pipelines?: PipelineSettings;
 }
 
 export interface LayoutSettings {

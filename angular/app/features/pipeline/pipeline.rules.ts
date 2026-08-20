@@ -5,10 +5,11 @@ import { PipelineCounts, PipelineFilter, PipelineKindMeta, PipelineLogEntry, Pip
 export const HISTORY_LIMIT = 50;
 
 
-export const PIPELINE_FILTERS: PipelineFilter[] = ["all", "running", "completed", "failed", "cancelled"];
+export const PIPELINE_FILTERS: PipelineFilter[] = ["all", "queued", "running", "completed", "failed", "cancelled"];
 
 export const PIPELINE_FILTER_KEYS: Record<PipelineFilter, I18nKey> = {
   all: "pipeline.filter.all",
+  queued: "pipeline.status.queued",
   running: "pipeline.status.running",
   completed: "pipeline.status.completed",
   failed: "pipeline.status.failed",
@@ -16,6 +17,7 @@ export const PIPELINE_FILTER_KEYS: Record<PipelineFilter, I18nKey> = {
 };
 
 export const PIPELINE_STATUS_KEYS: Record<PipelineStatus, I18nKey> = {
+  queued: "pipeline.status.queued",
   running: "pipeline.status.running",
   completed: "pipeline.status.completed",
   failed: "pipeline.status.failed",
@@ -23,6 +25,7 @@ export const PIPELINE_STATUS_KEYS: Record<PipelineStatus, I18nKey> = {
 };
 
 export const PIPELINE_STATUS_BADGES: Record<PipelineStatus, string> = {
+  queued: "badge-info",
   running: "badge-running",
   completed: "badge-success",
   failed: "badge-danger",
@@ -51,11 +54,16 @@ export const PIPELINE_LOG_KEYS: Record<PipelineLogKind, I18nKey> = {
 };
 
 export const PIPELINE_FINISH_LEVELS: Record<PipelineStatus, PipelineLogLevel> = {
+  queued: "info",
   running: "info",
   completed: "ok",
   failed: "err",
   cancelled: "warn",
 };
+
+export function isActive(pipeline: PipelineSnapshot): boolean {
+  return pipeline.status === "running" || pipeline.status === "queued";
+}
 
 export function kindKey(kind: string): I18nKey | null {
   return PIPELINE_KINDS[kind]?.labelKey ?? null;
@@ -70,7 +78,7 @@ export function kindSize(kind: string): number {
 }
 
 export function countsOf(pipelines: PipelineSnapshot[]): PipelineCounts {
-  const counts: PipelineCounts = { all: pipelines.length, running: 0, completed: 0, failed: 0, cancelled: 0 };
+  const counts: PipelineCounts = { all: pipelines.length, queued: 0, running: 0, completed: 0, failed: 0, cancelled: 0 };
   for (const pipeline of pipelines) {
     counts[pipeline.status] += 1;
   }
@@ -255,7 +263,7 @@ export function logOf(pipeline: PipelineSnapshot): PipelineLogEntry[] {
   for (const task of pipeline.tasks) {
     entries.push(...taskEntries(task, pipeline.finishedAt ?? begin));
   }
-  if (pipeline.status !== "running") {
+  if (!isActive(pipeline)) {
     entries.push({ time: pipeline.finishedAt ?? begin, level: PIPELINE_FINISH_LEVELS[pipeline.status], kind: "finished", task: null });
   }
   const ordered = entries.map(withOrder).sort(compareEntries);

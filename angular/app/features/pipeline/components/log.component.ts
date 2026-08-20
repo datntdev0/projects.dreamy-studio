@@ -7,7 +7,7 @@ import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
 import { PipelineLogEntry } from "../pipeline.models";
 import { PipelineStrip } from "./strip.component";
-import { PIPELINE_LOG_KEYS, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, formatClock, formatDuration, kindIcon, kindKey, kindSize, logOf, percentOf } from "../pipeline.rules";
+import { PIPELINE_LOG_KEYS, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, formatClock, formatDuration, isActive, kindIcon, kindKey, kindSize, logOf, percentOf } from "../pipeline.rules";
 import { PipelineService } from "../pipeline.service";
 
 @Component({
@@ -79,8 +79,15 @@ export class PipelineLog {
     });
   }
 
+  isActive(pipeline: PipelineSnapshot): boolean {
+    return isActive(pipeline);
+  }
+
   cancel(): void {
-    void this.pipelines.cancel();
+    const pipeline = this.pipelines.selected();
+    if (pipeline) {
+      void this.pipelines.cancel(pipeline.id);
+    }
   }
 
   private labelOf(pipeline: PipelineSnapshot, task: PipelineTask): string {

@@ -466,7 +466,6 @@
   "novel.toast.chapterRenamed": "Đã đổi tên chương.",
   "novel.toast.chapterDeleted": "Đã xóa chương “{title}”.",
   "novel.error.chapterLocked": "Chương này đã có bản dịch hoặc knowledge nên không thể thay đổi theo cách này.",
-  "novel.error.pipelineBusy": "Đang có một pipeline dịch chạy. Hãy đợi nó xong hoặc hủy nó.",
   "novel.error.dictionaryDuplicate": "Từ điển đã có mục với từ gốc này.",
   "novel.error.titleEmpty": "Tên chương không được để trống.",
   "novel.dialog.close": "Đóng (Esc)",
@@ -948,6 +947,11 @@
   ,"settings.general.theme.hint": "Đồng bộ với nút đổi giao diện trên thanh tiêu đề."
   ,"settings.general.theme.dark": "Tối"
   ,"settings.general.theme.light": "Sáng"
+  ,"settings.general.pipelines": "Pipelines"
+  ,"settings.general.maxPipelines": "Số pipeline chạy đồng thời"
+  ,"settings.general.maxPipelines.hint": "Số pipeline chạy cùng lúc (1-5). Pipeline vượt quá sẽ chờ trong hàng đợi."
+  ,"settings.general.maxTasks": "Số task chạy đồng thời (toàn ứng dụng)"
+  ,"settings.general.maxTasks.hint": "Số task chạy song song trên toàn bộ ứng dụng (1-10)."
   ,"settings.general.storage": "Dữ liệu và lưu trữ"
   ,"settings.general.workspace": "Workspace đang mở"
   ,"settings.general.workspace.hint": "Đổi workspace bằng tên workspace trên thanh tiêu đề."
@@ -1118,7 +1122,6 @@
   ,"novel.translation.warn.filter.source": "Bản gốc đã đổi"
   ,"novel.translation.warn.filter.dict": "Từ điển"
   ,"novel.translation.trans.cancel": "Hủy"
-  ,"novel.translation.trans.busy": "Đang có một pipeline dịch khác chạy."
   ,"novel.translation.result.review": "Nhờ Trợ lý rà soát"
   ,"novel.translation.result.reviewSoon": "Sắp ra mắt"
   ,"novel.translation.guide.prompt": "Prompt"
@@ -1153,6 +1156,7 @@
   ,"pipeline.col.progress": "Tiến độ"
   ,"pipeline.col.duration": "Thời lượng"
   ,"pipeline.kind.translation": "Dịch"
+  ,"pipeline.status.queued": "Đang chờ"
   ,"pipeline.status.running": "Đang chạy"
   ,"pipeline.status.completed": "Hoàn tất"
   ,"pipeline.status.failed": "Lỗi"

@@ -42,13 +42,12 @@ export class NovelTranslationService {
   private readonly workspace = inject(WorkspaceService);
   private readonly store = signal<Record<string, NovelTranslation>>({});
   private readonly views = signal<Record<number, TranslationView>>({});
-  private readonly activePipeline = signal<PipelineSnapshot | null>(null);
+  private readonly activePipelines = signal<PipelineSnapshot[]>([]);
   private workspacePath: string | null | undefined = undefined;
 
   readonly loading = signal(false);
   readonly error = signal<NovelError | null>(null);
-  readonly active = this.activePipeline.asReadonly();
-  readonly busy = computed(this.isBusy.bind(this));
+  readonly running = this.activePipelines.asReadonly();
 
   constructor() {
     effect(this.syncWorkspace.bind(this));
@@ -69,30 +68,19 @@ export class NovelTranslationService {
   }
 
   progressOf(novelId: number, target: TargetLang = this.targetOf(novelId)): Record<string, number> {
-    const active = this.active();
-    if (!active || active.novelId !== novelId || active.target !== target) {
-      return {};
-    }
     const progress: Record<string, number> = {};
-    for (const task of active.tasks) {
-      if (task.status === "queued") {
-        progress[task.chapterId] = 0;
-      }
-      if (task.status === "running") {
-        progress[task.chapterId] = task.progress;
+    for (const pipeline of this.running()) {
+      if (pipeline.novelId === novelId && pipeline.target === target) {
+        this.collectProgress(pipeline, progress);
       }
     }
     return progress;
   }
 
   isTranslating(novelId: number): boolean {
-    return this.active()?.novelId === novelId;
+    return this.running().some((pipeline) => pipeline.novelId === novelId);
   }
 
-  isBusyElsewhere(novelId: number): boolean {
-    const active = this.active();
-    return active !== null && active.novelId !== novelId;
-  }
 
   statusOf(novelId: number, chapterId: string, target: TargetLang = this.targetOf(novelId)): TranslationStatus {
     return chapterStatus(this.of(novelId, target), chapterId, Object.keys(this.progressOf(novelId, target)));
@@ -270,20 +258,35 @@ export class NovelTranslationService {
     await this.startPipeline(novelId, target, [{ chapterId: warning.chapterId, passage: warning.n }]);
   }
 
-  async cancelPipeline(): Promise<void> {
-    await this.ipc.invoke<boolean>("pipeline_cancel", {});
+  async cancelPipeline(pipelineId: number): Promise<void> {
+    await this.ipc.invoke<boolean>("pipeline_cancel", { pipelineId });
+  }
+
+  async cancelNovel(novelId: number): Promise<void> {
+    for (const pipeline of this.running()) {
+      if (pipeline.novelId === novelId) {
+        await this.cancelPipeline(pipeline.id);
+      }
+    }
   }
 
   reset(): void {
     this.store.set({});
     this.views.set({});
-    this.activePipeline.set(null);
+    this.activePipelines.set([]);
     this.loading.set(false);
     this.error.set(null);
   }
 
-  private isBusy(): boolean {
-    return this.active() !== null;
+  private collectProgress(pipeline: PipelineSnapshot, progress: Record<string, number>): void {
+    for (const task of pipeline.tasks) {
+      if (task.status === "queued") {
+        progress[task.chapterId] ??= 0;
+      }
+      if (task.status === "running") {
+        progress[task.chapterId] = task.progress;
+      }
+    }
   }
 
   private async startPipeline(novelId: number, target: TargetLang, tasks: TaskRequest[]): Promise<void> {
@@ -293,19 +296,31 @@ export class NovelTranslationService {
 
   private handlePipelineEvent(event: PipelineEvent): void {
     if (event.type === "started") {
-      this.activePipeline.set(event.pipeline);
+      this.activePipelines.set([...this.running().filter((pipeline) => pipeline.id !== event.pipeline.id), event.pipeline]);
+      return;
+    }
+    if (event.type === "updated") {
+      this.activePipelines.set(this.running().map((pipeline) => this.withSnapshot(pipeline, event.pipeline)));
       return;
     }
     if (event.type === "task") {
-      const active = this.active();
-      if (active?.id === event.pipelineId) {
-        const tasks = replaceTask(active.tasks, event.task);
-        this.activePipeline.set({ ...active, ...taskTotals(tasks), tasks });
-      }
+      this.activePipelines.set(this.running().map((pipeline) => this.withTask(pipeline, event.pipelineId, event.task)));
       return;
     }
-    this.activePipeline.set(null);
+    this.activePipelines.set(this.running().filter((pipeline) => pipeline.id !== event.pipeline.id));
     void this.load(event.pipeline.novelId, event.pipeline.target as TargetLang);
+  }
+
+  private withSnapshot(pipeline: PipelineSnapshot, next: PipelineSnapshot): PipelineSnapshot {
+    return pipeline.id === next.id ? { ...pipeline, status: next.status, startedAt: next.startedAt } : pipeline;
+  }
+
+  private withTask(pipeline: PipelineSnapshot, pipelineId: number, task: PipelineTask): PipelineSnapshot {
+    if (pipeline.id !== pipelineId) {
+      return pipeline;
+    }
+    const tasks = replaceTask(pipeline.tasks, task);
+    return { ...pipeline, ...taskTotals(tasks), tasks };
   }
 
   private async refreshWarnings(novelId: number, target: TargetLang): Promise<void> {

@@ -4,7 +4,7 @@ import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
-import { PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, elapsedMs, etaMs, firstError, formatDuration, kindIcon, kindKey, kindSize, percentOf, queuedCount, runningTasks } from "../pipeline.rules";
+import { PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, elapsedMs, etaMs, firstError, formatDuration, isActive, kindIcon, kindKey, kindSize, percentOf, queuedCount, runningTasks } from "../pipeline.rules";
 import { PipelineService } from "../pipeline.service";
 import { PipelineStrip } from "./strip.component";
 
@@ -57,11 +57,11 @@ export class PipelineItem {
   }
 
   cancel(): void {
-    void this.pipelines.cancel();
+    void this.pipelines.cancel(this.pipeline().id);
   }
 
   private isRunning(): boolean {
-    return this.pipeline().status === "running";
+    return isActive(this.pipeline());
   }
 
   private buildPercent(): number {

@@ -78,16 +78,14 @@
           ><ds-icon
             name="image"
             [size]="14"
-            data-testid="library-videos-grid-size-icon" /><input
-            class="range"
-            type="range"
-            min="110"
-            max="360"
-            step="10"
+            data-testid="library-videos-grid-size-icon" /><ds-slider
+            [min]="110"
+            [max]="360"
+            [step]="10"
             [value]="videos.gridSize()"
-            [attr.aria-label]="'library.image.previewSize' | t"
+            [label]="'library.image.previewSize' | t"
             data-testid="library-videos-grid-size-input"
-            (input)="onGridSize($event)"
+            (valueChange)="onGridSize($event)"
         /></span>
         <div
           class="seg"

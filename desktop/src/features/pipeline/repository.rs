@@ -17,6 +17,7 @@ impl<'a> PipelineRepository<'a> {
         Self { conn }
     }
 
+    #[cfg(test)]
     pub fn insert_pipeline_with_tasks(
         &self,
         novel_id: i64,
@@ -25,12 +26,33 @@ impl<'a> PipelineRepository<'a> {
         tasks: &[TaskRequest],
         now: &str,
     ) -> rusqlite::Result<i64> {
+        self.insert_pipeline(novel_id, kind, target, PipelineStatus::Running, tasks, now)
+    }
+
+    pub fn insert_pipeline(
+        &self,
+        novel_id: i64,
+        kind: &str,
+        target: &str,
+        status: PipelineStatus,
+        tasks: &[TaskRequest],
+        now: &str,
+    ) -> rusqlite::Result<i64> {
+        let started = (status == PipelineStatus::Running).then_some(now);
         let transaction = self.conn.unchecked_transaction()?;
         transaction.execute(
             "INSERT INTO ws_pipeline_history \
              (novel_id, kind, target, status, total, created_at, started_at) \
-             VALUES (?1, ?2, ?3, 'running', ?4, ?5, ?5)",
-            params![novel_id, kind, target, tasks.len() as i64, now],
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                novel_id,
+                kind,
+                target,
+                status.as_str(),
+                tasks.len() as i64,
+                now,
+                started
+            ],
         )?;
         let pipeline_id = transaction.last_insert_rowid();
         for task in tasks {
@@ -103,6 +125,15 @@ impl<'a> PipelineRepository<'a> {
         Ok(())
     }
 
+    pub fn mark_pipeline_running(&self, id: i64, now: &str) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE ws_pipeline_history SET status = 'running', started_at = ?2 \
+             WHERE id = ?1 AND status = 'queued'",
+            params![id, now],
+        )?;
+        Ok(())
+    }
+
     pub fn finish_pipeline(
         &self,
         id: i64,
@@ -142,7 +173,7 @@ impl<'a> PipelineRepository<'a> {
         let transaction = self.conn.unchecked_transaction()?;
         let changed = transaction.execute(
             "UPDATE ws_pipeline_history SET status = 'cancelled', finished_at = ?1 \
-             WHERE status = 'running'",
+             WHERE status IN ('running', 'queued')",
             [now],
         )?;
         transaction.execute(

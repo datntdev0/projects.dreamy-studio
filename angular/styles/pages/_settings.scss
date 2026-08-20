@@ -15,6 +15,9 @@
 .st-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-lg); align-items: center; padding: var(--sp-md) 0; }
 .st-row + .st-row { border-top: 1px solid var(--hairline); }
 .st-row .field > .t-ink { color: var(--ink); font-weight: 400; }
+.st-slider { display: flex; align-items: center; gap: var(--sp-md); }
+.st-slider .range { width: 180px; }
+.st-slider .mono { min-width: 2ch; text-align: right; }
 .st-label { font: 500 13px/18px var(--font); color: var(--body); }
 .st-path { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; height: var(--ctl-h); padding-left: var(--sp-md); border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-soft); }
 .st-path .path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--body); }
@@ -25,7 +28,7 @@
   .settings.st-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .settings.st-layout .settings-nav { grid-auto-flow: column; overflow-x: auto; }
   .st-row { grid-template-columns: minmax(0, 1fr); }
-  .st-row > ds-segments { justify-self: start; }
+  .st-row > ds-segments, .st-row > .st-slider { justify-self: start; }
 }
 
 .llm-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); flex-wrap: wrap; }

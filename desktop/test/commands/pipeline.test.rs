@@ -129,7 +129,8 @@ fn commands_without_a_workspace_return_no_workspace() {
 fn cancel_on_an_idle_executor_is_false() {
     let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(Duration::ZERO)));
 
-    assert!(!cancel_pipeline(&executor));
+    assert!(!cancel_pipeline(&executor, None));
+    assert!(!cancel_pipeline(&executor, Some(1)));
 }
 
 #[test]
@@ -244,4 +245,18 @@ fn snapshot_serializes_with_camel_case_fields() {
     assert!(value.get("createdAt").is_some());
     assert!(value["tasks"][0].get("chapterId").is_some());
     assert!(value["tasks"][0].get("startedAt").is_some());
+}
+
+#[test]
+fn limits_follow_the_saved_pipeline_settings() {
+    let saved = PipelineSettings {
+        max_pipelines: Some(3),
+        max_tasks: Some(8),
+    };
+
+    assert_eq!(limits_of(saved), PipelineLimits::new(3, 8));
+    assert_eq!(
+        limits_of(PipelineSettings::default()),
+        PipelineLimits::default()
+    );
 }

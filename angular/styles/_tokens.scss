@@ -175,6 +175,8 @@ a:hover { text-decoration: underline; }
 .btn-icon.btn-sm { width: var(--ctl-h-sm); }
 .btn-icon .ic { width: 17px; height: 17px; }
 .btn-icon.is-active { background: var(--primary-soft); color: var(--primary-text); }
+.btn-icon.btn-primary { border-color: var(--primary); color: var(--on-primary); }
+.btn-icon.btn-primary:hover { border-color: var(--primary-hover); }
 .btn-block { width: 100%; }
 
 /* ---------- inputs ---------- */

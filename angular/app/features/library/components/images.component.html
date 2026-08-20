@@ -28,7 +28,7 @@
     <span class="spacer" data-testid="library-images-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-images-toolbar-right">
       @if (images.viewMode() === "grid") {
-        <span class="lb-size" data-testid="library-images-grid-size"><ds-icon name="image" [size]="14" data-testid="library-images-grid-size-icon" /><input class="range" type="range" min="110" max="360" step="10" [value]="images.gridSize()" [attr.aria-label]="'library.image.previewSize' | t" data-testid="library-images-grid-size-input" (input)="onGridSize($event)" /></span>
+        <span class="lb-size" data-testid="library-images-grid-size"><ds-icon name="image" [size]="14" data-testid="library-images-grid-size-icon" /><ds-slider [min]="110" [max]="360" [step]="10" [value]="images.gridSize()" [label]="'library.image.previewSize' | t" data-testid="library-images-grid-size-input" (valueChange)="onGridSize($event)" /></span>
         <div class="seg" role="group" data-testid="library-images-ratio">
           @for (ratio of ratioOptions; track ratio[0]) {
             <button type="button" [class.is-active]="images.gridRatio() === ratio[0]" [attr.aria-label]="'library.image.ratio' | t: { ratio: ratio[1] }" [attr.aria-pressed]="images.gridRatio() === ratio[0]" data-testid="library-images-ratio-option" (click)="setRatio(ratio[0])"><ds-icon [name]="ratioIcon(ratio[0])" [size]="14" data-testid="library-images-ratio-icon" /></button>

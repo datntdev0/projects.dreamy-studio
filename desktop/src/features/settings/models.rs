@@ -30,6 +30,41 @@ impl Theme {
     }
 }
 
+pub const MAX_PIPELINES_LIMIT: u8 = 5;
+pub const MAX_TASKS_LIMIT: u8 = 10;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PipelineSettings {
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_pipelines: Option<u8>,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_tasks: Option<u8>,
+}
+
+impl PipelineSettings {
+    pub fn normalized(self) -> Self {
+        Self {
+            max_pipelines: self
+                .max_pipelines
+                .map(|value| value.clamp(1, MAX_PIPELINES_LIMIT)),
+            max_tasks: self.max_tasks.map(|value| value.clamp(1, MAX_TASKS_LIMIT)),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GeneralSettings {
@@ -45,6 +80,12 @@ pub struct GeneralSettings {
         skip_serializing_if = "Option::is_none"
     )]
     pub theme: Option<Theme>,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "PipelineSettings::is_empty"
+    )]
+    pub pipelines: PipelineSettings,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

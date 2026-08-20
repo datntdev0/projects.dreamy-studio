@@ -8,6 +8,7 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PipelineStatus {
+    Queued,
     Running,
     Completed,
     Failed,
@@ -17,6 +18,7 @@ pub enum PipelineStatus {
 impl PipelineStatus {
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::Queued => "queued",
             Self::Running => "running",
             Self::Completed => "completed",
             Self::Failed => "failed",
@@ -26,6 +28,7 @@ impl PipelineStatus {
 
     pub fn parse(value: &str) -> Option<Self> {
         match value {
+            "queued" => Some(Self::Queued),
             "running" => Some(Self::Running),
             "completed" => Some(Self::Completed),
             "failed" => Some(Self::Failed),
@@ -118,6 +121,9 @@ pub enum PipelineEvent {
     Started {
         pipeline: PipelineSnapshot,
     },
+    Updated {
+        pipeline: PipelineSnapshot,
+    },
     Task {
         pipeline_id: i64,
         task: PipelineTask,
@@ -153,7 +159,6 @@ pub enum PipelineErrorCode {
     NoWorkspace,
     NotFound,
     InvalidInput,
-    PipelineBusy,
     Io,
     Db,
     Task,
@@ -165,7 +170,6 @@ impl PipelineErrorCode {
             Self::NoWorkspace => "no_workspace",
             Self::NotFound => "not_found",
             Self::InvalidInput => "invalid_input",
-            Self::PipelineBusy => "pipeline_busy",
             Self::Io => "io",
             Self::Db => "db",
             Self::Task => "task",

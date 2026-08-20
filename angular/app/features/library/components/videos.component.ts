@@ -8,6 +8,7 @@ import {
 } from "@angular/core";
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
+import { Slider } from "@components/slider";
 import {
   DesktopDragDropEvent,
   DesktopIpcService,
@@ -38,7 +39,7 @@ function toAssetRef(video: LibraryVideo): AssetRef {
 @Component({
   selector: "app-library-videos",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryVideoMedia, LibraryVideoThumb],
+  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryVideoMedia, LibraryVideoThumb, Slider],
   templateUrl: "./videos.component.html",
   host: { "data-testid": "library-videos" },
 })
@@ -68,8 +69,8 @@ export class LibraryVideos implements OnInit, OnDestroy {
       (event.target as HTMLSelectElement).value as VideoSort,
     );
   }
-  onGridSize(event: Event): void {
-    this.videos.setGridSize(Number((event.target as HTMLInputElement).value));
+  onGridSize(value: number): void {
+    this.videos.setGridSize(value);
   }
   setRatio(value: string): void {
     this.videos.setGridRatio(value);

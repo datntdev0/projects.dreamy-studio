@@ -50,10 +50,6 @@ export class NovelTranslationWarnings {
     return this.i18n.translate(reason.key, reason.params);
   }
 
-  isBusy(): boolean {
-    return this.translation.busy();
-  }
-
   setFilter(filter: WarningFilter): void {
     this.filter.set(filter);
   }
@@ -79,10 +75,6 @@ export class NovelTranslationWarnings {
       await work;
     } catch (cause) {
       const error = toNovelError(cause);
-      if (error.code === "pipeline_busy") {
-        this.toasts.show(this.i18n.translate("novel.error.pipelineBusy"), "warning");
-        return;
-      }
       const detail = error.detail;
       this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
     }

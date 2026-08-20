@@ -10,7 +10,7 @@
   </div>
   <div class="field" data-testid="novel-display-field-size">
     <label>{{ "novel.display.size" | t }} <span class="mono t-mute" data-testid="novel-display-size-value">{{ "novel.display.sizeValue" | t: { size: prefs().size } }}</span></label>
-    <input type="range" class="range" data-testid="novel-display-size" [attr.min]="sizeRange.min" [attr.max]="sizeRange.max" [attr.step]="sizeRange.step" [value]="prefs().size" [attr.aria-label]="'novel.display.size' | t" (input)="onSize($event)">
+    <ds-slider data-testid="novel-display-size" [min]="sizeRange.min" [max]="sizeRange.max" [step]="sizeRange.step" [value]="prefs().size" [label]="'novel.display.size' | t" (valueChange)="onSize($event)" />
   </div>
   <div class="field" data-testid="novel-display-field-lh">
     <label>{{ "novel.display.lh" | t }}</label>

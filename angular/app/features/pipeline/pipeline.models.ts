@@ -28,6 +28,7 @@ export interface PipelineKindMeta {
 
 export interface PipelineCounts {
   all: number;
+  queued: number;
   running: number;
   completed: number;
   failed: number;

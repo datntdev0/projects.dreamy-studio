@@ -1,6 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@angular/core";
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
+import { Slider } from "@components/slider";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
@@ -21,7 +22,7 @@ function isField(target: EventTarget | null): boolean {
 @Component({
   selector: "app-library-images",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryImageThumb],
+  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryImageThumb, Slider],
   templateUrl: "./images.component.html",
 })
 export class LibraryImages implements OnInit, OnDestroy {
@@ -51,8 +52,8 @@ export class LibraryImages implements OnInit, OnDestroy {
     this.images.sort.set((event.target as HTMLSelectElement).value as ImageSort);
   }
 
-  onGridSize(event: Event): void {
-    this.images.setGridSize(Number((event.target as HTMLInputElement).value));
+  onGridSize(value: number): void {
+    this.images.setGridSize(value);
   }
 
   setRatio(value: string): void {

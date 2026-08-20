@@ -23,7 +23,7 @@
           <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-dict" (click)="openDictionary()"><ds-icon name="book" [size]="16" />{{ "novel.translation.warn.openDict" | t }}</button>
         }
         <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-view" (click)="view(warning)">{{ "novel.translation.warn.viewPassage" | t }}</button>
-        <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-retranslate" [disabled]="isBusy()" (click)="retranslate(warning)"><ds-icon name="refresh" [size]="16" />{{ "novel.translation.warn.retranslatePassage" | t }}</button>
+        <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-retranslate" (click)="retranslate(warning)"><ds-icon name="refresh" [size]="16" />{{ "novel.translation.warn.retranslatePassage" | t }}</button>
       </div>
     </div>
   } @empty {

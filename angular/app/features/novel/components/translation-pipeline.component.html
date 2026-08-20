@@ -7,7 +7,7 @@
   </select>
   <span class="t-sm t-mute" data-testid="novel-translation-pipeline-count">{{ "novel.translation.trans.count" | t: { count: count(matching().length) } }}</span>
   <span class="spacer"></span>
-  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [attr.data-tip]="translation.isBusyElsewhere(novelId()) ? ('novel.translation.trans.busy' | t) : null" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}@if (view().picks.length) { ({{ view().picks.length }}) }</button>
+  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}@if (view().picks.length) { ({{ view().picks.length }}) }</button>
   @if (translation.isTranslating(novelId())) {
     <button type="button" class="btn btn-sm" data-testid="novel-translation-pipeline-cancel" (click)="cancel()">{{ "novel.translation.trans.cancel" | t }}</button>
   }

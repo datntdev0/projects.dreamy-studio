@@ -19,7 +19,7 @@ export class PipelineService {
   private readonly layout = inject(LayoutService);
   private readonly records = signal<PipelineSnapshot[]>([]);
   private epoch = 0;
-  private lastActiveId: number | null = null;
+  private lastActiveCount = 0;
   private workspacePath: string | null | undefined = undefined;
 
   readonly loaded = signal(false);
@@ -87,8 +87,8 @@ export class PipelineService {
     this.layout.showBottomTab("output");
   }
 
-  async cancel(): Promise<void> {
-    await this.translation.cancelPipeline();
+  async cancel(id: number): Promise<void> {
+    await this.translation.cancelPipeline(id);
   }
 
   reset(): void {
@@ -98,7 +98,7 @@ export class PipelineService {
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
-    this.lastActiveId = null;
+    this.lastActiveCount = 0;
   }
 
   private loadRunningChapters(records: PipelineSnapshot[]): void {
@@ -122,8 +122,7 @@ export class PipelineService {
   }
 
   private buildRunning(): PipelineSnapshot[] {
-    const active = this.translation.active();
-    return active ? [active] : [];
+    return this.translation.running();
   }
 
   private buildTotals(): PipelineTotals {
@@ -131,13 +130,15 @@ export class PipelineService {
   }
 
   private buildHistory(): PipelineSnapshot[] {
-    const active = this.translation.active();
+    const active = this.translation.running();
     const out: PipelineSnapshot[] = [];
     for (const record of this.records()) {
-      out.push(active?.id === record.id ? active : record);
+      out.push(active.find((pipeline) => pipeline.id === record.id) ?? record);
     }
-    if (active && !out.some(this.isSamePipeline.bind(this, active))) {
-      out.unshift(active);
+    for (const pipeline of active) {
+      if (!out.some(this.isSamePipeline.bind(this, pipeline))) {
+        out.unshift(pipeline);
+      }
     }
     return out;
   }
@@ -157,13 +158,13 @@ export class PipelineService {
   }
 
   private syncActive(): void {
-    const id = this.translation.active()?.id ?? null;
-    untracked(this.applyActive.bind(this, id));
+    const count = this.translation.running().length;
+    untracked(this.applyActive.bind(this, count));
   }
 
-  private applyActive(id: number | null): void {
-    const finished = this.lastActiveId !== null && id === null;
-    this.lastActiveId = id;
+  private applyActive(count: number): void {
+    const finished = count < this.lastActiveCount;
+    this.lastActiveCount = count;
     if (finished && this.loaded()) {
       void this.load();
     }

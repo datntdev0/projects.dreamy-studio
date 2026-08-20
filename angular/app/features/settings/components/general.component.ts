@@ -1,15 +1,18 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { SegmentOption, Segments } from "@components/segments";
+import { Slider } from "@components/slider";
 import { TabOption, Tabs } from "@components/tabs";
 import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService, isLanguage } from "@app/core/i18n/i18n.service";
 import { ThemeService, isTheme } from "@app/core/theme/theme.service";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
-import { SettingsFolderTarget } from "../settings.models";
+import { MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget } from "../settings.models";
 import { SettingsService } from "../settings.service";
 
-type GeneralTab = "interface" | "storage";
+type GeneralTab = "interface" | "pipelines" | "storage";
+
+const TABS: GeneralTab[] = ["interface", "pipelines", "storage"];
 
 const LANGUAGE_OPTIONS: SegmentOption[] = [
   { value: "vi", label: "Tiếng Việt" },
@@ -19,7 +22,7 @@ const LANGUAGE_OPTIONS: SegmentOption[] = [
 @Component({
   selector: "app-settings-general",
   standalone: true,
-  imports: [Icon, I18nPipe, Segments, Tabs],
+  imports: [Icon, I18nPipe, Segments, Slider, Tabs],
   templateUrl: "./general.component.html",
   host: { "data-testid": "settings-general" },
 })
@@ -34,6 +37,10 @@ export class SettingsGeneralComponent {
   readonly workspace = this.workspaces.current;
   readonly dataDir = this.settings.dataDir;
   readonly file = this.settings.file;
+  readonly maxPipelines = this.settings.maxPipelines;
+  readonly maxTasks = this.settings.maxTasks;
+  readonly maxPipelinesLimit = MAX_PIPELINES_LIMIT;
+  readonly maxTasksLimit = MAX_TASKS_LIMIT;
   readonly languageOptions = LANGUAGE_OPTIONS;
   readonly themeOptions = computed(this.buildThemeOptions.bind(this));
   readonly tab = signal<GeneralTab>("interface");
@@ -52,7 +59,15 @@ export class SettingsGeneralComponent {
   }
 
   onTab(value: string): void {
-    this.tab.set(value === "storage" ? "storage" : "interface");
+    this.tab.set(TABS.find((tab) => tab === value) ?? "interface");
+  }
+
+  onMaxPipelines(value: number): void {
+    this.settings.setMaxPipelines(value);
+  }
+
+  onMaxTasks(value: number): void {
+    this.settings.setMaxTasks(value);
   }
 
   openFolder(target: SettingsFolderTarget): void {
@@ -62,6 +77,7 @@ export class SettingsGeneralComponent {
   private buildTabOptions(): TabOption[] {
     return [
       { value: "interface", label: this.i18n.translate("settings.general.interface"), icon: "eye" },
+      { value: "pipelines", label: this.i18n.translate("settings.general.pipelines"), icon: "layers" },
       { value: "storage", label: this.i18n.translate("settings.general.storage"), icon: "hdd" },
     ];
   }

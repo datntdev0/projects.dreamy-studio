@@ -13,6 +13,7 @@ fn general(language: Language, theme: Theme) -> GeneralSettings {
     GeneralSettings {
         language: Some(language),
         theme: Some(theme),
+        ..GeneralSettings::default()
     }
 }
 

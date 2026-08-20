@@ -1,4 +1,5 @@
 use crate::features::pipeline::executor::PipelineExecutor;
+use crate::features::pipeline::executor::PipelineLimits;
 use crate::features::pipeline::executor::PipelineStart;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
@@ -8,6 +9,8 @@ use crate::features::pipeline::models::PipelineSnapshot;
 use crate::features::pipeline::models::PipelineTarget;
 use crate::features::pipeline::models::TaskRequest;
 use crate::features::pipeline::repository::PipelineRepository;
+use crate::features::settings::models::PipelineSettings;
+use crate::features::settings::service::SettingsService;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::session::WorkspaceSession;
@@ -46,8 +49,21 @@ pub fn start_pipeline(
     )
 }
 
-pub fn cancel_pipeline(executor: &PipelineExecutor) -> bool {
-    executor.cancel()
+pub fn cancel_pipeline(executor: &PipelineExecutor, pipeline_id: Option<i64>) -> bool {
+    match pipeline_id {
+        Some(id) => executor.cancel_pipeline(id),
+        None => executor.cancel(),
+    }
+}
+
+pub fn limits_of(settings: PipelineSettings) -> PipelineLimits {
+    let defaults = PipelineLimits::default();
+    PipelineLimits::new(
+        settings
+            .max_pipelines
+            .map_or(defaults.max_pipelines, usize::from),
+        settings.max_tasks.map_or(defaults.max_tasks, usize::from),
+    )
 }
 
 pub fn list_history(
@@ -95,7 +111,9 @@ pub async fn pipeline_start(
     on_event: Channel<PipelineEvent>,
 ) -> PipelineResult<PipelineSnapshot> {
     let sink: Arc<dyn PipelineTarget> = Arc::new(on_event);
+    let settings = app.state::<SettingsService>().general().pipelines;
     run_blocking(app, move |executor, translation, session| {
+        executor.set_limits(limits_of(settings));
         start_pipeline(
             executor,
             translation,
@@ -110,8 +128,8 @@ pub async fn pipeline_start(
 }
 
 #[tauri::command]
-pub fn pipeline_cancel(app: AppHandle) -> bool {
-    app.state::<PipelineExecutor>().cancel()
+pub fn pipeline_cancel(app: AppHandle, pipeline_id: Option<i64>) -> bool {
+    cancel_pipeline(&app.state::<PipelineExecutor>(), pipeline_id)
 }
 
 #[tauri::command]

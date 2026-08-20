@@ -62,6 +62,10 @@ impl SettingsService {
     pub fn save_general(&self, general: GeneralSettings) -> Result<GeneralSettings, String> {
         let _guard = self.lock();
         let mut settings = self.repository.load().map_err(|error| error.to_string())?;
+        let general = GeneralSettings {
+            pipelines: general.pipelines.normalized(),
+            ..general
+        };
         settings.general = general.clone();
         self.repository
             .save(&settings)

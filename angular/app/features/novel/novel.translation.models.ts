@@ -88,7 +88,7 @@ export interface WireTranslation {
   warnings: WireWarning[];
 }
 
-export type PipelineStatus = "running" | "completed" | "failed" | "cancelled";
+export type PipelineStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 export type TaskStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 
 export interface TaskRequest {
@@ -124,5 +124,6 @@ export interface PipelineSnapshot {
 
 export type PipelineEvent =
   | { type: "started"; pipeline: PipelineSnapshot }
+  | { type: "updated"; pipeline: PipelineSnapshot }
   | { type: "task"; pipelineId: number; task: PipelineTask }
   | { type: "finished"; pipeline: PipelineSnapshot };

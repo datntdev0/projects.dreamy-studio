@@ -26,6 +26,7 @@ ds-form {
 .check input { margin-top: 2px; accent-color: var(--primary); }
 input[type="checkbox"] { accent-color: var(--primary); }
 .range { width: 100%; accent-color: var(--primary); }
+ds-slider { display: block; min-width: 0; }
 .tag-in { height: 22px; width: 110px; padding: 0 var(--sp-sm); border: 1px dashed var(--hairline-strong); border-radius: var(--r-full); background: transparent; color: var(--ink); font: 400 12px/1 var(--font); }
 .tag-in:focus { outline: 2px solid var(--primary); outline-offset: -1px; border-style: solid; }
 .tag-in::placeholder { color: var(--mute); }

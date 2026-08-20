@@ -29,13 +29,43 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
+use std::sync::Condvar;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::thread;
+use std::time::Duration;
 
 pub const MAX_PARALLEL_TASKS: usize = 5;
+pub const MAX_PARALLEL_PIPELINES: usize = 1;
+const MAX_WORKERS_PER_PIPELINE: usize = 10;
+const SLOT_POLL: Duration = Duration::from_millis(50);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PipelineLimits {
+    pub max_pipelines: usize,
+    pub max_tasks: usize,
+}
+
+impl Default for PipelineLimits {
+    fn default() -> Self {
+        Self {
+            max_pipelines: MAX_PARALLEL_PIPELINES,
+            max_tasks: MAX_PARALLEL_TASKS,
+        }
+    }
+}
+
+impl PipelineLimits {
+    pub fn new(max_pipelines: usize, max_tasks: usize) -> Self {
+        Self {
+            max_pipelines: max_pipelines.max(1),
+            max_tasks: max_tasks.max(1),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PipelineStart {
@@ -51,12 +81,48 @@ pub struct PipelineExecutor {
 
 struct Inner {
     translator: Arc<dyn Translator>,
-    active: Mutex<Option<Arc<AtomicBool>>>,
+    active: Mutex<Vec<ActiveRun>>,
+    limits: Mutex<PipelineLimits>,
+    next_token: AtomicU64,
+    slots: Slots,
+}
+
+struct Slots {
+    used: Mutex<usize>,
+    freed: Condvar,
+}
+
+struct SlotGuard<'a> {
+    inner: &'a Inner,
+}
+
+impl Drop for SlotGuard<'_> {
+    fn drop(&mut self) {
+        let mut used = lock(&self.inner.slots.used);
+        *used = used.saturating_sub(1);
+        drop(used);
+        self.inner.slots.freed.notify_all();
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RunState {
+    Queued,
+    Running,
+}
+
+struct ActiveRun {
+    token: u64,
+    pipeline_id: Option<i64>,
+    state: RunState,
+    cancel: Arc<AtomicBool>,
+    context: Option<Arc<CoordinatorContext>>,
 }
 
 struct CoordinatorContext {
     inner: Arc<Inner>,
     workspace: TranslationWorkspace,
+    token: u64,
     pipeline_id: i64,
     novel_id: i64,
     target_name: String,
@@ -77,9 +143,21 @@ impl PipelineExecutor {
         Self {
             inner: Arc::new(Inner {
                 translator,
-                active: Mutex::new(None),
+                active: Mutex::new(Vec::new()),
+                limits: Mutex::new(PipelineLimits::default()),
+                next_token: AtomicU64::new(1),
+                slots: Slots {
+                    used: Mutex::new(0),
+                    freed: Condvar::new(),
+                },
             }),
         }
+    }
+
+    pub fn set_limits(&self, limits: PipelineLimits) {
+        *lock(&self.inner.limits) = PipelineLimits::new(limits.max_pipelines, limits.max_tasks);
+        self.inner.slots.freed.notify_all();
+        promote(&self.inner);
     }
 
     pub fn start(
@@ -89,37 +167,53 @@ impl PipelineExecutor {
         target: Arc<dyn PipelineTarget>,
     ) -> PipelineResult<PipelineSnapshot> {
         let cancel = Arc::new(AtomicBool::new(false));
-        {
-            let mut active = lock(&self.inner.active);
-            if active.is_some() {
-                return Err(PipelineError::new(
-                    PipelineErrorCode::PipelineBusy,
-                    "a pipeline is already running",
-                ));
-            }
-            *active = Some(cancel.clone());
-        }
-
-        let result = self.start_claimed(workspace, request, target, cancel.clone());
+        let token = self.inner.next_token.fetch_add(1, Ordering::SeqCst);
+        let state = claim(&self.inner, token, cancel.clone());
+        let result = self.start_claimed(workspace, request, target, cancel, token, state);
         if result.is_err() {
-            release_active(&self.inner, &cancel);
+            release_active(&self.inner, token);
         }
         result
     }
 
     pub fn cancel(&self) -> bool {
-        let active = lock(&self.inner.active);
-        match active.as_ref() {
-            Some(cancel) => {
-                cancel.store(true, Ordering::SeqCst);
-                true
-            }
-            None => false,
-        }
+        self.cancel_runs(None)
+    }
+
+    pub fn cancel_pipeline(&self, pipeline_id: i64) -> bool {
+        self.cancel_runs(Some(pipeline_id))
     }
 
     pub fn is_running(&self) -> bool {
-        lock(&self.inner.active).is_some()
+        !lock(&self.inner.active).is_empty()
+    }
+
+    fn cancel_runs(&self, pipeline_id: Option<i64>) -> bool {
+        let mut found = false;
+        let mut waiting = Vec::new();
+        {
+            let mut active = lock(&self.inner.active);
+            for run in active.iter() {
+                if pipeline_id.is_none() || run.pipeline_id == pipeline_id {
+                    run.cancel.store(true, Ordering::SeqCst);
+                    found = true;
+                }
+            }
+            let mut index = 0;
+            while index < active.len() {
+                let run = &active[index];
+                let cancelled = run.cancel.load(Ordering::SeqCst);
+                if cancelled && run.state == RunState::Queued && run.context.is_some() {
+                    waiting.extend(active.remove(index).context);
+                } else {
+                    index += 1;
+                }
+            }
+        }
+        for context in waiting {
+            abort_queued(&context);
+        }
+        found
     }
 
     fn start_claimed(
@@ -128,6 +222,8 @@ impl PipelineExecutor {
         request: PipelineStart,
         target: Arc<dyn PipelineTarget>,
         cancel: Arc<AtomicBool>,
+        token: u64,
+        state: RunState,
     ) -> PipelineResult<PipelineSnapshot> {
         let translation_target = workspace.target_for(request.novel_id, &request.target)?;
         validate_tasks(&workspace, request.novel_id, &request.tasks)?;
@@ -135,16 +231,22 @@ impl PipelineExecutor {
         let now = format_timestamp(Utc::now());
         let db = database(&workspace)?;
         let repo = PipelineRepository::new(db.connection());
-        let pipeline_id = repo.insert_pipeline_with_tasks(
+        let status = match state {
+            RunState::Running => PipelineStatus::Running,
+            RunState::Queued => PipelineStatus::Queued,
+        };
+        let pipeline_id = repo.insert_pipeline(
             request.novel_id,
             KIND_TRANSLATION,
             translation_target.as_str(),
+            status,
             &request.tasks,
             &now,
         )?;
         let snapshot = repo
             .snapshot(pipeline_id)?
             .ok_or_else(|| PipelineError::not_found("pipeline was not created"))?;
+        bind_pipeline(&self.inner, token, pipeline_id);
         deliver(
             &target,
             PipelineEvent::Started {
@@ -155,6 +257,7 @@ impl PipelineExecutor {
         let context = Arc::new(CoordinatorContext {
             inner: self.inner.clone(),
             workspace,
+            token,
             pipeline_id,
             novel_id: request.novel_id,
             target_name: translation_target.as_str().to_string(),
@@ -163,21 +266,124 @@ impl PipelineExecutor {
             cancel,
             sink: target,
         });
-        thread::Builder::new()
-            .name(format!("pipeline-{pipeline_id}"))
-            .spawn(move || coordinator(context))
-            .map_err(|error| PipelineError::new(PipelineErrorCode::Task, error.to_string()))?;
+        match state {
+            RunState::Running => spawn_coordinator(context, false)?,
+            RunState::Queued => {
+                attach_context(&self.inner, token, context);
+                promote(&self.inner);
+            }
+        }
         Ok(snapshot)
     }
 }
 
-fn coordinator(context: Arc<CoordinatorContext>) {
+fn claim(inner: &Inner, token: u64, cancel: Arc<AtomicBool>) -> RunState {
+    let mut active = lock(&inner.active);
+    let max_pipelines = lock(&inner.limits).max_pipelines;
+    let running = active
+        .iter()
+        .filter(|run| run.state == RunState::Running)
+        .count();
+    let waiting = active.iter().any(|run| run.state == RunState::Queued);
+    let state = if running < max_pipelines && !waiting {
+        RunState::Running
+    } else {
+        RunState::Queued
+    };
+    active.push(ActiveRun {
+        token,
+        pipeline_id: None,
+        state,
+        cancel,
+        context: None,
+    });
+    state
+}
+
+fn attach_context(inner: &Inner, token: u64, context: Arc<CoordinatorContext>) {
+    let mut active = lock(&inner.active);
+    if let Some(run) = active.iter_mut().find(|run| run.token == token) {
+        run.context = Some(context);
+    }
+}
+
+fn promote(inner: &Arc<Inner>) {
+    let mut ready = Vec::new();
+    {
+        let mut active = lock(&inner.active);
+        let max_pipelines = lock(&inner.limits).max_pipelines;
+        let mut running = active
+            .iter()
+            .filter(|run| run.state == RunState::Running)
+            .count();
+        for run in active.iter_mut() {
+            if running >= max_pipelines {
+                break;
+            }
+            if run.state != RunState::Queued {
+                continue;
+            }
+            let Some(context) = run.context.take() else {
+                break;
+            };
+            run.state = RunState::Running;
+            running += 1;
+            ready.push(context);
+        }
+    }
+    for context in ready {
+        if let Err(error) = spawn_coordinator(context.clone(), true) {
+            eprintln!("cannot start queued pipeline: {}", error.detail);
+            context.cancel.store(true, Ordering::SeqCst);
+            abort_queued(&context);
+            release_active(&context.inner, context.token);
+        }
+    }
+}
+
+fn spawn_coordinator(context: Arc<CoordinatorContext>, promoted: bool) -> PipelineResult<()> {
+    thread::Builder::new()
+        .name(format!("pipeline-{}", context.pipeline_id))
+        .spawn(move || coordinator(context, promoted))
+        .map(|_| ())
+        .map_err(|error| PipelineError::new(PipelineErrorCode::Task, error.to_string()))
+}
+
+fn abort_queued(context: &CoordinatorContext) {
+    while let Some(task) = pop_task(&context.tasks) {
+        finish_task(context, task.id, TaskStatus::Cancelled, String::new());
+    }
+    finish_pipeline(context);
+}
+
+fn acquire_slot<'a>(inner: &'a Inner, cancel: &AtomicBool) -> Option<SlotGuard<'a>> {
+    let mut used = lock(&inner.slots.used);
+    loop {
+        if cancel.load(Ordering::SeqCst) {
+            return None;
+        }
+        let limit = lock(&inner.limits).max_tasks;
+        if *used < limit {
+            *used += 1;
+            return Some(SlotGuard { inner });
+        }
+        used = match inner.slots.freed.wait_timeout(used, SLOT_POLL) {
+            Ok((guard, _)) => guard,
+            Err(poisoned) => poisoned.into_inner().0,
+        };
+    }
+}
+
+fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
+    if promoted {
+        mark_running(&context);
+    }
     let inputs = load_inputs(&context);
     let workers = context
         .tasks
         .lock()
         .map_or(0, |tasks| tasks.len())
-        .min(MAX_PARALLEL_TASKS);
+        .min(MAX_WORKERS_PER_PIPELINE);
     let mut handles = Vec::with_capacity(workers);
     for _ in 0..workers {
         let worker = WorkerContext {
@@ -198,28 +404,19 @@ fn coordinator(context: Arc<CoordinatorContext>) {
         }
     }
     finish_pipeline(&context);
-    release_active(&context.inner, &context.cancel);
+    release_active(&context.inner, context.token);
 }
 
 fn worker_loop(context: WorkerContext, input_error: Option<String>) {
-    while let Some(task) = pop_task(&context.coordinator.tasks) {
-        if context.coordinator.cancel.load(Ordering::SeqCst) {
-            finish_task(
-                &context.coordinator,
-                task.id,
-                TaskStatus::Cancelled,
-                String::new(),
-            );
+    let coordinator = &context.coordinator;
+    while let Some(task) = pop_task(&coordinator.tasks) {
+        let Some(_slot) = acquire_slot(&coordinator.inner, &coordinator.cancel) else {
+            finish_task(coordinator, task.id, TaskStatus::Cancelled, String::new());
             continue;
-        }
-        set_running(&context.coordinator, task.id);
+        };
+        set_running(coordinator, task.id);
         if let Some(error) = &input_error {
-            finish_task(
-                &context.coordinator,
-                task.id,
-                TaskStatus::Failed,
-                error.clone(),
-            );
+            finish_task(coordinator, task.id, TaskStatus::Failed, error.clone());
             continue;
         }
         run_task(&context, task);
@@ -481,13 +678,35 @@ fn deliver(target: &Arc<dyn PipelineTarget>, event: PipelineEvent) {
     }
 }
 
-fn release_active(inner: &Inner, cancel: &Arc<AtomicBool>) {
+fn bind_pipeline(inner: &Inner, token: u64, pipeline_id: i64) {
     let mut active = lock(&inner.active);
-    if active
-        .as_ref()
-        .is_some_and(|active_cancel| Arc::ptr_eq(active_cancel, cancel))
-    {
-        *active = None;
+    if let Some(run) = active.iter_mut().find(|run| run.token == token) {
+        run.pipeline_id = Some(pipeline_id);
+    }
+}
+
+fn release_active(inner: &Arc<Inner>, token: u64) {
+    lock(&inner.active).retain(|run| run.token != token);
+    promote(inner);
+}
+
+fn mark_running(context: &CoordinatorContext) {
+    let Ok(db) = database(&context.workspace) else {
+        eprintln!("cannot open database to start pipeline");
+        return;
+    };
+    let repo = PipelineRepository::new(db.connection());
+    if let Err(error) = repo.mark_pipeline_running(context.pipeline_id, &timestamp()) {
+        eprintln!("cannot start pipeline: {error}");
+        return;
+    }
+    match repo.snapshot(context.pipeline_id) {
+        Ok(Some(snapshot)) => deliver(
+            &context.sink,
+            PipelineEvent::Updated { pipeline: snapshot },
+        ),
+        Ok(None) => eprintln!("started pipeline does not exist"),
+        Err(error) => eprintln!("cannot read started pipeline: {error}"),
     }
 }
 

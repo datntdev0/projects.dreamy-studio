@@ -466,7 +466,6 @@
   "novel.toast.chapterRenamed": "Renamed the chapter.",
   "novel.toast.chapterDeleted": "Deleted chapter “{title}”.",
   "novel.error.chapterLocked": "This chapter has a translation or knowledge, so it cannot be changed this way.",
-  "novel.error.pipelineBusy": "A translation pipeline is already running. Wait for it to finish or cancel it.",
   "novel.error.dictionaryDuplicate": "The dictionary already has an entry with this source term.",
   "novel.error.titleEmpty": "The chapter title cannot be empty.",
   "novel.dialog.close": "Close (Esc)",
@@ -948,6 +947,11 @@
   ,"settings.general.theme.hint": "Synced with the theme switch in the title bar menu."
   ,"settings.general.theme.dark": "Dark"
   ,"settings.general.theme.light": "Light"
+  ,"settings.general.pipelines": "Pipelines"
+  ,"settings.general.maxPipelines": "Concurrent pipelines"
+  ,"settings.general.maxPipelines.hint": "How many pipelines run at the same time (1-5). Extra pipelines wait in the queue."
+  ,"settings.general.maxTasks": "Concurrent tasks (application-wide)"
+  ,"settings.general.maxTasks.hint": "How many tasks run in parallel across the whole application (1-10)."
   ,"settings.general.storage": "Data and storage"
   ,"settings.general.workspace": "Open workspace"
   ,"settings.general.workspace.hint": "Switch workspace with the workspace name in the title bar."
@@ -1118,7 +1122,6 @@
   ,"novel.translation.warn.filter.source": "Source changed"
   ,"novel.translation.warn.filter.dict": "Dictionary"
   ,"novel.translation.trans.cancel": "Cancel"
-  ,"novel.translation.trans.busy": "Another translation pipeline is running."
   ,"novel.translation.result.review": "Ask the Assistant to review"
   ,"novel.translation.result.reviewSoon": "Coming soon"
   ,"novel.translation.guide.prompt": "Prompt"
@@ -1153,6 +1156,7 @@
   ,"pipeline.col.progress": "Progress"
   ,"pipeline.col.duration": "Duration"
   ,"pipeline.kind.translation": "Translation"
+  ,"pipeline.status.queued": "Queued"
   ,"pipeline.status.running": "Running"
   ,"pipeline.status.completed": "Completed"
   ,"pipeline.status.failed": "Failed"

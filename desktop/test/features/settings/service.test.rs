@@ -3,6 +3,8 @@ use crate::features::settings::llm::CliSettings;
 use crate::features::settings::llm::Effort;
 use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::models::Language;
+use crate::features::settings::models::MAX_TASKS_LIMIT;
+use crate::features::settings::models::PipelineSettings;
 use crate::features::settings::models::RightTab;
 use crate::features::settings::models::Theme;
 use crate::features::settings::repository::SETTINGS_FILE;
@@ -25,10 +27,30 @@ fn persists_the_saved_general_settings() {
     let general = GeneralSettings {
         language: Some(Language::En),
         theme: Some(Theme::Light),
+        pipelines: PipelineSettings {
+            max_pipelines: Some(3),
+            max_tasks: Some(8),
+        },
     };
     let saved = service(&dir).save_general(general.clone()).unwrap();
     assert_eq!(saved, general);
     assert_eq!(service(&dir).general(), general);
+}
+
+#[test]
+fn clamps_the_pipeline_limits_on_save() {
+    let dir = TempDir::new().unwrap();
+    let general = GeneralSettings {
+        pipelines: PipelineSettings {
+            max_pipelines: Some(0),
+            max_tasks: Some(99),
+        },
+        ..GeneralSettings::default()
+    };
+    let saved = service(&dir).save_general(general).unwrap();
+    assert_eq!(saved.pipelines.max_pipelines, Some(1));
+    assert_eq!(saved.pipelines.max_tasks, Some(MAX_TASKS_LIMIT));
+    assert_eq!(service(&dir).general(), saved);
 }
 
 #[test]
@@ -97,8 +119,9 @@ fn saving_the_window_keeps_the_general_settings() {
     let general = GeneralSettings {
         language: Some(Language::En),
         theme: Some(Theme::Light),
+        ..GeneralSettings::default()
     };
-    let window = WindowSettings::new(WindowBounds::new(10, 20, 1280, 800), true);
+    let window =WindowSettings::new(WindowBounds::new(10, 20, 1280, 800), true);
     let service = service(&dir);
     service.save_general(general.clone()).unwrap();
     service.save_window(window).unwrap();
@@ -188,6 +211,7 @@ fn saving_the_llm_settings_keeps_the_other_sections() {
     let general = GeneralSettings {
         language: Some(Language::En),
         theme: Some(Theme::Light),
+        ..GeneralSettings::default()
     };
     service.save_general(general.clone()).unwrap();
     service

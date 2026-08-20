@@ -70,11 +70,17 @@ export interface SettingsScenario {
 
 function settingsMock(i18n: I18nService, themes: ThemeService, scenario: SettingsScenario): Partial<SettingsService> {
   const section = signal<SettingsSectionId>(scenario.section ?? "general");
+  const maxPipelines = signal(1);
+  const maxTasks = signal(5);
   return {
     open: signal(true),
     section,
     dataDir: signal(scenario.dataDir ?? "C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio"),
     file: signal("settings.json"),
+    maxPipelines,
+    maxTasks,
+    setMaxPipelines: (value) => maxPipelines.set(value),
+    setMaxTasks: (value) => maxTasks.set(value),
     closeDialog: () => undefined,
     selectSection: (id) => section.set(id),
     setLanguage: (language) => i18n.setLanguage(language),

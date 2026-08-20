@@ -9,10 +9,10 @@
       <span class="badge" [class]="statusBadge(pipeline.status)" data-testid="pipeline-log-status">{{ statusKey(pipeline.status) | t }}</span>
       <span class="pipe-log-meter" data-testid="pipeline-log-meter">
         <app-pipeline-strip [pipeline]="pipeline" />
-        <span class="pipe-prog-text t-sm t-mute" data-testid="pipeline-log-summary"><span class="mono pipe-pct">{{ percent(pipeline) }}%</span><span>{{ "pipeline.progress" | t: { done: pipeline.done, total: pipeline.total } }}</span>@if (pipeline.failed > 0) { <span class="pipe-prog-failed">{{ "pipeline.failed" | t: { count: pipeline.failed } }}</span> }@if (pipeline.status !== "running") { <span>{{ durationOf(pipeline) }}</span> }</span>
+        <span class="pipe-prog-text t-sm t-mute" data-testid="pipeline-log-summary"><span class="mono pipe-pct">{{ percent(pipeline) }}%</span><span>{{ "pipeline.progress" | t: { done: pipeline.done, total: pipeline.total } }}</span>@if (pipeline.failed > 0) { <span class="pipe-prog-failed">{{ "pipeline.failed" | t: { count: pipeline.failed } }}</span> }@if (!isActive(pipeline)) { <span>{{ durationOf(pipeline) }}</span> }</span>
       </span>
       <span class="spacer"></span>
-      @if (pipeline.status === "running") {
+      @if (isActive(pipeline)) {
         <button type="button" class="btn btn-sm" data-testid="pipeline-log-cancel" (click)="cancel()"><ds-icon name="stop" [size]="16" />{{ "pipeline.cancel" | t }}</button>
       }
     </header>

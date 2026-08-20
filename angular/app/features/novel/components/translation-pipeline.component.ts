@@ -96,17 +96,13 @@ export class NovelTranslationPipeline {
       await this.translation.translate(this.novelId(), this.view().picks);
     } catch (cause) {
       const error = toNovelError(cause);
-      if (error.code === "pipeline_busy") {
-        this.toasts.show(this.i18n.translate("novel.error.pipelineBusy"), "warning");
-        return;
-      }
       this.toasts.show(this.i18n.translate("novel.error.generic", { detail: error.detail }), "danger");
     }
   }
 
   async cancel(): Promise<void> {
     try {
-      await this.translation.cancelPipeline();
+      await this.translation.cancelNovel(this.novelId());
     } catch (cause) {
       const detail = toNovelError(cause).detail;
       this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
@@ -137,6 +133,6 @@ export class NovelTranslationPipeline {
   }
 
   private buildReady(): boolean {
-    return this.view().picks.length > 0 && !this.translation.busy();
+    return this.view().picks.length > 0;
   }
 }

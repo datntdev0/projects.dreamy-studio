@@ -5,7 +5,17 @@ import { I18nService } from "@app/core/i18n/i18n.service";
 import { Theme } from "@app/core/theme/theme.models";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { ToastService } from "@app/core/toast/toast.service";
-import { GeneralSettings, LayoutSettings, SettingsFolderTarget, SettingsSectionId, SettingsView } from "./settings.models";
+import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from "./settings.models";
+
+const DEFAULT_MAX_PIPELINES = 1;
+const DEFAULT_MAX_TASKS = 5;
+
+function clampLimit(value: number | undefined, max: number, fallback: number): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(1, Math.round(value)));
+}
 
 @Injectable({ providedIn: "root" })
 export class SettingsService {
@@ -20,6 +30,8 @@ export class SettingsService {
   readonly dataDir = signal("");
   readonly file = signal("");
   readonly layout = signal<LayoutSettings>({});
+  readonly maxPipelines = signal(DEFAULT_MAX_PIPELINES);
+  readonly maxTasks = signal(DEFAULT_MAX_TASKS);
 
   async load(): Promise<void> {
     try {
@@ -57,6 +69,16 @@ export class SettingsService {
     this.persistGeneral();
   }
 
+  setMaxPipelines(value: number): void {
+    this.maxPipelines.set(clampLimit(value, MAX_PIPELINES_LIMIT, DEFAULT_MAX_PIPELINES));
+    this.persistGeneral();
+  }
+
+  setMaxTasks(value: number): void {
+    this.maxTasks.set(clampLimit(value, MAX_TASKS_LIMIT, DEFAULT_MAX_TASKS));
+    this.persistGeneral();
+  }
+
   saveLayout(layout: LayoutSettings): void {
     this.layout.set(layout);
     this.writes = this.writes.then(this.writeLayout.bind(this, layout));
@@ -77,6 +99,8 @@ export class SettingsService {
     if (general.theme) {
       this.themes.setTheme(general.theme);
     }
+    this.maxPipelines.set(clampLimit(general.pipelines?.maxPipelines, MAX_PIPELINES_LIMIT, DEFAULT_MAX_PIPELINES));
+    this.maxTasks.set(clampLimit(general.pipelines?.maxTasks, MAX_TASKS_LIMIT, DEFAULT_MAX_TASKS));
   }
 
   private async syncBackground(): Promise<void> {
@@ -101,7 +125,11 @@ export class SettingsService {
   }
 
   private async writeGeneral(): Promise<void> {
-    const general: GeneralSettings = { language: this.i18n.language(), theme: this.themes.theme() };
+    const general: GeneralSettings = {
+      language: this.i18n.language(),
+      theme: this.themes.theme(),
+      pipelines: { maxPipelines: this.maxPipelines(), maxTasks: this.maxTasks() },
+    };
     try {
       await this.ipc.invoke<GeneralSettings>("settings_general_save", { general });
     } catch {

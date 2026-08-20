@@ -14,6 +14,19 @@
       </div>
     </div>
   </section>
+  } @else if (tab() === "pipelines") {
+  <section class="st-card" role="tabpanel" id="settings-general-panel-pipelines" aria-labelledby="settings-general-tab-pipelines" data-testid="settings-general-pipelines">
+    <div class="st-rows">
+      <div class="st-row" data-testid="settings-general-max-pipelines-row">
+        <div class="field"><span class="t-ink">{{ "settings.general.maxPipelines" | t }}</span><span class="field-hint">{{ "settings.general.maxPipelines.hint" | t }}</span></div>
+        <div class="st-slider" data-testid="settings-general-max-pipelines"><ds-slider data-testid="settings-general-max-pipelines-input" [min]="1" [max]="maxPipelinesLimit" [step]="1" [value]="maxPipelines()" [label]="'settings.general.maxPipelines' | t" (valueChange)="onMaxPipelines($event)" /><span class="mono t-mute" data-testid="settings-general-max-pipelines-value">{{ maxPipelines() }}</span></div>
+      </div>
+      <div class="st-row" data-testid="settings-general-max-tasks-row">
+        <div class="field"><span class="t-ink">{{ "settings.general.maxTasks" | t }}</span><span class="field-hint">{{ "settings.general.maxTasks.hint" | t }}</span></div>
+        <div class="st-slider" data-testid="settings-general-max-tasks"><ds-slider data-testid="settings-general-max-tasks-input" [min]="1" [max]="maxTasksLimit" [step]="1" [value]="maxTasks()" [label]="'settings.general.maxTasks' | t" (valueChange)="onMaxTasks($event)" /><span class="mono t-mute" data-testid="settings-general-max-tasks-value">{{ maxTasks() }}</span></div>
+      </div>
+    </div>
+  </section>
   } @else {
   <section class="st-card" role="tabpanel" id="settings-general-panel-storage" aria-labelledby="settings-general-tab-storage" data-testid="settings-general-storage">
     @if (workspace(); as ws) {

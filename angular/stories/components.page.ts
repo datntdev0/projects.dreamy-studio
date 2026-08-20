@@ -9,6 +9,7 @@ import { Dialog } from "@components/dialog";
 import { Form, FormOption } from "@components/form";
 import { Icon } from "@components/icon";
 import { Segments, SegmentOption } from "@components/segments";
+import { Slider } from "@components/slider";
 import { Tabs, TabOption } from "@components/tabs";
 import { Toast } from "@components/toast";
 import { Tooltip } from "@components/tooltip";
@@ -16,12 +17,13 @@ import { Tooltip } from "@components/tooltip";
 @Component({
   selector: "app-components-page",
   standalone: true,
-  imports: [Icon, Button, Form, Segments, Tabs, Chip, Card, Badge, Toast, Tooltip, Breadcrumbs, Datatable, DatatableCell, Dialog],
+  imports: [Icon, Button, Form, Segments, Slider, Tabs, Chip, Card, Badge, Toast, Tooltip, Breadcrumbs, Datatable, DatatableCell, Dialog],
   templateUrl: "./components.page.html",
 })
 export class ComponentsPage {
   view = "grid";
   density = "compact";
+  size = 16;
   tab = "interface";
   chipSelected = true;
   selectedRow = 1;

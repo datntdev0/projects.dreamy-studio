@@ -137,22 +137,6 @@ pub trait PipelineTarget: Send + Sync {
     fn deliver(&self, event: PipelineEvent) -> Result<(), String>;
 }
 
-pub struct PipelineSink<T: PipelineTarget> {
-    target: T,
-}
-
-impl<T: PipelineTarget> PipelineSink<T> {
-    pub fn new(target: T) -> Self {
-        Self { target }
-    }
-
-    pub fn emit(&self, event: PipelineEvent) {
-        if let Err(error) = self.target.deliver(event) {
-            eprintln!("cannot forward pipeline event: {error}");
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PipelineErrorCode {

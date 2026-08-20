@@ -14,24 +14,24 @@ pub enum LoadMode {
 pub enum LoadStep {
     Application,
     Backend,
-    Workspace,
     Llm,
+    Workspace,
 }
 
 impl LoadStep {
     pub const ALL: [LoadStep; 4] = [
         LoadStep::Application,
         LoadStep::Backend,
-        LoadStep::Workspace,
         LoadStep::Llm,
+        LoadStep::Workspace,
     ];
 
     pub fn as_str(self) -> &'static str {
         match self {
             LoadStep::Application => "application",
             LoadStep::Backend => "backend",
-            LoadStep::Workspace => "workspace",
             LoadStep::Llm => "llm",
+            LoadStep::Workspace => "workspace",
         }
     }
 }

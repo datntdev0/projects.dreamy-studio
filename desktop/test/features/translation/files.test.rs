@@ -39,10 +39,6 @@ fn guidelines_and_chapters_round_trip() {
             .unwrap(),
         Some(expected)
     );
-    assert_eq!(
-        files.list_chapters(7, TranslationTarget::Vi).unwrap(),
-        vec![CHAPTER]
-    );
 }
 
 #[test]
@@ -80,12 +76,6 @@ fn missing_translation_files_are_empty() {
             .read_chapter(7, TranslationTarget::En, CHAPTER)
             .unwrap(),
         None
-    );
-    assert!(
-        files
-            .list_chapters(7, TranslationTarget::En)
-            .unwrap()
-            .is_empty()
     );
 }
 

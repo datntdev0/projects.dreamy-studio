@@ -4,9 +4,7 @@ use std::sync::atomic::AtomicBool;
 
 #[derive(Debug, Clone)]
 pub struct TranslateJob {
-    pub novel_id: i64,
     pub target: String,
-    pub chapter_id: String,
     pub passage: Option<usize>,
     pub title: String,
     pub paragraphs: Vec<String>,

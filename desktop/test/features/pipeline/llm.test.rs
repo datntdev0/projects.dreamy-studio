@@ -10,9 +10,7 @@ const CODEX: &CliSpec = &crate::features::settings::llm::CLI_SPECS[2];
 
 fn job(passage: Option<usize>) -> TranslateJob {
     TranslateJob {
-        novel_id: 1,
         target: "VI".to_string(),
-        chapter_id: "0123456789abcdef0123456789abcdef".to_string(),
         passage,
         title: "Chapter one".to_string(),
         paragraphs: vec!["First".to_string(), "Second".to_string()],

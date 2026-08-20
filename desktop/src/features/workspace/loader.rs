@@ -338,8 +338,8 @@ impl LoadRun<'_> {
         match step {
             LoadStep::Application => self.start_application(),
             LoadStep::Backend => self.start_backend(),
-            LoadStep::Workspace => self.start_workspace(),
             LoadStep::Llm => self.check_llms(),
+            LoadStep::Workspace => self.start_workspace(),
         }
     }
 

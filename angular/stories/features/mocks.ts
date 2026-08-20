@@ -31,8 +31,8 @@ export const LOADING_STATE: LoadState = {
   steps: [
     { id: "application", state: "done" },
     { id: "backend", state: "running" },
-    { id: "workspace", state: "pending" },
     { id: "llm", state: "pending" },
+    { id: "workspace", state: "pending" },
   ],
   percent: 25,
   status: "running",

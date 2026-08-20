@@ -97,31 +97,6 @@ impl TranslationFiles {
         Ok(())
     }
 
-    pub fn list_chapters(
-        &self,
-        novel_id: i64,
-        target: TranslationTarget,
-    ) -> TranslationResult<Vec<String>> {
-        let dir = self.translation_dir(novel_id, target);
-        let entries = match fs::read_dir(dir) {
-            Ok(entries) => entries,
-            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(error) => return Err(error.into()),
-        };
-        let mut chapter_ids = Vec::new();
-        for entry in entries {
-            let entry = entry?;
-            if !entry.file_type()?.is_file() {
-                continue;
-            }
-            if let Some(chapter_id) = chapter_id_from_name(&entry.file_name().to_string_lossy()) {
-                chapter_ids.push(chapter_id);
-            }
-        }
-        chapter_ids.sort();
-        Ok(chapter_ids)
-    }
-
     fn novel_dir(&self, novel_id: i64) -> PathBuf {
         NovelFiles::new(self.root.clone()).novel_dir(novel_id)
     }
@@ -174,11 +149,6 @@ fn chapter_name(chapter_id: &str) -> TranslationResult<String> {
         return Err(TranslationError::invalid("chapter id is malformed"));
     }
     Ok(format!("chapter_{chapter_id}.json"))
-}
-
-fn chapter_id_from_name(name: &str) -> Option<String> {
-    let chapter_id = name.strip_prefix("chapter_")?.strip_suffix(".json")?;
-    is_chapter_id(chapter_id).then(|| chapter_id.to_string())
 }
 
 fn is_chapter_id(value: &str) -> bool {

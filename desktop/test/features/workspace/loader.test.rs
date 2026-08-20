@@ -304,10 +304,10 @@ fn cancel_triggers() -> Vec<LoadEvent> {
         done(LoadStep::Application),
         running(LoadStep::Backend),
         done(LoadStep::Backend),
-        running(LoadStep::Workspace),
-        done(LoadStep::Workspace),
         running(LoadStep::Llm),
         done(LoadStep::Llm),
+        running(LoadStep::Workspace),
+        done(LoadStep::Workspace),
         progress(100),
     ]
 }
@@ -423,11 +423,11 @@ fn events_follow_the_four_step_order_with_quarter_progress() {
         running(LoadStep::Backend),
         done(LoadStep::Backend),
         progress(50),
-        running(LoadStep::Workspace),
-        done(LoadStep::Workspace),
-        progress(75),
         running(LoadStep::Llm),
         done(LoadStep::Llm),
+        progress(75),
+        running(LoadStep::Workspace),
+        done(LoadStep::Workspace),
         progress(100),
     ];
     assert_eq!(events, expected);
@@ -470,7 +470,7 @@ fn loader_checking(fixture: &Fixture, llm: Arc<StubLlm>) -> WorkspaceLoader {
 }
 
 #[test]
-fn checks_the_llm_clis_once_after_the_workspace_is_prepared() {
+fn checks_the_llm_clis_once_right_after_the_backend_starts() {
     let fixture = fixture();
     let llm = StubLlm::new(true);
     let loader = loader_checking(&fixture, llm.clone());
@@ -491,19 +491,40 @@ fn checks_the_llm_clis_once_after_the_workspace_is_prepared() {
         })
         .cloned()
         .collect();
-    assert_eq!(finished.last(), Some(&done(LoadStep::Llm)));
+    assert_eq!(
+        finished,
+        vec![
+            done(LoadStep::Application),
+            done(LoadStep::Backend),
+            done(LoadStep::Llm),
+            done(LoadStep::Workspace),
+        ]
+    );
 }
 
 #[test]
-fn does_not_check_the_llm_clis_when_an_earlier_step_fails() {
+fn does_not_check_the_llm_clis_when_the_backend_fails() {
+    let fixture = fixture_with(StubBackend::failing(BackendError::Missing(
+        "absent".to_string(),
+    )));
+    let llm = StubLlm::new(true);
+    let loader = loader_checking(&fixture, llm.clone());
+    let request = LoadRequest::new(text(&fixture.folder), None);
+    let (result, _) = run_request_on(&loader, &fixture, request, None);
+    assert_eq!(result.unwrap_err().step, LoadStep::Backend);
+    assert_eq!(llm.calls(), 0);
+}
+
+#[test]
+fn checks_the_llm_clis_before_a_failing_workspace_step() {
     let fixture = fixture();
     let llm = StubLlm::new(true);
     let loader = loader_checking(&fixture, llm.clone());
     let missing = fixture.folder.join("missing");
     let request = LoadRequest::new(text(&missing), None);
     let (result, _) = run_request_on(&loader, &fixture, request, None);
-    assert!(result.is_err());
-    assert_eq!(llm.calls(), 0);
+    assert_eq!(result.unwrap_err().step, LoadStep::Workspace);
+    assert_eq!(llm.calls(), 1);
 }
 
 #[test]
@@ -599,7 +620,7 @@ fn folder_not_writable_stops_the_workspace_step_and_stops_the_backend() {
     assert!(error.detail.contains("access is denied"));
     assert_eq!(step_errors(&events), vec![LoadStep::Workspace]);
     assert_eq!(
-        events[7..],
+        events[10..],
         [
             running(LoadStep::Workspace),
             LoadEvent::Step {
@@ -692,10 +713,10 @@ fn cancel_keeps_application_db_once_it_exists() {
         done(LoadStep::Application),
         running(LoadStep::Backend),
         done(LoadStep::Backend),
-        running(LoadStep::Workspace),
-        done(LoadStep::Workspace),
         running(LoadStep::Llm),
         done(LoadStep::Llm),
+        running(LoadStep::Workspace),
+        done(LoadStep::Workspace),
         progress(100),
     ];
     for trigger in late {

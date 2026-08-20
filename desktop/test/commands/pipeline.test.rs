@@ -5,7 +5,6 @@ use crate::container::AppContainer;
 use crate::features::novel::models::NovelInput;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::models::PipelineEvent;
-use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
@@ -23,16 +22,13 @@ use chrono::Utc;
 use serde_json::json;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::thread;
 use std::time::Duration;
-use std::time::Instant;
 use tempfile::TempDir;
 
 struct Fixture {
     _dir: TempDir,
     session: WorkspaceSession,
     novels: NovelService,
-    translation: TranslationService,
 }
 
 #[derive(Default)]
@@ -73,7 +69,6 @@ fn fixture() -> Fixture {
         _dir: dir,
         session,
         novels: NovelService::new(),
-        translation: TranslationService::new(),
     }
 }
 
@@ -179,44 +174,6 @@ fn history_is_newest_first_and_clamps_the_limit() {
     assert_eq!(
         all.iter().map(|snapshot| snapshot.id).collect::<Vec<_>>(),
         vec![third, second, first]
-    );
-}
-
-#[test]
-fn start_forwards_started_and_finished_events() {
-    let fixture = fixture();
-    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
-    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(
-        Duration::from_millis(10),
-    )));
-    let recording = Arc::new(RecordingTarget::default());
-    let sink: Arc<dyn PipelineTarget> = recording.clone();
-
-    let started = start_pipeline(
-        &executor,
-        &fixture.translation,
-        &fixture.session,
-        novel_id,
-        "VI".to_string(),
-        vec![TaskRequest {
-            chapter_id,
-            passage: None,
-        }],
-        sink,
-    )
-    .unwrap();
-    let timeout = Instant::now() + Duration::from_secs(2);
-    while executor.is_running() && Instant::now() < timeout {
-        thread::sleep(Duration::from_millis(10));
-    }
-    let events = recording.events.lock().unwrap();
-
-    assert!(!executor.is_running());
-    assert!(
-        matches!(events.first(), Some(PipelineEvent::Started { pipeline }) if pipeline.id == started.id)
-    );
-    assert!(
-        matches!(events.last(), Some(PipelineEvent::Finished { pipeline }) if pipeline.status == PipelineStatus::Completed)
     );
 }
 

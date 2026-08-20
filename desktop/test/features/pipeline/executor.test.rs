@@ -123,11 +123,6 @@ fn completes_a_translation_and_emits_lifecycle_events() {
     let finished = target.wait_for_finished();
     assert_eq!(finished.status, PipelineStatus::Completed);
     assert_eq!(finished.done, 1);
-    let until = Instant::now() + Duration::from_secs(1);
-    while executor.is_running() && Instant::now() < until {
-        std::thread::sleep(Duration::from_millis(1));
-    }
-    assert!(!executor.is_running());
     let translated = fixture.translation.get(fixture.novel_id, "VI").unwrap();
     assert_eq!(
         translated.chapters[&fixture.chapter_id].paragraphs[0].text,
@@ -166,7 +161,6 @@ fn rejects_invalid_requests_without_claiming_the_executor() {
         )
         .unwrap_err();
     assert_eq!(error.code, PipelineErrorCode::InvalidInput);
-    assert!(!executor.is_running());
     assert!(!executor.cancel());
 }
 

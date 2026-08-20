@@ -23,7 +23,7 @@ import { RecentWorkspace } from "./workspace.models";
 
 const FAILURE_HOLD_MS = 1200;
 
-const STEP_ORDER: LoadStepId[] = ["application", "backend", "workspace", "llm"];
+const STEP_ORDER: LoadStepId[] = ["application", "backend", "llm", "workspace"];
 
 const STEP_NAME_KEYS: Record<LoadStepId, I18nKey> = {
   application: "loading.stepName.application",

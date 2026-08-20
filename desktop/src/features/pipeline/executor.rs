@@ -184,10 +184,6 @@ impl PipelineExecutor {
         self.cancel_runs(Some(pipeline_id))
     }
 
-    pub fn is_running(&self) -> bool {
-        !lock(&self.inner.active).is_empty()
-    }
-
     fn cancel_runs(&self, pipeline_id: Option<i64>) -> bool {
         let mut found = false;
         let mut waiting = Vec::new();
@@ -512,9 +508,7 @@ fn build_job(context: &WorkerContext, task: &PipelineTask) -> Result<TranslateJo
             .collect(),
     };
     Ok(TranslateJob {
-        novel_id: coordinator.novel_id,
         target: coordinator.target_name.clone(),
-        chapter_id: task.chapter_id.clone(),
         passage: task.passage,
         title: chapter.title,
         paragraphs,

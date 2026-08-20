@@ -1,6 +1,6 @@
 import { Component, effect, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { DirEntry } from "../project.models";
 import { ProjectService } from "../project.service";
 import { treeKey } from "../project.rules";
@@ -8,7 +8,7 @@ import { treeKey } from "../project.rules";
 @Component({
   selector: "app-project-tree",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, LanguagePipe],
   templateUrl: "./tree.component.html",
 })
 export class ProjectTree {

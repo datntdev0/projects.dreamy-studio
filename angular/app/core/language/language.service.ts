@@ -1,7 +1,7 @@
 import { Injectable, signal } from "@angular/core";
-import EN from "./lang.en.json";
-import { I18nDictionary, I18nKey, I18nParams, Language } from "./i18n.models";
-import VI from "./lang.vi.json";
+import EN from "./language.en.json";
+import { LanguageDictionary, LanguageKey, LanguageParams, Language } from "./language.models";
+import VI from "./language.vi.json";
 
 const STORAGE_KEY = "dreamy-studio.language";
 
@@ -14,13 +14,13 @@ const LOCALES: Record<Language, string> = {
   en: "en-US",
 };
 
-const DICTIONARIES: Record<Language, I18nDictionary> = {
+const DICTIONARIES: Record<Language, LanguageDictionary> = {
   vi: VI,
   en: EN,
 };
 
 @Injectable({ providedIn: "root" })
-export class I18nService {
+export class LanguageService {
   private readonly active = signal<Language>(DEFAULT_LANGUAGE);
 
   readonly language = this.active.asReadonly();
@@ -38,7 +38,7 @@ export class I18nService {
     return LOCALES[this.active()];
   }
 
-  translate(key: I18nKey, params?: I18nParams): string {
+  translate(key: LanguageKey, params?: LanguageParams): string {
     const template =
       DICTIONARIES[this.active()][key] ?? DICTIONARIES[DEFAULT_LANGUAGE][key] ?? key;
     return params ? interpolate(template, params) : template;
@@ -50,7 +50,7 @@ export class I18nService {
   }
 }
 
-function interpolate(template: string, params: I18nParams): string {
+function interpolate(template: string, params: LanguageParams): string {
   let result = template;
   for (const name of Object.keys(params)) {
     result = result.replaceAll(`{${name}}`, String(params[name]));

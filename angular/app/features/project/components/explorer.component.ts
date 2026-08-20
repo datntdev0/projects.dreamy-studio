@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { projectTabId } from "@layout/layout.models";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectLabels } from "../project.labels";
@@ -17,7 +17,7 @@ function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
 @Component({
   selector: "app-project-explorer",
   standalone: true,
-  imports: [Icon, I18nPipe, ProjectTree, ProjectThumb],
+  imports: [Icon, LanguagePipe, ProjectTree, ProjectThumb],
   templateUrl: "./explorer.component.html",
 })
 export class ProjectExplorer {
@@ -31,7 +31,7 @@ export class ProjectExplorer {
     void this.projects.ensureLoaded();
   }
 
-  statusKey(status: ProjectStatus): I18nKey {
+  statusKey(status: ProjectStatus): LanguageKey {
     return `project.status.${status}`;
   }
 

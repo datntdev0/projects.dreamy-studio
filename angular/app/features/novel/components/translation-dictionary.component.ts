@@ -2,9 +2,9 @@ import { Component, ElementRef, computed, effect, inject, input, signal, untrack
 import { Datatable, DatatableAction, DatatableCell, DatatableCellEdit, DatatableColumn, DatatableEmpty } from "@components/datatable";
 import { FormOption } from "@components/form";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { toNovelError } from "../novel.rules";
 import { DictChange, DictDraft, DictEntry, DictEntryType } from "../novel.translation.models";
@@ -18,11 +18,11 @@ type DraftField = "src" | "dst" | "note";
 @Component({
   selector: "app-novel-translation-dictionary",
   standalone: true,
-  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe],
+  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, LanguagePipe],
   templateUrl: "./translation-dictionary.component.html",
 })
 export class NovelTranslationDictionary {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly translation = inject(NovelTranslationService);
 
@@ -40,17 +40,17 @@ export class NovelTranslationDictionary {
     if (this.isDraft(row)) {
       return [];
     }
-    return [{ key: "delete", label: this.i18n.translate("novel.translation.dict.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) }];
+    return [{ key: "delete", label: this.languageService.translate("novel.translation.dict.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) }];
   };
 
   readonly canEditCell = (row: object): boolean => !this.isDraft(row);
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "src", label: this.i18n.translate("novel.translation.dict.col.src"), editable: true, width: "24%" },
-      { key: "dst", label: this.i18n.translate("novel.translation.dict.col.dst"), editable: true, width: "24%" },
-      { key: "type", label: this.i18n.translate("novel.translation.dict.col.type"), editable: true, editor: "select", options: this.typeOptions(), width: "160px" },
-      { key: "note", label: this.i18n.translate("novel.translation.dict.col.note"), editable: true, ellipsis: true },
+      { key: "src", label: this.languageService.translate("novel.translation.dict.col.src"), editable: true, width: "24%" },
+      { key: "dst", label: this.languageService.translate("novel.translation.dict.col.dst"), editable: true, width: "24%" },
+      { key: "type", label: this.languageService.translate("novel.translation.dict.col.type"), editable: true, editor: "select", options: this.typeOptions(), width: "160px" },
+      { key: "note", label: this.languageService.translate("novel.translation.dict.col.note"), editable: true, ellipsis: true },
     ];
   }
 
@@ -67,7 +67,7 @@ export class NovelTranslationDictionary {
     return this.entryOf(row).id === DRAFT_ID;
   }
 
-  typeKey(type: DictEntryType): I18nKey {
+  typeKey(type: DictEntryType): LanguageKey {
     return DICT_TYPE_KEYS[type];
   }
 
@@ -104,7 +104,7 @@ export class NovelTranslationDictionary {
       return;
     }
     if (!draft.src.trim() || !draft.dst.trim()) {
-      this.toasts.show(this.i18n.translate("novel.translation.dict.required"), "warning");
+      this.toasts.show(this.languageService.translate("novel.translation.dict.required"), "warning");
       return;
     }
     try {
@@ -134,7 +134,7 @@ export class NovelTranslationDictionary {
     }
     const field = edit.key as DraftField;
     if ((field === "src" || field === "dst") && !value) {
-      this.toasts.show(this.i18n.translate("novel.translation.dict.emptyField"), "warning");
+      this.toasts.show(this.languageService.translate("novel.translation.dict.emptyField"), "warning");
       return;
     }
     if (value !== entry[field]) {
@@ -149,7 +149,7 @@ export class NovelTranslationDictionary {
   async remove(entry: DictEntry): Promise<void> {
     try {
       await this.translation.removeEntry(this.novelId(), entry.id);
-      this.toasts.show(this.i18n.translate("novel.translation.dict.deleted"), "success");
+      this.toasts.show(this.languageService.translate("novel.translation.dict.deleted"), "success");
     } catch (cause) {
       this.fail(cause);
     }
@@ -166,19 +166,19 @@ export class NovelTranslationDictionary {
     }
   }
 
-  private announce(change: DictChange, plain: I18nKey, flagged: I18nKey): void {
-    const message = change.flagged > 0 ? this.i18n.translate(flagged, { count: change.flagged }) : this.i18n.translate(plain);
+  private announce(change: DictChange, plain: LanguageKey, flagged: LanguageKey): void {
+    const message = change.flagged > 0 ? this.languageService.translate(flagged, { count: change.flagged }) : this.languageService.translate(plain);
     this.toasts.show(message, change.flagged > 0 ? "warning" : "success");
   }
 
   private fail(cause: unknown): void {
     const error = toNovelError(cause);
     if (error.code === "dictionary_duplicate") {
-      this.toasts.show(this.i18n.translate("novel.error.dictionaryDuplicate"), "warning");
+      this.toasts.show(this.languageService.translate("novel.error.dictionaryDuplicate"), "warning");
       return;
     }
     const detail = error.detail;
-    this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
   }
 
   private buildAll(): DictEntry[] {
@@ -197,7 +197,7 @@ export class NovelTranslationDictionary {
   private typeOptions(): FormOption[] {
     const options: FormOption[] = [];
     for (const type of this.types) {
-      options.push({ value: type, label: this.i18n.translate(DICT_TYPE_KEYS[type]) });
+      options.push({ value: type, label: this.languageService.translate(DICT_TYPE_KEYS[type]) });
     }
     return options;
   }

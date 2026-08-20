@@ -3,8 +3,8 @@ import { Router } from "@angular/router";
 import { Channel } from "@tauri-apps/api/core";
 import { DesktopIpcError } from "@app/core/desktop/desktop-ipc-error";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguageService } from "@app/core/language/language.service";
 import { AppInfo } from "./workspace.models";
 import { CancelOutcome } from "./workspace.models";
 import { CurrentWorkspace } from "./workspace.models";
@@ -25,14 +25,14 @@ const FAILURE_HOLD_MS = 1200;
 
 const STEP_ORDER: LoadStepId[] = ["application", "backend", "llm", "workspace"];
 
-const STEP_NAME_KEYS: Record<LoadStepId, I18nKey> = {
+const STEP_NAME_KEYS: Record<LoadStepId, LanguageKey> = {
   application: "loading.stepName.application",
   backend: "loading.stepName.backend",
   workspace: "loading.stepName.workspace",
   llm: "loading.stepName.llm",
 };
 
-const ERROR_CAUSE_KEYS: Record<LoadErrorCode, I18nKey> = {
+const ERROR_CAUSE_KEYS: Record<LoadErrorCode, LanguageKey> = {
   folder_missing: "loading.cause.folder_missing",
   folder_not_directory: "loading.cause.folder_not_directory",
   folder_not_readable: "loading.cause.folder_not_readable",
@@ -129,7 +129,7 @@ function toLoadError(error: unknown, fallbackStep: LoadStepId): LoadError {
 export class WorkspaceService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly router = inject(Router);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly opened = signal<CurrentWorkspace | null>(null);
   private previous: CurrentWorkspace | null = null;
   private origin: LoadOrigin = "splash";
@@ -216,9 +216,9 @@ export class WorkspaceService {
   private describeLoadError(error: LoadError): string {
     const showDetail =
       error.detail !== "" && !CODES_WITHOUT_DETAIL.includes(error.code);
-    return this.i18n.translate("loading.error", {
-      step: this.i18n.translate(STEP_NAME_KEYS[error.step]),
-      cause: this.i18n.translate(ERROR_CAUSE_KEYS[error.code]),
+    return this.languageService.translate("loading.error", {
+      step: this.languageService.translate(STEP_NAME_KEYS[error.step]),
+      cause: this.languageService.translate(ERROR_CAUSE_KEYS[error.code]),
       suffix: showDetail ? ` (${error.detail})` : "",
     });
   }

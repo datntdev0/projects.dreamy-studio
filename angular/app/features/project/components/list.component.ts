@@ -1,7 +1,7 @@
 import { Component, HostListener, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectConfirmService } from "../project.confirm.service";
@@ -22,7 +22,7 @@ function isField(target: EventTarget | null): boolean {
 @Component({
   selector: "app-project-list",
   standalone: true,
-  imports: [Icon, I18nPipe, ProjectThumb],
+  imports: [Icon, LanguagePipe, ProjectThumb],
   templateUrl: "./list.component.html",
 })
 export class ProjectList {
@@ -52,11 +52,11 @@ export class ProjectList {
     this.projects.setView(view);
   }
 
-  templateKey(id: ProjectTemplateId): I18nKey {
+  templateKey(id: ProjectTemplateId): LanguageKey {
     return this.labels.templateKey(id);
   }
 
-  statusKey(status: ProjectStatus): I18nKey {
+  statusKey(status: ProjectStatus): LanguageKey {
     return `project.status.${status}`;
   }
 

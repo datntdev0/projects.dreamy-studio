@@ -6,6 +6,6 @@
     "types": [],
     "composite": true,
   },
-  "include": ["**/*.ts", "app/core/i18n/*.json"],
+  "include": ["**/*.ts", "app/core/language/*.json"],
   "exclude": ["**/*.spec.ts", "stories/**"]
 }

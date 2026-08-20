@@ -1,8 +1,8 @@
 import { Injectable, Type, inject } from "@angular/core";
 import { DialogItem } from "@app/core/dialog/dialog.models";
 import { DialogService } from "@app/core/dialog/dialog.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
 import { LibraryImageConfirmThumb } from "./components/image-confirm-thumb.component";
@@ -17,11 +17,11 @@ import { LibraryVideoService } from "./library.videos.service";
 const IMAGE_LIMIT = 8;
 
 interface AssetKeys {
-  title: [I18nKey, I18nKey];
-  confirm: [I18nKey, I18nKey];
-  toast: [I18nKey, I18nKey];
-  close: I18nKey;
-  warning: I18nKey;
+  title: [LanguageKey, LanguageKey];
+  confirm: [LanguageKey, LanguageKey];
+  toast: [LanguageKey, LanguageKey];
+  close: LanguageKey;
+  warning: LanguageKey;
 }
 
 const IMAGE_KEYS: AssetKeys = {
@@ -59,7 +59,7 @@ const PROMPT_KEYS: AssetKeys = {
 @Injectable({ providedIn: "root" })
 export class LibraryConfirmService {
   private readonly dialogs = inject(DialogService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly tabs = inject(TabsService);
   private readonly library = inject(LibraryService);
@@ -75,12 +75,12 @@ export class LibraryConfirmService {
     }
     const total = sumCounts(collection.counts);
     return this.dialogs.ask({
-      title: this.i18n.translate("library.delete.title"),
-      eyebrow: this.i18n.translate("library.cap"),
-      closeLabel: this.i18n.translate("library.delete.close"),
-      message: this.i18n.translate("library.delete.question", { name: collection.name }),
-      warning: this.i18n.translate(total ? "library.delete.warning" : "library.delete.empty", { count: total }),
-      confirmLabel: this.i18n.translate("library.delete.confirm"),
+      title: this.languageService.translate("library.delete.title"),
+      eyebrow: this.languageService.translate("library.cap"),
+      closeLabel: this.languageService.translate("library.delete.close"),
+      message: this.languageService.translate("library.delete.question", { name: collection.name }),
+      warning: this.languageService.translate(total ? "library.delete.warning" : "library.delete.empty", { count: total }),
+      confirmLabel: this.languageService.translate("library.delete.confirm"),
       confirmIcon: "trash",
       onConfirm: this.removeCollection.bind(this, id),
     });
@@ -96,7 +96,7 @@ export class LibraryConfirmService {
 
   deleteSounds(ids: number[]): Promise<boolean> {
     const picked = new Set(ids);
-    const kind = this.i18n.translate("library.kind.sound");
+    const kind = this.languageService.translate("library.kind.sound");
     const rows = this.sounds.items().filter((sound) => picked.has(sound.id));
     const items = rows.map((sound): DialogItem => ({ name: sound.name, meta: `${kind} · ${formatBytes(sound.size)}`, icon: "music" }));
     return this.askAssets(SOUND_KEYS, ids, items, this.sounds.remove.bind(this.sounds, ids), {});
@@ -104,7 +104,7 @@ export class LibraryConfirmService {
 
   deleteVideos(ids: number[]): Promise<boolean> {
     const picked = new Set(ids);
-    const kind = this.i18n.translate("library.kind.video");
+    const kind = this.languageService.translate("library.kind.video");
     const rows = this.videos.items().filter((video) => picked.has(video.id));
     const items = rows.map((video): DialogItem => ({ name: video.name, meta: `${kind} · ${formatBytes(video.size)}`, icon: "film" }));
     return this.askAssets(VIDEO_KEYS, ids, items, this.videos.remove.bind(this.videos, ids), {});
@@ -112,7 +112,7 @@ export class LibraryConfirmService {
 
   deletePrompts(ids: number[]): Promise<boolean> {
     const picked = new Set(ids);
-    const kind = this.i18n.translate("library.prompt.title");
+    const kind = this.languageService.translate("library.prompt.title");
     const rows = this.prompts.items().filter((prompt) => picked.has(prompt.id));
     const items = rows.map((prompt): DialogItem => ({ name: prompt.name, meta: `${kind} · ${prompt.size}`, icon: "prompt" }));
     return this.askAssets(PROMPT_KEYS, ids, items, this.prompts.remove.bind(this.prompts, ids), {});
@@ -123,12 +123,12 @@ export class LibraryConfirmService {
     const row = this.library.tags().find((entry) => entry.tag === tag);
     const count = row ? sumCounts(row.counts) : 0;
     return this.dialogs.ask({
-      title: this.i18n.translate(merge ? "library.tag.mergeTitle" : "library.tag.deleteTitle"),
-      eyebrow: this.i18n.translate("library.cap"),
-      closeLabel: this.i18n.translate("library.tag.confirmClose"),
-      message: this.i18n.translate(merge ? "library.tag.mergeQuestion" : "library.tag.deleteQuestion", { tag, target }),
-      warning: this.i18n.translate(merge ? "library.tag.mergeWarning" : "library.tag.deleteWarning", { count, tag, target }),
-      confirmLabel: this.i18n.translate(merge ? "library.tag.merge" : "library.tag.delete"),
+      title: this.languageService.translate(merge ? "library.tag.mergeTitle" : "library.tag.deleteTitle"),
+      eyebrow: this.languageService.translate("library.cap"),
+      closeLabel: this.languageService.translate("library.tag.confirmClose"),
+      message: this.languageService.translate(merge ? "library.tag.mergeQuestion" : "library.tag.deleteQuestion", { tag, target }),
+      warning: this.languageService.translate(merge ? "library.tag.mergeWarning" : "library.tag.deleteWarning", { count, tag, target }),
+      confirmLabel: this.languageService.translate(merge ? "library.tag.merge" : "library.tag.delete"),
       confirmIcon: merge ? undefined : "trash",
       tone: merge ? "primary" : "danger",
       onConfirm: this.applyTag.bind(this, kind, tag, target),
@@ -142,15 +142,15 @@ export class LibraryConfirmService {
     const single = ids.length === 1 ? 0 : 1;
     const hidden = extra.itemLimit === undefined ? 0 : Math.max(0, items.length - extra.itemLimit);
     return this.dialogs.ask({
-      title: this.i18n.translate(keys.title[single], { count: ids.length }),
-      eyebrow: this.i18n.translate("library.cap"),
-      closeLabel: this.i18n.translate(keys.close),
+      title: this.languageService.translate(keys.title[single], { count: ids.length }),
+      eyebrow: this.languageService.translate("library.cap"),
+      closeLabel: this.languageService.translate(keys.close),
       items,
       thumb: extra.thumb,
       itemLimit: extra.itemLimit,
-      moreLabel: hidden > 0 ? this.i18n.translate("library.imageDelete.more", { count: hidden }) : undefined,
-      warning: this.i18n.translate(keys.warning),
-      confirmLabel: this.i18n.translate(keys.confirm[single], { count: ids.length }),
+      moreLabel: hidden > 0 ? this.languageService.translate("library.imageDelete.more", { count: hidden }) : undefined,
+      warning: this.languageService.translate(keys.warning),
+      confirmLabel: this.languageService.translate(keys.confirm[single], { count: ids.length }),
       confirmIcon: "trash",
       onConfirm: this.removeAssets.bind(this, keys, items, remove),
     });
@@ -164,7 +164,7 @@ export class LibraryConfirmService {
       throw this.failure(cause);
     }
     const name = items[0]?.name ?? "";
-    this.toasts.show(this.i18n.translate(keys.toast[count === 1 ? 0 : 1], { name, count }));
+    this.toasts.show(this.languageService.translate(keys.toast[count === 1 ? 0 : 1], { name, count }));
   }
 
   private async removeCollection(id: number): Promise<void> {
@@ -189,6 +189,6 @@ export class LibraryConfirmService {
   }
 
   private failure(cause: unknown): Error {
-    return new Error(this.i18n.translate(libraryErrorKey(cause) as I18nKey));
+    return new Error(this.languageService.translate(libraryErrorKey(cause) as LanguageKey));
   }
 }

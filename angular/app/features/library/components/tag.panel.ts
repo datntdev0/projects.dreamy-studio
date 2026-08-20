@@ -1,12 +1,12 @@
 import { Component, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { LibraryConfirmService } from "../library.confirm.service";
 import { LibraryService } from "../library.service";
 import { LIBRARY_KINDS, LibraryKind, LibraryTag } from "../library.models";
 import { normalizeTag, sumCounts } from "../library.rules";
 
-@Component({ selector: "app-library-tag-panel", standalone: true, imports: [Icon, I18nPipe], templateUrl: "./tag.panel.html", host: { "data-testid": "library-tag-panel" } })
+@Component({ selector: "app-library-tag-panel", standalone: true, imports: [Icon, LanguagePipe], templateUrl: "./tag.panel.html", host: { "data-testid": "library-tag-panel" } })
 export class LibraryTagPanel {
   readonly tag = input.required<string>();
   readonly library = inject(LibraryService);

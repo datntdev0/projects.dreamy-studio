@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from "@angular/core";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
-import { Language } from "@app/core/i18n/i18n.models";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { Language } from "@app/core/language/language.models";
+import { LanguageService } from "@app/core/language/language.service";
 import { Theme } from "@app/core/theme/theme.models";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { ToastService } from "@app/core/toast/toast.service";
@@ -20,7 +20,7 @@ function clampLimit(value: number | undefined, max: number, fallback: number): n
 @Injectable({ providedIn: "root" })
 export class SettingsService {
   private readonly ipc = inject(DesktopIpcService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly themes = inject(ThemeService);
   private readonly toasts = inject(ToastService);
   private writes: Promise<void> = Promise.resolve();
@@ -60,7 +60,7 @@ export class SettingsService {
   }
 
   setLanguage(language: Language): void {
-    this.i18n.setLanguage(language);
+    this.languageService.setLanguage(language);
     this.persistGeneral();
   }
 
@@ -88,13 +88,13 @@ export class SettingsService {
     try {
       await this.ipc.invoke<void>("settings_folder_open", { target });
     } catch {
-      this.toasts.show(this.i18n.translate("settings.general.openFailed"), "danger");
+      this.toasts.show(this.languageService.translate("settings.general.openFailed"), "danger");
     }
   }
 
   private applyGeneral(general: GeneralSettings): void {
     if (general.language) {
-      this.i18n.setLanguage(general.language);
+      this.languageService.setLanguage(general.language);
     }
     if (general.theme) {
       this.themes.setTheme(general.theme);
@@ -126,14 +126,14 @@ export class SettingsService {
 
   private async writeGeneral(): Promise<void> {
     const general: GeneralSettings = {
-      language: this.i18n.language(),
+      language: this.languageService.language(),
       theme: this.themes.theme(),
       pipelines: { maxPipelines: this.maxPipelines(), maxTasks: this.maxTasks() },
     };
     try {
       await this.ipc.invoke<GeneralSettings>("settings_general_save", { general });
     } catch {
-      this.toasts.show(this.i18n.translate("settings.general.saveFailed"), "danger");
+      this.toasts.show(this.languageService.translate("settings.general.saveFailed"), "danger");
     }
   }
 }

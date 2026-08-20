@@ -1,6 +1,6 @@
 import { Component, inject } from "@angular/core";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { Slider } from "@components/slider";
 import { ReaderFont } from "../novel.models";
 import { ReaderPaper } from "../novel.models";
@@ -10,7 +10,7 @@ import { formatCount } from "../novel.rules";
 
 interface DisplayOption<T> {
   value: T;
-  label: I18nKey;
+  label: LanguageKey;
 }
 
 const FONT_OPTIONS: DisplayOption<ReaderFont>[] = [
@@ -40,7 +40,7 @@ const PAPER_OPTIONS: DisplayOption<ReaderPaper>[] = [
 @Component({
   selector: "app-novel-display-panel",
   standalone: true,
-  imports: [I18nPipe, Slider],
+  imports: [LanguagePipe, Slider],
   templateUrl: "./display.panel.html",
 })
 export class NovelDisplayPanel {

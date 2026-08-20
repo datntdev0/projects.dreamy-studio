@@ -1,9 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from "@angular/core";
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus } from "@app/features/novel/novel.translation.models";
 import { PipelineFilter } from "../pipeline.models";
@@ -14,11 +14,11 @@ import { PipelineStrip } from "./strip.component";
 @Component({
   selector: "app-pipeline-history",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, I18nPipe, PipelineStrip],
+  imports: [Datatable, DatatableCell, Icon, LanguagePipe, PipelineStrip],
   templateUrl: "./history.component.html",
 })
 export class PipelineHistory implements OnInit {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly pipelines = inject(PipelineService);
   readonly filters = PIPELINE_FILTERS;
@@ -33,10 +33,10 @@ export class PipelineHistory implements OnInit {
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "novel", label: this.i18n.translate("pipeline.col.novel"), ellipsis: true },
-      { key: "started", label: this.i18n.translate("pipeline.col.started"), width: "148px" },
-      { key: "status", label: this.i18n.translate("pipeline.col.status"), width: "112px" },
-      { key: "progress", label: this.i18n.translate("pipeline.col.progress"), width: "200px" },
+      { key: "novel", label: this.languageService.translate("pipeline.col.novel"), ellipsis: true },
+      { key: "started", label: this.languageService.translate("pipeline.col.started"), width: "148px" },
+      { key: "status", label: this.languageService.translate("pipeline.col.status"), width: "112px" },
+      { key: "progress", label: this.languageService.translate("pipeline.col.progress"), width: "200px" },
     ];
   }
 
@@ -52,7 +52,7 @@ export class PipelineHistory implements OnInit {
     return this.pipelines.novelName(pipeline.novelId);
   }
 
-  kindOf(pipeline: PipelineSnapshot): I18nKey | null {
+  kindOf(pipeline: PipelineSnapshot): LanguageKey | null {
     return kindKey(pipeline.kind);
   }
 
@@ -76,7 +76,7 @@ export class PipelineHistory implements OnInit {
     return formatDuration(durationMs(pipeline));
   }
 
-  statusKey(status: PipelineStatus): I18nKey {
+  statusKey(status: PipelineStatus): LanguageKey {
     return PIPELINE_STATUS_KEYS[status];
   }
 
@@ -84,7 +84,7 @@ export class PipelineHistory implements OnInit {
     return PIPELINE_STATUS_BADGES[status];
   }
 
-  filterKey(filter: PipelineFilter): I18nKey {
+  filterKey(filter: PipelineFilter): LanguageKey {
     return PIPELINE_FILTER_KEYS[filter];
   }
 

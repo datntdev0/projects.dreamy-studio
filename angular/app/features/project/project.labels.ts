@@ -1,6 +1,6 @@
 import { Injectable, inject } from "@angular/core";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguageService } from "@app/core/language/language.service";
 import { NovelService } from "../novel/novel.service";
 import { displayName, formatMonthDay, formatStamp } from "../novel/novel.rules";
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "./project.models";
@@ -8,15 +8,15 @@ import { templateIcon } from "./project.rules";
 
 @Injectable({ providedIn: "root" })
 export class ProjectLabels {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly novels = inject(NovelService);
 
   novelNameOf(project: ProjectSummary): string {
     if (project.novelId === null) {
-      return this.i18n.translate("project.source.none");
+      return this.languageService.translate("project.source.none");
     }
     const novel = this.novels.novelById(project.novelId);
-    return project.novelMissing || !novel ? this.i18n.translate("project.source.missing") : displayName(novel);
+    return project.novelMissing || !novel ? this.languageService.translate("project.source.missing") : displayName(novel);
   }
 
   versionOf(project: ProjectSummary): string {
@@ -24,7 +24,7 @@ export class ProjectLabels {
     if (project.novelMissing || !novel) {
       return "—";
     }
-    const kind = this.i18n.translate(project.srcKind === "translation" ? "project.source.translation" : "project.source.original");
+    const kind = this.languageService.translate(project.srcKind === "translation" ? "project.source.translation" : "project.source.original");
     return `${kind} ${project.srcLang ?? novel.lang}`;
   }
 
@@ -37,7 +37,7 @@ export class ProjectLabels {
     if (project.novelId === null || project.rangeFrom === null || project.rangeTo === null) {
       return "";
     }
-    return this.i18n.translate("project.range", { from: project.rangeFrom, to: project.rangeTo });
+    return this.languageService.translate("project.range", { from: project.rangeFrom, to: project.rangeTo });
   }
 
   sourceLine(project: ProjectSummary): string {
@@ -65,7 +65,7 @@ export class ProjectLabels {
     return templateIcon(template);
   }
 
-  templateKey(template: ProjectTemplateId): I18nKey {
+  templateKey(template: ProjectTemplateId): LanguageKey {
     return `project.template.${template}`;
   }
 
@@ -73,7 +73,7 @@ export class ProjectLabels {
     return project.archived ? "archived" : "active";
   }
 
-  statusKey(project: ProjectSummary): I18nKey {
+  statusKey(project: ProjectSummary): LanguageKey {
     return `project.status.${this.statusOf(project)}`;
   }
 }

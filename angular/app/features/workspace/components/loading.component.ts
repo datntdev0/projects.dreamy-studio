@@ -1,21 +1,21 @@
 import { Component, Input, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { WorkspaceService } from "../workspace.service";
 import { LoadMode } from "../workspace.models";
 import { LoadState } from "../workspace.models";
 import { LoadStepId } from "../workspace.models";
 
-const STEP_KEYS: Record<LoadStepId, I18nKey> = {
+const STEP_KEYS: Record<LoadStepId, LanguageKey> = {
   application: "loading.step.application",
   backend: "loading.step.backend",
   workspace: "loading.step.workspace",
   llm: "loading.step.llm",
 };
 
-const MODE_KEYS: Record<LoadMode, I18nKey> = {
+const MODE_KEYS: Record<LoadMode, LanguageKey> = {
   create: "loading.mode.create",
   open: "loading.mode.open",
 };
@@ -23,7 +23,7 @@ const MODE_KEYS: Record<LoadMode, I18nKey> = {
 @Component({
   selector: "app-workspace-loading",
   standalone: true,
-  imports: [Button, Icon, I18nPipe],
+  imports: [Button, Icon, LanguagePipe],
   templateUrl: "./loading.component.html",
   host: { "data-testid": "workspace-loading" },
 })
@@ -32,11 +32,11 @@ export class WorkspaceLoading {
 
   @Input({ required: true }) state!: LoadState;
 
-  modeKey(mode: LoadMode | null): I18nKey {
+  modeKey(mode: LoadMode | null): LanguageKey {
     return mode ? MODE_KEYS[mode] : "loading.mode.prepare";
   }
 
-  stepKey(id: LoadStepId): I18nKey {
+  stepKey(id: LoadStepId): LanguageKey {
     return STEP_KEYS[id];
   }
 

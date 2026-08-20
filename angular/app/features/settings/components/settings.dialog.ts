@@ -1,7 +1,7 @@
 import { Component, computed, inject } from "@angular/core";
 import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { SettingsSection, SettingsSectionId } from "../settings.models";
 import { SETTINGS_SECTIONS } from "../settings.sections";
 import { SettingsService } from "../settings.service";
@@ -11,7 +11,7 @@ import { SettingsLlmComponent } from "./llm.component";
 @Component({
   selector: "app-settings-dialog",
   standalone: true,
-  imports: [Dialog, Icon, I18nPipe, SettingsGeneralComponent, SettingsLlmComponent],
+  imports: [Dialog, Icon, LanguagePipe, SettingsGeneralComponent, SettingsLlmComponent],
   templateUrl: "./settings.dialog.html",
   host: { "data-testid": "settings-dialog" },
 })

@@ -1,4 +1,4 @@
-import { I18nKey } from "@app/core/i18n/i18n.models";
+import { LanguageKey } from "@app/core/language/language.models";
 
 export type RailId = "projects" | "novels" | "library" | "distribution";
 
@@ -13,19 +13,19 @@ export type EditorTabKind = "home" | "novels" | "novel" | "translation" | "knowl
 export interface RailItem {
   id: RailId;
   icon: string;
-  labelKey: I18nKey;
+  labelKey: LanguageKey;
 }
 
 export interface RightTab {
   id: RightTabId;
-  labelKey: I18nKey;
+  labelKey: LanguageKey;
 }
 
 export interface EditorTab {
   id: string;
   kind: EditorTabKind;
   icon: string | null;
-  labelKey: I18nKey | null;
+  labelKey: LanguageKey | null;
   title: string;
   novelId: number | null;
   projectId: number | null;

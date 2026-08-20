@@ -2,8 +2,8 @@ import { Component, ElementRef, computed, effect, inject, signal, untracked, vie
 import { Dialog } from "@components/dialog";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { toNovelError } from "../novel.rules";
@@ -12,7 +12,7 @@ import { NovelService } from "../novel.service";
 @Component({
   selector: "app-novel-chapter-add-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe],
+  imports: [Button, Dialog, Icon, LanguagePipe],
   templateUrl: "./chapter-add.dialog.html",
   host: { "data-testid": "novel-chapter-add-dialog" },
 })
@@ -20,7 +20,7 @@ export class NovelChapterAddDialog {
   private readonly novels = inject(NovelService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly toasts = inject(ToastService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>("titleInput");
 
   readonly open = computed(this.buildOpen.bind(this));
@@ -50,10 +50,10 @@ export class NovelChapterAddDialog {
     try {
       const row = await this.novels.addChapter(novelId, this.title().trim());
       this.close();
-      this.toasts.show(this.i18n.translate("novel.toast.chapterAdded", { n: row.seq, title: row.title }));
+      this.toasts.show(this.languageService.translate("novel.toast.chapterAdded", { n: row.seq, title: row.title }));
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
     } finally {
       this.busy.set(false);
     }

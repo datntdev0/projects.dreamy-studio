@@ -3,8 +3,8 @@ import { Badge } from "@components/badge";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { Segments, SegmentOption } from "@components/segments";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService, isLanguage } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService, isLanguage } from "@app/core/language/language.service";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { SettingsService } from "@app/features/settings/settings.service";
 import { WorkspaceLoading } from "@app/features/workspace/components/loading.component";
@@ -21,18 +21,18 @@ const LANGUAGE_OPTIONS: SegmentOption[] = [
 @Component({
   selector: "app-splash-page",
   standalone: true,
-  imports: [Badge, Button, Icon, Segments, I18nPipe, RecentWorkspaceList, WorkspaceLoading],
+  imports: [Badge, Button, Icon, Segments, LanguagePipe, RecentWorkspaceList, WorkspaceLoading],
   templateUrl: "./splash.page.html",
 })
 export class SplashPage implements OnInit {
   private readonly workspace = inject(WorkspaceService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly themes = inject(ThemeService);
   private readonly settings = inject(SettingsService);
 
   readonly info = signal<AppInfo | null>(null);
   readonly recent = signal<RecentWorkspace[]>([]);
-  readonly language = this.i18n.language;
+  readonly language = this.languageService.language;
   readonly languageOptions = LANGUAGE_OPTIONS;
   readonly themeIcon = computed(() => this.themes.theme() === "dark" ? "sun" : "moon");
   readonly themeToggleKey = computed(() => this.themes.theme() === "dark" ? "theme.toLight" : "theme.toDark");

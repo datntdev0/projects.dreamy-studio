@@ -1,4 +1,4 @@
-import { I18nKey } from "@app/core/i18n/i18n.models";
+import { LanguageKey } from "@app/core/language/language.models";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
 import { PipelineCounts, PipelineFilter, PipelineKindMeta, PipelineLogEntry, PipelineLogKind, PipelineBar, PipelineLogLevel, PipelineTotals } from "./pipeline.models";
 
@@ -7,7 +7,7 @@ export const HISTORY_LIMIT = 50;
 
 export const PIPELINE_FILTERS: PipelineFilter[] = ["all", "queued", "running", "completed", "failed", "cancelled"];
 
-export const PIPELINE_FILTER_KEYS: Record<PipelineFilter, I18nKey> = {
+export const PIPELINE_FILTER_KEYS: Record<PipelineFilter, LanguageKey> = {
   all: "pipeline.filter.all",
   queued: "pipeline.status.queued",
   running: "pipeline.status.running",
@@ -16,7 +16,7 @@ export const PIPELINE_FILTER_KEYS: Record<PipelineFilter, I18nKey> = {
   cancelled: "pipeline.status.cancelled",
 };
 
-export const PIPELINE_STATUS_KEYS: Record<PipelineStatus, I18nKey> = {
+export const PIPELINE_STATUS_KEYS: Record<PipelineStatus, LanguageKey> = {
   queued: "pipeline.status.queued",
   running: "pipeline.status.running",
   completed: "pipeline.status.completed",
@@ -43,7 +43,7 @@ export const PIPELINE_FALLBACK_ICON = "activity";
 
 export const PIPELINE_FALLBACK_SIZE = 16;
 
-export const PIPELINE_LOG_KEYS: Record<PipelineLogKind, I18nKey> = {
+export const PIPELINE_LOG_KEYS: Record<PipelineLogKind, LanguageKey> = {
   started: "pipeline.log.started",
   taskStarted: "pipeline.log.taskStarted",
   taskRunning: "pipeline.log.taskRunning",
@@ -65,7 +65,7 @@ export function isActive(pipeline: PipelineSnapshot): boolean {
   return pipeline.status === "running" || pipeline.status === "queued";
 }
 
-export function kindKey(kind: string): I18nKey | null {
+export function kindKey(kind: string): LanguageKey | null {
   return PIPELINE_KINDS[kind]?.labelKey ?? null;
 }
 

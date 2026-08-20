@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from "@angular/core";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LlmCapability, LlmCliSettings, LlmCliView, LlmFeature, LlmFeatureSettings, LlmProbe, LlmProvider, LlmView } from "./settings.models";
 
@@ -34,7 +34,7 @@ function fresh(view: Omit<LlmCliView, "probe">): LlmProvider {
 @Injectable({ providedIn: "root" })
 export class LlmService {
   private readonly ipc = inject(DesktopIpcService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
 
   readonly providers = signal<LlmProvider[]>([]);
@@ -44,7 +44,7 @@ export class LlmService {
     try {
       this.apply(await this.ipc.invoke<LlmView>("llm_get"));
     } catch {
-      this.toasts.show(this.i18n.translate("settings.llm.loadFailed"), "danger");
+      this.toasts.show(this.languageService.translate("settings.llm.loadFailed"), "danger");
     }
   }
 
@@ -85,7 +85,7 @@ export class LlmService {
       await this.ipc.invoke<LlmView>("llm_feature_save", { feature: id, config });
     } catch {
       this.features.set(previous);
-      this.toasts.show(this.i18n.translate("settings.general.saveFailed"), "danger");
+      this.toasts.show(this.languageService.translate("settings.general.saveFailed"), "danger");
     }
   }
 
@@ -124,7 +124,7 @@ export class LlmService {
     try {
       await this.ipc.invoke<void>("llm_profile_open", { id });
     } catch {
-      this.toasts.show(this.i18n.translate("settings.general.openFailed"), "danger");
+      this.toasts.show(this.languageService.translate("settings.general.openFailed"), "danger");
     }
   }
 
@@ -135,9 +135,9 @@ export class LlmService {
     }
     try {
       await navigator.clipboard.writeText(provider.resolvedPath);
-      this.toasts.show(this.i18n.translate("settings.llm.copied"));
+      this.toasts.show(this.languageService.translate("settings.llm.copied"));
     } catch {
-      this.toasts.show(this.i18n.translate("settings.llm.copyFailed"), "warning");
+      this.toasts.show(this.languageService.translate("settings.llm.copyFailed"), "warning");
     }
   }
 
@@ -158,7 +158,7 @@ export class LlmService {
 
   private timeOf(ms: number): string {
     const date = ms > 0 ? new Date(ms) : new Date();
-    return date.toLocaleTimeString(this.i18n.locale());
+    return date.toLocaleTimeString(this.languageService.locale());
   }
 
   private patch(id: string, change: Partial<LlmProvider>): void {
@@ -227,7 +227,7 @@ export class LlmService {
       await this.ipc.invoke<LlmView>("llm_provider_save", { id, provider: settings });
       return true;
     } catch {
-      this.toasts.show(this.i18n.translate("settings.general.saveFailed"), "danger");
+      this.toasts.show(this.languageService.translate("settings.general.saveFailed"), "danger");
       return false;
     }
   }
@@ -238,6 +238,6 @@ export class LlmService {
 
   private describe(error: unknown): string {
     const cause = error instanceof Error ? (error as { cause?: unknown }).cause : error;
-    return typeof cause === "string" ? cause : this.i18n.translate("settings.llm.unknownError");
+    return typeof cause === "string" ? cause : this.languageService.translate("settings.llm.unknownError");
   }
 }

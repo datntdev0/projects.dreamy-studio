@@ -2,9 +2,9 @@ import { Component, computed, inject, signal } from "@angular/core";
 import { Badge } from "@components/badge";
 import { Icon } from "@components/icon";
 import { TabOption, Tabs } from "@components/tabs";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from "../llm.providers";
 import { LlmService, isReady } from "../llm.service";
 import { LlmCapability, LlmEffort, LlmFeature, LlmProvider } from "../settings.models";
@@ -13,13 +13,13 @@ type LlmTab = "cli" | "cloud" | "features";
 
 const LLM_TABS: LlmTab[] = ["cli", "cloud", "features"];
 
-const FEATURE_NAME_KEYS: Record<LlmCapability, I18nKey> = {
+const FEATURE_NAME_KEYS: Record<LlmCapability, LanguageKey> = {
   translation: "settings.llm.feature.translation",
   knowledge: "settings.llm.feature.knowledge",
   assistant: "settings.llm.feature.assistant",
 };
 
-const FEATURE_HINT_KEYS: Record<LlmCapability, I18nKey> = {
+const FEATURE_HINT_KEYS: Record<LlmCapability, LanguageKey> = {
   translation: "settings.llm.feature.translation.hint",
   knowledge: "settings.llm.feature.knowledge.hint",
   assistant: "settings.llm.feature.assistant.hint",
@@ -27,7 +27,7 @@ const FEATURE_HINT_KEYS: Record<LlmCapability, I18nKey> = {
 
 export interface EffortOption {
   value: LlmEffort | "";
-  key: I18nKey;
+  key: LanguageKey;
 }
 
 const EFFORT_OPTIONS: EffortOption[] = [
@@ -45,7 +45,7 @@ function toEffort(value: string): LlmEffort | null {
 type Tone = "default" | "primary" | "running" | "success" | "warning" | "danger" | "info";
 
 export interface LlmMessage {
-  key: I18nKey;
+  key: LanguageKey;
   tone: "ok" | "warn" | "mute";
   params?: Record<string, string | number>;
 }
@@ -53,13 +53,13 @@ export interface LlmMessage {
 @Component({
   selector: "app-settings-llm",
   standalone: true,
-  imports: [Badge, Icon, I18nPipe, Tabs],
+  imports: [Badge, Icon, LanguagePipe, Tabs],
   templateUrl: "./llm.component.html",
   host: { "data-testid": "settings-llm" },
 })
 export class SettingsLlmComponent {
   private readonly llm = inject(LlmService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly providers = this.llm.providers;
   readonly features = this.llm.features;
@@ -98,14 +98,14 @@ export class SettingsLlmComponent {
     return tones[provider.status];
   }
 
-  statusKey(provider: LlmProvider): I18nKey {
+  statusKey(provider: LlmProvider): LanguageKey {
     if (!provider.found) {
       return provider.status === "checking" ? "settings.llm.status.checking" : "settings.llm.status.notInstalled";
     }
     if (provider.signedIn === false) {
       return "settings.llm.status.notSignedIn";
     }
-    const keys: Record<string, I18nKey> = {
+    const keys: Record<string, LanguageKey> = {
       none: "settings.llm.status.notChecked",
       checking: "settings.llm.status.checking",
       ok: "settings.llm.status.ready",
@@ -160,11 +160,11 @@ export class SettingsLlmComponent {
     void this.llm.openProfile(provider.id);
   }
 
-  featureNameKey(feature: LlmFeature): I18nKey {
+  featureNameKey(feature: LlmFeature): LanguageKey {
     return FEATURE_NAME_KEYS[feature.id];
   }
 
-  featureHintKey(feature: LlmFeature): I18nKey {
+  featureHintKey(feature: LlmFeature): LanguageKey {
     return FEATURE_HINT_KEYS[feature.id];
   }
 
@@ -208,9 +208,9 @@ export class SettingsLlmComponent {
 
   private buildTabOptions(): TabOption[] {
     return [
-      { value: "cli", label: this.i18n.translate("settings.llm.cli"), icon: "terminal" },
-      { value: "cloud", label: this.i18n.translate("settings.llm.cloud"), icon: "cloud" },
-      { value: "features", label: this.i18n.translate("settings.llm.features"), icon: "spark" },
+      { value: "cli", label: this.languageService.translate("settings.llm.cli"), icon: "terminal" },
+      { value: "cloud", label: this.languageService.translate("settings.llm.cloud"), icon: "cloud" },
+      { value: "features", label: this.languageService.translate("settings.llm.features"), icon: "spark" },
     ];
   }
 }

@@ -2,9 +2,9 @@ import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@ang
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetRef } from "../library.models";
@@ -28,7 +28,7 @@ function toAssetRef(sound: LibrarySound): AssetRef {
 @Component({
   selector: "app-library-sounds",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibrarySoundMedia],
+  imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibrarySoundMedia],
   templateUrl: "./sounds.component.html",
   host: { "data-testid": "library-sounds" },
 })
@@ -36,7 +36,7 @@ export class LibrarySounds implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
   readonly sounds = inject(LibrarySoundService);
   readonly library = inject(LibraryService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
   readonly dragging = signal(false);
@@ -113,7 +113,7 @@ export class LibrarySounds implements OnInit, OnDestroy {
     return this.library.filterCollection() === "none";
   }
 
-  unfiledKey(): I18nKey {
+  unfiledKey(): LanguageKey {
     return "library.explorer.filters.unfiled";
   }
 
@@ -137,10 +137,10 @@ export class LibrarySounds implements OnInit, OnDestroy {
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "name", label: this.i18n.translate("library.image.column.name") },
-      { key: "spec", label: this.i18n.translate("library.sound.column.spec"), width: "120px" },
-      { key: "size", label: this.i18n.translate("library.image.column.size"), align: "right", width: "110px" },
-      { key: "collection", label: this.i18n.translate("library.image.column.collection"), width: "180px", ellipsis: true },
+      { key: "name", label: this.languageService.translate("library.image.column.name") },
+      { key: "spec", label: this.languageService.translate("library.sound.column.spec"), width: "120px" },
+      { key: "size", label: this.languageService.translate("library.image.column.size"), align: "right", width: "110px" },
+      { key: "collection", label: this.languageService.translate("library.image.column.collection"), width: "180px", ellipsis: true },
     ];
   }
 

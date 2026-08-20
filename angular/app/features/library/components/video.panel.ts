@@ -1,8 +1,8 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -15,7 +15,7 @@ import { LibraryVideoService } from "../library.videos.service";
 
 const MAX_TAGS = 12;
 
-const RIGHTS_KEYS: Record<AssetRights, I18nKey> = {
+const RIGHTS_KEYS: Record<AssetRights, LanguageKey> = {
   own: "library.rights.own",
   licensed: "library.rights.licensed",
   free: "library.rights.free",
@@ -25,7 +25,7 @@ const RIGHTS_KEYS: Record<AssetRights, I18nKey> = {
 @Component({
   selector: "app-library-video-panel",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, LanguagePipe],
   templateUrl: "./video.panel.html",
   host: { "data-testid": "library-video-panel" },
 })
@@ -35,12 +35,12 @@ export class LibraryVideoPanel {
   readonly library = inject(LibraryService);
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   readonly rightOptions = ASSET_RIGHTS;
   readonly video = computed(this.resolveVideo.bind(this));
 
-  rightKey(right: AssetRights): I18nKey {
+  rightKey(right: AssetRights): LanguageKey {
     return RIGHTS_KEYS[right];
   }
 
@@ -64,7 +64,7 @@ export class LibraryVideoPanel {
     return formatIsoMinute(video.createdAt);
   }
 
-  originKey(video: LibraryVideo): I18nKey {
+  originKey(video: LibraryVideo): LanguageKey {
     return video.origin === "app" ? "library.origin.app" : "library.origin.upload";
   }
 
@@ -100,11 +100,11 @@ export class LibraryVideoPanel {
       return;
     }
     if (video.tags.includes(tag)) {
-      this.toasts.show(this.i18n.translate("library.video.toast.tagExists", { tag }), "warning");
+      this.toasts.show(this.languageService.translate("library.video.toast.tagExists", { tag }), "warning");
       return;
     }
     if (video.tags.length >= MAX_TAGS) {
-      this.toasts.show(this.i18n.translate("library.video.toast.tagLimit"), "warning");
+      this.toasts.show(this.languageService.translate("library.video.toast.tagLimit"), "warning");
       return;
     }
     field.value = "";
@@ -138,9 +138,9 @@ export class LibraryVideoPanel {
     try {
       const updated = await this.videos.update(video.id, { name });
       if (updated.name !== name) {
-        this.toasts.show(this.i18n.translate("library.video.toast.renamed", { name: updated.name }), "warning");
+        this.toasts.show(this.languageService.translate("library.video.toast.renamed", { name: updated.name }), "warning");
       } else {
-        this.toasts.show(this.i18n.translate("library.video.toast.updated"));
+        this.toasts.show(this.languageService.translate("library.video.toast.updated"));
       }
     } catch (cause) {
       this.notifyFailure(cause);
@@ -150,14 +150,14 @@ export class LibraryVideoPanel {
   private async save(video: LibraryVideo, patch: AssetPatch): Promise<void> {
     try {
       await this.videos.update(video.id, patch);
-      this.toasts.show(this.i18n.translate("library.video.toast.updated"));
+      this.toasts.show(this.languageService.translate("library.video.toast.updated"));
     } catch (cause) {
       this.notifyFailure(cause);
     }
   }
 
   private notifyFailure(cause: unknown): void {
-    this.toasts.show(this.i18n.translate(libraryErrorKey(cause) as I18nKey), "danger");
+    this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
   }
 
   private resolveVideo(): LibraryVideo | null {

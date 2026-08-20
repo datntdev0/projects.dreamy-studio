@@ -1,8 +1,8 @@
 import { Component, ElementRef, effect, inject, signal, untracked, viewChild } from "@angular/core";
 import { Dialog } from "@components/dialog";
 import { Button } from "@components/button";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelFormValue } from "../novel.models";
@@ -27,7 +27,7 @@ const EMPTY_FORM: NovelFormValue = {
 @Component({
   selector: "app-novel-create-dialog",
   standalone: true,
-  imports: [Button, Dialog, I18nPipe],
+  imports: [Button, Dialog, LanguagePipe],
   templateUrl: "./create.dialog.html",
   host: { "data-testid": "novel-create-dialog" },
 })
@@ -35,7 +35,7 @@ export class NovelCreateDialog {
   private readonly novels = inject(NovelService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly toasts = inject(ToastService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>("titleInput");
 
   readonly open = this.dialogs.createOpen;
@@ -84,10 +84,10 @@ export class NovelCreateDialog {
       const created = await this.novels.create(toNovelInput(value));
       this.novels.select(created.id);
       this.close();
-      this.toasts.show(this.i18n.translate("novel.toast.created", { title: created.title }));
+      this.toasts.show(this.languageService.translate("novel.toast.created", { title: created.title }));
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
     } finally {
       this.busy.set(false);
     }

@@ -3,10 +3,10 @@ import { Button } from "@components/button";
 import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
 import { TabsService } from "@layout/tabs.service";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
+import { LanguageKey } from "@app/core/language/language.models";
 import { NovelService } from "@app/features/novel/novel.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
 import { ProjectInput, ProjectTemplateId } from "../project.models";
@@ -27,7 +27,7 @@ const EMPTY_FORM: CreateForm = { name: "", template: "audiobook", novelId: null,
 @Component({
   selector: "app-project-create-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe],
+  imports: [Button, Dialog, Icon, LanguagePipe],
   templateUrl: "./create.dialog.html",
   host: { "data-testid": "project-create-dialog" },
 })
@@ -37,14 +37,14 @@ export class ProjectCreateDialog {
   private readonly dialogs = inject(ProjectDialogsService);
   private readonly tabs = inject(TabsService);
   private readonly toasts = inject(ToastService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>("nameInput");
 
   readonly open = this.dialogs.createOpen;
   readonly form = signal<CreateForm>({ ...EMPTY_FORM });
   readonly busy = signal(false);
-  readonly nameError = signal<I18nKey | null>(null);
-  readonly rangeError = signal<I18nKey | null>(null);
+  readonly nameError = signal<LanguageKey | null>(null);
+  readonly rangeError = signal<LanguageKey | null>(null);
   readonly formError = signal("");
   readonly templates = PROJECT_TEMPLATES;
   readonly selectedNovel = computed(this.buildSelectedNovel.bind(this));
@@ -115,7 +115,7 @@ export class ProjectCreateDialog {
       this.tabs.openProjects();
       this.projects.selectOnly(created.id);
       this.close();
-      this.toasts.show(this.i18n.translate("project.create.toast", { name: created.name }));
+      this.toasts.show(this.languageService.translate("project.create.toast", { name: created.name }));
     } catch (cause) {
       this.applyBackendError(cause);
     } finally {
@@ -154,11 +154,11 @@ export class ProjectCreateDialog {
       return;
     }
     if (code === "novel_not_found") {
-      this.formError.set(this.i18n.translate("project.create.novelMissing"));
+      this.formError.set(this.languageService.translate("project.create.novelMissing"));
       return;
     }
     const error = toProjectError(cause);
-    this.formError.set(this.i18n.translate("project.error.generic", { detail: error.detail }));
+    this.formError.set(this.languageService.translate("project.error.generic", { detail: error.detail }));
   }
 
   private syncOpen(): void {

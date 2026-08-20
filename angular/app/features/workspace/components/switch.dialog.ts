@@ -2,8 +2,8 @@ import { Component, effect, inject, signal } from "@angular/core";
 import { Dialog } from "@components/dialog";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { WorkspaceService } from "../workspace.service";
 import { LoadRequest } from "../workspace.models";
 import { RecentWorkspace } from "../workspace.models";
@@ -12,13 +12,13 @@ import { RecentWorkspaceList } from "./recent.component";
 @Component({
   selector: "app-switch-workspace-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe, RecentWorkspaceList],
+  imports: [Button, Dialog, Icon, LanguagePipe, RecentWorkspaceList],
   templateUrl: "./switch.dialog.html",
   host: { "data-testid": "switch-workspace-dialog" },
 })
 export class SwitchWorkspaceDialog {
   private readonly workspace = inject(WorkspaceService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly open = this.workspace.switchDialogOpen;
   readonly rows = signal<RecentWorkspace[]>([]);
@@ -59,7 +59,7 @@ export class SwitchWorkspaceDialog {
 
   private async switchToPicked(request: LoadRequest): Promise<void> {
     if (await this.isOpenWorkspace(request.path)) {
-      this.notice.set(this.i18n.translate("switch.alreadyOpen"));
+      this.notice.set(this.languageService.translate("switch.alreadyOpen"));
       return;
     }
     this.notice.set(null);

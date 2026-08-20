@@ -14,9 +14,9 @@ import {
   DesktopIpcService,
   DesktopUnlisten,
 } from "@app/core/desktop/desktop-ipc.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetRef, ASSET_RATIOS } from "../library.models";
@@ -40,7 +40,7 @@ function toAssetRef(video: LibraryVideo): AssetRef {
 @Component({
   selector: "app-library-videos",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryVideoMedia, LibraryVideoThumb, Slider],
+  imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibraryVideoMedia, LibraryVideoThumb, Slider],
   templateUrl: "./videos.component.html",
   host: { "data-testid": "library-videos" },
 })
@@ -48,7 +48,7 @@ export class LibraryVideos implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
   readonly videos = inject(LibraryVideoService);
   readonly library = inject(LibraryService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
   readonly dragging = signal(false);
@@ -144,7 +144,7 @@ export class LibraryVideos implements OnInit, OnDestroy {
   collectionFilterIsKey(): boolean {
     return this.library.filterCollection() === "none";
   }
-  unfiledKey(): I18nKey {
+  unfiledKey(): LanguageKey {
     return "library.explorer.filters.unfiled";
   }
   ratioIcon(value: string): string {
@@ -155,10 +155,10 @@ export class LibraryVideos implements OnInit, OnDestroy {
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "name", label: this.i18n.translate("library.image.column.name") },
-      { key: "spec", label: this.i18n.translate("library.image.info.specs"), width: "170px" },
-      { key: "size", label: this.i18n.translate("library.image.column.size"), align: "right", width: "110px" },
-      { key: "collection", label: this.i18n.translate("library.image.column.collection"), width: "180px", ellipsis: true },
+      { key: "name", label: this.languageService.translate("library.image.column.name") },
+      { key: "spec", label: this.languageService.translate("library.image.info.specs"), width: "170px" },
+      { key: "size", label: this.languageService.translate("library.image.column.size"), align: "right", width: "110px" },
+      { key: "collection", label: this.languageService.translate("library.image.column.collection"), width: "180px", ellipsis: true },
     ];
   }
 

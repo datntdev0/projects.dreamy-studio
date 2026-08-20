@@ -1,8 +1,8 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ImagePatch } from "../library.images.models";
 import { ImageRights } from "../library.images.models";
@@ -22,7 +22,7 @@ import { LibraryService } from "../library.service";
 
 const MAX_TAGS = 12;
 
-const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
+const RIGHTS_KEYS: Record<ImageRights, LanguageKey> = {
   own: "library.rights.own",
   licensed: "library.rights.licensed",
   free: "library.rights.free",
@@ -32,7 +32,7 @@ const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
 @Component({
   selector: "app-library-image-panel",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, LanguagePipe],
   templateUrl: "./image.panel.html",
   host: { "data-testid": "library-image-panel" },
 })
@@ -42,12 +42,12 @@ export class LibraryImagePanel {
   readonly library = inject(LibraryService);
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   readonly rightOptions = IMAGE_RIGHTS;
   readonly image = computed(this.resolveImage.bind(this));
 
-  rightKey(right: ImageRights): I18nKey {
+  rightKey(right: ImageRights): LanguageKey {
     return RIGHTS_KEYS[right];
   }
 
@@ -67,7 +67,7 @@ export class LibraryImagePanel {
     return formatIsoMinute(image.createdAt);
   }
 
-  originKey(image: LibraryImage): I18nKey {
+  originKey(image: LibraryImage): LanguageKey {
     return image.origin === "app" ? "library.origin.app" : "library.origin.upload";
   }
 
@@ -107,11 +107,11 @@ export class LibraryImagePanel {
       return;
     }
     if (image.tags.includes(tag)) {
-      this.toasts.show(this.i18n.translate("library.image.toast.tagExists", { tag }), "warning");
+      this.toasts.show(this.languageService.translate("library.image.toast.tagExists", { tag }), "warning");
       return;
     }
     if (image.tags.length >= MAX_TAGS) {
-      this.toasts.show(this.i18n.translate("library.image.toast.tagLimit"), "warning");
+      this.toasts.show(this.languageService.translate("library.image.toast.tagLimit"), "warning");
       return;
     }
     field.value = "";
@@ -145,9 +145,9 @@ export class LibraryImagePanel {
     try {
       const updated = await this.images.update(image.id, { name });
       if (updated.name !== name) {
-        this.toasts.show(this.i18n.translate("library.image.toast.renamed", { name: updated.name }), "warning");
+        this.toasts.show(this.languageService.translate("library.image.toast.renamed", { name: updated.name }), "warning");
       } else {
-        this.toasts.show(this.i18n.translate("library.image.toast.updated"));
+        this.toasts.show(this.languageService.translate("library.image.toast.updated"));
       }
     } catch (cause) {
       this.notifyFailure(cause);
@@ -157,14 +157,14 @@ export class LibraryImagePanel {
   private async save(image: LibraryImage, patch: ImagePatch): Promise<void> {
     try {
       await this.images.update(image.id, patch);
-      this.toasts.show(this.i18n.translate("library.image.toast.updated"));
+      this.toasts.show(this.languageService.translate("library.image.toast.updated"));
     } catch (cause) {
       this.notifyFailure(cause);
     }
   }
 
   private notifyFailure(cause: unknown): void {
-    this.toasts.show(this.i18n.translate(libraryErrorKey(cause) as I18nKey), "danger");
+    this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
   }
 
   private resolveImage(): LibraryImage | null {

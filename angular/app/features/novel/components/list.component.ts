@@ -1,6 +1,6 @@
 import { Component, HostListener, effect, inject } from "@angular/core";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { TabsService } from "@layout/tabs.service";
 import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
@@ -23,11 +23,11 @@ function isInside(target: EventTarget | null, selector: string): boolean {
 @Component({
   selector: "app-novel-list",
   standalone: true,
-  imports: [Datatable, DatatableCell, Icon, I18nPipe, Cover, NovelProgressFrac],
+  imports: [Datatable, DatatableCell, Icon, LanguagePipe, Cover, NovelProgressFrac],
   templateUrl: "./list.component.html",
 })
 export class NovelList {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly tabs = inject(TabsService);
   private readonly reader = inject(NovelReaderService);
   private readonly dialogs = inject(NovelDialogsService);
@@ -40,16 +40,16 @@ export class NovelList {
   });
 
   readonly tableActions = (): DatatableAction[] => [
-    { key: "delete", label: this.i18n.translate("novel.list.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
+    { key: "delete", label: this.languageService.translate("novel.list.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
   ];
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "title", label: this.i18n.translate("novel.list.col.novel"), ellipsis: true },
-      { key: "source", label: this.i18n.translate("novel.list.col.source"), width: "64px" },
-      { key: "chapters", label: this.i18n.translate("novel.list.col.chapters"), align: "right", width: "80px" },
-      { key: "words", label: this.i18n.translate("novel.list.col.words"), align: "right", width: "88px" },
-      { key: "progress", label: this.i18n.translate("novel.list.col.progress"), width: "96px" },
+      { key: "title", label: this.languageService.translate("novel.list.col.novel"), ellipsis: true },
+      { key: "source", label: this.languageService.translate("novel.list.col.source"), width: "64px" },
+      { key: "chapters", label: this.languageService.translate("novel.list.col.chapters"), align: "right", width: "80px" },
+      { key: "words", label: this.languageService.translate("novel.list.col.words"), align: "right", width: "88px" },
+      { key: "progress", label: this.languageService.translate("novel.list.col.progress"), width: "96px" },
     ];
   }
 
@@ -62,7 +62,7 @@ export class NovelList {
   }
 
   authorOf(novel: NovelSummary): string {
-    return novel.author || this.i18n.translate("novel.author.unknown");
+    return novel.author || this.languageService.translate("novel.author.unknown");
   }
 
   subtitleOf(novel: NovelSummary): string {

@@ -3,14 +3,14 @@ import { Component, Type, computed, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { DialogItem, DialogRow } from "./dialog.models";
 import { DialogService } from "./dialog.service";
 
 @Component({
   selector: "app-dialog-host",
   standalone: true,
-  imports: [NgComponentOutlet, Button, Dialog, Icon, I18nPipe],
+  imports: [NgComponentOutlet, Button, Dialog, Icon, LanguagePipe],
   templateUrl: "./dialog-host.component.html",
   host: { "data-testid": "dialog-host" },
 })

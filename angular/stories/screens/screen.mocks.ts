@@ -2,7 +2,7 @@ import { EnvironmentProviders, Provider, inject, provideAppInitializer } from "@
 import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageService } from "@app/core/language/language.service";
 import { SettingsService } from "@app/features/settings/settings.service";
 import { SettingsView } from "@app/features/settings/settings.models";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
@@ -36,7 +36,7 @@ function ipcProvider(handlers: IpcHandlers): Provider {
 async function startup(): Promise<void> {
   const settings = inject(SettingsService);
   const workspace = inject(WorkspaceService);
-  inject(I18nService).init();
+  inject(LanguageService).init();
   await settings.load();
   await workspace.restoreCurrent();
 }

@@ -2,9 +2,9 @@ import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@ang
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetRef } from "../library.models";
@@ -20,12 +20,12 @@ const FIELD_SELECTOR = "input,textarea,select";
 function isField(target: EventTarget | null): boolean { return target instanceof Element && target.closest(FIELD_SELECTOR) !== null; }
 function toRef(prompt: LibraryPrompt): AssetRef { return { kind: "prompt", id: prompt.id }; }
 
-@Component({ selector: "app-library-prompts", standalone: true, imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryPromptMedia], templateUrl: "./prompts.component.html", host: { "data-testid": "library-prompts" } })
+@Component({ selector: "app-library-prompts", standalone: true, imports: [Datatable, DatatableCell, Icon, LanguagePipe, LibraryPromptMedia], templateUrl: "./prompts.component.html", host: { "data-testid": "library-prompts" } })
 export class LibraryPrompts implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
   readonly prompts = inject(LibraryPromptService);
   readonly library = inject(LibraryService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
   readonly dragging = signal(false);
@@ -51,16 +51,16 @@ export class LibraryPrompts implements OnInit, OnDestroy {
   collection(prompt: LibraryPrompt): string { return prompt.collectionId === null ? "—" : this.library.collectionById(prompt.collectionId)?.name ?? "—"; }
   collectionFilterName(): string { const value = this.library.filterCollection(); return typeof value === "number" ? this.library.collectionById(value)?.name ?? "—" : ""; }
   collectionFilterIsKey(): boolean { return this.library.filterCollection() === "none"; }
-  unfiledKey(): I18nKey { return "library.explorer.filters.unfiled"; }
+  unfiledKey(): LanguageKey { return "library.explorer.filters.unfiled"; }
 
   readonly tableRowClass = (row: object): Record<string, boolean> => ({ "is-selected": this.selected(this.promptOf(row)) });
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "name", label: this.i18n.translate("library.video.column.name") },
-      { key: "length", label: this.i18n.translate("library.prompt.column.length"), width: "120px" },
-      { key: "size", label: this.i18n.translate("library.prompt.column.size"), align: "right", width: "110px" },
-      { key: "collection", label: this.i18n.translate("library.video.column.collection"), width: "180px", ellipsis: true },
+      { key: "name", label: this.languageService.translate("library.video.column.name") },
+      { key: "length", label: this.languageService.translate("library.prompt.column.length"), width: "120px" },
+      { key: "size", label: this.languageService.translate("library.prompt.column.size"), align: "right", width: "110px" },
+      { key: "collection", label: this.languageService.translate("library.video.column.collection"), width: "180px", ellipsis: true },
     ];
   }
 

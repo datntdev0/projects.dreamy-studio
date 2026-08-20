@@ -3,8 +3,8 @@ import { SegmentOption, Segments } from "@components/segments";
 import { Slider } from "@components/slider";
 import { TabOption, Tabs } from "@components/tabs";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService, isLanguage } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService, isLanguage } from "@app/core/language/language.service";
 import { ThemeService, isTheme } from "@app/core/theme/theme.service";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget } from "../settings.models";
@@ -22,17 +22,17 @@ const LANGUAGE_OPTIONS: SegmentOption[] = [
 @Component({
   selector: "app-settings-general",
   standalone: true,
-  imports: [Icon, I18nPipe, Segments, Slider, Tabs],
+  imports: [Icon, LanguagePipe, Segments, Slider, Tabs],
   templateUrl: "./general.component.html",
   host: { "data-testid": "settings-general" },
 })
 export class SettingsGeneralComponent {
   private readonly settings = inject(SettingsService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly themes = inject(ThemeService);
   private readonly workspaces = inject(WorkspaceService);
 
-  readonly language = this.i18n.language;
+  readonly language = this.languageService.language;
   readonly theme = this.themes.theme;
   readonly workspace = this.workspaces.current;
   readonly dataDir = this.settings.dataDir;
@@ -76,16 +76,16 @@ export class SettingsGeneralComponent {
 
   private buildTabOptions(): TabOption[] {
     return [
-      { value: "interface", label: this.i18n.translate("settings.general.interface"), icon: "eye" },
-      { value: "pipelines", label: this.i18n.translate("settings.general.pipelines"), icon: "layers" },
-      { value: "storage", label: this.i18n.translate("settings.general.storage"), icon: "hdd" },
+      { value: "interface", label: this.languageService.translate("settings.general.interface"), icon: "eye" },
+      { value: "pipelines", label: this.languageService.translate("settings.general.pipelines"), icon: "layers" },
+      { value: "storage", label: this.languageService.translate("settings.general.storage"), icon: "hdd" },
     ];
   }
 
   private buildThemeOptions(): SegmentOption[] {
     return [
-      { value: "dark", label: this.i18n.translate("settings.general.theme.dark") },
-      { value: "light", label: this.i18n.translate("settings.general.theme.light") },
+      { value: "dark", label: this.languageService.translate("settings.general.theme.dark") },
+      { value: "light", label: this.languageService.translate("settings.general.theme.light") },
     ];
   }
 }

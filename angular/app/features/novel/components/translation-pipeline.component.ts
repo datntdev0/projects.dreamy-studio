@@ -1,8 +1,8 @@
 import { Component, computed, inject, input, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ChapterRow, TranslationStatus } from "../novel.models";
 import { NovelService } from "../novel.service";
@@ -14,12 +14,12 @@ import { NovelTranslationService } from "../novel.translation.service";
 @Component({
   selector: "app-novel-translation-pipeline",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, LanguagePipe],
   templateUrl: "./translation-pipeline.component.html",
 })
 export class NovelTranslationPipeline {
   private readonly novels = inject(NovelService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   readonly translation = inject(NovelTranslationService);
 
@@ -36,11 +36,11 @@ export class NovelTranslationPipeline {
   readonly allPicked = computed(this.buildAllPicked.bind(this));
   readonly ready = computed(this.buildReady.bind(this));
 
-  filterKey(filter: ChapterFilter): I18nKey {
+  filterKey(filter: ChapterFilter): LanguageKey {
     return CHAPTER_FILTER_KEYS[filter];
   }
 
-  statusKey(status: TranslationStatus): I18nKey {
+  statusKey(status: TranslationStatus): LanguageKey {
     return STATUS_KEYS[status];
   }
 
@@ -96,7 +96,7 @@ export class NovelTranslationPipeline {
       await this.translation.translate(this.novelId(), this.view().picks);
     } catch (cause) {
       const error = toNovelError(cause);
-      this.toasts.show(this.i18n.translate("novel.error.generic", { detail: error.detail }), "danger");
+      this.toasts.show(this.languageService.translate("novel.error.generic", { detail: error.detail }), "danger");
     }
   }
 
@@ -105,7 +105,7 @@ export class NovelTranslationPipeline {
       await this.translation.cancelNovel(this.novelId());
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
     }
   }
 

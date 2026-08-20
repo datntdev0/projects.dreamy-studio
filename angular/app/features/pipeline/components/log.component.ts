@@ -1,8 +1,8 @@
 import { Component, computed, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
 import { PipelineLogEntry } from "../pipeline.models";
@@ -13,11 +13,11 @@ import { PipelineService } from "../pipeline.service";
 @Component({
   selector: "app-pipeline-log",
   standalone: true,
-  imports: [Icon, I18nPipe, PipelineStrip],
+  imports: [Icon, LanguagePipe, PipelineStrip],
   templateUrl: "./log.component.html",
 })
 export class PipelineLog {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly pipelines = inject(PipelineService);
   readonly entries = computed(this.buildEntries.bind(this));
@@ -38,11 +38,11 @@ export class PipelineLog {
     return kindSize(pipeline.kind);
   }
 
-  kindOf(pipeline: PipelineSnapshot): I18nKey | null {
+  kindOf(pipeline: PipelineSnapshot): LanguageKey | null {
     return kindKey(pipeline.kind);
   }
 
-  statusKey(status: PipelineStatus): I18nKey {
+  statusKey(status: PipelineStatus): LanguageKey {
     return PIPELINE_STATUS_KEYS[status];
   }
 
@@ -64,14 +64,14 @@ export class PipelineLog {
 
   messageOf(pipeline: PipelineSnapshot, entry: PipelineLogEntry): string {
     const kind = kindKey(pipeline.kind);
-    return this.i18n.translate(PIPELINE_LOG_KEYS[entry.kind], {
+    return this.languageService.translate(PIPELINE_LOG_KEYS[entry.kind], {
       id: pipeline.id,
-      kind: kind ? this.i18n.translate(kind) : pipeline.kind,
+      kind: kind ? this.languageService.translate(kind) : pipeline.kind,
       target: pipeline.target,
       total: pipeline.total,
       done: pipeline.done,
       failed: pipeline.failed,
-      status: this.i18n.translate(PIPELINE_STATUS_KEYS[pipeline.status]),
+      status: this.languageService.translate(PIPELINE_STATUS_KEYS[pipeline.status]),
       duration: formatDuration(durationMs(pipeline)),
       label: entry.task ? this.labelOf(pipeline, entry.task) : "",
       progress: entry.task?.progress ?? 0,
@@ -92,8 +92,8 @@ export class PipelineLog {
 
   private labelOf(pipeline: PipelineSnapshot, task: PipelineTask): string {
     const chapter = this.pipelines.chapterOf(pipeline.novelId, task.chapterId);
-    const key: I18nKey = task.passage === null ? "pipeline.task.chapter" : "pipeline.task.passage";
-    const base = this.i18n.translate(key, { seq: chapter?.seq ?? 0, n: task.passage ?? 0 });
+    const key: LanguageKey = task.passage === null ? "pipeline.task.chapter" : "pipeline.task.passage";
+    const base = this.languageService.translate(key, { seq: chapter?.seq ?? 0, n: task.passage ?? 0 });
     return chapter?.title ? `${base} · ${chapter.title}` : base;
   }
 

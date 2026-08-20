@@ -1,4 +1,4 @@
-import { I18nKey, I18nParams } from "@app/core/i18n/i18n.models";
+import { LanguageKey, LanguageParams } from "@app/core/language/language.models";
 import { ChapterRow, NovelLang, TargetLang, TranslationStatus } from "./novel.models";
 import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, PipelineStatus, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
 
@@ -6,7 +6,7 @@ export const TARGET_LANGS: TargetLang[] = ["VI", "EN"];
 export const TRANSLATION_STEPS: TranslationStep[] = ["dict", "guide", "trans", "result", "warn"];
 export const STEP_ICONS: Record<TranslationStep, string> = { dict: "book", guide: "pen", trans: "lang", result: "frames", warn: "alert" };
 
-export const STEP_LABEL_KEYS: Record<TranslationStep, I18nKey> = {
+export const STEP_LABEL_KEYS: Record<TranslationStep, LanguageKey> = {
   dict: "novel.translation.step.dict",
   guide: "novel.translation.step.guide",
   trans: "novel.translation.step.trans",
@@ -14,7 +14,7 @@ export const STEP_LABEL_KEYS: Record<TranslationStep, I18nKey> = {
   warn: "novel.translation.step.warn",
 };
 
-export const STEP_HINT_KEYS: Record<TranslationStep, I18nKey> = {
+export const STEP_HINT_KEYS: Record<TranslationStep, LanguageKey> = {
   dict: "novel.translation.hint.dict",
   guide: "novel.translation.hint.guide",
   trans: "novel.translation.hint.trans",
@@ -24,7 +24,7 @@ export const STEP_HINT_KEYS: Record<TranslationStep, I18nKey> = {
 
 export const DICT_TYPES: DictEntryType[] = ["name", "place", "org", "title", "term"];
 
-export const DICT_TYPE_KEYS: Record<DictEntryType, I18nKey> = {
+export const DICT_TYPE_KEYS: Record<DictEntryType, LanguageKey> = {
   name: "novel.translation.dict.type.name",
   place: "novel.translation.dict.type.place",
   org: "novel.translation.dict.type.org",
@@ -34,7 +34,7 @@ export const DICT_TYPE_KEYS: Record<DictEntryType, I18nKey> = {
 
 export const CHAPTER_FILTERS: ChapterFilter[] = ["all", "none", "done"];
 
-export const CHAPTER_FILTER_KEYS: Record<ChapterFilter, I18nKey> = {
+export const CHAPTER_FILTER_KEYS: Record<ChapterFilter, LanguageKey> = {
   all: "novel.translation.trans.filter.all",
   none: "novel.translation.status.none",
   done: "novel.translation.status.done",
@@ -42,13 +42,13 @@ export const CHAPTER_FILTER_KEYS: Record<ChapterFilter, I18nKey> = {
 
 export const WARNING_FILTERS: WarningFilter[] = ["all", "source", "dict"];
 
-export const WARNING_FILTER_KEYS: Record<WarningFilter, I18nKey> = {
+export const WARNING_FILTER_KEYS: Record<WarningFilter, LanguageKey> = {
   all: "novel.translation.warn.filter.all",
   source: "novel.translation.warn.filter.source",
   dict: "novel.translation.warn.filter.dict",
 };
 
-export const WARNING_KIND_KEYS: Record<WarningKind, I18nKey> = {
+export const WARNING_KIND_KEYS: Record<WarningKind, LanguageKey> = {
   source: "novel.translation.warn.kind.source",
   dict: "novel.translation.warn.kind.dict",
 };
@@ -58,7 +58,7 @@ export const WARNING_KIND_BADGES: Record<WarningKind, string> = {
   dict: "badge-info",
 };
 
-export const STATUS_KEYS: Record<TranslationStatus, I18nKey> = {
+export const STATUS_KEYS: Record<TranslationStatus, LanguageKey> = {
   none: "novel.translation.status.none",
   done: "novel.translation.status.done",
   running: "novel.translation.status.running",
@@ -236,7 +236,7 @@ export function rangeText(numbers: number[]): string {
   return parts.join(", ");
 }
 
-export function warningReason(warning: TranslationWarning, dict: DictEntry[]): { key: I18nKey; params: I18nParams } {
+export function warningReason(warning: TranslationWarning, dict: DictEntry[]): { key: LanguageKey; params: LanguageParams } {
   if (warning.kind === "source") {
     return { key: "novel.translation.warn.reason.source", params: {} };
   }

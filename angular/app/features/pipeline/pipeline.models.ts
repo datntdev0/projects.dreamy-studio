@@ -1,4 +1,4 @@
-import { I18nKey } from "@app/core/i18n/i18n.models";
+import { LanguageKey } from "@app/core/language/language.models";
 import { PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
 
 export type PipelineFilter = "all" | PipelineStatus;
@@ -23,7 +23,7 @@ export interface PipelineLogEntry {
 export interface PipelineKindMeta {
   icon: string;
   size: number;
-  labelKey: I18nKey;
+  labelKey: LanguageKey;
 }
 
 export interface PipelineCounts {

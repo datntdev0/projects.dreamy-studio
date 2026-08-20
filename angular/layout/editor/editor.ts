@@ -1,7 +1,7 @@
 import { Component, HostListener, computed, inject } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { NovelView } from "@app/features/novel/components/novel-view.component";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { NovelToolPlaceholder } from "@app/features/novel/components/tool-placeholder.component";
@@ -24,11 +24,11 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
+  imports: [Icon, LanguagePipe, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
   templateUrl: "./editor.html",
 })
 export class Editor {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly layout = inject(LayoutService);
   readonly tabs = inject(TabsService);
@@ -38,12 +38,12 @@ export class Editor {
 
   tabLabel(tab: EditorTab): string {
     if (tab.kind === "translation") {
-      return this.i18n.translate("tabs.novel.translation", { name: tab.title });
+      return this.languageService.translate("tabs.novel.translation", { name: tab.title });
     }
     if (tab.kind === "knowledge") {
-      return this.i18n.translate("tabs.novel.knowledge", { name: tab.title });
+      return this.languageService.translate("tabs.novel.knowledge", { name: tab.title });
     }
-    return tab.labelKey ? this.i18n.translate(tab.labelKey) : tab.title;
+    return tab.labelKey ? this.languageService.translate(tab.labelKey) : tab.title;
   }
 
   activate(id: string): void {
@@ -66,19 +66,19 @@ export class Editor {
   private sectionOf(): string | null {
     const tab = this.tabs.active();
     if (tab.kind === "novels") {
-      return this.i18n.translate("main.rail.novels");
+      return this.languageService.translate("main.rail.novels");
     }
     if (tab.kind === "projects" || tab.kind === "project") {
-      return this.i18n.translate("main.rail.projects");
+      return this.languageService.translate("main.rail.projects");
     }
     if (tab.kind === "collections") {
-      return this.i18n.translate("library.explorer.organize");
+      return this.languageService.translate("library.explorer.organize");
     }
     if (tab.kind === "collection") {
-      return this.i18n.translate("library.collections");
+      return this.languageService.translate("library.collections");
     }
     if (tab.kind === "images" || tab.kind === "sounds" || tab.kind === "videos" || tab.kind === "prompts") {
-      return this.i18n.translate("library.crumb");
+      return this.languageService.translate("library.crumb");
     }
     return tab.kind === "novel" || tab.kind === "translation" || tab.kind === "knowledge" ? tab.title : null;
   }
@@ -89,11 +89,11 @@ export class Editor {
       return tab.title;
     }
     if (tab.kind === "translation") {
-      return this.i18n.translate("novel.tool.translation.title");
+      return this.languageService.translate("novel.tool.translation.title");
     }
     if (tab.kind === "knowledge") {
-      return this.i18n.translate("novel.tool.knowledge.title");
+      return this.languageService.translate("novel.tool.knowledge.title");
     }
-    return tab.kind === "novel" ? this.i18n.translate("tabs.novel.title") : this.tabLabel(tab);
+    return tab.kind === "novel" ? this.languageService.translate("tabs.novel.title") : this.tabLabel(tab);
   }
 }

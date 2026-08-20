@@ -1,8 +1,8 @@
-import { I18nKey } from "@app/core/i18n/i18n.models";
+import { LanguageKey } from "@app/core/language/language.models";
 
 export type LibraryKind = "image" | "sound" | "video" | "prompt";
 export type KindCounts = Record<LibraryKind, number>;
-export const LIBRARY_KINDS: { id: LibraryKind; icon: string; labelKey: I18nKey }[] = [
+export const LIBRARY_KINDS: { id: LibraryKind; icon: string; labelKey: LanguageKey }[] = [
   { id: "image", icon: "image", labelKey: "library.kind.image" },
   { id: "sound", icon: "music", labelKey: "library.kind.sound" },
   { id: "video", icon: "film", labelKey: "library.kind.video" },

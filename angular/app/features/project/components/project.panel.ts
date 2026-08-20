@@ -1,8 +1,8 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
 import { checkCoverFile, prepareCover } from "@app/features/novel/novel.cover";
@@ -16,7 +16,7 @@ import { ProjectThumb } from "./thumb.component";
 @Component({
   selector: "app-project-panel",
   standalone: true,
-  imports: [Icon, I18nPipe, ProjectThumb],
+  imports: [Icon, LanguagePipe, ProjectThumb],
   templateUrl: "./project.panel.html",
 })
 export class ProjectPanel {
@@ -24,7 +24,7 @@ export class ProjectPanel {
   readonly projects = inject(ProjectService);
   readonly labels = inject(ProjectLabels);
   private readonly confirms = inject(ProjectConfirmService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   readonly projectId = input.required<number>();
   readonly showOpen = input(false);
@@ -52,7 +52,7 @@ export class ProjectPanel {
     this.confirms.deleteProjects([project.id]);
   }
 
-  coverKey(): I18nKey {
+  coverKey(): LanguageKey {
     return this.hasCover() ? "project.panel.coverChange" : "project.panel.coverChoose";
   }
 
@@ -65,9 +65,9 @@ export class ProjectPanel {
     }
     const check = checkCoverFile(file);
     if (check === "notImage") {
-      this.toasts.show(this.i18n.translate("novel.toast.notImage"), "warning");
+      this.toasts.show(this.languageService.translate("novel.toast.notImage"), "warning");
     } else if (check === "tooLarge") {
-      this.toasts.show(this.i18n.translate("novel.toast.imageTooLarge"), "warning");
+      this.toasts.show(this.languageService.translate("novel.toast.imageTooLarge"), "warning");
     } else {
       await this.applyCover(project.id, file);
     }
@@ -76,7 +76,7 @@ export class ProjectPanel {
   async clearCover(project: ProjectSummary): Promise<void> {
     try {
       await this.projects.clearCover(project.id);
-      this.toasts.show(this.i18n.translate("project.toast.coverRemoved"));
+      this.toasts.show(this.languageService.translate("project.toast.coverRemoved"));
     } catch (cause) {
       this.fail(cause);
     }
@@ -87,12 +87,12 @@ export class ProjectPanel {
     try {
       dataUrl = await prepareCover(file);
     } catch {
-      this.toasts.show(this.i18n.translate("novel.toast.imageUnreadable"), "warning");
+      this.toasts.show(this.languageService.translate("novel.toast.imageUnreadable"), "warning");
       return;
     }
     try {
       await this.projects.setCover(id, dataUrl);
-      this.toasts.show(this.i18n.translate("project.toast.coverChanged"));
+      this.toasts.show(this.languageService.translate("project.toast.coverChanged"));
     } catch (cause) {
       this.fail(cause);
     }
@@ -100,7 +100,7 @@ export class ProjectPanel {
 
   private fail(cause: unknown): void {
     const detail = toProjectError(cause).detail;
-    this.toasts.show(this.i18n.translate("project.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate("project.error.generic", { detail }), "danger");
   }
 
   private buildHasCover(): boolean {

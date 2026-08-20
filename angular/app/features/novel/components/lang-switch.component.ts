@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from "@angular/core";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { NovelLang, NovelSummary, ReaderLang, ReaderView } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
@@ -10,7 +10,7 @@ import { targetsOf } from "../novel.translation.rules";
 @Component({
   selector: "app-novel-lang-switch",
   standalone: true,
-  imports: [I18nPipe],
+  imports: [LanguagePipe],
   templateUrl: "./lang-switch.component.html",
 })
 export class NovelLangSwitch {
@@ -23,7 +23,7 @@ export class NovelLangSwitch {
   readonly view = computed(this.buildView.bind(this));
   readonly targets = computed(this.buildTargets.bind(this));
 
-  nameKey(lang: NovelLang): I18nKey {
+  nameKey(lang: NovelLang): LanguageKey {
     return NOVEL_LANG_KEYS[lang];
   }
 

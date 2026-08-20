@@ -1,8 +1,8 @@
 import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../novel.models";
 import { NovelService } from "../novel.service";
@@ -11,7 +11,7 @@ import { ChapterTranslation, PassageState, PassageTranslation, TranslationView, 
 import { passageState, warningReason, warningsOfPassage } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
 
-const SAVE_NOTICES: Record<ParagraphSaveResult, I18nKey | null> = {
+const SAVE_NOTICES: Record<ParagraphSaveResult, LanguageKey | null> = {
   saved: "novel.translation.result.saved",
   empty: "novel.reader.empty",
   unchanged: "novel.reader.unchanged",
@@ -21,12 +21,12 @@ const SAVE_NOTICES: Record<ParagraphSaveResult, I18nKey | null> = {
 @Component({
   selector: "app-novel-translation-result",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, LanguagePipe],
   templateUrl: "./translation-result.component.html",
 })
 export class NovelTranslationResult {
   private readonly novels = inject(NovelService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly translation = inject(NovelTranslationService);
   private token = 0;
@@ -56,8 +56,8 @@ export class NovelTranslationResult {
   }
 
   jumpLabel(row: ChapterRow): string {
-    const note = this.translation.of(this.novelId()).chapters[row.id] ? "" : this.i18n.translate("novel.translation.result.untranslated");
-    return `${this.i18n.translate("novel.translation.result.chapterOption", { n: row.seq, title: row.title })}${note}`;
+    const note = this.translation.of(this.novelId()).chapters[row.id] ? "" : this.languageService.translate("novel.translation.result.untranslated");
+    return `${this.languageService.translate("novel.translation.result.chapterOption", { n: row.seq, title: row.title })}${note}`;
   }
 
   passageOf(n: number): PassageTranslation | null {
@@ -76,7 +76,7 @@ export class NovelTranslationResult {
 
   reasonOf(warning: TranslationWarning): string {
     const reason = warningReason(warning, this.translation.of(this.novelId()).dict);
-    return this.i18n.translate(reason.key, reason.params);
+    return this.languageService.translate(reason.key, reason.params);
   }
 
   indexOf(paragraph: ParagraphRow): number {
@@ -120,7 +120,7 @@ export class NovelTranslationResult {
       this.editing.set(result === "empty" ? n : null);
       const key = SAVE_NOTICES[result];
       if (key) {
-        this.toasts.show(this.i18n.translate(key), result === "saved" ? "success" : "warning");
+        this.toasts.show(this.languageService.translate(key), result === "saved" ? "success" : "warning");
       }
     } catch (cause) {
       this.fail(cause);
@@ -156,10 +156,10 @@ export class NovelTranslationResult {
 
   private fail(cause: unknown): void {
     const detail = toNovelError(cause).detail;
-    this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
   }
 
-  private buildTargetKey(): I18nKey {
+  private buildTargetKey(): LanguageKey {
     return NOVEL_LANG_KEYS[this.translation.targetOf(this.novelId())];
   }
 

@@ -1,7 +1,7 @@
 import { Injectable, inject } from "@angular/core";
 import { DialogItem } from "@app/core/dialog/dialog.models";
 import { DialogService } from "@app/core/dialog/dialog.service";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
 import { NovelConfirmThumb } from "./components/confirm-thumb.component";
@@ -13,7 +13,7 @@ import { NovelService } from "./novel.service";
 @Injectable({ providedIn: "root" })
 export class NovelConfirmService {
   private readonly dialogs = inject(DialogService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly tabs = inject(TabsService);
   private readonly novels = inject(NovelService);
@@ -33,13 +33,13 @@ export class NovelConfirmService {
     }
     const one = rows.length === 1;
     return this.dialogs.ask({
-      title: this.i18n.translate(one ? "novel.delete.title.one" : "novel.delete.title.other", { count: rows.length }),
-      eyebrow: this.i18n.translate("novel.cap"),
-      closeLabel: this.i18n.translate("novel.dialog.close"),
+      title: this.languageService.translate(one ? "novel.delete.title.one" : "novel.delete.title.other", { count: rows.length }),
+      eyebrow: this.languageService.translate("novel.cap"),
+      closeLabel: this.languageService.translate("novel.dialog.close"),
       items: rows.map(this.toItem.bind(this)),
       thumb: NovelConfirmThumb,
-      warning: this.i18n.translate(one ? "novel.delete.warn.one" : "novel.delete.warn.other"),
-      confirmLabel: this.i18n.translate(one ? "novel.delete.confirm.one" : "novel.delete.confirm.other", { count: rows.length }),
+      warning: this.languageService.translate(one ? "novel.delete.warn.one" : "novel.delete.warn.other"),
+      confirmLabel: this.languageService.translate(one ? "novel.delete.confirm.one" : "novel.delete.confirm.other", { count: rows.length }),
       confirmIcon: "trash",
       onConfirm: this.removeNovels.bind(this, rows),
     });
@@ -57,26 +57,26 @@ export class NovelConfirmService {
       passages = 0;
     }
     return this.dialogs.ask({
-      title: this.i18n.translate("novel.chapters.delete.title"),
-      eyebrow: this.i18n.translate("novel.cap"),
-      closeLabel: this.i18n.translate("novel.dialog.close"),
+      title: this.languageService.translate("novel.chapters.delete.title"),
+      eyebrow: this.languageService.translate("novel.cap"),
+      closeLabel: this.languageService.translate("novel.dialog.close"),
       items: [
         {
-          name: this.i18n.translate("novel.chapters.delete.heading", { n: row.seq, title: row.title }),
-          meta: this.i18n.translate("novel.chapters.delete.meta", { words: formatCount(row.wordCount), passages }),
+          name: this.languageService.translate("novel.chapters.delete.heading", { n: row.seq, title: row.title }),
+          meta: this.languageService.translate("novel.chapters.delete.meta", { words: formatCount(row.wordCount), passages }),
         },
       ],
-      warning: this.i18n.translate("novel.chapters.delete.warn"),
-      confirmLabel: this.i18n.translate("novel.chapters.delete.submit"),
+      warning: this.languageService.translate("novel.chapters.delete.warn"),
+      confirmLabel: this.languageService.translate("novel.chapters.delete.submit"),
       confirmIcon: "trash",
       onConfirm: this.removeChapter.bind(this, novelId, row.id, row.title),
     });
   }
 
   private toItem(novel: NovelSummary): DialogItem {
-    const author = novel.author.trim() || this.i18n.translate("novel.author.unknown");
+    const author = novel.author.trim() || this.languageService.translate("novel.author.unknown");
     const chapters = formatCount(novel.chapterCount);
-    return { name: displayName(novel), meta: this.i18n.translate("novel.delete.meta", { author, chapters }), data: novel };
+    return { name: displayName(novel), meta: this.languageService.translate("novel.delete.meta", { author, chapters }), data: novel };
   }
 
   private async removeNovels(rows: NovelSummary[]): Promise<void> {
@@ -97,17 +97,17 @@ export class NovelConfirmService {
     } catch (cause) {
       throw this.failure(cause);
     }
-    this.toasts.show(this.i18n.translate("novel.toast.chapterDeleted", { title }));
+    this.toasts.show(this.languageService.translate("novel.toast.chapterDeleted", { title }));
   }
 
   private deletedMessage(rows: NovelSummary[]): string {
     if (rows.length === 1) {
-      return this.i18n.translate("novel.toast.deleted.one", { title: displayName(rows[0]) });
+      return this.languageService.translate("novel.toast.deleted.one", { title: displayName(rows[0]) });
     }
-    return this.i18n.translate("novel.toast.deleted.other", { count: rows.length });
+    return this.languageService.translate("novel.toast.deleted.other", { count: rows.length });
   }
 
   private failure(cause: unknown): Error {
-    return new Error(this.i18n.translate("novel.error.generic", { detail: toNovelError(cause).detail }));
+    return new Error(this.languageService.translate("novel.error.generic", { detail: toNovelError(cause).detail }));
   }
 }

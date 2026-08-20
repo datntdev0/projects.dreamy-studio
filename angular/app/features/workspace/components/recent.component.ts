@@ -3,9 +3,9 @@ import { Badge } from "@components/badge";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { DialogService } from "@app/core/dialog/dialog.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { WorkspaceService } from "../workspace.service";
 import { RecentWorkspace } from "../workspace.models";
 import { RecentWorkspaceReason } from "../workspace.models";
@@ -16,7 +16,7 @@ const KILO = 1024;
 const SIZE_PENDING = "…";
 const SIZE_UNKNOWN = "—";
 
-const REASON_KEYS: Record<RecentWorkspaceReason, I18nKey> = {
+const REASON_KEYS: Record<RecentWorkspaceReason, LanguageKey> = {
   missing: "splash.reason.missing",
   not_a_directory: "splash.reason.not_a_directory",
   no_access: "splash.reason.no_access",
@@ -39,11 +39,11 @@ function formatLastOpened(iso: string, locale: string): string {
   return Number.isNaN(date.getTime()) ? iso : format.format(date);
 }
 
-function reasonKey(reason: RecentWorkspaceReason | undefined): I18nKey {
+function reasonKey(reason: RecentWorkspaceReason | undefined): LanguageKey {
   return REASON_KEYS[reason ?? "missing"];
 }
 
-function projectsKey(count: number): I18nKey {
+function projectsKey(count: number): LanguageKey {
   return count === 1 ? "splash.recent.projects.one" : "splash.recent.projects.other";
 }
 
@@ -54,13 +54,13 @@ function isMeasurable(row: RecentWorkspace): boolean {
 @Component({
   selector: "app-recent-workspace-list",
   standalone: true,
-  imports: [Badge, Button, Icon, I18nPipe],
+  imports: [Badge, Button, Icon, LanguagePipe],
   templateUrl: "./recent.component.html",
   host: { "data-testid": "recent-workspace-list" },
 })
 export class RecentWorkspaceList implements OnChanges {
   private readonly workspace = inject(WorkspaceService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly dialogs = inject(DialogService);
   private readonly requested = new Set<string>();
 
@@ -81,7 +81,7 @@ export class RecentWorkspaceList implements OnChanges {
   }
 
   formatLastOpened(iso: string): string {
-    return formatLastOpened(iso, this.i18n.locale());
+    return formatLastOpened(iso, this.languageService.locale());
   }
 
   sizeOf(path: string): string {
@@ -105,10 +105,10 @@ export class RecentWorkspaceList implements OnChanges {
 
   delete(row: RecentWorkspace): void {
     void this.dialogs.ask({
-      title: this.i18n.translate("splash.recent.deleteTitle"),
-      message: this.i18n.translate("splash.recent.deleteMessage", { name: row.name }),
-      warning: this.i18n.translate("splash.recent.deleteWarning"),
-      confirmLabel: this.i18n.translate("splash.recent.delete"),
+      title: this.languageService.translate("splash.recent.deleteTitle"),
+      message: this.languageService.translate("splash.recent.deleteMessage", { name: row.name }),
+      warning: this.languageService.translate("splash.recent.deleteWarning"),
+      confirmLabel: this.languageService.translate("splash.recent.delete"),
       confirmIcon: "trash",
       onConfirm: this.removeWorkspace.bind(this, row),
     });

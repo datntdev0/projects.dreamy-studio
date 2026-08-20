@@ -1,13 +1,13 @@
 import { Component, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryVideo } from "../library.videos.models";
 
 @Component({
   selector: "app-library-video-play",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Icon, LanguagePipe],
   templateUrl: "./video-play.component.html",
   host: { "data-testid": "library-video-play" },
 })

@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, input, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectConfirmService } from "../project.confirm.service";
@@ -18,7 +18,7 @@ type EditableElement = HTMLInputElement | HTMLTextAreaElement;
 @Component({
   selector: "app-project-view",
   standalone: true,
-  imports: [Icon, I18nPipe, ProjectTree],
+  imports: [Icon, LanguagePipe, ProjectTree],
   templateUrl: "./project-view.component.html",
 })
 export class ProjectView {
@@ -27,7 +27,7 @@ export class ProjectView {
   readonly labels = inject(ProjectLabels);
   private readonly confirms = inject(ProjectConfirmService);
   private readonly toasts = inject(ToastService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly projectId = input.required<number>();
   readonly project = computed(this.findProject.bind(this));
@@ -69,7 +69,7 @@ export class ProjectView {
     const issue = validateProjectName(name);
     if (issue !== null) {
       element.value = project.name;
-      this.toasts.show(this.i18n.translate("project.error.empty"), "warning");
+      this.toasts.show(this.languageService.translate("project.error.empty"), "warning");
       return;
     }
     if (name === project.name) {
@@ -148,6 +148,6 @@ export class ProjectView {
 
   private fail(cause: unknown): void {
     const detail = toProjectError(cause).detail;
-    this.toasts.show(this.i18n.translate("project.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate("project.error.generic", { detail }), "danger");
   }
 }

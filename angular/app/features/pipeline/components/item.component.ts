@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { formatStamp } from "@app/features/novel/novel.rules";
 import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@app/features/novel/novel.translation.models";
 import { PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, elapsedMs, etaMs, firstError, formatDuration, isActive, kindIcon, kindKey, kindSize, percentOf, queuedCount, runningTasks } from "../pipeline.rules";
@@ -19,7 +19,7 @@ import { PipelineStrip } from "./strip.component";
     "[attr.data-status]": "pipeline().status",
     "[attr.data-kind]": "pipeline().kind",
   },
-  imports: [Icon, I18nPipe, PipelineStrip],
+  imports: [Icon, LanguagePipe, PipelineStrip],
   templateUrl: "./item.component.html",
 })
 export class PipelineItem {
@@ -48,7 +48,7 @@ export class PipelineItem {
     return this.pipelines.chapterOf(this.pipeline().novelId, task.chapterId)?.seq ?? 0;
   }
 
-  taskLabelKey(task: PipelineTask): I18nKey {
+  taskLabelKey(task: PipelineTask): LanguageKey {
     return task.passage === null ? "pipeline.task.chapter" : "pipeline.task.passage";
   }
 
@@ -106,7 +106,7 @@ export class PipelineItem {
     return kindIcon(this.pipeline().kind);
   }
 
-  private buildKind(): I18nKey | null {
+  private buildKind(): LanguageKey | null {
     return kindKey(this.pipeline().kind);
   }
 
@@ -118,7 +118,7 @@ export class PipelineItem {
     return PIPELINE_STATUS_BADGES[this.pipeline().status];
   }
 
-  private buildStatusKey(): I18nKey {
+  private buildStatusKey(): LanguageKey {
     const status: PipelineStatus = this.pipeline().status;
     return PIPELINE_STATUS_KEYS[status];
   }

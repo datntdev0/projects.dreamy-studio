@@ -1,7 +1,7 @@
 import { Provider, signal } from "@angular/core";
 import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageService } from "@app/core/language/language.service";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { LlmService } from "@app/features/settings/llm.service";
 import { LlmCapability, LlmFeature, LlmFeatureSettings, LlmProvider, SettingsSectionId } from "@app/features/settings/settings.models";
@@ -68,7 +68,7 @@ export interface SettingsScenario {
   dataDir?: string;
 }
 
-function settingsMock(i18n: I18nService, themes: ThemeService, scenario: SettingsScenario): Partial<SettingsService> {
+function settingsMock(languageService: LanguageService, themes: ThemeService, scenario: SettingsScenario): Partial<SettingsService> {
   const section = signal<SettingsSectionId>(scenario.section ?? "general");
   const maxPipelines = signal(1);
   const maxTasks = signal(5);
@@ -83,7 +83,7 @@ function settingsMock(i18n: I18nService, themes: ThemeService, scenario: Setting
     setMaxTasks: (value) => maxTasks.set(value),
     closeDialog: () => undefined,
     selectSection: (id) => section.set(id),
-    setLanguage: (language) => i18n.setLanguage(language),
+    setLanguage: (language) => languageService.setLanguage(language),
     setTheme: (theme) => themes.setTheme(theme),
     openFolder: () => Promise.resolve(),
   };
@@ -92,8 +92,8 @@ function settingsMock(i18n: I18nService, themes: ThemeService, scenario: Setting
 export function settingsProvider(scenario: SettingsScenario = {}): Provider {
   return {
     provide: SettingsService,
-    useFactory: (i18n: I18nService, themes: ThemeService) => settingsMock(i18n, themes, scenario),
-    deps: [I18nService, ThemeService],
+    useFactory: (languageService: LanguageService, themes: ThemeService) => settingsMock(languageService, themes, scenario),
+    deps: [LanguageService, ThemeService],
   };
 }
 

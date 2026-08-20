@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { PIPELINE_KINDS } from "../pipeline.rules";
 import { PipelineService } from "../pipeline.service";
 import { PipelineItem } from "./item.component";
@@ -10,7 +10,7 @@ const CLOCK_MS = 1000;
 @Component({
   selector: "app-pipeline-list",
   standalone: true,
-  imports: [Icon, I18nPipe, PipelineItem],
+  imports: [Icon, LanguagePipe, PipelineItem],
   templateUrl: "./list.component.html",
 })
 export class PipelineList implements OnInit {

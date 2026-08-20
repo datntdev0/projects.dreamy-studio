@@ -1,9 +1,9 @@
 import { Component, HostListener, computed, inject, signal } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
-import { Language } from "@app/core/i18n/i18n.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
+import { Language } from "@app/core/language/language.models";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { SettingsService } from "@app/features/settings/settings.service";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
@@ -17,11 +17,11 @@ const LANGUAGE_NAMES: Record<Language, string> = {
 @Component({
   selector: "app-titlebar",
   standalone: true,
-  imports: [Button, Icon, I18nPipe],
+  imports: [Button, Icon, LanguagePipe],
   templateUrl: "./titlebar.html",
 })
 export class Titlebar {
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly themes = inject(ThemeService);
   private readonly workspaceService = inject(WorkspaceService);
   private readonly settings = inject(SettingsService);
@@ -52,11 +52,11 @@ export class Titlebar {
   }
 
   toggleLanguage(): void {
-    this.settings.setLanguage(this.i18n.language() === "vi" ? "en" : "vi");
+    this.settings.setLanguage(this.languageService.language() === "vi" ? "en" : "vi");
   }
 
   private currentLanguageName(): string {
-    return LANGUAGE_NAMES[this.i18n.language()];
+    return LANGUAGE_NAMES[this.languageService.language()];
   }
 
   private currentThemeIcon(): string {

@@ -1,10 +1,10 @@
 import { NgClass } from "@angular/common";
 import { Component, OnDestroy, computed, effect, inject, input, signal, untracked } from "@angular/core";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguageService } from "@app/core/language/language.service";
 import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelConfirmService } from "../novel.confirm.service";
@@ -24,7 +24,7 @@ import { NovelProgressFrac } from "./progress-frac.component";
 
 const DRAG_THRESHOLD = 5;
 
-type StatusView = { tone: string; title: I18nKey };
+type StatusView = { tone: string; title: LanguageKey };
 
 const TRANSLATION_VIEWS: Record<TranslationStatus, StatusView> = {
   none: { tone: "none", title: "novel.chapters.translation.none" },
@@ -49,13 +49,13 @@ interface DropTarget {
 @Component({
   selector: "app-novel-chapters",
   standalone: true,
-  imports: [NgClass, Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelLangSwitch, NovelProgressFrac],
+  imports: [NgClass, Datatable, DatatableCell, DatatableEmpty, Icon, LanguagePipe, Cover, NovelLangSwitch, NovelProgressFrac],
   templateUrl: "./chapters.component.html",
 })
 export class NovelChapters implements OnDestroy {
   private readonly novels = inject(NovelService);
   private readonly reader = inject(NovelReaderService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly translation = inject(NovelTranslationService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly confirms = inject(NovelConfirmService);
@@ -94,17 +94,17 @@ export class NovelChapters implements OnDestroy {
 
   readonly tableActions = (): DatatableAction[] => {
     return [
-      { key: "add", label: this.i18n.translate("novel.chapters.add"), icon: "plus", handler: this.add.bind(this) },
-      { key: "delete", label: this.i18n.translate("novel.chapters.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
+      { key: "add", label: this.languageService.translate("novel.chapters.add"), icon: "plus", handler: this.add.bind(this) },
+      { key: "delete", label: this.languageService.translate("novel.chapters.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
     ];
   };
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "seq", label: this.i18n.translate("novel.chapters.col.number"), width: "56px" },
-      { key: "title", label: this.i18n.translate("novel.chapters.col.title"), ellipsis: true },
-      { key: "wordCount", label: this.i18n.translate("novel.chapters.col.words"), align: "right", width: "80px" },
-      { key: "status", label: this.i18n.translate("novel.chapters.col.status"), align: "center", width: "96px" },
+      { key: "seq", label: this.languageService.translate("novel.chapters.col.number"), width: "56px" },
+      { key: "title", label: this.languageService.translate("novel.chapters.col.title"), ellipsis: true },
+      { key: "wordCount", label: this.languageService.translate("novel.chapters.col.words"), align: "right", width: "80px" },
+      { key: "status", label: this.languageService.translate("novel.chapters.col.status"), align: "center", width: "96px" },
     ];
   }
 
@@ -201,7 +201,7 @@ export class NovelChapters implements OnDestroy {
       await this.reader.moveChapter(this.novelId(), row.id, toSeq);
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.i18n.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
     }
   }
 

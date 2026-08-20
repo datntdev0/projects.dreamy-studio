@@ -6,9 +6,9 @@ import { Segments, SegmentOption } from "@components/segments";
 import { DesktopDragDropEvent } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ImageCheck } from "../library.images.models";
 import { ImageRights } from "../library.images.models";
@@ -33,8 +33,8 @@ type UploadKind = "image" | "sound" | "video" | "prompt";
 
 interface UploadConfig {
   icon: "image" | "music" | "film" | "prompt";
-  nounKey: I18nKey;
-  hintKey: I18nKey;
+  nounKey: LanguageKey;
+  hintKey: LanguageKey;
   limit: number;
 }
 
@@ -76,7 +76,7 @@ function parseTags(value: string): string[] {
 @Component({
   selector: "app-library-upload-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe, Segments],
+  imports: [Button, Dialog, Icon, LanguagePipe, Segments],
   templateUrl: "./upload.dialog.html",
   host: { "data-testid": "library-upload-dialog" },
 })
@@ -88,7 +88,7 @@ export class LibraryUploadDialog {
   readonly prompts = inject(LibraryPromptService);
   readonly library = inject(LibraryService);
   private readonly ipc = inject(DesktopIpcService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private unlisten: DesktopUnlisten = noop;
   private listenToken = 0;
@@ -131,9 +131,9 @@ export class LibraryUploadDialog {
     return UPLOAD_CONFIG[this.kind()];
   }
 
-  statusKey(item: UploadItem): I18nKey {
+  statusKey(item: UploadItem): LanguageKey {
     if (item.run) {
-      return `library.upload.status.${item.run}` as I18nKey;
+      return `library.upload.status.${item.run}` as LanguageKey;
     }
     if (item.check?.status === "warn") {
       return "library.upload.status.rename";
@@ -151,8 +151,8 @@ export class LibraryUploadDialog {
     return item.run === "error" || item.check?.status === "error" ? "badge-danger" : item.check?.status === "warn" ? "badge-warning" : "";
   }
 
-  kindKey(kind: PromptKind): I18nKey {
-    return `library.prompt.kind.${kind}` as I18nKey;
+  kindKey(kind: PromptKind): LanguageKey {
+    return `library.prompt.kind.${kind}` as LanguageKey;
   }
 
   setMode(value: string): void {
@@ -182,8 +182,8 @@ export class LibraryUploadDialog {
     return this.writeTried() && !this.writeText().trim();
   }
 
-  rightKey(right: ImageRights): I18nKey {
-    return `library.rights.${right}` as I18nKey;
+  rightKey(right: ImageRights): LanguageKey {
+    return `library.rights.${right}` as LanguageKey;
   }
 
   message(item: UploadItem): string {
@@ -191,7 +191,7 @@ export class LibraryUploadDialog {
       return item.error;
     }
     const code = item.check?.code;
-    return code ? this.i18n.translate(`library.upload.check.${code}` as I18nKey, { ext: this.extension(item.name) }) : "";
+    return code ? this.languageService.translate(`library.upload.check.${code}` as LanguageKey, { ext: this.extension(item.name) }) : "";
   }
 
   close(): void {
@@ -251,7 +251,7 @@ export class LibraryUploadDialog {
       collectionId = await this.resolveCollection();
     } catch (cause) {
       this.uploading.set(false);
-      this.toasts.show(this.i18n.translate(libraryErrorKey(cause) as I18nKey), "danger");
+      this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
       return;
     }
     const input: ImageUploadInput = { tags: parseTags(this.tags()), rights };
@@ -266,16 +266,16 @@ export class LibraryUploadDialog {
         this.setRun(target.path, "done");
         completed += 1;
       } catch (cause) {
-        this.setFailure(target.path, this.i18n.translate(libraryErrorKey(cause) as I18nKey));
+        this.setFailure(target.path, this.languageService.translate(libraryErrorKey(cause) as LanguageKey));
       }
     }
     this.uploading.set(false);
     const failed = targets.length - completed;
     if (!failed) {
       this.dialogs.closeUpload();
-      this.toasts.show(this.i18n.translate("library.upload.toast.success", { count: completed }));
+      this.toasts.show(this.languageService.translate("library.upload.toast.success", { count: completed }));
     } else {
-      this.toasts.show(this.i18n.translate("library.upload.toast.partial", { success: completed, total: targets.length, failed }), "warning");
+      this.toasts.show(this.languageService.translate("library.upload.toast.partial", { success: completed, total: targets.length, failed }), "warning");
     }
   }
 
@@ -296,10 +296,10 @@ export class LibraryUploadDialog {
       const prompt = await this.prompts.create(input);
       this.uploading.set(false);
       this.dialogs.closeUpload();
-      this.toasts.show(this.i18n.translate("library.promptWrite.toast", { name: prompt.name }));
+      this.toasts.show(this.languageService.translate("library.promptWrite.toast", { name: prompt.name }));
     } catch (cause) {
       this.uploading.set(false);
-      this.toasts.show(this.i18n.translate(libraryErrorKey(cause) as I18nKey), "danger");
+      this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
     }
   }
 
@@ -313,8 +313,8 @@ export class LibraryUploadDialog {
 
   private buildTabOptions(): SegmentOption[] {
     return [
-      { value: "files", label: this.i18n.translate("library.upload.tab.files") },
-      { value: "write", label: this.i18n.translate("library.upload.tab.write") },
+      { value: "files", label: this.languageService.translate("library.upload.tab.files") },
+      { value: "write", label: this.languageService.translate("library.upload.tab.write") },
     ];
   }
 
@@ -351,7 +351,7 @@ export class LibraryUploadDialog {
   private addPaths(paths: string[]): void {
     const fresh = paths.filter((path) => !this.items().some(hasPath.bind(null, path)));
     if (fresh.length !== paths.length) {
-      this.toasts.show(this.i18n.translate("library.upload.toast.skipped", { count: paths.length - fresh.length }), "warning");
+      this.toasts.show(this.languageService.translate("library.upload.toast.skipped", { count: paths.length - fresh.length }), "warning");
     }
     if (!fresh.length) {
       return;
@@ -374,7 +374,7 @@ export class LibraryUploadDialog {
       }
     } catch (cause) {
       if (token === this.token) {
-        const error = this.i18n.translate(libraryErrorKey(cause) as I18nKey);
+        const error = this.languageService.translate(libraryErrorKey(cause) as LanguageKey);
         this.items.update((items) => items.map((item) => paths.includes(item.path) ? { ...item, run: "error", error } : item));
       }
     }

@@ -1,13 +1,8 @@
 import { Component, HostListener, effect, inject } from "@angular/core";
 import { Title } from "@angular/platform-browser";
 import { Toast } from "@components/toast";
-import { Editor } from "@layout/editor/editor";
-import { Explorer } from "@layout/explorer/explorer";
-import { Inspector } from "@layout/inspector/inspector";
+import { LayoutModule } from "@layout/layout.module";
 import { LayoutService } from "@layout/layout.service";
-import { Railbar } from "@layout/railbar/railbar";
-import { Statusbar } from "@layout/statusbar/statusbar";
-import { Titlebar } from "@layout/titlebar/titlebar";
 import { DialogHost } from "@app/core/dialog/dialog-host.component";
 import { ToastHost } from "@app/core/toast/toast-host.component";
 import { NovelCreateDialog } from "@app/features/novel/components/create.dialog";
@@ -31,7 +26,7 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [Titlebar, Railbar, Explorer, Editor, Inspector, Statusbar, Toast, ToastHost, DialogHost, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelChapterAddDialog, NovelImportDialog, ProjectCreateDialog, LibraryCollectionDialog, LibraryImagePreviewDialog, LibrarySoundPreviewDialog, LibraryVideoPreviewDialog, LibraryPromptPreviewDialog, LibraryUploadDialog],
+  imports: [LayoutModule, Toast, ToastHost, DialogHost, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelChapterAddDialog, NovelImportDialog, ProjectCreateDialog, LibraryCollectionDialog, LibraryImagePreviewDialog, LibrarySoundPreviewDialog, LibraryVideoPreviewDialog, LibraryPromptPreviewDialog, LibraryUploadDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {

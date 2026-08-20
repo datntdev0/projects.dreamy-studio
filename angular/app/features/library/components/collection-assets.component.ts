@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit, computed, inject, input, signal } from "@angular/core";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { LibraryConfirmService } from "../library.confirm.service";
@@ -9,7 +9,7 @@ import { AssetRow, toAssetRows } from "../library.assets.models";
 import { LibraryVideoService } from "../library.videos.service";
 import { LibraryPromptService } from "../library.prompts.service";
 import { charCount } from "../library.prompts.rules";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageService } from "@app/core/language/language.service";
 import { videoMeta } from "../library.videos.rules";
 import { dimensionsText } from "../library.images.rules";
 import { LibraryImageService } from "../library.images.service";
@@ -42,7 +42,7 @@ function inCollection(collectionId: number, row: AssetRow): boolean {
 @Component({
   selector: "app-library-collection-assets",
   standalone: true,
-  imports: [Icon, I18nPipe, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay, LibraryVideoMedia, LibraryVideoThumb, LibraryPromptMedia],
+  imports: [Icon, LanguagePipe, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay, LibraryVideoMedia, LibraryVideoThumb, LibraryPromptMedia],
   templateUrl: "./collection-assets.component.html",
   host: { "data-testid": "library-collection-assets" },
 })
@@ -52,7 +52,7 @@ export class LibraryCollectionAssets implements OnInit {
   private readonly sounds = inject(LibrarySoundService);
   private readonly videos = inject(LibraryVideoService);
   private readonly prompts = inject(LibraryPromptService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   readonly library = inject(LibraryService);
   readonly assets = inject(LibraryCollectionAssetsService);
   readonly dialogs = inject(LibraryDialogsService);
@@ -123,7 +123,7 @@ export class LibraryCollectionAssets implements OnInit {
       return videoMeta(row.video);
     }
     if (row.prompt) {
-      return this.i18n.translate("library.prompt.chars", { count: charCount(row.prompt.text) });
+      return this.languageService.translate("library.prompt.chars", { count: charCount(row.prompt.text) });
     }
     return row.image ? dimensionsText(row.image) : row.sound ? durationText(row.sound.durationMs) : "—";
   }
@@ -132,7 +132,7 @@ export class LibraryCollectionAssets implements OnInit {
     return formatBytes(row.size);
   }
 
-  typeKey(row: AssetRow): I18nKey {
+  typeKey(row: AssetRow): LanguageKey {
     if (row.ref.kind === "prompt") return "library.kind.prompt";
     return row.ref.kind === "image" ? "library.kind.image" : row.ref.kind === "sound" ? "library.kind.sound" : "library.kind.video";
   }

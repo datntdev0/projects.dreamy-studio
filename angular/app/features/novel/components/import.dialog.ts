@@ -5,9 +5,9 @@ import { Icon } from "@components/icon";
 import { DesktopDragDropEvent } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { InspectCheck } from "../novel.models";
 import { InspectEvent } from "../novel.models";
@@ -32,12 +32,12 @@ type CheckState = "idle" | "running" | "ok" | "fail";
 
 interface StepItem {
   n: ImportStep;
-  key: I18nKey;
+  key: LanguageKey;
 }
 
 interface LangOption {
   value: NovelLang;
-  key: I18nKey;
+  key: LanguageKey;
 }
 
 
@@ -47,7 +47,7 @@ const STEP_ITEMS: StepItem[] = [
   { n: 3, key: "novel.import.steps.preview" },
 ];
 
-const CHECK_KEYS: Record<InspectStep, I18nKey> = {
+const CHECK_KEYS: Record<InspectStep, LanguageKey> = {
   format: "novel.import.check.step.format",
   open: "novel.import.check.step.open",
   manifest: "novel.import.check.step.manifest",
@@ -56,7 +56,7 @@ const CHECK_KEYS: Record<InspectStep, I18nKey> = {
   cover: "novel.import.check.step.cover",
 };
 
-const LANG_KEYS: Record<NovelLang, I18nKey> = {
+const LANG_KEYS: Record<NovelLang, LanguageKey> = {
   EN: "novel.lang.EN",
   VI: "novel.lang.VI",
   ZH: "novel.lang.ZH",
@@ -88,7 +88,7 @@ function langOption(value: NovelLang): LangOption {
 @Component({
   selector: "app-novel-import-dialog",
   standalone: true,
-  imports: [Button, Dialog, Icon, I18nPipe, Cover],
+  imports: [Button, Dialog, Icon, LanguagePipe, Cover],
   templateUrl: "./import.dialog.html",
   host: { "data-testid": "novel-import-dialog" },
 })
@@ -96,7 +96,7 @@ export class NovelImportDialog {
   private readonly dialogs = inject(NovelDialogsService);
   private readonly novels = inject(NovelService);
   private readonly ipc = inject(DesktopIpcService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly toasts = inject(ToastService);
   private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>("titleInput");
@@ -134,7 +134,7 @@ export class NovelImportDialog {
     inject(DestroyRef).onDestroy(this.teardown.bind(this));
   }
 
-  checkKey(step: InspectStep): I18nKey {
+  checkKey(step: InspectStep): LanguageKey {
     return CHECK_KEYS[step];
   }
 
@@ -221,9 +221,9 @@ export class NovelImportDialog {
       this.novels.select(created.id);
       this.invalidate();
       this.dialogs.closeImport();
-      this.toasts.show(this.i18n.translate("novel.toast.imported", { title: created.title, count: info.chapterCount }));
+      this.toasts.show(this.languageService.translate("novel.toast.imported", { title: created.title, count: info.chapterCount }));
     } catch (cause) {
-      this.importError.set(this.i18n.translate("novel.import.error.failed", { detail: toNovelError(cause).detail }));
+      this.importError.set(this.languageService.translate("novel.import.error.failed", { detail: toNovelError(cause).detail }));
     } finally {
       this.importing.set(false);
     }
@@ -367,7 +367,7 @@ export class NovelImportDialog {
     const error = toNovelError(cause);
     this.state.set("fail");
     if (error.code === "package_format") {
-      this.error.set(this.i18n.translate("novel.import.error.badFormat", { name: fileNameOf(path) }));
+      this.error.set(this.languageService.translate("novel.import.error.badFormat", { name: fileNameOf(path) }));
     } else {
       this.error.set(error.detail);
     }
@@ -396,16 +396,16 @@ export class NovelImportDialog {
     if (!info) {
       return "";
     }
-    const base = this.i18n.translate("novel.import.result.okDetail", {
+    const base = this.languageService.translate("novel.import.result.okDetail", {
       chapters: info.chapterCount,
       words: formatCount(info.wordCount),
-      lang: this.i18n.translate(LANG_KEYS[info.lang]),
+      lang: this.languageService.translate(LANG_KEYS[info.lang]),
     });
     const warns = this.warnCount();
     if (!warns) {
       return base;
     }
-    return base + this.i18n.translate("novel.import.result.okWarnings", { count: warns });
+    return base + this.languageService.translate("novel.import.result.okWarnings", { count: warns });
   }
 
   private buildWordsText(): string {

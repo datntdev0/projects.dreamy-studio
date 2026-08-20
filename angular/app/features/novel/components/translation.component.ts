@@ -1,9 +1,9 @@
 import { Component, computed, effect, inject, input, untracked } from "@angular/core";
 import { Cover } from "@components/cover";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
-import { I18nService } from "@app/core/i18n/i18n.service";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
+import { LanguageService } from "@app/core/language/language.service";
 import { NovelLang, NovelSummary, TargetLang } from "../novel.models";
 import { NovelService } from "../novel.service";
 import { NOVEL_LANG_KEYS, displayName } from "../novel.rules";
@@ -19,12 +19,12 @@ import { NovelTranslationWarnings } from "./translation-warnings.component";
 @Component({
   selector: "app-novel-translation",
   standalone: true,
-  imports: [Cover, Icon, I18nPipe, NovelTranslationDictionary, NovelTranslationGuidelines, NovelTranslationPipeline, NovelTranslationResult, NovelTranslationWarnings],
+  imports: [Cover, Icon, LanguagePipe, NovelTranslationDictionary, NovelTranslationGuidelines, NovelTranslationPipeline, NovelTranslationResult, NovelTranslationWarnings],
   templateUrl: "./translation.component.html",
 })
 export class NovelTranslation {
   private readonly novels = inject(NovelService);
-  private readonly i18n = inject(I18nService);
+  private readonly languageService = inject(LanguageService);
 
   readonly translation = inject(NovelTranslationService);
   readonly novelId = input.required<number>();
@@ -48,7 +48,7 @@ export class NovelTranslation {
     return displayName(novel);
   }
 
-  langKey(lang: NovelLang): I18nKey {
+  langKey(lang: NovelLang): LanguageKey {
     return NOVEL_LANG_KEYS[lang];
   }
 
@@ -56,11 +56,11 @@ export class NovelTranslation {
     this.translation.setTarget(this.novelId(), (event.target as HTMLSelectElement).value as TargetLang);
   }
 
-  labelKey(step: TranslationStep): I18nKey {
+  labelKey(step: TranslationStep): LanguageKey {
     return STEP_LABEL_KEYS[step];
   }
 
-  hintKey(step: TranslationStep): I18nKey {
+  hintKey(step: TranslationStep): LanguageKey {
     return STEP_HINT_KEYS[step];
   }
 
@@ -83,15 +83,15 @@ export class NovelTranslation {
     const warnings = this.translation.warningsOf(id).length;
     switch (step) {
       case "dict":
-        return this.i18n.translate("novel.translation.summary.dict", { count: this.translation.of(id).dict.length });
+        return this.languageService.translate("novel.translation.summary.dict", { count: this.translation.of(id).dict.length });
       case "guide":
-        return this.i18n.translate(this.translation.of(id).guidelines ? "novel.translation.summary.guideSet" : "novel.translation.summary.guideEmpty");
+        return this.languageService.translate(this.translation.of(id).guidelines ? "novel.translation.summary.guideSet" : "novel.translation.summary.guideEmpty");
       case "trans":
-        return this.translation.isTranslating(id) ? this.i18n.translate("novel.translation.summary.running") : this.i18n.translate("novel.translation.summary.trans", { done: this.translation.translatedCountOf(id), total });
+        return this.translation.isTranslating(id) ? this.languageService.translate("novel.translation.summary.running") : this.languageService.translate("novel.translation.summary.trans", { done: this.translation.translatedCountOf(id), total });
       case "result":
-        return review ? this.i18n.translate("novel.translation.summary.review", { count: review }) : this.i18n.translate("novel.translation.summary.reviewed");
+        return review ? this.languageService.translate("novel.translation.summary.review", { count: review }) : this.languageService.translate("novel.translation.summary.reviewed");
       case "warn":
-        return warnings ? this.i18n.translate("novel.translation.summary.warn", { count: warnings }) : this.i18n.translate("novel.translation.summary.none");
+        return warnings ? this.languageService.translate("novel.translation.summary.warn", { count: warnings }) : this.languageService.translate("novel.translation.summary.none");
     }
   }
 

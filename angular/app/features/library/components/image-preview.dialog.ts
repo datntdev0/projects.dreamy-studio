@@ -1,8 +1,8 @@
 import { Component, HostListener, computed, effect, inject, signal, untracked } from "@angular/core";
 import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
-import { I18nKey } from "@app/core/i18n/i18n.models";
-import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { LanguageKey } from "@app/core/language/language.models";
+import { LanguagePipe } from "@app/core/language/language.pipe";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { ImageRights, LibraryImage } from "../library.images.models";
 import { dimensionsText, formatBytes, imageCode } from "../library.images.rules";
@@ -11,7 +11,7 @@ import { LibraryService } from "../library.service";
 import { AssetRef } from "../library.models";
 import { formatIsoMinute } from "../library.rules";
 
-const RIGHTS_KEYS: Record<ImageRights, I18nKey> = {
+const RIGHTS_KEYS: Record<ImageRights, LanguageKey> = {
   own: "library.rights.own",
   licensed: "library.rights.licensed",
   free: "library.rights.free",
@@ -25,7 +25,7 @@ function sameId(id: number, image: LibraryImage): boolean {
 @Component({
   selector: "app-library-image-preview-dialog",
   standalone: true,
-  imports: [Dialog, Icon, I18nPipe],
+  imports: [Dialog, Icon, LanguagePipe],
   templateUrl: "./image-preview.dialog.html",
   host: { "data-testid": "library-image-preview-dialog" },
 })
@@ -81,7 +81,7 @@ export class LibraryImagePreviewDialog {
     return formatIsoMinute(image.createdAt);
   }
 
-  rightsKey(rights: ImageRights): I18nKey {
+  rightsKey(rights: ImageRights): LanguageKey {
     return RIGHTS_KEYS[rights];
   }
 

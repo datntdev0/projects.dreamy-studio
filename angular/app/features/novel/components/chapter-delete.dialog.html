@@ -1,9 +1,0 @@
-@if (chapter(); as row) {
-  <ds-dialog [title]="'novel.chapters.delete.title' | t" [eyebrow]="'novel.cap' | t" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-chapter-delete-dialog-panel" (closed)="close()">
-    <div class="t-ink" data-testid="novel-chapter-delete-name">{{ "novel.chapters.delete.heading" | t: { n: row.seq, title: row.title } }}</div>
-    <div class="t-sm t-mute" data-testid="novel-chapter-delete-meta">{{ "novel.chapters.delete.meta" | t: { words: count(row.wordCount), passages: passages() ?? 0 } }}</div>
-    <div class="ld-warn" data-testid="novel-chapter-delete-warning"><ds-icon name="alert" [size]="15" /><span>{{ "novel.chapters.delete.warn" | t }}</span></div>
-    <ds-button dialogFoot data-testid="novel-chapter-delete-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button>
-    <ds-button dialogFoot variant="danger" [disabled]="busy()" data-testid="novel-chapter-delete-confirm" (pressed)="confirm()"><ds-icon name="trash" [size]="16" />{{ "novel.chapters.delete.submit" | t }}</ds-button>
-  </ds-dialog>
-}

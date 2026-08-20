@@ -7,6 +7,7 @@ import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
+import { NovelConfirmService } from "../novel.confirm.service";
 import { AnalysisStatus, ChapterRow, TargetLang, TranslationStatus } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
@@ -57,6 +58,7 @@ export class NovelChapters implements OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly translation = inject(NovelTranslationService);
   private readonly dialogs = inject(NovelDialogsService);
+  private readonly confirms = inject(NovelConfirmService);
   private readonly toasts = inject(ToastService);
 
   readonly novelId = input.required<number>();
@@ -148,7 +150,7 @@ export class NovelChapters implements OnDestroy {
   }
 
   removeRow(row: object): void {
-    this.dialogs.openDeleteChapter(this.novelId(), this.chapterOf(row).id);
+    this.confirms.deleteChapter(this.novelId(), this.chapterOf(row).id);
   }
 
   translationView(row: ChapterRow): StatusView {

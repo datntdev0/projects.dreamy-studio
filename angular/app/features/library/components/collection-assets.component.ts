@@ -4,6 +4,7 @@ import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetRow, toAssetRows } from "../library.assets.models";
 import { LibraryVideoService } from "../library.videos.service";
 import { LibraryPromptService } from "../library.prompts.service";
@@ -55,6 +56,7 @@ export class LibraryCollectionAssets implements OnInit {
   readonly library = inject(LibraryService);
   readonly assets = inject(LibraryCollectionAssetsService);
   readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   readonly uploadMenuOpen = signal(false);
   readonly visible = computed(this.buildVisible.bind(this));
   readonly total = computed(this.buildTotal.bind(this));
@@ -167,10 +169,10 @@ export class LibraryCollectionAssets implements OnInit {
     if (event.key !== "Delete" || isField(event.target) || selected === null || this.dialogs.uploadOpen() || this.isDialogOpen()) {
       return;
     }
-    if (selected.kind === "image") this.dialogs.openDeleteImages([selected.id]);
-    else if (selected.kind === "sound") this.dialogs.openDeleteSounds([selected.id]);
-    else if (selected.kind === "video") this.dialogs.openDeleteVideos([selected.id]);
-    else this.dialogs.openDeletePrompts([selected.id]);
+    if (selected.kind === "image") this.confirms.deleteImages([selected.id]);
+    else if (selected.kind === "sound") this.confirms.deleteSounds([selected.id]);
+    else if (selected.kind === "video") this.confirms.deleteVideos([selected.id]);
+    else this.confirms.deletePrompts([selected.id]);
   }
 
   private buildVisible(): AssetRow[] {
@@ -182,6 +184,6 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   private isDialogOpen(): boolean {
-    return this.dialogs.previewImageId() !== null || this.dialogs.previewSoundId() !== null || this.dialogs.previewVideoId() !== null || this.dialogs.previewPromptId() !== null || this.dialogs.deleteImageIds().length > 0 || this.dialogs.deleteSoundIds().length > 0 || this.dialogs.deleteVideoIds().length > 0 || this.dialogs.deletePromptIds().length > 0 || document.querySelector(".modal") !== null;
+    return this.dialogs.previewImageId() !== null || this.dialogs.previewSoundId() !== null || this.dialogs.previewVideoId() !== null || this.dialogs.previewPromptId() !== null || document.querySelector(".modal") !== null;
   }
 }

@@ -1,8 +1,8 @@
 import { Component, EventEmitter, Input, OnChanges, Output, inject, signal } from "@angular/core";
 import { Badge } from "@components/badge";
 import { Button } from "@components/button";
-import { Dialog } from "@components/dialog";
 import { Icon } from "@components/icon";
+import { DialogService } from "@app/core/dialog/dialog.service";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
@@ -54,13 +54,14 @@ function isMeasurable(row: RecentWorkspace): boolean {
 @Component({
   selector: "app-recent-workspace-list",
   standalone: true,
-  imports: [Badge, Button, Dialog, Icon, I18nPipe],
+  imports: [Badge, Button, Icon, I18nPipe],
   templateUrl: "./recent.component.html",
   host: { "data-testid": "recent-workspace-list" },
 })
 export class RecentWorkspaceList implements OnChanges {
   private readonly workspace = inject(WorkspaceService);
   private readonly i18n = inject(I18nService);
+  private readonly dialogs = inject(DialogService);
   private readonly requested = new Set<string>();
 
   @Input() rows: RecentWorkspace[] = [];
@@ -70,9 +71,6 @@ export class RecentWorkspaceList implements OnChanges {
   @Output() deleted = new EventEmitter<void>();
 
   readonly sizes = signal<Record<string, string>>({});
-  readonly deleteTarget = signal<RecentWorkspace | null>(null);
-  readonly deleteError = signal<string | null>(null);
-  readonly deleting = signal(false);
   readonly reasonKey = reasonKey;
   readonly projectsKey = projectsKey;
 
@@ -106,33 +104,19 @@ export class RecentWorkspaceList implements OnChanges {
   }
 
   delete(row: RecentWorkspace): void {
-    this.deleteTarget.set(row);
-    this.deleteError.set(null);
+    void this.dialogs.ask({
+      title: this.i18n.translate("splash.recent.deleteTitle"),
+      message: this.i18n.translate("splash.recent.deleteMessage", { name: row.name }),
+      warning: this.i18n.translate("splash.recent.deleteWarning"),
+      confirmLabel: this.i18n.translate("splash.recent.delete"),
+      confirmIcon: "trash",
+      onConfirm: this.removeWorkspace.bind(this, row),
+    });
   }
 
-  closeDelete(): void {
-    if (!this.deleting()) {
-      this.deleteTarget.set(null);
-      this.deleteError.set(null);
-    }
-  }
-
-  async confirmDelete(): Promise<void> {
-    const row = this.deleteTarget();
-    if (!row || this.deleting()) {
-      return;
-    }
-    this.deleting.set(true);
-    this.deleteError.set(null);
-    try {
-      await this.workspace.workspaceDelete(row.path);
-      this.deleteTarget.set(null);
-      this.deleted.emit();
-    } catch (error) {
-      this.deleteError.set(error instanceof Error ? error.message : String(error));
-    } finally {
-      this.deleting.set(false);
-    }
+  private async removeWorkspace(row: RecentWorkspace): Promise<void> {
+    await this.workspace.workspaceDelete(row.path);
+    this.deleted.emit();
   }
 
   private async measureRow(path: string): Promise<void> {

@@ -7,7 +7,7 @@ import { I18nService } from "@app/core/i18n/i18n.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { checkCoverFile } from "../novel.cover";
 import { prepareCover } from "../novel.cover";
-import { NovelDialogsService } from "../novel.dialogs.service";
+import { NovelConfirmService } from "../novel.confirm.service";
 import { NovelField } from "../novel.models";
 import { NovelLang } from "../novel.models";
 import { NovelOrigin } from "../novel.models";
@@ -58,7 +58,7 @@ function fieldOf(patch: NovelPatch): NovelField {
 })
 export class NovelPanel {
   private readonly novels = inject(NovelService);
-  private readonly dialogs = inject(NovelDialogsService);
+  private readonly confirms = inject(NovelConfirmService);
   private readonly tabs = inject(TabsService);
   private readonly toasts = inject(ToastService);
   private readonly i18n = inject(I18nService);
@@ -123,7 +123,7 @@ export class NovelPanel {
   }
 
   requestDelete(novel: NovelSummary): void {
-    this.dialogs.openDelete([novel.id]);
+    this.confirms.deleteNovels([novel.id]);
   }
 
   exportTipKey(novel: NovelSummary): I18nKey {

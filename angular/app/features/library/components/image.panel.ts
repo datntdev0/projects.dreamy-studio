@@ -13,6 +13,7 @@ import { imageInspectorFormatText } from "../library.images.rules";
 import { formatBytes } from "../library.images.rules";
 import { imageCode } from "../library.images.rules";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { LibraryImageService } from "../library.images.service";
 import { normalizeTag } from "../library.rules";
 import { libraryErrorKey } from "../library.rules";
@@ -40,6 +41,7 @@ export class LibraryImagePanel {
   readonly images = inject(LibraryImageService);
   readonly library = inject(LibraryService);
   private readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
   readonly rightOptions = IMAGE_RIGHTS;
@@ -136,7 +138,7 @@ export class LibraryImagePanel {
   }
 
   remove(image: LibraryImage): void {
-    this.dialogs.openDeleteImages([image.id]);
+    this.confirms.deleteImages([image.id]);
   }
 
   private async rename(image: LibraryImage, name: string): Promise<void> {

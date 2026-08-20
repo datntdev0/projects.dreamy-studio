@@ -18,6 +18,7 @@ import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetRef, ASSET_RATIOS } from "../library.models";
 import { formatBytes } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -49,6 +50,7 @@ export class LibraryVideos implements OnInit, OnDestroy {
   readonly library = inject(LibraryService);
   private readonly i18n = inject(I18nService);
   readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   readonly dragging = signal(false);
   readonly ratioOptions = ASSET_RATIOS;
   private unlisten: DesktopUnlisten | null = null;
@@ -190,7 +192,7 @@ export class LibraryVideos implements OnInit, OnDestroy {
       this.isDialogOpen()
     )
       return;
-    this.dialogs.openDeleteVideos([id]);
+    this.confirms.deleteVideos([id]);
   }
 
   private async listenForDrops(): Promise<void> {
@@ -219,7 +221,6 @@ export class LibraryVideos implements OnInit, OnDestroy {
   private isDialogOpen(): boolean {
     return (
       this.dialogs.previewVideoId() !== null ||
-      this.dialogs.deleteVideoIds().length > 0 ||
       document.querySelector(".modal") !== null
     );
   }

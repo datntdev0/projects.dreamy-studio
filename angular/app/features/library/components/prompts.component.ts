@@ -6,6 +6,7 @@ import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetRef } from "../library.models";
 import { formatBytes } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -26,6 +27,7 @@ export class LibraryPrompts implements OnInit, OnDestroy {
   readonly library = inject(LibraryService);
   private readonly i18n = inject(I18nService);
   readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   readonly dragging = signal(false);
   private unlisten: DesktopUnlisten | null = null;
 
@@ -82,9 +84,9 @@ export class LibraryPrompts implements OnInit, OnDestroy {
   }
 
   @HostListener("document:keydown", ["$event"])
-  onDelete(event: KeyboardEvent): void { const id = this.prompts.selectedId(); if (event.key !== "Delete" || isField(event.target) || id === null || this.dialogs.uploadOpen() || this.dialogOpen()) return; this.dialogs.openDeletePrompts([id]); }
+  onDelete(event: KeyboardEvent): void { const id = this.prompts.selectedId(); if (event.key !== "Delete" || isField(event.target) || id === null || this.dialogs.uploadOpen() || this.dialogOpen()) return; this.confirms.deletePrompts([id]); }
 
   private async listenForDrops(): Promise<void> { this.unlisten = await this.ipc.onDragDrop(this.handleDrop.bind(this)); }
   private handleDrop(event: DesktopDragDropEvent): void { if (this.dialogs.uploadOpen()) { this.dragging.set(false); return; } if (event.type === "enter" || event.type === "over") { this.dragging.set(true); return; } if (event.type === "leave") { this.dragging.set(false); return; } if (event.type === "drop") { this.dragging.set(false); this.dialogs.openUpload(event.paths, "prompt"); } }
-  private dialogOpen(): boolean { return this.dialogs.previewPromptId() !== null || this.dialogs.deletePromptIds().length > 0 || document.querySelector(".modal") !== null; }
+  private dialogOpen(): boolean { return this.dialogs.previewPromptId() !== null || document.querySelector(".modal") !== null; }
 }

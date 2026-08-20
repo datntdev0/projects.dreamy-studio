@@ -5,6 +5,7 @@ import { TabsService } from "@layout/tabs.service";
 import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
 import { NovelDialogsService } from "../novel.dialogs.service";
+import { NovelConfirmService } from "../novel.confirm.service";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
 import { displayName, formatCount, hasCustomName } from "../novel.rules";
@@ -30,6 +31,7 @@ export class NovelList {
   private readonly tabs = inject(TabsService);
   private readonly reader = inject(NovelReaderService);
   private readonly dialogs = inject(NovelDialogsService);
+  private readonly confirms = inject(NovelConfirmService);
 
   readonly novels = inject(NovelService);
 
@@ -110,7 +112,7 @@ export class NovelList {
   }
 
   removeRow(row: object): void {
-    this.dialogs.openDelete([this.novelOf(row).id]);
+    this.confirms.deleteNovels([this.novelOf(row).id]);
   }
 
   onTableDoubleClick(event: DatatableRowEvent): void {
@@ -163,12 +165,12 @@ export class NovelList {
     if (this.isModalOpen() || id === null) {
       return;
     }
-    this.dialogs.openDelete([id]);
+    this.confirms.deleteNovels([id]);
   }
 
   private isModalOpen(): boolean {
     const dialogs = this.dialogs;
-    const tracked = dialogs.createOpen() || dialogs.importOpen() || dialogs.deleteIds().length > 0;
+    const tracked = dialogs.createOpen() || dialogs.importOpen();
     return tracked || document.querySelector(".modal") !== null;
   }
 

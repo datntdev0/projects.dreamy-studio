@@ -5,6 +5,7 @@ import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { AssetPatch, AssetRights, ASSET_RIGHTS } from "../library.models";
 import { formatBytes, formatIsoMinute, libraryErrorKey, normalizeTag } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -27,6 +28,7 @@ export class LibrarySoundPanel {
   readonly sounds = inject(LibrarySoundService);
   readonly library = inject(LibraryService);
   private readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
   readonly rightOptions = ASSET_RIGHTS;
@@ -67,7 +69,7 @@ export class LibrarySoundPanel {
     const rights = (event.target as HTMLSelectElement).value as AssetRights;
     if (rights !== sound.rights) { void this.save(sound, { rights }); }
   }
-  remove(sound: LibrarySound): void { this.dialogs.openDeleteSounds([sound.id]); }
+  remove(sound: LibrarySound): void { this.confirms.deleteSounds([sound.id]); }
   private async rename(sound: LibrarySound, name: string): Promise<void> {
     try {
       const updated = await this.sounds.update(sound.id, { name });

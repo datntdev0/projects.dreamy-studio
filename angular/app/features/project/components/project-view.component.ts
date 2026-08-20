@@ -4,7 +4,7 @@ import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
-import { ProjectDialogsService } from "../project.dialogs.service";
+import { ProjectConfirmService } from "../project.confirm.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectSummary } from "../project.models";
 import { ProjectService } from "../project.service";
@@ -25,7 +25,7 @@ export class ProjectView {
   private readonly projects = inject(ProjectService);
   private readonly tabs = inject(TabsService);
   readonly labels = inject(ProjectLabels);
-  private readonly dialogs = inject(ProjectDialogsService);
+  private readonly confirms = inject(ProjectConfirmService);
   private readonly toasts = inject(ToastService);
   private readonly i18n = inject(I18nService);
 
@@ -115,7 +115,7 @@ export class ProjectView {
   }
 
   requestDelete(project: ProjectSummary): void {
-    this.dialogs.openDelete([project.id]);
+    this.confirms.deleteProjects([project.id]);
   }
 
   private findProject(): ProjectSummary | null {

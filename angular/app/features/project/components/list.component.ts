@@ -4,6 +4,7 @@ import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { TabsService } from "@layout/tabs.service";
 import { ProjectDialogsService } from "../project.dialogs.service";
+import { ProjectConfirmService } from "../project.confirm.service";
 import { ProjectStatus } from "../project.models";
 import { ProjectSummary } from "../project.models";
 import { ProjectTemplateId } from "../project.models";
@@ -29,6 +30,7 @@ export class ProjectList {
   readonly projects = inject(ProjectService);
   readonly labels = inject(ProjectLabels);
   readonly dialogs = inject(ProjectDialogsService);
+  private readonly confirms = inject(ProjectConfirmService);
 
   constructor() {
     void this.projects.ensureLoaded();
@@ -103,11 +105,11 @@ export class ProjectList {
     if (event.key !== "Delete" || isField(event.target) || id === null || this.isModalOpen()) {
       return;
     }
-    this.dialogs.openDelete([id]);
+    this.confirms.deleteProjects([id]);
   }
 
   private isModalOpen(): boolean {
-    return this.dialogs.createOpen() || this.dialogs.deleteIds().length > 0 || document.querySelector(".modal") !== null;
+    return this.dialogs.createOpen() || document.querySelector(".modal") !== null;
   }
 
   private async openProject(project: ProjectSummary): Promise<void> {

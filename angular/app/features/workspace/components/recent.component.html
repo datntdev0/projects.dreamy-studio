@@ -35,14 +35,3 @@
     }
   }
 </div>
-@if (deleteTarget(); as row) {
-  <ds-dialog [title]="'splash.recent.deleteTitle' | t" [closeLabel]="'common.cancel' | t" data-testid="recent-delete-dialog" (closed)="closeDelete()">
-    <p data-testid="recent-delete-message">{{ "splash.recent.deleteMessage" | t: { name: row.name } }}</p>
-    <div class="ld-warn is-error" role="alert" data-testid="recent-delete-warning"><ds-icon name="alert" [size]="15" /><span>{{ "splash.recent.deleteWarning" | t }}</span></div>
-    @if (deleteError(); as error) {
-      <p class="t-sm ws-err" role="alert" data-testid="recent-delete-error">{{ error }}</p>
-    }
-    <ds-button dialogFoot data-testid="recent-delete-cancel" [disabled]="deleting()" (pressed)="closeDelete()">{{ "common.cancel" | t }}</ds-button>
-    <ds-button dialogFoot variant="danger" data-testid="recent-delete-confirm" [disabled]="deleting()" (pressed)="confirmDelete()"><ds-icon name="trash" [size]="14" />{{ "splash.recent.delete" | t }}</ds-button>
-  </ds-dialog>
-}

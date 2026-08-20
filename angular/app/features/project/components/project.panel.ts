@@ -6,7 +6,7 @@ import { I18nService } from "@app/core/i18n/i18n.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { TabsService } from "@layout/tabs.service";
 import { checkCoverFile, prepareCover } from "@app/features/novel/novel.cover";
-import { ProjectDialogsService } from "../project.dialogs.service";
+import { ProjectConfirmService } from "../project.confirm.service";
 import { ProjectLabels } from "../project.labels";
 import { ProjectSummary } from "../project.models";
 import { projectCode, toProjectError } from "../project.rules";
@@ -23,7 +23,7 @@ export class ProjectPanel {
   private readonly tabs = inject(TabsService);
   readonly projects = inject(ProjectService);
   readonly labels = inject(ProjectLabels);
-  readonly dialogs = inject(ProjectDialogsService);
+  private readonly confirms = inject(ProjectConfirmService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
   readonly projectId = input.required<number>();
@@ -49,7 +49,7 @@ export class ProjectPanel {
   }
 
   remove(project: ProjectSummary): void {
-    this.dialogs.openDelete([project.id]);
+    this.confirms.deleteProjects([project.id]);
   }
 
   coverKey(): I18nKey {

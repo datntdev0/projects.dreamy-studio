@@ -5,6 +5,7 @@ import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { ASSET_RIGHTS, AssetPatch, AssetRights } from "../library.models";
 import { durationText, formatBytes, formatIsoMinute, libraryErrorKey, normalizeTag } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -33,6 +34,7 @@ export class LibraryVideoPanel {
   readonly videos = inject(LibraryVideoService);
   readonly library = inject(LibraryService);
   private readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   private readonly i18n = inject(I18nService);
   private readonly toasts = inject(ToastService);
   readonly rightOptions = ASSET_RIGHTS;
@@ -129,7 +131,7 @@ export class LibraryVideoPanel {
   }
 
   remove(video: LibraryVideo): void {
-    this.dialogs.openDeleteVideos([video.id]);
+    this.confirms.deleteVideos([video.id]);
   }
 
   private async rename(video: LibraryVideo, name: string): Promise<void> {

@@ -2,9 +2,9 @@
 /* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
 {
   "extends": "./tsconfig.json",
-  "composite": true,
   "compilerOptions": {
-    "types": []
+    "types": [],
+    "composite": true,
   },
   "include": ["**/*.ts", "app/core/i18n/*.json"],
   "exclude": ["**/*.spec.ts", "stories/**"]

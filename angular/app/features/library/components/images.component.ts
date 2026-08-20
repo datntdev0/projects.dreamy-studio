@@ -7,6 +7,7 @@ import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { I18nService } from "@app/core/i18n/i18n.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
+import { LibraryConfirmService } from "../library.confirm.service";
 import { IMAGE_RATIOS, ImageSort, ImageViewMode, LibraryImage } from "../library.images.models";
 import { dimensionsText, formatBytes } from "../library.images.rules";
 import { LibraryImageService } from "../library.images.service";
@@ -31,6 +32,7 @@ export class LibraryImages implements OnInit, OnDestroy {
   readonly library = inject(LibraryService);
   private readonly i18n = inject(I18nService);
   readonly dialogs = inject(LibraryDialogsService);
+  private readonly confirms = inject(LibraryConfirmService);
   readonly dragging = signal(false);
   readonly ratioOptions = IMAGE_RATIOS;
   private unlisten: DesktopUnlisten | null = null;
@@ -177,7 +179,7 @@ export class LibraryImages implements OnInit, OnDestroy {
     if (event.key !== "Delete" || isField(event.target) || id === null || this.dialogs.uploadOpen() || this.isDialogOpen()) {
       return;
     }
-    this.dialogs.openDeleteImages([id]);
+    this.confirms.deleteImages([id]);
   }
 
   private async listenForDrops(): Promise<void> {
@@ -204,6 +206,6 @@ export class LibraryImages implements OnInit, OnDestroy {
   }
 
   private isDialogOpen(): boolean {
-    return this.dialogs.previewImageId() !== null || this.dialogs.deleteImageIds().length > 0 || document.querySelector(".modal") !== null;
+    return this.dialogs.previewImageId() !== null || document.querySelector(".modal") !== null;
   }
 }

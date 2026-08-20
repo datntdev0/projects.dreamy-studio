@@ -1,6 +1,0 @@
-@if (collection(); as item) {
-  <ds-dialog [title]="'library.delete.title' | t" [eyebrow]="'library.cap' | t" [closeLabel]="'library.delete.close' | t" data-testid="library-collection-delete-dialog-panel" (closed)="close()">
-    <p data-testid="library-collection-delete-dialog-question">{{ "library.delete.confirm" | t }} <b class="t-ink">{{ item.name }}</b>?</p><div class="ld-warn" role="alert" data-testid="library-collection-delete-dialog-warning"><ds-icon name="alert" [size]="15" /><span>{{ (total() ? "library.delete.warning" : "library.delete.empty") | t: { count: total() } }}</span></div>
-    <ds-button dialogFoot data-testid="library-collection-delete-dialog-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button><ds-button dialogFoot variant="danger" [disabled]="busy()" data-testid="library-collection-delete-dialog-confirm" (pressed)="confirm()"><ds-icon name="trash" [size]="16" />{{ "library.delete.confirm" | t }}</ds-button>
-  </ds-dialog>
-}

@@ -40,7 +40,7 @@
     </div>
   </div>
   <div class="nv-body" data-testid="library-sounds-body">
-    <div class="nv-scroll" data-testid="library-sounds-scroll">
+    <div class="nv-scroll" [class.table-view]="library.viewMode() === 'list' && sounds.visible().length > 0" data-testid="library-sounds-scroll">
       @if (sounds.visible().length === 0) {
         @if (sounds.items().length === 0 && !hasActiveFilters()) {
           <div class="empty" data-testid="library-sounds-empty"><div class="empty-inner" data-testid="library-sounds-empty-inner"><div class="illus" data-testid="library-sounds-empty-illustration"></div><h3 class="t-display-xs" data-testid="library-sounds-empty-title">{{ "library.sound.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="library-sounds-empty-description">{{ "library.sound.empty.description" | t }}</p><div class="empty-act" data-testid="library-sounds-empty-actions"><button type="button" class="btn btn-primary" data-testid="library-sounds-empty-upload" (click)="openUpload()"><ds-icon name="plus" [size]="16" data-testid="library-sounds-empty-upload-icon" />{{ "library.sound.empty.upload" | t }}</button></div></div></div>
@@ -54,14 +54,12 @@
           }
         </div>
       } @else {
-        <table class="table" data-testid="library-sounds-table">
-          <thead data-testid="library-sounds-table-head"><tr data-testid="library-sounds-table-head-row"><th data-testid="library-sounds-table-head-name">{{ "library.image.column.name" | t }}</th><th data-testid="library-sounds-table-head-spec">{{ "library.sound.column.spec" | t }}</th><th data-testid="library-sounds-table-head-size">{{ "library.image.column.size" | t }}</th><th data-testid="library-sounds-table-head-collection">{{ "library.image.column.collection" | t }}</th><th data-testid="library-sounds-table-head-added">{{ "library.image.column.added" | t }}</th></tr></thead>
-          <tbody data-testid="library-sounds-table-body">
-            @for (sound of sounds.visible(); track sound.id) {
-              <tr [class.is-selected]="isSelected(sound)" tabindex="0" data-testid="library-sounds-table-row" (click)="select(sound)" (dblclick)="open(sound)" (keydown)="onSoundKeydown(sound, $event)"><td data-testid="library-sounds-table-name"><div class="nm-title" data-testid="library-sounds-table-name-wrap"><span class="lb-th is-ic" data-testid="library-sounds-table-thumb"><ds-icon name="music" [size]="16" data-testid="library-sounds-table-thumb-icon" /></span><div class="lb-rname" data-testid="library-sounds-table-name-content"><div class="t-ink" data-testid="library-sounds-table-name-text">{{ sound.name }}</div></div></div></td><td class="mono t-mute" data-testid="library-sounds-table-spec">{{ duration(sound) }}</td><td class="num" data-testid="library-sounds-table-size">{{ size(sound) }}</td><td class="t-sm t-mute lb-cols" data-testid="library-sounds-table-collection">{{ collectionName(sound) }}</td><td class="mono t-mute" data-testid="library-sounds-table-added">{{ sound.createdAt.slice(0, 10) }}</td></tr>
-            }
-          </tbody>
-        </table>
+        <ds-datatable [columns]="tableColumns" [rows]="sounds.visible()" trackKey="id" variant="fill" rowTestId="library-sounds-table-row" [rowClass]="tableRowClass" data-testid="library-sounds-table" (rowSelected)="onRowSelected($event)" (rowDblClick)="onRowDblClick($event)" (rowEnter)="onRowEnter($event)">
+          <ng-template dsCell="name" let-row><div class="nm-title" data-testid="library-sounds-table-name-wrap"><span class="lb-th is-ic" data-testid="library-sounds-table-thumb"><ds-icon name="music" [size]="16" /></span><div class="lb-rname" data-testid="library-sounds-table-name-content"><div class="t-ink" data-testid="library-sounds-table-name-text">{{ soundOf(row).name }}</div></div></div></ng-template>
+          <ng-template dsCell="spec" let-row><span class="mono t-mute" data-testid="library-sounds-table-spec">{{ duration(soundOf(row)) }}</span></ng-template>
+          <ng-template dsCell="size" let-row><span data-testid="library-sounds-table-size">{{ size(soundOf(row)) }}</span></ng-template>
+          <ng-template dsCell="collection" let-row><span class="t-sm t-mute" data-testid="library-sounds-table-collection">{{ collectionName(soundOf(row)) }}</span></ng-template>
+        </ds-datatable>
       }
     </div>
   </div>

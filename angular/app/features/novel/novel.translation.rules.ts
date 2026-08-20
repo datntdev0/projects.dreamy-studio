@@ -73,20 +73,6 @@ export const STATUS_BADGES: Record<TranslationStatus, string> = {
   running: "badge-running",
 };
 
-export const PIPELINE_STATUS_KEYS: Record<PipelineStatus, I18nKey> = {
-  running: "novel.translation.history.status.running",
-  completed: "novel.translation.history.status.completed",
-  failed: "novel.translation.history.status.failed",
-  cancelled: "novel.translation.history.status.cancelled",
-};
-
-export const PIPELINE_STATUS_BADGES: Record<PipelineStatus, string> = {
-  running: "badge-running",
-  completed: "badge-success",
-  failed: "badge-danger",
-  cancelled: "badge-warning",
-};
-
 export const PASSAGE_STATE_KEYS: Record<PassageState, I18nKey> = {
   draft: "novel.translation.passage.draft",
   review: "novel.translation.passage.review",

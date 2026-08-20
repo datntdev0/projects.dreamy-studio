@@ -1,11 +1,13 @@
+import { NgClass } from "@angular/common";
 import { Component, OnDestroy, computed, effect, inject, input, signal } from "@angular/core";
+import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nService } from "@app/core/i18n/i18n.service";
-import { Datatable, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
+import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
-import { ChapterRow } from "../novel.models";
+import { AnalysisStatus, ChapterRow, TranslationStatus } from "../novel.models";
 import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelTranslationService } from "../novel.translation.service";
@@ -21,6 +23,22 @@ import { NovelProgressFrac } from "./progress-frac.component";
 
 const DRAG_THRESHOLD = 5;
 
+type StatusView = { tone: string; title: I18nKey };
+
+const TRANSLATION_VIEWS: Record<TranslationStatus, StatusView> = {
+  none: { tone: "none", title: "novel.chapters.translation.none" },
+  draft: { tone: "success", title: "novel.chapters.translation.draft" },
+  review: { tone: "warning", title: "novel.chapters.translation.review" },
+  running: { tone: "running", title: "novel.chapters.translation.running" },
+};
+
+const ANALYSIS_VIEWS: Record<AnalysisStatus, StatusView> = {
+  none: { tone: "none", title: "novel.chapters.analysis.none" },
+  done: { tone: "info", title: "novel.chapters.analysis.done" },
+  stale: { tone: "warning", title: "novel.chapters.analysis.stale" },
+  running: { tone: "running", title: "novel.chapters.analysis.running" },
+};
+
 type DropSide = "before" | "after";
 
 interface DropTarget {
@@ -31,7 +49,7 @@ interface DropTarget {
 @Component({
   selector: "app-novel-chapters",
   standalone: true,
-  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelLangSwitch, NovelProgressFrac],
+  imports: [NgClass, Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe, Cover, NovelLangSwitch, NovelProgressFrac],
   templateUrl: "./chapters.component.html",
 })
 export class NovelChapters implements OnDestroy {
@@ -72,14 +90,19 @@ export class NovelChapters implements OnDestroy {
     };
   };
 
+  readonly tableActions = (): DatatableAction[] => {
+    return [
+      { key: "add", label: this.i18n.translate("novel.chapters.add"), icon: "plus", handler: this.add.bind(this) },
+      { key: "delete", label: this.i18n.translate("novel.chapters.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
+    ];
+  };
+
   get tableColumns(): DatatableColumn[] {
     return [
       { key: "seq", label: this.i18n.translate("novel.chapters.col.number"), width: "56px" },
       { key: "title", label: this.i18n.translate("novel.chapters.col.title"), ellipsis: true },
       { key: "wordCount", label: this.i18n.translate("novel.chapters.col.words"), align: "right", width: "80px" },
-      { key: "translationStatus", label: this.i18n.translate("novel.chapters.col.translation"), align: "center", width: "104px" },
-      { key: "analysisStatus", label: this.i18n.translate("novel.chapters.col.knowledge"), align: "center", width: "104px" },
-      { key: "actions", label: "", align: "right", width: "48px" },
+      { key: "status", label: this.i18n.translate("novel.chapters.col.status"), align: "center", width: "96px" },
     ];
   }
 
@@ -119,17 +142,20 @@ export class NovelChapters implements OnDestroy {
     this.dialogs.openAddChapter(this.novelId());
   }
 
-  isLocked(row: ChapterRow): boolean {
-    return isChapterLocked(row);
-  }
-
   canMove(row: ChapterRow): boolean {
     return !this.filtered() && !isChapterLocked(row);
   }
 
-  remove(row: ChapterRow, event: Event): void {
-    event.stopPropagation();
-    this.dialogs.openDeleteChapter(this.novelId(), row.id);
+  removeRow(row: object): void {
+    this.dialogs.openDeleteChapter(this.novelId(), this.chapterOf(row).id);
+  }
+
+  translationView(row: ChapterRow): StatusView {
+    return TRANSLATION_VIEWS[row.translationStatus];
+  }
+
+  analysisView(row: ChapterRow): StatusView {
+    return ANALYSIS_VIEWS[row.analysisStatus];
   }
 
   onRowClick(event: DatatableRowEvent): void {

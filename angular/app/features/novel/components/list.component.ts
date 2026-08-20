@@ -7,7 +7,7 @@ import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelService } from "../novel.service";
-import { displayName, formatCount, formatStamp, hasCustomName } from "../novel.rules";
+import { displayName, formatCount, hasCustomName } from "../novel.rules";
 import { Cover, coverBackground } from "@components/cover";
 import { Icon } from "@components/icon";
 import { NovelProgressFrac } from "./progress-frac.component";
@@ -43,9 +43,7 @@ export class NovelList {
       { key: "source", label: this.i18n.translate("novel.list.col.source"), width: "64px" },
       { key: "chapters", label: this.i18n.translate("novel.list.col.chapters"), align: "right", width: "80px" },
       { key: "words", label: this.i18n.translate("novel.list.col.words"), align: "right", width: "88px" },
-      { key: "translation", label: this.i18n.translate("novel.list.col.translation"), align: "center", width: "96px" },
-      { key: "knowledge", label: this.i18n.translate("novel.list.col.knowledge"), align: "center", width: "96px" },
-      { key: "updated", label: this.i18n.translate("novel.list.col.updated"), width: "152px", ellipsis: true },
+      { key: "progress", label: this.i18n.translate("novel.list.col.progress"), width: "120px" },
     ];
   }
 
@@ -68,10 +66,6 @@ export class NovelList {
 
   fmt(value: number): string {
     return formatCount(value);
-  }
-
-  stampOf(novel: NovelSummary): string {
-    return formatStamp(novel.updatedAt);
   }
 
   imageOf(novel: NovelSummary): string {

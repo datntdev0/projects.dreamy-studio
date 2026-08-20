@@ -50,7 +50,7 @@
           }
         </div>
       } @else {
-        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="720px" variant="fill" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id, $event.event)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
+        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="496px" variant="fill" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id, $event.event)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
           <ng-template dsCell="title" let-row>
             @let novel = novelOf(row);
             <div class="nm-title"><ds-cover [image]="imageOf(novel)" /><div><div class="t-ink">{{ nameOf(novel) }}</div><div class="t-sm t-mute">{{ subtitleOf(novel) }}</div></div></div>
@@ -58,9 +58,10 @@
           <ng-template dsCell="source" let-row><span class="badge">{{ novelOf(row).lang }}</span></ng-template>
           <ng-template dsCell="chapters" let-row>{{ fmt(novelOf(row).chapterCount) }}</ng-template>
           <ng-template dsCell="words" let-row>{{ fmt(novelOf(row).wordCount) }}</ng-template>
-          <ng-template dsCell="translation" let-row><app-novel-progress-frac icon="lang" [done]="novelOf(row).translatedCount" [total]="novelOf(row).chapterCount" [label]="'novel.frac.translated' | t" /></ng-template>
-          <ng-template dsCell="knowledge" let-row><app-novel-progress-frac icon="graph" [done]="novelOf(row).analyzedCount" [total]="novelOf(row).chapterCount" [label]="'novel.frac.analyzed' | t" /></ng-template>
-          <ng-template dsCell="updated" let-row><span class="mono t-mute">{{ stampOf(novelOf(row)) }}</span></ng-template>
+          <ng-template dsCell="progress" let-row>
+            @let novel = novelOf(row);
+            <div class="nm-progress" data-testid="novel-list-progress"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></div>
+          </ng-template>
         </ds-datatable>
       }
     </div>

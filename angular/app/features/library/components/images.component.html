@@ -48,7 +48,7 @@
     </div>
   </div>
   <div class="nv-body" data-testid="library-images-body">
-    <div class="nv-scroll" data-testid="library-images-scroll">
+    <div class="nv-scroll" [class.table-view]="images.viewMode() === 'list' && images.visible().length > 0" data-testid="library-images-scroll">
       @if (images.visible().length === 0) {
         @if (images.items().length === 0 && !hasActiveFilters()) {
           <div class="empty" data-testid="library-images-empty"><div class="empty-inner" data-testid="library-images-empty-inner"><div class="illus" data-testid="library-images-empty-illustration"></div><h3 class="t-display-xs" data-testid="library-images-empty-title">{{ "library.image.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="library-images-empty-description">{{ "library.image.empty.description" | t }}</p><div class="empty-act" data-testid="library-images-empty-actions"><button type="button" class="btn btn-primary" data-testid="library-images-empty-upload" (click)="openUpload()"><ds-icon name="plus" [size]="16" data-testid="library-images-empty-upload-icon" />{{ "library.image.empty.upload" | t }}</button></div></div></div>
@@ -62,14 +62,12 @@
           }
         </div>
       } @else {
-        <table class="table" data-testid="library-images-table">
-          <thead data-testid="library-images-table-head"><tr data-testid="library-images-table-head-row"><th data-testid="library-images-table-head-name">{{ "library.image.column.name" | t }}</th><th data-testid="library-images-table-head-dimensions">{{ "library.image.column.dimensions" | t }}</th><th data-testid="library-images-table-head-size">{{ "library.image.column.size" | t }}</th><th data-testid="library-images-table-head-collection">{{ "library.image.column.collection" | t }}</th><th data-testid="library-images-table-head-added">{{ "library.image.column.added" | t }}</th></tr></thead>
-          <tbody data-testid="library-images-table-body">
-            @for (image of images.visible(); track image.id) {
-              <tr [class.is-selected]="isSelected(image)" tabindex="0" data-testid="library-images-table-row" (click)="select(image)" (dblclick)="open(image)" (keydown)="onImageKeydown(image, $event)"><td data-testid="library-images-table-name"><div class="nm-title" data-testid="library-images-table-name-wrap"><app-library-image-thumb [image]="image" variant="row" data-testid="library-images-table-thumb" /><div class="lb-rname" data-testid="library-images-table-name-content"><div class="t-ink" data-testid="library-images-table-name-text">{{ image.name }}</div></div></div></td><td class="mono t-mute" data-testid="library-images-table-dimensions">{{ dimensions(image) }}</td><td class="num" data-testid="library-images-table-size">{{ formatBytes(image.size) }}</td><td data-testid="library-images-table-collection">{{ collectionName(image) }}</td><td class="mono t-mute" data-testid="library-images-table-added">{{ image.createdAt.slice(0, 10) }}</td></tr>
-            }
-          </tbody>
-        </table>
+        <ds-datatable [columns]="tableColumns" [rows]="images.visible()" trackKey="id" variant="fill" rowTestId="library-images-table-row" [rowClass]="tableRowClass" data-testid="library-images-table" (rowSelected)="onRowSelected($event)" (rowDblClick)="onRowDblClick($event)" (rowEnter)="onRowEnter($event)">
+          <ng-template dsCell="name" let-row><div class="nm-title" data-testid="library-images-table-name-wrap"><app-library-image-thumb [image]="imageOf(row)" variant="row" data-testid="library-images-table-thumb" /><div class="lb-rname" data-testid="library-images-table-name-content"><div class="t-ink" data-testid="library-images-table-name-text">{{ imageOf(row).name }}</div></div></div></ng-template>
+          <ng-template dsCell="dimensions" let-row><span class="mono t-mute" data-testid="library-images-table-dimensions">{{ dimensions(imageOf(row)) }}</span></ng-template>
+          <ng-template dsCell="size" let-row><span data-testid="library-images-table-size">{{ formatBytes(imageOf(row).size) }}</span></ng-template>
+          <ng-template dsCell="collection" let-row><span class="t-sm t-mute" data-testid="library-images-table-collection">{{ collectionName(imageOf(row)) }}</span></ng-template>
+        </ds-datatable>
       }
     </div>
   </div>

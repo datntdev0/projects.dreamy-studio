@@ -38,4 +38,12 @@ ds-datatable {
   .table .cen { text-align: center; }
   .table td.cell-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .table .empty-cell { padding: var(--sp-2xl); color: var(--mute); text-align: center; }
+  .table col.row-menu-col { width: 44px; }
+  .table .row-menu-cell { padding-inline: var(--sp-xs); text-align: right; }
+  .table td.is-editing { padding-block: 2px; }
+  .table td.is-editing .datatable-cell-input { width: 100%; height: var(--ctl-h-sm); }
+  .datatable-menu { inset: auto; margin: 0; min-width: 180px; color: var(--body); overflow: visible; }
+  .datatable-menu .menu-row.is-danger { color: var(--danger); }
+  .datatable-menu .menu-row.is-danger .ic { color: inherit; }
+  .datatable-menu .menu-row:focus-visible { background: var(--canvas-soft); outline: 0; }
 }

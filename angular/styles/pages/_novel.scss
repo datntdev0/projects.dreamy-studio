@@ -46,9 +46,6 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .tl-prog { display: grid; grid-template-columns: minmax(70px, 1fr) 36px; gap: var(--sp-sm); align-items: center; min-width: 120px; }
 .onto { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-xs) var(--sp-md); }
 .tl-list { flex: 1; overflow: auto; padding: var(--sp-md); display: grid; gap: var(--sp-md); align-content: start; }
-.tl-history { display: grid; gap: var(--sp-sm); margin-top: var(--sp-md); padding: var(--sp-md); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
-.tl-history-row td:first-child { width: var(--ctl-h-sm); padding-inline: var(--sp-xs); }
-.tl-history-detail > td { padding: var(--sp-sm) var(--sp-md); background: var(--danger-soft); color: var(--danger); font: 400 12px/18px var(--font-mono); white-space: pre-wrap; }
 .tl-fill { flex: 1; display: grid; place-items: center; min-height: 220px; }
 .w-card { display: grid; gap: var(--sp-sm); }
 .w-top { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
@@ -113,6 +110,15 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 
 .ins-novel { display: flex; gap: var(--sp-md); align-items: center; }
 .ins-novel-t { min-width: 0; display: grid; gap: 2px; }
+.ch-sts { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-md); }
+.ch-st { display: inline-flex; color: var(--mute); opacity: 0.4; }
+.ch-st.is-success { color: var(--success); opacity: 1; }
+.ch-st.is-info { color: var(--info); opacity: 1; }
+.ch-st.is-warning { color: var(--warning); opacity: 1; }
+.ch-st.is-running { color: var(--secondary); opacity: 1; animation: pulse 1.4s ease-in-out infinite; }
+.dict-draft-cell { display: flex; align-items: center; gap: var(--sp-xs); }
+.dict-draft-cell .input { flex: 1; min-width: 0; }
+.nm-progress { display: grid; justify-items: start; gap: 2px; }
 .legend-dots { display: inline-flex; gap: var(--sp-lg); }
 
 /* novel grid */
@@ -187,6 +193,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .flow-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); padding: var(--sp-sm) var(--sp-md); border-top: 1px solid var(--hairline); background: var(--canvas-card); }
 .flow-hint { flex: 1; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-main.is-flat { border-right: 0; }
+.tl-main.is-fill { flex: 1; min-height: 0; overflow: hidden; }
 .tl-sub.is-inner { position: sticky; top: 0; z-index: 2; }
 .tl-center { flex: 1; overflow: auto; padding: var(--sp-xl) var(--sp-lg); }
 .tl-form { max-width: 680px; margin: 0 auto; }

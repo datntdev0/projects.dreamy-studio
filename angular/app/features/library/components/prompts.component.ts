@@ -1,8 +1,10 @@
 import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@angular/core";
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@app/core/desktop/desktop-ipc.service";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRef } from "../library.models";
 import { formatBytes } from "../library.rules";
@@ -17,11 +19,12 @@ const FIELD_SELECTOR = "input,textarea,select";
 function isField(target: EventTarget | null): boolean { return target instanceof Element && target.closest(FIELD_SELECTOR) !== null; }
 function toRef(prompt: LibraryPrompt): AssetRef { return { kind: "prompt", id: prompt.id }; }
 
-@Component({ selector: "app-library-prompts", standalone: true, imports: [Icon, I18nPipe, LibraryPromptMedia], templateUrl: "./prompts.component.html", host: { "data-testid": "library-prompts" } })
+@Component({ selector: "app-library-prompts", standalone: true, imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryPromptMedia], templateUrl: "./prompts.component.html", host: { "data-testid": "library-prompts" } })
 export class LibraryPrompts implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
   readonly prompts = inject(LibraryPromptService);
   readonly library = inject(LibraryService);
+  private readonly i18n = inject(I18nService);
   readonly dialogs = inject(LibraryDialogsService);
   readonly dragging = signal(false);
   private unlisten: DesktopUnlisten | null = null;
@@ -47,6 +50,36 @@ export class LibraryPrompts implements OnInit, OnDestroy {
   collectionFilterName(): string { const value = this.library.filterCollection(); return typeof value === "number" ? this.library.collectionById(value)?.name ?? "—" : ""; }
   collectionFilterIsKey(): boolean { return this.library.filterCollection() === "none"; }
   unfiledKey(): I18nKey { return "library.explorer.filters.unfiled"; }
+
+  readonly tableRowClass = (row: object): Record<string, boolean> => ({ "is-selected": this.selected(this.promptOf(row)) });
+
+  get tableColumns(): DatatableColumn[] {
+    return [
+      { key: "name", label: this.i18n.translate("library.video.column.name") },
+      { key: "length", label: this.i18n.translate("library.prompt.column.length"), width: "120px" },
+      { key: "size", label: this.i18n.translate("library.prompt.column.size"), align: "right", width: "110px" },
+      { key: "collection", label: this.i18n.translate("library.video.column.collection"), width: "180px", ellipsis: true },
+    ];
+  }
+
+  promptOf(row: object): LibraryPrompt {
+    return row as LibraryPrompt;
+  }
+
+  onRowSelected(index: number): void {
+    const item = this.prompts.visible()[index];
+    if (item) {
+      this.select(item);
+    }
+  }
+
+  onRowDblClick(event: DatatableRowEvent): void {
+    this.open(this.promptOf(event.row));
+  }
+
+  onRowEnter(event: DatatableRowEvent): void {
+    this.open(this.promptOf(event.row));
+  }
 
   @HostListener("document:keydown", ["$event"])
   onDelete(event: KeyboardEvent): void { const id = this.prompts.selectedId(); if (event.key !== "Delete" || isField(event.target) || id === null || this.dialogs.uploadOpen() || this.dialogOpen()) return; this.dialogs.openDeletePrompts([id]); }

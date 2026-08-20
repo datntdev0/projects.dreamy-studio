@@ -1,4 +1,6 @@
 import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
+import { Datatable, DatatableAction, DatatableCell, DatatableCellEdit, DatatableColumn, DatatableEmpty } from "@components/datatable";
+import { FormOption } from "@components/form";
 import { Icon } from "@components/icon";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
@@ -9,12 +11,14 @@ import { DictChange, DictDraft, DictEntry, DictEntryType } from "../novel.transl
 import { DICT_TYPES, DICT_TYPE_KEYS, emptyDraft, filterDict } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
 
+const DRAFT_ID = 0;
+
 type DraftField = "src" | "dst" | "note";
 
 @Component({
   selector: "app-novel-translation-dictionary",
   standalone: true,
-  imports: [Icon, I18nPipe],
+  imports: [Datatable, DatatableCell, DatatableEmpty, Icon, I18nPipe],
   templateUrl: "./translation-dictionary.component.html",
 })
 export class NovelTranslationDictionary {
@@ -30,10 +34,37 @@ export class NovelTranslationDictionary {
 
   readonly all = computed(this.buildAll.bind(this));
   readonly rows = computed(this.buildRows.bind(this));
+  readonly tableRows = computed(this.buildTableRows.bind(this));
+
+  readonly tableActions = (row: object): DatatableAction[] => {
+    if (this.isDraft(row)) {
+      return [];
+    }
+    return [{ key: "delete", label: this.i18n.translate("novel.translation.dict.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) }];
+  };
+
+  readonly canEditCell = (row: object): boolean => !this.isDraft(row);
+
+  get tableColumns(): DatatableColumn[] {
+    return [
+      { key: "src", label: this.i18n.translate("novel.translation.dict.col.src"), editable: true, width: "24%" },
+      { key: "dst", label: this.i18n.translate("novel.translation.dict.col.dst"), editable: true, width: "24%" },
+      { key: "type", label: this.i18n.translate("novel.translation.dict.col.type"), editable: true, editor: "select", options: this.typeOptions(), width: "160px" },
+      { key: "note", label: this.i18n.translate("novel.translation.dict.col.note"), editable: true, ellipsis: true },
+    ];
+  }
 
   constructor() {
     effect(this.syncDraftFocus.bind(this));
     effect(this.syncNewEntry.bind(this));
+  }
+
+  entryOf(row: object): DictEntry {
+    return row as DictEntry;
+  }
+
+  isDraft(row: object): boolean {
+    return this.entryOf(row).id === DRAFT_ID;
   }
 
   typeKey(type: DictEntryType): I18nKey {
@@ -85,11 +116,24 @@ export class NovelTranslationDictionary {
     }
   }
 
-  async onField(entry: DictEntry, field: DraftField, event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const value = input.value.trim();
+  onDraftKeydown(event: KeyboardEvent): void {
+    event.stopPropagation();
+    if (event.key === "Enter") {
+      void this.addDraft();
+    } else if (event.key === "Escape") {
+      this.cancelDraft();
+    }
+  }
+
+  async onCellEdit(edit: DatatableCellEdit): Promise<void> {
+    const entry = this.entryOf(edit.row);
+    const value = edit.value.trim();
+    if (edit.key === "type") {
+      await this.update(entry, { type: value as DictEntryType });
+      return;
+    }
+    const field = edit.key as DraftField;
     if ((field === "src" || field === "dst") && !value) {
-      input.value = entry[field];
       this.toasts.show(this.i18n.translate("novel.translation.dict.emptyField"), "warning");
       return;
     }
@@ -98,8 +142,8 @@ export class NovelTranslationDictionary {
     }
   }
 
-  async onType(entry: DictEntry, event: Event): Promise<void> {
-    await this.update(entry, { type: (event.target as HTMLSelectElement).value as DictEntryType });
+  removeRow(row: object): void {
+    void this.remove(this.entryOf(row));
   }
 
   async remove(entry: DictEntry): Promise<void> {
@@ -143,6 +187,19 @@ export class NovelTranslationDictionary {
 
   private buildRows(): DictEntry[] {
     return filterDict(this.all(), this.query());
+  }
+
+  private buildTableRows(): DictEntry[] {
+    const draft = this.draft();
+    return draft ? [{ id: DRAFT_ID, ...draft }, ...this.rows()] : this.rows();
+  }
+
+  private typeOptions(): FormOption[] {
+    const options: FormOption[] = [];
+    for (const type of this.types) {
+      options.push({ value: type, label: this.i18n.translate(DICT_TYPE_KEYS[type]) });
+    }
+    return options;
   }
 
   private syncNewEntry(): void {

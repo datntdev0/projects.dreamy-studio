@@ -253,9 +253,7 @@
   "novel.list.col.source": "Gốc",
   "novel.list.col.chapters": "Chương",
   "novel.list.col.words": "Số từ",
-  "novel.list.col.translation": "Dịch",
-  "novel.list.col.knowledge": "Tri thức",
-  "novel.list.col.updated": "Cập nhật",
+  "novel.list.col.progress": "Tiến độ",
   "novel.list.empty.none.title": "Chưa có novel nào",
   "novel.list.empty.none.description": "Tạo novel mới hoặc nhập từ một package .dsnovel / .zip.",
   "novel.list.empty.none.create": "Tạo novel",
@@ -323,8 +321,7 @@
   "novel.chapters.col.number": "#",
   "novel.chapters.col.title": "Chương",
   "novel.chapters.col.words": "Số từ",
-  "novel.chapters.col.translation": "Dịch",
-  "novel.chapters.col.knowledge": "Tri thức",
+  "novel.chapters.col.status": "Trạng thái",
   "novel.chapters.read": "Đọc",
   "novel.chapters.continue": "Tiếp tục đọc",
   "novel.tool.translation.title": "Dịch",
@@ -336,6 +333,7 @@
   "novel.chapters.empty.none.title": "Chưa có chương nào",
   "novel.chapters.empty.none.description": "Thêm chương đầu tiên, rồi mở chương để viết hoặc dán nội dung.",
   "novel.chapters.empty.none.add": "Thêm chương",
+  "novel.chapters.actions": "Thao tác",
   "novel.chapters.add": "Thêm chương",
   "novel.chapters.delete": "Xóa chương",
   "novel.chapters.locked": "Đã có bản dịch hoặc knowledge nên không thể di chuyển hay xóa",
@@ -1060,6 +1058,8 @@
   ,"novel.translation.dict.cancel": "Hủy"
   ,"novel.translation.dict.delete": "Xóa"
   ,"novel.translation.dict.empty.title": "Không có mục nào"
+  ,"novel.translation.dict.actions": "Thao tác"
+  ,"novel.translation.dict.empty.none.description": "Thêm thuật ngữ đầu tiên để bản dịch dùng nhất quán tên riêng và thuật ngữ."
   ,"novel.translation.dict.empty.description": "Thử từ khóa khác."
   ,"novel.translation.dict.required": "Hãy nhập cả thuật ngữ gốc và bản dịch."
   ,"novel.translation.dict.emptyField": "Thuật ngữ gốc và bản dịch không được để trống."
@@ -1118,21 +1118,6 @@
   ,"novel.translation.warn.filter.dict": "Từ điển"
   ,"novel.translation.trans.cancel": "Hủy"
   ,"novel.translation.trans.busy": "Đang có một pipeline dịch khác chạy."
-  ,"novel.translation.history.title": "Lịch sử pipeline"
-  ,"novel.translation.history.empty": "Chưa có pipeline nào chạy cho novel này."
-  ,"novel.translation.history.col.started": "Bắt đầu"
-  ,"novel.translation.history.col.target": "Ngôn ngữ đích"
-  ,"novel.translation.history.col.status": "Trạng thái"
-  ,"novel.translation.history.col.tasks": "Chương"
-  ,"novel.translation.history.status.running": "Đang chạy"
-  ,"novel.translation.history.status.completed": "Hoàn tất"
-  ,"novel.translation.history.status.failed": "Có lỗi"
-  ,"novel.translation.history.status.cancelled": "Đã hủy"
-  ,"novel.translation.history.tasks": "{done}/{total} xong"
-  ,"novel.translation.history.failed": "{count} lỗi"
-  ,"novel.translation.history.task.chapter": "Ch.{seq}: {error}"
-  ,"novel.translation.history.task.passage": "Ch.{seq} ¶{n}: {error}"
-  ,"novel.translation.history.toggle": "Xem chi tiết"
   ,"novel.translation.result.review": "Nhờ Trợ lý rà soát"
   ,"novel.translation.result.reviewSoon": "Sắp ra mắt"
   ,"novel.translation.guide.prompt": "Prompt"

@@ -179,7 +179,7 @@
     </div>
   </div>
   <div class="nv-body" data-testid="library-videos-body">
-    <div class="nv-scroll" data-testid="library-videos-scroll">
+    <div class="nv-scroll" [class.table-view]="library.viewMode() === 'list' && videos.visible().length > 0" data-testid="library-videos-scroll">
       @if (videos.visible().length === 0) {
         @if (videos.items().length === 0 && !hasActiveFilters()) {
           <div class="empty" data-testid="library-videos-empty">
@@ -287,80 +287,12 @@
           }
         </div>
       } @else {
-        <table class="table" data-testid="library-videos-table">
-          <thead data-testid="library-videos-table-head">
-            <tr data-testid="library-videos-table-head-row">
-              <th data-testid="library-videos-table-head-name">
-                {{ "library.image.column.name" | t }}
-              </th>
-              <th data-testid="library-videos-table-head-spec">
-                {{ "library.image.info.specs" | t }}
-              </th>
-              <th data-testid="library-videos-table-head-size">
-                {{ "library.image.column.size" | t }}
-              </th>
-              <th data-testid="library-videos-table-head-collection">
-                {{ "library.image.column.collection" | t }}
-              </th>
-              <th data-testid="library-videos-table-head-added">
-                {{ "library.image.column.added" | t }}
-              </th>
-            </tr>
-          </thead>
-          <tbody data-testid="library-videos-table-body">
-            @for (video of videos.visible(); track video.id) {
-              <tr
-                [class.is-selected]="isSelected(video)"
-                tabindex="0"
-                data-testid="library-videos-table-row"
-                (click)="select(video)"
-                (dblclick)="open(video)"
-                (keydown)="onVideoKeydown(video, $event)"
-              >
-                <td data-testid="library-videos-table-name">
-                  <div
-                    class="nm-title"
-                    data-testid="library-videos-table-name-wrap"
-                  >
-                    <app-library-video-thumb
-                      [video]="video"
-                      data-testid="library-videos-table-thumb"
-                    />
-                    <div
-                      class="lb-rname"
-                      data-testid="library-videos-table-name-content"
-                    >
-                      <div
-                        class="t-ink"
-                        data-testid="library-videos-table-name-text"
-                      >
-                        {{ video.name }}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td class="mono t-mute" data-testid="library-videos-table-spec">
-                  {{ videoDetails(video) }}
-                </td>
-                <td class="num" data-testid="library-videos-table-size">
-                  {{ size(video) }}
-                </td>
-                <td
-                  class="t-sm t-mute lb-cols"
-                  data-testid="library-videos-table-collection"
-                >
-                  {{ collectionName(video) }}
-                </td>
-                <td
-                  class="mono t-mute"
-                  data-testid="library-videos-table-added"
-                >
-                  {{ video.createdAt.slice(0, 10) }}
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <ds-datatable [columns]="tableColumns" [rows]="videos.visible()" trackKey="id" variant="fill" rowTestId="library-videos-table-row" [rowClass]="tableRowClass" data-testid="library-videos-table" (rowSelected)="onRowSelected($event)" (rowDblClick)="onRowDblClick($event)" (rowEnter)="onRowEnter($event)">
+          <ng-template dsCell="name" let-row><div class="nm-title" data-testid="library-videos-table-name-wrap"><app-library-video-thumb [video]="videoOf(row)" data-testid="library-videos-table-thumb" /><div class="lb-rname" data-testid="library-videos-table-name-content"><div class="t-ink" data-testid="library-videos-table-name-text">{{ videoOf(row).name }}</div></div></div></ng-template>
+          <ng-template dsCell="spec" let-row><span class="mono t-mute" data-testid="library-videos-table-spec">{{ videoDetails(videoOf(row)) }}</span></ng-template>
+          <ng-template dsCell="size" let-row><span data-testid="library-videos-table-size">{{ size(videoOf(row)) }}</span></ng-template>
+          <ng-template dsCell="collection" let-row><span class="t-sm t-mute" data-testid="library-videos-table-collection">{{ collectionName(videoOf(row)) }}</span></ng-template>
+        </ds-datatable>
       }
     </div>
   </div>

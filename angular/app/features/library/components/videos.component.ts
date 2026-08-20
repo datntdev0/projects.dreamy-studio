@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from "@angular/core";
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
 import { Icon } from "@components/icon";
 import {
   DesktopDragDropEvent,
@@ -14,6 +15,7 @@ import {
 } from "@app/core/desktop/desktop-ipc.service";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { I18nService } from "@app/core/i18n/i18n.service";
 import { LibraryDialogsService } from "../library.dialogs.service";
 import { AssetRef, ASSET_RATIOS } from "../library.models";
 import { formatBytes } from "../library.rules";
@@ -36,7 +38,7 @@ function toAssetRef(video: LibraryVideo): AssetRef {
 @Component({
   selector: "app-library-videos",
   standalone: true,
-  imports: [Icon, I18nPipe, LibraryVideoMedia, LibraryVideoThumb],
+  imports: [Datatable, DatatableCell, Icon, I18nPipe, LibraryVideoMedia, LibraryVideoThumb],
   templateUrl: "./videos.component.html",
   host: { "data-testid": "library-videos" },
 })
@@ -44,6 +46,7 @@ export class LibraryVideos implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
   readonly videos = inject(LibraryVideoService);
   readonly library = inject(LibraryService);
+  private readonly i18n = inject(I18nService);
   readonly dialogs = inject(LibraryDialogsService);
   readonly dragging = signal(false);
   readonly ratioOptions = ASSET_RATIOS;
@@ -143,6 +146,36 @@ export class LibraryVideos implements OnInit, OnDestroy {
   }
   ratioIcon(value: string): string {
     return `ratio-${value.replace("/", "-")}`;
+  }
+
+  readonly tableRowClass = (row: object): Record<string, boolean> => ({ "is-selected": this.isSelected(this.videoOf(row)) });
+
+  get tableColumns(): DatatableColumn[] {
+    return [
+      { key: "name", label: this.i18n.translate("library.image.column.name") },
+      { key: "spec", label: this.i18n.translate("library.image.info.specs"), width: "170px" },
+      { key: "size", label: this.i18n.translate("library.image.column.size"), align: "right", width: "110px" },
+      { key: "collection", label: this.i18n.translate("library.image.column.collection"), width: "180px", ellipsis: true },
+    ];
+  }
+
+  videoOf(row: object): LibraryVideo {
+    return row as LibraryVideo;
+  }
+
+  onRowSelected(index: number): void {
+    const item = this.videos.visible()[index];
+    if (item) {
+      this.select(item);
+    }
+  }
+
+  onRowDblClick(event: DatatableRowEvent): void {
+    this.open(this.videoOf(event.row));
+  }
+
+  onRowEnter(event: DatatableRowEvent): void {
+    this.open(this.videoOf(event.row));
   }
 
   @HostListener("document:keydown", ["$event"])

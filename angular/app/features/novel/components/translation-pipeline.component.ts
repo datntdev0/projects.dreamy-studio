@@ -10,12 +10,11 @@ import { formatCount, matchesChapter, toNovelError } from "../novel.rules";
 import { ChapterFilter, TranslationView } from "../novel.translation.models";
 import { CHAPTER_FILTERS, CHAPTER_FILTER_KEYS, CHAPTER_ROW_LIMIT, STATUS_BADGES, STATUS_KEYS, matchesChapterFilter } from "../novel.translation.rules";
 import { NovelTranslationService } from "../novel.translation.service";
-import { NovelTranslationHistory } from "./translation-history.component";
 
 @Component({
   selector: "app-novel-translation-pipeline",
   standalone: true,
-  imports: [Icon, I18nPipe, NovelTranslationHistory],
+  imports: [Icon, I18nPipe],
   templateUrl: "./translation-pipeline.component.html",
 })
 export class NovelTranslationPipeline {

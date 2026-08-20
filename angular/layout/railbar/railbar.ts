@@ -3,7 +3,8 @@ import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { SettingsService } from "@app/features/settings/settings.service";
 import { LayoutService } from "../layout.service";
-import { RAIL_ITEMS } from "../layout.models";
+import { PIPELINES_TAB_ID, RAIL_ITEMS } from "../layout.models";
+import { TabsService } from "../tabs.service";
 
 @Component({
   selector: "app-railbar",
@@ -14,5 +15,7 @@ import { RAIL_ITEMS } from "../layout.models";
 export class Railbar {
   readonly layout = inject(LayoutService);
   readonly settings = inject(SettingsService);
+  readonly tabs = inject(TabsService);
+  readonly pipelinesTabId = PIPELINES_TAB_ID;
   readonly items = RAIL_ITEMS;
 }

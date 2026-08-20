@@ -1,0 +1,57 @@
+<section class="nv" [attr.aria-label]="'pipeline.history.label' | t" data-testid="pipeline-history">
+  <div class="nv-bar" data-testid="pipeline-history-bar">
+    <div class="nv-bar-l" data-testid="pipeline-history-bar-left">
+      <label class="search"><span class="sr-only">{{ "pipeline.search.label" | t }}</span><input class="input" type="search" [value]="query()" [attr.placeholder]="'pipeline.search.placeholder' | t" data-testid="pipeline-history-search" (input)="onQuery($event)"></label>
+      <select class="select" [attr.aria-label]="'pipeline.filter.label' | t" data-testid="pipeline-history-filter" (change)="onFilter($event)">
+        @for (item of filters; track item) {
+          <option [value]="item" [selected]="filter() === item">{{ filterKey(item) | t }}</option>
+        }
+      </select>
+      <span class="t-sm t-mute" data-testid="pipeline-history-count">{{ "pipeline.count" | t: { count: visible().length } }}</span>
+      @if (filterActive()) {
+        <button type="button" class="btn btn-sm btn-ghost" data-testid="pipeline-history-clear" (click)="clearFilters()">{{ "pipeline.filter.clear" | t }}</button>
+      }
+    </div>
+    <span class="spacer"></span>
+    <div class="nv-bar-r" data-testid="pipeline-history-bar-right">
+      <button type="button" class="btn btn-sm" [disabled]="pipelines.loading()" data-testid="pipeline-history-refresh" (click)="refresh()"><ds-icon name="refresh" [size]="16" />{{ "pipeline.refresh" | t }}</button>
+    </div>
+  </div>
+  <div class="nv-body" data-testid="pipeline-history-body">
+    <div class="nv-scroll" [class.table-view]="visible().length > 0" data-testid="pipeline-history-scroll">
+      @if (pipelines.error(); as failure) {
+        <div class="empty" data-testid="pipeline-history-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "pipeline.error.loadFailed" | t: { detail: failure.detail } }}</p><button type="button" class="btn" data-testid="pipeline-history-retry" (click)="refresh()">{{ "pipeline.error.retry" | t }}</button></div></div>
+      } @else if (visible().length === 0) {
+        @if (!pipelines.loaded()) {
+          <div class="empty" data-testid="pipeline-history-loading"><div class="empty-inner"><p class="t-sm t-mute">{{ "pipeline.loading" | t }}</p></div></div>
+        } @else if (pipelines.history().length === 0) {
+          <div class="empty" data-testid="pipeline-history-empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="pipeline-history-empty-title">{{ "pipeline.empty.title" | t }}</h3><p class="t-sm t-mute" data-testid="pipeline-history-empty-description">{{ "pipeline.empty.description" | t }}</p></div></div>
+        } @else {
+          <div class="empty" data-testid="pipeline-history-nomatch"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs" data-testid="pipeline-history-nomatch-title">{{ "pipeline.noMatch.title" | t }}</h3><p class="t-sm t-mute" data-testid="pipeline-history-nomatch-description">{{ "pipeline.noMatch.description" | t }}</p><button type="button" class="btn" data-testid="pipeline-history-nomatch-clear" (click)="clearFilters()">{{ "pipeline.filter.clear" | t }}</button></div></div>
+        }
+      } @else {
+        <ds-datatable [columns]="tableColumns" [rows]="visible()" trackKey="id" minWidth="520px" variant="fill" rowTestId="pipeline-history-row" [rowClass]="tableRowClass" data-testid="pipeline-history-table" (rowClick)="onRowClick($event)" (rowEnter)="onRowClick($event)">
+          <ng-template dsCell="novel" let-row>
+            @let pipeline = snapshotOf(row);
+            <div class="pipe-cell-novel" data-testid="pipeline-history-novel"><span class="pipe-kind"><ds-icon [name]="iconOf(pipeline)" [size]="sizeOf(pipeline)" /></span><div class="pipe-novel"><div class="t-ink">{{ novelOf(pipeline) }}</div><div class="t-sm t-mute">@if (kindOf(pipeline); as kind) { {{ kind | t }} } @else { {{ pipeline.kind }} }<span class="pipe-sep">·</span><span class="mono">{{ pipeline.target }}</span></div></div></div>
+          </ng-template>
+          <ng-template dsCell="started" let-row>
+            @let pipeline = snapshotOf(row);
+            <div class="pipe-novel" data-testid="pipeline-history-time"><span class="mono t-mute pipe-nowrap" data-testid="pipeline-history-started">{{ stampOf(pipeline) }}</span><span class="t-sm t-mute" data-testid="pipeline-history-duration">{{ durationOf(pipeline) }}</span></div>
+          </ng-template>
+          <ng-template dsCell="status" let-row>
+            @let pipeline = snapshotOf(row);
+            <span class="badge" [class]="statusBadge(pipeline.status)" data-testid="pipeline-history-status">{{ statusKey(pipeline.status) | t }}</span>
+          </ng-template>
+          <ng-template dsCell="progress" let-row>
+            @let pipeline = snapshotOf(row);
+            <div class="pipe-prog" data-testid="pipeline-history-progress">
+              <app-pipeline-strip [pipeline]="pipeline" />
+              <div class="pipe-prog-text t-sm t-mute"><span class="mono pipe-pct">{{ percent(pipeline) }}%</span><span data-testid="pipeline-history-done">{{ pipeline.done }}/{{ pipeline.total }}</span>@if (pipeline.failed > 0) { <span class="pipe-prog-failed" data-testid="pipeline-history-failed">{{ "pipeline.failed" | t: { count: pipeline.failed } }}</span> }</div>
+            </div>
+          </ng-template>
+        </ds-datatable>
+      }
+    </div>
+  </div>
+</section>

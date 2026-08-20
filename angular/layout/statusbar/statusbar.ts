@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from "@angular/core";
 import { Icon } from "@components/icon";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
+import { PipelineService } from "@app/features/pipeline/pipeline.service";
 import { AppInfo } from "@app/features/workspace/workspace.models";
 import { LayoutService } from "../layout.service";
 
@@ -15,6 +16,7 @@ export class Statusbar implements OnInit {
   private readonly service = inject(WorkspaceService);
 
   readonly layout = inject(LayoutService);
+  readonly pipelines = inject(PipelineService);
   readonly workspace = this.service.current;
   readonly info = signal<AppInfo | null>(null);
 

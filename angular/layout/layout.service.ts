@@ -1,13 +1,13 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
 import { LayoutSettings } from "@app/features/settings/settings.models";
 import { SettingsService } from "@app/features/settings/settings.service";
-import { PanelId, RailId, RightTabId } from "./layout.models";
+import { BottomTabId, PanelId, RailId, RightTabId } from "./layout.models";
 import { TabsService } from "./tabs.service";
 
 export const PANEL_LIMITS: Record<PanelId, { min: number; max: number; initial: number }> = {
   explorer: { min: 200, max: 420, initial: 264 },
   inspector: { min: 240, max: 480, initial: 320 },
-  bottom: { min: 120, max: 520, initial: 200 },
+  bottom: { min: 120, max: 520, initial: 240 },
 };
 
 const SAVE_DELAY_MS = 300;
@@ -30,11 +30,13 @@ export class LayoutService {
   readonly explorerOpen = signal(this.stored.explorerOpen ?? true);
   readonly inspectorOpen = signal(this.stored.inspectorOpen ?? true);
   readonly bottomOpen = signal(this.stored.bottomOpen ?? false);
+  readonly bottomTab = signal<BottomTabId>("pipelines");
   readonly explorerSize = signal(clampSize("explorer", this.stored.explorerSize));
   readonly inspectorSize = signal(clampSize("inspector", this.stored.inspectorSize));
   readonly bottomSize = signal(clampSize("bottom", this.stored.bottomSize));
   readonly resizing = signal(false);
   readonly rightTab = signal<RightTabId>(this.stored.rightTab ?? "inspector");
+  readonly explorerVisible = computed(this.isExplorerVisible.bind(this));
   readonly assistantActive = computed(this.isAssistantActive.bind(this));
   readonly panelLimits = PANEL_LIMITS;
   private readonly sizes = { explorer: this.explorerSize, inspector: this.inspectorSize, bottom: this.bottomSize };
@@ -50,7 +52,7 @@ export class LayoutService {
   }
 
   isRailActive(id: RailId): boolean {
-    return this.rail() === id && this.explorerOpen();
+    return this.rail() === id && this.explorerVisible();
   }
 
   selectRail(id: RailId): void {
@@ -73,6 +75,11 @@ export class LayoutService {
 
   toggleBottom(): void {
     this.bottomOpen.set(!this.bottomOpen());
+  }
+
+  showBottomTab(id: BottomTabId): void {
+    this.bottomTab.set(id);
+    this.bottomOpen.set(true);
   }
 
   beginResize(panel: PanelId, event: PointerEvent): void {
@@ -162,6 +169,10 @@ export class LayoutService {
     if (rail) {
       this.rail.set(rail);
     }
+  }
+
+  private isExplorerVisible(): boolean {
+    return this.explorerOpen() && this.tabs.active().kind !== "pipelines";
   }
 
   private isAssistantActive(): boolean {

@@ -1,0 +1,39 @@
+@let p = pipeline();
+<button type="button" class="pipe-main" [attr.aria-label]="'pipeline.item.open' | t: { id: p.id }" [attr.aria-current]="selected() ? 'true' : null" data-testid="pipeline-item-open" (click)="open()">
+  <span class="pipe-kind" data-testid="pipeline-item-kind"><ds-icon [name]="icon()" [size]="iconSize()" /></span>
+  <span class="pipe-title" data-testid="pipeline-item-title">
+    <span class="pipe-name t-ink" data-testid="pipeline-item-novel">{{ novel() }}</span>
+    <span class="pipe-sub t-sm t-mute" data-testid="pipeline-item-sub">@if (kind(); as label) { {{ label | t }} } @else { {{ p.kind }} }<span class="pipe-sep">·</span><span class="mono pipe-target" data-testid="pipeline-item-target">{{ p.target }}</span><span class="pipe-sep">·</span><span class="mono" data-testid="pipeline-item-id">#{{ p.id }}</span></span>
+  </span>
+  <span class="pipe-prog" data-testid="pipeline-item-progress">
+    <app-pipeline-strip [pipeline]="p" />
+    <span class="pipe-prog-text t-sm t-mute" data-testid="pipeline-item-progress-text">
+      <span class="mono pipe-pct" data-testid="pipeline-item-percent">{{ percent() }}%</span>
+      <span data-testid="pipeline-item-count">{{ "pipeline.progress" | t: { done: p.done, total: p.total } }}</span>
+      @if (p.failed > 0) {
+        <span class="pipe-prog-failed" data-testid="pipeline-item-failed">{{ "pipeline.failed" | t: { count: p.failed } }}</span>
+      }
+      @if (running()) {
+        @for (task of active(); track task.id) {
+          <span class="pipe-task" data-testid="pipeline-item-task"><span class="t-ink">{{ taskLabelKey(task) | t: { seq: seqOf(task), n: task.passage ?? 0 } }}</span> {{ task.progress }}%</span>
+        }
+        @if (queued() > 0) {
+          <span data-testid="pipeline-item-queued">{{ "pipeline.running.queued" | t: { count: queued() } }}</span>
+        }
+      } @else if (error()) {
+        <span class="pipe-error" [attr.title]="error()" data-testid="pipeline-item-error">{{ error() }}</span>
+      }
+    </span>
+  </span>
+  <span class="pipe-when" data-testid="pipeline-item-when">
+    <span class="badge" [class]="badge()" data-testid="pipeline-item-status">{{ statusKey() | t }}</span>
+    @if (running()) {
+      <span class="t-sm t-mute pipe-nowrap" data-testid="pipeline-item-time"><span class="mono" data-testid="pipeline-item-elapsed">{{ elapsed() }}</span>@if (eta()) { <span class="pipe-sep">·</span><span data-testid="pipeline-item-eta">{{ "pipeline.eta" | t: { time: eta() } }}</span> }</span>
+    } @else {
+      <span class="t-sm t-mute pipe-nowrap" data-testid="pipeline-item-time"><span class="mono" data-testid="pipeline-item-stamp">{{ stamp() }}</span><span class="pipe-sep">·</span><span data-testid="pipeline-item-duration">{{ duration() }}</span></span>
+    }
+  </span>
+</button>
+@if (running()) {
+  <button type="button" class="btn btn-sm pipe-cancel" [attr.aria-label]="'pipeline.cancel' | t" data-testid="pipeline-item-cancel" (click)="cancel()"><ds-icon name="stop" [size]="16" /><span class="pipe-cancel-text">{{ "pipeline.cancel" | t }}</span></button>
+}

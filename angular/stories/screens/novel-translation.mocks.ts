@@ -1,7 +1,11 @@
+import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
+import { PipelineService } from "@app/features/pipeline/pipeline.service";
 import { ChapterRow, NovelSummary, ParagraphRow, TranslationStatus } from "@app/features/novel/novel.models";
 import { DictEntry, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, WireChapter, WireTranslation, WireWarning } from "@app/features/novel/novel.translation.models";
+import { mixedHistory, runningAnalysis, runningPipeline } from "../features/pipeline.fixtures";
 import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from "./novel-translation.fixtures";
+import { ConcurrentPipelineService } from "./pipeline.mocks";
 import { IpcHandlers, baseHandlers, screenProviders, withScreen } from "./screen.mocks";
 
 export const NOVEL_ID = 1;
@@ -26,6 +30,9 @@ export interface TranslationScenario {
   chapters?: boolean;
   translated?: boolean;
   warnings?: boolean;
+  history?: boolean;
+  running?: boolean;
+  pipelineDelayMs?: number;
 }
 
 interface MockState {
@@ -33,6 +40,7 @@ interface MockState {
   translations: Record<string, WireTranslation>;
   nextDictionaryId: number;
   nextPipelineId: number;
+  history: PipelineSnapshot[];
   activePipeline: MockPipeline | null;
 }
 
@@ -230,6 +238,7 @@ function finishPipeline(state: MockState, pipeline: MockPipeline, status: Pipeli
   pipeline.snapshot.failed = pipeline.snapshot.tasks.filter((task) => task.status === "failed").length;
   pipeline.snapshot.finishedAt = new Date().toISOString();
   pipeline.emit({ type: "finished", pipeline: clonePipeline(pipeline.snapshot) });
+  state.history.unshift(clonePipeline(pipeline.snapshot));
   if (state.activePipeline === pipeline) {
     state.activePipeline = null;
   }
@@ -280,7 +289,7 @@ async function runTask(state: MockState, pipeline: MockPipeline, task: PipelineT
   task.startedAt = new Date().toISOString();
   emitTask(pipeline, task);
   for (const progress of PROGRESS_TICKS) {
-    await pause(PIPELINE_DELAY_MS);
+    await pause(state.scenario.pipelineDelayMs ?? PIPELINE_DELAY_MS);
     if (pipeline.cancelled || pipeline.finalized) {
       return;
     }
@@ -439,12 +448,19 @@ function ipcHandlers(state: MockState, rows: ChapterRow[]): IpcHandlers {
     },
     pipeline_start: (args) => startPipeline(state, args),
     pipeline_cancel: () => cancelPipeline(state),
+    pipeline_history_list: (args) => state.history.filter((item) => item.novelId === Number(args["novelId"])).slice(0, Number(args["limit"] ?? 20)).map(clonePipeline),
   };
+}
+
+function runningHistory(scenario: TranslationScenario): PipelineSnapshot[] {
+  return scenario.running ? [runningPipeline(NOVEL_ID), runningAnalysis(NOVEL_ID)] : [];
 }
 
 function handlersFor(scenario: TranslationScenario): IpcHandlers {
   const rows = scenario.chapters === false ? [] : chapterRows(scenario.translated !== false);
-  const state: MockState = { scenario, translations: {}, nextDictionaryId: 11, nextPipelineId: 1, activePipeline: null };
+  const history = scenario.history ? [...runningHistory(scenario), ...mixedHistory()] : [];
+  const nextPipelineId = history.reduce((top, item) => Math.max(top, item.id), 0) + 1;
+  const state: MockState = { scenario, translations: {}, nextDictionaryId: 11, nextPipelineId, history, activePipeline: null };
   return ipcHandlers(state, rows);
 }
 
@@ -453,5 +469,9 @@ export function translationProviders(scenario: TranslationScenario = {}): Return
 }
 
 export function withTranslation(scenario: TranslationScenario = {}): { decorators: Decorator[] } {
-  return withScreen(handlersFor(scenario));
+  if (!scenario.running) {
+    return withScreen(handlersFor(scenario));
+  }
+  const providers = [...screenProviders(handlersFor(scenario)), { provide: PipelineService, useClass: ConcurrentPipelineService }];
+  return { decorators: [applicationConfig({ providers })] };
 }

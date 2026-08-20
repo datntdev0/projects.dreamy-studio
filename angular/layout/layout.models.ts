@@ -4,9 +4,11 @@ export type RailId = "projects" | "novels" | "library" | "distribution";
 
 export type PanelId = "explorer" | "inspector" | "bottom";
 
+export type BottomTabId = "pipelines" | "output";
+
 export type RightTabId = "inspector" | "assistant";
 
-export type EditorTabKind = "home" | "novels" | "novel" | "translation" | "knowledge" | "projects" | "project" | "images" | "sounds" | "videos" | "prompts" | "collections" | "collection";
+export type EditorTabKind = "home" | "novels" | "novel" | "translation" | "knowledge" | "projects" | "project" | "images" | "sounds" | "videos" | "prompts" | "collections" | "collection" | "pipelines";
 
 export interface RailItem {
   id: RailId;
@@ -46,6 +48,8 @@ export const VIDEOS_TAB_ID = "videos";
 export const PROMPTS_TAB_ID = "prompts";
 
 export const COLLECTIONS_TAB_ID = "collections";
+
+export const PIPELINES_TAB_ID = "pipelines";
 
 export const HOME_TAB: EditorTab = {
   id: HOME_TAB_ID,
@@ -135,6 +139,19 @@ export const PROMPTS_TAB: EditorTab = {
   projectId: null,
   collectionId: null,
   rail: "library",
+  closable: true,
+};
+
+export const PIPELINES_TAB: EditorTab = {
+  id: PIPELINES_TAB_ID,
+  kind: "pipelines",
+  icon: "activity",
+  labelKey: "tabs.pipelines.title",
+  title: "",
+  novelId: null,
+  projectId: null,
+  collectionId: null,
+  rail: null,
   closable: true,
 };
 

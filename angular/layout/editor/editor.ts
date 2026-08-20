@@ -15,6 +15,7 @@ import { LibraryImages } from "@app/features/library/components/images.component
 import { LibrarySounds } from "@app/features/library/components/sounds.component";
 import { LibraryVideos } from "@app/features/library/components/videos.component";
 import { LibraryPrompts } from "@app/features/library/components/prompts.component";
+import { PipelineHistory } from "@app/features/pipeline/components/history.component";
 import { Bottom } from "../bottom/bottom";
 import { LayoutService } from "../layout.service";
 import { EditorTab } from "../layout.models";
@@ -23,7 +24,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, I18nPipe, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts],
+  imports: [Icon, I18nPipe, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
   templateUrl: "./editor.html",
 })
 export class Editor {

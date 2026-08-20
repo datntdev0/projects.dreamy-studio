@@ -3,7 +3,15 @@
     <span class="sb-item" [attr.title]="ws.path" data-testid="statusbar-workspace"><ds-icon name="hdd" [size]="14" /><span class="path">{{ ws.path }}</span></span>
   }
   <span class="spacer"></span>
-  <button type="button" class="sb-item" [attr.aria-label]="'main.titlebar.toggleBottom' | t" [attr.title]="'main.titlebar.toggleBottom' | t" data-testid="statusbar-pipelines" (click)="layout.toggleBottom()"><ds-icon name="activity" [size]="14" /><span class="mono">{{ "main.statusbar.pipelinesIdle" | t }}</span></button>
+  @let totals = pipelines.totals();
+  <button type="button" class="sb-item" [attr.aria-label]="'main.titlebar.toggleBottom' | t" [attr.title]="'main.titlebar.toggleBottom' | t" data-testid="statusbar-pipelines" (click)="layout.toggleBottom()">
+    <ds-icon name="activity" [size]="14" />
+    @if (totals.count > 0) {
+      <span class="mono" data-testid="statusbar-pipelines-running">{{ "main.statusbar.pipelinesRunning" | t: { count: totals.count, done: totals.done, total: totals.total } }}</span>
+    } @else {
+      <span class="mono" data-testid="statusbar-pipelines-idle">{{ "main.statusbar.pipelinesIdle" | t }}</span>
+    }
+  </button>
   @if (info(); as app) {
     <span class="sb-item mono" data-testid="statusbar-version">V{{ app.version }}</span>
   }

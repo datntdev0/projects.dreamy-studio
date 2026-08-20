@@ -1,0 +1,27 @@
+<section class="pipes" [attr.aria-label]="'pipeline.list.label' | t" data-testid="pipeline-list">
+  @if (pipelines.running().length > 0) {
+    <div class="pipes-bar" data-testid="pipeline-list-bar">
+      <h4 class="pipes-group" data-testid="pipeline-list-group"><i class="dot dot-running"></i>{{ "pipeline.group.running" | t: { count: pipelines.running().length } }}</h4>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-sm btn-ghost" data-testid="pipeline-list-history" (click)="tabs.openPipelines()"><ds-icon name="external" [size]="16" />{{ "pipeline.openHistory" | t }}</button>
+    </div>
+    <ul class="pipes-list" data-testid="pipeline-list-running">
+      @for (pipeline of pipelines.running(); track pipeline.id) {
+        <li app-pipeline-item [pipeline]="pipeline" [now]="now()" data-testid="pipeline-item"></li>
+      }
+    </ul>
+  } @else {
+    <div class="empty pipes-empty" data-testid="pipeline-list-empty">
+      <div class="empty-inner">
+        <div class="pipes-kinds" data-testid="pipeline-list-empty-kinds">
+          @for (kind of kinds; track kind.icon) {
+            <span class="pipes-kind" data-testid="pipeline-list-empty-kind"><span class="pipe-kind"><ds-icon [name]="kind.icon" [size]="kind.size" /></span><span class="t-sm t-mute">{{ kind.labelKey | t }}</span></span>
+          }
+        </div>
+        <h3 class="t-display-xs" data-testid="pipeline-list-empty-title">{{ "main.bottom.pipelines.title" | t }}</h3>
+        <p class="t-sm t-mute" data-testid="pipeline-list-empty-description">{{ "main.bottom.pipelines.description" | t }}</p>
+        <button type="button" class="btn btn-sm btn-ghost" data-testid="pipeline-list-empty-history" (click)="tabs.openPipelines()"><ds-icon name="external" [size]="16" />{{ "pipeline.openHistory" | t }}</button>
+      </div>
+    </div>
+  }
+</section>

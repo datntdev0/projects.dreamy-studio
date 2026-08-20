@@ -1,11 +1,12 @@
-import { Component, inject, signal } from "@angular/core";
+import { Component, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { I18nKey } from "@app/core/i18n/i18n.models";
 import { I18nPipe } from "@app/core/i18n/i18n.pipe";
+import { PipelineLog } from "@app/features/pipeline/components/log.component";
+import { PipelineList } from "@app/features/pipeline/components/list.component";
 import { LayoutService } from "../layout.service";
-
-type BottomTabId = "pipelines" | "output";
+import { BottomTabId } from "../layout.models";
 
 interface BottomTab {
   id: BottomTabId;
@@ -20,15 +21,14 @@ const BOTTOM_TABS: BottomTab[] = [
 @Component({
   selector: "app-bottom",
   standalone: true,
-  imports: [Button, Icon, I18nPipe],
+  imports: [Button, Icon, I18nPipe, PipelineLog, PipelineList],
   templateUrl: "./bottom.html",
 })
 export class Bottom {
   readonly layout = inject(LayoutService);
   readonly tabs = BOTTOM_TABS;
-  readonly tab = signal<BottomTabId>("pipelines");
 
   selectTab(id: BottomTabId): void {
-    this.tab.set(id);
+    this.layout.bottomTab.set(id);
   }
 }

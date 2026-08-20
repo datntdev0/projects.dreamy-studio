@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from "@angular/core";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
-import { COLLECTIONS_TAB, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, NovelToolKind, PROJECTS_TAB, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, collectionTab, collectionTabId, novelTab, novelTabId, novelToolTab, novelToolTabId, projectTab, projectTabId } from "./layout.models";
+import { COLLECTIONS_TAB, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, NovelToolKind, PIPELINES_TAB, PROJECTS_TAB, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, collectionTab, collectionTabId, novelTab, novelTabId, novelToolTab, novelToolTabId, projectTab, projectTabId } from "./layout.models";
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -49,6 +49,10 @@ export class TabsService {
   openPrompts(): void { this.open(PROMPTS_TAB); }
 
   openCollections(): void { this.open(COLLECTIONS_TAB); }
+
+  openPipelines(): void {
+    this.open(PIPELINES_TAB);
+  }
 
   openCollection(id: number, name: string): void {
     const tabId = collectionTabId(id);

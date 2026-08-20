@@ -1,0 +1,22 @@
+ds-graph {
+  & { display: block; position: relative; width: 100%; height: 100%; min-height: 240px; }
+  .graph { position: absolute; inset: 0; overflow: hidden; background: var(--canvas); }
+  .graph-canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; outline: none; }
+  .graph-canvas.is-hover { cursor: pointer; }
+  .graph-panel { position: absolute; top: var(--sp-md); right: var(--sp-md); width: 224px; max-height: calc(100% - 120px); overflow: auto; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); box-shadow: var(--shadow-float); }
+  .graph-panel details + details { border-top: 1px solid var(--hairline); }
+  .graph-panel summary { display: flex; align-items: center; gap: var(--sp-xs); padding: var(--sp-sm) var(--sp-md); list-style: none; cursor: pointer; color: var(--mute); font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+  .graph-panel summary::-webkit-details-marker { display: none; }
+  .graph-panel summary::before { content: "▸"; font-size: 10px; transition: transform 0.12s; }
+  .graph-panel details[open] > summary::before { transform: rotate(90deg); }
+  .graph-panel summary:hover { color: var(--body); }
+  .graph-section { display: grid; gap: var(--sp-sm); padding: 0 var(--sp-md) var(--sp-md); }
+  .graph-section .check { align-items: center; }
+  .graph-section .input { height: var(--ctl-h-sm); }
+  .graph-range { display: grid; gap: var(--sp-xxs); color: var(--mute); font-size: 12px; }
+  .graph-legend { position: absolute; left: var(--sp-md); bottom: var(--sp-md); display: flex; flex-wrap: wrap; gap: var(--sp-xs) var(--sp-lg); max-width: calc(100% - 80px); margin: 0; padding: var(--sp-sm) var(--sp-md); list-style: none; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); color: var(--body); font: 400 12px/16px var(--font); pointer-events: none; }
+  .graph-legend li { display: inline-flex; align-items: center; gap: var(--sp-sm); }
+  .graph-zoom { position: absolute; right: var(--sp-md); bottom: var(--sp-md); display: grid; gap: var(--sp-xxs); padding: var(--sp-xxs); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); box-shadow: var(--shadow-float); }
+  .graph-zoom .btn { font-size: 16px; line-height: 1; }
+  .graph-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--mute); pointer-events: none; }
+}

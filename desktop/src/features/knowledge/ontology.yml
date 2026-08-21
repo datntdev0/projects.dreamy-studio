@@ -1,0 +1,47 @@
+version: 1
+
+entity_types:
+  character: { abstract: true, hint: "The real person behind one or more personas. Never used directly; it is reached only through a persona_of fact." }
+  persona: { properties: [titles, aliases], hint: "A role, mask or identity under which a person appears in the story. Every fact about a person is attached to a persona. titles are honorifics or epithets, aliases are other names for the same persona." }
+  location: { hint: "A place: a city, building, region, world or room." }
+  organization: { hint: "A group of people: a guild, family, army, company or sect." }
+  artifact: { hint: "A notable object: a weapon, tool, relic or document." }
+  skill: { hint: "An ability, technique, spell or craft that a persona can have." }
+  term: { hint: "A specific in-world word or concept that needs an explanation, such as a currency, a law or a magic system." }
+  event: { hint: "Something that happens at a certain time and place: a battle, a ceremony, a meeting or a disaster." }
+
+scalars:
+  gender: { domain: [persona], single: true, hint: "The text states the gender of the persona. Quote the sentence that says it." }
+  age: { domain: [persona], single: true, hint: "The text states the age or the age range of the persona. Quote the sentence that says it." }
+  appearance: { domain: [persona], hint: "The text describes how the persona looks. Quote the description." }
+  occupation: { domain: [persona], hint: "The text states the job, profession or social role of the persona. Quote the sentence that says it." }
+  vital_status: { domain: [persona], single: true, hint: "The text states whether the persona is alive, dead or missing. Quote the sentence that says it." }
+  founded_at: { domain: [organization], single: true, hint: "The text states when the organization was founded. Quote the sentence that says it." }
+  occurred_at: { domain: [event], single: true, hint: "The text states when the event took place. Quote the sentence that says it." }
+  meaning: { domain: [term, skill, artifact], single: true, hint: "The text explains what the term, skill or artifact means or does. Quote the explanation." }
+
+relationships:
+  persona_of: { domain: [persona], range: [character], hint: "The persona is a mask or identity of this character. The only way to reach a character." }
+  kin_of: { domain: [persona], range: [persona], hint: "The two personas are relatives: parent, child, sibling, spouse or other family." }
+  ally_of: { domain: [persona], range: [persona], hint: "The two personas are friends or allies." }
+  enemy_of: { domain: [persona], range: [persona], hint: "The two personas are enemies or rivals." }
+  mentor_of: { domain: [persona], range: [persona], hint: "The subject teaches or guides the object." }
+  member_of: { domain: [persona], range: [organization], hint: "The persona belongs to the organization." }
+  leader_of: { domain: [persona], range: [organization], unique_range: true, hint: "The persona leads the organization. An organization has one leader." }
+  resides_at: { domain: [persona], range: [location], hint: "The persona lives or stays at the location." }
+  owns: { domain: [persona, organization], range: [artifact], hint: "The persona or organization owns or carries the artifact." }
+  has_skill: { domain: [persona], range: [skill], hint: "The persona knows or uses the skill." }
+  participates_in: { domain: [persona, organization], range: [event], hint: "The persona or organization takes part in the event." }
+  occurs_at: { domain: [event], range: [location], hint: "The event takes place at the location." }
+  located_in: { domain: [location, organization], range: [location], hint: "The location or organization is inside a larger location." }
+  created_by: { domain: [artifact], range: [persona], hint: "The artifact was made by the persona." }
+
+rules:
+  character_predicate: { severity: error }
+  persona_link: { severity: error }
+  relation_signature: { severity: error }
+  dangling_ref: { severity: error }
+  relation_unique: { severity: warning }
+  entity_duplicate: { severity: warning }
+  evidence: { severity: warning }
+  source_stale: { severity: warning }

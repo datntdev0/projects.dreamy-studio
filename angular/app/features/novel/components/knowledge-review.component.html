@@ -48,12 +48,6 @@
             <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-edit" (click)="edit(card.issue)"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
             <button type="button" class="btn btn-sm" (click)="remove(card.issue)">{{ "novel.knowledge.action.delete" | t }}</button>
           }
-          @case ("scalar_single") {
-            @for (value of card.issue.values; track value) {
-              <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-keep" (click)="keepValue(card.issue, value)">{{ "novel.knowledge.review.keepValue" | t: { value: value } }}</button>
-            }
-            <button type="button" class="btn btn-sm" (click)="edit(card.issue)"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
-          }
           @case ("entity_duplicate") {
             @if (card.pair.length === 2) {
               <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-review-merge" (click)="merge(card.pair[0].id, card.pair[1].id)"><ds-icon name="merge" [size]="14" />{{ "novel.knowledge.review.mergeInto" | t: { from: card.pair[1].label, to: card.pair[0].label } }}</button>

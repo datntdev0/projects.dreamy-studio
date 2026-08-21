@@ -96,16 +96,6 @@ export class NovelKnowledgeReview {
     await this.commitEdits([...created, { k: "add", item: link }], "novel.knowledge.review.done.created");
   }
 
-  async keepValue(issue: KnowledgeIssue, value: string): Promise<void> {
-    const drop: string[] = [];
-    for (const item of this.items()) {
-      if (issue.ids.includes(item.id) && isFact(item) && item.value !== value) {
-        drop.push(item.id);
-      }
-    }
-    await this.guard(this.knowledge.remove(this.novelId(), drop), "novel.knowledge.review.done.kept");
-  }
-
   async merge(keep: string, drop: string): Promise<void> {
     await this.commitEdits([{ k: "merge", sources: [keep, drop], target: keep }], "novel.knowledge.review.done.merged");
   }

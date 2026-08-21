@@ -11,13 +11,16 @@
     "test": "cargo test --manifest-path desktop/Cargo.toml --target-dir _output/desktop/target",
     "verify": "pnpm --filter dreamy-studio-verify run test",
     "angular:serve": "pnpm --filter dreamy-studio-angular run serve",
-    "angular:build": "pnpm --filter dreamy-studio-angular run build",
-    "story": "pnpm --filter dreamy-studio-angular run story",
-    "story:build": "pnpm --filter dreamy-studio-angular run story:build"
+    "angular:build": "pnpm ontology && pnpm --filter dreamy-studio-angular run build",
+    "story": "pnpm ontology && pnpm --filter dreamy-studio-angular run story",
+    "story:build": "pnpm ontology && pnpm --filter dreamy-studio-angular run story:build",
+    "ontology": "node _scripts/ontology.mjs",
+    "ontology:check": "node _scripts/ontology.mjs --check"
   },
   "private": true,
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "yaml": "^2"
   },
   "packageManager": "pnpm@12.16.1"
 }

@@ -1,14 +1,14 @@
 import { LanguageKey } from "@app/core/language/language.models";
+import { EntityType, PredicateKind, RuleId } from "./novel.knowledge.ontology.data";
 import { TargetLang } from "./novel.models";
+
+export type { EntityType, PredicateKind, RuleId };
 
 export type KnowledgeTab = "graph" | "list" | "review";
 export type KnowledgeListKind = "entity" | "fact";
-export type EntityType = "character" | "persona" | "location" | "organization" | "artifact" | "skill" | "term" | "event";
-export type PredicateKind = "scalar" | "relationship";
 export type KnowledgeLang = "src" | TargetLang;
 export type AnalyzeMode = "missing" | "range" | "all";
 export type Severity = "error" | "warning";
-export type RuleId = "character_predicate" | "persona_link" | "relation_signature" | "scalar_single" | "relation_unique" | "entity_duplicate" | "dangling_ref" | "evidence" | "source_stale";
 export type ItemState = "same" | "edited" | "new" | "deleted" | "merged" | "removed";
 export type DraftPreviewState = "idle" | "invalid" | "resolved" | "open" | "clean" | "warn";
 
@@ -17,6 +17,7 @@ export interface EntityTypeDef {
   icon: string;
   color: string;
   abstract: boolean;
+  properties: string[];
   labelKey: LanguageKey;
   hintKey: LanguageKey;
 }

@@ -245,28 +245,12 @@ function groupBy(facts: KnowledgeFact[], keyOf: (fact: KnowledgeFact) => string)
   return groups;
 }
 
-function subjectPredKey(fact: KnowledgeFact): string {
-  return `${fact.subject}|${fact.pred}`;
-}
-
 function predObjectKey(fact: KnowledgeFact): string {
   return `${fact.pred}|${fact.object}`;
 }
 
 function distinct(values: string[]): string[] {
   return [...new Set(values)];
-}
-
-function checkScalarSingle(ctx: CheckContext): RawIssue[] {
-  const out: RawIssue[] = [];
-  const scalars = liveFacts(ctx).filter((fact) => fact.object === null && predicateDef(fact.pred)?.limit && liveEntity(ctx.map, fact.subject));
-  for (const [key, group] of groupBy(scalars, subjectPredKey)) {
-    const values = distinct(group.map((fact) => fact.value ?? ""));
-    if (values.length > 1) {
-      out.push({ ids: group.map((fact) => fact.id), key, message: ctx.t("novel.knowledge.check.scalar_single", { entity: nameOf(ctx.map, group[0].subject), pred: predicateLabel(group[0].pred, ctx.t), values: values.map((value) => `“${value}”`).join(", ") }), values });
-    }
-  }
-  return out;
 }
 
 function checkRelationUnique(ctx: CheckContext): RawIssue[] {
@@ -335,7 +319,6 @@ const CHECKS: Record<RuleId, (ctx: CheckContext) => RawIssue[]> = {
   persona_link: checkPersonaLink,
   relation_signature: checkSignature,
   dangling_ref: checkDangling,
-  scalar_single: checkScalarSingle,
   relation_unique: checkRelationUnique,
   entity_duplicate: checkDuplicate,
   evidence: checkEvidence,

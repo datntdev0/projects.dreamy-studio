@@ -1,4 +1,5 @@
 pub mod app;
+pub mod knowledge;
 pub mod library;
 pub mod library_stream;
 pub mod novel;

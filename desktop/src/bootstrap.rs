@@ -93,6 +93,7 @@ pub fn run() {
             commands::translation::translation_dict_delete,
             commands::translation::translation_passage_save,
             commands::translation::translation_note_save,
+            commands::knowledge::knowledge_get,
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
             commands::pipeline::pipeline_history_list,
@@ -196,6 +197,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(loader);
     app.manage(NovelService::new());
     app.manage(crate::features::translation::service::TranslationService::new());
+    app.manage(crate::features::knowledge::service::KnowledgeService::new());
     app.manage(PipelineExecutor::new(std::sync::Arc::new(
         LlmTranslator::new(SettingsRepository::new(container.settings_path.clone())),
     )));

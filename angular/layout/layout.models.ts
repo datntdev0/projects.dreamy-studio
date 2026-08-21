@@ -4,7 +4,7 @@ export type RailId = "projects" | "novels" | "library" | "distribution";
 
 export type PanelId = "explorer" | "inspector" | "bottom";
 
-export type BottomTabId = "pipelines" | "output";
+export type BottomTabId = "pipelines" | "output" | "omniscient";
 
 export type RightTabId = "inspector" | "assistant";
 

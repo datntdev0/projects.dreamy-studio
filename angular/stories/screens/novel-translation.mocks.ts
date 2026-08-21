@@ -456,7 +456,7 @@ function runningHistory(scenario: TranslationScenario): PipelineSnapshot[] {
   return scenario.running ? [runningPipeline(NOVEL_ID), runningAnalysis(NOVEL_ID)] : [];
 }
 
-function handlersFor(scenario: TranslationScenario): IpcHandlers {
+export function handlersFor(scenario: TranslationScenario): IpcHandlers {
   const rows = scenario.chapters === false ? [] : chapterRows(scenario.translated !== false);
   const history = scenario.history ? [...runningHistory(scenario), ...mixedHistory()] : [];
   const nextPipelineId = history.reduce((top, item) => Math.max(top, item.id), 0) + 1;

@@ -1,0 +1,185 @@
+@if (open()) {
+  <ds-dialog [title]="(issue() ? 'novel.knowledge.edit.title.resolve' : 'novel.knowledge.edit.title') | t" [eyebrow]="'novel.knowledge.edit.eyebrow' | t" size="xl" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-knowledge-edit-panel" (closed)="close()">
+    <div class="ed-layout">
+      @if (issue(); as issue) {
+        @if (rule(); as ruleKey) {
+          <section class="ed-issue" [class.is-error]="severityOf(issue) === 'error'" data-testid="novel-knowledge-edit-issue"><ds-icon name="alert" [size]="18" /><div><b>{{ ruleKey | t }}</b><p>{{ issue.message }}</p></div></section>
+        }
+      }
+      <section class="ed-group" data-testid="novel-knowledge-edit-entities">
+        <div class="ed-ghead"><h4>{{ "novel.knowledge.edit.entities" | t: { count: entityCards().length } }}</h4><span class="spacer"></span><button type="button" class="btn btn-sm btn-ghost" data-testid="novel-knowledge-edit-add-entity" (click)="addEntity()"><ds-icon name="plus" [size]="14" />{{ "novel.knowledge.list.add.entity" | t }}</button></div>
+        @if (picked().length > 0) {
+          <div class="ed-sel" data-testid="novel-knowledge-edit-selection">
+            <div class="ed-sel-bar"><span class="mono">{{ "novel.knowledge.edit.selected" | t: { count: picked().length } }}</span><span class="spacer"></span>
+              <button type="button" class="btn btn-sm" data-testid="novel-knowledge-edit-merge" [disabled]="picked().length < 2 || mergeTarget() !== null" (click)="startMerge()"><ds-icon name="merge" [size]="14" />{{ "novel.knowledge.edit.merge" | t }}</button>
+              <button type="button" class="btn btn-sm btn-danger" (click)="deleteSelected()"><ds-icon name="trash" [size]="14" />{{ "novel.knowledge.edit.delete" | t }}</button>
+              <button type="button" class="btn btn-sm btn-ghost" (click)="clearSelection()">{{ "novel.knowledge.edit.deselect" | t }}</button></div>
+            @if (mergeTarget() !== null) {
+              <div class="ed-merge" data-testid="novel-knowledge-edit-merge-form">
+                <div class="field"><label for="knowledge-edit-merge">{{ "novel.knowledge.edit.merge.keep" | t }}</label>
+                  <select id="knowledge-edit-merge" class="select" (change)="onMergeTarget($event)">
+                    @for (card of picked(); track card.key) {
+                      <option [value]="card.key" [selected]="card.key === mergeTarget()">{{ card.title }}</option>
+                    }
+                  </select></div>
+                <p class="t-sm t-mute">{{ "novel.knowledge.edit.merge.hint" | t }}</p>
+                <div class="ed-actions"><button type="button" class="btn btn-sm" (click)="cancelMerge()">{{ "common.cancel" | t }}</button><button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-edit-merge-apply" (click)="applyMerge()"><ds-icon name="merge" [size]="14" />{{ "novel.knowledge.edit.merge" | t }}</button></div>
+              </div>
+            }
+          </div>
+        }
+        @for (card of entityCards(); track card.key) {
+          <article class="ed-card" [attr.data-state]="card.state" [attr.data-involved]="card.involved" data-testid="novel-knowledge-edit-card" [attr.data-id]="card.key">
+            <div class="ed-head">
+              <input type="checkbox" [checked]="card.selected" [disabled]="!card.present" [attr.aria-label]="'novel.knowledge.edit.choose' | t: { name: card.title }" (change)="onSelect(card.key, $event)">
+              <button type="button" class="ed-toggle" [attr.aria-expanded]="card.open" [disabled]="!card.present" data-testid="novel-knowledge-edit-toggle" (click)="toggle(card.key)">
+                <ds-icon [name]="card.open ? 'chev-d' : 'chev-r'" [size]="14" />
+                @if (card.entity; as entity) { <app-novel-knowledge-type [type]="entity.type" /> }
+                <span class="ed-title">{{ card.title || ("novel.knowledge.edit.unnamed" | t) }}</span>
+                <span class="t-sm t-mute mono">{{ card.chapters ? ("novel.knowledge.edit.chapters" | t: { range: card.chapters }) : "" }}</span>
+              </button>
+              @if (card.involved) { <span class="badge badge-danger"><ds-icon name="flag" [size]="12" />{{ "novel.knowledge.edit.related" | t }}</span> }
+              @if (card.state !== "same") { <span class="badge" [class]="stateBadge(card.state)">{{ stateKey(card.state) | t }}</span> }
+              @if (card.state === "deleted") {
+                <button type="button" class="btn btn-sm btn-ghost" (click)="restore(card.key)"><ds-icon name="undo" [size]="14" />{{ "novel.knowledge.edit.undo" | t }}</button>
+              } @else if (card.present) {
+                <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.split' | t" [attr.data-tip]="'novel.knowledge.edit.split' | t" data-testid="novel-knowledge-edit-split-start" (click)="startSplit(card.key)"><ds-icon name="scissors" [size]="14" /></button>
+                <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.delete' | t" [attr.data-tip]="'novel.knowledge.edit.delete' | t" data-testid="novel-knowledge-edit-delete" (click)="remove(card.key)"><ds-icon name="trash" [size]="14" /></button>
+              }
+            </div>
+            @if (card.open && card.present && card.entity; as entity) {
+              @if (split()?.id === card.key) {
+                <div class="ed-body" data-testid="novel-knowledge-edit-split">
+                  <div class="form-2">
+                    <div class="field"><label for="knowledge-edit-split-name">{{ "novel.knowledge.edit.split.name" | t }}</label><input id="knowledge-edit-split-name" class="input" autocomplete="off" [value]="split()?.name" (input)="onSplitName($event)"></div>
+                    <div class="field"><label for="knowledge-edit-split-type">{{ "novel.knowledge.edit.field.type" | t }}</label>
+                      <select id="knowledge-edit-split-type" class="select" (change)="onSplitType($event)">
+                        @for (type of types; track type.key) { <option [value]="type.key" [selected]="split()?.type === type.key">{{ type.labelKey | t }}</option> }
+                      </select></div>
+                  </div>
+                  <div class="field span-full"><span class="eyebrow">{{ "novel.knowledge.edit.split.move" | t }}</span>
+                    @for (fact of splitFacts(); track fact.id) {
+                      <label class="check"><input type="checkbox" [checked]="split()?.facts?.includes(fact.id)" (change)="onSplitFact(fact.id, $event)"><span>{{ fact.text }}</span></label>
+                    } @empty { <p class="t-sm t-mute">{{ "novel.knowledge.edit.split.none" | t }}</p> }
+                  </div>
+                  <div class="ed-actions"><button type="button" class="btn btn-sm" (click)="cancelSplit()">{{ "common.cancel" | t }}</button><button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-edit-split-apply" [disabled]="!split()?.name?.trim()" (click)="applySplit()"><ds-icon name="scissors" [size]="14" />{{ "novel.knowledge.edit.split" | t }}</button></div>
+                </div>
+              } @else {
+                <div class="ed-body" data-testid="novel-knowledge-edit-entity-form">
+                  <div class="field"><label [attr.for]="'ke-' + card.key + '-name'">{{ "novel.knowledge.edit.field.name" | t }}</label><input [id]="'ke-' + card.key + '-name'" class="input" autocomplete="off" data-testid="novel-knowledge-edit-name" [value]="entity.name" (input)="onText(card.key, 'name', $event)">@if (!entity.name.trim()) { <span class="field-err">{{ "novel.knowledge.edit.name.required" | t }}</span> }</div>
+                  <div class="field"><label [attr.for]="'ke-' + card.key + '-type'">{{ "novel.knowledge.edit.field.type" | t }}</label>
+                    <select [id]="'ke-' + card.key + '-type'" class="select" data-testid="novel-knowledge-edit-type" (change)="onType(card.key, $event)">
+                      @for (type of types; track type.key) { <option [value]="type.key" [selected]="entity.type === type.key">{{ type.labelKey | t }}</option> }
+                    </select>
+                    @if (entity.type === "character") { <span class="field-hint">{{ "novel.knowledge.type.character.hint" | t }}</span> }</div>
+                  <div class="field span-full"><label [attr.for]="'ke-' + card.key + '-summary'">{{ "novel.knowledge.edit.field.summary" | t }}</label><textarea [id]="'ke-' + card.key + '-summary'" class="textarea" rows="2" [value]="entity.summary" (input)="onText(card.key, 'summary', $event)"></textarea></div>
+                  <ng-container *ngTemplateOutlet="evidenceTpl; context: { $implicit: card }" />
+                </div>
+              }
+            }
+          </article>
+        } @empty {
+          <p class="t-sm t-mute">{{ "novel.knowledge.edit.entities.empty" | t }}</p>
+        }
+      </section>
+      <section class="ed-group" data-testid="novel-knowledge-edit-facts">
+        <div class="ed-ghead"><h4>{{ "novel.knowledge.edit.facts" | t: { count: factCards().length } }}</h4><span class="spacer"></span><button type="button" class="btn btn-sm btn-ghost" data-testid="novel-knowledge-edit-add-fact" (click)="addFact()"><ds-icon name="plus" [size]="14" />{{ "novel.knowledge.list.add.fact" | t }}</button></div>
+        @for (card of factCards(); track card.key) {
+          <article class="ed-card" [attr.data-state]="card.state" [attr.data-involved]="card.involved" data-testid="novel-knowledge-edit-card" [attr.data-id]="card.key">
+            <div class="ed-head">
+              <button type="button" class="ed-toggle" [attr.aria-expanded]="card.open" [disabled]="!card.present" data-testid="novel-knowledge-edit-toggle" (click)="toggle(card.key)">
+                <ds-icon [name]="card.open ? 'chev-d' : 'chev-r'" [size]="14" />
+                <span class="ed-ico"><ds-icon [name]="card.scalar ? 'tag' : 'swap'" [size]="14" /></span>
+                <span class="ed-title">{{ card.title }}</span>
+                <span class="t-sm t-mute mono">{{ card.chapters ? ("novel.knowledge.edit.chapters" | t: { range: card.chapters }) : "" }}</span>
+              </button>
+              @if (card.involved) { <span class="badge badge-danger"><ds-icon name="flag" [size]="12" />{{ "novel.knowledge.edit.related" | t }}</span> }
+              @if (card.state !== "same") { <span class="badge" [class]="stateBadge(card.state)">{{ stateKey(card.state) | t }}</span> }
+              @if (card.state === "deleted") {
+                <button type="button" class="btn btn-sm btn-ghost" (click)="restore(card.key)"><ds-icon name="undo" [size]="14" />{{ "novel.knowledge.edit.undo" | t }}</button>
+              } @else if (card.present) {
+                <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.delete' | t" [attr.data-tip]="'novel.knowledge.edit.delete' | t" data-testid="novel-knowledge-edit-delete" (click)="remove(card.key)"><ds-icon name="trash" [size]="14" /></button>
+              }
+            </div>
+            @if (card.open && card.present && card.fact; as fact) {
+              <div class="ed-body" data-testid="novel-knowledge-edit-fact-form">
+                <div class="form-3">
+                  <div class="field"><label [attr.for]="'ke-' + card.key + '-subject'">{{ "novel.knowledge.edit.field.subject" | t }}</label>
+                    <select [id]="'ke-' + card.key + '-subject'" class="select" data-testid="novel-knowledge-edit-subject" (change)="onEnd(card.key, 'subject', $event)">
+                      @for (option of options(); track option.value) { <option [value]="option.value" [selected]="fact.subject === option.value">{{ option.label }}</option> }
+                    </select></div>
+                  <div class="field"><label [attr.for]="'ke-' + card.key + '-pred'">{{ "novel.knowledge.edit.field.pred" | t }}</label>
+                    <select [id]="'ke-' + card.key + '-pred'" class="select" data-testid="novel-knowledge-edit-pred" (change)="onPred(card.key, $event)">
+                      <optgroup [label]="'novel.knowledge.fact.scalar' | t">
+                        @for (pred of scalars; track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }
+                      </optgroup>
+                      <optgroup [label]="'novel.knowledge.fact.relationship' | t">
+                        @for (pred of relationships; track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }
+                      </optgroup>
+                    </select></div>
+                  @if (card.scalar) {
+                    <div class="field"><label [attr.for]="'ke-' + card.key + '-value'">{{ "novel.knowledge.edit.field.value" | t }}</label><input [id]="'ke-' + card.key + '-value'" class="input" autocomplete="off" data-testid="novel-knowledge-edit-value" [value]="fact.value ?? ''" (input)="onText(card.key, 'value', $event)">@if (!(fact.value ?? "").trim()) { <span class="field-err">{{ "novel.knowledge.edit.value.required" | t }}</span> }</div>
+                  } @else {
+                    <div class="field"><label [attr.for]="'ke-' + card.key + '-object'">{{ "novel.knowledge.edit.field.object" | t }}</label>
+                      <select [id]="'ke-' + card.key + '-object'" class="select" data-testid="novel-knowledge-edit-object" (change)="onEnd(card.key, 'object', $event)">
+                        @for (option of options(); track option.value) { <option [value]="option.value" [selected]="fact.object === option.value">{{ option.label }}</option> }
+                      </select></div>
+                  }
+                </div>
+                <ng-container *ngTemplateOutlet="evidenceTpl; context: { $implicit: card }" />
+              </div>
+            }
+          </article>
+        } @empty {
+          <p class="t-sm t-mute">{{ "novel.knowledge.edit.facts.empty" | t }}</p>
+        }
+      </section>
+      <section class="ed-changes" data-testid="novel-knowledge-edit-changes">
+        <button type="button" class="ed-toggle" [attr.aria-expanded]="changesOpen()" data-testid="novel-knowledge-edit-changes-toggle" (click)="toggleChanges()"><ds-icon [name]="changesOpen() ? 'chev-d' : 'chev-r'" [size]="14" /><b>{{ "novel.knowledge.edit.changes" | t: { count: edits().length } }}</b></button>
+        @if (changesOpen()) {
+          @if (edits().length > 0) {
+            <ol>
+              @for (text of changes(); track $index) {
+                <li><span>{{ text }}</span><button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.undo' | t" (click)="undo($index)"><ds-icon name="undo" [size]="14" /></button></li>
+              }
+            </ol>
+          } @else {
+            <p class="t-sm t-mute">{{ "novel.knowledge.edit.changes.empty" | t }}</p>
+          }
+        }
+      </section>
+      <section class="ed-preview" [class]="'ed-preview is-' + preview().state" role="status" data-testid="novel-knowledge-edit-preview" [attr.data-state]="preview().state">
+        <p><ds-icon [name]="previewIcon()" [size]="16" /><span>{{ previewKey() | t }}</span></p>
+        @if (preview().added.length > 0) {
+          <ul>
+            @for (item of preview().added; track item.id) { <li [class.is-error]="item.sev === 'error'">{{ ruleLabel(item) | t }} · {{ item.message }}</li> }
+          </ul>
+        }
+        @if (preview().fixed.length > 0) {
+          <p class="t-sm t-mute"><ds-icon name="check" [size]="14" /><span>{{ "novel.knowledge.edit.preview.fixed" | t: { count: preview().fixed.length } }}</span></p>
+        }
+      </section>
+    </div>
+    <span class="t-sm t-mute" dialogFoot>{{ "novel.knowledge.edit.count" | t: { count: edits().length } }}</span>
+    <span class="spacer" dialogFoot></span>
+    <ds-button dialogFoot data-testid="novel-knowledge-edit-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button>
+    <ds-button dialogFoot variant="primary" [disabled]="!ready() || busy()" data-testid="novel-knowledge-edit-confirm" (pressed)="confirm()"><ds-icon name="check" [size]="16" />{{ (issue() ? "novel.knowledge.edit.confirm.resolve" : "novel.knowledge.edit.confirm") | t }}</ds-button>
+  </ds-dialog>
+}
+
+<ng-template #evidenceTpl let-card>
+  <div class="field span-full" data-testid="novel-knowledge-edit-evidence">
+    <span class="eyebrow">{{ "novel.knowledge.edit.evidence" | t: { count: card.item.ev.length } }}</span>
+    @for (evidence of card.item.ev; track $index) {
+      <div class="ed-ev"><blockquote class="quote" [class.is-bad]="!evidence.verified">{{ evidence.q }}</blockquote><span class="kn-ref mono">{{ "novel.knowledge.ref" | t: { chapter: evidence.chapter, p: evidence.p } }}</span><button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.evidence.remove' | t" (click)="removeEvidence(card.key, $index)"><ds-icon name="x" [size]="14" /></button></div>
+    } @empty {
+      <p class="t-sm t-mute">{{ "novel.knowledge.edit.evidence.empty" | t }}</p>
+    }
+    <div class="ed-ev-add">
+      <input class="input" type="number" min="1" [attr.aria-label]="'novel.knowledge.edit.evidence.chapter' | t" [attr.placeholder]="'novel.knowledge.edit.evidence.chapter' | t" [value]="card.evidence.chapter" (input)="onDraft(card.key, 'chapter', $event)">
+      <input class="input" type="number" min="1" [attr.aria-label]="'novel.knowledge.edit.evidence.p' | t" [attr.placeholder]="'novel.knowledge.edit.evidence.p' | t" [value]="card.evidence.p" (input)="onDraft(card.key, 'p', $event)">
+      <input class="input" [attr.aria-label]="'novel.knowledge.edit.evidence.quote' | t" [attr.placeholder]="'novel.knowledge.edit.evidence.quote' | t" [value]="card.evidence.q" (input)="onDraft(card.key, 'q', $event)">
+      <button type="button" class="btn btn-sm" data-testid="novel-knowledge-edit-evidence-add" (click)="addEvidence(card.key)"><ds-icon name="plus" [size]="14" />{{ "novel.knowledge.edit.evidence.add" | t }}</button>
+    </div>
+  </div>
+</ng-template>

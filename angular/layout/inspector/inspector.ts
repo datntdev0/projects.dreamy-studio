@@ -3,6 +3,7 @@ import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { CoreModule } from "@app/core/core.module";
 import { NovelDisplayPanel } from "@app/features/novel/components/display.panel";
+import { NovelKnowledgeInspector } from "@app/features/novel/components/knowledge-inspector.component";
 import { NovelPanel } from "@app/features/novel/components/novel.panel";
 import { NovelReaderService } from "@app/features/novel/novel.reader.service";
 import { NovelService } from "@app/features/novel/novel.service";
@@ -30,7 +31,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-inspector",
   standalone: true,
-  imports: [Button, Icon, CoreModule, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryTagPanel, LibrarySoundPanel, LibraryVideoPanel, LibraryPromptPanel, LibraryPromptsPanel],
+  imports: [Button, Icon, CoreModule, NovelKnowledgeInspector, NovelPanel, NovelDisplayPanel, ProjectLibraryPanel, ProjectPanel, LibraryTaxonomyPanel, LibraryCollectionPanel, LibraryImagePanel, LibraryTagPanel, LibrarySoundPanel, LibraryVideoPanel, LibraryPromptPanel, LibraryPromptsPanel],
   templateUrl: "./inspector.html",
 })
 export class Inspector {

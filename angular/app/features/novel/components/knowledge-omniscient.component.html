@@ -1,0 +1,33 @@
+<section class="om" aria-label="Omniscient view" data-testid="novel-omniscient">
+  @if (novel(); as novel) {
+    <div class="om-main" [attr.data-mode]="view().spoiler ? 'chapter' : 'omniscient'">
+      <header class="om-head" data-testid="novel-omniscient-head">
+        <span class="om-label">{{ "novel.knowledge.omniscient.mode" | t }}</span>
+        <ds-segments label="View mode" [options]="modes()" [value]="view().spoiler ? 'chapter' : 'omniscient'" [attr.title]="(view().spoiler ? 'novel.knowledge.omniscient.hint.chapter' : 'novel.knowledge.omniscient.hint.omniscient') | t" data-testid="novel-omniscient-mode" (valueChange)="onMode($event)" />
+        <span class="spacer"></span>
+        <span class="om-novel t-sm t-mute">{{ nameOf(novel) }}</span>
+      </header>
+      <div class="om-ctl" [attr.inert]="view().spoiler ? null : ''" [class.is-off]="!view().spoiler" data-testid="novel-omniscient-controls">
+        <label class="om-label" for="omniscient-chapter">{{ "novel.knowledge.omniscient.upTo" | t }}</label>
+        <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.omniscient.prev' | t" [disabled]="cursor() <= 1" data-testid="novel-omniscient-prev" (click)="step(-1)"><ds-icon name="chev-l" [size]="16" /></button>
+        <select id="omniscient-chapter" class="select om-select" data-testid="novel-omniscient-select" (change)="onSelect($event)">
+          @for (row of chapters(); track row.id) {
+            <option [value]="row.seq" [selected]="row.seq === cursor()">{{ titleOf(row) }}</option>
+          }
+        </select>
+        <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.omniscient.next' | t" [disabled]="cursor() >= total()" data-testid="novel-omniscient-next" (click)="step(1)"><ds-icon name="chev-r" [size]="16" /></button>
+        <span class="om-pos mono" data-testid="novel-omniscient-position">{{ cursor() }} / {{ total() }}</span>
+      </div>
+      <div class="om-track" [attr.inert]="view().spoiler ? null : ''" [class.is-off]="!view().spoiler" data-testid="novel-omniscient-track">
+        <div class="om-ticks" role="presentation">
+          @for (tick of ticks(); track tick.seq) {
+            <span class="om-tick" [class.is-done]="tick.analyzed" [class.is-hidden]="tick.hidden" [class.is-cursor]="tick.cursor" [attr.title]="tick.title" data-testid="novel-omniscient-tick" (click)="jump(tick.seq)"></span>
+          }
+        </div>
+        <ds-slider [label]="'novel.knowledge.omniscient.slider' | t" [min]="1" [max]="total() > 1 ? total() : 2" [value]="cursor()" data-testid="novel-omniscient-slider" (valueChange)="onSlider($event)" />
+      </div>
+    </div>
+  } @else {
+    <div class="om-empty" data-testid="novel-omniscient-empty"><ds-icon name="eye" [size]="18" /><div><b class="t-ink">{{ "novel.knowledge.omniscient.empty.title" | t }}</b><p class="t-sm t-mute">{{ "novel.knowledge.omniscient.empty.description" | t }}</p></div></div>
+  }
+</section>

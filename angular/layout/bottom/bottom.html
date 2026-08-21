@@ -10,6 +10,8 @@
   <div class="bottom-body" data-testid="bottom-body">
     @if (layout.bottomTab() === "pipelines") {
       <app-pipeline-list data-testid="bottom-pipelines" />
+    } @else if (layout.bottomTab() === "omniscient") {
+      <app-novel-omniscient data-testid="bottom-omniscient" />
     } @else {
       <app-pipeline-log data-testid="bottom-output" />
     }

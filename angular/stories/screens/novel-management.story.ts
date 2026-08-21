@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/angular-vite";
 import { MainPage } from "@app/pages/main/main.page";
 import { choose, click, waitFor } from "./novel-screen.helpers";
+import { withKnowledge } from "./novel-knowledge.mocks";
 import { TranslationScenario, withTranslation } from "./novel-translation.mocks";
 
 const EMPTY_CHAPTER = "ch-4";
@@ -21,16 +22,6 @@ async function openReader(root: HTMLElement, chapterId: string): Promise<void> {
   await choose(root, '[data-testid="novel-lang-switch"]', "src");
 }
 
-function translation(scenario: TranslationScenario): StoryObj<MainPage> {
-  return {
-    ...withTranslation(scenario),
-    play: async ({ canvasElement }) => {
-      await openNovels(canvasElement);
-      await click(canvasElement, '[data-testid="novel-explorer-translation"]');
-    },
-  };
-}
-
 const meta: Meta<MainPage> = {
   title: "Screens/Novel Management",
   component: MainPage,
@@ -42,15 +33,15 @@ export default meta;
 type Story = StoryObj<MainPage>;
 
 export const Default: Story = {
-  ...withTranslation(),
+  ...withKnowledge(),
   play: async ({ canvasElement }) => {
     await openChapters(canvasElement);
     await waitFor(canvasElement, '[data-testid="novel-chapter-row"]');
   },
 };
 
-export const ReadingNoChapter: Story = {
-  ...withTranslation({ ...SOURCE_ONLY, chapters: false }),
+export const NoChapter: Story = {
+  ...withKnowledge({ analyzed: false, translated: false, chapters: false }),
   play: async ({ canvasElement }) => {
     await openChapters(canvasElement);
     await waitFor(canvasElement, '[data-testid="novel-chapters-empty"]');
@@ -65,4 +56,10 @@ export const ReadingNoContent: Story = {
   },
 };
 
-export const TranslationFreshNovel: Story = translation({ translated: false, warnings: false });
+export const FreshNovel: Story = {
+  ...withKnowledge({ analyzed: false, translated: false }),
+  play: async ({ canvasElement }) => {
+    await openNovels(canvasElement);
+    await click(canvasElement, '[data-testid="novel-explorer-translation"]');
+  },
+};

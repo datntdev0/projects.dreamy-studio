@@ -63,7 +63,7 @@
       @case ("knowledge") {
         <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-knowledge-host">
           @if (tabs.active().novelId; as novelId) {
-            <app-novel-tool-placeholder kind="knowledge" [novelId]="novelId" />
+            <app-novel-knowledge [novelId]="novelId" />
           }
         </div>
       }

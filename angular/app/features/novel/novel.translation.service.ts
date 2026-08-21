@@ -9,6 +9,8 @@ import { EMPTY_VIEW, chapterStatus, emptyTranslation, fromWireChapter, fromWireT
 
 const EMPTY = emptyTranslation();
 
+export const ANALYSIS_KIND = "analysis";
+
 function storeKey(novelId: number, target: TargetLang): string {
   return `${novelId}:${target}`;
 }
@@ -48,6 +50,7 @@ export class NovelTranslationService {
   readonly loading = signal(false);
   readonly error = signal<NovelError | null>(null);
   readonly running = this.activePipelines.asReadonly();
+  readonly finished = signal<PipelineSnapshot | null>(null);
 
   constructor() {
     effect(this.syncWorkspace.bind(this));
@@ -70,7 +73,7 @@ export class NovelTranslationService {
   progressOf(novelId: number, target: TargetLang = this.targetOf(novelId)): Record<string, number> {
     const progress: Record<string, number> = {};
     for (const pipeline of this.running()) {
-      if (pipeline.novelId === novelId && pipeline.target === target) {
+      if (pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND && pipeline.target === target) {
         this.collectProgress(pipeline, progress);
       }
     }
@@ -78,7 +81,11 @@ export class NovelTranslationService {
   }
 
   isTranslating(novelId: number): boolean {
-    return this.running().some((pipeline) => pipeline.novelId === novelId);
+    return this.running().some((pipeline) => pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND);
+  }
+
+  isAnalyzing(novelId: number): boolean {
+    return this.running().some((pipeline) => pipeline.novelId === novelId && pipeline.kind === ANALYSIS_KIND);
   }
 
 
@@ -264,10 +271,16 @@ export class NovelTranslationService {
 
   async cancelNovel(novelId: number): Promise<void> {
     for (const pipeline of this.running()) {
-      if (pipeline.novelId === novelId) {
+      if (pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND) {
         await this.cancelPipeline(pipeline.id);
       }
     }
+  }
+
+  async startAnalysis(novelId: number, lang: string, overwrite: boolean, chapterIds: string[]): Promise<void> {
+    const tasks: TaskRequest[] = chapterIds.map((chapterId) => ({ chapterId, passage: null }));
+    const channel = this.ipc.channel<PipelineEvent>(this.handlePipelineEvent.bind(this));
+    await this.ipc.invoke<PipelineSnapshot>("pipeline_start", { kind: ANALYSIS_KIND, novelId, lang, overwrite, tasks, onEvent: channel });
   }
 
   reset(): void {
@@ -308,6 +321,10 @@ export class NovelTranslationService {
       return;
     }
     this.activePipelines.set(this.running().filter((pipeline) => pipeline.id !== event.pipeline.id));
+    if (event.pipeline.kind === ANALYSIS_KIND) {
+      this.finished.set(event.pipeline);
+      return;
+    }
     void this.load(event.pipeline.novelId, event.pipeline.target as TargetLang);
   }
 

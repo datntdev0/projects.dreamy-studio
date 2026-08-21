@@ -60,6 +60,13 @@
             }
           </div>
         }
+        @case ("knowledge") {
+          <div [attr.data-novel-id]="editorTabs.active().novelId" data-testid="inspector-knowledge-host">
+            @if (editorTabs.active().novelId; as novelId) {
+              <app-novel-knowledge-inspector [novelId]="novelId" />
+            }
+          </div>
+        }
         @case ("collections") {
           <div data-testid="inspector-collections-host">
             @if (library.taxonomySelection(); as selection) {

@@ -4,7 +4,7 @@ import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { NovelView } from "@app/features/novel/components/novel-view.component";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
-import { NovelToolPlaceholder } from "@app/features/novel/components/tool-placeholder.component";
+import { NovelKnowledge } from "@app/features/novel/components/knowledge.component";
 import { NovelTranslation } from "@app/features/novel/components/translation.component";
 import { NovelList } from "@app/features/novel/components/list.component";
 import { ProjectList } from "@app/features/project/components/list.component";
@@ -24,7 +24,7 @@ import { TabsService } from "../tabs.service";
 @Component({
   selector: "app-editor",
   standalone: true,
-  imports: [Icon, CoreModule, Bottom, NovelView, NovelToolPlaceholder, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
+  imports: [Icon, CoreModule, Bottom, NovelView, NovelKnowledge, NovelTranslation, NovelList, ProjectList, ProjectView, LibraryCollections, LibraryCollectionView, LibraryImages, LibrarySounds, LibraryVideos, LibraryPrompts, PipelineHistory],
   templateUrl: "./editor.html",
 })
 export class Editor {

@@ -219,10 +219,13 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .kbg-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 .kbg-svg.is-drag { cursor: grabbing; }
 .gt-character { --c: var(--primary); }
-.gt-place { --c: var(--info); }
-.gt-org { --c: var(--secondary); }
-.gt-object { --c: var(--warning); }
-.gt-event { --c: var(--success); }
+.gt-persona { --c: var(--acc-twilight); }
+.gt-location { --c: var(--info); }
+.gt-organization { --c: var(--secondary); }
+.gt-artifact { --c: var(--warning); }
+.gt-skill { --c: var(--success); }
+.gt-term { --c: var(--acc-sunset); }
+.gt-event { --c: var(--acc-breeze); }
 .gt-issue { --c: var(--danger); }
 .gt { display: inline-block; width: 10px; height: 10px; border-radius: var(--r-full); background: var(--c); flex: none; }
 .kbg-n { cursor: pointer; outline: none; transition: opacity 0.15s; }

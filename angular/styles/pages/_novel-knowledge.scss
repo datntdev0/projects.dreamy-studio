@@ -1,0 +1,56 @@
+app-novel-knowledge, app-novel-knowledge-graph, app-novel-knowledge-list, app-novel-knowledge-review, app-novel-knowledge-detail, app-novel-omniscient, app-novel-knowledge-type, app-novel-knowledge-analyze-dialog, app-novel-knowledge-edit-dialog, app-novel-knowledge-ontology-dialog { display: contents; }
+
+.type-tag[class*="gt-"] .ic { color: var(--c); }
+.kn-ref { color: var(--mute); font-size: 11px; white-space: nowrap; }
+.kb-table { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.kb-table .empty { height: auto; }
+
+.kg { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.kd { min-height: 0; }
+.kd-head { display: flex; align-items: center; gap: var(--sp-sm); padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--hairline); position: sticky; top: 0; z-index: 1; background: var(--canvas-card); }
+.kd-title { display: flex; align-items: center; gap: var(--sp-sm); }
+.kd .ins-sec h3 { margin: 0; overflow-wrap: anywhere; }
+
+.an-fields { align-items: start; }
+.an-label { color: var(--body); font: 500 13px/18px var(--font); }
+.an-prov { display: flex; align-items: center; gap: var(--sp-sm); min-height: var(--ctl-h); padding-block: var(--sp-xxs); padding: 0 var(--sp-sm) 0 var(--sp-md); border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-soft); font-size: 13px; }
+.an-prov > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.an-prov .btn { flex: none; }
+.an-prov .mono { margin-left: var(--sp-sm); }
+.an-prov .ic { flex: none; color: var(--success); }
+.an-prov[data-state="unready"] .ic { color: var(--warning); }
+.an-prov[data-state="unset"] .ic { color: var(--danger); }
+.an-prov[data-state="unset"], .an-prov[data-state="unready"] { border-color: var(--danger); }
+.an-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-md); margin: 0; padding: 0; list-style: none; }
+.an-flow li { display: flex; gap: var(--sp-sm); align-items: flex-start; padding: var(--sp-sm) var(--sp-md); border: 1px dashed var(--hairline-strong); border-radius: var(--r-md); }
+.an-flow li > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.an-flow b { color: var(--ink); font-weight: 500; font-size: 13px; }
+.an-flow small { color: var(--mute); font-size: 12px; line-height: 16px; }
+
+
+.ed-ev-add { grid-template-columns: 104px 104px minmax(0, 1fr) auto; }
+.ed-ev .kn-ref { flex: none; }
+
+.an-n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r-full); border: 1px solid var(--hairline-strong); color: var(--mute); font: 500 11.5px/1 var(--font-mono); flex: none; }
+.om { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; padding: var(--sp-sm) var(--sp-lg); }
+.om-main { display: grid; gap: var(--sp-sm); min-width: 0; }
+.om-head, .om-ctl { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; }
+.om-label { font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--mute); white-space: nowrap; }
+.om-head ds-segments { flex: none; }
+.om-hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.om-novel { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.om-ctl, .om-track { transition: opacity 0.15s; }
+.om-ctl.is-off, .om-track.is-off { opacity: 0.4; }
+.om-select { width: min(340px, 100%); height: var(--ctl-h-sm); }
+.om-pos { margin-left: auto; color: var(--ink); white-space: nowrap; }
+.om-track { display: grid; gap: 4px; padding: 0 8px; }
+.om-ticks { display: flex; gap: 1px; height: 10px; }
+.om-tick { flex: 1; min-width: 1px; border-radius: 1px; background: var(--canvas-mid); cursor: pointer; }
+.om-tick.is-done { background: var(--success); opacity: 0.6; }
+.om-tick.is-hidden { opacity: 0.2; }
+.om-tick.is-cursor { background: var(--primary); opacity: 1; }
+.om-empty { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: var(--sp-md); color: var(--mute); }
+.om-empty p { margin: 0; }
+.iss-ico { display: inline-flex; vertical-align: -2px; margin-right: var(--sp-xs); color: var(--danger); }
+.an-pane { display: grid; gap: var(--sp-lg); min-width: 0; }
+.an-pane .yaml { max-height: 46vh; }

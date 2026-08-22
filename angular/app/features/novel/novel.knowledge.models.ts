@@ -1,8 +1,9 @@
 import { LanguageKey } from "@app/core/language/language.models";
-import { EntityType, PredicateKind, RuleId } from "./novel.knowledge.ontology.data";
 import { TargetLang } from "./novel.models";
 
-export type { EntityType, PredicateKind, RuleId };
+export type EntityType = string;
+export type PredicateKind = "scalar" | "relationship";
+export type RuleId = "character_predicate" | "persona_link" | "relation_signature" | "dangling_ref" | "relation_unique" | "entity_duplicate" | "evidence" | "source_stale";
 
 export type KnowledgeTab = "graph" | "list" | "review";
 export type KnowledgeListKind = "entity" | "fact";
@@ -107,8 +108,36 @@ export interface AnalyzedChapter {
   stale: boolean;
 }
 
+export interface OntologyTypeView {
+  key: EntityType;
+  abstract: boolean;
+  properties: string[];
+}
+
+export interface OntologyPredicateView {
+  key: string;
+  kind: PredicateKind;
+  domain: EntityType[];
+  range: EntityType[];
+  limit: boolean;
+}
+
+export interface OntologyRuleView {
+  id: string;
+  severity: Severity;
+}
+
+export interface OntologyView {
+  version: number;
+  yaml: string;
+  types: OntologyTypeView[];
+  predicates: OntologyPredicateView[];
+  rules: OntologyRuleView[];
+}
+
 export interface WireKnowledge {
   lang: KnowledgeLang;
+  ontology: OntologyView;
   items: KnowledgeItem[];
   analyzed: Record<number, AnalyzedChapter>;
 }

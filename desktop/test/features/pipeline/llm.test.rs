@@ -341,6 +341,7 @@ fn client_rejects_an_unsupported_cli_with_its_label() {
         ANTIGRAVITY,
         &FeatureSettings::default(),
         "knowledge analysis",
+        Mode::Once,
     )
     .unwrap_err();
 
@@ -394,4 +395,126 @@ fn client_reports_the_cli_failure_detail() {
         }
         other => panic!("unexpected result: {other:?}"),
     }
+}
+
+#[test]
+fn claude_session_arguments_name_or_resume_the_session() {
+    let feature = FeatureSettings::default();
+
+    let start = build_args(CLAUDE, &feature, "x", Mode::Start("abc")).unwrap();
+    let resume = build_args(CLAUDE, &feature, "x", Mode::Resume("abc")).unwrap();
+
+    assert!(start.windows(2).any(|pair| pair == ["--session-id", "abc"]));
+    assert!(resume.windows(2).any(|pair| pair == ["--resume", "abc"]));
+    assert!(!start.contains(&"--no-session-persistence".to_string()));
+    assert!(!resume.contains(&"--no-session-persistence".to_string()));
+}
+
+#[test]
+fn codex_session_arguments_read_json_and_resume_by_thread() {
+    let feature = feature(Some("gpt"), None, None);
+
+    let start = build_args(CODEX, &feature, "x", Mode::Start("ignored")).unwrap();
+    let resume = build_args(CODEX, &feature, "x", Mode::Resume("thread-1")).unwrap();
+
+    assert!(start.contains(&"--json".to_string()));
+    assert!(!start.contains(&"--ephemeral".to_string()));
+    assert_eq!(start.last().map(String::as_str), Some("-"));
+    assert_eq!(&resume[..2], ["exec", "resume"]);
+    assert!(resume.windows(2).any(|pair| pair == ["-m", "gpt"]));
+    assert_eq!(&resume[resume.len() - 2..], ["thread-1", "-"]);
+}
+
+#[test]
+fn codex_json_events_give_the_thread_and_the_last_message() {
+    let stdout = "{\"type\":\"thread.started\",\"thread_id\":\"t1\"}\nnot json\n{\"type\":\"item.completed\",\"item\":{\"type\":\"reasoning\",\"text\":\"hm\"}}\n{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"first\"}}\n{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"last\"}}\n";
+
+    let (text, session) = reply_of(CODEX, Mode::Start("x"), stdout.to_string()).unwrap();
+
+    assert_eq!(text, "last");
+    assert_eq!(session.as_deref(), Some("t1"));
+    assert!(reply_of(CODEX, Mode::Resume("t1"), "{}\n".to_string()).is_err());
+}
+
+#[test]
+fn plain_output_is_returned_as_is_without_a_session() {
+    let (text, session) = reply_of(CLAUDE, Mode::Start("x"), "hello".to_string()).unwrap();
+
+    assert_eq!(text, "hello");
+    assert_eq!(session, None);
+    assert_eq!(
+        reply_of(CODEX, Mode::Once, "plain".to_string()).unwrap().0,
+        "plain"
+    );
+}
+
+#[test]
+fn start_returns_the_generated_claude_session_and_resume_keeps_it() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one", "two"]);
+    let client = client(&dir, Some(("claude", &cli.path)));
+    let cancel = AtomicBool::new(false);
+    let reported = std::sync::Mutex::new(Vec::new());
+    let progress = |value| reported.lock().unwrap().push(value);
+
+    let first = client
+        .start("hello".to_string(), &progress, &cancel)
+        .unwrap();
+    let second = client
+        .resume(&first.session, "again".to_string(), &progress, &cancel)
+        .unwrap();
+
+    assert!(first.text.contains("one"));
+    assert!(second.text.contains("two"));
+    assert_eq!(second.session, first.session);
+    assert!(
+        cli.args(1)
+            .contains(&format!("--session-id {}", first.session))
+    );
+    assert!(cli.args(2).contains(&format!("--resume {}", first.session)));
+    assert!(cli.stdin(2).contains("again"));
+    assert_eq!(*reported.lock().unwrap(), [10]);
+}
+
+#[test]
+fn forget_removes_the_stored_session_of_the_cli() {
+    let dir = TempDir::new().unwrap();
+    let client = client(&dir, Some(("claude", "unused")));
+    let project = dir
+        .path()
+        .join("llm")
+        .join("claude")
+        .join("projects")
+        .join("p");
+    std::fs::create_dir_all(project.join("abc")).unwrap();
+    std::fs::write(project.join("abc.jsonl"), "{}").unwrap();
+    std::fs::write(project.join("keep.jsonl"), "{}").unwrap();
+
+    client.forget("abc");
+
+    assert!(!project.join("abc.jsonl").exists());
+    assert!(!project.join("abc").exists());
+    assert!(project.join("keep.jsonl").exists());
+}
+
+#[test]
+fn forget_finds_a_codex_rollout_by_thread_id() {
+    let dir = TempDir::new().unwrap();
+    let client = client(&dir, Some(("codex", "unused")));
+    let day = dir
+        .path()
+        .join("llm")
+        .join("codex")
+        .join("sessions")
+        .join("2026")
+        .join("11")
+        .join("18");
+    std::fs::create_dir_all(&day).unwrap();
+    std::fs::write(day.join("rollout-2026-11-18T10-00-00-t1.jsonl"), "{}").unwrap();
+    std::fs::write(day.join("rollout-2026-11-18T10-00-00-t2.jsonl"), "{}").unwrap();
+
+    client.forget("t1");
+
+    assert!(!day.join("rollout-2026-11-18T10-00-00-t1.jsonl").exists());
+    assert!(day.join("rollout-2026-11-18T10-00-00-t2.jsonl").exists());
 }

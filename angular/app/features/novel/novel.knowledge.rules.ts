@@ -1,7 +1,7 @@
 import { LanguageKey, LanguageParams } from "@app/core/language/language.models";
 import { ChapterRow } from "./novel.models";
 import { AnalyzeRequest, AnalyzeSummary, AnalyzedChapter, GraphLink, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeVisibility, KnowledgeView, NovelKnowledge, RuleCount, RuleId } from "./novel.knowledge.models";
-import { BATCH_SIZE, PERSONA_PREDICATE, RULES, predicateDef, ruleDef, typeDef } from "./novel.knowledge.ontology";
+import { BATCH_SIZE, Ontology, PERSONA_PREDICATE } from "./novel.knowledge.ontology";
 
 export type Translate = (key: LanguageKey, params?: LanguageParams) => string;
 
@@ -13,6 +13,7 @@ interface RawIssue {
 }
 
 interface CheckContext {
+  ontology: Ontology;
   items: KnowledgeItem[];
   map: Map<string, KnowledgeItem>;
   t: Translate;
@@ -85,13 +86,13 @@ export function chaptersOfItem(item: KnowledgeItem): number[] {
   return [...seen].sort((a, b) => a - b);
 }
 
-export function predicateLabel(pred: string, t: Translate): string {
-  const def = predicateDef(pred);
+export function predicateLabel(ontology: Ontology, pred: string, t: Translate): string {
+  const def = ontology.predicateDef(pred);
   return def ? t(def.labelKey) : pred;
 }
 
-export function typeLabel(type: string, t: Translate): string {
-  const def = typeDef(type);
+export function typeLabel(ontology: Ontology, type: string, t: Translate): string {
+  const def = ontology.typeDef(type);
   return def ? t(def.labelKey) : type;
 }
 
@@ -100,13 +101,13 @@ export function nameOf(map: Map<string, KnowledgeItem>, id: string | null): stri
   return entity ? entity.name || "—" : "?";
 }
 
-export function factText(map: Map<string, KnowledgeItem>, fact: KnowledgeFact, t: Translate): string {
+export function factText(ontology: Ontology, map: Map<string, KnowledgeItem>, fact: KnowledgeFact, t: Translate): string {
   const tail = fact.object === null ? `: ${fact.ev[0]?.q ?? ""}` : ` → ${nameOf(map, fact.object)}`;
-  return `${nameOf(map, fact.subject)} — ${predicateLabel(fact.pred, t)}${tail}`;
+  return `${nameOf(map, fact.subject)} — ${predicateLabel(ontology, fact.pred, t)}${tail}`;
 }
 
-export function itemText(map: Map<string, KnowledgeItem>, item: KnowledgeItem, t: Translate): string {
-  return isEntity(item) ? item.name : factText(map, item, t);
+export function itemText(ontology: Ontology, map: Map<string, KnowledgeItem>, item: KnowledgeItem, t: Translate): string {
+  return isEntity(item) ? item.name : factText(ontology, map, item, t);
 }
 
 export function factsAbout(items: KnowledgeItem[], entityId: string): KnowledgeFact[] {
@@ -159,7 +160,7 @@ function checkCharacterPredicate(ctx: CheckContext): RawIssue[] {
       continue;
     }
     const personas = personasOf(ctx.items, character.id).map((persona) => persona.id);
-    out.push({ ids: [fact.id], key: fact.id, message: ctx.t("novel.knowledge.check.character_predicate", { character: character.name, pred: predicateLabel(fact.pred, ctx.t) }), values: personas });
+    out.push({ ids: [fact.id], key: fact.id, message: ctx.t("novel.knowledge.check.character_predicate", { character: character.name, pred: predicateLabel(ctx.ontology, fact.pred, ctx.t) }), values: personas });
   }
   return out;
 }
@@ -187,14 +188,14 @@ function checkPersonaLink(ctx: CheckContext): RawIssue[] {
   return out;
 }
 
-function typesText(types: string[], t: Translate): string {
-  return types.map((type) => typeLabel(type, t)).join(" / ");
+function typesText(ontology: Ontology, types: string[], t: Translate): string {
+  return types.map((type) => typeLabel(ontology, type, t)).join(" / ");
 }
 
 function checkSignature(ctx: CheckContext): RawIssue[] {
   const out: RawIssue[] = [];
   for (const fact of liveFacts(ctx)) {
-    const def = predicateDef(fact.pred);
+    const def = ctx.ontology.predicateDef(fact.pred);
     const subject = liveEntity(ctx.map, fact.subject);
     const object = liveEntity(ctx.map, fact.object);
     if (!subject || (fact.object !== null && !object)) {
@@ -211,9 +212,9 @@ function checkSignature(ctx: CheckContext): RawIssue[] {
     const badDomain = !def.domain.includes(subject.type);
     const badRange = def.kind === "relationship" && (!object || !def.range.includes(object.type));
     if (badDomain || badRange) {
-      const want = def.kind === "relationship" ? `${typesText(def.domain, ctx.t)} → ${typesText(def.range, ctx.t)}` : typesText(def.domain, ctx.t);
-      const have = def.kind === "relationship" ? `${typeLabel(subject.type, ctx.t)} → ${object ? typeLabel(object.type, ctx.t) : "?"}` : typeLabel(subject.type, ctx.t);
-      out.push({ ids: [fact.id], key: `${fact.pred}|${subject.type}|${object?.type ?? ""}`, message: ctx.t("novel.knowledge.check.signature", { pred: predicateLabel(fact.pred, ctx.t), want, have }) });
+      const want = def.kind === "relationship" ? `${typesText(ctx.ontology, def.domain, ctx.t)} → ${typesText(ctx.ontology, def.range, ctx.t)}` : typesText(ctx.ontology, def.domain, ctx.t);
+      const have = def.kind === "relationship" ? `${typeLabel(ctx.ontology, subject.type, ctx.t)} → ${object ? typeLabel(ctx.ontology, object.type, ctx.t) : "?"}` : typeLabel(ctx.ontology, subject.type, ctx.t);
+      out.push({ ids: [fact.id], key: `${fact.pred}|${subject.type}|${object?.type ?? ""}`, message: ctx.t("novel.knowledge.check.signature", { pred: predicateLabel(ctx.ontology, fact.pred, ctx.t), want, have }) });
     }
   }
   return out;
@@ -255,12 +256,12 @@ function distinct(values: string[]): string[] {
 
 function checkRelationUnique(ctx: CheckContext): RawIssue[] {
   const out: RawIssue[] = [];
-  const relations = liveFacts(ctx).filter((fact) => fact.object !== null && predicateDef(fact.pred)?.limit && liveEntity(ctx.map, fact.subject) && liveEntity(ctx.map, fact.object));
+  const relations = liveFacts(ctx).filter((fact) => fact.object !== null && ctx.ontology.predicateDef(fact.pred)?.limit && liveEntity(ctx.map, fact.subject) && liveEntity(ctx.map, fact.object));
   for (const [key, group] of groupBy(relations, predObjectKey)) {
     const subjects = distinct(group.map((fact) => fact.subject));
     if (subjects.length > 1) {
       const names = subjects.map((id) => nameOf(ctx.map, id)).join(", ");
-      out.push({ ids: group.map((fact) => fact.id), key, message: ctx.t("novel.knowledge.check.relation_unique", { names, pred: predicateLabel(group[0].pred, ctx.t), object: nameOf(ctx.map, group[0].object) }) });
+      out.push({ ids: group.map((fact) => fact.id), key, message: ctx.t("novel.knowledge.check.relation_unique", { names, pred: predicateLabel(ctx.ontology, group[0].pred, ctx.t), object: nameOf(ctx.map, group[0].object) }) });
     }
   }
   return out;
@@ -284,7 +285,7 @@ function checkDuplicate(ctx: CheckContext): RawIssue[] {
       const a = entities[i];
       const b = entities[j];
       if (a.type === b.type && isSubset(tokensOf(a.name), tokensOf(b.name))) {
-        out.push({ ids: [a.id, b.id], key: `${a.id},${b.id}`, message: ctx.t("novel.knowledge.check.duplicate", { a: a.name, b: b.name, type: typeLabel(a.type, ctx.t).toLowerCase() }) });
+        out.push({ ids: [a.id, b.id], key: `${a.id},${b.id}`, message: ctx.t("novel.knowledge.check.duplicate", { a: a.name, b: b.name, type: typeLabel(ctx.ontology, a.type, ctx.t).toLowerCase() }) });
       }
     }
   }
@@ -294,7 +295,7 @@ function checkDuplicate(ctx: CheckContext): RawIssue[] {
 function checkEvidence(ctx: CheckContext): RawIssue[] {
   const out: RawIssue[] = [];
   for (const item of ctx.items) {
-    const label = itemText(ctx.map, item, ctx.t);
+    const label = itemText(ctx.ontology, ctx.map, item, ctx.t);
     if (item.ev.length === 0) {
       out.push({ ids: [item.id], key: `${item.id}|none`, message: ctx.t("novel.knowledge.check.evidence_none", { item: label }) });
     } else if (item.ev.some((evidence) => !evidence.verified)) {
@@ -325,10 +326,10 @@ const CHECKS: Record<RuleId, (ctx: CheckContext) => RawIssue[]> = {
   source_stale: checkStale,
 };
 
-export function checkKnowledge(items: KnowledgeItem[], t: Translate): KnowledgeIssue[] {
-  const ctx: CheckContext = { items, map: mapOf(items), t };
+export function checkKnowledge(ontology: Ontology, items: KnowledgeItem[], t: Translate): KnowledgeIssue[] {
+  const ctx: CheckContext = { ontology, items, map: mapOf(items), t };
   const out: KnowledgeIssue[] = [];
-  for (const rule of RULES) {
+  for (const rule of ontology.rules) {
     for (const raw of CHECKS[rule.id](ctx)) {
       out.push({ id: `${rule.id}|${raw.key}|${raw.ids.join(",")}`, rule: rule.id, sev: rule.severity, ids: raw.ids, message: raw.message, values: raw.values ?? [] });
     }
@@ -336,8 +337,8 @@ export function checkKnowledge(items: KnowledgeItem[], t: Translate): KnowledgeI
   return out;
 }
 
-export function ruleCounts(open: KnowledgeIssue[]): RuleCount[] {
-  return RULES.map((rule) => ({ rule, count: open.filter((issue) => issue.rule === rule.id).length }));
+export function ruleCounts(ontology: Ontology, open: KnowledgeIssue[]): RuleCount[] {
+  return ontology.rules.map((rule) => ({ rule, count: open.filter((issue) => issue.rule === rule.id).length }));
 }
 
 export function issuesOfItem(open: KnowledgeIssue[], id: string): KnowledgeIssue[] {

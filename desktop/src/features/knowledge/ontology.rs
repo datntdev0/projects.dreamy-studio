@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde::de::Error;
 use serde_yaml_ng::Mapping;
@@ -9,13 +10,14 @@ const RAW: &str = include_str!("ontology.yml");
 
 static ONTOLOGY: OnceLock<Ontology> = OnceLock::new();
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PredicateKind {
     Scalar,
     Relationship,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Severity {
     Error,
@@ -53,6 +55,42 @@ pub struct Ontology {
     pub types: Vec<TypeDef>,
     pub predicates: Vec<PredicateDef>,
     pub rules: Vec<RuleDef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OntologyView {
+    pub version: u32,
+    pub yaml: String,
+    pub types: Vec<TypeView>,
+    pub predicates: Vec<PredicateView>,
+    pub rules: Vec<RuleView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TypeView {
+    pub key: String,
+    #[serde(rename = "abstract")]
+    pub abstract_: bool,
+    pub properties: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PredicateView {
+    pub key: String,
+    pub kind: PredicateKind,
+    pub domain: Vec<String>,
+    pub range: Vec<String>,
+    pub limit: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuleView {
+    pub id: String,
+    pub severity: Severity,
 }
 
 #[derive(Deserialize)]
@@ -102,6 +140,44 @@ impl Ontology {
 
     pub fn raw() -> &'static str {
         RAW
+    }
+
+    pub fn view(&self) -> OntologyView {
+        OntologyView {
+            version: self.version,
+            yaml: RAW.replace("\r\n", "\n"),
+            types: self
+                .types
+                .iter()
+                .map(|item| TypeView {
+                    key: item.key.clone(),
+                    abstract_: item.abstract_,
+                    properties: item.properties.clone(),
+                })
+                .collect(),
+            predicates: self
+                .predicates
+                .iter()
+                .map(|item| PredicateView {
+                    key: item.key.clone(),
+                    kind: item.kind,
+                    domain: item.domain.clone(),
+                    range: item.range.clone(),
+                    limit: match item.kind {
+                        PredicateKind::Scalar => item.single,
+                        PredicateKind::Relationship => item.unique_range,
+                    },
+                })
+                .collect(),
+            rules: self
+                .rules
+                .iter()
+                .map(|item| RuleView {
+                    id: item.key.clone(),
+                    severity: item.severity,
+                })
+                .collect(),
+        }
     }
 
     fn parse(text: &str) -> Result<Ontology, serde_yaml_ng::Error> {

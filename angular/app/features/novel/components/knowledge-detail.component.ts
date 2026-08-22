@@ -6,7 +6,6 @@ import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem } from "../novel.knowledge.models";
-import { predicateDef } from "../novel.knowledge.ontology";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { characterOf, factText, factsAbout, isEntity, isFact, issuesOfItem, mapOf, nameOf, personasOf, predicateLabel } from "../novel.knowledge.rules";
 import { toNovelError } from "../novel.rules";
@@ -93,7 +92,7 @@ export class NovelKnowledgeDetail {
       const outgoing = fact.subject === entity.id;
       const otherId = outgoing ? fact.object : fact.subject;
       const value = otherId === null ? this.quoteOf(fact) : nameOf(map, otherId);
-      out.push({ id: fact.id, pred: predicateLabel(fact.pred, this.text.bind(this)), value, other: otherId, outgoing });
+      out.push({ id: fact.id, pred: predicateLabel(this.knowledge.ontology(), fact.pred, this.text.bind(this)), value, other: otherId, outgoing });
     }
     return out;
   }
@@ -143,7 +142,7 @@ export class NovelKnowledgeDetail {
 
   private buildTitle(): string {
     const item = this.item();
-    return isEntity(item) ? item.name : factText(mapOf(this.items()), item, this.text.bind(this));
+    return isEntity(item) ? item.name : factText(this.knowledge.ontology(), mapOf(this.items()), item, this.text.bind(this));
   }
 
   private buildStale(): string {
@@ -158,7 +157,7 @@ export class NovelKnowledgeDetail {
 
   private buildFactKind(): LanguageKey {
     const fact = this.fact();
-    const kind = fact ? (predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship")) : "scalar";
+    const kind = fact ? (this.knowledge.ontology().predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship")) : "scalar";
     return kind === "scalar" ? "novel.knowledge.fact.scalar" : "novel.knowledge.fact.relationship";
   }
 
@@ -167,6 +166,6 @@ export class NovelKnowledgeDetail {
   }
 
   predText(pred: string): string {
-    return predicateLabel(pred, this.text.bind(this));
+    return predicateLabel(this.knowledge.ontology(), pred, this.text.bind(this));
   }
 }

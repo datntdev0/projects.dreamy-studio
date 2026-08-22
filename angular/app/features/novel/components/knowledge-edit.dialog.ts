@@ -8,8 +8,7 @@ import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { ItemDraftPatch, applyEdits, blankEntity, blankFact, cloneItem, createdItems, describeEdit, isPresent, isIncomplete, itemState, previewOf, scopeOf, withCreated, withDelete, withPatch, withoutDelete } from "../novel.knowledge.draft";
-import { DraftPreview, EntityType, EvidenceRef, ItemState, KnowledgeEdit, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeListKind, PredicateDef } from "../novel.knowledge.models";
-import { ENTITY_TYPES, PREDICATES, predicateDef, ruleDef } from "../novel.knowledge.ontology";
+import { DraftPreview, EntityType, EntityTypeDef, EvidenceRef, ItemState, KnowledgeEdit, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeListKind, PredicateDef } from "../novel.knowledge.models";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { chaptersOfItem, entitiesOf, factText, isEntity, isFact, mapOf } from "../novel.knowledge.rules";
 import { NovelService } from "../novel.service";
@@ -92,9 +91,6 @@ export class NovelKnowledgeEditDialog {
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
 
-  readonly types = ENTITY_TYPES;
-  readonly scalars = PREDICATES.filter((item) => item.kind === "scalar");
-  readonly relationships = PREDICATES.filter((item) => item.kind === "relationship");
   readonly request = this.dialogs.edit;
 
   readonly base = signal<KnowledgeItem[]>([]);
@@ -111,6 +107,9 @@ export class NovelKnowledgeEditDialog {
   readonly chapterOptions = signal<EditOption[]>([]);
   readonly busy = signal(false);
 
+  readonly types = computed(this.buildTypes.bind(this));
+  readonly scalars = computed(this.buildScalars.bind(this));
+  readonly relationships = computed(this.buildRelationships.bind(this));
   readonly open = computed(this.buildOpen.bind(this));
   readonly current = computed(this.buildCurrent.bind(this));
   readonly preview = computed(this.buildPreview.bind(this));
@@ -145,7 +144,7 @@ export class NovelKnowledgeEditDialog {
   }
 
   ruleLabel(issue: KnowledgeIssue): LanguageKey {
-    return ruleDef(issue.rule).labelKey;
+    return this.knowledge.ontology().ruleDef(issue.rule).labelKey;
   }
 
   severityOf(issue: KnowledgeIssue): string {
@@ -212,7 +211,7 @@ export class NovelKnowledgeEditDialog {
   onPred(key: string, event: Event): void {
     const pred = (event.target as HTMLSelectElement).value;
     const fact = this.factOf(key);
-    const kind = predicateDef(pred)?.kind;
+    const kind = this.knowledge.ontology().predicateDef(pred)?.kind;
     if (!fact || !kind) {
       return;
     }
@@ -419,7 +418,7 @@ export class NovelKnowledgeEditDialog {
     if (entities.length === 0 && kind === "fact") {
       return;
     }
-    const item = kind === "entity" ? blankEntity(base, edits, PERSONA_TYPE) : blankFact(base, edits, this.anchorOf(entities), null);
+    const item = kind === "entity" ? blankEntity(base, edits, PERSONA_TYPE) : blankFact(this.knowledge.ontology(), base, edits, this.anchorOf(entities), null);
     this.edits.set(withCreated(edits, item));
     this.expanded.set([...this.expanded(), item.id]);
   }
@@ -443,7 +442,7 @@ export class NovelKnowledgeEditDialog {
   }
 
   private buildPreview(): DraftPreview {
-    return previewOf(this.current(), this.scope(), this.edits(), this.issue(), this.baseOpen(), this.text.bind(this));
+    return previewOf(this.knowledge.ontology(), this.current(), this.scope(), this.edits(), this.issue(), this.baseOpen(), this.text.bind(this));
   }
 
   private pickedType(): EntityType | null {
@@ -464,8 +463,8 @@ export class NovelKnowledgeEditDialog {
   }
 
   private predsOf(fact: KnowledgeFact, scalar: boolean): PredicateDef[] {
-    const list = scalar ? this.scalars : this.relationships;
-    const def = predicateDef(fact.pred);
+    const list = scalar ? this.scalars() : this.relationships();
+    const def = this.knowledge.ontology().predicateDef(fact.pred);
     return def && !list.includes(def) ? [def, ...list] : list;
   }
 
@@ -481,7 +480,7 @@ export class NovelKnowledgeEditDialog {
     const entity = isEntity(item) ? item : null;
     const fact = isFact(item) ? item : null;
     const created = state === "new";
-    const scalar = fact !== null && (predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship")) === "scalar";
+    const scalar = fact !== null && (this.knowledge.ontology().predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship")) === "scalar";
     return {
       key: item.id,
       item,
@@ -493,7 +492,7 @@ export class NovelKnowledgeEditDialog {
       open: this.expanded().includes(item.id),
       selected: this.selected().includes(item.id),
       locked: entity !== null && lock !== null && entity.type !== lock && !this.selected().includes(item.id),
-      title: fact ? factText(mapOf([...base, ...current]), fact, this.text.bind(this)) : (entity?.name ?? ""),
+      title: fact ? factText(this.knowledge.ontology(), mapOf([...base, ...current]), fact, this.text.bind(this)) : (entity?.name ?? ""),
       chapters: chapters.length > 0 ? rangeText(chapters) : "",
       scalar,
       created,
@@ -530,7 +529,7 @@ export class NovelKnowledgeEditDialog {
   private buildOptions(): EditOption[] {
     const out: EditOption[] = [];
     for (const entity of entitiesOf(this.current())) {
-      const def = ENTITY_TYPES.find((item) => item.key === entity.type);
+      const def = this.knowledge.ontology().typeDef(entity.type);
       out.push({ value: entity.id, label: `${entity.name || "—"} · ${def ? this.text(def.labelKey) : entity.type}` });
     }
     return out.sort((a, b) => a.label.localeCompare(b.label));
@@ -547,11 +546,11 @@ export class NovelKnowledgeEditDialog {
 
   private buildChanges(): string[] {
     const current = this.current();
-    return this.edits().map((edit) => describeEdit(edit, current, this.base(), this.text.bind(this)));
+    return this.edits().map((edit) => describeEdit(this.knowledge.ontology(), edit, current, this.base(), this.text.bind(this)));
   }
 
   private buildReady(): boolean {
-    if (this.edits().length === 0 || isIncomplete(this.current(), this.scope(), this.edits())) {
+    if (this.edits().length === 0 || isIncomplete(this.knowledge.ontology(), this.current(), this.scope(), this.edits())) {
       return false;
     }
     const state = this.preview().state;
@@ -560,7 +559,19 @@ export class NovelKnowledgeEditDialog {
 
   private buildRule(): LanguageKey | null {
     const issue = this.issue();
-    return issue ? ruleDef(issue.rule).labelKey : null;
+    return issue ? this.knowledge.ontology().ruleDef(issue.rule).labelKey : null;
+  }
+
+  private buildTypes(): readonly EntityTypeDef[] {
+    return this.knowledge.ontology().types;
+  }
+
+  private buildScalars(): PredicateDef[] {
+    return this.knowledge.ontology().scalars;
+  }
+
+  private buildRelationships(): PredicateDef[] {
+    return this.knowledge.ontology().relationships;
   }
 
   private buildCanAddFact(): boolean {

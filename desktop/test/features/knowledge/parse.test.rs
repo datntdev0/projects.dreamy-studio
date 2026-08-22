@@ -2,7 +2,11 @@ use super::*;
 use serde_json::json;
 
 fn parse(value: Value, count: usize) -> ChapterAnalysis {
-    parse_reply(&value.to_string(), count).unwrap()
+    parse_reply(&value.to_string(), count).unwrap().analysis
+}
+
+fn issues(value: Value, count: usize) -> Vec<String> {
+    parse_reply(&value.to_string(), count).unwrap().issues
 }
 
 fn evidence(p: usize, q: &str) -> AnalysisEvidence {
@@ -37,8 +41,10 @@ fn entity_names(analysis: &ChapterAnalysis) -> Vec<&str> {
 
 #[test]
 fn reads_a_valid_reply() {
-    let analysis = parse(valid(), 2);
+    let reading = parse_reply(&valid().to_string(), 2).unwrap();
+    let analysis = reading.analysis;
 
+    assert!(reading.issues.is_empty());
     assert_eq!(analysis.ontology, Ontology::get().version);
     assert_eq!(analysis.source_hash, "");
     assert_eq!(analysis.analyzed_at, "");
@@ -64,8 +70,10 @@ fn reads_a_reply_wrapped_in_prose_and_code_fences() {
         valid()
     );
 
-    let analysis = parse_reply(&text, 2).unwrap();
+    let reading = parse_reply(&text, 2).unwrap();
+    let analysis = reading.analysis;
 
+    assert!(reading.issues.is_empty());
     assert_eq!(analysis.entities.len(), 3);
     assert_eq!(analysis.facts.len(), 3);
 }
@@ -107,10 +115,17 @@ fn drops_entities_with_an_unknown_type_or_an_empty_name() {
         "facts": []
     });
 
-    let analysis = parse(value, 1);
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
 
-    assert_eq!(entity_names(&analysis), ["Harbor"]);
-    assert_eq!(analysis.entities[0].id, "E1");
+    assert_eq!(entity_names(&reading.analysis), ["Harbor"]);
+    assert_eq!(reading.analysis.entities[0].id, "E1");
+    assert_eq!(reading.issues.len(), 4);
+    assert!(reading.issues[0].starts_with(
+        "entity E1: type \"planet\" is not in the ontology; use one of: character, persona,"
+    ));
+    assert_eq!(reading.issues[1], "entity E2: name is missing");
+    assert_eq!(reading.issues[2], "entity E3: name is missing");
+    assert!(reading.issues[3].starts_with("entity E4: type is missing; use one of:"));
 }
 
 #[test]
@@ -170,19 +185,38 @@ fn drops_an_entity_that_reuses_a_local_id() {
         ]
     });
 
-    let analysis = parse(value, 1);
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
 
-    assert_eq!(entity_names(&analysis), ["Harbor"]);
+    assert_eq!(entity_names(&reading.analysis), ["Harbor"]);
+    assert_eq!(
+        reading.issues,
+        [
+            "entity E1: the id E1 is already used by another entity",
+            "fact F1: the subject and the object are the same entity"
+        ]
+    );
 }
 
 #[test]
 fn drops_facts_with_an_unknown_predicate() {
     let value = json!({
         "entities": [{"id": "E1", "type": "persona", "name": "Wren"}],
-        "facts": [{"id": "F1", "pred": "loves", "subject": "E1"}]
+        "facts": [
+            {"id": "F1", "pred": "loves", "subject": "E1"},
+            {"id": "F2", "subject": "E1"}
+        ]
     });
 
-    assert!(parse(value, 1).facts.is_empty());
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
+
+    assert!(reading.analysis.facts.is_empty());
+    assert_eq!(reading.issues.len(), 2);
+    assert!(
+        reading.issues[0].starts_with(
+            "fact F1: predicate \"loves\" is not in the ontology; use one of: gender,"
+        )
+    );
+    assert!(reading.issues[1].starts_with("fact F2: predicate is missing; use one of:"));
 }
 
 #[test]
@@ -201,10 +235,36 @@ fn drops_facts_with_a_dangling_subject_or_object() {
         ]
     });
 
-    let analysis = parse(value, 1);
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
 
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].pred, "resides_at");
+    assert_eq!(reading.analysis.facts.len(), 1);
+    assert_eq!(reading.analysis.facts[0].pred, "resides_at");
+    assert_eq!(
+        reading.issues,
+        [
+            "fact F1: the subject \"E9\" is not an entity id in this reply",
+            "fact F2: the object \"E9\" is not an entity id in this reply",
+            "fact F3: the subject \"E9\" is not an entity id in this reply",
+            "fact F4: the subject is missing"
+        ]
+    );
+}
+
+#[test]
+fn does_not_blame_a_fact_for_an_entity_that_was_already_reported() {
+    let value = json!({
+        "entities": [
+            {"id": "E1", "type": "persona", "name": "Wren"},
+            {"id": "E2", "type": "planet", "name": "Mars"}
+        ],
+        "facts": [{"id": "F1", "pred": "resides_at", "subject": "E1", "object": "E2"}]
+    });
+
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
+
+    assert!(reading.analysis.facts.is_empty());
+    assert_eq!(reading.issues.len(), 1);
+    assert!(reading.issues[0].starts_with("entity E2:"));
 }
 
 #[test]
@@ -221,14 +281,21 @@ fn drops_a_scalar_fact_with_an_object() {
         ]
     });
 
-    let analysis = parse(value, 1);
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
 
-    let preds: Vec<&str> = analysis
+    let preds: Vec<&str> = reading
+        .analysis
         .facts
         .iter()
         .map(|fact| fact.pred.as_str())
         .collect();
     assert_eq!(preds, ["age", "gender"]);
+    assert_eq!(
+        reading.issues,
+        [
+            "fact F1: occupation is a scalar predicate and must not have an object; put the quote in ev"
+        ]
+    );
 }
 
 #[test]
@@ -246,26 +313,90 @@ fn drops_a_relationship_without_an_object_or_to_itself() {
         ]
     });
 
-    let analysis = parse(value, 1);
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
 
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
+    assert_eq!(reading.analysis.facts.len(), 1);
+    assert_eq!(reading.analysis.facts[0].object.as_deref(), Some("E2"));
+    assert_eq!(
+        reading.issues,
+        [
+            "fact F1: ally_of needs an object",
+            "fact F2: ally_of needs an object",
+            "fact F3: the subject and the object are the same entity"
+        ]
+    );
 }
 
 #[test]
-fn keeps_domain_and_range_mismatches() {
+fn drops_facts_that_break_the_domain_or_the_range() {
     let value = json!({
         "entities": [
             {"id": "E1", "type": "location", "name": "Harbor"},
-            {"id": "E2", "type": "persona", "name": "Wren"}
+            {"id": "E2", "type": "persona", "name": "Wren"},
+            {"id": "E3", "type": "organization", "name": "The Guild"}
         ],
         "facts": [
-            {"id": "F1", "pred": "member_of", "subject": "E1", "object": "E2"},
-            {"id": "F2", "pred": "occupation", "subject": "E1"}
+            {"id": "F1", "pred": "member_of", "subject": "E1", "object": "E3"},
+            {"id": "F2", "pred": "member_of", "subject": "E2", "object": "E1"},
+            {"id": "F3", "pred": "occupation", "subject": "E1"},
+            {"id": "F4", "pred": "member_of", "subject": "E2", "object": "E3"}
         ]
     });
 
-    assert_eq!(parse(value, 1).facts.len(), 2);
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
+
+    assert_eq!(reading.analysis.facts.len(), 1);
+    assert_eq!(reading.analysis.facts[0].pred, "member_of");
+    assert_eq!(
+        reading.issues,
+        [
+            "fact F1: member_of needs a subject of type persona, but Harbor is a location",
+            "fact F2: member_of needs an object of type organization, but Harbor is a location",
+            "fact F3: occupation needs a subject of type persona, but Harbor is a location"
+        ]
+    );
+}
+
+#[test]
+fn tells_the_model_that_a_character_only_takes_persona_of() {
+    let value = json!({
+        "entities": [
+            {"id": "E1", "type": "character", "name": "Aldous"},
+            {"id": "E2", "type": "location", "name": "Harbor"}
+        ],
+        "facts": [
+            {"id": "F1", "pred": "resides_at", "subject": "E1", "object": "E2"},
+            {"id": "F2", "pred": "persona_of", "subject": "E1", "object": "E1"}
+        ]
+    });
+
+    let found = issues(value, 1);
+
+    assert_eq!(found.len(), 2);
+    assert_eq!(
+        found[0],
+        "fact F1: resides_at cannot be attached to the character Aldous; a character only takes persona_of, so attach the fact to a persona"
+    );
+    assert_eq!(
+        found[1],
+        "fact F2: the subject and the object are the same entity"
+    );
+}
+
+#[test]
+fn accepts_a_persona_linked_to_its_character() {
+    let value = json!({
+        "entities": [
+            {"id": "E1", "type": "persona", "name": "Wren"},
+            {"id": "E2", "type": "character", "name": "Aldous"}
+        ],
+        "facts": [{"id": "F1", "pred": "persona_of", "subject": "E1", "object": "E2"}]
+    });
+
+    let reading = parse_reply(&value.to_string(), 1).unwrap();
+
+    assert!(reading.issues.is_empty());
+    assert_eq!(reading.analysis.facts.len(), 1);
 }
 
 #[test]
@@ -307,9 +438,20 @@ fn drops_evidence_outside_the_paragraph_range_or_without_a_quote() {
         ]
     });
 
-    let analysis = parse(value, 2);
+    let reading = parse_reply(&value.to_string(), 2).unwrap();
 
-    assert_eq!(analysis.entities[0].ev, [evidence(1, "first")]);
+    assert_eq!(reading.analysis.entities[0].ev, [evidence(1, "first")]);
+    assert_eq!(
+        reading.issues,
+        [
+            "entity E1: evidence item 1: paragraph 0 does not exist; the chapter has paragraphs 1 to 2",
+            "entity E1: evidence item 3: paragraph 3 does not exist; the chapter has paragraphs 1 to 2",
+            "entity E1: evidence item 4: the quote is empty",
+            "entity E1: evidence item 5: must look like {\"p\": paragraph number, \"q\": quote}",
+            "entity E1: evidence item 6: must look like {\"p\": paragraph number, \"q\": quote}",
+            "entity E1: evidence item 7: must look like {\"p\": paragraph number, \"q\": quote}"
+        ]
+    );
 }
 
 #[test]
@@ -327,7 +469,7 @@ fn renumbers_ids_in_order_and_remaps_references() {
         ]
     });
 
-    let analysis = parse(value, 1);
+    let analysis = parse(value.clone(), 1);
 
     let ids: Vec<&str> = analysis
         .entities
@@ -339,6 +481,7 @@ fn renumbers_ids_in_order_and_remaps_references() {
     assert_eq!(analysis.facts[0].subject, "E1");
     assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
     assert_eq!(analysis.facts[1].id, "F2");
+    assert_eq!(issues(value, 1).len(), 2);
 }
 
 #[test]

@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::knowledge::ontology::Ontology;
 use serde_json::Value;
 use serde_json::json;
 
@@ -145,6 +146,7 @@ fn wire_knowledge_and_edit_result_use_camel_case() {
     );
     let knowledge = WireKnowledge {
         lang: "VI".to_string(),
+        ontology: Ontology::get().view(),
         items: Vec::new(),
         analyzed,
     };
@@ -153,6 +155,7 @@ fn wire_knowledge_and_edit_result_use_camel_case() {
     let result = KnowledgeEditResult { knowledge, remap };
     let value = serde_json::to_value(&result).expect("result encodes");
     assert_eq!(value["knowledge"]["lang"], "VI");
+    assert_eq!(value["knowledge"]["ontology"]["version"], 1);
     assert_eq!(value["knowledge"]["analyzed"]["4"]["entities"], 2);
     assert_eq!(value["remap"]["new1"], "E9");
 }

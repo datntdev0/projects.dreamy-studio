@@ -1,6 +1,6 @@
 import { LanguageKey } from "@app/core/language/language.models";
 import { DraftPreview, EntityType, EvidenceRef, ItemState, KnowledgeEdit, KnowledgeEntity, KnowledgeEvidence, KnowledgeFact, KnowledgeIssue, KnowledgeItem } from "./novel.knowledge.models";
-import { PERSONA_PREDICATE, PREDICATES, predicateDef } from "./novel.knowledge.ontology";
+import { Ontology, PERSONA_PREDICATE } from "./novel.knowledge.ontology";
 import { Translate, checkKnowledge, entitiesOf, factText, factsOf, isEntity, isFact, mapOf } from "./novel.knowledge.rules";
 
 type EntityEdit = Extract<KnowledgeEdit, { k: "add_entity" }>;
@@ -442,8 +442,8 @@ export function isPresent(state: ItemState): boolean {
   return state !== "deleted" && state !== "merged" && state !== "removed";
 }
 
-function factComplete(fact: KnowledgeFact, entities: Set<string>): boolean {
-  const kind = predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship");
+function factComplete(ontology: Ontology, fact: KnowledgeFact, entities: Set<string>): boolean {
+  const kind = ontology.predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship");
   const subject = entities.has(fact.subject);
   return kind === "relationship" ? subject && fact.object !== null && entities.has(fact.object) : subject;
 }
@@ -453,7 +453,7 @@ function entityComplete(entity: KnowledgeEntity): boolean {
   return entity.name.trim().length > 0 && (entity.type === "persona" || !hasProps);
 }
 
-export function isIncomplete(current: KnowledgeItem[], scope: Set<string>, edits: KnowledgeEdit[]): boolean {
+export function isIncomplete(ontology: Ontology, current: KnowledgeItem[], scope: Set<string>, edits: KnowledgeEdit[]): boolean {
   const entities = new Set(entitiesOf(current).map((entity) => entity.id));
   const created = new Set(createdItems(edits).map((item) => item.id));
   for (const item of current) {
@@ -463,21 +463,21 @@ export function isIncomplete(current: KnowledgeItem[], scope: Set<string>, edits
     if (created.has(item.id) && item.ev.length === 0) {
       return true;
     }
-    if (isEntity(item) ? !entityComplete(item) : !factComplete(item, entities)) {
+    if (isEntity(item) ? !entityComplete(item) : !factComplete(ontology, item, entities)) {
       return true;
     }
   }
   return false;
 }
 
-export function previewOf(current: KnowledgeItem[], scope: Set<string>, edits: KnowledgeEdit[], issue: KnowledgeIssue | null, baseOpen: KnowledgeIssue[], t: Translate): DraftPreview {
+export function previewOf(ontology: Ontology, current: KnowledgeItem[], scope: Set<string>, edits: KnowledgeEdit[], issue: KnowledgeIssue | null, baseOpen: KnowledgeIssue[], t: Translate): DraftPreview {
   if (edits.length === 0) {
     return { state: "idle", added: [], fixed: [] };
   }
-  if (isIncomplete(current, scope, edits)) {
+  if (isIncomplete(ontology, current, scope, edits)) {
     return { state: "invalid", added: [], fixed: [] };
   }
-  const after = checkKnowledge(current, t);
+  const after = checkKnowledge(ontology, current, t);
   const afterIds = new Set(after.map((item) => item.id));
   const baseIds = new Set(baseOpen.map((item) => item.id));
   const added = after.filter((item) => !baseIds.has(item.id));
@@ -495,8 +495,8 @@ function nextRef(base: KnowledgeItem[], edits: KnowledgeEdit[]): string {
   return `${REF_PREFIX}${n}`;
 }
 
-function defaultPredicate(scalar: boolean): string {
-  const found = PREDICATES.find((item) => (item.kind === "scalar") === scalar && item.key !== PERSONA_PREDICATE);
+function defaultPredicate(ontology: Ontology, scalar: boolean): string {
+  const found = ontology.predicates.find((item) => (item.kind === "scalar") === scalar && item.key !== PERSONA_PREDICATE);
   return found?.key ?? "";
 }
 
@@ -504,14 +504,14 @@ export function blankEntity(base: KnowledgeItem[], edits: KnowledgeEdit[], type:
   return { id: nextRef(base, edits), kind: "entity", type, name: "", titles: [], aliases: [], ev: [], stale: [] };
 }
 
-export function blankFact(base: KnowledgeItem[], edits: KnowledgeEdit[], subject: string, object: string | null): KnowledgeFact {
-  return { id: nextRef(base, edits), kind: "fact", pred: defaultPredicate(object === null), subject, object, ev: [], stale: [] };
+export function blankFact(ontology: Ontology, base: KnowledgeItem[], edits: KnowledgeEdit[], subject: string, object: string | null): KnowledgeFact {
+  return { id: nextRef(base, edits), kind: "fact", pred: defaultPredicate(ontology, object === null), subject, object, ev: [], stale: [] };
 }
 
-function nameIn(current: KnowledgeItem[], base: KnowledgeItem[], id: string, t: Translate): string {
+function nameIn(ontology: Ontology, current: KnowledgeItem[], base: KnowledgeItem[], id: string, t: Translate): string {
   const map = mapOf([...base, ...current]);
   const item = map.get(id);
-  return item ? (isEntity(item) ? item.name || "—" : factText(map, item, t)) : id;
+  return item ? (isEntity(item) ? item.name || "—" : factText(ontology, map, item, t)) : id;
 }
 
 function fieldsOf(edit: KnowledgeEdit, t: Translate): string {
@@ -536,27 +536,27 @@ function fieldsOf(edit: KnowledgeEdit, t: Translate): string {
   return keys.map((key) => t(FIELD_KEYS[key])).join(", ");
 }
 
-function describeEdited(edit: ItemEdit, current: KnowledgeItem[], base: KnowledgeItem[], t: Translate): string {
-  return t("novel.knowledge.edit.change.edit", { name: nameIn(current, base, edit.id, t), fields: fieldsOf(edit, t) });
+function describeEdited(ontology: Ontology, edit: ItemEdit, current: KnowledgeItem[], base: KnowledgeItem[], t: Translate): string {
+  return t("novel.knowledge.edit.change.edit", { name: nameIn(ontology, current, base, edit.id, t), fields: fieldsOf(edit, t) });
 }
 
-function describeMerge(edit: Extract<KnowledgeEdit, { k: "merge" }>, current: KnowledgeItem[], base: KnowledgeItem[], t: Translate): string {
-  const names = edit.sources.filter((id) => id !== edit.target).map((id) => nameIn(current, base, id, t)).join(", ");
-  return t("novel.knowledge.edit.change.merge", { names, target: nameIn(current, base, edit.target, t) });
+function describeMerge(ontology: Ontology, edit: Extract<KnowledgeEdit, { k: "merge" }>, current: KnowledgeItem[], base: KnowledgeItem[], t: Translate): string {
+  const names = edit.sources.filter((id) => id !== edit.target).map((id) => nameIn(ontology, current, base, id, t)).join(", ");
+  return t("novel.knowledge.edit.change.merge", { names, target: nameIn(ontology, current, base, edit.target, t) });
 }
 
-export function describeEdit(edit: KnowledgeEdit, current: KnowledgeItem[], base: KnowledgeItem[], t: Translate): string {
+export function describeEdit(ontology: Ontology, edit: KnowledgeEdit, current: KnowledgeItem[], base: KnowledgeItem[], t: Translate): string {
   switch (edit.k) {
     case "add_entity":
     case "add_fact":
-      return t("novel.knowledge.edit.change.add", { name: nameIn([createdItem(edit), ...current], base, edit.ref, t) });
+      return t("novel.knowledge.edit.change.add", { name: nameIn(ontology, [createdItem(edit), ...current], base, edit.ref, t) });
     case "del":
-      return t("novel.knowledge.edit.change.del", { name: nameIn(current, base, edit.id, t) });
+      return t("novel.knowledge.edit.change.del", { name: nameIn(ontology, current, base, edit.id, t) });
     case "merge":
-      return describeMerge(edit, current, base, t);
+      return describeMerge(ontology, edit, current, base, t);
     case "character":
-      return t("novel.knowledge.edit.change.add", { name: nameIn(current, base, `${edit.persona}.character`, t) });
+      return t("novel.knowledge.edit.change.add", { name: nameIn(ontology, current, base, `${edit.persona}.character`, t) });
     default:
-      return describeEdited(edit, current, base, t);
+      return describeEdited(ontology, edit, current, base, t);
   }
 }

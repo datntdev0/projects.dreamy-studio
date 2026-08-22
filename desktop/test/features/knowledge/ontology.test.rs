@@ -167,3 +167,47 @@ fn rules_match_the_checker() {
 fn invalid_text_is_an_error() {
     assert!(Ontology::parse("version: 1").is_err());
 }
+
+#[test]
+fn view_lists_every_definition_for_the_frontend() {
+    let ontology = Ontology::get();
+    let view = ontology.view();
+    assert_eq!(view.version, ontology.version);
+    assert_eq!(view.types.len(), ontology.types.len());
+    assert_eq!(view.predicates.len(), ontology.predicates.len());
+    assert_eq!(view.rules.len(), ontology.rules.len());
+    assert!(view.yaml.starts_with("version: 1"));
+    assert!(!view.yaml.contains('\r'));
+}
+
+#[test]
+fn view_marks_the_single_and_unique_limits() {
+    let view = Ontology::get().view();
+    let limit = |key: &str| {
+        view.predicates
+            .iter()
+            .find(|item| item.key == key)
+            .map(|item| item.limit)
+    };
+    assert_eq!(limit("gender"), Some(true));
+    assert_eq!(limit("appearance"), Some(false));
+    assert_eq!(limit("leader_of"), Some(true));
+    assert_eq!(limit("kin_of"), Some(false));
+}
+
+#[test]
+fn view_encodes_in_camel_case_with_lowercase_enums() {
+    let value = serde_json::to_value(Ontology::get().view()).expect("view encodes");
+    let persona = value["types"]
+        .as_array()
+        .and_then(|items| items.iter().find(|item| item["key"] == "persona"))
+        .expect("persona type");
+    assert_eq!(persona["abstract"], false);
+    assert_eq!(persona["properties"][0], "titles");
+    let owns = value["predicates"]
+        .as_array()
+        .and_then(|items| items.iter().find(|item| item["key"] == "owns"))
+        .expect("owns predicate");
+    assert_eq!(owns["kind"], "relationship");
+    assert_eq!(value["rules"][0]["severity"], "error");
+}

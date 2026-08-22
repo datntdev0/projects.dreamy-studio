@@ -9,8 +9,11 @@ use crate::features::knowledge::text::norm;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 const PERSONA: &str = "persona";
+const CHARACTER: &str = "character";
+const PERSONA_OF: &str = "persona_of";
 const NOT_JSON: &str = "The model did not return a JSON result.";
 
 #[derive(Deserialize)]
@@ -32,26 +35,43 @@ struct RawEntity {
 
 #[derive(Deserialize)]
 struct RawFact {
+    id: Option<String>,
     pred: Option<String>,
     subject: Option<String>,
     object: Option<String>,
     ev: Option<Vec<Value>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reading {
+    pub analysis: ChapterAnalysis,
+    pub issues: Vec<String>,
+}
+
+enum End {
+    Found(usize),
+    Absent,
+    Skipped,
+}
+
 struct Cleaner {
     count: usize,
     entities: Vec<AnalysisEntity>,
     ids: HashMap<String, usize>,
+    dropped: HashSet<String>,
     facts: Vec<AnalysisFact>,
+    issues: Vec<String>,
 }
 
-pub fn parse_reply(text: &str, paragraph_count: usize) -> Result<ChapterAnalysis, String> {
+pub fn parse_reply(text: &str, paragraph_count: usize) -> Result<Reading, String> {
     let reply = read_reply(text)?;
     let mut cleaner = Cleaner {
         count: paragraph_count,
         entities: Vec::new(),
         ids: HashMap::new(),
+        dropped: HashSet::new(),
         facts: Vec::new(),
+        issues: Vec::new(),
     };
     for entity in reply.entities.unwrap_or_default() {
         cleaner.entity(entity);
@@ -59,12 +79,15 @@ pub fn parse_reply(text: &str, paragraph_count: usize) -> Result<ChapterAnalysis
     for fact in reply.facts.unwrap_or_default() {
         cleaner.fact(fact);
     }
-    Ok(ChapterAnalysis {
-        ontology: Ontology::get().version,
-        source_hash: String::new(),
-        analyzed_at: String::new(),
-        entities: cleaner.entities,
-        facts: cleaner.facts,
+    Ok(Reading {
+        analysis: ChapterAnalysis {
+            ontology: Ontology::get().version,
+            source_hash: String::new(),
+            analyzed_at: String::new(),
+            entities: cleaner.entities,
+            facts: cleaner.facts,
+        },
+        issues: cleaner.issues,
     })
 }
 
@@ -85,14 +108,28 @@ fn read_reply(text: &str) -> Result<RawReply, String> {
 
 impl Cleaner {
     fn entity(&mut self, raw: RawEntity) {
-        let Some(kind) = trimmed(raw.kind).filter(|kind| known_type(kind)) else {
-            return;
-        };
-        let Some(name) = trimmed(raw.name) else {
-            return;
-        };
         let id = trimmed(raw.id).unwrap_or_default();
+        let name = trimmed(raw.name);
+        let label = entity_label(&id, name.as_deref());
+        let kind = trimmed(raw.kind);
+        if !kind.as_deref().is_some_and(known_type) {
+            let found = kind.map_or("type is missing".to_string(), |kind| {
+                format!("type \"{kind}\" is not in the ontology")
+            });
+            self.issues
+                .push(format!("{label}: {found}; use one of: {}", type_keys()));
+            self.drop_id(id);
+            return;
+        }
+        let (Some(kind), Some(name)) = (kind, name) else {
+            self.issues.push(format!("{label}: name is missing"));
+            self.drop_id(id);
+            return;
+        };
         if !id.is_empty() && self.ids.contains_key(&id) {
+            self.issues.push(format!(
+                "{label}: the id {id} is already used by another entity"
+            ));
             return;
         }
         let mut entity = AnalysisEntity {
@@ -101,7 +138,7 @@ impl Cleaner {
             name,
             titles: Vec::new(),
             aliases: Vec::new(),
-            ev: evidence(raw.ev, self.count),
+            ev: self.evidence(raw.ev, &label),
         };
         if entity.kind == PERSONA {
             merge_names(&mut entity.titles, strings(raw.titles));
@@ -110,6 +147,12 @@ impl Cleaner {
         let index = self.place(entity);
         if !id.is_empty() {
             self.ids.insert(id, index);
+        }
+    }
+
+    fn drop_id(&mut self, id: String) {
+        if !id.is_empty() {
+            self.dropped.insert(id);
         }
     }
 
@@ -139,15 +182,26 @@ impl Cleaner {
     }
 
     fn fact(&mut self, raw: RawFact) {
-        let Some(def) = trimmed(raw.pred.clone()).and_then(|pred| predicate(&pred)) else {
+        let pred = trimmed(raw.pred.clone()).unwrap_or_default();
+        let label = fact_label(trimmed(raw.id.clone()).as_deref(), &pred);
+        let Some(def) = predicate(&pred) else {
+            let found = if pred.is_empty() {
+                "predicate is missing".to_string()
+            } else {
+                format!("predicate \"{pred}\" is not in the ontology")
+            };
+            self.issues.push(format!(
+                "{label}: {found}; use one of: {}",
+                predicate_keys()
+            ));
             return;
         };
-        let Some((subject, object)) = self.ends(def, &raw) else {
+        let Some((subject, object)) = self.ends(def, &raw, &label) else {
             return;
         };
         let subject = entity_id(subject);
         let object = object.map(entity_id);
-        let ev = evidence(raw.ev, self.count);
+        let ev = self.evidence(raw.ev, &label);
         let found = self
             .facts
             .iter_mut()
@@ -167,25 +221,124 @@ impl Cleaner {
         }
     }
 
-    fn ends(&self, def: &PredicateDef, raw: &RawFact) -> Option<(usize, Option<usize>)> {
-        let subject = self.resolve(raw.subject.as_deref())?;
+    fn ends(
+        &mut self,
+        def: &PredicateDef,
+        raw: &RawFact,
+        label: &str,
+    ) -> Option<(usize, Option<usize>)> {
+        let subject = self.end("subject", raw.subject.as_deref(), label);
         let object = raw
             .object
             .as_deref()
             .map(str::trim)
             .filter(|value| !value.is_empty());
-        match (def.kind, object) {
-            (PredicateKind::Scalar, None) => Some((subject, None)),
-            (PredicateKind::Relationship, Some(id)) => {
-                let object = self.resolve(Some(id))?;
-                (object != subject).then_some((subject, Some(object)))
+        let object = match (def.kind, object) {
+            (PredicateKind::Scalar, None) => End::Absent,
+            (PredicateKind::Scalar, Some(_)) => {
+                self.issues.push(format!(
+                    "{label}: {} is a scalar predicate and must not have an object; put the quote in ev",
+                    def.key
+                ));
+                End::Skipped
             }
-            _ => None,
+            (PredicateKind::Relationship, None) => {
+                self.issues
+                    .push(format!("{label}: {} needs an object", def.key));
+                End::Skipped
+            }
+            (PredicateKind::Relationship, Some(id)) => self.end("object", Some(id), label),
+        };
+        let End::Found(subject) = subject else {
+            return None;
+        };
+        let object = match object {
+            End::Found(index) => Some(index),
+            End::Absent => None,
+            End::Skipped => return None,
+        };
+        if object == Some(subject) {
+            self.issues.push(format!(
+                "{label}: the subject and the object are the same entity"
+            ));
+            return None;
+        }
+        self.signature(def, subject, object, label)
+            .then_some((subject, object))
+    }
+
+    fn end(&mut self, role: &str, id: Option<&str>, label: &str) -> End {
+        let id = id.map(str::trim).filter(|value| !value.is_empty());
+        let Some(id) = id else {
+            self.issues.push(format!("{label}: the {role} is missing"));
+            return End::Skipped;
+        };
+        match self.ids.get(id) {
+            Some(index) => End::Found(*index),
+            None if self.dropped.contains(id) => End::Skipped,
+            None => {
+                self.issues.push(format!(
+                    "{label}: the {role} \"{id}\" is not an entity id in this reply"
+                ));
+                End::Skipped
+            }
         }
     }
 
-    fn resolve(&self, id: Option<&str>) -> Option<usize> {
-        self.ids.get(id?.trim()).copied()
+    fn signature(
+        &mut self,
+        def: &PredicateDef,
+        subject: usize,
+        object: Option<usize>,
+        label: &str,
+    ) -> bool {
+        let mut valid = true;
+        let from = &self.entities[subject];
+        if !def.domain.contains(&from.kind) {
+            let message = if from.kind == CHARACTER && def.key != PERSONA_OF {
+                format!(
+                    "{label}: {} cannot be attached to the character {}; a character only takes persona_of, so attach the fact to a persona",
+                    def.key, from.name
+                )
+            } else {
+                format!(
+                    "{label}: {} needs a subject of type {}, but {} is a {}",
+                    def.key,
+                    def.domain.join(" or "),
+                    from.name,
+                    from.kind
+                )
+            };
+            self.issues.push(message);
+            valid = false;
+        }
+        if let Some(object) = object {
+            let to = &self.entities[object];
+            if !def.range.contains(&to.kind) {
+                self.issues.push(format!(
+                    "{label}: {} needs an object of type {}, but {} is a {}",
+                    def.key,
+                    def.range.join(" or "),
+                    to.name,
+                    to.kind
+                ));
+                valid = false;
+            }
+        }
+        valid
+    }
+
+    fn evidence(&mut self, values: Option<Vec<Value>>, label: &str) -> Vec<AnalysisEvidence> {
+        let mut out = Vec::new();
+        for (index, value) in values.unwrap_or_default().into_iter().enumerate() {
+            match read_evidence(&value, self.count) {
+                Ok(item) => merge_evidence(&mut out, vec![item]),
+                Err(problem) => self
+                    .issues
+                    .push(format!("{label}: evidence item {}: {problem}", index + 1)),
+            }
+        }
+        out
     }
 }
 
@@ -201,6 +354,40 @@ fn trimmed(value: Option<String>) -> Option<String> {
 
 fn known_type(kind: &str) -> bool {
     Ontology::get().types.iter().any(|item| item.key == kind)
+}
+
+fn type_keys() -> String {
+    let keys: Vec<&str> = Ontology::get()
+        .types
+        .iter()
+        .map(|item| item.key.as_str())
+        .collect();
+    keys.join(", ")
+}
+
+fn predicate_keys() -> String {
+    let keys: Vec<&str> = Ontology::get()
+        .predicates
+        .iter()
+        .map(|item| item.key.as_str())
+        .collect();
+    keys.join(", ")
+}
+
+fn entity_label(id: &str, name: Option<&str>) -> String {
+    match (id.is_empty(), name) {
+        (false, _) => format!("entity {id}"),
+        (true, Some(name)) => format!("entity \"{name}\""),
+        (true, None) => "an entity without id or name".to_string(),
+    }
+}
+
+fn fact_label(id: Option<&str>, pred: &str) -> String {
+    match id {
+        Some(id) => format!("fact {id}"),
+        None if pred.is_empty() => "a fact without id or predicate".to_string(),
+        None => format!("a {pred} fact without id"),
+    }
 }
 
 fn predicate(pred: &str) -> Option<&'static PredicateDef> {
@@ -228,26 +415,27 @@ fn merge_names(target: &mut Vec<String>, extra: Vec<String>) {
     }
 }
 
-fn evidence(values: Option<Vec<Value>>, count: usize) -> Vec<AnalysisEvidence> {
-    let mut out = Vec::new();
-    for value in values.unwrap_or_default() {
-        let p = value
-            .get("p")
-            .and_then(Value::as_u64)
-            .and_then(|p| usize::try_from(p).ok());
-        let q = value.get("q").and_then(Value::as_str).map(str::trim);
-        if let (Some(p), Some(q)) = (p, q)
-            && (1..=count).contains(&p)
-            && !q.is_empty()
-        {
-            let item = AnalysisEvidence {
-                p,
-                q: q.to_string(),
-            };
-            merge_evidence(&mut out, vec![item]);
-        }
+fn read_evidence(value: &Value, count: usize) -> Result<AnalysisEvidence, String> {
+    let p = value
+        .get("p")
+        .and_then(Value::as_u64)
+        .and_then(|p| usize::try_from(p).ok());
+    let q = value.get("q").and_then(Value::as_str).map(str::trim);
+    let (Some(p), Some(q)) = (p, q) else {
+        return Err("must look like {\"p\": paragraph number, \"q\": quote}".to_string());
+    };
+    if q.is_empty() {
+        return Err("the quote is empty".to_string());
     }
-    out
+    if !(1..=count).contains(&p) {
+        return Err(format!(
+            "paragraph {p} does not exist; the chapter has paragraphs 1 to {count}"
+        ));
+    }
+    Ok(AnalysisEvidence {
+        p,
+        q: q.to_string(),
+    })
 }
 
 fn merge_evidence(target: &mut Vec<AnalysisEvidence>, extra: Vec<AnalysisEvidence>) {

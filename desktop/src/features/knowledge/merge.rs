@@ -9,6 +9,7 @@ use crate::features::knowledge::models::KnowledgeFact;
 use crate::features::knowledge::models::KnowledgeItem;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::models::WireKnowledge;
+use crate::features::knowledge::ontology::Ontology;
 use crate::features::knowledge::text::contains;
 use crate::features::knowledge::text::norm;
 use crate::features::knowledge::text::text_hash;
@@ -43,6 +44,7 @@ pub fn merge(lang: KnowledgeLang, chapters: &[LoadedChapter]) -> WireKnowledge {
     }
     WireKnowledge {
         lang: lang.as_str().to_string(),
+        ontology: Ontology::get().view(),
         items: merger.into_items(),
         analyzed: analyzed(chapters),
     }

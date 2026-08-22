@@ -1,3 +1,4 @@
+use crate::features::knowledge::ontology::OntologyView;
 use crate::infra::storage::StorageError;
 use serde::Deserialize;
 use serde::Serialize;
@@ -120,6 +121,7 @@ pub struct AnalyzedChapter {
 #[serde(rename_all = "camelCase")]
 pub struct WireKnowledge {
     pub lang: String,
+    pub ontology: OntologyView,
     pub items: Vec<KnowledgeItem>,
     pub analyzed: BTreeMap<i64, AnalyzedChapter>,
 }

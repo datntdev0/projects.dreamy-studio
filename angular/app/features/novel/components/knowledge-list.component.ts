@@ -6,8 +6,7 @@ import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
-import { KnowledgeEntity, KnowledgeIssue, KnowledgeView } from "../novel.knowledge.models";
-import { ENTITY_TYPES } from "../novel.knowledge.ontology";
+import { EntityTypeDef, KnowledgeEntity, KnowledgeIssue, KnowledgeView } from "../novel.knowledge.models";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { chaptersOfItem, entitiesOf, issuesOfItem, matchesList } from "../novel.knowledge.rules";
 import { toNovelError } from "../novel.rules";
@@ -38,7 +37,7 @@ export class NovelKnowledgeList {
   private readonly toasts = inject(ToastService);
 
   readonly novelId = input.required<number>();
-  readonly entityTypes = ENTITY_TYPES;
+  readonly entityTypes = computed(this.buildEntityTypes.bind(this));
 
   readonly view = computed(this.buildView.bind(this));
   readonly issues = computed(this.buildIssues.bind(this));
@@ -92,6 +91,10 @@ export class NovelKnowledgeList {
 
   private text(key: LanguageKey): string {
     return this.languageService.translate(key);
+  }
+
+  private buildEntityTypes(): readonly EntityTypeDef[] {
+    return this.knowledge.ontology().types;
   }
 
   private buildView(): KnowledgeView {

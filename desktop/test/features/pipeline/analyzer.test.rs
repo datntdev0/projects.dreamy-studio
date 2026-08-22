@@ -3,6 +3,7 @@ use crate::features::knowledge::ontology::Ontology;
 use crate::features::settings::llm::CliSettings;
 use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::models::AppSettings;
+use crate::testing::cli::ScriptedCli;
 use tempfile::TempDir;
 
 fn known(kind: &str, name: &str) -> KnownEntity {
@@ -254,4 +255,167 @@ fn reports_the_cli_failure_detail() {
         }
         other => panic!("unexpected result: {other:?}"),
     }
+}
+
+const GOOD: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"Wren lit the lamp.\"}]},{\"id\":\"E2\",\"type\":\"location\",\"name\":\"Harbor\",\"ev\":[]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"resides_at\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":1,\"q\":\"Wren lit the lamp.\"}]}]}";
+
+const BAD: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[]},{\"id\":\"E2\",\"type\":\"location\",\"name\":\"Harbor\",\"ev\":[]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"resides_at\",\"subject\":\"E2\",\"object\":\"E1\",\"ev\":[]},{\"id\":\"F2\",\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[]}]}";
+
+fn run(analyzer: &LlmAnalyzer) -> Result<ChapterAnalysis, AnalyzeError> {
+    analyzer.analyze(&job(Vec::new()), &|_| {}, &AtomicBool::new(false))
+}
+
+#[test]
+fn a_valid_reply_needs_one_call_and_starts_a_named_claude_session() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[GOOD]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let analysis = run(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 1);
+    assert_eq!(analysis.facts.len(), 1);
+    let args = cli.args(1);
+    assert!(args.contains("--session-id"));
+    assert!(!args.contains("--no-session-persistence"));
+    assert!(cli.stdin(1).contains("Chapter title: Chapter one"));
+}
+
+#[test]
+fn sends_the_problems_back_into_the_same_claude_session() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[BAD, GOOD]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let analysis = run(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 2);
+    let session = cli
+        .args(1)
+        .split_whitespace()
+        .skip_while(|word| *word != "--session-id")
+        .nth(1)
+        .unwrap()
+        .to_string();
+    let second = cli.args(2);
+    assert!(second.contains(&format!("--resume {session}")));
+    assert!(!second.contains("--session-id"));
+    let retry = cli.stdin(2);
+    assert!(retry.contains("Your reply breaks the ontology rules."));
+    assert!(
+        retry.contains(
+            "fact F1: resides_at needs a subject of type persona, but Harbor is a location"
+        )
+    );
+    assert!(!retry.contains("fact F2"));
+    assert!(!retry.contains("Chapter title:"));
+    assert_eq!(analysis.facts.len(), 1);
+    assert_eq!(analysis.facts[0].subject, "E1");
+    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
+}
+
+#[test]
+fn asks_again_when_the_reply_is_not_json() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &["I could not do it", GOOD]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let analysis = run(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 2);
+    assert!(
+        cli.stdin(2)
+            .contains("Your reply could not be used: The model did not return a JSON result.")
+    );
+    assert_eq!(analysis.entities.len(), 2);
+}
+
+#[test]
+fn keeps_the_valid_part_after_the_last_retry() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[BAD, BAD, BAD]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let analysis = run(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 3);
+    assert_eq!(analysis.entities.len(), 2);
+    assert_eq!(analysis.facts.len(), 1);
+    assert_eq!(analysis.facts[0].pred, "occupation");
+}
+
+#[test]
+fn fails_when_every_reply_is_unreadable() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &["no", "still no", "never"]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let result = run(&analyzer);
+
+    assert_eq!(cli.calls(), 3);
+    assert_eq!(
+        result,
+        Err(AnalyzeError::Failed(
+            "The model did not return a JSON result.".to_string()
+        ))
+    );
+}
+
+#[test]
+fn keeps_the_earlier_result_when_a_retry_call_fails() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[BAD]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let analysis = run(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 2);
+    assert_eq!(analysis.entities.len(), 2);
+    assert_eq!(analysis.facts.len(), 1);
+    assert_eq!(analysis.facts[0].pred, "occupation");
+}
+
+#[test]
+fn caps_the_listed_problems() {
+    let issues: Vec<String> = (1..=35).map(|number| format!("problem {number}")).collect();
+
+    let request = fix_request(&issues);
+
+    assert!(request.contains("- problem 30\n"));
+    assert!(!request.contains("problem 31"));
+    assert!(request.contains("- and 5 more problems of the same kind\n"));
+    assert!(request.contains("complete corrected JSON object"));
+}
+
+#[test]
+fn continues_a_codex_thread_with_resume() {
+    let dir = TempDir::new().unwrap();
+    let first = codex_message(BAD);
+    let second = codex_message(GOOD);
+    let cli = ScriptedCli::new(dir.path(), &[&first, &second]);
+    let analyzer = analyzer(&dir, Some(("codex", &cli.path)));
+
+    let analysis = run(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 2);
+    assert!(cli.args(1).contains("--json"));
+    assert!(!cli.args(1).contains("--ephemeral"));
+    let second = cli.args(2);
+    assert!(second.contains("exec resume"));
+    assert!(second.contains("thread-7"));
+    assert!(
+        cli.stdin(2)
+            .contains("Your reply breaks the ontology rules.")
+    );
+    assert_eq!(analysis.facts.len(), 1);
+}
+
+fn codex_message(reply: &str) -> String {
+    let message = serde_json::json!({
+        "type": "item.completed",
+        "item": {"id": "item_0", "type": "agent_message", "text": reply}
+    });
+    format!(
+        "{{\"type\":\"thread.started\",\"thread_id\":\"thread-7\"}}\n{{\"type\":\"turn.started\"}}\n{message}\n{{\"type\":\"turn.completed\"}}\n"
+    )
 }

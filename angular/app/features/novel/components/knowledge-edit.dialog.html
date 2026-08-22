@@ -51,7 +51,7 @@
                 <div class="field"><label [attr.for]="'ke-' + card.key + '-name'">{{ "novel.knowledge.edit.field.name" | t }}</label><input [id]="'ke-' + card.key + '-name'" class="input" autocomplete="off" data-testid="novel-knowledge-edit-name" [value]="entity.name" (input)="onName(card.key, $event)" (change)="onNameEnd(card.key, $event)">@if (!entity.name.trim()) { <span class="field-err" data-testid="novel-knowledge-edit-name-error">{{ "novel.knowledge.edit.name.required" | t }}</span> }</div>
                 <div class="field"><label [attr.for]="'ke-' + card.key + '-type'">{{ "novel.knowledge.edit.field.type" | t }}</label>
                   <select [id]="'ke-' + card.key + '-type'" class="select" data-testid="novel-knowledge-edit-type" (change)="onType(card.key, $event)">
-                    @for (type of types; track type.key) { <option [value]="type.key" [selected]="entity.type === type.key">{{ type.labelKey | t }}</option> }
+                    @for (type of types(); track type.key) { <option [value]="type.key" [selected]="entity.type === type.key">{{ type.labelKey | t }}</option> }
                   </select>
                   @if (entity.type === "character") { <span class="field-hint">{{ "novel.knowledge.type.character.hint" | t }}</span> }</div>
                 @for (list of card.lists; track list.field) {
@@ -108,10 +108,10 @@
                     <select [id]="'ke-' + card.key + '-pred'" class="select" data-testid="novel-knowledge-edit-pred" (change)="onPred(card.key, $event)">
                       @if (card.created) {
                         <optgroup [label]="'novel.knowledge.fact.scalar' | t">
-                          @for (pred of scalars; track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }
+                          @for (pred of scalars(); track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }
                         </optgroup>
                         <optgroup [label]="'novel.knowledge.fact.relationship' | t">
-                          @for (pred of relationships; track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }
+                          @for (pred of relationships(); track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }
                         </optgroup>
                       } @else {
                         @for (pred of card.preds; track pred.key) { <option [value]="pred.key" [selected]="fact.pred === pred.key">{{ pred.labelKey | t }}</option> }

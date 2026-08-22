@@ -5,6 +5,7 @@ import { applyEdits } from "@app/features/novel/novel.knowledge.draft";
 import { AnalyzedChapter, KnowledgeEdit, KnowledgeEditResult, KnowledgeItem, KnowledgeLang, WireKnowledge } from "@app/features/novel/novel.knowledge.models";
 import { PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest } from "@app/features/novel/novel.translation.models";
 import { batchesOf } from "@app/features/novel/novel.knowledge.rules";
+import { ONTOLOGY_VIEW } from "./novel-knowledge.ontology";
 import { CHARACTER_PREDICATE_FACT, KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS, chapterItems } from "./novel-knowledge.fixtures";
 import { TranslationScenario, handlersFor as translationHandlers } from "./novel-translation.mocks";
 import { IpcHandlers, screenProviders } from "./screen.mocks";
@@ -80,7 +81,7 @@ function langOf(args: Record<string, unknown>): KnowledgeLang {
 }
 
 function wireOf(state: MockState, lang: KnowledgeLang): WireKnowledge {
-  return { lang, items: clone(state.langs[lang].items), analyzed: clone(state.langs[lang].analyzed) };
+  return { lang, ontology: clone(ONTOLOGY_VIEW), items: clone(state.langs[lang].items), analyzed: clone(state.langs[lang].analyzed) };
 }
 
 function clearStale(target: LangState, chapters: number[]): void {

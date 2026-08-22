@@ -2,7 +2,7 @@
   <label class="search"><span class="sr-only">{{ "novel.knowledge.list.search" | t }}</span><input class="input" type="search" data-testid="novel-knowledge-list-search" [value]="view().q" [attr.placeholder]="'novel.knowledge.list.search.entity' | t" (input)="onField('q', $event)"></label>
   <select class="select" data-testid="novel-knowledge-list-type" [attr.aria-label]="'novel.knowledge.list.type' | t" (change)="onField('type', $event)">
     <option value="all" [selected]="view().type === 'all'">{{ "novel.knowledge.list.type.all" | t }}</option>
-    @for (type of entityTypes; track type.key) {
+    @for (type of entityTypes(); track type.key) {
       <option [value]="type.key" [selected]="view().type === type.key">{{ type.labelKey | t }}</option>
     }
   </select>

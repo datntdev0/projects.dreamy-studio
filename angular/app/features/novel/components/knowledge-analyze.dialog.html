@@ -90,10 +90,10 @@
     } @else {
       <div class="an-pane" data-testid="novel-knowledge-ontology-pane">
         <div class="onto-sum" data-testid="novel-knowledge-ontology-summary">
-          <div><b>{{ ontology.types }}</b><span>{{ "novel.knowledge.ontology.sum.types" | t }}</span></div>
-          <div><b>{{ ontology.scalars }}</b><span>{{ "novel.knowledge.ontology.sum.scalars" | t }}</span></div>
-          <div><b>{{ ontology.relationships }}</b><span>{{ "novel.knowledge.ontology.sum.relationships" | t }}</span></div>
-          <div><b>{{ ontology.rules }}</b><span>{{ "novel.knowledge.ontology.sum.rules" | t }}</span></div>
+          <div><b>{{ ontology().types }}</b><span>{{ "novel.knowledge.ontology.sum.types" | t }}</span></div>
+          <div><b>{{ ontology().scalars }}</b><span>{{ "novel.knowledge.ontology.sum.scalars" | t }}</span></div>
+          <div><b>{{ ontology().relationships }}</b><span>{{ "novel.knowledge.ontology.sum.relationships" | t }}</span></div>
+          <div><b>{{ ontology().rules }}</b><span>{{ "novel.knowledge.ontology.sum.rules" | t }}</span></div>
         </div>
         <p class="t-sm t-mute" data-testid="novel-knowledge-ontology-note">{{ "novel.knowledge.ontology.note" | t }} <span class="path">novels\{{ novel.id }}\ontology.yml</span></p>
         <pre class="yaml" tabindex="0" data-testid="novel-knowledge-ontology-yaml">@for (line of lines(); track $index) {<span [class.y-c]="line.comment">{{ line.text }}</span>

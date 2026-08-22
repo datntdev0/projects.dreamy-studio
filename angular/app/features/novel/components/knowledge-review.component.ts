@@ -6,7 +6,6 @@ import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { KnowledgeEdit, KnowledgeEvidence, KnowledgeIssue, KnowledgeItem, KnowledgeView, RuleCount, RuleDef, RuleId } from "../novel.knowledge.models";
-import { ruleDef } from "../novel.knowledge.ontology";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { chaptersOfItem, isEntity, isFact, itemText, mapOf, ruleCounts } from "../novel.knowledge.rules";
 import { toNovelError } from "../novel.rules";
@@ -68,7 +67,7 @@ export class NovelKnowledgeReview {
   async remove(issue: KnowledgeIssue): Promise<void> {
     const item = this.items().find((entry) => entry.id === issue.ids[0]);
     if (item) {
-      const name = itemText(mapOf(this.items()), item, this.text.bind(this));
+      const name = itemText(this.knowledge.ontology(), mapOf(this.items()), item, this.text.bind(this));
       await this.guard(this.knowledge.confirmRemove(this.novelId(), [item.id], name), "novel.knowledge.review.done.removed");
     }
   }
@@ -136,7 +135,7 @@ export class NovelKnowledgeReview {
 
   private optionOf(map: Map<string, KnowledgeItem>, id: string): IssueOption {
     const item = map.get(id);
-    return { id, label: item ? itemText(map, item, this.languageService.translate.bind(this.languageService)) : id };
+    return { id, label: item ? itemText(this.knowledge.ontology(), map, item, this.languageService.translate.bind(this.languageService)) : id };
   }
 
   private chipOf(map: Map<string, KnowledgeItem>, id: string): IssueChip {
@@ -158,12 +157,13 @@ export class NovelKnowledgeReview {
   }
 
   private buildCounts(): RuleCount[] {
-    return ruleCounts(this.issues());
+    return ruleCounts(this.knowledge.ontology(), this.issues());
   }
 
   private buildCards(): IssueCard[] {
     const view = this.view();
     const map = mapOf(this.items());
+    const ontology = this.knowledge.ontology();
     const out: IssueCard[] = [];
     for (const issue of this.issues()) {
       if (view.rule !== "all" && issue.rule !== view.rule) {
@@ -172,7 +172,7 @@ export class NovelKnowledgeReview {
       const first = map.get(issue.ids[0]);
       out.push({
         issue,
-        rule: ruleDef(issue.rule),
+        rule: ontology.ruleDef(issue.rule),
         chips: issue.ids.map(this.chipOf.bind(this, map)),
         personas: issue.rule === "character_predicate" ? issue.values.map(this.optionOf.bind(this, map)) : [],
         pair: issue.rule === "entity_duplicate" ? issue.ids.map(this.optionOf.bind(this, map)) : [],

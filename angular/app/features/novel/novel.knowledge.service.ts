@@ -8,7 +8,8 @@ import { NovelError } from "./novel.models";
 import { NovelService } from "./novel.service";
 import { toNovelError } from "./novel.rules";
 import { NovelTranslationService, ANALYSIS_KIND } from "./novel.translation.service";
-import { KnowledgeEdit, KnowledgeEditResult, KnowledgeIssue, KnowledgeLang, KnowledgeTab, KnowledgeView, KnowledgeVisibility, NovelKnowledge, WireKnowledge } from "./novel.knowledge.models";
+import { KnowledgeEdit, KnowledgeEditResult, KnowledgeIssue, KnowledgeLang, KnowledgeTab, KnowledgeView, KnowledgeVisibility, NovelKnowledge, OntologyView, WireKnowledge } from "./novel.knowledge.models";
+import { EMPTY_ONTOLOGY, Ontology, buildOntology } from "./novel.knowledge.ontology";
 import { EMPTY_KNOWLEDGE, checkKnowledge, emptyView, visibilityOf } from "./novel.knowledge.rules";
 import { targetsOf } from "./novel.translation.rules";
 
@@ -28,6 +29,7 @@ export class NovelKnowledgeService {
   private readonly views = signal<Record<number, KnowledgeView>>({});
   private workspacePath: string | null | undefined = undefined;
 
+  readonly ontology = signal<Ontology>(EMPTY_ONTOLOGY);
   readonly loading = signal(false);
   readonly error = signal<NovelError | null>(null);
 
@@ -66,7 +68,7 @@ export class NovelKnowledgeService {
   }
 
   issuesOf(novelId: number): KnowledgeIssue[] {
-    return checkKnowledge(this.of(novelId).items, this.translate.bind(this));
+    return checkKnowledge(this.ontology(), this.of(novelId).items, this.translate.bind(this));
   }
 
   visibleOf(novelId: number): KnowledgeVisibility {
@@ -156,6 +158,7 @@ export class NovelKnowledgeService {
   reset(): void {
     this.store.set({});
     this.views.set({});
+    this.ontology.set(EMPTY_ONTOLOGY);
     this.loading.set(false);
     this.error.set(null);
   }
@@ -164,7 +167,15 @@ export class NovelKnowledgeService {
     return this.languageService.translate(key, params);
   }
 
+  private storeOntology(view: OntologyView): void {
+    const current = this.ontology();
+    if (current.version !== view.version || current.yaml !== view.yaml) {
+      this.ontology.set(buildOntology(view));
+    }
+  }
+
   private storeKnowledge(novelId: number, lang: KnowledgeLang, wire: WireKnowledge): void {
+    this.storeOntology(wire.ontology);
     this.store.set({ ...this.store(), [storeKey(novelId, lang)]: { lang, items: wire.items, analyzed: wire.analyzed } });
   }
 

@@ -11,7 +11,7 @@ import { LlmFeature, LlmProvider } from "../../settings/settings.models";
 import { SettingsService } from "../../settings/settings.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { AnalyzeMode, AnalyzeSummary, KnowledgeLang } from "../novel.knowledge.models";
-import { BATCH_SIZE, ENTITY_TYPES, PREDICATES, RULES, ontologyYaml } from "../novel.knowledge.ontology";
+import { BATCH_SIZE } from "../novel.knowledge.ontology";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { planAnalysis } from "../novel.knowledge.rules";
 import { ChapterRow, NovelLang, NovelSummary, TargetLang } from "../novel.models";
@@ -37,6 +37,13 @@ export interface YamlLine {
   comment: boolean;
 }
 
+export interface OntologySummary {
+  types: number;
+  scalars: number;
+  relationships: number;
+  rules: number;
+}
+
 type AnalyzeTab = "analyze" | "ontology";
 
 const MODES: AnalyzeMode[] = ["missing", "range", "all"];
@@ -58,12 +65,6 @@ export class NovelKnowledgeAnalyzeDialog {
   private readonly toasts = inject(ToastService);
   private readonly languageService = inject(LanguageService);
 
-  readonly ontology = {
-    types: ENTITY_TYPES.length,
-    scalars: PREDICATES.filter((item) => item.kind === "scalar").length,
-    relationships: PREDICATES.filter((item) => item.kind === "relationship").length,
-    rules: RULES.length,
-  };
   readonly tab = signal<AnalyzeTab>("analyze");
   readonly modes = MODES;
   readonly batchSize = BATCH_SIZE;
@@ -86,6 +87,7 @@ export class NovelKnowledgeAnalyzeDialog {
   readonly provider = computed(this.buildProvider.bind(this));
   readonly canStart = computed(this.buildCanStart.bind(this));
   readonly tabs = computed(this.buildTabs.bind(this));
+  readonly ontology = computed(this.buildOntology.bind(this));
   readonly lines = computed(this.buildLines.bind(this));
   readonly effectiveOverwrite = computed(this.buildOverwrite.bind(this));
 
@@ -150,7 +152,7 @@ export class NovelKnowledgeAnalyzeDialog {
 
   async copy(): Promise<void> {
     try {
-      await navigator.clipboard.writeText(ontologyYaml());
+      await navigator.clipboard.writeText(this.knowledge.ontology().yaml);
       this.toasts.show(this.languageService.translate("novel.knowledge.ontology.copied"));
     } catch {
       this.toasts.show(this.languageService.translate("novel.knowledge.ontology.copyFailed"), "warning");
@@ -187,8 +189,13 @@ export class NovelKnowledgeAnalyzeDialog {
     ];
   }
 
+  private buildOntology(): OntologySummary {
+    const ontology = this.knowledge.ontology();
+    return { types: ontology.types.length, scalars: ontology.scalars.length, relationships: ontology.relationships.length, rules: ontology.rules.length };
+  }
+
   private buildLines(): YamlLine[] {
-    return ontologyYaml().split("\n").map((text) => ({ text, comment: text.trimStart().startsWith("#") }));
+    return this.knowledge.ontology().yaml.split("\n").map((text) => ({ text, comment: text.trimStart().startsWith("#") }));
   }
 
   private buildOpen(): boolean {

@@ -4,7 +4,6 @@ import { LanguageKey } from "@app/core/language/language.models";
 import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { KnowledgeView } from "../novel.knowledge.models";
-import { ENTITY_TYPES } from "../novel.knowledge.ontology";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
 import { entitiesOf, flaggedIds, graphLinks, predicateLabel } from "../novel.knowledge.rules";
@@ -44,7 +43,7 @@ export class NovelKnowledgeGraph {
   }
 
   private predText(pred: string): string {
-    return predicateLabel(pred, this.text.bind(this));
+    return predicateLabel(this.knowledge.ontology(), pred, this.text.bind(this));
   }
 
   private buildView(): KnowledgeView {
@@ -60,7 +59,7 @@ export class NovelKnowledgeGraph {
   }
 
   private buildGroups(): GraphGroup[] {
-    return ENTITY_TYPES.map((type) => ({ key: type.key, label: this.text(type.labelKey), color: type.color }));
+    return this.knowledge.ontology().types.map((type) => ({ key: type.key, label: this.text(type.labelKey), color: type.color }));
   }
 
   private buildFlagged(): string[] {

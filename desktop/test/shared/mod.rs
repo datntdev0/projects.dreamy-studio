@@ -1,3 +1,4 @@
+pub mod analyzer;
 pub mod backend;
 pub mod job;
 pub mod package;

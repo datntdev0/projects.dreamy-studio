@@ -57,6 +57,28 @@ fn script(dir: &TempDir, stdout: &str, stderr: &str, code: i32) -> String {
     }
 }
 
+fn client(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmClient {
+    let repository = SettingsRepository::new(dir.path().join("settings.json"));
+    let mut settings = AppSettings::default();
+    if let Some((id, path)) = provider {
+        settings.llm.providers.insert(
+            id.to_string(),
+            CliSettings {
+                path: Some(path.to_string()),
+            },
+        );
+        settings.llm.features.insert(
+            "knowledge".to_string(),
+            FeatureSettings {
+                provider: Some(id.to_string()),
+                ..FeatureSettings::default()
+            },
+        );
+    }
+    repository.save(&settings).unwrap();
+    LlmClient::new(repository, "knowledge", "knowledge analysis")
+}
+
 fn translator(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmTranslator {
     let repository = SettingsRepository::new(dir.path().join("settings.json"));
     let mut settings = AppSettings::default();
@@ -265,6 +287,108 @@ fn reports_the_cli_failure_detail() {
 
     match result {
         Err(TranslateError::Failed(message)) => {
+            assert!(message.contains("Codex CLI exited"));
+            assert!(message.contains("not signed in"));
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
+}
+
+#[test]
+fn client_names_its_label_when_no_provider_is_set() {
+    let dir = TempDir::new().unwrap();
+    let client = client(&dir, None);
+
+    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(false));
+
+    match result {
+        Err(ClientError::Failed(message)) => assert_eq!(
+            message,
+            "No LLM provider is set for knowledge analysis. Choose one in Settings > LLM."
+        ),
+        other => panic!("unexpected result: {other:?}"),
+    }
+}
+
+#[test]
+fn client_rejects_a_cli_without_the_feature() {
+    let dir = TempDir::new().unwrap();
+    let repository = SettingsRepository::new(dir.path().join("settings.json"));
+    let mut settings = AppSettings::default();
+    settings.llm.features.insert(
+        "knowledge".to_string(),
+        FeatureSettings {
+            provider: Some("unknown".to_string()),
+            ..FeatureSettings::default()
+        },
+    );
+    repository.save(&settings).unwrap();
+    let client = LlmClient::new(repository, "knowledge", "knowledge analysis");
+
+    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(false));
+
+    match result {
+        Err(ClientError::Failed(message)) => {
+            assert_eq!(message, "unknown cannot be used for knowledge analysis.")
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
+}
+
+#[test]
+fn client_rejects_an_unsupported_cli_with_its_label() {
+    let error = build_args(
+        ANTIGRAVITY,
+        &FeatureSettings::default(),
+        "knowledge analysis",
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        error,
+        "Antigravity CLI cannot be used for knowledge analysis yet."
+    );
+}
+
+#[test]
+fn client_is_cancelled_before_it_resolves_anything() {
+    let dir = TempDir::new().unwrap();
+    let client = client(&dir, None);
+
+    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(true));
+
+    assert!(matches!(result, Err(ClientError::Cancelled)));
+}
+
+#[test]
+fn client_returns_the_stdout_text() {
+    let dir = TempDir::new().unwrap();
+    let path = script(&dir, "analysis result", "", 0);
+    let client = client(&dir, Some(("claude", &path)));
+    let reported = std::sync::Mutex::new(Vec::new());
+
+    let text = client
+        .complete(
+            "prompt".to_string(),
+            &|value| reported.lock().unwrap().push(value),
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    assert!(text.contains("analysis result"));
+    assert_eq!(*reported.lock().unwrap(), [10]);
+}
+
+#[test]
+fn client_reports_the_cli_failure_detail() {
+    let dir = TempDir::new().unwrap();
+    let path = script(&dir, "", "not signed in", 3);
+    let client = client(&dir, Some(("codex", &path)));
+
+    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(false));
+
+    match result {
+        Err(ClientError::Failed(message)) => {
             assert!(message.contains("Codex CLI exited"));
             assert!(message.contains("not signed in"));
         }

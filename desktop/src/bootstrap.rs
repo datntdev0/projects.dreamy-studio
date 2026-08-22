@@ -5,9 +5,12 @@ use tauri::RunEvent;
 
 use crate::commands;
 use crate::container::AppContainer;
+use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::service::NovelService;
+use crate::features::pipeline::analyzer::LlmAnalyzer;
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::job::JobRegistry;
+use crate::features::pipeline::jobs::analysis::AnalysisJobFactory;
 use crate::features::pipeline::jobs::translation::TranslationJobFactory;
 use crate::features::pipeline::llm::LlmTranslator;
 use crate::features::settings::models::Theme;
@@ -200,19 +203,33 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(service);
     app.manage(loader);
     app.manage(NovelService::new());
+    manage_pipeline(app, container);
+    app.manage(crate::features::project::service::ProjectService::new());
+    app.manage(crate::features::library::service::LibraryService::new());
+}
+
+fn manage_pipeline(app: &App, container: &AppContainer) {
     let translation = crate::features::translation::service::TranslationService::new();
     let translator = std::sync::Arc::new(LlmTranslator::new(SettingsRepository::new(
         container.settings_path.clone(),
     )));
+    let knowledge = KnowledgeService::new();
+    let analyzer = std::sync::Arc::new(LlmAnalyzer::new(SettingsRepository::new(
+        container.settings_path.clone(),
+    )));
     app.manage(translation.clone());
-    app.manage(crate::features::knowledge::service::KnowledgeService::new());
+    app.manage(knowledge.clone());
     app.manage(PipelineExecutor::new());
-    app.manage(JobRegistry::new().register(std::sync::Arc::new(TranslationJobFactory::new(
-        translation,
-        translator,
-    ))));
-    app.manage(crate::features::project::service::ProjectService::new());
-    app.manage(crate::features::library::service::LibraryService::new());
+    app.manage(
+        JobRegistry::new()
+            .register(std::sync::Arc::new(TranslationJobFactory::new(
+                translation,
+                translator,
+            )))
+            .register(std::sync::Arc::new(AnalysisJobFactory::new(
+                knowledge, analyzer,
+            ))),
+    );
 }
 
 fn log_startup(app: &App, container: &AppContainer) {

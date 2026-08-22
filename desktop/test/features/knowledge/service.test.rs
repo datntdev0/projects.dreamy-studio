@@ -566,3 +566,259 @@ fn stale_accept_rejects_empty_lists_and_unknown_langs() {
     assert_eq!(empty.code, KnowledgeErrorCode::InvalidInput);
     assert_eq!(lang.code, KnowledgeErrorCode::InvalidInput);
 }
+
+fn three_chapters(fixture: &Fixture) -> (i64, Vec<String>) {
+    let novel = fixture.novel.create(novel_input()).unwrap();
+    let mut ids = Vec::new();
+    for title in ["One", "Two", "Three"] {
+        let chapter = fixture.novel.chapter_add(novel.id, title).unwrap();
+        fixture
+            .novel
+            .paragraph_add(novel.id, &chapter.id, TEXT)
+            .unwrap();
+        ids.push(chapter.id);
+    }
+    (novel.id, ids)
+}
+
+fn persona_of(id: &str, subject: &str, object: &str) -> AnalysisFact {
+    AnalysisFact {
+        id: id.to_string(),
+        pred: "persona_of".to_string(),
+        subject: subject.to_string(),
+        object: Some(object.to_string()),
+        ev: Vec::new(),
+    }
+}
+
+fn save(fixture: &Fixture, novel_id: i64, chapter_id: &str, analysis: ChapterAnalysis) {
+    fixture
+        .knowledge
+        .save_analysis(novel_id, KnowledgeLang::Src, chapter_id, analysis)
+        .unwrap();
+}
+
+fn saved_story(fixture: &Fixture) -> (i64, Vec<String>) {
+    let (novel_id, ids) = three_chapters(fixture);
+    let quote = || vec![evidence(1, "Lin Mo")];
+    let first = analysis(
+        "ignored",
+        vec![
+            entity("E1", "persona", "Wren", quote()),
+            entity("E2", "character", "Wren Aldous", Vec::new()),
+            entity("E3", "location", "Hall", quote()),
+        ],
+        vec![persona_of("F1", "E1", "E2")],
+    );
+    let second = analysis(
+        "ignored",
+        vec![
+            entity("E1", "persona", "wren", quote()),
+            entity("E2", "persona", "Ash", quote()),
+        ],
+        Vec::new(),
+    );
+    let third = analysis(
+        "ignored",
+        vec![entity("E1", "persona", "Late", quote())],
+        Vec::new(),
+    );
+    save(fixture, novel_id, &ids[0], first);
+    save(fixture, novel_id, &ids[1], second);
+    save(fixture, novel_id, &ids[2], third);
+    (novel_id, ids)
+}
+
+fn names(known: &[KnownEntity]) -> Vec<&str> {
+    known.iter().map(|entity| entity.name.as_str()).collect()
+}
+
+#[test]
+fn save_analysis_sets_the_ontology_hash_and_timestamp() {
+    let fixture = fixture();
+    let (novel_id, ids) = two_chapters(&fixture);
+    let stale = ChapterAnalysis {
+        ontology: 99,
+        source_hash: "bogus".to_string(),
+        analyzed_at: "never".to_string(),
+        ..analysis(
+            "x",
+            vec![entity("E1", "persona", "Wren", Vec::new())],
+            Vec::new(),
+        )
+    };
+
+    fixture
+        .knowledge
+        .save_analysis(novel_id, KnowledgeLang::Src, &ids[0], stale)
+        .unwrap();
+
+    let saved = KnowledgeFiles::new(fixture.knowledge.dir().to_path_buf())
+        .read(novel_id, KnowledgeLang::Src, &ids[0])
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved.ontology, 1);
+    assert_eq!(saved.source_hash, text_hash(&[TEXT.to_string()]));
+    assert!(saved.analyzed_at.ends_with('Z'));
+    assert_ne!(saved.analyzed_at, "never");
+    assert_eq!(saved.entities.len(), 1);
+    assert!(!fixture.knowledge.get(novel_id, "src").unwrap().analyzed[&1].stale);
+}
+
+#[test]
+fn save_analysis_overwrites_the_previous_file() {
+    let fixture = fixture();
+    let (novel_id, ids) = two_chapters(&fixture);
+    save(
+        &fixture,
+        novel_id,
+        &ids[0],
+        analysis(
+            "x",
+            vec![entity("E1", "persona", "Wren", Vec::new())],
+            Vec::new(),
+        ),
+    );
+
+    save(
+        &fixture,
+        novel_id,
+        &ids[0],
+        analysis(
+            "x",
+            vec![entity("E1", "persona", "Ash", Vec::new())],
+            Vec::new(),
+        ),
+    );
+
+    let knowledge = fixture.knowledge.get(novel_id, "src").unwrap();
+    let names: Vec<&str> = entities_of(&knowledge)
+        .iter()
+        .map(|entity| entity.name.as_str())
+        .collect();
+    assert_eq!(names, vec!["Ash"]);
+}
+
+#[test]
+fn save_analysis_rejects_unknown_novels_and_chapters() {
+    let fixture = fixture();
+    let (novel_id, _) = two_chapters(&fixture);
+    let empty = || analysis("x", Vec::new(), Vec::new());
+
+    let chapter = fixture
+        .knowledge
+        .save_analysis(
+            novel_id,
+            KnowledgeLang::Src,
+            "0123456789abcdef0123456789abcdef",
+            empty(),
+        )
+        .unwrap_err();
+    let novel = fixture
+        .knowledge
+        .save_analysis(novel_id + 100, KnowledgeLang::Src, "x", empty())
+        .unwrap_err();
+
+    assert_eq!(chapter.code, KnowledgeErrorCode::NotFound);
+    assert_eq!(novel.code, KnowledgeErrorCode::NotFound);
+}
+
+#[test]
+fn save_analysis_requires_chapter_text_for_the_lang() {
+    let fixture = fixture();
+    let (novel_id, ids) = two_chapters(&fixture);
+
+    let error = fixture
+        .knowledge
+        .save_analysis(
+            novel_id,
+            KnowledgeLang::Vi,
+            &ids[0],
+            analysis("x", Vec::new(), Vec::new()),
+        )
+        .unwrap_err();
+
+    assert_eq!(error.code, KnowledgeErrorCode::NotFound);
+    assert_eq!(error.detail, "chapter has no text for this language");
+    assert!(
+        KnowledgeFiles::new(fixture.knowledge.dir().to_path_buf())
+            .read(novel_id, KnowledgeLang::Vi, &ids[0])
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn known_entities_only_come_from_earlier_chapters() {
+    let fixture = fixture();
+    let (novel_id, _) = saved_story(&fixture);
+
+    let before_third = fixture
+        .knowledge
+        .known_entities(novel_id, KnowledgeLang::Src, 3, 50)
+        .unwrap();
+    let before_second = fixture
+        .knowledge
+        .known_entities(novel_id, KnowledgeLang::Src, 2, 50)
+        .unwrap();
+    let before_first = fixture
+        .knowledge
+        .known_entities(novel_id, KnowledgeLang::Src, 1, 50)
+        .unwrap();
+
+    assert!(!names(&before_third).contains(&"Late"));
+    assert!(names(&before_third).contains(&"Ash"));
+    assert!(!names(&before_second).contains(&"Ash"));
+    assert_eq!(before_second.len(), 3);
+    assert!(before_first.is_empty());
+}
+
+#[test]
+fn known_entities_are_ordered_by_evidence_and_fill_the_character() {
+    let fixture = fixture();
+    let (novel_id, _) = saved_story(&fixture);
+
+    let known = fixture
+        .knowledge
+        .known_entities(novel_id, KnowledgeLang::Src, 3, 50)
+        .unwrap();
+
+    assert_eq!(known.len(), 4);
+    assert_eq!(known[0].name, "Wren");
+    assert_eq!(known[0].kind, "persona");
+    assert_eq!(known[0].character.as_deref(), Some("Wren Aldous"));
+    assert_eq!(known[3].name, "Wren Aldous");
+    assert_eq!(known[3].kind, "character");
+    assert!(known[1..].iter().all(|entity| entity.character.is_none()));
+}
+
+#[test]
+fn known_entities_are_capped_by_the_limit() {
+    let fixture = fixture();
+    let (novel_id, _) = saved_story(&fixture);
+
+    let two = fixture
+        .knowledge
+        .known_entities(novel_id, KnowledgeLang::Src, 3, 2)
+        .unwrap();
+    let none = fixture
+        .knowledge
+        .known_entities(novel_id, KnowledgeLang::Src, 3, 0)
+        .unwrap();
+
+    assert_eq!(two.len(), 2);
+    assert_eq!(two[0].name, "Wren");
+    assert!(none.is_empty());
+}
+
+#[test]
+fn known_entities_of_an_unknown_novel_are_not_found() {
+    let fixture = fixture();
+
+    let error = fixture
+        .knowledge
+        .known_entities(99, KnowledgeLang::Src, 3, 10)
+        .unwrap_err();
+
+    assert_eq!(error.code, KnowledgeErrorCode::NotFound);
+}

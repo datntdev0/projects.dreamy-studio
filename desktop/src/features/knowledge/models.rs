@@ -50,6 +50,15 @@ pub struct AnalysisEvidence {
     pub q: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KnownEntity {
+    pub kind: String,
+    pub name: String,
+    pub titles: Vec<String>,
+    pub aliases: Vec<String>,
+    pub character: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KnowledgeEvidence {

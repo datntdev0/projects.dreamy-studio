@@ -4,10 +4,13 @@ use crate::commands::workspace::perform_load;
 use crate::container::AppContainer;
 use crate::features::novel::models::NovelInput;
 use crate::features::novel::service::NovelService;
+use crate::features::knowledge::models::KnowledgeLang;
+use crate::features::knowledge::service::KnowledgeService;
 use crate::features::pipeline::models::PipelineEvent;
 use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::pipeline::job::JobFactory;
 use crate::features::pipeline::job::PipelineJob;
+use crate::features::pipeline::jobs::analysis::AnalysisJobFactory;
 use crate::features::pipeline::jobs::translation::TranslationJobFactory;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::translation::service::TranslationService;
@@ -20,6 +23,7 @@ use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
+use crate::testing::analyzer::FakeAnalyzer;
 use crate::testing::backend::StubBackend;
 use crate::testing::translator::FakeTranslator;
 use chrono::Utc;
@@ -79,10 +83,24 @@ impl JobFactory for ProbeFactory {
 }
 
 fn registry() -> JobRegistry {
-    JobRegistry::new().register(Arc::new(TranslationJobFactory::new(
-        TranslationService::new(),
-        Arc::new(FakeTranslator::with_delay(Duration::ZERO)),
-    )))
+    JobRegistry::new()
+        .register(Arc::new(TranslationJobFactory::new(
+            TranslationService::new(),
+            Arc::new(FakeTranslator::with_delay(Duration::ZERO)),
+        )))
+        .register(Arc::new(AnalysisJobFactory::new(
+            KnowledgeService::new(),
+            Arc::new(FakeAnalyzer::new()),
+        )))
+}
+
+fn analysis_request(novel_id: i64, lang: Option<&str>) -> JobRequest {
+    JobRequest {
+        kind: Some("analysis".to_string()),
+        novel_id,
+        lang: lang.map(str::to_string),
+        ..JobRequest::default()
+    }
 }
 
 fn request(novel_id: i64, target: Option<&str>) -> JobRequest {
@@ -473,4 +491,152 @@ fn params_must_be_an_object() {
     let error = job_params(None, None, Some(json!([1]))).unwrap_err();
 
     assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+}
+
+fn start_analysis(
+    fixture: &Fixture,
+    request: JobRequest,
+    tasks: Vec<TaskRequest>,
+) -> PipelineResult<PipelineSnapshot> {
+    start_pipeline(
+        &PipelineExecutor::new(),
+        &registry(),
+        &fixture.session,
+        request,
+        tasks,
+        Arc::new(RecordingTarget::default()),
+    )
+}
+
+#[test]
+fn an_analysis_starts_with_a_lang_and_stores_the_result() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+    let executor = PipelineExecutor::new();
+    let translated = Arc::new(RecordingTarget::default());
+    start_pipeline(
+        &executor,
+        &registry(),
+        &fixture.session,
+        request(novel_id, Some("VI")),
+        task_of(&chapter_id),
+        translated.clone(),
+    )
+    .unwrap();
+    translated.wait_for_finished();
+    let sink = Arc::new(RecordingTarget::default());
+
+    let snapshot = start_pipeline(
+        &executor,
+        &registry(),
+        &fixture.session,
+        analysis_request(novel_id, Some("VI")),
+        task_of(&chapter_id),
+        sink.clone(),
+    )
+    .unwrap();
+
+    assert_eq!(snapshot.kind, "analysis");
+    assert_eq!(snapshot.target, "VI");
+    assert_eq!(snapshot.novel_id, novel_id);
+    let finished = sink.wait_for_finished();
+    assert_eq!(finished.status, PipelineStatus::Completed);
+    let stored = KnowledgeService::new()
+        .open(&fixture.session)
+        .unwrap()
+        .load_chapters(novel_id, KnowledgeLang::Vi)
+        .unwrap();
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0].id, chapter_id);
+}
+
+#[test]
+fn an_analysis_of_the_source_text_needs_no_translation() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+    let sink = Arc::new(RecordingTarget::default());
+
+    let snapshot = start_pipeline(
+        &PipelineExecutor::new(),
+        &registry(),
+        &fixture.session,
+        analysis_request(novel_id, Some("src")),
+        task_of(&chapter_id),
+        sink.clone(),
+    )
+    .unwrap();
+
+    assert_eq!(snapshot.target, "src");
+    assert_eq!(sink.wait_for_finished().status, PipelineStatus::Completed);
+}
+
+#[test]
+fn an_analysis_without_a_lang_is_invalid_input() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+
+    let error = start_analysis(
+        &fixture,
+        analysis_request(novel_id, None),
+        task_of(&chapter_id),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+    assert_eq!(error.detail, "lang is required");
+}
+
+#[test]
+fn an_analysis_with_an_unsupported_lang_is_invalid_input() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+
+    let error = start_analysis(
+        &fixture,
+        analysis_request(novel_id, Some("FR")),
+        task_of(&chapter_id),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+    assert_eq!(error.detail, "unsupported lang 'FR'");
+}
+
+#[test]
+fn an_analysis_of_an_unknown_novel_is_not_found() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+
+    let error = start_analysis(
+        &fixture,
+        analysis_request(novel_id + 100, Some("src")),
+        task_of(&chapter_id),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::NotFound);
+}
+
+#[test]
+fn an_analysis_reads_the_lang_from_params() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+    let mut job = analysis_request(novel_id, None);
+    job.params = Some(json!({ "lang": "src" }));
+
+    let sink = Arc::new(RecordingTarget::default());
+
+    let snapshot = start_pipeline(
+        &PipelineExecutor::new(),
+        &registry(),
+        &fixture.session,
+        job,
+        task_of(&chapter_id),
+        sink.clone(),
+    )
+    .unwrap();
+
+    assert_eq!(snapshot.kind, "analysis");
+    assert_eq!(snapshot.target, "src");
+    assert_eq!(sink.wait_for_finished().status, PipelineStatus::Completed);
 }

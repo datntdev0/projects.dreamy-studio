@@ -1,3 +1,4 @@
+pub mod analyzer;
 pub mod executor;
 pub mod job;
 pub mod jobs;

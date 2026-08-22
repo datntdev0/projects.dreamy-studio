@@ -38,16 +38,70 @@ const FINISHED_PROGRESS: u8 = 100;
 
 #[derive(Debug, Clone)]
 pub struct LlmTranslator {
-    repository: SettingsRepository,
-    timeout: Duration,
+    client: LlmClient,
 }
 
 impl LlmTranslator {
     pub fn new(repository: SettingsRepository) -> Self {
         Self {
+            client: LlmClient::new(repository, FEATURE, FEATURE),
+        }
+    }
+}
+
+impl Translator for LlmTranslator {
+    fn translate(
+        &self,
+        job: &TranslateJob,
+        progress: &dyn Fn(u8),
+        cancel: &AtomicBool,
+    ) -> Result<TranslatedRun, TranslateError> {
+        let text = self.client.complete(build_prompt(job), progress, cancel)?;
+        let run = parse_output(&text, job).map_err(TranslateError::Failed)?;
+        progress(FINISHED_PROGRESS);
+        Ok(run)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LlmClient {
+    repository: SettingsRepository,
+    feature: &'static str,
+    label: &'static str,
+    timeout: Duration,
+}
+
+impl LlmClient {
+    pub(crate) fn new(
+        repository: SettingsRepository,
+        feature: &'static str,
+        label: &'static str,
+    ) -> Self {
+        Self {
             repository,
+            feature,
+            label,
             timeout: RUN_TIMEOUT,
         }
+    }
+
+    pub(crate) fn complete(
+        &self,
+        prompt: String,
+        progress: &dyn Fn(u8),
+        cancel: &AtomicBool,
+    ) -> Result<String, ClientError> {
+        if cancel.load(Ordering::SeqCst) {
+            return Err(ClientError::Cancelled);
+        }
+        let provider = self.resolve()?;
+        let command = self.command(&provider)?;
+        progress(STARTED_PROGRESS);
+        let output = run(command, prompt, self.timeout, cancel)?;
+        if !output.success {
+            return Err(failed(failure_detail(provider.cli, &output)));
+        }
+        Ok(output.stdout)
     }
 
     fn data_dir(&self) -> PathBuf {
@@ -58,19 +112,22 @@ impl LlmTranslator {
             .unwrap_or_default()
     }
 
-    fn resolve(&self) -> Result<Provider, TranslateError> {
+    fn resolve(&self) -> Result<Provider, ClientError> {
         let settings = self
             .repository
             .load()
             .map_err(|error| failed(error.to_string()))?
             .llm;
-        let feature = settings.feature(FEATURE).normalized();
+        let feature = settings.feature(self.feature).normalized();
         let id = feature.provider.clone().ok_or_else(|| {
-            failed("No LLM provider is set for translation. Choose one in Settings > LLM.")
+            failed(format!(
+                "No LLM provider is set for {}. Choose one in Settings > LLM.",
+                self.label
+            ))
         })?;
         let cli = spec(&id)
-            .filter(|cli| cli.caps.contains(&FEATURE))
-            .ok_or_else(|| failed(format!("{id} cannot be used for translation.")))?;
+            .filter(|cli| cli.caps.contains(&self.feature))
+            .ok_or_else(|| failed(format!("{id} cannot be used for {}.", self.label)))?;
         let configured = settings.provider(&id).normalized();
         let path = locate(cli, configured.path()).ok_or_else(|| {
             failed(format!(
@@ -78,11 +135,11 @@ impl LlmTranslator {
                 cli.name
             ))
         })?;
-        let args = invocation_args(cli, &feature).map_err(failed)?;
+        let args = build_args(cli, &feature, self.label).map_err(failed)?;
         Ok(Provider { cli, path, args })
     }
 
-    fn command(&self, provider: &Provider) -> Result<Command, TranslateError> {
+    fn command(&self, provider: &Provider) -> Result<Command, ClientError> {
         let data_dir = self.data_dir();
         prepare(provider.cli, &data_dir).map_err(failed)?;
         let work = data_dir.join(LLM_DIR).join(WORK_DIR);
@@ -103,26 +160,18 @@ impl LlmTranslator {
     }
 }
 
-impl Translator for LlmTranslator {
-    fn translate(
-        &self,
-        job: &TranslateJob,
-        progress: &dyn Fn(u8),
-        cancel: &AtomicBool,
-    ) -> Result<TranslatedRun, TranslateError> {
-        if cancel.load(Ordering::SeqCst) {
-            return Err(TranslateError::Cancelled);
+#[derive(Debug)]
+pub(crate) enum ClientError {
+    Cancelled,
+    Failed(String),
+}
+
+impl From<ClientError> for TranslateError {
+    fn from(error: ClientError) -> Self {
+        match error {
+            ClientError::Cancelled => TranslateError::Cancelled,
+            ClientError::Failed(message) => TranslateError::Failed(message),
         }
-        let provider = self.resolve()?;
-        let command = self.command(&provider)?;
-        progress(STARTED_PROGRESS);
-        let output = run(command, build_prompt(job), self.timeout, cancel)?;
-        if !output.success {
-            return Err(failed(failure_detail(provider.cli, &output)));
-        }
-        let run = parse_output(&output.stdout, job).map_err(failed)?;
-        progress(FINISHED_PROGRESS);
-        Ok(run)
     }
 }
 
@@ -146,11 +195,19 @@ struct Reply {
     paragraphs: Vec<String>,
 }
 
-fn failed(message: impl Into<String>) -> TranslateError {
-    TranslateError::Failed(message.into())
+fn failed(message: impl Into<String>) -> ClientError {
+    ClientError::Failed(message.into())
 }
 
 pub fn invocation_args(cli: &CliSpec, feature: &FeatureSettings) -> Result<Vec<String>, String> {
+    build_args(cli, feature, FEATURE)
+}
+
+fn build_args(
+    cli: &CliSpec,
+    feature: &FeatureSettings,
+    label: &str,
+) -> Result<Vec<String>, String> {
     let mut args: Vec<String> = match cli.id {
         "claude" => ["-p", "--output-format", "text", "--no-session-persistence"]
             .into_iter()
@@ -166,7 +223,7 @@ pub fn invocation_args(cli: &CliSpec, feature: &FeatureSettings) -> Result<Vec<S
         ]
         .map(String::from)
         .to_vec(),
-        _ => return Err(format!("{} cannot translate yet.", cli.name)),
+        _ => return Err(format!("{} cannot be used for {label} yet.", cli.name)),
     };
     if let Some(model) = &feature.model {
         args.extend(model_args(cli.id, model));
@@ -308,7 +365,7 @@ fn run(
     prompt: String,
     timeout: Duration,
     cancel: &AtomicBool,
-) -> Result<Captured, TranslateError> {
+) -> Result<Captured, ClientError> {
     let mut child = command
         .spawn()
         .map_err(|error| failed(format!("Could not run the command: {error}")))?;
@@ -349,14 +406,14 @@ fn wait(
     child: &mut Child,
     timeout: Duration,
     cancel: &AtomicBool,
-) -> Result<ExitStatus, TranslateError> {
+) -> Result<ExitStatus, ClientError> {
     let deadline = Instant::now() + timeout;
     loop {
         match child.try_wait() {
             Ok(Some(status)) => return Ok(status),
             Ok(None) if cancel.load(Ordering::SeqCst) => {
                 stop(child);
-                return Err(TranslateError::Cancelled);
+                return Err(ClientError::Cancelled);
             }
             Ok(None) if Instant::now() >= deadline => {
                 stop(child);

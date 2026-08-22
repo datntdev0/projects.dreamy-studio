@@ -3,6 +3,7 @@ use crate::features::novel::repository::NovelRepository;
 use crate::features::pipeline::job::JobFactory;
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::job::TaskOutcome;
+use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineResult;
@@ -171,18 +172,29 @@ impl PipelineJob for TranslationJob {
     fn run(
         &self,
         task: &PipelineTask,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<(), TaskOutcome> {
         let job = self.build_job(task)?;
+        log.line(&format!(
+            "translating \"{}\" into {}: {} paragraphs, {} dictionary entries",
+            job.title,
+            job.target,
+            job.paragraphs.len(),
+            job.dict.len()
+        ));
         let translated = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            self.translator.translate(&job, progress, cancel)
+            self.translator.translate(&job, log, progress, cancel)
         }));
         let run = match translated {
             Ok(Ok(run)) => run,
             Ok(Err(TranslateError::Cancelled)) => return Err(TaskOutcome::Cancelled),
             Ok(Err(TranslateError::Failed(error))) => return Err(TaskOutcome::Failed(error)),
-            Err(_) => return Err(TaskOutcome::Failed("translator panicked".to_string())),
+            Err(_) => {
+                log.line("translator panicked");
+                return Err(TaskOutcome::Failed("translator panicked".to_string()));
+            }
         };
         if cancel.load(Ordering::SeqCst) {
             return Err(TaskOutcome::Cancelled);
@@ -195,7 +207,13 @@ impl PipelineJob for TranslationJob {
                 task.passage,
                 run,
             )
-            .map_err(|error| TaskOutcome::Failed(error.detail))
+            .map_err(|error| TaskOutcome::Failed(error.detail))?;
+        log.line(&format!(
+            "saved the {} translation of {}",
+            self.target.as_str(),
+            task.chapter_id
+        ));
+        Ok(())
     }
 }
 

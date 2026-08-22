@@ -4,6 +4,7 @@ use crate::features::knowledge::parse::parse_reply;
 use crate::features::pipeline::llm::ClientError;
 use crate::features::pipeline::llm::LlmClient;
 use crate::features::pipeline::llm::Turn;
+use crate::features::pipeline::log::TaskLog;
 use crate::features::settings::repository::SettingsRepository;
 use std::sync::atomic::AtomicBool;
 
@@ -55,6 +56,7 @@ pub trait Analyzer: Send + Sync {
     fn analyze(
         &self,
         job: &AnalyzeJob,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<ChapterAnalysis, AnalyzeError>;
@@ -87,6 +89,7 @@ impl LlmAnalyzer {
         &self,
         job: &AnalyzeJob,
         first: Turn,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<ChapterAnalysis, AnalyzeError> {
@@ -95,13 +98,25 @@ impl LlmAnalyzer {
         let mut turn = first;
         for retry in 0..=MAX_RETRIES {
             let request = match parse_reply(&turn.text, job.paragraphs.len()) {
-                Ok(reading) if reading.issues.is_empty() => return Ok(reading.analysis),
+                Ok(reading) if reading.issues.is_empty() => {
+                    log.line(&format!(
+                        "reply accepted: {} entities, {} facts",
+                        reading.analysis.entities.len(),
+                        reading.analysis.facts.len()
+                    ));
+                    return Ok(reading.analysis);
+                }
                 Ok(reading) => {
+                    log.line(&format!("reply has {} problems", reading.issues.len()));
+                    for issue in &reading.issues {
+                        log.line(&format!("problem: {issue}"));
+                    }
                     let request = fix_request(&reading.issues);
                     best = Some(reading.analysis);
                     request
                 }
                 Err(error) => {
+                    log.line(&format!("reply cannot be used: {error}"));
                     let request = unreadable_request(&error);
                     last_error = error;
                     request
@@ -110,16 +125,35 @@ impl LlmAnalyzer {
             if retry == MAX_RETRIES {
                 break;
             }
-            match self.client.resume(&turn.session, request, progress, cancel) {
+            log.line(&format!(
+                "retry {} of {MAX_RETRIES}: sending the problems back into session {}",
+                retry + 1,
+                turn.session
+            ));
+            match self
+                .client
+                .resume(&turn.session, request, log, progress, cancel)
+            {
                 Ok(next) => turn = next,
                 Err(ClientError::Cancelled) => return Err(AnalyzeError::Cancelled),
                 Err(ClientError::Failed(error)) => {
+                    log.line(&format!("retry failed: {error}"));
                     last_error = error;
                     break;
                 }
             }
         }
-        best.ok_or(AnalyzeError::Failed(last_error))
+        match best {
+            Some(analysis) => {
+                log.line(&format!(
+                    "keeping the valid part: {} entities, {} facts; the invalid items are dropped",
+                    analysis.entities.len(),
+                    analysis.facts.len()
+                ));
+                Ok(analysis)
+            }
+            None => Err(AnalyzeError::Failed(last_error)),
+        }
     }
 }
 
@@ -127,12 +161,16 @@ impl Analyzer for LlmAnalyzer {
     fn analyze(
         &self,
         job: &AnalyzeJob,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<ChapterAnalysis, AnalyzeError> {
-        let first = self.client.start(build_prompt(job), progress, cancel)?;
+        let first = self
+            .client
+            .start(build_prompt(job), log, progress, cancel)?;
+        log.line(&format!("session {}", first.session));
         let session = first.session.clone();
-        let result = self.converse(job, first, progress, cancel);
+        let result = self.converse(job, first, log, progress, cancel);
         self.client.forget(&session);
         let analysis = result?;
         progress(FINISHED_PROGRESS);

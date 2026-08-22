@@ -16,6 +16,7 @@ impl Translator for PickyTranslator {
     fn translate(
         &self,
         job: &TranslateJob,
+        _log: &TaskLog,
         progress: &dyn Fn(u8),
         _cancel: &AtomicBool,
     ) -> Result<TranslatedRun, TranslateError> {
@@ -36,6 +37,7 @@ impl Translator for PanickingTranslator {
     fn translate(
         &self,
         _job: &TranslateJob,
+        _log: &TaskLog,
         _progress: &dyn Fn(u8),
         _cancel: &AtomicBool,
     ) -> Result<TranslatedRun, TranslateError> {
@@ -98,7 +100,7 @@ fn request(chapter_id: &str, passage: Option<usize>) -> TaskRequest {
 }
 
 fn run(job: &TranslationJob, task: &PipelineTask) -> Result<(), TaskOutcome> {
-    job.run(task, &|_| {}, &AtomicBool::new(false))
+    job.run(task, &TaskLog::none(), &|_| {}, &AtomicBool::new(false))
 }
 
 #[test]
@@ -211,7 +213,12 @@ fn a_cancelled_translator_is_a_cancelled_task_and_writes_nothing() {
     let cancel = AtomicBool::new(true);
 
     let outcome = job
-        .run(&task_of(&setup.fixture.chapter_id, None), &|_| {}, &cancel)
+        .run(
+            &task_of(&setup.fixture.chapter_id, None),
+            &TaskLog::none(),
+            &|_| {},
+            &cancel,
+        )
         .unwrap_err();
 
     assert_eq!(outcome, TaskOutcome::Cancelled);

@@ -179,7 +179,12 @@ fn fails_without_a_knowledge_provider() {
     let dir = TempDir::new().unwrap();
     let analyzer = analyzer(&dir, None);
 
-    let result = analyzer.analyze(&job(Vec::new()), &|_| {}, &AtomicBool::new(false));
+    let result = analyzer.analyze(
+        &job(Vec::new()),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     assert_eq!(
         result,
@@ -195,7 +200,12 @@ fn cancelled_before_start_does_not_touch_the_provider() {
     let dir = TempDir::new().unwrap();
     let analyzer = analyzer(&dir, None);
 
-    let result = analyzer.analyze(&job(Vec::new()), &|_| {}, &AtomicBool::new(true));
+    let result = analyzer.analyze(
+        &job(Vec::new()),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(true),
+    );
 
     assert_eq!(result, Err(AnalyzeError::Cancelled));
 }
@@ -211,6 +221,7 @@ fn analyzes_through_the_configured_cli() {
     let analysis = analyzer
         .analyze(
             &job(Vec::new()),
+            &TaskLog::none(),
             &|value| reported.lock().unwrap().push(value),
             &AtomicBool::new(false),
         )
@@ -230,7 +241,12 @@ fn fails_when_the_cli_does_not_return_json() {
     let path = script(&dir, "I could not do it", "", 0);
     let analyzer = analyzer(&dir, Some(("claude", &path)));
 
-    let result = analyzer.analyze(&job(Vec::new()), &|_| {}, &AtomicBool::new(false));
+    let result = analyzer.analyze(
+        &job(Vec::new()),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     assert_eq!(
         result,
@@ -246,7 +262,12 @@ fn reports_the_cli_failure_detail() {
     let path = script(&dir, "", "not signed in", 3);
     let analyzer = analyzer(&dir, Some(("codex", &path)));
 
-    let result = analyzer.analyze(&job(Vec::new()), &|_| {}, &AtomicBool::new(false));
+    let result = analyzer.analyze(
+        &job(Vec::new()),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(AnalyzeError::Failed(message)) => {
@@ -262,7 +283,12 @@ const GOOD: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":
 const BAD: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[]},{\"id\":\"E2\",\"type\":\"location\",\"name\":\"Harbor\",\"ev\":[]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"resides_at\",\"subject\":\"E2\",\"object\":\"E1\",\"ev\":[]},{\"id\":\"F2\",\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[]}]}";
 
 fn run(analyzer: &LlmAnalyzer) -> Result<ChapterAnalysis, AnalyzeError> {
-    analyzer.analyze(&job(Vec::new()), &|_| {}, &AtomicBool::new(false))
+    analyzer.analyze(
+        &job(Vec::new()),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    )
 }
 
 #[test]

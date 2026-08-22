@@ -12,6 +12,7 @@ use crate::features::pipeline::analyzer::Analyzer;
 use crate::features::pipeline::job::JobFactory;
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::job::TaskOutcome;
+use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineResult;
@@ -149,11 +150,19 @@ impl PipelineJob for AnalysisJob {
     fn run(
         &self,
         task: &PipelineTask,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<(), TaskOutcome> {
         let job = self.build_job(task)?;
-        let analysis = match self.analyzer.analyze(&job, progress, cancel) {
+        log.line(&format!(
+            "analyzing \"{}\": {} paragraphs, {} known entities from earlier chapters, language {}",
+            job.title,
+            job.paragraphs.len(),
+            job.known.len(),
+            job.lang
+        ));
+        let analysis = match self.analyzer.analyze(&job, log, progress, cancel) {
             Ok(analysis) => analysis,
             Err(AnalyzeError::Cancelled) => return Err(TaskOutcome::Cancelled),
             Err(AnalyzeError::Failed(error)) => return Err(TaskOutcome::Failed(error)),
@@ -161,9 +170,18 @@ impl PipelineJob for AnalysisJob {
         if cancel.load(Ordering::SeqCst) {
             return Err(TaskOutcome::Cancelled);
         }
+        let counts = (analysis.entities.len(), analysis.facts.len());
         self.workspace
             .save_analysis(self.novel_id, self.lang, &task.chapter_id, analysis)
-            .map_err(|error| TaskOutcome::Failed(error.detail))
+            .map_err(|error| TaskOutcome::Failed(error.detail))?;
+        log.line(&format!(
+            "saved {} entities and {} facts to the {} analysis of {}",
+            counts.0,
+            counts.1,
+            self.lang.as_str(),
+            task.chapter_id
+        ));
+        Ok(())
     }
 }
 

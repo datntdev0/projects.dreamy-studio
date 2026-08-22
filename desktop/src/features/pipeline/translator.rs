@@ -1,3 +1,4 @@
+use crate::features::pipeline::log::TaskLog;
 use crate::features::translation::models::DictEntry;
 use crate::features::translation::service::TranslatedRun;
 use std::sync::atomic::AtomicBool;
@@ -22,6 +23,7 @@ pub trait Translator: Send + Sync {
     fn translate(
         &self,
         job: &TranslateJob,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<TranslatedRun, TranslateError>;

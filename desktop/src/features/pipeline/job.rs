@@ -1,3 +1,4 @@
+use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineResult;
 use crate::features::pipeline::models::PipelineTask;
@@ -24,6 +25,7 @@ pub trait PipelineJob: Send + Sync {
     fn run(
         &self,
         task: &PipelineTask,
+        log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<(), TaskOutcome>;

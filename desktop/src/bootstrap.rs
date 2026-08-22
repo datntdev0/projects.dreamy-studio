@@ -219,7 +219,7 @@ fn manage_pipeline(app: &App, container: &AppContainer) {
     )));
     app.manage(translation.clone());
     app.manage(knowledge.clone());
-    app.manage(PipelineExecutor::new());
+    app.manage(PipelineExecutor::with_logs(container.directories.logs.clone()));
     app.manage(
         JobRegistry::new()
             .register(std::sync::Arc::new(TranslationJobFactory::new(

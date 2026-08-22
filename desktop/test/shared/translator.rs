@@ -1,3 +1,4 @@
+use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::translator::TranslateError;
 use crate::features::pipeline::translator::TranslateJob;
 use crate::features::pipeline::translator::Translator;
@@ -23,6 +24,7 @@ impl Translator for FakeTranslator {
     fn translate(
         &self,
         job: &TranslateJob,
+        _log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<TranslatedRun, TranslateError> {

@@ -2,6 +2,7 @@ use crate::features::novel::models::NovelInput;
 use crate::features::novel::service::NovelWorkspace;
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::job::TaskOutcome;
+use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineEvent;
 use crate::features::pipeline::models::PipelineResult;
@@ -289,6 +290,7 @@ impl PipelineJob for FakeJob {
     fn run(
         &self,
         task: &PipelineTask,
+        _log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<(), TaskOutcome> {

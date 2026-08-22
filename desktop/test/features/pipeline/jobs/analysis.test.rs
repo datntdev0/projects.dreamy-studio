@@ -3,15 +3,22 @@ use crate::features::knowledge::files::KnowledgeFiles;
 use crate::features::knowledge::models::ChapterAnalysis;
 use crate::features::knowledge::text::text_hash;
 use crate::features::novel::files::NovelFiles;
+use crate::features::pipeline::analyzer::LlmAnalyzer;
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::TaskStatus;
+use crate::features::settings::llm::CliSettings;
+use crate::features::settings::llm::FeatureSettings;
+use crate::features::settings::models::AppSettings;
+use crate::features::settings::repository::SettingsRepository;
 use crate::features::translation::service::TranslatedRun;
 use crate::features::translation::service::TranslationWorkspace;
 use crate::testing::analyzer::FakeAnalyzer;
+use crate::testing::cli::ScriptedCli;
 use crate::testing::job::JobFixture;
 use crate::testing::job::RecordingTarget;
 use std::time::Duration;
+use tempfile::TempDir;
 
 struct EagerAnalyzer;
 
@@ -19,6 +26,7 @@ impl Analyzer for EagerAnalyzer {
     fn analyze(
         &self,
         _job: &AnalyzeJob,
+        _log: &TaskLog,
         _progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<ChapterAnalysis, AnalyzeError> {
@@ -76,7 +84,12 @@ fn request(chapter_id: &str, passage: Option<usize>) -> TaskRequest {
 }
 
 fn run(job: &AnalysisJob, chapter_id: &str) -> Result<(), TaskOutcome> {
-    job.run(&task_of(chapter_id), &|_| {}, &AtomicBool::new(false))
+    job.run(
+        &task_of(chapter_id),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    )
 }
 
 fn stored(setup: &Setup, lang: KnowledgeLang, chapter_id: &str) -> Option<ChapterAnalysis> {
@@ -187,7 +200,12 @@ fn a_cancelled_analyzer_is_a_cancelled_task_and_writes_nothing() {
     let cancel = AtomicBool::new(true);
 
     let outcome = job(&setup, &fake())
-        .run(&task_of(&setup.fixture.chapter_id), &|_| {}, &cancel)
+        .run(
+            &task_of(&setup.fixture.chapter_id),
+            &TaskLog::none(),
+            &|_| {},
+            &cancel,
+        )
         .unwrap_err();
 
     assert_eq!(outcome, TaskOutcome::Cancelled);
@@ -434,4 +452,142 @@ fn the_factory_needs_an_open_workspace() {
 
     assert_eq!(factory.kind(), KIND_ANALYSIS);
     assert_eq!(error.code, PipelineErrorCode::NoWorkspace);
+}
+
+const BAD_REPLY: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"source\"}]},{\"id\":\"E2\",\"type\":\"planet\",\"name\":\"Mars\"}],\"facts\":[]}";
+
+const GOOD_REPLY: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"source\"}]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"source\"}]}]}";
+
+fn llm_analyzer(dir: &TempDir, cli: &ScriptedCli) -> Arc<LlmAnalyzer> {
+    let repository = SettingsRepository::new(dir.path().join("settings.json"));
+    let mut settings = AppSettings::default();
+    settings.llm.providers.insert(
+        "claude".to_string(),
+        CliSettings {
+            path: Some(cli.path.clone()),
+        },
+    );
+    settings.llm.features.insert(
+        "knowledge".to_string(),
+        FeatureSettings {
+            provider: Some("claude".to_string()),
+            ..FeatureSettings::default()
+        },
+    );
+    repository.save(&settings).unwrap();
+    Arc::new(LlmAnalyzer::new(repository))
+}
+
+fn only_run_folder(logs: &TempDir) -> std::path::PathBuf {
+    let folders: Vec<_> = std::fs::read_dir(logs.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    assert_eq!(folders.len(), 1);
+    folders[0].clone()
+}
+
+#[test]
+fn an_analysis_run_logs_its_command_prompts_and_responses_in_its_own_folder() {
+    let setup = setup();
+    let chapter_id = setup.fixture.chapter_id.clone();
+    let tools = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(tools.path(), &[BAD_REPLY, GOOD_REPLY]);
+    let analyzer = llm_analyzer(&tools, &cli);
+    let logs = TempDir::new().unwrap();
+    let executor = PipelineExecutor::with_logs(logs.path().to_path_buf());
+    let target = Arc::new(RecordingTarget::new());
+
+    executor
+        .start(
+            Box::new(job_with(&setup, KnowledgeLang::Src, analyzer)),
+            setup.fixture.tasks(),
+            target.clone(),
+        )
+        .unwrap();
+
+    let finished = target.wait_for_finished();
+    assert_eq!(finished.status, PipelineStatus::Completed);
+    let folder = only_run_folder(&logs);
+    assert!(folder.to_string_lossy().ends_with("-analysis-1"));
+    let log = std::fs::read_to_string(folder.join("pipeline.log")).unwrap();
+    let prefix = format!("t1-{chapter_id}");
+    for expected in [
+        "[pipeline] analysis pipeline 1 (src) for novel 1: 1 tasks, running",
+        "[pipeline] prepared",
+        "analyzing \"Chapter\": 1 paragraphs, 0 known entities from earlier chapters, language src",
+        "exchange 1 (new session): ",
+        "--session-id",
+        "exchange 1 working directory: ",
+        &format!("exchange 1 prompt: {prefix}-exchange-1-prompt.txt"),
+        &format!("exchange 1 response: {prefix}-exchange-1-response.txt"),
+        "reply has 1 problems",
+        "problem: entity E2: type \"planet\" is not in the ontology",
+        "retry 1 of 2: sending the problems back into session ",
+        "exchange 2 (resumed session): ",
+        "--resume",
+        &format!("exchange 2 prompt: {prefix}-exchange-2-prompt.txt"),
+        "reply accepted: 1 entities, 1 facts",
+        "saved 1 entities and 1 facts",
+        "] completed",
+        "[pipeline] finished Completed: 1 done, 0 failed of 1 tasks",
+    ] {
+        assert!(
+            log.contains(expected),
+            "log misses {expected:?}:
+{log}"
+        );
+    }
+    let read =
+        |name: &str| std::fs::read_to_string(folder.join(format!("{prefix}-{name}"))).unwrap();
+    assert!(read("exchange-1-prompt.txt").contains("[1] source"));
+    assert!(read("exchange-1-prompt.txt").contains("Chapter title: Chapter"));
+    assert!(read("exchange-1-response.txt").contains("planet"));
+    assert!(read("exchange-2-prompt.txt").contains("type \"planet\" is not in the ontology"));
+    assert!(read("exchange-2-response.txt").contains("occupation"));
+    let analysis = stored(&setup, KnowledgeLang::Src, &chapter_id).unwrap();
+    assert_eq!(analysis.entities.len(), 1);
+    assert_eq!(analysis.facts.len(), 1);
+}
+
+#[test]
+fn a_failed_analysis_run_logs_the_failure() {
+    let setup = setup();
+    let tools = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(tools.path(), &["no json", "still none", "never"]);
+    let analyzer = llm_analyzer(&tools, &cli);
+    let logs = TempDir::new().unwrap();
+    let executor = PipelineExecutor::with_logs(logs.path().to_path_buf());
+    let target = Arc::new(RecordingTarget::new());
+
+    executor
+        .start(
+            Box::new(job_with(&setup, KnowledgeLang::Src, analyzer)),
+            setup.fixture.tasks(),
+            target.clone(),
+        )
+        .unwrap();
+
+    assert_eq!(target.wait_for_finished().status, PipelineStatus::Failed);
+    let log = std::fs::read_to_string(only_run_folder(&logs).join("pipeline.log")).unwrap();
+    assert!(log.contains("reply cannot be used: The model did not return a JSON result."));
+    assert!(log.contains("] failed: The model did not return a JSON result."));
+    assert!(log.contains("[pipeline] finished Failed: 0 done, 1 failed of 1 tasks"));
+}
+
+#[test]
+fn a_run_without_a_log_folder_still_works() {
+    let setup = setup();
+    let executor = PipelineExecutor::new();
+    let target = Arc::new(RecordingTarget::new());
+
+    executor
+        .start(
+            Box::new(job(&setup, &fake())),
+            setup.fixture.tasks(),
+            target.clone(),
+        )
+        .unwrap();
+
+    assert_eq!(target.wait_for_finished().status, PipelineStatus::Completed);
 }

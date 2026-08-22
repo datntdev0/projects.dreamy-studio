@@ -220,7 +220,12 @@ fn fails_without_a_translation_provider() {
     let dir = TempDir::new().unwrap();
     let translator = translator(&dir, None);
 
-    let result = translator.translate(&job(None), &|_| {}, &AtomicBool::new(false));
+    let result = translator.translate(
+        &job(None),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(TranslateError::Failed(message)) => assert!(message.contains("Settings > LLM")),
@@ -234,7 +239,12 @@ fn fails_when_the_configured_path_is_missing() {
     let missing = dir.path().join("missing").to_string_lossy().into_owned();
     let translator = translator(&dir, Some(("claude", &missing)));
 
-    let result = translator.translate(&job(None), &|_| {}, &AtomicBool::new(false));
+    let result = translator.translate(
+        &job(None),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(TranslateError::Failed(message)) => assert!(message.contains("was not found")),
@@ -247,7 +257,12 @@ fn cancelled_before_start_does_not_touch_the_provider() {
     let dir = TempDir::new().unwrap();
     let translator = translator(&dir, None);
 
-    let result = translator.translate(&job(None), &|_| {}, &AtomicBool::new(true));
+    let result = translator.translate(
+        &job(None),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(true),
+    );
 
     assert!(matches!(result, Err(TranslateError::Cancelled)));
 }
@@ -267,6 +282,7 @@ fn translates_through_the_configured_cli() {
     let run = translator
         .translate(
             &job(None),
+            &TaskLog::none(),
             &|value| reported.lock().unwrap().push(value),
             &AtomicBool::new(false),
         )
@@ -283,7 +299,12 @@ fn reports_the_cli_failure_detail() {
     let path = script(&dir, "", "not signed in", 3);
     let translator = translator(&dir, Some(("codex", &path)));
 
-    let result = translator.translate(&job(None), &|_| {}, &AtomicBool::new(false));
+    let result = translator.translate(
+        &job(None),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(TranslateError::Failed(message)) => {
@@ -299,7 +320,12 @@ fn client_names_its_label_when_no_provider_is_set() {
     let dir = TempDir::new().unwrap();
     let client = client(&dir, None);
 
-    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(false));
+    let result = client.complete(
+        "prompt".to_string(),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(ClientError::Failed(message)) => assert_eq!(
@@ -325,7 +351,12 @@ fn client_rejects_a_cli_without_the_feature() {
     repository.save(&settings).unwrap();
     let client = LlmClient::new(repository, "knowledge", "knowledge analysis");
 
-    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(false));
+    let result = client.complete(
+        "prompt".to_string(),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(ClientError::Failed(message)) => {
@@ -356,7 +387,12 @@ fn client_is_cancelled_before_it_resolves_anything() {
     let dir = TempDir::new().unwrap();
     let client = client(&dir, None);
 
-    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(true));
+    let result = client.complete(
+        "prompt".to_string(),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(true),
+    );
 
     assert!(matches!(result, Err(ClientError::Cancelled)));
 }
@@ -371,6 +407,7 @@ fn client_returns_the_stdout_text() {
     let text = client
         .complete(
             "prompt".to_string(),
+            &TaskLog::none(),
             &|value| reported.lock().unwrap().push(value),
             &AtomicBool::new(false),
         )
@@ -386,7 +423,12 @@ fn client_reports_the_cli_failure_detail() {
     let path = script(&dir, "", "not signed in", 3);
     let client = client(&dir, Some(("codex", &path)));
 
-    let result = client.complete("prompt".to_string(), &|_| {}, &AtomicBool::new(false));
+    let result = client.complete(
+        "prompt".to_string(),
+        &TaskLog::none(),
+        &|_| {},
+        &AtomicBool::new(false),
+    );
 
     match result {
         Err(ClientError::Failed(message)) => {
@@ -458,10 +500,16 @@ fn start_returns_the_generated_claude_session_and_resume_keeps_it() {
     let progress = |value| reported.lock().unwrap().push(value);
 
     let first = client
-        .start("hello".to_string(), &progress, &cancel)
+        .start("hello".to_string(), &TaskLog::none(), &progress, &cancel)
         .unwrap();
     let second = client
-        .resume(&first.session, "again".to_string(), &progress, &cancel)
+        .resume(
+            &first.session,
+            "again".to_string(),
+            &TaskLog::none(),
+            &progress,
+            &cancel,
+        )
         .unwrap();
 
     assert!(first.text.contains("one"));
@@ -517,4 +565,70 @@ fn forget_finds_a_codex_rollout_by_thread_id() {
 
     assert!(!day.join("rollout-2026-11-18T10-00-00-t1.jsonl").exists());
     assert!(day.join("rollout-2026-11-18T10-00-00-t2.jsonl").exists());
+}
+
+#[test]
+fn a_single_call_logs_the_command_the_prompt_and_the_response() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["translated text"]);
+    let client = client(&dir, Some(("claude", &cli.path)));
+    let logs = TempDir::new().unwrap();
+    let run = crate::features::pipeline::log::RunLog::create(
+        logs.path(),
+        chrono::Local::now(),
+        "translation",
+        3,
+    );
+    let task = run.task(5, "chp0001");
+
+    client
+        .complete(
+            "the prompt".to_string(),
+            &task,
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    let folder = run.dir().unwrap();
+    let log = std::fs::read_to_string(folder.join("pipeline.log")).unwrap();
+    assert!(log.contains("[task 5 chp0001] exchange 1 (single call): "));
+    assert!(log.contains("--no-session-persistence"));
+    assert!(log.contains("exchange 1 prompt: t5-chp0001-exchange-1-prompt.txt (10 bytes"));
+    assert!(log.contains("exchange 1 response: t5-chp0001-exchange-1-response.txt"));
+    let prompt = std::fs::read_to_string(folder.join("t5-chp0001-exchange-1-prompt.txt")).unwrap();
+    let response =
+        std::fs::read_to_string(folder.join("t5-chp0001-exchange-1-response.txt")).unwrap();
+    assert_eq!(prompt, "the prompt");
+    assert!(response.contains("translated text"));
+}
+
+#[test]
+fn a_failing_call_logs_the_failure_and_keeps_the_stderr() {
+    let dir = TempDir::new().unwrap();
+    let path = script(&dir, "", "not signed in", 3);
+    let client = client(&dir, Some(("codex", &path)));
+    let logs = TempDir::new().unwrap();
+    let run = crate::features::pipeline::log::RunLog::create(
+        logs.path(),
+        chrono::Local::now(),
+        "analysis",
+        1,
+    );
+    let task = run.task(1, "chp0001");
+
+    let result = client.complete(
+        "prompt".to_string(),
+        &task,
+        &|_| {},
+        &AtomicBool::new(false),
+    );
+
+    assert!(result.is_err());
+    let folder = run.dir().unwrap();
+    let log = std::fs::read_to_string(folder.join("pipeline.log")).unwrap();
+    assert!(log.contains("exchange 1 stderr: t1-chp0001-exchange-1-stderr.txt"));
+    assert!(log.contains("exchange failed: Codex CLI exited"));
+    let stderr = std::fs::read_to_string(folder.join("t1-chp0001-exchange-1-stderr.txt")).unwrap();
+    assert!(stderr.contains("not signed in"));
 }

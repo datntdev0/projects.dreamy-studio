@@ -1,3 +1,4 @@
+use crate::features::pipeline::log::TaskLog;
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::AnalysisFact;
@@ -96,6 +97,7 @@ impl Analyzer for FakeAnalyzer {
     fn analyze(
         &self,
         job: &AnalyzeJob,
+        _log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<ChapterAnalysis, AnalyzeError> {

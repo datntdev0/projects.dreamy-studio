@@ -1,5 +1,7 @@
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::job::TaskOutcome;
+use crate::features::pipeline::log::RunLog;
+use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineEvent;
@@ -14,10 +16,12 @@ use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::infra::storage::database::Database;
+use chrono::Local;
 use chrono::Utc;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::panic::AssertUnwindSafe;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Condvar;
 use std::sync::Mutex;
@@ -65,6 +69,7 @@ pub struct PipelineExecutor {
 struct Inner {
     active: Mutex<Vec<ActiveRun>>,
     limits: Mutex<PipelineLimits>,
+    logs: Option<PathBuf>,
     next_token: AtomicU64,
     slots: Slots,
 }
@@ -109,6 +114,7 @@ struct CoordinatorContext {
     tasks: Arc<Mutex<VecDeque<PipelineTask>>>,
     cancel: Arc<AtomicBool>,
     sink: Arc<dyn PipelineTarget>,
+    log: RunLog,
 }
 
 impl Default for PipelineExecutor {
@@ -119,10 +125,19 @@ impl Default for PipelineExecutor {
 
 impl PipelineExecutor {
     pub fn new() -> Self {
+        Self::build(None)
+    }
+
+    pub fn with_logs(logs: PathBuf) -> Self {
+        Self::build(Some(logs))
+    }
+
+    fn build(logs: Option<PathBuf>) -> Self {
         Self {
             inner: Arc::new(Inner {
                 active: Mutex::new(Vec::new()),
                 limits: Mutex::new(PipelineLimits::default()),
+                logs,
                 next_token: AtomicU64::new(1),
                 slots: Slots {
                     used: Mutex::new(0),
@@ -191,6 +206,13 @@ impl PipelineExecutor {
         found
     }
 
+    fn run_log(&self, job: &dyn PipelineJob, pipeline_id: i64) -> RunLog {
+        match &self.inner.logs {
+            Some(root) => RunLog::create(root, Local::now(), job.kind(), pipeline_id),
+            None => RunLog::none(),
+        }
+    }
+
     fn start_claimed(
         &self,
         job: Arc<dyn PipelineJob>,
@@ -222,6 +244,21 @@ impl PipelineExecutor {
             .snapshot(pipeline_id)?
             .ok_or_else(|| PipelineError::not_found("pipeline was not created"))?;
         bind_pipeline(&self.inner, token, pipeline_id);
+        let log = self.run_log(job.as_ref(), pipeline_id);
+        log.line(
+            "pipeline",
+            &format!(
+                "{} pipeline {pipeline_id} ({}) for novel {}: {} tasks, {}",
+                job.kind(),
+                job.scope(),
+                job.novel_id(),
+                tasks.len(),
+                match state {
+                    RunState::Running => "running",
+                    RunState::Queued => "waiting for a free slot",
+                }
+            ),
+        );
         deliver(
             &sink,
             PipelineEvent::Started {
@@ -237,6 +274,7 @@ impl PipelineExecutor {
             tasks: Arc::new(Mutex::new(VecDeque::from(snapshot.tasks.clone()))),
             cancel,
             sink,
+            log,
         });
         match state {
             RunState::Running => spawn_coordinator(context, false)?,
@@ -321,8 +359,19 @@ fn spawn_coordinator(context: Arc<CoordinatorContext>, promoted: bool) -> Pipeli
         .map_err(|error| PipelineError::new(PipelineErrorCode::Task, error.to_string()))
 }
 
+fn task_label(task: &PipelineTask) -> String {
+    match task.passage {
+        Some(passage) => format!("{}-p{passage}", task.chapter_id),
+        None => task.chapter_id.clone(),
+    }
+}
+
 fn abort_queued(context: &CoordinatorContext) {
     while let Some(task) = pop_task(&context.tasks) {
+        context
+            .log
+            .task(task.id, &task_label(&task))
+            .line("cancelled while queued");
         finish_task(context, task.id, TaskStatus::Cancelled, String::new());
     }
     finish_pipeline(context);
@@ -351,6 +400,12 @@ fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
         mark_running(&context);
     }
     let prepared = context.job.prepare();
+    match &prepared {
+        Ok(()) => context.log.line("pipeline", "prepared"),
+        Err(error) => context
+            .log
+            .line("pipeline", &format!("prepare failed: {error}")),
+    }
     let workers = context
         .tasks
         .lock()
@@ -374,11 +429,19 @@ fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
 fn worker_loop(context: Arc<CoordinatorContext>, prepare_error: Option<String>) {
     while let Some(task) = pop_task(&context.tasks) {
         let Some(_slot) = acquire_slot(&context.inner, &context.cancel) else {
+            context
+                .log
+                .task(task.id, &task_label(&task))
+                .line("cancelled before it started");
             finish_task(&context, task.id, TaskStatus::Cancelled, String::new());
             continue;
         };
         set_running(&context, task.id);
         if let Some(error) = &prepare_error {
+            context
+                .log
+                .task(task.id, &task_label(&task))
+                .line(&format!("failed: {error}"));
             finish_task(&context, task.id, TaskStatus::Failed, error.clone());
             continue;
         }
@@ -387,25 +450,38 @@ fn worker_loop(context: Arc<CoordinatorContext>, prepare_error: Option<String>) 
 }
 
 fn run_task(context: &CoordinatorContext, task: PipelineTask) {
-    match execute_task(context, &task) {
+    let log = context.log.task(task.id, &task_label(&task));
+    log.line("started");
+    match execute_task(context, &task, &log) {
         Ok(()) if context.cancel.load(Ordering::SeqCst) => {
+            log.line("cancelled");
             finish_task(context, task.id, TaskStatus::Cancelled, String::new());
         }
-        Ok(()) => finish_task(context, task.id, TaskStatus::Completed, String::new()),
+        Ok(()) => {
+            log.line("completed");
+            finish_task(context, task.id, TaskStatus::Completed, String::new());
+        }
         Err(TaskOutcome::Cancelled) => {
+            log.line("cancelled");
             finish_task(context, task.id, TaskStatus::Cancelled, String::new())
         }
         Err(TaskOutcome::Failed(error)) => {
+            log.line(&format!("failed: {error}"));
             finish_task(context, task.id, TaskStatus::Failed, error)
         }
     }
 }
 
-fn execute_task(context: &CoordinatorContext, task: &PipelineTask) -> Result<(), TaskOutcome> {
+fn execute_task(
+    context: &CoordinatorContext,
+    task: &PipelineTask,
+    log: &TaskLog,
+) -> Result<(), TaskOutcome> {
     let task_id = task.id;
     let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
         context.job.run(
             task,
+            log,
             &|value| set_progress(context, task_id, value),
             &context.cancel,
         )
@@ -500,6 +576,13 @@ fn finish_pipeline(context: &CoordinatorContext) {
     } else {
         PipelineStatus::Completed
     };
+    context.log.line(
+        "pipeline",
+        &format!(
+            "finished {status:?}: {done} done, {failed} failed of {} tasks",
+            snapshot.tasks.len()
+        ),
+    );
     if let Err(error) =
         repo.finish_pipeline(context.pipeline_id, status, done, failed, &timestamp())
     {
@@ -558,11 +641,11 @@ fn mark_running(context: &CoordinatorContext) {
         eprintln!("cannot start pipeline: {error}");
         return;
     }
+    context
+        .log
+        .line("pipeline", "left the queue and started running");
     match repo.snapshot(context.pipeline_id) {
-        Ok(Some(snapshot)) => deliver(
-            &context.sink,
-            PipelineEvent::Updated { pipeline: snapshot },
-        ),
+        Ok(Some(snapshot)) => deliver(&context.sink, PipelineEvent::Updated { pipeline: snapshot }),
         Ok(None) => eprintln!("started pipeline does not exist"),
         Err(error) => eprintln!("cannot read started pipeline: {error}"),
     }

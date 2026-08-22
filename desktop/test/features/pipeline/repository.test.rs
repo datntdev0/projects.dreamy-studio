@@ -1,5 +1,5 @@
 use super::*;
-use crate::features::pipeline::models::KIND_TRANSLATION;
+use crate::features::pipeline::jobs::translation::KIND_TRANSLATION;
 use crate::infra::storage::database::Database;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;

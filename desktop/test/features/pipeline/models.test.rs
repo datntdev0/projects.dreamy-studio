@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::pipeline::jobs::translation::KIND_TRANSLATION;
 use crate::features::translation::models::TranslationError;
 use crate::features::translation::models::TranslationErrorCode;
 use serde_json::json;

@@ -1,6 +1,7 @@
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::executor::PipelineLimits;
-use crate::features::pipeline::executor::PipelineStart;
+use crate::features::pipeline::job::JobRegistry;
+use crate::features::pipeline::jobs::translation::KIND_TRANSLATION;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineEvent;
@@ -11,10 +12,11 @@ use crate::features::pipeline::models::TaskRequest;
 use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::settings::models::PipelineSettings;
 use crate::features::settings::service::SettingsService;
-use crate::features::translation::service::TranslationService;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
+use serde_json::Map;
+use serde_json::Value;
 use std::path::Path;
 use std::sync::Arc;
 use tauri::AppHandle;
@@ -28,25 +30,52 @@ impl PipelineTarget for Channel<PipelineEvent> {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct JobRequest {
+    pub kind: Option<String>,
+    pub novel_id: i64,
+    pub target: Option<String>,
+    pub lang: Option<String>,
+    pub params: Option<Value>,
+}
+
+pub fn job_params(
+    target: Option<String>,
+    lang: Option<String>,
+    params: Option<Value>,
+) -> PipelineResult<Value> {
+    let mut merged = match params {
+        None | Some(Value::Null) => Map::new(),
+        Some(Value::Object(map)) => map,
+        Some(_) => return Err(PipelineError::invalid("params must be an object")),
+    };
+    for (key, value) in [("target", target), ("lang", lang)] {
+        if let Some(value) = value {
+            merged.entry(key).or_insert(Value::String(value));
+        }
+    }
+    Ok(Value::Object(merged))
+}
+
 pub fn start_pipeline(
     executor: &PipelineExecutor,
-    translation: &TranslationService,
+    registry: &JobRegistry,
     session: &WorkspaceSession,
-    novel_id: i64,
-    target: String,
+    request: JobRequest,
     tasks: Vec<TaskRequest>,
     sink: Arc<dyn PipelineTarget>,
 ) -> PipelineResult<PipelineSnapshot> {
-    let workspace = translation.open(session)?;
-    executor.start(
-        workspace,
-        PipelineStart {
-            novel_id,
-            target,
-            tasks,
-        },
-        sink,
-    )
+    let JobRequest {
+        kind,
+        novel_id,
+        target,
+        lang,
+        params,
+    } = request;
+    let params = job_params(target, lang, params)?;
+    let kind = kind.as_deref().unwrap_or(KIND_TRANSLATION);
+    let job = registry.create(kind, session, novel_id, &params)?;
+    executor.start(job, tasks, sink)
 }
 
 pub fn cancel_pipeline(executor: &PipelineExecutor, pipeline_id: Option<i64>) -> bool {
@@ -86,15 +115,15 @@ fn task_failure(error: tauri::Error) -> PipelineError {
 async fn run_blocking<T, F>(app: AppHandle, job: F) -> PipelineResult<T>
 where
     T: Send + 'static,
-    F: FnOnce(&PipelineExecutor, &TranslationService, &WorkspaceSession) -> PipelineResult<T>
+    F: FnOnce(&PipelineExecutor, &JobRegistry, &WorkspaceSession) -> PipelineResult<T>
         + Send
         + 'static,
 {
     let task = spawn_blocking(move || {
         let executor = app.state::<PipelineExecutor>();
-        let translation = app.state::<TranslationService>();
+        let registry = app.state::<JobRegistry>();
         let session = app.state::<WorkspaceSession>();
-        job(&executor, &translation, &session)
+        job(&executor, &registry, &session)
     });
     match task.await {
         Ok(result) => result,
@@ -103,26 +132,29 @@ where
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn pipeline_start(
     app: AppHandle,
+    kind: Option<String>,
     novel_id: i64,
-    target: String,
+    target: Option<String>,
+    lang: Option<String>,
+    params: Option<Value>,
     tasks: Vec<TaskRequest>,
     on_event: Channel<PipelineEvent>,
 ) -> PipelineResult<PipelineSnapshot> {
     let sink: Arc<dyn PipelineTarget> = Arc::new(on_event);
     let settings = app.state::<SettingsService>().general().pipelines;
-    run_blocking(app, move |executor, translation, session| {
+    let request = JobRequest {
+        kind,
+        novel_id,
+        target,
+        lang,
+        params,
+    };
+    run_blocking(app, move |executor, registry, session| {
         executor.set_limits(limits_of(settings));
-        start_pipeline(
-            executor,
-            translation,
-            session,
-            novel_id,
-            target,
-            tasks,
-            sink,
-        )
+        start_pipeline(executor, registry, session, request, tasks, sink)
     })
     .await
 }

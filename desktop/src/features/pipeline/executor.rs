@@ -1,6 +1,5 @@
-use crate::features::novel::files::NovelFiles;
-use crate::features::novel::repository::NovelRepository;
-use crate::features::pipeline::models::KIND_TRANSLATION;
+use crate::features::pipeline::job::PipelineJob;
+use crate::features::pipeline::job::TaskOutcome;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineEvent;
@@ -12,15 +11,6 @@ use crate::features::pipeline::models::PipelineTask;
 use crate::features::pipeline::models::TaskRequest;
 use crate::features::pipeline::models::TaskStatus;
 use crate::features::pipeline::repository::PipelineRepository;
-use crate::features::pipeline::translator::TranslateError;
-use crate::features::pipeline::translator::TranslateJob;
-use crate::features::pipeline::translator::Translator;
-use crate::features::translation::dictionary::DictionaryRepository;
-use crate::features::translation::files::TranslationFiles;
-use crate::features::translation::models::DictEntry;
-use crate::features::translation::models::TranslationTarget;
-use crate::features::translation::service::TranslatedRun;
-use crate::features::translation::service::TranslationWorkspace;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::infra::storage::database::Database;
@@ -67,20 +57,12 @@ impl PipelineLimits {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct PipelineStart {
-    pub novel_id: i64,
-    pub target: String,
-    pub tasks: Vec<TaskRequest>,
-}
-
 #[derive(Clone)]
 pub struct PipelineExecutor {
     inner: Arc<Inner>,
 }
 
 struct Inner {
-    translator: Arc<dyn Translator>,
     active: Mutex<Vec<ActiveRun>>,
     limits: Mutex<PipelineLimits>,
     next_token: AtomicU64,
@@ -121,28 +103,24 @@ struct ActiveRun {
 
 struct CoordinatorContext {
     inner: Arc<Inner>,
-    workspace: TranslationWorkspace,
+    job: Arc<dyn PipelineJob>,
     token: u64,
     pipeline_id: i64,
-    novel_id: i64,
-    target_name: String,
-    target: TranslationTarget,
     tasks: Arc<Mutex<VecDeque<PipelineTask>>>,
     cancel: Arc<AtomicBool>,
     sink: Arc<dyn PipelineTarget>,
 }
 
-struct WorkerContext {
-    coordinator: Arc<CoordinatorContext>,
-    guidelines: String,
-    dict: Vec<DictEntry>,
+impl Default for PipelineExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PipelineExecutor {
-    pub fn new(translator: Arc<dyn Translator>) -> Self {
+    pub fn new() -> Self {
         Self {
             inner: Arc::new(Inner {
-                translator,
                 active: Mutex::new(Vec::new()),
                 limits: Mutex::new(PipelineLimits::default()),
                 next_token: AtomicU64::new(1),
@@ -162,14 +140,15 @@ impl PipelineExecutor {
 
     pub fn start(
         &self,
-        workspace: TranslationWorkspace,
-        request: PipelineStart,
-        target: Arc<dyn PipelineTarget>,
+        job: Box<dyn PipelineJob>,
+        tasks: Vec<TaskRequest>,
+        sink: Arc<dyn PipelineTarget>,
     ) -> PipelineResult<PipelineSnapshot> {
+        let job: Arc<dyn PipelineJob> = Arc::from(job);
         let cancel = Arc::new(AtomicBool::new(false));
         let token = self.inner.next_token.fetch_add(1, Ordering::SeqCst);
         let state = claim(&self.inner, token, cancel.clone());
-        let result = self.start_claimed(workspace, request, target, cancel, token, state);
+        let result = self.start_claimed(job, tasks, sink, cancel, token, state);
         if result.is_err() {
             release_active(&self.inner, token);
         }
@@ -214,29 +193,29 @@ impl PipelineExecutor {
 
     fn start_claimed(
         &self,
-        workspace: TranslationWorkspace,
-        request: PipelineStart,
-        target: Arc<dyn PipelineTarget>,
+        job: Arc<dyn PipelineJob>,
+        tasks: Vec<TaskRequest>,
+        sink: Arc<dyn PipelineTarget>,
         cancel: Arc<AtomicBool>,
         token: u64,
         state: RunState,
     ) -> PipelineResult<PipelineSnapshot> {
-        let translation_target = workspace.target_for(request.novel_id, &request.target)?;
-        validate_tasks(&workspace, request.novel_id, &request.tasks)?;
+        validate_requests(&tasks)?;
+        job.validate(&tasks)?;
 
         let now = format_timestamp(Utc::now());
-        let db = database(&workspace)?;
+        let db = database(job.as_ref())?;
         let repo = PipelineRepository::new(db.connection());
         let status = match state {
             RunState::Running => PipelineStatus::Running,
             RunState::Queued => PipelineStatus::Queued,
         };
         let pipeline_id = repo.insert_pipeline(
-            request.novel_id,
-            KIND_TRANSLATION,
-            translation_target.as_str(),
+            job.novel_id(),
+            job.kind(),
+            &job.scope(),
             status,
-            &request.tasks,
+            &tasks,
             &now,
         )?;
         let snapshot = repo
@@ -244,7 +223,7 @@ impl PipelineExecutor {
             .ok_or_else(|| PipelineError::not_found("pipeline was not created"))?;
         bind_pipeline(&self.inner, token, pipeline_id);
         deliver(
-            &target,
+            &sink,
             PipelineEvent::Started {
                 pipeline: snapshot.clone(),
             },
@@ -252,15 +231,12 @@ impl PipelineExecutor {
 
         let context = Arc::new(CoordinatorContext {
             inner: self.inner.clone(),
-            workspace,
+            job,
             token,
             pipeline_id,
-            novel_id: request.novel_id,
-            target_name: translation_target.as_str().to_string(),
-            target: translation_target,
             tasks: Arc::new(Mutex::new(VecDeque::from(snapshot.tasks.clone()))),
             cancel,
-            sink: target,
+            sink,
         });
         match state {
             RunState::Running => spawn_coordinator(context, false)?,
@@ -374,7 +350,7 @@ fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
     if promoted {
         mark_running(&context);
     }
-    let inputs = load_inputs(&context);
+    let prepared = context.job.prepare();
     let workers = context
         .tasks
         .lock()
@@ -382,17 +358,9 @@ fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
         .min(MAX_WORKERS_PER_PIPELINE);
     let mut handles = Vec::with_capacity(workers);
     for _ in 0..workers {
-        let worker = WorkerContext {
-            coordinator: context.clone(),
-            guidelines: inputs
-                .as_ref()
-                .map_or_else(|error| error.clone(), |inputs| inputs.0.clone()),
-            dict: inputs
-                .as_ref()
-                .map_or_else(|_| Vec::new(), |inputs| inputs.1.clone()),
-        };
-        let input_error = inputs.as_ref().err().cloned();
-        handles.push(thread::spawn(move || worker_loop(worker, input_error)));
+        let worker = context.clone();
+        let prepare_error = prepared.as_ref().err().cloned();
+        handles.push(thread::spawn(move || worker_loop(worker, prepare_error)));
     }
     for handle in handles {
         if handle.join().is_err() {
@@ -403,163 +371,59 @@ fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
     release_active(&context.inner, context.token);
 }
 
-fn worker_loop(context: WorkerContext, input_error: Option<String>) {
-    let coordinator = &context.coordinator;
-    while let Some(task) = pop_task(&coordinator.tasks) {
-        let Some(_slot) = acquire_slot(&coordinator.inner, &coordinator.cancel) else {
-            finish_task(coordinator, task.id, TaskStatus::Cancelled, String::new());
+fn worker_loop(context: Arc<CoordinatorContext>, prepare_error: Option<String>) {
+    while let Some(task) = pop_task(&context.tasks) {
+        let Some(_slot) = acquire_slot(&context.inner, &context.cancel) else {
+            finish_task(&context, task.id, TaskStatus::Cancelled, String::new());
             continue;
         };
-        set_running(coordinator, task.id);
-        if let Some(error) = &input_error {
-            finish_task(coordinator, task.id, TaskStatus::Failed, error.clone());
+        set_running(&context, task.id);
+        if let Some(error) = &prepare_error {
+            finish_task(&context, task.id, TaskStatus::Failed, error.clone());
             continue;
         }
         run_task(&context, task);
     }
 }
 
-fn run_task(context: &WorkerContext, task: PipelineTask) {
-    let coordinator = &context.coordinator;
-    match translate_task(context, &task) {
-        Ok(_run) if coordinator.cancel.load(Ordering::SeqCst) => {
-            finish_task(coordinator, task.id, TaskStatus::Cancelled, String::new());
+fn run_task(context: &CoordinatorContext, task: PipelineTask) {
+    match execute_task(context, &task) {
+        Ok(()) if context.cancel.load(Ordering::SeqCst) => {
+            finish_task(context, task.id, TaskStatus::Cancelled, String::new());
         }
-        Ok(run) => match coordinator.workspace.save_run(
-            coordinator.novel_id,
-            &coordinator.target_name,
-            &task.chapter_id,
-            task.passage,
-            run,
-        ) {
-            Ok(()) => finish_task(coordinator, task.id, TaskStatus::Completed, String::new()),
-            Err(error) => finish_task(coordinator, task.id, TaskStatus::Failed, error.detail),
-        },
+        Ok(()) => finish_task(context, task.id, TaskStatus::Completed, String::new()),
         Err(TaskOutcome::Cancelled) => {
-            finish_task(coordinator, task.id, TaskStatus::Cancelled, String::new())
+            finish_task(context, task.id, TaskStatus::Cancelled, String::new())
         }
         Err(TaskOutcome::Failed(error)) => {
-            finish_task(coordinator, task.id, TaskStatus::Failed, error)
+            finish_task(context, task.id, TaskStatus::Failed, error)
         }
     }
 }
 
-fn translate_task(
-    context: &WorkerContext,
-    task: &PipelineTask,
-) -> Result<TranslatedRun, TaskOutcome> {
-    let coordinator = &context.coordinator;
-    let job = build_job(context, task)?;
-    let progress = ProgressReporter {
-        context: coordinator.clone(),
-        task_id: task.id,
-    };
-    let translated = std::panic::catch_unwind(AssertUnwindSafe(|| {
-        coordinator.inner.translator.translate(
-            &job,
-            &|value| progress.report(value),
-            &coordinator.cancel,
+fn execute_task(context: &CoordinatorContext, task: &PipelineTask) -> Result<(), TaskOutcome> {
+    let task_id = task.id;
+    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        context.job.run(
+            task,
+            &|value| set_progress(context, task_id, value),
+            &context.cancel,
         )
     }));
-    match translated {
-        Ok(Ok(run)) => Ok(run),
-        Ok(Err(TranslateError::Cancelled)) => Err(TaskOutcome::Cancelled),
-        Ok(Err(TranslateError::Failed(error))) => Err(TaskOutcome::Failed(error)),
-        Err(_) => Err(TaskOutcome::Failed("translator panicked".to_string())),
+    match result {
+        Ok(outcome) => outcome,
+        Err(_) => Err(TaskOutcome::Failed("pipeline task panicked".to_string())),
     }
 }
 
-struct ProgressReporter {
-    context: Arc<CoordinatorContext>,
-    task_id: i64,
-}
-
-impl ProgressReporter {
-    fn report(&self, value: u8) {
-        set_progress(&self.context, self.task_id, value);
-    }
-}
-
-enum TaskOutcome {
-    Cancelled,
-    Failed(String),
-}
-
-fn build_job(context: &WorkerContext, task: &PipelineTask) -> Result<TranslateJob, TaskOutcome> {
-    let coordinator = &context.coordinator;
-    let db = database(&coordinator.workspace).map_err(|error| TaskOutcome::Failed(error.detail))?;
-    let chapter = NovelRepository::new(db.connection())
-        .find_chapter(coordinator.novel_id, &task.chapter_id)
-        .map_err(|error| TaskOutcome::Failed(error.to_string()))?
-        .ok_or_else(|| {
-            TaskOutcome::Failed(format!("chapter {} does not exist", task.chapter_id))
-        })?;
-    let paragraphs = NovelFiles::new(coordinator.workspace.dir().to_path_buf())
-        .read_chapter(coordinator.novel_id, &task.chapter_id)
-        .map_err(|error| TaskOutcome::Failed(error.detail))?;
-    let paragraphs = match task.passage {
-        Some(passage) => paragraphs
-            .get(passage - 1)
-            .map(|paragraph| vec![paragraph.text.clone()])
-            .ok_or_else(|| TaskOutcome::Failed("passage is out of range".to_string()))?,
-        None => paragraphs
-            .into_iter()
-            .map(|paragraph| paragraph.text)
-            .collect(),
-    };
-    Ok(TranslateJob {
-        target: coordinator.target_name.clone(),
-        passage: task.passage,
-        title: chapter.title,
-        paragraphs,
-        guidelines: context.guidelines.clone(),
-        dict: context.dict.clone(),
-    })
-}
-
-fn load_inputs(context: &CoordinatorContext) -> Result<(String, Vec<DictEntry>), String> {
-    let guidelines = TranslationFiles::new(context.workspace.dir().to_path_buf())
-        .read_guidelines(context.novel_id, context.target)
-        .map_err(|error| error.detail)?;
-    let db = database(&context.workspace).map_err(|error| error.detail)?;
-    let dict = DictionaryRepository::new(db.connection())
-        .list(context.novel_id, context.target)
-        .map_err(|error| error.to_string())?;
-    Ok((guidelines, dict))
-}
-
-fn validate_tasks(
-    workspace: &TranslationWorkspace,
-    novel_id: i64,
-    tasks: &[TaskRequest],
-) -> PipelineResult<()> {
+fn validate_requests(tasks: &[TaskRequest]) -> PipelineResult<()> {
     if tasks.is_empty() {
         return Err(PipelineError::invalid("at least one task is required"));
     }
-    let db = database(workspace)?;
-    let repo = NovelRepository::new(db.connection());
-    let files = NovelFiles::new(workspace.dir().to_path_buf());
     let mut seen = HashSet::new();
     for task in tasks {
         if !seen.insert((task.chapter_id.clone(), task.passage)) {
             return Err(PipelineError::invalid("duplicate pipeline task"));
-        }
-        if repo.find_chapter(novel_id, &task.chapter_id)?.is_none() {
-            return Err(PipelineError::not_found(format!(
-                "chapter {} does not exist in novel {novel_id}",
-                task.chapter_id
-            )));
-        }
-        let paragraphs = files
-            .read_chapter(novel_id, &task.chapter_id)
-            .map_err(|error| PipelineError::new(PipelineErrorCode::Io, error.detail))?;
-        if paragraphs.is_empty() {
-            return Err(PipelineError::invalid("chapter has no paragraphs"));
-        }
-        if let Some(passage) = task.passage {
-            if passage == 0 || passage > paragraphs.len() {
-                return Err(PipelineError::invalid("passage is out of range"));
-            }
         }
     }
     Ok(())
@@ -587,7 +451,7 @@ fn with_task_update<F>(context: &CoordinatorContext, task_id: i64, update: F)
 where
     F: FnOnce(&PipelineRepository<'_>) -> rusqlite::Result<()>,
 {
-    let Ok(db) = database(&context.workspace) else {
+    let Ok(db) = database(context.job.as_ref()) else {
         eprintln!("cannot open database for pipeline task update");
         return;
     };
@@ -610,7 +474,7 @@ where
 }
 
 fn finish_pipeline(context: &CoordinatorContext) {
-    let Ok(db) = database(&context.workspace) else {
+    let Ok(db) = database(context.job.as_ref()) else {
         eprintln!("cannot open database to finish pipeline");
         return;
     };
@@ -656,9 +520,9 @@ fn pop_task(tasks: &Mutex<VecDeque<PipelineTask>>) -> Option<PipelineTask> {
     lock(tasks).pop_front()
 }
 
-fn database(workspace: &TranslationWorkspace) -> PipelineResult<Database> {
+fn database(job: &dyn PipelineJob) -> PipelineResult<Database> {
     Ok(Database::open_read_write(
-        &workspace.dir().join(WORKSPACE_DB_FILE),
+        &job.dir().join(WORKSPACE_DB_FILE),
     )?)
 }
 
@@ -685,7 +549,7 @@ fn release_active(inner: &Arc<Inner>, token: u64) {
 }
 
 fn mark_running(context: &CoordinatorContext) {
-    let Ok(db) = database(&context.workspace) else {
+    let Ok(db) = database(context.job.as_ref()) else {
         eprintln!("cannot open database to start pipeline");
         return;
     };

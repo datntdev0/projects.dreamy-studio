@@ -6,6 +6,10 @@ use crate::features::novel::models::NovelInput;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::models::PipelineEvent;
 use crate::features::pipeline::repository::PipelineRepository;
+use crate::features::pipeline::job::JobFactory;
+use crate::features::pipeline::job::PipelineJob;
+use crate::features::pipeline::jobs::translation::TranslationJobFactory;
+use crate::features::pipeline::models::PipelineStatus;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::load::LoadEvent;
@@ -23,6 +27,7 @@ use serde_json::json;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
+use std::time::Instant;
 use tempfile::TempDir;
 
 struct Fixture {
@@ -34,6 +39,58 @@ struct Fixture {
 #[derive(Default)]
 struct RecordingTarget {
     events: Mutex<Vec<PipelineEvent>>,
+}
+
+impl RecordingTarget {
+    fn wait_for_finished(&self) -> PipelineSnapshot {
+        let until = Instant::now() + Duration::from_secs(5);
+        loop {
+            let finished = self.events.lock().unwrap().iter().find_map(|event| match event {
+                PipelineEvent::Finished { pipeline } => Some(pipeline.clone()),
+                _ => None,
+            });
+            if let Some(pipeline) = finished {
+                return pipeline;
+            }
+            assert!(Instant::now() < until, "pipeline did not finish in time");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+}
+
+struct ProbeFactory {
+    seen: Arc<Mutex<Vec<serde_json::Value>>>,
+}
+
+impl JobFactory for ProbeFactory {
+    fn kind(&self) -> &'static str {
+        "probe"
+    }
+
+    fn create(
+        &self,
+        _session: &WorkspaceSession,
+        _novel_id: i64,
+        params: &serde_json::Value,
+    ) -> PipelineResult<Box<dyn PipelineJob>> {
+        self.seen.lock().unwrap().push(params.clone());
+        Err(PipelineError::invalid("probe stops here"))
+    }
+}
+
+fn registry() -> JobRegistry {
+    JobRegistry::new().register(Arc::new(TranslationJobFactory::new(
+        TranslationService::new(),
+        Arc::new(FakeTranslator::with_delay(Duration::ZERO)),
+    )))
+}
+
+fn request(novel_id: i64, target: Option<&str>) -> JobRequest {
+    JobRequest {
+        novel_id,
+        target: target.map(str::to_string),
+        ..JobRequest::default()
+    }
 }
 
 impl PipelineTarget for RecordingTarget {
@@ -98,17 +155,15 @@ fn database(fixture: &Fixture) -> Database {
 
 #[test]
 fn commands_without_a_workspace_return_no_workspace() {
-    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(Duration::ZERO)));
-    let translation = TranslationService::new();
+    let executor = PipelineExecutor::new();
     let session = WorkspaceSession::new();
     let sink: Arc<dyn PipelineTarget> = Arc::new(RecordingTarget::default());
 
     let start = start_pipeline(
         &executor,
-        &translation,
+        &registry(),
         &session,
-        1,
-        "VI".to_string(),
+        request(1, Some("VI")),
         Vec::new(),
         sink,
     )
@@ -122,7 +177,7 @@ fn commands_without_a_workspace_return_no_workspace() {
 
 #[test]
 fn cancel_on_an_idle_executor_is_false() {
-    let executor = PipelineExecutor::new(Arc::new(FakeTranslator::with_delay(Duration::ZERO)));
+    let executor = PipelineExecutor::new();
 
     assert!(!cancel_pipeline(&executor, None));
     assert!(!cancel_pipeline(&executor, Some(1)));
@@ -216,4 +271,206 @@ fn limits_follow_the_saved_pipeline_settings() {
         limits_of(PipelineSettings::default()),
         PipelineLimits::default()
     );
+}
+
+fn task_of(chapter_id: &str) -> Vec<TaskRequest> {
+    vec![TaskRequest {
+        chapter_id: chapter_id.to_string(),
+        passage: None,
+    }]
+}
+
+#[test]
+fn the_default_kind_is_translation() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+    let executor = PipelineExecutor::new();
+    let sink = Arc::new(RecordingTarget::default());
+
+    let snapshot = start_pipeline(
+        &executor,
+        &registry(),
+        &fixture.session,
+        request(novel_id, Some("VI")),
+        task_of(&chapter_id),
+        sink.clone(),
+    )
+    .unwrap();
+
+    assert_eq!(snapshot.kind, "translation");
+    assert_eq!(snapshot.target, "VI");
+    assert_eq!(snapshot.novel_id, novel_id);
+    let finished = sink.wait_for_finished();
+    assert_eq!(finished.status, PipelineStatus::Completed);
+    assert_eq!(finished.done, 1);
+}
+
+#[test]
+fn an_explicit_translation_kind_reads_the_target_from_params() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+    let executor = PipelineExecutor::new();
+    let sink = Arc::new(RecordingTarget::default());
+    let mut job = request(novel_id, None);
+    job.kind = Some("translation".to_string());
+    job.params = Some(json!({ "target": "EN" }));
+
+    let snapshot = start_pipeline(
+        &executor,
+        &registry(),
+        &fixture.session,
+        job,
+        task_of(&chapter_id),
+        sink.clone(),
+    )
+    .unwrap();
+
+    assert_eq!(snapshot.target, "EN");
+    assert_eq!(sink.wait_for_finished().status, PipelineStatus::Completed);
+}
+
+#[test]
+fn an_unknown_kind_is_invalid_input() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+    let executor = PipelineExecutor::new();
+    let mut job = request(novel_id, Some("VI"));
+    job.kind = Some("unknown".to_string());
+
+    let error = start_pipeline(
+        &executor,
+        &registry(),
+        &fixture.session,
+        job,
+        task_of(&chapter_id),
+        Arc::new(RecordingTarget::default()),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+    assert_eq!(serde_json::to_value(error).unwrap()["code"], "invalid_input");
+    assert!(!executor.cancel());
+}
+
+#[test]
+fn a_translation_without_a_target_is_invalid_input() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+
+    let error = start_pipeline(
+        &PipelineExecutor::new(),
+        &registry(),
+        &fixture.session,
+        request(novel_id, None),
+        task_of(&chapter_id),
+        Arc::new(RecordingTarget::default()),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+}
+
+#[test]
+fn a_translation_to_an_unsupported_target_is_invalid_input() {
+    let fixture = fixture();
+    let (novel_id, chapter_id) = novel_with_chapter(&fixture);
+
+    let error = start_pipeline(
+        &PipelineExecutor::new(),
+        &registry(),
+        &fixture.session,
+        request(novel_id, Some("FR")),
+        task_of(&chapter_id),
+        Arc::new(RecordingTarget::default()),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+}
+
+#[test]
+fn a_target_equal_to_the_novel_language_is_rejected() {
+    let fixture = fixture();
+    let input = serde_json::from_value(json!({ "title": "Sach", "lang": "VI" })).unwrap();
+    let novel = novel::create_novel(&fixture.novels, &fixture.session, input).unwrap();
+    let chapter = novel::add_chapter(&fixture.novels, &fixture.session, novel.id, "Mot").unwrap();
+    novel::add_paragraph(&fixture.novels, &fixture.session, novel.id, &chapter.id, "Van ban")
+        .unwrap();
+
+    let error = start_pipeline(
+        &PipelineExecutor::new(),
+        &registry(),
+        &fixture.session,
+        request(novel.id, Some("VI")),
+        task_of(&chapter.id),
+        Arc::new(RecordingTarget::default()),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+    assert_eq!(error.detail, "target must differ from the novel language");
+}
+
+#[test]
+fn target_and_lang_fold_into_the_params_of_the_job() {
+    let fixture = fixture();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let registry = JobRegistry::new().register(Arc::new(ProbeFactory { seen: seen.clone() }));
+    let mut job = request(1, Some("VI"));
+    job.kind = Some("probe".to_string());
+    job.lang = Some("src".to_string());
+    job.params = Some(json!({ "extra": 1 }));
+
+    let error = start_pipeline(
+        &PipelineExecutor::new(),
+        &registry,
+        &fixture.session,
+        job,
+        Vec::new(),
+        Arc::new(RecordingTarget::default()),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.detail, "probe stops here");
+    assert_eq!(
+        *seen.lock().unwrap(),
+        vec![json!({ "extra": 1, "target": "VI", "lang": "src" })]
+    );
+}
+
+#[test]
+fn params_fold_only_what_is_given() {
+    assert_eq!(job_params(None, None, None).unwrap(), json!({}));
+    assert_eq!(job_params(None, None, Some(Value::Null)).unwrap(), json!({}));
+    assert_eq!(
+        job_params(Some("VI".to_string()), None, None).unwrap(),
+        json!({ "target": "VI" })
+    );
+    assert_eq!(
+        job_params(None, Some("EN".to_string()), None).unwrap(),
+        json!({ "lang": "EN" })
+    );
+    assert_eq!(
+        job_params(Some("VI".to_string()), Some("EN".to_string()), None).unwrap(),
+        json!({ "target": "VI", "lang": "EN" })
+    );
+}
+
+#[test]
+fn explicit_params_win_over_target_and_lang() {
+    let params = job_params(
+        Some("VI".to_string()),
+        Some("EN".to_string()),
+        Some(json!({ "target": "EN", "other": true })),
+    )
+    .unwrap();
+
+    assert_eq!(params, json!({ "target": "EN", "other": true, "lang": "EN" }));
+}
+
+#[test]
+fn params_must_be_an_object() {
+    let error = job_params(None, None, Some(json!([1]))).unwrap_err();
+
+    assert_eq!(error.code, PipelineErrorCode::InvalidInput);
 }

@@ -71,8 +71,6 @@ impl TaskStatus {
     }
 }
 
-pub const KIND_TRANSLATION: &str = "translation";
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskRequest {

@@ -1,15 +1,16 @@
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::AnalysisFact;
-use crate::features::knowledge::models::ChapterAnalysis;
 use crate::features::knowledge::ontology::Ontology;
 use crate::features::knowledge::ontology::PredicateDef;
 use crate::features::knowledge::ontology::PredicateKind;
+use crate::features::knowledge::text::contains;
+use crate::features::knowledge::text::locate;
 use crate::features::knowledge::text::norm;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 const PERSONA: &str = "persona";
 const CHARACTER: &str = "character";
@@ -17,20 +18,22 @@ const PERSONA_OF: &str = "persona_of";
 const NOT_JSON: &str = "The model did not return a JSON result.";
 
 #[derive(Deserialize)]
-struct RawReply {
-    entities: Option<Vec<RawEntity>>,
-    facts: Option<Vec<RawFact>>,
+struct RawCandidates {
+    entities: Option<Vec<RawCandidate>>,
 }
 
 #[derive(Deserialize)]
-struct RawEntity {
-    id: Option<String>,
+struct RawCandidate {
     #[serde(rename = "type")]
     kind: Option<String>,
     name: Option<String>,
     titles: Option<Vec<Value>>,
     aliases: Option<Vec<Value>>,
-    ev: Option<Vec<Value>>,
+}
+
+#[derive(Deserialize)]
+struct RawFacts {
+    facts: Option<Vec<RawFact>>,
 }
 
 #[derive(Deserialize)]
@@ -42,9 +45,22 @@ struct RawFact {
     ev: Option<Vec<Value>>,
 }
 
+struct Candidate {
+    kind: String,
+    name: String,
+    titles: Vec<String>,
+    aliases: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Reading {
-    pub analysis: ChapterAnalysis,
+pub struct CandidateReading {
+    pub chapters: Vec<Vec<AnalysisEntity>>,
+    pub issues: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FactReading {
+    pub facts: Vec<AnalysisFact>,
     pub issues: Vec<String>,
 }
 
@@ -54,133 +70,169 @@ enum End {
     Skipped,
 }
 
-struct Cleaner {
-    count: usize,
-    entities: Vec<AnalysisEntity>,
-    ids: HashMap<String, usize>,
-    dropped: HashSet<String>,
+struct FactCleaner<'a> {
+    entities: &'a [AnalysisEntity],
+    paragraphs: &'a [String],
+    ids: HashMap<&'a str, usize>,
     facts: Vec<AnalysisFact>,
     issues: Vec<String>,
 }
 
-pub fn parse_reply(text: &str, paragraph_count: usize) -> Result<Reading, String> {
-    let reply = read_reply(text)?;
-    let mut cleaner = Cleaner {
-        count: paragraph_count,
-        entities: Vec::new(),
-        ids: HashMap::new(),
-        dropped: HashSet::new(),
+pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<CandidateReading, String> {
+    let reply: RawCandidates = read_json(text)?;
+    let raw = reply
+        .entities
+        .ok_or_else(|| "The model returned no entities.".to_string())?;
+    let mut issues = Vec::new();
+    let mut unique: Vec<Candidate> = Vec::new();
+    for item in raw {
+        if let Some(candidate) = candidate(item, &mut issues) {
+            fold(&mut unique, candidate);
+        }
+    }
+    let mut placed: Vec<Vec<AnalysisEntity>> = vec![Vec::new(); chapters.len()];
+    for candidate in unique {
+        let names = names_of(&candidate);
+        let mut found = false;
+        for (index, paragraphs) in chapters.iter().enumerate() {
+            let ev = found_in(paragraphs, &names);
+            if ev.is_empty() {
+                continue;
+            }
+            found = true;
+            placed[index].push(AnalysisEntity {
+                id: String::new(),
+                kind: candidate.kind.clone(),
+                name: candidate.name.clone(),
+                titles: candidate.titles.clone(),
+                aliases: candidate.aliases.clone(),
+                ev,
+            });
+        }
+        if !found {
+            issues.push(format!(
+                "entity \"{}\" ({}): neither the name nor the aliases appear in the chapter text",
+                candidate.name, candidate.kind
+            ));
+        }
+    }
+    for entities in &mut placed {
+        for (index, entity) in entities.iter_mut().enumerate() {
+            entity.id = entity_id(index);
+        }
+    }
+    Ok(CandidateReading {
+        chapters: placed,
+        issues,
+    })
+}
+
+pub fn parse_facts(
+    text: &str,
+    entities: &[AnalysisEntity],
+    paragraphs: &[String],
+) -> Result<FactReading, String> {
+    let reply: RawFacts = read_json(text)?;
+    let raw = reply
+        .facts
+        .ok_or_else(|| "The model returned no facts.".to_string())?;
+    let mut cleaner = FactCleaner {
+        entities,
+        paragraphs,
+        ids: entities
+            .iter()
+            .enumerate()
+            .map(|(index, entity)| (entity.id.as_str(), index))
+            .collect(),
         facts: Vec::new(),
         issues: Vec::new(),
     };
-    for entity in reply.entities.unwrap_or_default() {
-        cleaner.entity(entity);
-    }
-    for fact in reply.facts.unwrap_or_default() {
+    for fact in raw {
         cleaner.fact(fact);
     }
-    Ok(Reading {
-        analysis: ChapterAnalysis {
-            ontology: Ontology::get().version,
-            source_hash: String::new(),
-            analyzed_at: String::new(),
-            entities: cleaner.entities,
-            facts: cleaner.facts,
-        },
+    Ok(FactReading {
+        facts: cleaner.facts,
         issues: cleaner.issues,
     })
 }
 
-fn read_reply(text: &str) -> Result<RawReply, String> {
+fn read_json<T: DeserializeOwned>(text: &str) -> Result<T, String> {
     let (Some(start), Some(end)) = (text.find('{'), text.rfind('}')) else {
         return Err(NOT_JSON.to_string());
     };
     if end < start {
         return Err(NOT_JSON.to_string());
     }
-    let reply: RawReply = serde_json::from_str(&text[start..=end])
-        .map_err(|error| format!("The model returned an unreadable result: {error}"))?;
-    if reply.entities.is_none() && reply.facts.is_none() {
-        return Err("The model returned neither entities nor facts.".to_string());
-    }
-    Ok(reply)
+    serde_json::from_str(&text[start..=end])
+        .map_err(|error| format!("The model returned an unreadable result: {error}"))
 }
 
-impl Cleaner {
-    fn entity(&mut self, raw: RawEntity) {
-        let id = trimmed(raw.id).unwrap_or_default();
-        let name = trimmed(raw.name);
-        let label = entity_label(&id, name.as_deref());
-        let kind = trimmed(raw.kind);
-        if !kind.as_deref().is_some_and(known_type) {
-            let found = kind.map_or("type is missing".to_string(), |kind| {
-                format!("type \"{kind}\" is not in the ontology")
-            });
-            self.issues
-                .push(format!("{label}: {found}; use one of: {}", type_keys()));
-            self.drop_id(id);
-            return;
+fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
+    let name = trimmed(raw.name);
+    let kind = trimmed(raw.kind);
+    let label = match &name {
+        Some(name) => format!("entity \"{name}\""),
+        None => "an entity without a name".to_string(),
+    };
+    let known = kind.as_deref().is_some_and(known_type);
+    if !known {
+        let found = kind.map_or("type is missing".to_string(), |kind| {
+            format!("type \"{kind}\" is not in the ontology")
+        });
+        issues.push(format!("{label}: {found}; use one of: {}", type_keys()));
+        return None;
+    }
+    let (Some(kind), Some(name)) = (kind, name) else {
+        issues.push(format!("{label}: the name is missing"));
+        return None;
+    };
+    let mut candidate = Candidate {
+        kind,
+        name,
+        titles: Vec::new(),
+        aliases: Vec::new(),
+    };
+    if candidate.kind == PERSONA {
+        merge_names(&mut candidate.titles, strings(raw.titles));
+        merge_names(&mut candidate.aliases, strings(raw.aliases));
+        candidate
+            .aliases
+            .retain(|alias| norm(alias) != norm(&candidate.name));
+    }
+    Some(candidate)
+}
+
+fn fold(unique: &mut Vec<Candidate>, candidate: Candidate) {
+    let key = norm(&candidate.name);
+    match unique
+        .iter_mut()
+        .find(|item| item.kind == candidate.kind && norm(&item.name) == key)
+    {
+        Some(target) => {
+            merge_names(&mut target.titles, candidate.titles);
+            merge_names(&mut target.aliases, candidate.aliases);
         }
-        let (Some(kind), Some(name)) = (kind, name) else {
-            self.issues.push(format!("{label}: name is missing"));
-            self.drop_id(id);
-            return;
-        };
-        if !id.is_empty() && self.ids.contains_key(&id) {
-            self.issues.push(format!(
-                "{label}: the id {id} is already used by another entity"
-            ));
-            return;
-        }
-        let mut entity = AnalysisEntity {
-            id: String::new(),
-            kind,
-            name,
-            titles: Vec::new(),
-            aliases: Vec::new(),
-            ev: self.evidence(raw.ev, &label),
-        };
-        if entity.kind == PERSONA {
-            merge_names(&mut entity.titles, strings(raw.titles));
-            merge_names(&mut entity.aliases, strings(raw.aliases));
-        }
-        let index = self.place(entity);
-        if !id.is_empty() {
-            self.ids.insert(id, index);
+        None => unique.push(candidate),
+    }
+}
+
+fn names_of(candidate: &Candidate) -> Vec<String> {
+    let mut names = vec![candidate.name.clone()];
+    merge_names(&mut names, candidate.aliases.clone());
+    names
+}
+
+fn found_in(paragraphs: &[String], names: &[String]) -> Vec<AnalysisEvidence> {
+    let mut ev = Vec::new();
+    for name in names {
+        if let Some(p) = (1..=paragraphs.len()).find(|p| contains(paragraphs, *p, name)) {
+            merge_evidence(&mut ev, vec![AnalysisEvidence { p, q: name.clone() }]);
         }
     }
+    ev
+}
 
-    fn drop_id(&mut self, id: String) {
-        if !id.is_empty() {
-            self.dropped.insert(id);
-        }
-    }
-
-    fn place(&mut self, entity: AnalysisEntity) -> usize {
-        let key = norm(&entity.name);
-        let found = self
-            .entities
-            .iter()
-            .position(|item| item.kind == entity.kind && norm(&item.name) == key);
-        match found {
-            Some(index) => {
-                let target = &mut self.entities[index];
-                merge_names(&mut target.titles, entity.titles);
-                merge_names(&mut target.aliases, entity.aliases);
-                merge_evidence(&mut target.ev, entity.ev);
-                index
-            }
-            None => {
-                let index = self.entities.len();
-                self.entities.push(AnalysisEntity {
-                    id: entity_id(index),
-                    ..entity
-                });
-                index
-            }
-        }
-    }
-
+impl FactCleaner<'_> {
     fn fact(&mut self, raw: RawFact) {
         let pred = trimmed(raw.pred.clone()).unwrap_or_default();
         let label = fact_label(trimmed(raw.id.clone()).as_deref(), &pred);
@@ -199,8 +251,8 @@ impl Cleaner {
         let Some((subject, object)) = self.ends(def, &raw, &label) else {
             return;
         };
-        let subject = entity_id(subject);
-        let object = object.map(entity_id);
+        let subject = self.entities[subject].id.clone();
+        let object = object.map(|index| self.entities[index].id.clone());
         let ev = self.evidence(raw.ev, &label);
         let found = self
             .facts
@@ -275,10 +327,9 @@ impl Cleaner {
         };
         match self.ids.get(id) {
             Some(index) => End::Found(*index),
-            None if self.dropped.contains(id) => End::Skipped,
             None => {
                 self.issues.push(format!(
-                    "{label}: the {role} \"{id}\" is not an entity id in this reply"
+                    "{label}: the {role} \"{id}\" is not in the entity list"
                 ));
                 End::Skipped
             }
@@ -331,7 +382,7 @@ impl Cleaner {
     fn evidence(&mut self, values: Option<Vec<Value>>, label: &str) -> Vec<AnalysisEvidence> {
         let mut out = Vec::new();
         for (index, value) in values.unwrap_or_default().into_iter().enumerate() {
-            match read_evidence(&value, self.count) {
+            match read_evidence(&value, self.paragraphs) {
                 Ok(item) => merge_evidence(&mut out, vec![item]),
                 Err(problem) => self
                     .issues
@@ -342,7 +393,28 @@ impl Cleaner {
     }
 }
 
-fn entity_id(index: usize) -> String {
+fn read_evidence(value: &Value, paragraphs: &[String]) -> Result<AnalysisEvidence, String> {
+    let hint = value
+        .get("p")
+        .and_then(Value::as_u64)
+        .and_then(|p| usize::try_from(p).ok())
+        .unwrap_or(0);
+    let Some(q) = value.get("q").and_then(Value::as_str).map(str::trim) else {
+        return Err("must look like {\"p\": paragraph number, \"q\": quote}".to_string());
+    };
+    if q.is_empty() {
+        return Err("the quote is empty".to_string());
+    }
+    match locate(paragraphs, hint, q) {
+        Some(p) => Ok(AnalysisEvidence {
+            p,
+            q: q.to_string(),
+        }),
+        None => Err("the quote is not in the chapter text; copy it verbatim".to_string()),
+    }
+}
+
+pub fn entity_id(index: usize) -> String {
     format!("E{}", index + 1)
 }
 
@@ -372,14 +444,6 @@ fn predicate_keys() -> String {
         .map(|item| item.key.as_str())
         .collect();
     keys.join(", ")
-}
-
-fn entity_label(id: &str, name: Option<&str>) -> String {
-    match (id.is_empty(), name) {
-        (false, _) => format!("entity {id}"),
-        (true, Some(name)) => format!("entity \"{name}\""),
-        (true, None) => "an entity without id or name".to_string(),
-    }
 }
 
 fn fact_label(id: Option<&str>, pred: &str) -> String {
@@ -413,29 +477,6 @@ fn merge_names(target: &mut Vec<String>, extra: Vec<String>) {
             target.push(value.to_string());
         }
     }
-}
-
-fn read_evidence(value: &Value, count: usize) -> Result<AnalysisEvidence, String> {
-    let p = value
-        .get("p")
-        .and_then(Value::as_u64)
-        .and_then(|p| usize::try_from(p).ok());
-    let q = value.get("q").and_then(Value::as_str).map(str::trim);
-    let (Some(p), Some(q)) = (p, q) else {
-        return Err("must look like {\"p\": paragraph number, \"q\": quote}".to_string());
-    };
-    if q.is_empty() {
-        return Err("the quote is empty".to_string());
-    }
-    if !(1..=count).contains(&p) {
-        return Err(format!(
-            "paragraph {p} does not exist; the chapter has paragraphs 1 to {count}"
-        ));
-    }
-    Ok(AnalysisEvidence {
-        p,
-        q: q.to_string(),
-    })
 }
 
 fn merge_evidence(target: &mut Vec<AnalysisEvidence>, extra: Vec<AnalysisEvidence>) {

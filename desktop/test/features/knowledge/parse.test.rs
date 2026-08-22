@@ -1,12 +1,19 @@
 use super::*;
 use serde_json::json;
 
-fn parse(value: Value, count: usize) -> ChapterAnalysis {
-    parse_reply(&value.to_string(), count).unwrap().analysis
+fn paragraphs(lines: &[&str]) -> Vec<String> {
+    lines.iter().map(|line| line.to_string()).collect()
 }
 
-fn issues(value: Value, count: usize) -> Vec<String> {
-    parse_reply(&value.to_string(), count).unwrap().issues
+fn chapters() -> Vec<Vec<String>> {
+    vec![
+        paragraphs(&["Wren lit the lamp.", "The Guild met at the Harbor."]),
+        paragraphs(&["Aldous, also called the Keeper, slept."]),
+    ]
+}
+
+fn candidates(value: Value) -> CandidateReading {
+    parse_candidates(&value.to_string(), &chapters()).unwrap()
 }
 
 fn evidence(p: usize, q: &str) -> AnalysisEvidence {
@@ -16,201 +23,218 @@ fn evidence(p: usize, q: &str) -> AnalysisEvidence {
     }
 }
 
-fn valid() -> Value {
-    json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren", "titles": ["lamplighter"], "aliases": ["Wren Aldous"], "ev": [{"p": 1, "q": "Wren lit the lamp."}]},
-            {"id": "E2", "type": "character", "name": "Wren Aldous", "ev": [{"p": 1, "q": "Wren lit the lamp."}]},
-            {"id": "E3", "type": "organization", "name": "The Guild", "ev": [{"p": 2, "q": "The Guild met."}]}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "persona_of", "subject": "E1", "object": "E2", "ev": [{"p": 1, "q": "Wren lit the lamp."}]},
-            {"id": "F2", "pred": "occupation", "subject": "E1", "ev": [{"p": 1, "q": "the lamplighter"}]},
-            {"id": "F3", "pred": "member_of", "subject": "E1", "object": "E3", "ev": [{"p": 2, "q": "The Guild met."}]}
-        ]
-    })
-}
-
-fn entity_names(analysis: &ChapterAnalysis) -> Vec<&str> {
-    analysis
-        .entities
-        .iter()
-        .map(|entity| entity.name.as_str())
-        .collect()
+fn names(entities: &[AnalysisEntity]) -> Vec<&str> {
+    entities.iter().map(|entity| entity.name.as_str()).collect()
 }
 
 #[test]
-fn reads_a_valid_reply() {
-    let reading = parse_reply(&valid().to_string(), 2).unwrap();
-    let analysis = reading.analysis;
+fn candidates_go_to_the_chapters_that_mention_them_with_their_first_paragraph() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren", "titles": ["lamplighter"], "aliases": []},
+        {"type": "organization", "name": "The Guild"},
+        {"type": "location", "name": "Harbor"},
+        {"type": "persona", "name": "Aldous", "aliases": ["the Keeper"]}
+    ]}));
 
     assert!(reading.issues.is_empty());
-    assert_eq!(analysis.ontology, Ontology::get().version);
-    assert_eq!(analysis.source_hash, "");
-    assert_eq!(analysis.analyzed_at, "");
-    assert_eq!(
-        entity_names(&analysis),
-        ["Wren", "Wren Aldous", "The Guild"]
-    );
-    let wren = &analysis.entities[0];
+    assert_eq!(names(&reading.chapters[0]), ["Wren", "The Guild", "Harbor"]);
+    assert_eq!(names(&reading.chapters[1]), ["Aldous"]);
+    let wren = &reading.chapters[0][0];
     assert_eq!(wren.id, "E1");
     assert_eq!(wren.titles, ["lamplighter"]);
-    assert_eq!(wren.aliases, ["Wren Aldous"]);
-    assert_eq!(wren.ev, [evidence(1, "Wren lit the lamp.")]);
-    assert_eq!(analysis.facts.len(), 3);
-    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
-    assert_eq!(analysis.facts[1].object, None);
-    assert_eq!(analysis.facts[1].ev, [evidence(1, "the lamplighter")]);
+    assert_eq!(wren.ev, [evidence(1, "Wren")]);
+    assert_eq!(reading.chapters[0][1].id, "E2");
+    assert_eq!(reading.chapters[0][1].ev, [evidence(2, "The Guild")]);
+    assert_eq!(reading.chapters[1][0].id, "E1");
 }
 
 #[test]
-fn reads_a_reply_wrapped_in_prose_and_code_fences() {
-    let text = format!(
-        "Here is the analysis:\n```json\n{}\n```\nHope it helps.",
-        valid()
-    );
+fn an_alias_alone_places_the_entity_in_a_chapter() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren", "aliases": ["the Keeper"]}
+    ]}));
 
-    let reading = parse_reply(&text, 2).unwrap();
-    let analysis = reading.analysis;
+    assert_eq!(names(&reading.chapters[0]), ["Wren"]);
+    assert_eq!(names(&reading.chapters[1]), ["Wren"]);
+    assert_eq!(reading.chapters[0][0].ev, [evidence(1, "Wren")]);
+    assert_eq!(reading.chapters[1][0].ev, [evidence(1, "the Keeper")]);
+}
 
+#[test]
+fn candidates_match_names_ignoring_case_spacing_and_composition() {
+    let reading = candidates(json!({"entities": [
+        {"type": "location", "name": "  the   HARBOR "}
+    ]}));
+
+    assert_eq!(names(&reading.chapters[0]), ["the   HARBOR"]);
     assert!(reading.issues.is_empty());
-    assert_eq!(analysis.entities.len(), 3);
-    assert_eq!(analysis.facts.len(), 3);
 }
 
 #[test]
-fn ignores_unknown_fields() {
-    let value = json!({
-        "note": "x",
-        "entities": [{"id": "E1", "type": "location", "name": "Harbor", "color": "red", "ev": []}],
-        "facts": []
-    });
+fn reports_entities_with_an_unknown_type_or_no_name() {
+    let reading = candidates(json!({"entities": [
+        {"type": "planet", "name": "Mars"},
+        {"type": "location", "name": "   "},
+        {"name": "Harbor"},
+        {"type": "location", "name": "Harbor"}
+    ]}));
 
-    let analysis = parse(value, 1);
-
-    assert_eq!(entity_names(&analysis), ["Harbor"]);
-}
-
-#[test]
-fn reads_a_reply_with_only_entities() {
-    let value = json!({"entities": [{"id": "E1", "type": "location", "name": "Harbor"}]});
-
-    let analysis = parse(value, 1);
-
-    assert_eq!(analysis.entities.len(), 1);
-    assert!(analysis.facts.is_empty());
-    assert!(analysis.entities[0].ev.is_empty());
-}
-
-#[test]
-fn drops_entities_with_an_unknown_type_or_an_empty_name() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "planet", "name": "Mars"},
-            {"id": "E2", "type": "location", "name": "   "},
-            {"id": "E3", "type": "location"},
-            {"id": "E4", "name": "No type"},
-            {"id": "E5", "type": "location", "name": " Harbor "}
-        ],
-        "facts": []
-    });
-
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
-
-    assert_eq!(entity_names(&reading.analysis), ["Harbor"]);
-    assert_eq!(reading.analysis.entities[0].id, "E1");
-    assert_eq!(reading.issues.len(), 4);
+    assert_eq!(names(&reading.chapters[0]), ["Harbor"]);
+    assert_eq!(reading.issues.len(), 3);
     assert!(reading.issues[0].starts_with(
-        "entity E1: type \"planet\" is not in the ontology; use one of: character, persona,"
+        "entity \"Mars\": type \"planet\" is not in the ontology; use one of: character, persona,"
     ));
-    assert_eq!(reading.issues[1], "entity E2: name is missing");
-    assert_eq!(reading.issues[2], "entity E3: name is missing");
-    assert!(reading.issues[3].starts_with("entity E4: type is missing; use one of:"));
+    assert_eq!(
+        reading.issues[1],
+        "an entity without a name: the name is missing"
+    );
+    assert!(
+        reading.issues[2].starts_with("entity \"Harbor\": type is missing; use one of: character,")
+    );
+}
+
+#[test]
+fn reports_an_entity_that_appears_in_no_chapter() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Ghost", "aliases": ["Spirit"]},
+        {"type": "persona", "name": "Wren"}
+    ]}));
+
+    assert_eq!(names(&reading.chapters[0]), ["Wren"]);
+    assert_eq!(
+        reading.issues,
+        ["entity \"Ghost\" (persona): neither the name nor the aliases appear in the chapter text"]
+    );
 }
 
 #[test]
 fn keeps_titles_and_aliases_only_on_personas() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren", "titles": [" Lamp ", "lamp", "", "Keeper"], "aliases": ["W.", "w."]},
-            {"id": "E2", "type": "location", "name": "Harbor", "titles": ["Port"], "aliases": ["Dock"]}
-        ]
-    });
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren", "titles": [" Lamp ", "lamp", "", "Keeper"], "aliases": ["W.", "w.", "wren"]},
+        {"type": "location", "name": "Harbor", "titles": ["Port"], "aliases": ["Dock"]}
+    ]}));
 
-    let analysis = parse(value, 1);
-
-    assert_eq!(analysis.entities[0].titles, ["Lamp", "Keeper"]);
-    assert_eq!(analysis.entities[0].aliases, ["W."]);
-    assert!(analysis.entities[1].titles.is_empty());
-    assert!(analysis.entities[1].aliases.is_empty());
+    let wren = &reading.chapters[0][0];
+    assert_eq!(wren.titles, ["Lamp", "Keeper"]);
+    assert_eq!(wren.aliases, ["W."]);
+    let harbor = &reading.chapters[0][1];
+    assert!(harbor.titles.is_empty());
+    assert!(harbor.aliases.is_empty());
 }
 
 #[test]
-fn folds_entities_with_the_same_type_and_name() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren", "titles": ["A"], "ev": [{"p": 1, "q": "one"}]},
-            {"id": "E2", "type": "location", "name": "Wren"},
-            {"id": "E3", "type": "persona", "name": "  WREN ", "titles": ["a", "B"], "aliases": ["Wr"], "ev": [{"p": 1, "q": "ONE"}, {"p": 2, "q": "two"}]}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "ally_of", "subject": "E3", "object": "E1"},
-            {"id": "F2", "pred": "resides_at", "subject": "E3", "object": "E2", "ev": [{"p": 2, "q": "home"}]}
-        ]
-    });
+fn folds_candidates_with_the_same_type_and_name() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren", "titles": ["A"]},
+        {"type": "location", "name": "Wren"},
+        {"type": "persona", "name": "  WREN ", "titles": ["a", "B"], "aliases": ["Wr"]}
+    ]}));
 
-    let analysis = parse(value, 2);
-
-    assert_eq!(analysis.entities.len(), 2);
-    let wren = &analysis.entities[0];
+    assert_eq!(reading.chapters[0].len(), 2);
+    let wren = &reading.chapters[0][0];
     assert_eq!(wren.name, "Wren");
     assert_eq!(wren.titles, ["A", "B"]);
     assert_eq!(wren.aliases, ["Wr"]);
-    assert_eq!(wren.ev, [evidence(1, "one"), evidence(2, "two")]);
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].pred, "resides_at");
-    assert_eq!(analysis.facts[0].subject, "E1");
-    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
 }
 
 #[test]
-fn drops_an_entity_that_reuses_a_local_id() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "location", "name": "Harbor"},
-            {"id": "E1", "type": "location", "name": "Castle"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "located_in", "subject": "E1", "object": "E1"}
-        ]
-    });
+fn reads_candidates_wrapped_in_prose_and_code_fences() {
+    let text = format!(
+        "Here you go:\n```json\n{}\n```\nDone.",
+        json!({"entities": [{"type": "persona", "name": "Wren"}]})
+    );
 
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
+    let reading = parse_candidates(&text, &chapters()).unwrap();
 
-    assert_eq!(entity_names(&reading.analysis), ["Harbor"]);
+    assert_eq!(names(&reading.chapters[0]), ["Wren"]);
+}
+
+#[test]
+fn rejects_candidate_replies_that_are_not_usable() {
     assert_eq!(
-        reading.issues,
-        [
-            "entity E1: the id E1 is already used by another entity",
-            "fact F1: the subject and the object are the same entity"
-        ]
+        parse_candidates("Sorry, I cannot do that.", &chapters()).unwrap_err(),
+        "The model did not return a JSON result."
+    );
+    assert!(parse_candidates("} backwards {", &chapters()).is_err());
+    assert!(
+        parse_candidates("{ not json }", &chapters())
+            .unwrap_err()
+            .starts_with("The model returned an unreadable result")
+    );
+    assert!(parse_candidates("{\"entities\": \"none\"}", &chapters()).is_err());
+    assert_eq!(
+        parse_candidates("{}", &chapters()).unwrap_err(),
+        "The model returned no entities."
     );
 }
 
 #[test]
-fn drops_facts_with_an_unknown_predicate() {
-    let value = json!({
-        "entities": [{"id": "E1", "type": "persona", "name": "Wren"}],
-        "facts": [
-            {"id": "F1", "pred": "loves", "subject": "E1"},
-            {"id": "F2", "subject": "E1"}
-        ]
-    });
+fn accepts_an_empty_candidate_list() {
+    let reading = candidates(json!({"entities": []}));
 
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
+    assert!(reading.issues.is_empty());
+    assert!(reading.chapters.iter().all(Vec::is_empty));
+}
 
-    assert!(reading.analysis.facts.is_empty());
-    assert_eq!(reading.issues.len(), 2);
+fn entity(id: &str, kind: &str, name: &str) -> AnalysisEntity {
+    AnalysisEntity {
+        id: id.to_string(),
+        kind: kind.to_string(),
+        name: name.to_string(),
+        titles: Vec::new(),
+        aliases: Vec::new(),
+        ev: Vec::new(),
+    }
+}
+
+fn cast() -> Vec<AnalysisEntity> {
+    vec![
+        entity("E1", "persona", "Wren"),
+        entity("E2", "location", "Harbor"),
+        entity("E3", "organization", "The Guild"),
+        entity("E4", "character", "Aldous"),
+        entity("E5", "persona", "Mara"),
+    ]
+}
+
+fn text() -> Vec<String> {
+    paragraphs(&[
+        "Wren lit the lamp.",
+        "The Guild met at the Harbor.",
+        "Mara is the captain.",
+    ])
+}
+
+fn facts(value: Value) -> FactReading {
+    parse_facts(&value.to_string(), &cast(), &text()).unwrap()
+}
+
+#[test]
+fn reads_valid_facts_and_numbers_them() {
+    let reading = facts(json!({"facts": [
+        {"id": "x", "pred": "persona_of", "subject": "E1", "object": "E4", "ev": [{"p": 1, "q": "Wren lit the lamp."}]},
+        {"pred": "occupation", "subject": "E1", "ev": [{"p": 1, "q": "lit the lamp"}]},
+        {"pred": "member_of", "subject": "E1", "object": "E3", "ev": [{"p": 2, "q": "The Guild met"}]}
+    ]}));
+
+    assert!(reading.issues.is_empty());
+    assert_eq!(reading.facts.len(), 3);
+    assert_eq!(reading.facts[0].id, "F1");
+    assert_eq!(reading.facts[0].object.as_deref(), Some("E4"));
+    assert_eq!(reading.facts[1].id, "F2");
+    assert_eq!(reading.facts[1].object, None);
+    assert_eq!(reading.facts[1].ev, [evidence(1, "lit the lamp")]);
+    assert_eq!(reading.facts[2].subject, "E1");
+}
+
+#[test]
+fn reports_an_unknown_or_missing_predicate() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "loves", "subject": "E1"},
+        {"id": "F2", "subject": "E1"}
+    ]}));
+
+    assert!(reading.facts.is_empty());
     assert!(
         reading.issues[0].starts_with(
             "fact F1: predicate \"loves\" is not in the ontology; use one of: gender,"
@@ -220,133 +244,66 @@ fn drops_facts_with_an_unknown_predicate() {
 }
 
 #[test]
-fn drops_facts_with_a_dangling_subject_or_object() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren"},
-            {"id": "E2", "type": "location", "name": "Harbor"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "resides_at", "subject": "E9", "object": "E2"},
-            {"id": "F2", "pred": "resides_at", "subject": "E1", "object": "E9"},
-            {"id": "F3", "pred": "occupation", "subject": "E9"},
-            {"id": "F4", "pred": "occupation"},
-            {"id": "F5", "pred": "resides_at", "subject": "E1", "object": "E2"}
-        ]
-    });
+fn reports_references_that_are_not_in_the_entity_list() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "resides_at", "subject": "E9", "object": "E2"},
+        {"id": "F2", "pred": "resides_at", "subject": "E1", "object": "E9"},
+        {"id": "F3", "pred": "occupation", "subject": "E9"},
+        {"id": "F4", "pred": "occupation"},
+        {"id": "F5", "pred": "resides_at", "subject": "E1", "object": "E2", "ev": [{"p": 2, "q": "Harbor"}]}
+    ]}));
 
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
-
-    assert_eq!(reading.analysis.facts.len(), 1);
-    assert_eq!(reading.analysis.facts[0].pred, "resides_at");
+    assert_eq!(reading.facts.len(), 1);
+    assert_eq!(reading.facts[0].pred, "resides_at");
     assert_eq!(
         reading.issues,
         [
-            "fact F1: the subject \"E9\" is not an entity id in this reply",
-            "fact F2: the object \"E9\" is not an entity id in this reply",
-            "fact F3: the subject \"E9\" is not an entity id in this reply",
+            "fact F1: the subject \"E9\" is not in the entity list",
+            "fact F2: the object \"E9\" is not in the entity list",
+            "fact F3: the subject \"E9\" is not in the entity list",
             "fact F4: the subject is missing"
         ]
     );
 }
 
 #[test]
-fn does_not_blame_a_fact_for_an_entity_that_was_already_reported() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren"},
-            {"id": "E2", "type": "planet", "name": "Mars"}
-        ],
-        "facts": [{"id": "F1", "pred": "resides_at", "subject": "E1", "object": "E2"}]
-    });
-
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
-
-    assert!(reading.analysis.facts.is_empty());
-    assert_eq!(reading.issues.len(), 1);
-    assert!(reading.issues[0].starts_with("entity E2:"));
-}
-
-#[test]
-fn drops_a_scalar_fact_with_an_object() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren"},
-            {"id": "E2", "type": "location", "name": "Harbor"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "occupation", "subject": "E1", "object": "E2"},
-            {"id": "F2", "pred": "age", "subject": "E1", "object": null},
-            {"id": "F3", "pred": "gender", "subject": "E1", "object": ""}
-        ]
-    });
-
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
+fn reports_the_shape_of_scalar_and_relationship_facts() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "occupation", "subject": "E1", "object": "E2"},
+        {"id": "F2", "pred": "age", "subject": "E1", "object": null},
+        {"id": "F3", "pred": "ally_of", "subject": "E1"},
+        {"id": "F4", "pred": "ally_of", "subject": "E1", "object": ""},
+        {"id": "F5", "pred": "ally_of", "subject": "E1", "object": "E1"},
+        {"id": "F6", "pred": "ally_of", "subject": "E1", "object": "E5"}
+    ]}));
 
     let preds: Vec<&str> = reading
-        .analysis
         .facts
         .iter()
         .map(|fact| fact.pred.as_str())
         .collect();
-    assert_eq!(preds, ["age", "gender"]);
+    assert_eq!(preds, ["age", "ally_of"]);
     assert_eq!(
         reading.issues,
         [
-            "fact F1: occupation is a scalar predicate and must not have an object; put the quote in ev"
+            "fact F1: occupation is a scalar predicate and must not have an object; put the quote in ev",
+            "fact F3: ally_of needs an object",
+            "fact F4: ally_of needs an object",
+            "fact F5: the subject and the object are the same entity"
         ]
     );
 }
 
 #[test]
-fn drops_a_relationship_without_an_object_or_to_itself() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren"},
-            {"id": "E2", "type": "persona", "name": "Wren Two"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "ally_of", "subject": "E1"},
-            {"id": "F2", "pred": "ally_of", "subject": "E1", "object": ""},
-            {"id": "F3", "pred": "ally_of", "subject": "E1", "object": "E1"},
-            {"id": "F4", "pred": "ally_of", "subject": "E1", "object": "E2"}
-        ]
-    });
+fn reports_facts_that_break_the_domain_or_the_range() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "member_of", "subject": "E2", "object": "E3"},
+        {"id": "F2", "pred": "member_of", "subject": "E1", "object": "E2"},
+        {"id": "F3", "pred": "occupation", "subject": "E2"},
+        {"id": "F4", "pred": "member_of", "subject": "E1", "object": "E3"}
+    ]}));
 
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
-
-    assert_eq!(reading.analysis.facts.len(), 1);
-    assert_eq!(reading.analysis.facts[0].object.as_deref(), Some("E2"));
-    assert_eq!(
-        reading.issues,
-        [
-            "fact F1: ally_of needs an object",
-            "fact F2: ally_of needs an object",
-            "fact F3: the subject and the object are the same entity"
-        ]
-    );
-}
-
-#[test]
-fn drops_facts_that_break_the_domain_or_the_range() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "location", "name": "Harbor"},
-            {"id": "E2", "type": "persona", "name": "Wren"},
-            {"id": "E3", "type": "organization", "name": "The Guild"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "member_of", "subject": "E1", "object": "E3"},
-            {"id": "F2", "pred": "member_of", "subject": "E2", "object": "E1"},
-            {"id": "F3", "pred": "occupation", "subject": "E1"},
-            {"id": "F4", "pred": "member_of", "subject": "E2", "object": "E3"}
-        ]
-    });
-
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
-
-    assert_eq!(reading.analysis.facts.len(), 1);
-    assert_eq!(reading.analysis.facts[0].pred, "member_of");
+    assert_eq!(reading.facts.len(), 1);
     assert_eq!(
         reading.issues,
         [
@@ -359,171 +316,103 @@ fn drops_facts_that_break_the_domain_or_the_range() {
 
 #[test]
 fn tells_the_model_that_a_character_only_takes_persona_of() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "character", "name": "Aldous"},
-            {"id": "E2", "type": "location", "name": "Harbor"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "resides_at", "subject": "E1", "object": "E2"},
-            {"id": "F2", "pred": "persona_of", "subject": "E1", "object": "E1"}
-        ]
-    });
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "resides_at", "subject": "E4", "object": "E2"},
+        {"id": "F2", "pred": "persona_of", "subject": "E4", "object": "E4"}
+    ]}));
 
-    let found = issues(value, 1);
-
-    assert_eq!(found.len(), 2);
     assert_eq!(
-        found[0],
+        reading.issues[0],
         "fact F1: resides_at cannot be attached to the character Aldous; a character only takes persona_of, so attach the fact to a persona"
     );
     assert_eq!(
-        found[1],
+        reading.issues[1],
         "fact F2: the subject and the object are the same entity"
     );
 }
 
 #[test]
-fn accepts_a_persona_linked_to_its_character() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren"},
-            {"id": "E2", "type": "character", "name": "Aldous"}
-        ],
-        "facts": [{"id": "F1", "pred": "persona_of", "subject": "E1", "object": "E2"}]
-    });
-
-    let reading = parse_reply(&value.to_string(), 1).unwrap();
+fn merges_duplicate_facts_and_their_evidence() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "occupation", "subject": "E5", "ev": [{"p": 3, "q": "is the captain"}]},
+        {"id": "F2", "pred": "occupation", "subject": "E5", "ev": [{"p": 3, "q": "IS THE CAPTAIN"}, {"p": 3, "q": "Mara"}]},
+        {"id": "F3", "pred": "resides_at", "subject": "E5", "object": "E2", "ev": [{"p": 2, "q": "Harbor"}]},
+        {"id": "F4", "pred": "resides_at", "subject": "E5", "object": "E2", "ev": [{"p": 2, "q": "The Guild"}]}
+    ]}));
 
     assert!(reading.issues.is_empty());
-    assert_eq!(reading.analysis.facts.len(), 1);
-}
-
-#[test]
-fn merges_duplicate_facts_and_their_evidence() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren"},
-            {"id": "E2", "type": "location", "name": "Harbor"}
-        ],
-        "facts": [
-            {"id": "F1", "pred": "occupation", "subject": "E1", "ev": [{"p": 1, "q": "a"}]},
-            {"id": "F2", "pred": "occupation", "subject": "E1", "ev": [{"p": 1, "q": "A"}, {"p": 2, "q": "b"}]},
-            {"id": "F3", "pred": "resides_at", "subject": "E1", "object": "E2", "ev": [{"p": 1, "q": "c"}]},
-            {"id": "F4", "pred": "resides_at", "subject": "E1", "object": "E2", "ev": [{"p": 2, "q": "d"}]}
-        ]
-    });
-
-    let analysis = parse(value, 2);
-
-    assert_eq!(analysis.facts.len(), 2);
-    assert_eq!(analysis.facts[0].ev, [evidence(1, "a"), evidence(2, "b")]);
-    assert_eq!(analysis.facts[1].ev, [evidence(1, "c"), evidence(2, "d")]);
-}
-
-#[test]
-fn drops_evidence_outside_the_paragraph_range_or_without_a_quote() {
-    let value = json!({
-        "entities": [
-            {"id": "E1", "type": "persona", "name": "Wren", "ev": [
-                {"p": 0, "q": "zero"},
-                {"p": 1, "q": " first "},
-                {"p": 3, "q": "third"},
-                {"p": 2, "q": "   "},
-                {"p": -1, "q": "negative"},
-                {"p": 2},
-                {"q": "no paragraph"},
-                {"p": 1, "q": "first"}
-            ]}
-        ]
-    });
-
-    let reading = parse_reply(&value.to_string(), 2).unwrap();
-
-    assert_eq!(reading.analysis.entities[0].ev, [evidence(1, "first")]);
+    assert_eq!(reading.facts.len(), 2);
     assert_eq!(
-        reading.issues,
+        reading.facts[0].ev,
+        [evidence(3, "is the captain"), evidence(3, "Mara")]
+    );
+    assert_eq!(
+        reading.facts[1].ev,
+        [evidence(2, "Harbor"), evidence(2, "The Guild")]
+    );
+}
+
+#[test]
+fn corrects_the_paragraph_of_a_quote_found_elsewhere() {
+    let reading = facts(json!({"facts": [
+        {"pred": "occupation", "subject": "E5", "ev": [
+            {"p": 1, "q": "is the captain"},
+            {"p": 99, "q": "Mara"},
+            {"q": "Mara is the captain."}
+        ]}
+    ]}));
+
+    assert!(reading.issues.is_empty());
+    assert_eq!(
+        reading.facts[0].ev,
         [
-            "entity E1: evidence item 1: paragraph 0 does not exist; the chapter has paragraphs 1 to 2",
-            "entity E1: evidence item 3: paragraph 3 does not exist; the chapter has paragraphs 1 to 2",
-            "entity E1: evidence item 4: the quote is empty",
-            "entity E1: evidence item 5: must look like {\"p\": paragraph number, \"q\": quote}",
-            "entity E1: evidence item 6: must look like {\"p\": paragraph number, \"q\": quote}",
-            "entity E1: evidence item 7: must look like {\"p\": paragraph number, \"q\": quote}"
+            evidence(3, "is the captain"),
+            evidence(3, "Mara"),
+            evidence(3, "Mara is the captain.")
         ]
     );
 }
 
 #[test]
-fn renumbers_ids_in_order_and_remaps_references() {
-    let value = json!({
-        "entities": [
-            {"id": "a", "type": "persona", "name": "Wren"},
-            {"id": "b", "type": "planet", "name": "Mars"},
-            {"id": "c", "type": "location", "name": "Harbor"}
-        ],
-        "facts": [
-            {"id": "x", "pred": "loves", "subject": "a"},
-            {"id": "y", "pred": "resides_at", "subject": "a", "object": "c"},
-            {"id": "z", "pred": "occupation", "subject": "a"}
+fn reports_quotes_that_are_not_in_the_chapter() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "occupation", "subject": "E1", "ev": [
+            {"p": 1, "q": "nobody said this"},
+            {"p": 1, "q": "   "},
+            {"p": 1},
+            {"q": 7}
+        ]}
+    ]}));
+
+    assert_eq!(reading.facts.len(), 1);
+    assert!(reading.facts[0].ev.is_empty());
+    assert_eq!(
+        reading.issues,
+        [
+            "fact F1: evidence item 1: the quote is not in the chapter text; copy it verbatim",
+            "fact F1: evidence item 2: the quote is empty",
+            "fact F1: evidence item 3: must look like {\"p\": paragraph number, \"q\": quote}",
+            "fact F1: evidence item 4: must look like {\"p\": paragraph number, \"q\": quote}"
         ]
-    });
-
-    let analysis = parse(value.clone(), 1);
-
-    let ids: Vec<&str> = analysis
-        .entities
-        .iter()
-        .map(|entity| entity.id.as_str())
-        .collect();
-    assert_eq!(ids, ["E1", "E2"]);
-    assert_eq!(analysis.facts[0].id, "F1");
-    assert_eq!(analysis.facts[0].subject, "E1");
-    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
-    assert_eq!(analysis.facts[1].id, "F2");
-    assert_eq!(issues(value, 1).len(), 2);
+    );
 }
 
 #[test]
-fn keeps_entities_without_a_local_id_but_cannot_link_them() {
-    let value = json!({
-        "entities": [
-            {"type": "location", "name": "Harbor"},
-            {"type": "location", "name": "Castle"}
-        ]
-    });
+fn rejects_fact_replies_that_are_not_usable() {
+    let parse = |text: &str| parse_facts(text, &cast(), &text_lines());
 
-    let analysis = parse(value, 1);
-
-    assert_eq!(entity_names(&analysis), ["Harbor", "Castle"]);
+    assert_eq!(
+        parse("no json").unwrap_err(),
+        "The model did not return a JSON result."
+    );
+    assert!(parse("{ not json }").is_err());
+    assert_eq!(
+        parse("{\"entities\": []}").unwrap_err(),
+        "The model returned no facts."
+    );
+    assert!(parse("{\"facts\": []}").unwrap().facts.is_empty());
 }
 
-#[test]
-fn rejects_a_reply_without_json() {
-    let error = parse_reply("Sorry, I cannot do that.", 1).unwrap_err();
-
-    assert_eq!(error, "The model did not return a JSON result.");
-    assert!(parse_reply("} backwards {", 1).is_err());
-}
-
-#[test]
-fn rejects_unreadable_json() {
-    let error = parse_reply("{ not json }", 1).unwrap_err();
-
-    assert!(error.starts_with("The model returned an unreadable result"));
-    assert!(parse_reply("{\"entities\": \"none\"}", 1).is_err());
-}
-
-#[test]
-fn rejects_an_object_without_entities_and_facts() {
-    assert!(parse_reply("{}", 1).is_err());
-    assert!(parse_reply("{\"note\": \"nothing\"}", 1).is_err());
-}
-
-#[test]
-fn accepts_empty_entities_and_facts_arrays() {
-    let analysis = parse(json!({"entities": [], "facts": []}), 1);
-
-    assert!(analysis.entities.is_empty());
-    assert!(analysis.facts.is_empty());
+fn text_lines() -> Vec<String> {
+    text()
 }

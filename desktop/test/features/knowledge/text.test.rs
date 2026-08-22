@@ -155,3 +155,18 @@ fn contains_rejects_out_of_range_and_empty() {
     assert!(!contains(&paragraphs, 1, "   "));
     assert!(!contains(&[], 1, "one"));
 }
+
+#[test]
+fn locate_prefers_the_hinted_paragraph_and_falls_back_to_the_first_match() {
+    let paragraphs = vec![
+        "Wren lit the lamp.".to_string(),
+        "The Guild met. Wren left.".to_string(),
+    ];
+
+    assert_eq!(locate(&paragraphs, 2, "wren"), Some(2));
+    assert_eq!(locate(&paragraphs, 1, "Wren"), Some(1));
+    assert_eq!(locate(&paragraphs, 9, "the guild"), Some(2));
+    assert_eq!(locate(&paragraphs, 0, "lit the  lamp"), Some(1));
+    assert_eq!(locate(&paragraphs, 1, "nobody"), None);
+    assert_eq!(locate(&paragraphs, 1, "  "), None);
+}

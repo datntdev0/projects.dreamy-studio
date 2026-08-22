@@ -25,7 +25,7 @@ fn parses_all_sections() {
             .any(|item| item.kind == PredicateKind::Relationship)
     );
     assert_eq!(ontology.rules.len(), 8);
-    assert!(!Ontology::raw().is_empty());
+    assert!(!ontology.view().yaml.is_empty());
 }
 
 #[test]

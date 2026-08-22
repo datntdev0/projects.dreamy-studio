@@ -1,5 +1,4 @@
 use super::*;
-use crate::features::knowledge::ontology::Ontology;
 use crate::features::settings::llm::CliSettings;
 use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::models::AppSettings;
@@ -16,16 +15,51 @@ fn known(kind: &str, name: &str) -> KnownEntity {
     }
 }
 
-fn job(known: Vec<KnownEntity>) -> AnalyzeJob {
-    AnalyzeJob {
+fn candidate_job(known: Vec<KnownEntity>) -> CandidateJob {
+    CandidateJob {
         lang: "VI".to_string(),
-        title: "Chapter one".to_string(),
+        chapters: vec![
+            CandidateChapter {
+                seq: 3,
+                title: "Chapter three".to_string(),
+                paragraphs: vec![
+                    "Wren lit the lamp.".to_string(),
+                    "The Guild met.".to_string(),
+                ],
+            },
+            CandidateChapter {
+                seq: 4,
+                title: "Chapter four".to_string(),
+                paragraphs: vec!["The Harbor was quiet.".to_string()],
+            },
+        ],
+        known,
+    }
+}
+
+fn cast_member(id: &str, kind: &str, name: &str) -> AnalysisEntity {
+    AnalysisEntity {
+        id: id.to_string(),
+        kind: kind.to_string(),
+        name: name.to_string(),
+        titles: Vec::new(),
+        aliases: Vec::new(),
+        ev: Vec::new(),
+    }
+}
+
+fn facts_job() -> FactsJob {
+    let mut wren = cast_member("E1", "persona", "Wren");
+    wren.aliases = vec!["W.".to_string(), "Wren Aldous".to_string()];
+    wren.titles = vec!["lamplighter".to_string()];
+    FactsJob {
+        lang: "EN".to_string(),
+        title: "Chapter three".to_string(),
         paragraphs: vec![
             "Wren lit the lamp.".to_string(),
-            "The Guild met.".to_string(),
+            "The Guild met at the Harbor.".to_string(),
         ],
-        ontology: Ontology::raw().to_string(),
-        known,
+        entities: vec![wren, cast_member("E2", "location", "Harbor")],
     }
 }
 
@@ -75,56 +109,39 @@ fn analyzer(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmAnalyzer {
 }
 
 #[test]
-fn prompt_carries_the_raw_ontology_verbatim() {
-    let prompt = build_prompt(&job(Vec::new()));
+fn the_candidate_prompt_lists_the_entity_types_and_not_the_ontology_file() {
+    let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
-    assert!(prompt.contains(&format!("```yaml\n{}```", Ontology::raw())));
+    assert!(prompt.contains("Entity types:\n- character: "));
+    assert!(prompt.contains("- persona: "));
+    assert!(prompt.contains("Properties: titles, aliases."));
+    assert!(prompt.contains("- event: "));
+    assert!(!prompt.contains("Predicates:"));
+    assert!(!prompt.contains("```yaml"));
+    assert!(!prompt.contains("severity"));
+    assert!(!prompt.contains("persona_link"));
 }
 
 #[test]
-fn prompt_numbers_the_paragraphs_and_names_the_chapter_and_language() {
-    let prompt = build_prompt(&job(Vec::new()));
+fn the_candidate_prompt_carries_every_chapter_of_the_batch() {
+    let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
-    assert!(prompt.contains("Chapter title: Chapter one"));
     assert!(prompt.contains("Language of the text: Vietnamese"));
-    assert!(prompt.contains("[1] Wren lit the lamp.\n[2] The Guild met.\n"));
+    assert!(prompt.contains("## Chapter 3: Chapter three\nWren lit the lamp.\n\nThe Guild met.\n"));
+    assert!(prompt.contains("## Chapter 4: Chapter four\nThe Harbor was quiet.\n"));
+    assert!(prompt.find("Chapter 3").unwrap() < prompt.find("Chapter 4").unwrap());
 }
 
 #[test]
-fn prompt_names_the_language_of_each_lang() {
-    let mut item = job(Vec::new());
-    item.lang = "EN".to_string();
-    assert!(build_prompt(&item).contains("Language of the text: English"));
-
-    item.lang = "src".to_string();
-    assert!(build_prompt(&item).contains("Language of the text: the original language"));
-}
-
-#[test]
-fn prompt_states_the_rules() {
-    let prompt = build_prompt(&job(Vec::new()));
+fn the_candidate_prompt_states_the_rules_and_the_reply_contract() {
+    let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
     assert!(prompt.contains("Entities have no description."));
-    assert!(prompt.contains("A scalar fact has no value."));
-    assert!(prompt.contains("A character is reached only through persona_of."));
-    assert!(prompt.contains("attached to personas"));
     assert!(prompt.contains("titles and aliases only for personas"));
-    assert!(prompt.contains("copied verbatim from the paragraph numbered \"p\""));
-    assert!(
-        prompt.contains("one entity per (type, name) and one fact per (pred, subject, object)")
-    );
-    assert!(prompt.contains("E1, E2"));
-    assert!(prompt.contains("F1, F2"));
-}
-
-#[test]
-fn prompt_ends_with_the_reply_contract() {
-    let prompt = build_prompt(&job(Vec::new()));
-
+    assert!(prompt.contains("reached only through persona_of"));
     assert!(prompt.contains(
-        "Reply with only one JSON object shaped like {\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[],\"ev\":[{\"p\":1,\"q\":\"...\"}]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"occupation\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":1,\"q\":\"...\"}]}]}."
+        "Reply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}]}."
     ));
-    assert!(prompt.contains("Omit `object` on scalar facts."));
     assert!(
         prompt
             .trim_end()
@@ -133,27 +150,38 @@ fn prompt_ends_with_the_reply_contract() {
 }
 
 #[test]
-fn prompt_has_no_known_section_without_known_entities() {
-    let prompt = build_prompt(&job(Vec::new()));
+fn the_candidate_prompt_names_the_language_of_each_lang() {
+    let mut item = candidate_job(Vec::new());
+    item.lang = "EN".to_string();
+    assert!(build_candidate_prompt(&item).contains("Language of the text: English"));
 
-    assert!(!prompt.contains("Known entities"));
+    item.lang = "src".to_string();
+    assert!(build_candidate_prompt(&item).contains("Language of the text: the original language"));
 }
 
 #[test]
-fn prompt_lists_every_known_entity() {
+fn the_candidate_prompt_has_no_known_section_without_known_entities() {
+    assert!(!build_candidate_prompt(&candidate_job(Vec::new())).contains("Known entities"));
+}
+
+#[test]
+fn the_candidate_prompt_lists_every_known_entity_before_the_chapters() {
     let wren = KnownEntity {
         titles: vec!["lamplighter".to_string()],
         aliases: vec!["Wren Aldous".to_string(), "W.".to_string()],
         character: Some("Aldous".to_string()),
         ..known("persona", "Wren")
     };
-    let guild = known("organization", "The Guild");
     let titled = KnownEntity {
         titles: vec!["Captain".to_string()],
         ..known("persona", "Mara")
     };
 
-    let prompt = build_prompt(&job(vec![wren, guild, titled]));
+    let prompt = build_candidate_prompt(&candidate_job(vec![
+        wren,
+        known("organization", "The Guild"),
+        titled,
+    ]));
 
     assert!(prompt.contains("Known entities"));
     assert!(prompt.contains(
@@ -163,128 +191,79 @@ fn prompt_lists_every_known_entity() {
     assert!(prompt.contains("- persona | Mara | titles: Captain\n"));
     assert!(prompt.contains("reuse its exact name and type"));
     assert!(prompt.contains("never invent a new spelling"));
+    assert!(prompt.find("- organization | The Guild").unwrap() < prompt.find("Chapter 3").unwrap());
 }
 
 #[test]
-fn known_entities_come_before_the_chapter_text() {
-    let prompt = build_prompt(&job(vec![known("location", "Harbor")]));
+fn the_facts_prompt_lists_the_chapter_entities_with_their_ids() {
+    let prompt = build_facts_prompt(&facts_job());
 
-    let known_at = prompt.find("- location | Harbor").unwrap();
-    let chapter_at = prompt.find("Chapter title:").unwrap();
-    assert!(known_at < chapter_at);
+    assert!(
+        prompt.contains("- E1 | persona | Wren | aliases: W., Wren Aldous | titles: lamplighter\n")
+    );
+    assert!(prompt.contains("- E2 | location | Harbor\n"));
+    assert!(!prompt.contains("Entity types:"));
 }
 
 #[test]
-fn fails_without_a_knowledge_provider() {
-    let dir = TempDir::new().unwrap();
-    let analyzer = analyzer(&dir, None);
+fn the_facts_prompt_lists_scalars_and_relationships_with_their_signatures() {
+    let prompt = build_facts_prompt(&facts_job());
 
-    let result = analyzer.analyze(
-        &job(Vec::new()),
+    assert!(prompt.contains("Predicates:\n"));
+    assert!(prompt.contains("- gender: scalar; subject: persona; "));
+    assert!(prompt.contains("- meaning: scalar; subject: term or skill or artifact; "));
+    assert!(prompt.contains("- member_of: relationship; subject: persona; object: organization; "));
+    assert!(
+        prompt
+            .contains("- owns: relationship; subject: persona or organization; object: artifact; ")
+    );
+    assert!(prompt.contains("- persona_of: relationship; subject: persona; object: character; "));
+    assert!(!prompt.contains("severity"));
+    assert!(!prompt.contains("```yaml"));
+}
+
+#[test]
+fn the_facts_prompt_numbers_the_paragraphs_and_states_the_rules() {
+    let prompt = build_facts_prompt(&facts_job());
+
+    assert!(prompt.contains("Chapter title: Chapter three"));
+    assert!(prompt.contains("Language of the text: English"));
+    assert!(prompt.contains("[1] Wren lit the lamp.\n[2] The Guild met at the Harbor.\n"));
+    assert!(prompt.contains("Every subject and object is an id from the entity list."));
+    assert!(prompt.contains("A scalar fact has no value and no object."));
+    assert!(prompt.contains("copied verbatim from the paragraph numbered \"p\""));
+    assert!(prompt.contains("A character is reached only through persona_of"));
+    assert!(prompt.contains(
+        "Reply with only one JSON object shaped like {\"facts\":[{\"pred\":\"occupation\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":1,\"q\":\"...\"}]}]}."
+    ));
+    assert!(prompt.contains("Omit `object` on scalar facts."));
+    assert!(
+        prompt
+            .trim_end()
+            .ends_with("Do not add commentary or code fences.")
+    );
+}
+
+const CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"Wren\"},{\"type\":\"location\",\"name\":\"Harbor\"}]}";
+
+const BAD_CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"Wren\"},{\"type\":\"planet\",\"name\":\"Mars\"}]}";
+
+const FACTS: &str = "{\"facts\":[{\"pred\":\"resides_at\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":2,\"q\":\"Harbor\"}]}]}";
+
+const BAD_FACTS: &str = "{\"facts\":[{\"pred\":\"resides_at\",\"subject\":\"E2\",\"object\":\"E1\",\"ev\":[]},{\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"lit the lamp\"}]}]}";
+
+fn find(analyzer: &LlmAnalyzer) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError> {
+    analyzer.candidates(
+        &candidate_job(Vec::new()),
         &TaskLog::none(),
         &|_| {},
         &AtomicBool::new(false),
-    );
-
-    assert_eq!(
-        result,
-        Err(AnalyzeError::Failed(
-            "No LLM provider is set for knowledge analysis. Choose one in Settings > LLM."
-                .to_string()
-        ))
-    );
+    )
 }
 
-#[test]
-fn cancelled_before_start_does_not_touch_the_provider() {
-    let dir = TempDir::new().unwrap();
-    let analyzer = analyzer(&dir, None);
-
-    let result = analyzer.analyze(
-        &job(Vec::new()),
-        &TaskLog::none(),
-        &|_| {},
-        &AtomicBool::new(true),
-    );
-
-    assert_eq!(result, Err(AnalyzeError::Cancelled));
-}
-
-#[test]
-fn analyzes_through_the_configured_cli() {
-    let dir = TempDir::new().unwrap();
-    let reply = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"Wren lit the lamp.\"}]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"lit the lamp\"}]}]}";
-    let path = script(&dir, reply, "", 0);
-    let analyzer = analyzer(&dir, Some(("claude", &path)));
-    let reported = std::sync::Mutex::new(Vec::new());
-
-    let analysis = analyzer
-        .analyze(
-            &job(Vec::new()),
-            &TaskLog::none(),
-            &|value| reported.lock().unwrap().push(value),
-            &AtomicBool::new(false),
-        )
-        .unwrap();
-
-    assert_eq!(analysis.ontology, Ontology::get().version);
-    assert_eq!(analysis.entities.len(), 1);
-    assert_eq!(analysis.entities[0].name, "Wren");
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].pred, "occupation");
-    assert_eq!(reported.lock().unwrap().last(), Some(&100));
-}
-
-#[test]
-fn fails_when_the_cli_does_not_return_json() {
-    let dir = TempDir::new().unwrap();
-    let path = script(&dir, "I could not do it", "", 0);
-    let analyzer = analyzer(&dir, Some(("claude", &path)));
-
-    let result = analyzer.analyze(
-        &job(Vec::new()),
-        &TaskLog::none(),
-        &|_| {},
-        &AtomicBool::new(false),
-    );
-
-    assert_eq!(
-        result,
-        Err(AnalyzeError::Failed(
-            "The model did not return a JSON result.".to_string()
-        ))
-    );
-}
-
-#[test]
-fn reports_the_cli_failure_detail() {
-    let dir = TempDir::new().unwrap();
-    let path = script(&dir, "", "not signed in", 3);
-    let analyzer = analyzer(&dir, Some(("codex", &path)));
-
-    let result = analyzer.analyze(
-        &job(Vec::new()),
-        &TaskLog::none(),
-        &|_| {},
-        &AtomicBool::new(false),
-    );
-
-    match result {
-        Err(AnalyzeError::Failed(message)) => {
-            assert!(message.contains("Codex CLI exited"));
-            assert!(message.contains("not signed in"));
-        }
-        other => panic!("unexpected result: {other:?}"),
-    }
-}
-
-const GOOD: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"Wren lit the lamp.\"}]},{\"id\":\"E2\",\"type\":\"location\",\"name\":\"Harbor\",\"ev\":[]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"resides_at\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":1,\"q\":\"Wren lit the lamp.\"}]}]}";
-
-const BAD: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[]},{\"id\":\"E2\",\"type\":\"location\",\"name\":\"Harbor\",\"ev\":[]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"resides_at\",\"subject\":\"E2\",\"object\":\"E1\",\"ev\":[]},{\"id\":\"F2\",\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[]}]}";
-
-fn run(analyzer: &LlmAnalyzer) -> Result<ChapterAnalysis, AnalyzeError> {
-    analyzer.analyze(
-        &job(Vec::new()),
+fn extract(analyzer: &LlmAnalyzer) -> Result<Vec<AnalysisFact>, AnalyzeError> {
+    analyzer.facts(
+        &facts_job(),
         &TaskLog::none(),
         &|_| {},
         &AtomicBool::new(false),
@@ -292,28 +271,92 @@ fn run(analyzer: &LlmAnalyzer) -> Result<ChapterAnalysis, AnalyzeError> {
 }
 
 #[test]
-fn a_valid_reply_needs_one_call_and_starts_a_named_claude_session() {
+fn fails_without_a_knowledge_provider() {
     let dir = TempDir::new().unwrap();
-    let cli = ScriptedCli::new(dir.path(), &[GOOD]);
-    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+    let analyzer = analyzer(&dir, None);
+    let message = "No LLM provider is set for knowledge analysis. Choose one in Settings > LLM.";
 
-    let analysis = run(&analyzer).unwrap();
-
-    assert_eq!(cli.calls(), 1);
-    assert_eq!(analysis.facts.len(), 1);
-    let args = cli.args(1);
-    assert!(args.contains("--session-id"));
-    assert!(!args.contains("--no-session-persistence"));
-    assert!(cli.stdin(1).contains("Chapter title: Chapter one"));
+    assert_eq!(
+        find(&analyzer),
+        Err(AnalyzeError::Failed(message.to_string()))
+    );
+    assert_eq!(
+        extract(&analyzer),
+        Err(AnalyzeError::Failed(message.to_string()))
+    );
 }
 
 #[test]
-fn sends_the_problems_back_into_the_same_claude_session() {
+fn cancelled_before_start_does_not_touch_the_provider() {
     let dir = TempDir::new().unwrap();
-    let cli = ScriptedCli::new(dir.path(), &[BAD, GOOD]);
+    let analyzer = analyzer(&dir, None);
+    let cancel = AtomicBool::new(true);
+
+    let found = analyzer.candidates(
+        &candidate_job(Vec::new()),
+        &TaskLog::none(),
+        &|_| {},
+        &cancel,
+    );
+    let facts = analyzer.facts(&facts_job(), &TaskLog::none(), &|_| {}, &cancel);
+
+    assert_eq!(found, Err(AnalyzeError::Cancelled));
+    assert_eq!(facts, Err(AnalyzeError::Cancelled));
+}
+
+#[test]
+fn finds_the_candidates_of_every_chapter_through_the_cli() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[CANDIDATES]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+    let reported = std::sync::Mutex::new(Vec::new());
+
+    let found = analyzer
+        .candidates(
+            &candidate_job(Vec::new()),
+            &TaskLog::none(),
+            &|value| reported.lock().unwrap().push(value),
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    assert_eq!(cli.calls(), 1);
+    assert_eq!(found.len(), 2);
+    assert_eq!(found[0].len(), 1);
+    assert_eq!(found[0][0].name, "Wren");
+    assert_eq!(found[0][0].ev[0].p, 1);
+    assert_eq!(found[1].len(), 1);
+    assert_eq!(found[1][0].name, "Harbor");
+    let args = cli.args(1);
+    assert!(args.contains("--session-id"));
+    assert!(!args.contains("--no-session-persistence"));
+    assert!(cli.stdin(1).contains("## Chapter 4: Chapter four"));
+    assert_eq!(*reported.lock().unwrap(), [10]);
+}
+
+#[test]
+fn finds_the_facts_of_a_chapter_through_the_cli() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[FACTS]);
     let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
 
-    let analysis = run(&analyzer).unwrap();
+    let facts = extract(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 1);
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].pred, "resides_at");
+    assert_eq!(facts[0].subject, "E1");
+    assert_eq!(facts[0].object.as_deref(), Some("E2"));
+    assert!(cli.stdin(1).contains("- E2 | location | Harbor"));
+}
+
+#[test]
+fn sends_the_candidate_problems_back_into_the_same_claude_session() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[BAD_CANDIDATES, CANDIDATES]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let found = find(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 2);
     let session = cli
@@ -328,46 +371,56 @@ fn sends_the_problems_back_into_the_same_claude_session() {
     assert!(!second.contains("--session-id"));
     let retry = cli.stdin(2);
     assert!(retry.contains("Your reply breaks the ontology rules."));
-    assert!(
-        retry.contains(
-            "fact F1: resides_at needs a subject of type persona, but Harbor is a location"
-        )
-    );
-    assert!(!retry.contains("fact F2"));
-    assert!(!retry.contains("Chapter title:"));
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].subject, "E1");
-    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
+    assert!(retry.contains("entity \"Mars\": type \"planet\" is not in the ontology"));
+    assert!(!retry.contains("## Chapter"));
+    assert_eq!(found[0].len(), 1);
+}
+
+#[test]
+fn sends_the_fact_problems_back_into_the_same_session() {
+    let dir = TempDir::new().unwrap();
+    let cli = ScriptedCli::new(dir.path(), &[BAD_FACTS, FACTS]);
+    let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
+
+    let facts = extract(&analyzer).unwrap();
+
+    assert_eq!(cli.calls(), 2);
+    let retry = cli.stdin(2);
+    assert!(retry.contains(
+        "a resides_at fact without id: resides_at needs a subject of type persona, but Harbor is a location"
+    ));
+    assert!(!retry.contains("occupation"));
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].subject, "E1");
 }
 
 #[test]
 fn asks_again_when_the_reply_is_not_json() {
     let dir = TempDir::new().unwrap();
-    let cli = ScriptedCli::new(dir.path(), &["I could not do it", GOOD]);
+    let cli = ScriptedCli::new(dir.path(), &["I could not do it", CANDIDATES]);
     let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
 
-    let analysis = run(&analyzer).unwrap();
+    let found = find(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 2);
     assert!(
         cli.stdin(2)
             .contains("Your reply could not be used: The model did not return a JSON result.")
     );
-    assert_eq!(analysis.entities.len(), 2);
+    assert_eq!(found[0].len(), 1);
 }
 
 #[test]
 fn keeps_the_valid_part_after_the_last_retry() {
     let dir = TempDir::new().unwrap();
-    let cli = ScriptedCli::new(dir.path(), &[BAD, BAD, BAD]);
+    let cli = ScriptedCli::new(dir.path(), &[BAD_FACTS, BAD_FACTS, BAD_FACTS]);
     let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
 
-    let analysis = run(&analyzer).unwrap();
+    let facts = extract(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 3);
-    assert_eq!(analysis.entities.len(), 2);
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].pred, "occupation");
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].pred, "occupation");
 }
 
 #[test]
@@ -376,7 +429,7 @@ fn fails_when_every_reply_is_unreadable() {
     let cli = ScriptedCli::new(dir.path(), &["no", "still no", "never"]);
     let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
 
-    let result = run(&analyzer);
+    let result = find(&analyzer);
 
     assert_eq!(cli.calls(), 3);
     assert_eq!(
@@ -390,15 +443,29 @@ fn fails_when_every_reply_is_unreadable() {
 #[test]
 fn keeps_the_earlier_result_when_a_retry_call_fails() {
     let dir = TempDir::new().unwrap();
-    let cli = ScriptedCli::new(dir.path(), &[BAD]);
+    let cli = ScriptedCli::new(dir.path(), &[BAD_CANDIDATES]);
     let analyzer = analyzer(&dir, Some(("claude", &cli.path)));
 
-    let analysis = run(&analyzer).unwrap();
+    let found = find(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 2);
-    assert_eq!(analysis.entities.len(), 2);
-    assert_eq!(analysis.facts.len(), 1);
-    assert_eq!(analysis.facts[0].pred, "occupation");
+    assert_eq!(found[0].len(), 1);
+    assert_eq!(found[0][0].name, "Wren");
+}
+
+#[test]
+fn reports_the_cli_failure_detail() {
+    let dir = TempDir::new().unwrap();
+    let path = script(&dir, "", "not signed in", 3);
+    let analyzer = analyzer(&dir, Some(("codex", &path)));
+
+    match find(&analyzer) {
+        Err(AnalyzeError::Failed(message)) => {
+            assert!(message.contains("Codex CLI exited"));
+            assert!(message.contains("not signed in"));
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
 }
 
 #[test]
@@ -416,12 +483,12 @@ fn caps_the_listed_problems() {
 #[test]
 fn continues_a_codex_thread_with_resume() {
     let dir = TempDir::new().unwrap();
-    let first = codex_message(BAD);
-    let second = codex_message(GOOD);
+    let first = codex_message(BAD_FACTS);
+    let second = codex_message(FACTS);
     let cli = ScriptedCli::new(dir.path(), &[&first, &second]);
     let analyzer = analyzer(&dir, Some(("codex", &cli.path)));
 
-    let analysis = run(&analyzer).unwrap();
+    let facts = extract(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 2);
     assert!(cli.args(1).contains("--json"));
@@ -433,7 +500,7 @@ fn continues_a_codex_thread_with_resume() {
         cli.stdin(2)
             .contains("Your reply breaks the ontology rules.")
     );
-    assert_eq!(analysis.facts.len(), 1);
+    assert_eq!(facts.len(), 1);
 }
 
 fn codex_message(reply: &str) -> String {

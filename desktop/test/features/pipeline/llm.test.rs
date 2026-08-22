@@ -321,6 +321,7 @@ fn client_names_its_label_when_no_provider_is_set() {
     let client = client(&dir, None);
 
     let result = client.complete(
+        "test",
         "prompt".to_string(),
         &TaskLog::none(),
         &|_| {},
@@ -352,6 +353,7 @@ fn client_rejects_a_cli_without_the_feature() {
     let client = LlmClient::new(repository, "knowledge", "knowledge analysis");
 
     let result = client.complete(
+        "test",
         "prompt".to_string(),
         &TaskLog::none(),
         &|_| {},
@@ -388,6 +390,7 @@ fn client_is_cancelled_before_it_resolves_anything() {
     let client = client(&dir, None);
 
     let result = client.complete(
+        "test",
         "prompt".to_string(),
         &TaskLog::none(),
         &|_| {},
@@ -406,6 +409,7 @@ fn client_returns_the_stdout_text() {
 
     let text = client
         .complete(
+            "test",
             "prompt".to_string(),
             &TaskLog::none(),
             &|value| reported.lock().unwrap().push(value),
@@ -424,6 +428,7 @@ fn client_reports_the_cli_failure_detail() {
     let client = client(&dir, Some(("codex", &path)));
 
     let result = client.complete(
+        "test",
         "prompt".to_string(),
         &TaskLog::none(),
         &|_| {},
@@ -500,10 +505,17 @@ fn start_returns_the_generated_claude_session_and_resume_keeps_it() {
     let progress = |value| reported.lock().unwrap().push(value);
 
     let first = client
-        .start("hello".to_string(), &TaskLog::none(), &progress, &cancel)
+        .start(
+            "test",
+            "hello".to_string(),
+            &TaskLog::none(),
+            &progress,
+            &cancel,
+        )
         .unwrap();
     let second = client
         .resume(
+            "test",
             &first.session,
             "again".to_string(),
             &TaskLog::none(),
@@ -583,6 +595,7 @@ fn a_single_call_logs_the_command_the_prompt_and_the_response() {
 
     client
         .complete(
+            "test",
             "the prompt".to_string(),
             &task,
             &|_| {},
@@ -592,13 +605,14 @@ fn a_single_call_logs_the_command_the_prompt_and_the_response() {
 
     let folder = run.dir().unwrap();
     let log = std::fs::read_to_string(folder.join("pipeline.log")).unwrap();
-    assert!(log.contains("[task 5 chp0001] exchange 1 (single call): "));
+    assert!(log.contains("[task 5 chp0001] exchange 1 (test, single call): "));
     assert!(log.contains("--no-session-persistence"));
-    assert!(log.contains("exchange 1 prompt: t5-chp0001-exchange-1-prompt.txt (10 bytes"));
-    assert!(log.contains("exchange 1 response: t5-chp0001-exchange-1-response.txt"));
-    let prompt = std::fs::read_to_string(folder.join("t5-chp0001-exchange-1-prompt.txt")).unwrap();
+    assert!(log.contains("exchange 1 prompt: t5-chp0001-exchange-1-test-prompt.txt (10 bytes"));
+    assert!(log.contains("exchange 1 response: t5-chp0001-exchange-1-test-response.txt"));
+    let prompt =
+        std::fs::read_to_string(folder.join("t5-chp0001-exchange-1-test-prompt.txt")).unwrap();
     let response =
-        std::fs::read_to_string(folder.join("t5-chp0001-exchange-1-response.txt")).unwrap();
+        std::fs::read_to_string(folder.join("t5-chp0001-exchange-1-test-response.txt")).unwrap();
     assert_eq!(prompt, "the prompt");
     assert!(response.contains("translated text"));
 }
@@ -618,6 +632,7 @@ fn a_failing_call_logs_the_failure_and_keeps_the_stderr() {
     let task = run.task(1, "chp0001");
 
     let result = client.complete(
+        "test",
         "prompt".to_string(),
         &task,
         &|_| {},
@@ -627,8 +642,9 @@ fn a_failing_call_logs_the_failure_and_keeps_the_stderr() {
     assert!(result.is_err());
     let folder = run.dir().unwrap();
     let log = std::fs::read_to_string(folder.join("pipeline.log")).unwrap();
-    assert!(log.contains("exchange 1 stderr: t1-chp0001-exchange-1-stderr.txt"));
+    assert!(log.contains("exchange 1 stderr: t1-chp0001-exchange-1-test-stderr.txt"));
     assert!(log.contains("exchange failed: Codex CLI exited"));
-    let stderr = std::fs::read_to_string(folder.join("t1-chp0001-exchange-1-stderr.txt")).unwrap();
+    let stderr =
+        std::fs::read_to_string(folder.join("t1-chp0001-exchange-1-test-stderr.txt")).unwrap();
     assert!(stderr.contains("not signed in"));
 }

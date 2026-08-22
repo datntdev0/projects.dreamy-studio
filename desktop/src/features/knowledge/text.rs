@@ -62,6 +62,13 @@ pub fn contains(paragraphs: &[String], p: usize, q: &str) -> bool {
     }
 }
 
+pub fn locate(paragraphs: &[String], hint: usize, q: &str) -> Option<usize> {
+    if contains(paragraphs, hint, q) {
+        return Some(hint);
+    }
+    (1..=paragraphs.len()).find(|p| contains(paragraphs, *p, q))
+}
+
 fn load_source(
     root: &Path,
     novel_id: i64,

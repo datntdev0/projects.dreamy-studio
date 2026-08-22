@@ -23,15 +23,26 @@ use tempfile::TempDir;
 struct EagerAnalyzer;
 
 impl Analyzer for EagerAnalyzer {
-    fn analyze(
+    fn candidates(
         &self,
-        _job: &AnalyzeJob,
+        job: &CandidateJob,
         _log: &TaskLog,
         _progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-    ) -> Result<ChapterAnalysis, AnalyzeError> {
+    ) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError> {
         cancel.store(true, Ordering::SeqCst);
-        Ok(ChapterAnalysis::default())
+        Ok(job.chapters.iter().map(|_| Vec::new()).collect())
+    }
+
+    fn facts(
+        &self,
+        _job: &FactsJob,
+        _log: &TaskLog,
+        _progress: &dyn Fn(u8),
+        cancel: &AtomicBool,
+    ) -> Result<Vec<AnalysisFact>, AnalyzeError> {
+        cancel.store(true, Ordering::SeqCst);
+        Ok(Vec::new())
     }
 }
 
@@ -113,6 +124,39 @@ fn translate(setup: &Setup, chapter_id: &str) {
         .unwrap();
 }
 
+fn six_chapters(setup: &Setup) -> Vec<String> {
+    let mut ids = vec![setup.fixture.chapter_id.clone()];
+    for title in ["Two", "Three", "Four", "Five", "Six"] {
+        ids.push(setup.fixture.add_chapter(title));
+    }
+    ids
+}
+
+fn tasks_of(ids: &[String]) -> Vec<TaskRequest> {
+    ids.iter().map(|id| request(id, None)).collect()
+}
+
+fn start_and_wait(
+    setup: &Setup,
+    job: AnalysisJob,
+    ids: &[String],
+) -> crate::features::pipeline::models::PipelineSnapshot {
+    let _ = setup;
+    let executor = PipelineExecutor::new();
+    let target = Arc::new(RecordingTarget::new());
+    executor
+        .start(Box::new(job), tasks_of(ids), target.clone())
+        .unwrap();
+    target.wait_for_finished()
+}
+
+fn known_names(call: &CandidateJob) -> Vec<String> {
+    call.known
+        .iter()
+        .map(|entity| entity.name.clone())
+        .collect()
+}
+
 #[test]
 fn describes_itself_for_the_executor() {
     let setup = setup();
@@ -162,29 +206,74 @@ fn a_translated_lang_is_analyzed_on_the_translation_text() {
     let analysis = stored(&setup, KnowledgeLang::Vi, &chapter_id).unwrap();
     assert_eq!(analysis.source_hash, text_hash(&["nguon".to_string()]));
     assert!(stored(&setup, KnowledgeLang::Src, &chapter_id).is_none());
-    let received = analyzer.received();
-    assert_eq!(received[0].lang, "VI");
-    assert_eq!(received[0].paragraphs, vec!["nguon".to_string()]);
+    let candidates = analyzer.candidate_calls();
+    assert_eq!(candidates[0].lang, "VI");
+    assert_eq!(
+        candidates[0].chapters[0].paragraphs,
+        vec!["nguon".to_string()]
+    );
+    assert_eq!(
+        analyzer.fact_calls()[0].paragraphs,
+        vec!["nguon".to_string()]
+    );
 }
 
 #[test]
-fn the_analyzer_receives_the_chapter_and_the_raw_ontology() {
+fn the_analyzer_receives_the_chapter_text_and_then_its_entities() {
     let setup = setup();
     let analyzer = fake();
 
     run(&job(&setup, &analyzer), &setup.fixture.chapter_id).unwrap();
 
-    let received = analyzer.received();
-    assert_eq!(received.len(), 1);
-    assert_eq!(received[0].lang, "src");
-    assert_eq!(received[0].title, "Chapter");
-    assert_eq!(received[0].paragraphs, vec!["source".to_string()]);
-    assert_eq!(received[0].ontology, Ontology::raw());
-    assert!(received[0].known.is_empty());
+    let candidates = analyzer.candidate_calls();
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].lang, "src");
+    assert_eq!(candidates[0].chapters.len(), 1);
+    assert_eq!(candidates[0].chapters[0].seq, 1);
+    assert_eq!(candidates[0].chapters[0].title, "Chapter");
+    assert_eq!(
+        candidates[0].chapters[0].paragraphs,
+        vec!["source".to_string()]
+    );
+    assert!(candidates[0].known.is_empty());
+    let facts = analyzer.fact_calls();
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].title, "Chapter");
+    assert_eq!(facts[0].entities[0].id, "E1");
+    assert_eq!(facts[0].entities[0].name, "Chapter");
 }
 
 #[test]
-fn an_analyzer_error_is_a_failed_task_and_writes_nothing() {
+fn a_chapter_without_entities_is_saved_empty_without_asking_for_facts() {
+    let setup = setup();
+    let analyzer = Arc::new(FakeAnalyzer::new().with_entities("Chapter", Vec::new()));
+
+    run(&job(&setup, &analyzer), &setup.fixture.chapter_id).unwrap();
+
+    let analysis = stored(&setup, KnowledgeLang::Src, &setup.fixture.chapter_id).unwrap();
+    assert!(analysis.entities.is_empty());
+    assert!(analysis.facts.is_empty());
+    assert_eq!(analysis.ontology, 1);
+    assert!(analyzer.fact_calls().is_empty());
+}
+
+#[test]
+fn a_candidate_error_is_a_failed_task_and_writes_nothing() {
+    let setup = setup();
+    let analyzer = Arc::new(FakeAnalyzer::new().failing_candidates("Chapter"));
+
+    let outcome = run(&job(&setup, &analyzer), &setup.fixture.chapter_id).unwrap_err();
+
+    assert_eq!(
+        outcome,
+        TaskOutcome::Failed("candidates refused".to_string())
+    );
+    assert!(stored(&setup, KnowledgeLang::Src, &setup.fixture.chapter_id).is_none());
+    assert!(analyzer.fact_calls().is_empty());
+}
+
+#[test]
+fn a_fact_error_is_a_failed_task_and_writes_nothing() {
     let setup = setup();
     let analyzer = Arc::new(FakeAnalyzer::new().failing_title("Chapter"));
 
@@ -195,7 +284,7 @@ fn an_analyzer_error_is_a_failed_task_and_writes_nothing() {
 }
 
 #[test]
-fn a_cancelled_analyzer_is_a_cancelled_task_and_writes_nothing() {
+fn a_cancelled_run_is_a_cancelled_task_and_writes_nothing() {
     let setup = setup();
     let cancel = AtomicBool::new(true);
 
@@ -213,7 +302,7 @@ fn a_cancelled_analyzer_is_a_cancelled_task_and_writes_nothing() {
 }
 
 #[test]
-fn a_cancel_after_a_successful_analysis_writes_nothing() {
+fn a_cancel_after_the_candidates_writes_nothing() {
     let setup = setup();
     let job = job_with(&setup, KnowledgeLang::Src, Arc::new(EagerAnalyzer));
 
@@ -245,6 +334,25 @@ fn running_an_unknown_chapter_fails_the_task() {
 }
 
 #[test]
+fn progress_moves_through_the_candidates_and_the_facts_up_to_one_hundred() {
+    let setup = setup();
+    let reported = std::sync::Mutex::new(Vec::new());
+
+    job(&setup, &fake())
+        .run(
+            &task_of(&setup.fixture.chapter_id),
+            &TaskLog::none(),
+            &|value| reported.lock().unwrap().push(value),
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    let values = reported.lock().unwrap().clone();
+    assert_eq!(values, [50, 50, 100, 100]);
+    assert!(values.windows(2).all(|pair| pair[0] <= pair[1]));
+}
+
+#[test]
 fn known_entities_come_only_from_earlier_chapters() {
     let setup = setup();
     let second = setup.fixture.add_chapter("Two");
@@ -260,23 +368,15 @@ fn known_entities_come_only_from_earlier_chapters() {
     run(&job, &third).unwrap();
     run(&job, &first).unwrap();
 
-    let names = |title: &str| -> Vec<String> {
-        analyzer
-            .received_for(title)
-            .unwrap()
-            .known
-            .into_iter()
-            .map(|entity| entity.name)
-            .collect()
-    };
-    assert_eq!(names("Two"), vec!["Chapter".to_string()]);
+    let known = |title: &str| known_names(&analyzer.candidates_with(title).unwrap());
+    assert_eq!(known("Two"), vec!["Chapter".to_string()]);
     assert_eq!(
-        names("Three"),
+        known("Three"),
         vec!["Chapter".to_string(), "Two".to_string()]
     );
-    assert!(names("Chapter").is_empty());
+    assert!(known("Chapter").is_empty());
     assert_eq!(
-        analyzer.received_for("Two").unwrap().known[0].kind,
+        analyzer.candidates_with("Two").unwrap().known[0].kind,
         "persona"
     );
 }
@@ -286,8 +386,7 @@ fn a_rerun_overwrites_the_chapter_file() {
     let setup = setup();
     let chapter_id = setup.fixture.chapter_id.clone();
     run(&job(&setup, &fake()), &chapter_id).unwrap();
-    let canned = ChapterAnalysis::default();
-    let analyzer = Arc::new(FakeAnalyzer::new().with_analysis("Chapter", canned));
+    let analyzer = Arc::new(FakeAnalyzer::new().with_entities("Chapter", Vec::new()));
 
     run(&job(&setup, &analyzer), &chapter_id).unwrap();
 
@@ -369,7 +468,114 @@ fn the_executor_runs_an_analysis_job_to_completion() {
 }
 
 #[test]
-fn the_executor_fails_only_the_chapter_the_analyzer_refused() {
+fn five_chapters_share_one_candidate_call_and_each_asks_for_its_own_facts() {
+    let setup = setup();
+    let ids = six_chapters(&setup);
+    let analyzer = fake();
+
+    let finished = start_and_wait(&setup, job(&setup, &analyzer), &ids);
+
+    assert_eq!(finished.status, PipelineStatus::Completed);
+    assert_eq!(finished.done, 6);
+    let mut sizes: Vec<usize> = analyzer
+        .candidate_calls()
+        .iter()
+        .map(|call| call.chapters.len())
+        .collect();
+    sizes.sort_unstable();
+    assert_eq!(sizes, [1, 5]);
+    assert_eq!(analyzer.fact_calls().len(), 6);
+    for id in &ids {
+        let analysis = stored(&setup, KnowledgeLang::Src, id).unwrap();
+        assert_eq!(analysis.entities.len(), 1);
+        assert_eq!(analysis.facts.len(), 1);
+    }
+}
+
+#[test]
+fn the_batch_holds_the_chapters_in_order_even_when_the_tasks_are_not() {
+    let setup = setup();
+    let mut ids = six_chapters(&setup);
+    ids.reverse();
+    let analyzer = fake();
+
+    start_and_wait(&setup, job(&setup, &analyzer), &ids);
+
+    let calls = analyzer.candidate_calls();
+    let big = calls.iter().find(|call| call.chapters.len() == 5).unwrap();
+    let seqs: Vec<i64> = big.chapters.iter().map(|chapter| chapter.seq).collect();
+    assert_eq!(seqs, [1, 2, 3, 4, 5]);
+}
+
+#[test]
+fn the_batch_size_is_configurable_and_capped() {
+    let setup = setup();
+    let ids = six_chapters(&setup);
+    let analyzer = fake();
+
+    start_and_wait(&setup, job(&setup, &analyzer).with_batch_size(2), &ids);
+
+    let mut sizes: Vec<usize> = analyzer
+        .candidate_calls()
+        .iter()
+        .map(|call| call.chapters.len())
+        .collect();
+    sizes.sort_unstable();
+    assert_eq!(sizes, [2, 2, 2]);
+
+    let all = fake();
+    start_and_wait(&setup, job(&setup, &all).with_batch_size(99), &ids);
+    assert_eq!(all.candidate_calls().len(), 1);
+}
+
+#[test]
+fn a_later_batch_knows_the_candidates_of_an_earlier_batch_before_they_are_saved() {
+    let setup = setup();
+    let ids = six_chapters(&setup);
+    let analyzer = fake();
+    let job = job(&setup, &analyzer);
+    job.validate(&tasks_of(&ids)).unwrap();
+
+    run(&job, &ids[0]).unwrap();
+    run(&job, &ids[5]).unwrap();
+
+    let call = analyzer.candidates_with("Six").unwrap();
+    assert_eq!(
+        known_names(&call),
+        ["Chapter", "Two", "Three", "Four", "Five"]
+    );
+    assert!(stored(&setup, KnowledgeLang::Src, &ids[1]).is_none());
+}
+
+#[test]
+fn a_failed_candidate_call_fails_every_chapter_of_its_batch() {
+    let setup = setup();
+    let ids = six_chapters(&setup);
+    let analyzer = Arc::new(FakeAnalyzer::new().failing_candidates("Three"));
+
+    let finished = start_and_wait(&setup, job(&setup, &analyzer), &ids);
+
+    assert_eq!(finished.status, PipelineStatus::Failed);
+    let failed: Vec<&str> = finished
+        .tasks
+        .iter()
+        .filter(|task| task.status == TaskStatus::Failed)
+        .map(|task| task.error.as_str())
+        .collect();
+    assert_eq!(failed.len(), 5);
+    assert!(failed.iter().all(|error| *error == "candidates refused"));
+    let sixth = finished
+        .tasks
+        .iter()
+        .find(|task| task.chapter_id == ids[5])
+        .unwrap();
+    assert_eq!(sixth.status, TaskStatus::Completed);
+    assert!(stored(&setup, KnowledgeLang::Src, &ids[0]).is_none());
+    assert!(stored(&setup, KnowledgeLang::Src, &ids[5]).is_some());
+}
+
+#[test]
+fn the_executor_fails_only_the_chapter_whose_facts_were_refused() {
     let setup = setup();
     let bad = setup.fixture.add_chapter("Bad");
     let executor = PipelineExecutor::new();
@@ -393,6 +599,7 @@ fn the_executor_fails_only_the_chapter_the_analyzer_refused() {
         .unwrap();
     assert_eq!(failed.status, TaskStatus::Failed);
     assert_eq!(failed.error, "provider refused");
+    assert_eq!(analyzer.candidate_calls().len(), 1);
     assert!(stored(&setup, KnowledgeLang::Src, &setup.fixture.chapter_id).is_some());
     assert!(stored(&setup, KnowledgeLang::Src, &bad).is_none());
 }
@@ -400,13 +607,14 @@ fn the_executor_fails_only_the_chapter_the_analyzer_refused() {
 #[test]
 fn the_executor_records_a_cancelled_analysis_without_writing_it() {
     let setup = setup();
+    let ids = six_chapters(&setup);
     let executor = PipelineExecutor::new();
     let target = Arc::new(RecordingTarget::new());
     let analyzer = Arc::new(FakeAnalyzer::new().with_delay(Duration::from_secs(10)));
     let snapshot = executor
         .start(
             Box::new(job(&setup, &analyzer)),
-            setup.fixture.tasks(),
+            tasks_of(&ids[..3]),
             target.clone(),
         )
         .unwrap();
@@ -415,8 +623,13 @@ fn the_executor_records_a_cancelled_analysis_without_writing_it() {
 
     let finished = target.wait_for_finished();
     assert_eq!(finished.status, PipelineStatus::Cancelled);
-    assert_eq!(finished.tasks[0].status, TaskStatus::Cancelled);
-    assert!(stored(&setup, KnowledgeLang::Src, &setup.fixture.chapter_id).is_none());
+    assert!(
+        finished
+            .tasks
+            .iter()
+            .all(|task| task.status == TaskStatus::Cancelled)
+    );
+    assert!(stored(&setup, KnowledgeLang::Src, &ids[0]).is_none());
 }
 
 #[test]
@@ -454,9 +667,11 @@ fn the_factory_needs_an_open_workspace() {
     assert_eq!(error.code, PipelineErrorCode::NoWorkspace);
 }
 
-const BAD_REPLY: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"source\"}]},{\"id\":\"E2\",\"type\":\"planet\",\"name\":\"Mars\"}],\"facts\":[]}";
+const BAD_CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"source\"},{\"type\":\"planet\",\"name\":\"Mars\"}]}";
 
-const GOOD_REPLY: &str = "{\"entities\":[{\"id\":\"E1\",\"type\":\"persona\",\"name\":\"Wren\",\"ev\":[{\"p\":1,\"q\":\"source\"}]}],\"facts\":[{\"id\":\"F1\",\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"source\"}]}]}";
+const CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"source\"}]}";
+
+const FACTS: &str = "{\"facts\":[{\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"source\"}]}]}";
 
 fn llm_analyzer(dir: &TempDir, cli: &ScriptedCli) -> Arc<LlmAnalyzer> {
     let repository = SettingsRepository::new(dir.path().join("settings.json"));
@@ -487,67 +702,81 @@ fn only_run_folder(logs: &TempDir) -> std::path::PathBuf {
     folders[0].clone()
 }
 
+fn one_at_a_time(executor: &PipelineExecutor) {
+    executor.set_limits(crate::features::pipeline::executor::PipelineLimits::new(
+        1, 1,
+    ));
+}
+
 #[test]
-fn an_analysis_run_logs_its_command_prompts_and_responses_in_its_own_folder() {
+fn a_batch_run_logs_the_command_prompts_and_responses_of_both_phases() {
     let setup = setup();
-    let chapter_id = setup.fixture.chapter_id.clone();
+    let second = setup.fixture.add_chapter("Two");
+    let first = setup.fixture.chapter_id.clone();
     let tools = TempDir::new().unwrap();
-    let cli = ScriptedCli::new(tools.path(), &[BAD_REPLY, GOOD_REPLY]);
+    let cli = ScriptedCli::new(tools.path(), &[BAD_CANDIDATES, CANDIDATES, FACTS, FACTS]);
     let analyzer = llm_analyzer(&tools, &cli);
     let logs = TempDir::new().unwrap();
     let executor = PipelineExecutor::with_logs(logs.path().to_path_buf());
+    one_at_a_time(&executor);
     let target = Arc::new(RecordingTarget::new());
 
     executor
         .start(
             Box::new(job_with(&setup, KnowledgeLang::Src, analyzer)),
-            setup.fixture.tasks(),
+            tasks_of(&[first.clone(), second.clone()]),
             target.clone(),
         )
         .unwrap();
 
     let finished = target.wait_for_finished();
     assert_eq!(finished.status, PipelineStatus::Completed);
+    assert_eq!(cli.calls(), 4);
     let folder = only_run_folder(&logs);
     assert!(folder.to_string_lossy().ends_with("-analysis-1"));
     let log = std::fs::read_to_string(folder.join("pipeline.log")).unwrap();
-    let prefix = format!("t1-{chapter_id}");
     for expected in [
-        "[pipeline] analysis pipeline 1 (src) for novel 1: 1 tasks, running",
-        "[pipeline] prepared",
-        "analyzing \"Chapter\": 1 paragraphs, 0 known entities from earlier chapters, language src",
-        "exchange 1 (new session): ",
+        "[pipeline] analysis pipeline 1 (src) for novel 1: 2 tasks, running",
+        "finding candidates for 2 chapters (seq 1, 2), 0 known entities from earlier chapters, language src",
+        "(candidates, new session): ",
         "--session-id",
         "exchange 1 working directory: ",
-        &format!("exchange 1 prompt: {prefix}-exchange-1-prompt.txt"),
-        &format!("exchange 1 response: {prefix}-exchange-1-response.txt"),
-        "reply has 1 problems",
-        "problem: entity E2: type \"planet\" is not in the ontology",
-        "retry 1 of 2: sending the problems back into session ",
-        "exchange 2 (resumed session): ",
+        "candidates: reply has 1 problems",
+        "problem: entity \"Mars\": type \"planet\" is not in the ontology",
+        "candidates: retry 1 of 2, sending the problems back into session ",
+        "(candidates, resumed session): ",
         "--resume",
-        &format!("exchange 2 prompt: {prefix}-exchange-2-prompt.txt"),
-        "reply accepted: 1 entities, 1 facts",
+        "candidates: reply accepted",
+        "candidates found: 1 + 1",
+        "the candidates of this chapter came from its batch",
+        "1 entities found in this chapter",
+        "(facts, new session): ",
+        "facts: reply accepted",
         "saved 1 entities and 1 facts",
         "] completed",
-        "[pipeline] finished Completed: 1 done, 0 failed of 1 tasks",
+        "[pipeline] finished Completed: 2 done, 0 failed of 2 tasks",
     ] {
-        assert!(
-            log.contains(expected),
-            "log misses {expected:?}:
-{log}"
-        );
+        assert!(log.contains(expected), "log misses {expected:?}:\n{log}");
     }
+    let leader = format!("t1-{first}");
     let read =
-        |name: &str| std::fs::read_to_string(folder.join(format!("{prefix}-{name}"))).unwrap();
-    assert!(read("exchange-1-prompt.txt").contains("[1] source"));
-    assert!(read("exchange-1-prompt.txt").contains("Chapter title: Chapter"));
-    assert!(read("exchange-1-response.txt").contains("planet"));
-    assert!(read("exchange-2-prompt.txt").contains("type \"planet\" is not in the ontology"));
-    assert!(read("exchange-2-response.txt").contains("occupation"));
-    let analysis = stored(&setup, KnowledgeLang::Src, &chapter_id).unwrap();
-    assert_eq!(analysis.entities.len(), 1);
-    assert_eq!(analysis.facts.len(), 1);
+        |name: &str| std::fs::read_to_string(folder.join(format!("{leader}-{name}"))).unwrap();
+    assert!(read("exchange-1-candidates-prompt.txt").contains("## Chapter 1: Chapter"));
+    assert!(read("exchange-1-candidates-prompt.txt").contains("## Chapter 2: Two"));
+    assert!(read("exchange-1-candidates-response.txt").contains("planet"));
+    assert!(
+        read("exchange-2-candidates-prompt.txt").contains("type \"planet\" is not in the ontology")
+    );
+    assert!(read("exchange-2-candidates-response.txt").contains("\"source\""));
+    assert!(read("exchange-3-facts-prompt.txt").contains("- E1 | persona | source"));
+    assert!(read("exchange-3-facts-response.txt").contains("occupation"));
+    let follower = format!("t2-{second}-exchange-1-facts-prompt.txt");
+    assert!(folder.join(follower).is_file());
+    for id in [&first, &second] {
+        let analysis = stored(&setup, KnowledgeLang::Src, id).unwrap();
+        assert_eq!(analysis.entities.len(), 1);
+        assert_eq!(analysis.facts.len(), 1);
+    }
 }
 
 #[test]
@@ -570,7 +799,9 @@ fn a_failed_analysis_run_logs_the_failure() {
 
     assert_eq!(target.wait_for_finished().status, PipelineStatus::Failed);
     let log = std::fs::read_to_string(only_run_folder(&logs).join("pipeline.log")).unwrap();
-    assert!(log.contains("reply cannot be used: The model did not return a JSON result."));
+    assert!(
+        log.contains("candidates: reply cannot be used: The model did not return a JSON result.")
+    );
     assert!(log.contains("] failed: The model did not return a JSON result."));
     assert!(log.contains("[pipeline] finished Failed: 0 done, 1 failed of 1 tasks"));
 }

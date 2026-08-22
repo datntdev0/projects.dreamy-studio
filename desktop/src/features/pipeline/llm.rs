@@ -63,7 +63,7 @@ impl Translator for LlmTranslator {
     ) -> Result<TranslatedRun, TranslateError> {
         let text = self
             .client
-            .complete(build_prompt(job), log, progress, cancel)?;
+            .complete("translation", build_prompt(job), log, progress, cancel)?;
         let run = parse_output(&text, job).map_err(TranslateError::Failed)?;
         progress(FINISHED_PROGRESS);
         Ok(run)
@@ -94,23 +94,28 @@ impl LlmClient {
 
     pub(crate) fn complete(
         &self,
+        purpose: &str,
         prompt: String,
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<String, ClientError> {
-        Ok(self.exchange(Mode::Once, prompt, log, progress, cancel)?.0)
+        Ok(self
+            .exchange(Mode::Once, purpose, prompt, log, progress, cancel)?
+            .0)
     }
 
     pub(crate) fn start(
         &self,
+        purpose: &str,
         prompt: String,
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<Turn, ClientError> {
         let id = Uuid::new_v4().to_string();
-        let (text, session) = self.exchange(Mode::Start(&id), prompt, log, progress, cancel)?;
+        let (text, session) =
+            self.exchange(Mode::Start(&id), purpose, prompt, log, progress, cancel)?;
         Ok(Turn {
             text,
             session: session.unwrap_or(id),
@@ -119,13 +124,21 @@ impl LlmClient {
 
     pub(crate) fn resume(
         &self,
+        purpose: &str,
         session: &str,
         prompt: String,
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<Turn, ClientError> {
-        let (text, _) = self.exchange(Mode::Resume(session), prompt, log, progress, cancel)?;
+        let (text, _) = self.exchange(
+            Mode::Resume(session),
+            purpose,
+            prompt,
+            log,
+            progress,
+            cancel,
+        )?;
         Ok(Turn {
             text,
             session: session.to_string(),
@@ -152,12 +165,13 @@ impl LlmClient {
     fn exchange(
         &self,
         mode: Mode,
+        purpose: &str,
         prompt: String,
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<(String, Option<String>), ClientError> {
-        let result = self.exchange_once(mode, prompt, log, progress, cancel);
+        let result = self.exchange_once(mode, purpose, prompt, log, progress, cancel);
         match &result {
             Err(ClientError::Cancelled) => log.line("exchange cancelled"),
             Err(ClientError::Failed(message)) => log.line(&format!("exchange failed: {message}")),
@@ -169,6 +183,7 @@ impl LlmClient {
     fn exchange_once(
         &self,
         mode: Mode,
+        purpose: &str,
         prompt: String,
         log: &TaskLog,
         progress: &dyn Fn(u8),
@@ -183,10 +198,10 @@ impl LlmClient {
             progress(STARTED_PROGRESS);
         }
         let number = log.next_exchange();
-        record_call(log, number, mode, &command, &prompt);
+        record_call(log, number, purpose, mode, &command, &prompt);
         let started = Instant::now();
         let output = run(command, prompt, self.timeout, cancel)?;
-        record_output(log, number, &output, started.elapsed());
+        record_output(log, number, purpose, &output, started.elapsed());
         if !output.success {
             return Err(failed(failure_detail(provider.cli, &output)));
         }
@@ -413,7 +428,14 @@ fn quoted(text: &str) -> String {
     }
 }
 
-fn record_call(log: &TaskLog, number: usize, mode: Mode, command: &Command, prompt: &str) {
+fn record_call(
+    log: &TaskLog,
+    number: usize,
+    purpose: &str,
+    mode: Mode,
+    command: &Command,
+    prompt: &str,
+) {
     let kind = match mode {
         Mode::Once => "single call",
         Mode::Start(_) => "new session",
@@ -421,7 +443,10 @@ fn record_call(log: &TaskLog, number: usize, mode: Mode, command: &Command, prom
     };
     let mut words = vec![quoted(&command.get_program().to_string_lossy())];
     words.extend(command.get_args().map(|arg| quoted(&arg.to_string_lossy())));
-    log.line(&format!("exchange {number} ({kind}): {}", words.join(" ")));
+    log.line(&format!(
+        "exchange {number} ({purpose}, {kind}): {}",
+        words.join(" ")
+    ));
     if let Some(dir) = command.get_current_dir() {
         log.line(&format!(
             "exchange {number} working directory: {}",
@@ -437,7 +462,7 @@ fn record_call(log: &TaskLog, number: usize, mode: Mode, command: &Command, prom
             ));
         }
     }
-    let file = log.attach(&format!("exchange-{number}-prompt.txt"), prompt);
+    let file = log.attach(&format!("exchange-{number}-{purpose}-prompt.txt"), prompt);
     log.line(&format!(
         "exchange {number} prompt: {} ({} bytes, sent on stdin)",
         file.as_deref().unwrap_or("not saved"),
@@ -445,20 +470,32 @@ fn record_call(log: &TaskLog, number: usize, mode: Mode, command: &Command, prom
     ));
 }
 
-fn record_output(log: &TaskLog, number: usize, output: &Captured, elapsed: Duration) {
+fn record_output(
+    log: &TaskLog,
+    number: usize,
+    purpose: &str,
+    output: &Captured,
+    elapsed: Duration,
+) {
     log.line(&format!(
         "exchange {number} finished: {} after {} ms",
         output.status,
         elapsed.as_millis()
     ));
-    let response = log.attach(&format!("exchange-{number}-response.txt"), &output.stdout);
+    let response = log.attach(
+        &format!("exchange-{number}-{purpose}-response.txt"),
+        &output.stdout,
+    );
     log.line(&format!(
         "exchange {number} response: {} ({} bytes)",
         response.as_deref().unwrap_or("not saved"),
         output.stdout.len()
     ));
     if !output.stderr.trim().is_empty() {
-        let stderr = log.attach(&format!("exchange-{number}-stderr.txt"), &output.stderr);
+        let stderr = log.attach(
+            &format!("exchange-{number}-{purpose}-stderr.txt"),
+            &output.stderr,
+        );
         log.line(&format!(
             "exchange {number} stderr: {} ({} bytes)",
             stderr.as_deref().unwrap_or("not saved"),

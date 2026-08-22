@@ -138,10 +138,6 @@ impl Ontology {
         })
     }
 
-    pub fn raw() -> &'static str {
-        RAW
-    }
-
     pub fn view(&self) -> OntologyView {
         OntologyView {
             version: self.version,

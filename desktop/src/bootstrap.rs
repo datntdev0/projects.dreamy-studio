@@ -94,6 +94,8 @@ pub fn run() {
             commands::translation::translation_passage_save,
             commands::translation::translation_note_save,
             commands::knowledge::knowledge_get,
+            commands::knowledge::knowledge_edit,
+            commands::knowledge::knowledge_stale_accept,
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
             commands::pipeline::pipeline_history_list,

@@ -1,3 +1,5 @@
+use crate::features::knowledge::models::KnowledgeEdit;
+use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::KnowledgeError;
 use crate::features::knowledge::models::KnowledgeErrorCode;
 use crate::features::knowledge::models::KnowledgeResult;
@@ -15,6 +17,28 @@ pub fn get(
     lang: &str,
 ) -> KnowledgeResult<WireKnowledge> {
     service.open(session)?.get(novel_id, lang)
+}
+
+pub fn edit(
+    service: &KnowledgeService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    lang: &str,
+    edits: Vec<KnowledgeEdit>,
+) -> KnowledgeResult<KnowledgeEditResult> {
+    service.open(session)?.edit(novel_id, lang, edits)
+}
+
+pub fn stale_accept(
+    service: &KnowledgeService,
+    session: &WorkspaceSession,
+    novel_id: i64,
+    lang: &str,
+    chapters: &[i64],
+) -> KnowledgeResult<WireKnowledge> {
+    service
+        .open(session)?
+        .stale_accept(novel_id, lang, chapters)
 }
 
 fn task_failure(error: tauri::Error) -> KnowledgeError {
@@ -45,6 +69,32 @@ pub async fn knowledge_get(
 ) -> KnowledgeResult<WireKnowledge> {
     run_blocking(app, move |service, session| {
         get(service, session, novel_id, &lang)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn knowledge_edit(
+    app: AppHandle,
+    novel_id: i64,
+    lang: String,
+    edits: Vec<KnowledgeEdit>,
+) -> KnowledgeResult<KnowledgeEditResult> {
+    run_blocking(app, move |service, session| {
+        edit(service, session, novel_id, &lang, edits)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn knowledge_stale_accept(
+    app: AppHandle,
+    novel_id: i64,
+    lang: String,
+    chapters: Vec<i64>,
+) -> KnowledgeResult<WireKnowledge> {
+    run_blocking(app, move |service, session| {
+        stale_accept(service, session, novel_id, &lang, &chapters)
     })
     .await
 }

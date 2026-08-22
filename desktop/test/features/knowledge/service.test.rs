@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::knowledge::merge::entity_id;
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::AnalysisFact;
@@ -254,4 +255,314 @@ fn a_corrupt_analysis_file_is_an_io_error_naming_the_file() {
 
     assert_eq!(error.code, KnowledgeErrorCode::Io);
     assert!(error.detail.contains(&format!("chapter_{}.json", ids[0])));
+}
+
+const SEEDED_TEXTS: [&str; 3] = [
+    "Lin Mo drew his sword.",
+    "Lin Mo sheathed his blade.",
+    "The Sect gate stood open.",
+];
+
+fn seeded(fixture: &Fixture) -> (i64, Vec<String>) {
+    let novel = fixture.novel.create(novel_input()).unwrap();
+    let files = KnowledgeFiles::new(fixture.knowledge.dir().to_path_buf());
+    let mut ids = Vec::new();
+    for (index, text) in SEEDED_TEXTS.iter().enumerate() {
+        let chapter = fixture
+            .novel
+            .chapter_add(novel.id, &format!("Chapter {index}"))
+            .unwrap();
+        fixture
+            .novel
+            .paragraph_add(novel.id, &chapter.id, text)
+            .unwrap();
+        let hash = if index == 1 {
+            "outdated".to_string()
+        } else {
+            text_hash(&[text.to_string()])
+        };
+        let entities = if index == 2 {
+            vec![entity("E1", "organization", "Sect", Vec::new())]
+        } else {
+            vec![entity(
+                "E1",
+                "character",
+                "Lin Mo",
+                vec![evidence(1, "Lin Mo")],
+            )]
+        };
+        files
+            .write(
+                novel.id,
+                KnowledgeLang::Src,
+                &chapter.id,
+                &analysis(&hash, entities, Vec::new()),
+            )
+            .unwrap();
+        ids.push(chapter.id);
+    }
+    (novel.id, ids)
+}
+
+fn snapshot(fixture: &Fixture, novel_id: i64, ids: &[String]) -> Vec<Vec<u8>> {
+    let dir = NovelFiles::new(fixture.knowledge.dir().to_path_buf())
+        .novel_dir(novel_id)
+        .join("knowledgebase_src");
+    ids.iter()
+        .map(|id| std::fs::read(dir.join(format!("chapter_{id}.json"))).unwrap())
+        .collect()
+}
+
+fn rename(id: &str, name: &str) -> KnowledgeEdit {
+    KnowledgeEdit::Rename {
+        id: id.to_string(),
+        name: name.to_string(),
+    }
+}
+
+#[test]
+fn edit_rewrites_only_the_dirty_chapter_files() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+    let old_id = entity_id("character", "Lin Mo");
+    let new_id = entity_id("character", "Lin");
+
+    let result = fixture
+        .knowledge
+        .edit(novel_id, "src", vec![rename(&old_id, "Lin")])
+        .unwrap();
+
+    let after = snapshot(&fixture, novel_id, &ids);
+    assert_ne!(before[0], after[0]);
+    assert_ne!(before[1], after[1]);
+    assert_eq!(before[2], after[2]);
+    assert_eq!(result.remap.get(&old_id), Some(&new_id));
+    let names: Vec<&str> = entities_of(&result.knowledge)
+        .iter()
+        .map(|entity| entity.name.as_str())
+        .collect();
+    assert_eq!(names.len(), 2);
+    assert!(names.contains(&"Lin"));
+    assert!(names.contains(&"Sect"));
+    assert_eq!(
+        result.knowledge,
+        fixture.knowledge.get(novel_id, "src").unwrap()
+    );
+}
+
+#[test]
+fn edit_keeps_the_analysis_header_of_the_chapters_it_rewrites() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+
+    fixture
+        .knowledge
+        .edit(
+            novel_id,
+            "src",
+            vec![rename(&entity_id("character", "Lin Mo"), "Lin")],
+        )
+        .unwrap();
+
+    let loaded = fixture
+        .knowledge
+        .load_chapters(novel_id, KnowledgeLang::Src)
+        .unwrap();
+    assert_eq!(loaded[0].id, ids[0]);
+    assert_eq!(
+        loaded[0].file.source_hash,
+        text_hash(&[SEEDED_TEXTS[0].to_string()])
+    );
+    assert_eq!(loaded[1].file.source_hash, "outdated");
+    assert_eq!(loaded[0].file.analyzed_at, "2026-01-01T00:00:00Z");
+    assert_eq!(loaded[0].file.ontology, 1);
+    assert_eq!(loaded[0].file.entities[0].name, "Lin");
+}
+
+#[test]
+fn a_failed_validation_leaves_every_file_byte_identical() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+
+    let error = fixture
+        .knowledge
+        .edit(
+            novel_id,
+            "src",
+            vec![rename(&entity_id("character", "Lin Mo"), "sword")],
+        )
+        .unwrap_err();
+
+    assert_eq!(error.code, KnowledgeErrorCode::TextNotFound);
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+}
+
+#[test]
+fn a_second_edit_that_fails_writes_nothing() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+
+    let error = fixture
+        .knowledge
+        .edit(
+            novel_id,
+            "src",
+            vec![
+                rename(&entity_id("character", "Lin Mo"), "Lin"),
+                rename(&entity_id("organization", "Sect"), "Nowhere"),
+            ],
+        )
+        .unwrap_err();
+
+    assert_eq!(error.code, KnowledgeErrorCode::TextNotFound);
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+}
+
+#[test]
+fn edit_rejects_empty_edits_and_unknown_langs() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+
+    let empty = fixture
+        .knowledge
+        .edit(novel_id, "src", Vec::new())
+        .unwrap_err();
+    let lang = fixture
+        .knowledge
+        .edit(novel_id, "FR", vec![rename("E1", "Lin")])
+        .unwrap_err();
+
+    assert_eq!(empty.code, KnowledgeErrorCode::InvalidInput);
+    assert_eq!(lang.code, KnowledgeErrorCode::InvalidInput);
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+}
+
+#[test]
+fn edit_of_an_unknown_novel_is_not_found() {
+    let fixture = fixture();
+
+    let error = fixture
+        .knowledge
+        .edit(99, "src", vec![rename("E1", "Lin")])
+        .unwrap_err();
+
+    assert_eq!(error.code, KnowledgeErrorCode::NotFound);
+}
+
+#[test]
+fn stale_accept_rehashes_the_chapter_and_clears_the_flag() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+    assert!(fixture.knowledge.get(novel_id, "src").unwrap().analyzed[&2].stale);
+
+    let knowledge = fixture
+        .knowledge
+        .stale_accept(novel_id, "src", &[2])
+        .unwrap();
+
+    let after = snapshot(&fixture, novel_id, &ids);
+    assert!(!knowledge.analyzed[&2].stale);
+    assert!(
+        entities_of(&knowledge)
+            .iter()
+            .all(|entity| entity.stale.is_empty())
+    );
+    assert_ne!(before[1], after[1]);
+    assert_eq!(before[0], after[0]);
+    assert_eq!(before[2], after[2]);
+    let loaded = fixture
+        .knowledge
+        .load_chapters(novel_id, KnowledgeLang::Src)
+        .unwrap();
+    assert_eq!(
+        loaded[1].file.source_hash,
+        text_hash(&[SEEDED_TEXTS[1].to_string()])
+    );
+    assert_eq!(loaded[1].file.entities.len(), 1);
+    assert_eq!(knowledge, fixture.knowledge.get(novel_id, "src").unwrap());
+}
+
+#[test]
+fn stale_accept_does_not_rewrite_an_up_to_date_chapter() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+
+    let knowledge = fixture
+        .knowledge
+        .stale_accept(novel_id, "src", &[1, 3])
+        .unwrap();
+
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+    assert!(knowledge.analyzed[&2].stale);
+}
+
+#[test]
+fn stale_accept_rejects_unknown_and_unanalyzed_seqs_without_writing() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    fixture.novel.chapter_add(novel_id, "Fourth").unwrap();
+    let before = snapshot(&fixture, novel_id, &ids);
+
+    let unknown = fixture
+        .knowledge
+        .stale_accept(novel_id, "src", &[2, 9])
+        .unwrap_err();
+    let unanalyzed = fixture
+        .knowledge
+        .stale_accept(novel_id, "src", &[4])
+        .unwrap_err();
+
+    assert_eq!(unknown.code, KnowledgeErrorCode::NotFound);
+    assert_eq!(unanalyzed.code, KnowledgeErrorCode::NotFound);
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+}
+
+#[test]
+fn stale_accept_requires_chapter_text_for_the_lang() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    KnowledgeFiles::new(fixture.knowledge.dir().to_path_buf())
+        .write(
+            novel_id,
+            KnowledgeLang::Vi,
+            &ids[0],
+            &analysis("x", Vec::new(), Vec::new()),
+        )
+        .unwrap();
+
+    let error = fixture
+        .knowledge
+        .stale_accept(novel_id, "VI", &[1])
+        .unwrap_err();
+
+    assert_eq!(error.code, KnowledgeErrorCode::NotFound);
+    assert!(
+        error
+            .detail
+            .contains("chapter has no text for this language")
+    );
+}
+
+#[test]
+fn stale_accept_rejects_empty_lists_and_unknown_langs() {
+    let fixture = fixture();
+    let (novel_id, _) = seeded(&fixture);
+
+    let empty = fixture
+        .knowledge
+        .stale_accept(novel_id, "src", &[])
+        .unwrap_err();
+    let lang = fixture
+        .knowledge
+        .stale_accept(novel_id, "FR", &[1])
+        .unwrap_err();
+
+    assert_eq!(empty.code, KnowledgeErrorCode::InvalidInput);
+    assert_eq!(lang.code, KnowledgeErrorCode::InvalidInput);
 }

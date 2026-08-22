@@ -92,6 +92,7 @@ export class NovelKnowledgeAnalyzeDialog {
   constructor() {
     effect(this.resetOnOpen.bind(this));
     effect(this.loadTranslations.bind(this));
+    effect(this.loadAnalyzed.bind(this));
   }
 
   nameOf(novel: NovelSummary): string {
@@ -238,7 +239,7 @@ export class NovelKnowledgeAnalyzeDialog {
 
   private buildSummary(): AnalyzeSummary {
     const request = this.request();
-    const analyzed = request ? this.knowledge.of(request.novelId).analyzed : {};
+    const analyzed = request ? this.knowledge.of(request.novelId, this.lang()).analyzed : {};
     const available = new Set(this.langs().find((item) => item.value === this.lang())?.seqs ?? []);
     return planAnalysis(this.chapters(), analyzed, { mode: this.mode(), from: this.from(), to: this.to(), overwrite: this.overwrite(), lang: this.lang() }, available);
   }
@@ -275,15 +276,16 @@ export class NovelKnowledgeAnalyzeDialog {
       return;
     }
     const rows = this.novels.chaptersOf(request.novelId);
-    const analyzed = this.knowledge.of(request.novelId).analyzed;
+    const preset = request.preset;
+    const lang = preset.lang ?? this.knowledge.viewOf(request.novelId).lang;
+    const analyzed = this.knowledge.of(request.novelId, lang).analyzed;
     const missing = rows.filter((row) => analyzed[row.seq] === undefined).map((row) => row.seq);
     const last = rows.length > 0 ? rows[rows.length - 1].seq : 1;
-    const preset = request.preset;
     this.mode.set(preset.mode ?? (missing.length > 0 ? "missing" : "range"));
     this.from.set(preset.from ?? missing[0] ?? 1);
     this.to.set(preset.to ?? last);
     this.overwrite.set(preset.overwrite ?? false);
-    this.picked.set(preset.lang ?? "src");
+    this.picked.set(lang);
     this.tab.set("analyze");
     this.busy.set(false);
   }
@@ -294,6 +296,18 @@ export class NovelKnowledgeAnalyzeDialog {
     if (request && novel) {
       untracked(this.ensureTranslations.bind(this, request.novelId, targetsOf(novel.lang)));
     }
+  }
+
+  private loadAnalyzed(): void {
+    const request = this.request();
+    const lang = this.lang();
+    if (request) {
+      untracked(this.ensureAnalyzed.bind(this, request.novelId, lang));
+    }
+  }
+
+  private ensureAnalyzed(novelId: number, lang: KnowledgeLang): void {
+    void this.knowledge.ensure(novelId, lang);
   }
 
   private ensureTranslations(novelId: number, targets: TargetLang[]): void {

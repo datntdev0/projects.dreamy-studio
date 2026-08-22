@@ -2,16 +2,24 @@ import { Component, computed, effect, inject, input, untracked } from "@angular/
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
 import { CoreModule } from "@app/core/core.module";
+import { LanguageService } from "@app/core/language/language.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
-import { KnowledgeTab, KnowledgeView } from "../novel.knowledge.models";
+import { KnowledgeLang, KnowledgeTab, KnowledgeView } from "../novel.knowledge.models";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { errorCount } from "../novel.knowledge.rules";
-import { NovelSummary } from "../novel.models";
+import { NovelLang, NovelSummary } from "../novel.models";
+import { NOVEL_LANG_KEYS } from "../novel.rules";
 import { NovelService } from "../novel.service";
+import { targetsOf } from "../novel.translation.rules";
 import { NovelKnowledgeGraph } from "./knowledge-graph.component";
 import { NovelKnowledgeList } from "./knowledge-list.component";
 import { NovelKnowledgeReview } from "./knowledge-review.component";
 import { NovelProgressFrac } from "./progress-frac.component";
+
+export interface KnowledgeLangOption {
+  value: KnowledgeLang;
+  label: string;
+}
 
 const TABS: KnowledgeTab[] = ["graph", "list", "review"];
 const TAB_ICONS: Record<KnowledgeTab, string> = { graph: "nodes", list: "list", review: "shield" };
@@ -26,6 +34,7 @@ const TAB_KEYS: Record<KnowledgeTab, LanguageKey> = { graph: "novel.knowledge.ta
 export class NovelKnowledge {
   private readonly novels = inject(NovelService);
   private readonly dialogs = inject(NovelDialogsService);
+  private readonly languageService = inject(LanguageService);
 
   readonly knowledge = inject(NovelKnowledgeService);
   readonly novelId = input.required<number>();
@@ -33,6 +42,7 @@ export class NovelKnowledge {
 
   readonly novel = computed(this.findNovel.bind(this));
   readonly view = computed(this.buildView.bind(this));
+  readonly langs = computed(this.buildLangs.bind(this));
   readonly total = computed(this.buildTotal.bind(this));
   readonly analyzed = computed(this.buildAnalyzed.bind(this));
   readonly open = computed(this.buildOpen.bind(this));
@@ -56,6 +66,10 @@ export class NovelKnowledge {
     this.knowledge.setTab(this.novelId(), tab);
   }
 
+  onLang(event: Event): void {
+    this.knowledge.setLang(this.novelId(), (event.target as HTMLSelectElement).value as KnowledgeLang);
+  }
+
   analyze(): void {
     this.dialogs.openAnalyze(this.novelId());
   }
@@ -66,6 +80,22 @@ export class NovelKnowledge {
 
   private buildView(): KnowledgeView {
     return this.knowledge.viewOf(this.novelId());
+  }
+
+  private buildLangs(): KnowledgeLangOption[] {
+    const novel = this.novel();
+    if (!novel) {
+      return [];
+    }
+    const out: KnowledgeLangOption[] = [{ value: "src", label: this.langLabel("novel.knowledge.lang.src", novel.lang) }];
+    for (const target of targetsOf(novel.lang)) {
+      out.push({ value: target, label: this.langLabel("novel.knowledge.lang.tr", target) });
+    }
+    return out;
+  }
+
+  private langLabel(key: LanguageKey, lang: NovelLang): string {
+    return this.languageService.translate(key, { lang: this.languageService.translate(NOVEL_LANG_KEYS[lang]) });
   }
 
   private buildTotal(): number {
@@ -85,7 +115,7 @@ export class NovelKnowledge {
   }
 
   private buildBlank(): boolean {
-    return this.analyzed() === 0 && this.knowledge.of(this.novelId()).items.length === 0;
+    return this.knowledge.of(this.novelId()).items.length === 0;
   }
 
   private buildRunning(): boolean {

@@ -28,7 +28,11 @@ app-novel-knowledge, app-novel-knowledge-graph, app-novel-knowledge-list, app-no
 .an-flow small { color: var(--mute); font-size: 12px; line-height: 16px; }
 
 
-.ed-ev-add { grid-template-columns: 104px 104px minmax(0, 1fr) auto; }
+.ed-ev-add { grid-template-columns: minmax(0, 1fr) 104px; align-items: start; }
+.ed-ev-add .textarea, .ed-ev-add .btn { grid-column: 1 / -1; }
+.ed-ev-add .btn { justify-self: end; }
+.ed-tags { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
+.ed-list-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-sm); }
 .ed-ev .kn-ref { flex: none; }
 
 .an-n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r-full); border: 1px solid var(--hairline-strong); color: var(--mute); font: 500 11.5px/1 var(--font-mono); flex: none; }

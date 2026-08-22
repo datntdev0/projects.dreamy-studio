@@ -1,7 +1,8 @@
 import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
 import { ChapterRow, NovelSummary } from "@app/features/novel/novel.models";
-import { AnalyzedChapter, KnowledgeChange, KnowledgeItem, KnowledgeLang, WireKnowledge } from "@app/features/novel/novel.knowledge.models";
+import { applyEdits } from "@app/features/novel/novel.knowledge.draft";
+import { AnalyzedChapter, KnowledgeEdit, KnowledgeEditResult, KnowledgeItem, KnowledgeLang, WireKnowledge } from "@app/features/novel/novel.knowledge.models";
 import { PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest } from "@app/features/novel/novel.translation.models";
 import { batchesOf } from "@app/features/novel/novel.knowledge.rules";
 import { CHARACTER_PREDICATE_FACT, KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS, chapterItems } from "./novel-knowledge.fixtures";
@@ -11,6 +12,8 @@ import { IpcHandlers, screenProviders } from "./screen.mocks";
 const TICK_MS = 600;
 const PROGRESS_TICKS = [30, 55, 80, 100];
 const FIRST_PIPELINE_ID = 500;
+const SEEDED_LANG: KnowledgeLang = "VI";
+const KNOWLEDGE_LANGS: KnowledgeLang[] = ["src", "VI", "EN"];
 
 export interface KnowledgeScenario {
   analyzed?: boolean;
@@ -26,10 +29,15 @@ interface MockPipeline {
   cancelled: boolean;
 }
 
-interface MockState {
-  scenario: KnowledgeScenario;
+interface LangState {
   items: KnowledgeItem[];
   analyzed: Record<number, AnalyzedChapter>;
+}
+
+interface MockState {
+  scenario: KnowledgeScenario;
+  langs: Record<KnowledgeLang, LangState>;
+  nextItem: number;
   history: PipelineSnapshot[];
   nextPipeline: number;
   active: MockPipeline | null;
@@ -47,8 +55,93 @@ function seqOf(chapterId: string): number {
   return Number(chapterId.slice(3));
 }
 
-function seedItems(scenario: KnowledgeScenario): KnowledgeItem[] {
-  return scenario.analyzed === false ? [] : [...clone(KNOWLEDGE_ITEMS), clone(CHARACTER_PREDICATE_FACT)];
+function emptyLang(): LangState {
+  return { items: [], analyzed: {} };
+}
+
+function seededLang(): LangState {
+  return { items: [...clone(KNOWLEDGE_ITEMS), clone(CHARACTER_PREDICATE_FACT)], analyzed: clone(KNOWLEDGE_ANALYZED) };
+}
+
+function langsFor(scenario: KnowledgeScenario): Record<KnowledgeLang, LangState> {
+  const langs: Record<KnowledgeLang, LangState> = { src: emptyLang(), VI: emptyLang(), EN: emptyLang() };
+  if (scenario.analyzed !== false) {
+    langs[SEEDED_LANG] = seededLang();
+  }
+  return langs;
+}
+
+function langOf(args: Record<string, unknown>): KnowledgeLang {
+  const lang = args["lang"] as KnowledgeLang;
+  if (!KNOWLEDGE_LANGS.includes(lang)) {
+    throw { code: "invalid_input", detail: "Unknown language." };
+  }
+  return lang;
+}
+
+function wireOf(state: MockState, lang: KnowledgeLang): WireKnowledge {
+  return { lang, items: clone(state.langs[lang].items), analyzed: clone(state.langs[lang].analyzed) };
+}
+
+function clearStale(target: LangState, chapters: number[]): void {
+  for (const seq of chapters) {
+    if (target.analyzed[seq]) {
+      target.analyzed[seq].stale = false;
+    }
+  }
+  for (const item of target.items) {
+    item.stale = item.stale.filter((seq) => !chapters.includes(seq));
+  }
+}
+
+function createdRefs(edits: KnowledgeEdit[]): string[] {
+  const refs: string[] = [];
+  for (const edit of edits) {
+    if (edit.k === "add_entity" || edit.k === "add_fact") {
+      refs.push(edit.ref);
+    }
+    if (edit.k === "character") {
+      refs.push(`${edit.persona}.character`, `${edit.persona}.link`);
+    }
+  }
+  return refs;
+}
+
+function rekey(items: KnowledgeItem[], from: string, to: string): void {
+  for (const item of items) {
+    item.id = item.id === from ? to : item.id;
+    if (item.kind === "fact") {
+      item.subject = item.subject === from ? to : item.subject;
+      item.object = item.object === from ? to : item.object;
+    }
+  }
+}
+
+function assignIds(state: MockState, items: KnowledgeItem[], edits: KnowledgeEdit[]): Record<string, string> {
+  const remap: Record<string, string> = {};
+  for (const ref of createdRefs(edits)) {
+    if (items.some((item) => item.id === ref)) {
+      remap[ref] = `M${state.nextItem}`;
+      state.nextItem += 1;
+      rekey(items, ref, remap[ref]);
+    }
+  }
+  return remap;
+}
+
+function editKnowledge(state: MockState, args: Record<string, unknown>): KnowledgeEditResult {
+  const lang = langOf(args);
+  const edits = clone(args["edits"] as KnowledgeEdit[]);
+  const items = applyEdits(state.langs[lang].items, edits);
+  const remap = assignIds(state, items, edits);
+  state.langs[lang].items = items;
+  return { knowledge: wireOf(state, lang), remap };
+}
+
+function acceptStale(state: MockState, args: Record<string, unknown>): WireKnowledge {
+  const lang = langOf(args);
+  clearStale(state.langs[lang], args["chapters"] as number[]);
+  return wireOf(state, lang);
 }
 
 function emitTask(pipeline: MockPipeline, task: PipelineTask): void {
@@ -56,11 +149,13 @@ function emitTask(pipeline: MockPipeline, task: PipelineTask): void {
 }
 
 function writeChapter(state: MockState, seq: number, lang: KnowledgeLang): void {
+  const target = state.langs[lang];
   const made = chapterItems(seq);
-  const known = new Set(state.items.map((item) => item.id));
-  state.items = [...state.items, ...made.filter((item) => !known.has(item.id))];
+  const known = new Set(target.items.map((item) => item.id));
+  target.items = [...target.items, ...made.filter((item) => !known.has(item.id))];
   const entities = made.filter((item) => item.kind === "entity").length;
-  state.analyzed[seq] = { lang, at: new Date().toISOString(), entities, facts: made.length - entities };
+  target.analyzed[seq] = { at: new Date().toISOString(), entities, facts: made.length - entities, stale: false };
+  clearStale(target, [seq]);
 }
 
 async function runTask(state: MockState, pipeline: MockPipeline, task: PipelineTask): Promise<void> {
@@ -147,34 +242,24 @@ function startAnalysis(state: MockState, args: Record<string, unknown>): Pipelin
   };
   state.nextPipeline += 1;
   const emit = (args["onEvent"] as { emit: (event: PipelineEvent) => void }).emit;
-  const pipeline: MockPipeline = { snapshot, lang: args["lang"] as KnowledgeLang, emit, cancelled: false };
+  const pipeline: MockPipeline = { snapshot, lang: langOf(args), emit, cancelled: false };
   state.active = pipeline;
   setTimeout(() => void runAnalysis(state, pipeline), 0);
   return clone(snapshot);
 }
 
-function applyChange(state: MockState, change: KnowledgeChange): void {
-  const gone = new Set(change.remove);
-  const changed = new Map(change.upsert.map((item) => [item.id, item]));
-  const kept = state.items.filter((item) => !gone.has(item.id)).map((item) => changed.get(item.id) ?? item);
-  const known = new Set(kept.map((item) => item.id));
-  state.items = [...kept, ...change.upsert.filter((item) => !known.has(item.id))];
-}
-
 function withAnalysis(rows: ChapterRow[], state: MockState): ChapterRow[] {
-  return rows.map((row) => ({ ...row, analysisStatus: state.analyzed[row.seq] ? "done" : "none" }));
+  return rows.map((row) => ({ ...row, analysisStatus: state.langs[SEEDED_LANG].analyzed[row.seq] ? "done" : "none" }));
 }
 
 function knowledgeHandlers(state: MockState, base: IpcHandlers): IpcHandlers {
   return {
     ...base,
-    novel_list: (args) => (base["novel_list"](args) as NovelSummary[]).map((novel) => ({ ...novel, analyzedCount: Object.keys(state.analyzed).length })),
+    novel_list: (args) => (base["novel_list"](args) as NovelSummary[]).map((novel) => ({ ...novel, analyzedCount: Object.keys(state.langs[SEEDED_LANG].analyzed).length })),
     novel_chapters: (args) => withAnalysis(base["novel_chapters"](args) as ChapterRow[], state),
-    knowledge_get: (): WireKnowledge => ({ items: clone(state.items), analyzed: clone(state.analyzed) }),
-    knowledge_save: (args) => {
-      applyChange(state, clone(args["change"] as KnowledgeChange));
-      return undefined;
-    },
+    knowledge_get: (args): WireKnowledge => wireOf(state, langOf(args)),
+    knowledge_edit: (args) => editKnowledge(state, args),
+    knowledge_stale_accept: (args) => acceptStale(state, args),
     pipeline_start: (args) => (args["kind"] === "analysis" ? startAnalysis(state, args) : base["pipeline_start"](args)),
     pipeline_cancel: (args) => {
       if (state.active && state.active.snapshot.id === Number(args["pipelineId"])) {
@@ -190,8 +275,8 @@ function knowledgeHandlers(state: MockState, base: IpcHandlers): IpcHandlers {
 function stateFor(scenario: KnowledgeScenario): MockState {
   return {
     scenario,
-    items: seedItems(scenario),
-    analyzed: scenario.analyzed === false ? {} : clone(KNOWLEDGE_ANALYZED),
+    langs: langsFor(scenario),
+    nextItem: 1,
     history: [],
     nextPipeline: FIRST_PIPELINE_ID,
     active: null,

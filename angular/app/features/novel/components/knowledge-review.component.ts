@@ -5,9 +5,8 @@ import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
-import { blankEntity, blankFact } from "../novel.knowledge.draft";
-import { KnowledgeEdit, KnowledgeEvidence, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeView, RuleCount, RuleDef, RuleId } from "../novel.knowledge.models";
-import { PERSONA_PREDICATE, ruleDef } from "../novel.knowledge.ontology";
+import { KnowledgeEdit, KnowledgeEvidence, KnowledgeIssue, KnowledgeItem, KnowledgeView, RuleCount, RuleDef, RuleId } from "../novel.knowledge.models";
+import { ruleDef } from "../novel.knowledge.ontology";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { chaptersOfItem, isEntity, isFact, itemText, mapOf, ruleCounts } from "../novel.knowledge.rules";
 import { toNovelError } from "../novel.rules";
@@ -80,20 +79,16 @@ export class NovelKnowledgeReview {
       return;
     }
     const subject = mapOf(this.items()).get(fact.subject);
-    const side = subject && isEntity(subject) && subject.type === "character" ? "subject" : "object";
-    await this.commitEdits([{ k: "edit", id: fact.id, patch: { [side]: personaId } }], "novel.knowledge.review.done.moved");
+    const onSubject = subject && isEntity(subject) && subject.type === "character";
+    const edit: KnowledgeEdit = onSubject ? { k: "fact", id: fact.id, subject: personaId } : { k: "fact", id: fact.id, object: personaId };
+    await this.commitEdits([edit], "novel.knowledge.review.done.moved");
   }
 
   async createCharacter(issue: KnowledgeIssue): Promise<void> {
     const persona = this.items().find((item) => item.id === issue.ids[0]);
-    if (!persona || !isEntity(persona)) {
-      return;
+    if (persona && isEntity(persona)) {
+      await this.commitEdits([{ k: "character", persona: persona.id }], "novel.knowledge.review.done.created");
     }
-    const base = this.items();
-    const character = { ...blankEntity(base, [], "character"), name: persona.name, ev: structuredClone(persona.ev) };
-    const created: KnowledgeEdit[] = [{ k: "add", item: character }];
-    const link: KnowledgeFact = { ...blankFact(base, created, persona.id, character.id), pred: PERSONA_PREDICATE, value: null, ev: structuredClone(persona.ev) };
-    await this.commitEdits([...created, { k: "add", item: link }], "novel.knowledge.review.done.created");
   }
 
   async merge(keep: string, drop: string): Promise<void> {
@@ -101,7 +96,7 @@ export class NovelKnowledgeReview {
   }
 
   async keepStale(issue: KnowledgeIssue): Promise<void> {
-    await this.guard(this.knowledge.clearStale(this.novelId(), issue.ids), "novel.knowledge.review.done.kept");
+    await this.guard(this.knowledge.staleAccept(this.novelId(), this.staleChaptersOf(issue)), "novel.knowledge.review.done.kept");
   }
 
   reanalyze(issue: KnowledgeIssue): void {
@@ -110,6 +105,16 @@ export class NovelKnowledgeReview {
     if (chapters.length > 0) {
       this.dialogs.openAnalyze(this.novelId(), { mode: "range", from: chapters[0], to: chapters[chapters.length - 1], overwrite: true });
     }
+  }
+
+  private staleChaptersOf(issue: KnowledgeIssue): number[] {
+    const seqs = new Set<number>();
+    for (const item of this.items()) {
+      if (issue.ids.includes(item.id)) {
+        item.stale.forEach(seqs.add.bind(seqs));
+      }
+    }
+    return [...seqs].sort((a, b) => a - b);
   }
 
   private async commitEdits(edits: KnowledgeEdit[], done: LanguageKey): Promise<void> {

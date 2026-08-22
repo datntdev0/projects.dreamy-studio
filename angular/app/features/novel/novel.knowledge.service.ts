@@ -8,9 +8,13 @@ import { NovelError } from "./novel.models";
 import { NovelService } from "./novel.service";
 import { toNovelError } from "./novel.rules";
 import { NovelTranslationService, ANALYSIS_KIND } from "./novel.translation.service";
-import { applyEdits } from "./novel.knowledge.draft";
-import { KnowledgeEdit, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeTab, KnowledgeView, KnowledgeVisibility, NovelKnowledge, WireKnowledge } from "./novel.knowledge.models";
-import { EMPTY_KNOWLEDGE, applyChange, checkKnowledge, diffItems, emptyView, visibilityOf } from "./novel.knowledge.rules";
+import { KnowledgeEdit, KnowledgeEditResult, KnowledgeIssue, KnowledgeLang, KnowledgeTab, KnowledgeView, KnowledgeVisibility, NovelKnowledge, WireKnowledge } from "./novel.knowledge.models";
+import { EMPTY_KNOWLEDGE, checkKnowledge, emptyView, visibilityOf } from "./novel.knowledge.rules";
+import { targetsOf } from "./novel.translation.rules";
+
+function storeKey(novelId: number, lang: KnowledgeLang): string {
+  return `${novelId}:${lang}`;
+}
 
 @Injectable({ providedIn: "root" })
 export class NovelKnowledgeService {
@@ -20,7 +24,7 @@ export class NovelKnowledgeService {
   private readonly workspace = inject(WorkspaceService);
   private readonly languageService = inject(LanguageService);
   private readonly dialogs = inject(DialogService);
-  private readonly store = signal<Record<number, NovelKnowledge>>({});
+  private readonly store = signal<Record<string, NovelKnowledge>>({});
   private readonly views = signal<Record<number, KnowledgeView>>({});
   private workspacePath: string | null | undefined = undefined;
 
@@ -32,16 +36,25 @@ export class NovelKnowledgeService {
     effect(this.syncFinished.bind(this));
   }
 
-  of(novelId: number): NovelKnowledge {
-    return this.store()[novelId] ?? EMPTY_KNOWLEDGE;
+  defaultLangOf(novelId: number): KnowledgeLang {
+    const lang = this.novels.novelById(novelId)?.lang;
+    const targets = targetsOf(lang);
+    if (lang === "VI") {
+      return "src";
+    }
+    return targets.includes("VI") ? "VI" : (targets[0] ?? "src");
   }
 
-  isLoaded(novelId: number): boolean {
-    return this.store()[novelId] !== undefined;
+  of(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): NovelKnowledge {
+    return this.store()[storeKey(novelId, lang)] ?? EMPTY_KNOWLEDGE;
+  }
+
+  isLoaded(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): boolean {
+    return this.store()[storeKey(novelId, lang)] !== undefined;
   }
 
   viewOf(novelId: number): KnowledgeView {
-    return this.views()[novelId] ?? emptyView();
+    return this.views()[novelId] ?? emptyView(this.defaultLangOf(novelId));
   }
 
   isRunning(novelId: number): boolean {
@@ -69,6 +82,11 @@ export class NovelKnowledgeService {
     this.patchView(novelId, { tab });
   }
 
+  setLang(novelId: number, lang: KnowledgeLang): void {
+    this.patchView(novelId, { lang, sel: null });
+    void this.ensure(novelId, lang);
+  }
+
   select(novelId: number, id: string | null): void {
     this.patchView(novelId, { sel: id });
   }
@@ -77,19 +95,19 @@ export class NovelKnowledgeService {
     this.patchView(novelId, { q: "", type: "all", chapter: 0, onlyIssues: false });
   }
 
-  async ensure(novelId: number): Promise<void> {
-    if (!this.isLoaded(novelId)) {
-      await this.load(novelId);
+  async ensure(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): Promise<void> {
+    if (!this.isLoaded(novelId, lang)) {
+      await this.load(novelId, lang);
     }
   }
 
-  async load(novelId: number): Promise<void> {
+  async load(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const wire = await this.ipc.invoke<WireKnowledge>("knowledge_get", { novelId });
+      const wire = await this.ipc.invoke<WireKnowledge>("knowledge_get", { novelId, lang });
       await this.novels.loadChapters(novelId);
-      this.store.set({ ...this.store(), [novelId]: { items: wire.items, analyzed: wire.analyzed } });
+      this.storeKnowledge(novelId, lang, wire);
     } catch (cause) {
       this.error.set(toNovelError(cause));
     } finally {
@@ -97,18 +115,12 @@ export class NovelKnowledgeService {
     }
   }
 
-  async commit(novelId: number, next: KnowledgeItem[]): Promise<void> {
-    const current = this.of(novelId);
-    const change = diffItems(current.items, next);
-    if (change.upsert.length === 0 && change.remove.length === 0) {
-      return;
-    }
-    await this.ipc.invoke<void>("knowledge_save", { novelId, change });
-    this.store.set({ ...this.store(), [novelId]: { ...current, items: applyChange(current.items, change) } });
-  }
-
-  async apply(novelId: number, edits: KnowledgeEdit[]): Promise<void> {
-    await this.commit(novelId, applyEdits(this.of(novelId).items, edits));
+  async apply(novelId: number, edits: KnowledgeEdit[]): Promise<KnowledgeEditResult> {
+    const lang = this.viewOf(novelId).lang;
+    const result = await this.ipc.invoke<KnowledgeEditResult>("knowledge_edit", { novelId, lang, edits });
+    this.storeKnowledge(novelId, lang, result.knowledge);
+    this.followRemap(novelId, lang, result);
+    return result;
   }
 
   async remove(novelId: number, ids: string[]): Promise<void> {
@@ -130,14 +142,15 @@ export class NovelKnowledgeService {
     });
   }
 
-  async clearStale(novelId: number, ids: string[]): Promise<void> {
-    const wanted = new Set(ids);
-    await this.commit(novelId, this.of(novelId).items.map((item) => (wanted.has(item.id) ? { ...item, stale: null } : item)));
+  async staleAccept(novelId: number, chapters: number[]): Promise<void> {
+    const lang = this.viewOf(novelId).lang;
+    const wire = await this.ipc.invoke<WireKnowledge>("knowledge_stale_accept", { novelId, lang, chapters });
+    this.storeKnowledge(novelId, lang, wire);
   }
 
-  async analyze(novelId: number, seqs: number[], lang: KnowledgeLang, overwrite: boolean): Promise<void> {
+  async analyze(novelId: number, seqs: number[], lang: KnowledgeLang, _overwrite: boolean): Promise<void> {
     const chapterIds = this.novels.chaptersOf(novelId).filter((row) => seqs.includes(row.seq)).map((row) => row.id);
-    await this.translation.startAnalysis(novelId, lang, overwrite, chapterIds);
+    await this.translation.startAnalysis(novelId, lang, chapterIds);
   }
 
   reset(): void {
@@ -151,10 +164,23 @@ export class NovelKnowledgeService {
     return this.languageService.translate(key, params);
   }
 
+  private storeKnowledge(novelId: number, lang: KnowledgeLang, wire: WireKnowledge): void {
+    this.store.set({ ...this.store(), [storeKey(novelId, lang)]: { lang, items: wire.items, analyzed: wire.analyzed } });
+  }
+
+  private followRemap(novelId: number, lang: KnowledgeLang, result: KnowledgeEditResult): void {
+    const view = this.viewOf(novelId);
+    if (view.lang !== lang || view.sel === null) {
+      return;
+    }
+    const next = result.remap[view.sel] ?? view.sel;
+    this.select(novelId, result.knowledge.items.some((item) => item.id === next) ? next : null);
+  }
+
   private syncFinished(): void {
     const finished = this.translation.finished();
     if (finished && finished.kind === ANALYSIS_KIND) {
-      untracked(this.load.bind(this, finished.novelId));
+      untracked(this.load.bind(this, finished.novelId, finished.target as KnowledgeLang));
     }
   }
 

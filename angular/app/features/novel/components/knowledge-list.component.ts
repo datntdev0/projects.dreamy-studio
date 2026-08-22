@@ -19,7 +19,7 @@ export interface KnowledgeRow {
   entity: KnowledgeEntity;
   type: string;
   name: string;
-  summary: string;
+  aliases: string;
   chapters: string;
   issues: number;
   errors: boolean;
@@ -118,7 +118,7 @@ export class NovelKnowledgeList {
         entity,
         type: entity.type,
         name: entity.name,
-        summary: entity.summary,
+        aliases: entity.aliases.join(", "),
         chapters: chapters.length > 0 ? rangeText(chapters) : "—",
         issues: issues.length,
         errors: issues.some((issue) => issue.sev === "error"),

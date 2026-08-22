@@ -1,6 +1,6 @@
 import { LanguageKey, LanguageParams } from "@app/core/language/language.models";
 import { ChapterRow } from "./novel.models";
-import { AnalyzeRequest, AnalyzeSummary, AnalyzedChapter, GraphLink, KnowledgeChange, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeVisibility, KnowledgeView, NovelKnowledge, RuleCount, RuleId } from "./novel.knowledge.models";
+import { AnalyzeRequest, AnalyzeSummary, AnalyzedChapter, GraphLink, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeVisibility, KnowledgeView, NovelKnowledge, RuleCount, RuleId } from "./novel.knowledge.models";
 import { BATCH_SIZE, PERSONA_PREDICATE, RULES, predicateDef, ruleDef, typeDef } from "./novel.knowledge.ontology";
 
 export type Translate = (key: LanguageKey, params?: LanguageParams) => string;
@@ -18,10 +18,10 @@ interface CheckContext {
   t: Translate;
 }
 
-export const EMPTY_KNOWLEDGE: NovelKnowledge = { items: [], analyzed: {} };
+export const EMPTY_KNOWLEDGE: NovelKnowledge = { lang: "src", items: [], analyzed: {} };
 
-export function emptyView(): KnowledgeView {
-  return { tab: "graph", q: "", type: "all", chapter: 0, onlyIssues: false, sel: null, rule: "all", spoiler: false, upTo: 1 };
+export function emptyView(lang: KnowledgeLang): KnowledgeView {
+  return { lang, tab: "graph", q: "", type: "all", chapter: 0, onlyIssues: false, sel: null, rule: "all", spoiler: false, upTo: 1 };
 }
 
 export function isEntity(item: KnowledgeItem): item is KnowledgeEntity {
@@ -101,7 +101,7 @@ export function nameOf(map: Map<string, KnowledgeItem>, id: string | null): stri
 }
 
 export function factText(map: Map<string, KnowledgeItem>, fact: KnowledgeFact, t: Translate): string {
-  const tail = fact.object === null ? `: ${fact.value ?? ""}` : ` → ${nameOf(map, fact.object)}`;
+  const tail = fact.object === null ? `: ${fact.ev[0]?.q ?? ""}` : ` → ${nameOf(map, fact.object)}`;
   return `${nameOf(map, fact.subject)} — ${predicateLabel(fact.pred, t)}${tail}`;
 }
 
@@ -307,8 +307,8 @@ function checkEvidence(ctx: CheckContext): RawIssue[] {
 function checkStale(ctx: CheckContext): RawIssue[] {
   const out: RawIssue[] = [];
   for (const item of ctx.items) {
-    if (item.stale) {
-      out.push({ ids: [item.id], key: item.id, message: item.stale });
+    if (item.stale.length > 0) {
+      out.push({ ids: [item.id], key: item.id, message: ctx.t("novel.knowledge.check.stale", { chapters: item.stale.join(", ") }) });
     }
   }
   return out;
@@ -366,46 +366,12 @@ export function flaggedIds(items: KnowledgeItem[], open: KnowledgeIssue[]): Set<
   return out;
 }
 
-export function diffItems(base: KnowledgeItem[], next: KnowledgeItem[]): KnowledgeChange {
-  const before = new Map<string, string>();
-  for (const item of base) {
-    before.set(item.id, JSON.stringify(item));
-  }
-  const upsert: KnowledgeItem[] = [];
-  const kept = new Set<string>();
-  for (const item of next) {
-    kept.add(item.id);
-    if (before.get(item.id) !== JSON.stringify(item)) {
-      upsert.push(item);
-    }
-  }
-  const remove = base.filter((item) => !kept.has(item.id)).map((item) => item.id);
-  return { upsert, remove };
-}
-
-export function applyChange(base: KnowledgeItem[], change: KnowledgeChange): KnowledgeItem[] {
-  const gone = new Set(change.remove);
-  const changed = new Map<string, KnowledgeItem>();
-  for (const item of change.upsert) {
-    changed.set(item.id, item);
-  }
-  const out: KnowledgeItem[] = [];
-  for (const item of base) {
-    if (!gone.has(item.id)) {
-      out.push(changed.get(item.id) ?? item);
-      changed.delete(item.id);
-    }
-  }
-  out.push(...changed.values());
-  return out;
-}
-
 export function matchesList(entity: KnowledgeEntity, view: KnowledgeView, flagged: Set<string>): boolean {
   const needle = view.q.trim().toLowerCase();
   return (view.type === "all" || entity.type === view.type)
     && (view.chapter === 0 || chaptersOfItem(entity).includes(view.chapter))
     && (!view.onlyIssues || flagged.has(entity.id))
-    && (!needle || `${entity.name} ${entity.summary}`.toLowerCase().includes(needle));
+    && (!needle || [entity.name, ...entity.titles, ...entity.aliases].some((text) => text.toLowerCase().includes(needle)));
 }
 
 export function graphLinks(items: KnowledgeItem[], label: (pred: string) => string): GraphLink[] {

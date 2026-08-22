@@ -45,17 +45,24 @@ export interface KnowledgeEvidence {
   verified: boolean;
 }
 
+export interface EvidenceRef {
+  chapter: number;
+  p: number;
+  q: string;
+}
+
 interface KnowledgeBase {
   id: string;
   ev: KnowledgeEvidence[];
-  stale: string | null;
+  stale: number[];
 }
 
 export interface KnowledgeEntity extends KnowledgeBase {
   kind: "entity";
   type: EntityType;
   name: string;
-  summary: string;
+  titles: string[];
+  aliases: string[];
 }
 
 export interface KnowledgeFact extends KnowledgeBase {
@@ -63,19 +70,21 @@ export interface KnowledgeFact extends KnowledgeBase {
   pred: string;
   subject: string;
   object: string | null;
-  value: string | null;
 }
 
 export type KnowledgeItem = KnowledgeEntity | KnowledgeFact;
 
-export type ItemPatch = Partial<Omit<KnowledgeEntity, "id" | "kind">> & Partial<Omit<KnowledgeFact, "id" | "kind">>;
-
 export type KnowledgeEdit =
-  | { k: "add"; item: KnowledgeItem }
-  | { k: "edit"; id: string; patch: ItemPatch }
+  | { k: "rename"; id: string; name: string }
+  | { k: "retype"; id: string; type: EntityType }
   | { k: "del"; id: string }
   | { k: "merge"; sources: string[]; target: string }
-  | { k: "split"; id: string; item: KnowledgeEntity; facts: string[] };
+  | { k: "fact"; id: string; pred?: string; subject?: string; object?: string }
+  | { k: "props"; id: string; titles?: string[]; aliases?: string[] }
+  | { k: "evidence"; id: string; add?: EvidenceRef[]; remove?: EvidenceRef[] }
+  | { k: "add_entity"; ref: string; type: EntityType; name: string; titles?: string[]; aliases?: string[]; ev: EvidenceRef[] }
+  | { k: "add_fact"; ref: string; pred: string; subject: string; object?: string; ev: EvidenceRef[] }
+  | { k: "character"; persona: string };
 
 export interface KnowledgeIssue {
   id: string;
@@ -92,28 +101,31 @@ export interface RuleCount {
 }
 
 export interface AnalyzedChapter {
-  lang: KnowledgeLang;
   at: string;
   entities: number;
   facts: number;
+  stale: boolean;
 }
 
 export interface WireKnowledge {
+  lang: KnowledgeLang;
   items: KnowledgeItem[];
   analyzed: Record<number, AnalyzedChapter>;
 }
 
 export interface NovelKnowledge {
+  lang: KnowledgeLang;
   items: KnowledgeItem[];
   analyzed: Record<number, AnalyzedChapter>;
 }
 
-export interface KnowledgeChange {
-  upsert: KnowledgeItem[];
-  remove: string[];
+export interface KnowledgeEditResult {
+  knowledge: WireKnowledge;
+  remap: Record<string, string>;
 }
 
 export interface KnowledgeView {
+  lang: KnowledgeLang;
   tab: KnowledgeTab;
   q: string;
   type: string;

@@ -277,10 +277,10 @@ export class NovelTranslationService {
     }
   }
 
-  async startAnalysis(novelId: number, lang: string, overwrite: boolean, chapterIds: string[]): Promise<void> {
+  async startAnalysis(novelId: number, lang: string, chapterIds: string[]): Promise<void> {
     const tasks: TaskRequest[] = chapterIds.map((chapterId) => ({ chapterId, passage: null }));
     const channel = this.ipc.channel<PipelineEvent>(this.handlePipelineEvent.bind(this));
-    await this.ipc.invoke<PipelineSnapshot>("pipeline_start", { kind: ANALYSIS_KIND, novelId, lang, overwrite, tasks, onEvent: channel });
+    await this.ipc.invoke<PipelineSnapshot>("pipeline_start", { kind: ANALYSIS_KIND, novelId, lang, tasks, onEvent: channel });
   }
 
   reset(): void {

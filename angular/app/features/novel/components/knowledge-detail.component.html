@@ -12,12 +12,29 @@
       <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-detail-edit" (click)="edit()"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
       <button type="button" class="btn btn-sm btn-danger" data-testid="novel-knowledge-detail-delete" (click)="remove()"><ds-icon name="trash" [size]="14" />{{ "novel.knowledge.action.delete" | t }}</button>
     </div>
-    @if (item().stale; as stale) {
-      <div class="ld-warn"><ds-icon name="alert" [size]="15" /><span>{{ stale }}</span></div>
+    @if (stale()) {
+      <div class="ld-warn" data-testid="novel-knowledge-detail-stale"><ds-icon name="alert" [size]="15" /><span>{{ stale() }}</span></div>
     }
     @if (entity(); as entity) {
-      @if (entity.summary) {
-        <p class="t-sm">{{ entity.summary }}</p>
+      @if (entity.titles.length > 0) {
+        <div data-testid="novel-knowledge-detail-titles">
+          <span class="eyebrow">{{ "novel.knowledge.detail.titles" | t }}</span>
+          <div class="kb-rel">
+            @for (title of entity.titles; track title) {
+              <span class="chip">{{ title }}</span>
+            }
+          </div>
+        </div>
+      }
+      @if (entity.aliases.length > 0) {
+        <div data-testid="novel-knowledge-detail-aliases">
+          <span class="eyebrow">{{ "novel.knowledge.detail.aliases" | t }}</span>
+          <div class="kb-rel">
+            @for (alias of entity.aliases; track alias) {
+              <span class="chip">{{ alias }}</span>
+            }
+          </div>
+        </div>
       }
     }
     @if (fact(); as fact) {
@@ -27,7 +44,11 @@
         @if (fact.object !== null) {
           <button type="button" class="chip" (click)="go(fact.object)">{{ endName(fact.object) }}</button>
         } @else {
-          <b class="t-ink">{{ fact.value }}</b>
+          @for (quote of quotes(); track $index) {
+            <b class="t-ink" data-testid="novel-knowledge-detail-quote">“{{ quote }}”</b>
+          } @empty {
+            <b class="t-ink">—</b>
+          }
         }
       </div>
     }

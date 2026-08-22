@@ -43,6 +43,8 @@ export class NovelKnowledgeDetail {
   readonly character = computed(this.buildCharacter.bind(this));
   readonly issues = computed(this.buildIssues.bind(this));
   readonly title = computed(this.buildTitle.bind(this));
+  readonly stale = computed(this.buildStale.bind(this));
+  readonly quotes = computed(this.buildQuotes.bind(this));
   readonly factKind = computed(this.buildFactKind.bind(this));
 
   go(id: string | null): void {
@@ -79,13 +81,18 @@ export class NovelKnowledgeDetail {
     return this.knowledge.of(this.novelId()).items;
   }
 
+  private quoteOf(fact: KnowledgeFact): string {
+    const quote = fact.ev[0]?.q;
+    return quote ? `“${quote}”` : "—";
+  }
+
   private lines(entity: KnowledgeEntity): DetailLine[] {
     const map = mapOf(this.items());
     const out: DetailLine[] = [];
     for (const fact of factsAbout(this.items(), entity.id)) {
       const outgoing = fact.subject === entity.id;
       const otherId = outgoing ? fact.object : fact.subject;
-      const value = otherId === null ? (fact.value ?? "") : nameOf(map, otherId);
+      const value = otherId === null ? this.quoteOf(fact) : nameOf(map, otherId);
       out.push({ id: fact.id, pred: predicateLabel(fact.pred, this.text.bind(this)), value, other: otherId, outgoing });
     }
     return out;
@@ -137,6 +144,16 @@ export class NovelKnowledgeDetail {
   private buildTitle(): string {
     const item = this.item();
     return isEntity(item) ? item.name : factText(mapOf(this.items()), item, this.text.bind(this));
+  }
+
+  private buildStale(): string {
+    const chapters = this.item().stale;
+    return chapters.length > 0 ? this.languageService.translate("novel.knowledge.check.stale", { chapters: chapters.join(", ") }) : "";
+  }
+
+  private buildQuotes(): string[] {
+    const fact = this.fact();
+    return fact && fact.object === null ? fact.ev.map((evidence) => evidence.q) : [];
   }
 
   private buildFactKind(): LanguageKey {

@@ -4,6 +4,9 @@ app-novel-knowledge, app-novel-knowledge-graph, app-novel-knowledge-list, app-no
 .kn-ref { color: var(--mute); font-size: 11px; white-space: nowrap; }
 .kb-table { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .kb-table .empty { height: auto; }
+.kb-tabbody { --kb-w: 920px; }
+.kb-table > ds-datatable, .kb-table > ds-datatable.is-fill { flex: 0 1 var(--kb-w); margin-inline: auto; border-inline: 1px solid var(--hairline); }
+.tl-sub.is-col { padding-inline: max(var(--sp-md), calc((100% - var(--kb-w)) / 2 + var(--sp-md))); }
 
 .kg { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .kd { min-height: 0; }
@@ -33,7 +36,12 @@ app-novel-knowledge, app-novel-knowledge-graph, app-novel-knowledge-list, app-no
 .ed-ev-add .btn { justify-self: end; }
 .ed-tags { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
 .ed-list-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-sm); }
-.ed-ev .kn-ref { flex: none; }
+.ed-ev .kn-ref { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ed-ev .btn { flex: none; }
+.ed-tags .tag { max-width: 100%; }
+.ed-tags .tag > span:first-child { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+.ed-body .field { min-width: 0; }
+.ed-body .textarea, .ed-body .input { max-width: 100%; }
 
 .an-n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r-full); border: 1px solid var(--hairline-strong); color: var(--mute); font: 500 11.5px/1 var(--font-mono); flex: none; }
 .om { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; padding: var(--sp-sm) var(--sp-lg); }

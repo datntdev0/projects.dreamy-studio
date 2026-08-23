@@ -80,6 +80,8 @@ export class NovelKnowledgeAnalyzeDialog {
   readonly open = computed(this.buildOpen.bind(this));
   readonly novel = computed(this.findNovel.bind(this));
   readonly chapters = computed(this.buildChapters.bind(this));
+  readonly firstSeq = computed(this.buildFirstSeq.bind(this));
+  readonly lastSeq = computed(this.buildLastSeq.bind(this));
   readonly langs = computed(this.buildLangs.bind(this));
   readonly lang = computed(this.buildLang.bind(this));
   readonly summary = computed(this.buildSummary.bind(this));
@@ -109,13 +111,6 @@ export class NovelKnowledgeAnalyzeDialog {
     return rangeText(seqs);
   }
 
-  titleOf(row: ChapterRow): string {
-    const request = this.request();
-    const lang = this.lang();
-    const translated = request && lang !== "src" ? this.translation.titleOf(request.novelId, row.id, lang) : null;
-    return `${row.seq} · ${translated || row.title}`;
-  }
-
   close(): void {
     this.dialogs.closeAnalyze();
   }
@@ -125,14 +120,18 @@ export class NovelKnowledgeAnalyzeDialog {
   }
 
   onFrom(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
+    const input = event.target as HTMLInputElement;
+    const value = this.clampSeq(input.value, this.from());
+    input.value = String(value);
     this.mode.set("range");
     this.from.set(value);
     this.to.set(Math.max(this.to(), value));
   }
 
   onTo(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
+    const input = event.target as HTMLInputElement;
+    const value = this.clampSeq(input.value, this.to());
+    input.value = String(value);
     this.mode.set("range");
     this.to.set(value);
     this.from.set(Math.min(this.from(), value));
@@ -238,6 +237,24 @@ export class NovelKnowledgeAnalyzeDialog {
   private buildLang(): KnowledgeLang {
     const wanted = this.picked();
     return this.langs().some((item) => item.value === wanted) ? wanted : "src";
+  }
+
+  private buildFirstSeq(): number {
+    const rows = this.chapters();
+    return rows.length > 0 ? rows[0].seq : 1;
+  }
+
+  private buildLastSeq(): number {
+    const rows = this.chapters();
+    return rows.length > 0 ? rows[rows.length - 1].seq : 1;
+  }
+
+  private clampSeq(raw: string, fallback: number): number {
+    const value = Math.round(Number(raw));
+    if (raw.trim() === "" || !Number.isFinite(value)) {
+      return fallback;
+    }
+    return Math.min(Math.max(value, this.firstSeq()), this.lastSeq());
   }
 
   private buildOverwrite(): boolean {

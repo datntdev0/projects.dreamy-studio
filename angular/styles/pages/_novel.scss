@@ -270,7 +270,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .rule.is-warn b { color: var(--warning); }
 .rule.is-ok { color: var(--mute); }
 .rule.is-ok .ic { width: 13px; height: 13px; color: var(--success); }
-.rv-list .iss { display: grid; gap: var(--sp-sm); border-left: 3px solid var(--warning); cursor: pointer; max-width: 920px; }
+.rv-list .iss { display: grid; gap: var(--sp-sm); border-left: 3px solid var(--warning); cursor: pointer; width: min(100%, var(--kb-w)); justify-self: center; }
 .rv-list .iss.is-error { border-left-color: var(--danger); }
 .iss-top { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
 .iss p { margin: 0; }
@@ -287,6 +287,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .opt.is-on { border-color: var(--primary); background: var(--primary-soft); }
 .opt input { margin-top: 3px; accent-color: var(--primary); }
 .opt-b { display: grid; gap: 2px; min-width: 0; }
+.opt-row .an-num { width: 88px; text-align: right; }
 .opt-row { display: flex; align-items: center; gap: var(--sp-md); margin-top: var(--sp-xs); flex-wrap: wrap; }
 .an-sum .kv { grid-template-columns: 110px minmax(0, 1fr); }
 .an-onto { display: flex; align-items: center; gap: var(--sp-sm); font-size: 13px; color: var(--body); flex-wrap: wrap; }
@@ -320,7 +321,9 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 
 /* edit dialog (draft) */
 .ed-dialog .modal-body { gap: var(--sp-md); }
-.ed-layout { display: grid; gap: var(--sp-lg); }
+.dialog-body { grid-template-columns: minmax(0, 1fr); }
+.ed-layout { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sp-lg); }
+.ed-group, .ed-card { min-width: 0; }
 .ed-issue { display: flex; gap: var(--sp-md); align-items: flex-start; padding: var(--sp-md) var(--sp-lg); border-radius: var(--r-md); background: var(--warning-soft); border-left: 3px solid var(--warning); }
 .ed-issue.is-error { background: var(--danger-soft); border-left-color: var(--danger); }
 .ed-issue .ic { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--warning); }
@@ -342,12 +345,13 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .ed-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 .ed-pred { color: var(--primary-text); font-style: italic; }
 .ed-missing { color: var(--danger); }
-.ed-body { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); padding: var(--sp-md) var(--sp-lg) var(--sp-lg); border-top: 1px solid var(--hairline); }
+.ed-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-md); padding: var(--sp-md) var(--sp-lg) var(--sp-lg); border-top: 1px solid var(--hairline); }
 .ed-body .span-full, .ed-body .form-3, .ed-body > .form-2, .ed-actions { grid-column: 1 / -1; }
 .ed-body .select, .ed-body .input { width: 100%; }
 .ed-actions { display: flex; justify-content: flex-end; gap: var(--sp-sm); }
-.ed-ev { display: flex; align-items: center; gap: var(--sp-sm); }
-.ed-ev .quote { flex: 1; min-width: 0; }
+.ed-ev { display: grid; grid-template-columns: minmax(0, 1fr) 104px; align-items: center; gap: var(--sp-sm); }
+.ed-ev .quote { min-width: 0; overflow-wrap: anywhere; }
+.ed-ev-side { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-xs); min-width: 0; }
 .ed-ev-add { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: var(--sp-sm); }
 .ed-sel { display: grid; gap: var(--sp-sm); padding: var(--sp-sm) var(--sp-md); border: 1px dashed var(--hairline-strong); border-radius: var(--r-md); }
 .ed-sel-bar { display: flex; align-items: center; gap: var(--sp-sm); }
@@ -356,6 +360,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .ed-changes li { display: flex; align-items: center; gap: var(--sp-sm); font-size: 12.5px; padding: 0 var(--sp-sm); border-radius: var(--r-sm); }
 .ed-changes li:hover { background: var(--canvas-soft); }
 .ed-changes li span { flex: 1; min-width: 0; }
+.ed-changes li span, .ed-preview li, .ed-preview p span, .ed-issue p { overflow-wrap: anywhere; }
 .ed-preview { padding: var(--sp-md) var(--sp-lg); border-radius: var(--r-md); background: var(--canvas-soft); display: grid; gap: var(--sp-xs); font-size: 13px; }
 .ed-preview p { margin: 0; display: flex; gap: var(--sp-sm); align-items: flex-start; }
 .ed-preview .ic { width: 16px; height: 16px; flex: none; margin-top: 1px; }

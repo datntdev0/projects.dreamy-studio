@@ -13,6 +13,7 @@ import { NovelSummary } from "../novel.models";
 import { NovelReaderService } from "../novel.reader.service";
 import { NovelTranslationService } from "../novel.translation.service";
 import { NovelService } from "../novel.service";
+import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { displayName } from "../novel.rules";
 import { matchesChapter } from "../novel.rules";
 import { formatCount } from "../novel.rules";
@@ -57,6 +58,7 @@ export class NovelChapters implements OnDestroy {
   private readonly reader = inject(NovelReaderService);
   private readonly languageService = inject(LanguageService);
   private readonly translation = inject(NovelTranslationService);
+  private readonly knowledge = inject(NovelKnowledgeService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly confirms = inject(NovelConfirmService);
   private readonly toasts = inject(ToastService);
@@ -72,6 +74,7 @@ export class NovelChapters implements OnDestroy {
   readonly resumeSeq = computed(this.buildResumeSeq.bind(this));
   readonly cover = computed(this.buildCover.bind(this));
   readonly translatedCount = computed(this.buildTranslatedCount.bind(this));
+  readonly analyzedCount = computed(this.buildAnalyzedCount.bind(this));
   private pressed: { id: string; y: number } | null = null;
   private suppressClick = false;
   private readonly moveListener = this.onPointerMove.bind(this);
@@ -111,6 +114,7 @@ export class NovelChapters implements OnDestroy {
   constructor() {
     effect(this.syncCover.bind(this));
     effect(this.syncTranslation.bind(this));
+    effect(this.syncKnowledge.bind(this));
   }
 
   nameOf(novel: NovelSummary): string {
@@ -158,7 +162,7 @@ export class NovelChapters implements OnDestroy {
   }
 
   analysisView(row: ChapterRow): StatusView {
-    return ANALYSIS_VIEWS[row.analysisStatus];
+    return ANALYSIS_VIEWS[this.knowledge.analysisOf(this.novelId(), row.seq)];
   }
 
   onRowClick(event: DatatableRowEvent): void {
@@ -309,6 +313,10 @@ export class NovelChapters implements OnDestroy {
     return Object.keys(this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).chapters).length;
   }
 
+  private buildAnalyzedCount(): number {
+    return this.knowledge.analyzedSeqCountOf(this.novelId(), this.all().map((row) => row.seq));
+  }
+
   private buildCover(): string {
     const novel = this.novel();
     return novel ? (this.novels.coverUrl(novel) ?? "") : "";
@@ -317,6 +325,15 @@ export class NovelChapters implements OnDestroy {
   private syncTranslation(): void {
     const target = this.reader.readerTarget(this.novelId());
     untracked(this.loadTranslation.bind(this, target));
+  }
+
+  private syncKnowledge(): void {
+    const novelId = this.novelId();
+    untracked(this.loadKnowledge.bind(this, novelId));
+  }
+
+  private loadKnowledge(novelId: number): void {
+    void this.knowledge.ensureAll(novelId);
   }
 
   private loadTranslation(target: TargetLang): void {

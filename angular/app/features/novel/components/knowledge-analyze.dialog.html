@@ -39,18 +39,10 @@
                   @case ("range") {
                     <span class="t-sm t-mute">{{ "novel.knowledge.analyze.mode.range.hint" | t }}</span>
                     <span class="opt-row">
-                        <select class="select" data-testid="novel-knowledge-analyze-from" [attr.aria-label]="'novel.knowledge.analyze.from' | t" (change)="onFrom($event)">
-                          @for (row of chapters(); track row.id) {
-                            <option [value]="row.seq" [selected]="row.seq === from()">{{ titleOf(row) }}</option>
-                          }
-                        </select>
-                        <span class="t-mute">{{ "novel.knowledge.analyze.to" | t }}</span>
-                        <select class="select" data-testid="novel-knowledge-analyze-to" [attr.aria-label]="'novel.knowledge.analyze.toLabel' | t" (change)="onTo($event)">
-                          @for (row of chapters(); track row.id) {
-                            <option [value]="row.seq" [selected]="row.seq === to()">{{ titleOf(row) }}</option>
-                          }
-                        </select>
-                      </span>
+                      <input class="input an-num" type="number" inputmode="numeric" step="1" [min]="firstSeq()" [max]="lastSeq()" [value]="from()" [attr.aria-label]="'novel.knowledge.analyze.from' | t" data-testid="novel-knowledge-analyze-from" (change)="onFrom($event)">
+                      <span class="t-mute">{{ "novel.knowledge.analyze.to" | t }}</span>
+                      <input class="input an-num" type="number" inputmode="numeric" step="1" [min]="firstSeq()" [max]="lastSeq()" [value]="to()" [attr.aria-label]="'novel.knowledge.analyze.toLabel' | t" data-testid="novel-knowledge-analyze-to" (change)="onTo($event)">
+                    </span>
                   }
                   @case ("all") {
                     <span class="t-sm t-mute">{{ "novel.knowledge.analyze.mode.all.count" | t: { count: chapters().length } }}</span>

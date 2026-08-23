@@ -172,7 +172,7 @@
   <div class="field span-full" data-testid="novel-knowledge-edit-evidence">
     <span class="eyebrow">{{ "novel.knowledge.edit.evidence" | t: { count: card.item.ev.length } }}</span>
     @for (evidence of card.item.ev; track $index) {
-      <div class="ed-ev" data-testid="novel-knowledge-edit-evidence-item"><blockquote class="quote" [class.is-bad]="!evidence.verified">{{ evidence.q }}</blockquote><span class="kn-ref mono">{{ "novel.knowledge.ref" | t: { chapter: evidence.chapter, p: evidence.p } }}</span><button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.evidence.remove' | t" data-testid="novel-knowledge-edit-evidence-remove" (click)="removeEvidence(card.key, evidence)"><ds-icon name="x" [size]="14" /></button></div>
+      <div class="ed-ev" data-testid="novel-knowledge-edit-evidence-item"><blockquote class="quote" [class.is-bad]="!evidence.verified">{{ evidence.q }}</blockquote><span class="ed-ev-side"><span class="kn-ref mono">{{ "novel.knowledge.ref" | t: { chapter: evidence.chapter, p: evidence.p } }}</span><button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.knowledge.edit.evidence.remove' | t" data-testid="novel-knowledge-edit-evidence-remove" (click)="removeEvidence(card.key, evidence)"><ds-icon name="x" [size]="14" /></button></span></div>
     } @empty {
       <p class="t-sm t-mute">{{ "novel.knowledge.edit.evidence.empty" | t }}</p>
     }

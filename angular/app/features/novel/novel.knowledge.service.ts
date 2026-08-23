@@ -4,7 +4,7 @@ import { DialogService } from "@app/core/dialog/dialog.service";
 import { LanguageKey, LanguageParams } from "@app/core/language/language.models";
 import { LanguageService } from "@app/core/language/language.service";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { NovelError } from "./novel.models";
+import { AnalysisStatus, NovelError } from "./novel.models";
 import { NovelService } from "./novel.service";
 import { toNovelError } from "./novel.rules";
 import { NovelTranslationService, ANALYSIS_KIND } from "./novel.translation.service";
@@ -67,6 +67,18 @@ export class NovelKnowledgeService {
     return Object.keys(this.of(novelId).analyzed).length;
   }
 
+  analysisOf(novelId: number, seq: number): AnalysisStatus {
+    const found = this.langsOf(novelId).map((lang) => this.of(novelId, lang).analyzed[seq]).filter((chapter) => chapter !== undefined);
+    if (found.length === 0) {
+      return "none";
+    }
+    return found.some((chapter) => !chapter.stale) ? "done" : "stale";
+  }
+
+  analyzedSeqCountOf(novelId: number, seqs: number[]): number {
+    return seqs.filter((seq) => this.analysisOf(novelId, seq) !== "none").length;
+  }
+
   issuesOf(novelId: number): KnowledgeIssue[] {
     return checkKnowledge(this.ontology(), this.of(novelId).items, this.translate.bind(this));
   }
@@ -101,6 +113,10 @@ export class NovelKnowledgeService {
     if (!this.isLoaded(novelId, lang)) {
       await this.load(novelId, lang);
     }
+  }
+
+  async ensureAll(novelId: number): Promise<void> {
+    await Promise.all(this.langsOf(novelId).map((lang) => this.ensure(novelId, lang)));
   }
 
   async load(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): Promise<void> {
@@ -161,6 +177,10 @@ export class NovelKnowledgeService {
     this.ontology.set(EMPTY_ONTOLOGY);
     this.loading.set(false);
     this.error.set(null);
+  }
+
+  private langsOf(novelId: number): KnowledgeLang[] {
+    return ["src", ...targetsOf(this.novels.novelById(novelId)?.lang)];
   }
 
   private translate(key: LanguageKey, params?: LanguageParams): string {

@@ -1,4 +1,4 @@
-<div class="tl-sub" data-testid="novel-knowledge-review-sub">
+<div class="tl-sub is-col" data-testid="novel-knowledge-review-sub">
   <label class="bar-field"><span>{{ "novel.knowledge.review.rule" | t }}</span>
     <select class="select" data-testid="novel-knowledge-review-rule" [attr.aria-label]="'novel.knowledge.review.rule' | t" (change)="onRule($event)">
       <option value="all" [selected]="view().rule === 'all'">{{ "novel.knowledge.review.rule.all" | t: { count: issues().length } }}</option>

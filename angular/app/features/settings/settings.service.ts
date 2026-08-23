@@ -5,6 +5,7 @@ import { LanguageService } from "@app/core/language/language.service";
 import { Theme } from "@app/core/theme/theme.models";
 import { ThemeService } from "@app/core/theme/theme.service";
 import { ToastService } from "@app/core/toast/toast.service";
+import { LlmService } from "./llm.service";
 import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from "./settings.models";
 
 const DEFAULT_MAX_PIPELINES = 1;
@@ -23,6 +24,7 @@ export class SettingsService {
   private readonly languageService = inject(LanguageService);
   private readonly themes = inject(ThemeService);
   private readonly toasts = inject(ToastService);
+  private readonly llm = inject(LlmService);
   private writes: Promise<void> = Promise.resolve();
 
   readonly open = signal(false);
@@ -34,6 +36,11 @@ export class SettingsService {
   readonly maxTasks = signal(DEFAULT_MAX_TASKS);
 
   async load(): Promise<void> {
+    await this.writes;
+    await Promise.all([this.loadGeneral(), this.llm.load()]);
+  }
+
+  private async loadGeneral(): Promise<void> {
     try {
       const view = await this.ipc.invoke<SettingsView>("settings_get");
       this.dataDir.set(view.dataDir);

@@ -1,8 +1,8 @@
 version: 1
 
 entity_types:
-  character: { abstract: true, hint: "The real person behind one or more personas. Never used directly; it is reached only through a persona_of fact." }
-  persona: { properties: [titles, aliases], hint: "A role, mask or identity under which a person appears in the story. Every fact about a person is attached to a persona. titles are honorifics or epithets, aliases are other names for the same persona." }
+  character: { abstract: true, hint: "The real person behind one or more personas. Never used directly; it is reached only through persona_of facts, and it may have several personas." }
+  persona: { properties: [titles, aliases], hint: "A role, mask or identity under which a person appears in the story. Every fact about a person is attached to a persona, and every persona has exactly one persona_of fact to a character. titles are honorifics or epithets, aliases are other names for the same persona." }
   location: { hint: "A place: a city, building, region, world or room." }
   organization: { hint: "A group of people: a guild, family, army, company or sect." }
   artifact: { hint: "A notable object: a weapon, tool, relic or document." }
@@ -21,7 +21,7 @@ scalars:
   meaning: { domain: [term, skill, artifact], single: true, hint: "The text explains what the term, skill or artifact means or does. Quote the explanation." }
 
 relationships:
-  persona_of: { domain: [persona], range: [character], hint: "The persona is a mask or identity of this character. The only way to reach a character. Extracted together with the entities." }
+  persona_of: { domain: [persona], range: [character], hint: "The persona is a mask or identity of this character. Every persona has exactly one. The only way to reach a character. Extracted together with the entities." }
   kin_of: { domain: [persona], range: [persona], hint: "The two personas are relatives: parent, child, sibling, spouse or other family." }
   ally_of: { domain: [persona], range: [persona], hint: "The two personas are friends or allies." }
   enemy_of: { domain: [persona], range: [persona], hint: "The two personas are enemies or rivals." }

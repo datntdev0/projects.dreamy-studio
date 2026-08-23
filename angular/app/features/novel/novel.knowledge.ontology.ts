@@ -14,8 +14,8 @@ const RULE_IDS: RuleId[] = ["character_predicate", "persona_link", "relation_sig
 const FALLBACK_STYLE: TypeStyle = { icon: "tag", color: "mute" };
 
 const TYPE_STYLE: Record<string, TypeStyle> = {
-  character: { icon: "user", color: "primary" },
-  persona: { icon: "shirt", color: "acc-twilight" },
+  character: { icon: "user", color: "acc-twilight" },
+  persona: { icon: "shirt", color: "primary" },
   location: { icon: "globe", color: "info" },
   organization: { icon: "users", color: "secondary" },
   artifact: { icon: "package", color: "warning" },

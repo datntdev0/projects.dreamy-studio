@@ -28,8 +28,9 @@ const CANDIDATE_RULES: &str = "\nRules:\n\
 - Entities have no description.\n\
 - Copy every name exactly as it is written in the text, and keep one entity per (type, name).\n\
 - Give titles and aliases only for personas: put the other names of a persona in aliases and its honorifics or epithets in titles.\n\
-- Facts about people belong to personas. List a character only when the text makes clear that a persona is that real person (for example one person appearing under several personas), and then also list a persona_of fact for each persona of that character.\n\
-- A character is never listed alone: every character needs at least one persona_of fact, and its name does not have to appear in the chapters.\n\
+- Facts about people belong to personas, never to characters.\n\
+- Every persona has exactly one persona_of fact that points to the character it belongs to: never none and never two. A character may have one persona or several, so list the same character as the object of every persona that is that real person.\n\
+- When the text does not say who is behind a persona, list a new character named after that persona and link the persona to it. The name of a character does not have to appear in the chapters.\n\
 - In a persona_of fact, subject is the exact name of a persona from the entity list and object is the exact name of a character from the entity list. List no other predicate in this step.\n\
 - List only entities that are named in the text.\n";
 
@@ -37,7 +38,7 @@ const KNOWN_INTRO: &str = "\nKnown entities from earlier chapters, one per line 
 
 const KNOWN_RULES: &str = "When the text refers to one of these entities, reuse its exact name, type and character, and never invent a new spelling for it. When a known persona with a character appears, list that character and the persona_of fact again. A known entity does not need to appear in the reply unless these chapters mention it.\n";
 
-const CANDIDATE_CONTRACT: &str = "\nReply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"...\",\"object\":\"...\"}]}. Use an empty \"facts\" list when there is no persona_of fact. Do not add commentary or code fences.\n";
+const CANDIDATE_CONTRACT: &str = "\nReply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"...\",\"object\":\"...\"}]}. Every persona needs its persona_of fact, so \"facts\" is empty only when there is no persona. Do not add commentary or code fences.\n";
 
 const FACTS_INTRO: &str = "You are a literary analyst. Read the novel chapter below and extract the facts it states, using only the listed entities and predicates.\n";
 

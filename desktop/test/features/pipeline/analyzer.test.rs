@@ -141,8 +141,10 @@ fn the_candidate_prompt_states_the_rules_and_the_reply_contract() {
 
     assert!(prompt.contains("Entities have no description."));
     assert!(prompt.contains("titles and aliases only for personas"));
-    assert!(prompt.contains("also list a persona_of fact for each persona of that character"));
-    assert!(prompt.contains("every character needs at least one persona_of fact"));
+    assert!(prompt.contains("Every persona has exactly one persona_of fact"));
+    assert!(prompt.contains("never none and never two"));
+    assert!(prompt.contains("list a new character named after that persona"));
+    assert!(!prompt.contains("A character is never listed alone"));
     assert!(prompt.contains(
         "Reply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"...\",\"object\":\"...\"}]}."
     ));
@@ -273,9 +275,9 @@ fn the_facts_prompt_numbers_the_paragraphs_and_states_the_rules() {
     );
 }
 
-const CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"Wren\"},{\"type\":\"location\",\"name\":\"Harbor\"}]}";
+const CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"Wren\"},{\"type\":\"character\",\"name\":\"Mara Voss\"},{\"type\":\"location\",\"name\":\"Harbor\"}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"Wren\",\"object\":\"Mara Voss\"}]}";
 
-const BAD_CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"Wren\"},{\"type\":\"planet\",\"name\":\"Mars\"}]}";
+const BAD_CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"Wren\"},{\"type\":\"character\",\"name\":\"Mara Voss\"},{\"type\":\"planet\",\"name\":\"Mars\"}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"Wren\",\"object\":\"Mara Voss\"}]}";
 
 const FACTS: &str = "{\"facts\":[{\"pred\":\"resides_at\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":2,\"q\":\"Harbor\"}]}]}";
 
@@ -351,9 +353,11 @@ fn finds_the_candidates_of_every_chapter_through_the_cli() {
 
     assert_eq!(cli.calls(), 1);
     assert_eq!(found.len(), 2);
-    assert_eq!(found[0].entities.len(), 1);
+    assert_eq!(found[0].entities.len(), 2);
     assert_eq!(found[0].entities[0].name, "Wren");
     assert_eq!(found[0].entities[0].ev[0].p, 1);
+    assert_eq!(found[0].entities[1].name, "Mara Voss");
+    assert_eq!(found[0].facts.len(), 1);
     assert_eq!(found[1].entities.len(), 1);
     assert_eq!(found[1].entities[0].name, "Harbor");
     let args = cli.args(1);
@@ -402,7 +406,7 @@ fn sends_the_candidate_problems_back_into_the_same_claude_session() {
     assert!(retry.contains("Your reply breaks the ontology rules."));
     assert!(retry.contains("entity \"Mars\": type \"planet\" is not in the ontology"));
     assert!(!retry.contains("## Chapter"));
-    assert_eq!(found[0].entities.len(), 1);
+    assert_eq!(found[0].entities.len(), 2);
 }
 
 #[test]
@@ -436,7 +440,7 @@ fn asks_again_when_the_reply_is_not_json() {
         cli.stdin(2)
             .contains("Your reply could not be used: The model did not return a JSON result.")
     );
-    assert_eq!(found[0].entities.len(), 1);
+    assert_eq!(found[0].entities.len(), 2);
 }
 
 #[test]
@@ -478,7 +482,7 @@ fn keeps_the_earlier_result_when_a_retry_call_fails() {
     let found = find(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 2);
-    assert_eq!(found[0].entities.len(), 1);
+    assert_eq!(found[0].entities.len(), 2);
     assert_eq!(found[0].entities[0].name, "Wren");
 }
 

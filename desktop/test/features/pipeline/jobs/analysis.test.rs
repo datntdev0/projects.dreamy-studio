@@ -737,9 +737,9 @@ fn the_factory_needs_an_open_workspace() {
     assert_eq!(error.code, PipelineErrorCode::NoWorkspace);
 }
 
-const BAD_CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"source\"},{\"type\":\"planet\",\"name\":\"Mars\"}]}";
+const BAD_CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"source\"},{\"type\":\"character\",\"name\":\"Mara Voss\"},{\"type\":\"planet\",\"name\":\"Mars\"}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"source\",\"object\":\"Mara Voss\"}]}";
 
-const CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"source\"}]}";
+const CANDIDATES: &str = "{\"entities\":[{\"type\":\"persona\",\"name\":\"source\"},{\"type\":\"character\",\"name\":\"Mara Voss\"}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"source\",\"object\":\"Mara Voss\"}]}";
 
 const FACTS: &str = "{\"facts\":[{\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"source\"}]}]}";
 
@@ -817,12 +817,12 @@ fn a_batch_run_logs_the_command_prompts_and_responses_of_both_phases() {
         "(candidates, resumed session): ",
         "--resume",
         "candidates: reply accepted",
-        "candidates found: 1 + 1",
+        "candidates found: 2 + 2",
         "the candidates of this chapter came from its batch",
-        "1 entities and 0 persona_of links found in this chapter",
+        "2 entities and 1 persona_of links found in this chapter",
         "(facts, new session): ",
         "facts: reply accepted",
-        "saved 1 entities and 1 facts",
+        "saved 2 entities and 2 facts",
         "] completed",
         "[pipeline] finished Completed: 2 done, 0 failed of 2 tasks",
     ] {
@@ -844,8 +844,8 @@ fn a_batch_run_logs_the_command_prompts_and_responses_of_both_phases() {
     assert!(folder.join(follower).is_file());
     for id in [&first, &second] {
         let analysis = stored(&setup, KnowledgeLang::Src, id).unwrap();
-        assert_eq!(analysis.entities.len(), 1);
-        assert_eq!(analysis.facts.len(), 1);
+        assert_eq!(analysis.entities.len(), 2);
+        assert_eq!(analysis.facts.len(), 2);
     }
 }
 

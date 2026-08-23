@@ -103,22 +103,30 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
     let mut placed: Vec<Vec<Placed>> = vec![Vec::new(); chapters.len()];
     for (position, candidate) in unique.iter().enumerate() {
         if candidate.kind == CHARACTER {
-            if !links.iter().any(|link| link.1 == position) {
-                issues.push(format!(
-                    "entity \"{}\" (character): no persona_of fact links a persona to it; add the persona_of fact or drop the character",
-                    candidate.name
-                ));
-            }
             continue;
         }
         let names = names_of(candidate);
-        let mut found = false;
-        for (index, paragraphs) in chapters.iter().enumerate() {
-            let ev = found_in(paragraphs, &names);
-            if ev.is_empty() {
-                continue;
-            }
-            found = true;
+        let hits: Vec<(usize, Vec<AnalysisEvidence>)> = chapters
+            .iter()
+            .enumerate()
+            .map(|(index, paragraphs)| (index, found_in(paragraphs, &names)))
+            .filter(|(_, ev)| !ev.is_empty())
+            .collect();
+        if hits.is_empty() {
+            issues.push(format!(
+                "entity \"{}\" ({}): neither the name nor the aliases appear in the chapter text",
+                candidate.name, candidate.kind
+            ));
+            continue;
+        }
+        if candidate.kind == PERSONA && !links.iter().any(|link| link.0 == position) {
+            issues.push(format!(
+                "entity \"{}\" (persona): no persona_of fact links it to a character; add exactly one persona_of fact from this persona to a character",
+                candidate.name
+            ));
+            continue;
+        }
+        for (index, ev) in hits {
             placed[index].push(Placed {
                 candidate: position,
                 entity: AnalysisEntity {
@@ -130,12 +138,6 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
                     ev,
                 },
             });
-        }
-        if !found {
-            issues.push(format!(
-                "entity \"{}\" ({}): neither the name nor the aliases appear in the chapter text",
-                candidate.name, candidate.kind
-            ));
         }
     }
     Ok(CandidateReading {
@@ -201,8 +203,13 @@ fn links_of(
             }
             continue;
         };
-        if !links.contains(&(persona, character)) {
-            links.push((persona, character));
+        match links.iter().find(|link| link.0 == persona) {
+            Some(link) if link.1 == character => {}
+            Some(link) => issues.push(format!(
+                "{label}: the persona \"{}\" already has a persona_of fact to the character \"{}\"; a persona has exactly one persona_of fact, so keep only one",
+                unique[persona].name, unique[link.1].name
+            )),
+            None => links.push((persona, character)),
         }
     }
     links

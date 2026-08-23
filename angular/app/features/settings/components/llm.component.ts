@@ -68,10 +68,6 @@ export class SettingsLlmComponent {
   readonly tab = signal<LlmTab>("cli");
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
-  constructor() {
-    void this.llm.load();
-  }
-
   onTab(value: string): void {
     const tab = LLM_TABS.find((item) => item === value);
     this.tab.set(tab ?? "cli");

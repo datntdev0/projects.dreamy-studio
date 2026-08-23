@@ -33,15 +33,16 @@ fn candidates_go_to_the_chapters_that_mention_them_with_their_first_paragraph() 
         {"type": "persona", "name": "Wren", "titles": ["lamplighter"], "aliases": []},
         {"type": "organization", "name": "The Guild"},
         {"type": "location", "name": "Harbor"},
-        {"type": "persona", "name": "Aldous", "aliases": ["the Keeper"]}
-    ]}));
+        {"type": "persona", "name": "Aldous", "aliases": ["the Keeper"]},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Wren", "Mara Voss"), persona_of("Aldous", "Mara Voss")]}));
 
     assert!(reading.issues.is_empty());
     assert_eq!(
         names(&reading.chapters[0].entities),
-        ["Wren", "The Guild", "Harbor"]
+        ["Wren", "The Guild", "Harbor", "Mara Voss"]
     );
-    assert_eq!(names(&reading.chapters[1].entities), ["Aldous"]);
+    assert_eq!(names(&reading.chapters[1].entities), ["Aldous", "Mara Voss"]);
     let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.id, "E1");
     assert_eq!(wren.titles, ["lamplighter"]);
@@ -57,11 +58,12 @@ fn candidates_go_to_the_chapters_that_mention_them_with_their_first_paragraph() 
 #[test]
 fn an_alias_alone_places_the_entity_in_a_chapter() {
     let reading = candidates(json!({"entities": [
-        {"type": "persona", "name": "Wren", "aliases": ["the Keeper"]}
-    ]}));
+        {"type": "persona", "name": "Wren", "aliases": ["the Keeper"]},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Wren", "Mara Voss")]}));
 
-    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
-    assert_eq!(names(&reading.chapters[1].entities), ["Wren"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren", "Mara Voss"]);
+    assert_eq!(names(&reading.chapters[1].entities), ["Wren", "Mara Voss"]);
     assert_eq!(reading.chapters[0].entities[0].ev, [evidence(1, "Wren")]);
     assert_eq!(
         reading.chapters[1].entities[0].ev,
@@ -107,10 +109,11 @@ fn reports_entities_with_an_unknown_type_or_no_name() {
 fn reports_an_entity_that_appears_in_no_chapter() {
     let reading = candidates(json!({"entities": [
         {"type": "persona", "name": "Ghost", "aliases": ["Spirit"]},
-        {"type": "persona", "name": "Wren"}
-    ]}));
+        {"type": "persona", "name": "Wren"},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Wren", "Mara Voss")]}));
 
-    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren", "Mara Voss"]);
     assert_eq!(
         reading.issues,
         ["entity \"Ghost\" (persona): neither the name nor the aliases appear in the chapter text"]
@@ -121,8 +124,9 @@ fn reports_an_entity_that_appears_in_no_chapter() {
 fn keeps_titles_and_aliases_only_on_personas() {
     let reading = candidates(json!({"entities": [
         {"type": "persona", "name": "Wren", "titles": [" Lamp ", "lamp", "", "Keeper"], "aliases": ["W.", "w.", "wren"]},
-        {"type": "location", "name": "Harbor", "titles": ["Port"], "aliases": ["Dock"]}
-    ]}));
+        {"type": "location", "name": "Harbor", "titles": ["Port"], "aliases": ["Dock"]},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Wren", "Mara Voss")]}));
 
     let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.titles, ["Lamp", "Keeper"]);
@@ -137,10 +141,11 @@ fn folds_candidates_with_the_same_type_and_name() {
     let reading = candidates(json!({"entities": [
         {"type": "persona", "name": "Wren", "titles": ["A"]},
         {"type": "location", "name": "Wren"},
-        {"type": "persona", "name": "  WREN ", "titles": ["a", "B"], "aliases": ["Wr"]}
-    ]}));
+        {"type": "persona", "name": "  WREN ", "titles": ["a", "B"], "aliases": ["Wr"]},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Wren", "Mara Voss")]}));
 
-    assert_eq!(reading.chapters[0].entities.len(), 2);
+    assert_eq!(reading.chapters[0].entities.len(), 3);
     let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.name, "Wren");
     assert_eq!(wren.titles, ["A", "B"]);
@@ -151,12 +156,15 @@ fn folds_candidates_with_the_same_type_and_name() {
 fn reads_candidates_wrapped_in_prose_and_code_fences() {
     let text = format!(
         "Here you go:\n```json\n{}\n```\nDone.",
-        json!({"entities": [{"type": "persona", "name": "Wren"}]})
+        json!({"entities": [
+            {"type": "persona", "name": "Wren"},
+            {"type": "character", "name": "Mara Voss"}
+        ], "facts": [persona_of("Wren", "Mara Voss")]})
     );
 
     let reading = parse_candidates(&text, &chapters()).unwrap();
 
-    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren", "Mara Voss"]);
 }
 
 #[test]
@@ -435,20 +443,57 @@ fn reports_a_persona_of_fact_that_names_unknown_or_mistyped_entities() {
 }
 
 #[test]
-fn reports_a_character_without_a_persona_of_fact_and_drops_it() {
+fn a_character_without_a_persona_is_allowed_and_left_out_of_the_chapters() {
     let reading = candidates(json!({"entities": [
         {"type": "character", "name": "Aldous"},
-        {"type": "persona", "name": "Wren"}
+        {"type": "persona", "name": "Wren"},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Wren", "Mara Voss")]}));
+
+    assert!(reading.issues.is_empty());
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren", "Mara Voss"]);
+    assert_eq!(reading.chapters[0].facts.len(), 1);
+}
+
+#[test]
+fn reports_a_persona_without_a_persona_of_fact_and_drops_it() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren"},
+        {"type": "persona", "name": "Aldous"},
+        {"type": "character", "name": "Mara Voss"}
+    ], "facts": [persona_of("Aldous", "Mara Voss")]}));
+
+    assert_eq!(
+        reading.issues,
+        [
+            "entity \"Wren\" (persona): no persona_of fact links it to a character; add exactly one persona_of fact from this persona to a character"
+        ]
+    );
+    assert!(!names(&reading.chapters[0].entities).contains(&"Wren"));
+    assert_eq!(names(&reading.chapters[1].entities), ["Aldous", "Mara Voss"]);
+}
+
+#[test]
+fn reports_a_persona_with_two_persona_of_facts_and_keeps_the_first() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren"},
+        {"type": "character", "name": "Mara Voss"},
+        {"type": "character", "name": "Aldous"}
+    ], "facts": [
+        persona_of("Wren", "Mara Voss"),
+        persona_of("Wren", "mara voss"),
+        persona_of("Wren", "Aldous")
     ]}));
 
     assert_eq!(
         reading.issues,
         [
-            "entity \"Aldous\" (character): no persona_of fact links a persona to it; add the persona_of fact or drop the character"
+            "fact Wren persona_of Aldous: the persona \"Wren\" already has a persona_of fact to the character \"Mara Voss\"; a persona has exactly one persona_of fact, so keep only one"
         ]
     );
-    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
-    assert!(reading.chapters[0].facts.is_empty());
+    let first = &reading.chapters[0];
+    assert_eq!(names(&first.entities), ["Wren", "Mara Voss"]);
+    assert_eq!(first.facts.len(), 1);
 }
 
 #[test]

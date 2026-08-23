@@ -5,6 +5,7 @@ import { DesktopIpcError } from "@app/core/desktop/desktop-ipc-error";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { LanguageKey } from "@app/core/language/language.models";
 import { LanguageService } from "@app/core/language/language.service";
+import { SettingsService } from "@app/features/settings/settings.service";
 import { AppInfo } from "./workspace.models";
 import { CancelOutcome } from "./workspace.models";
 import { CurrentWorkspace } from "./workspace.models";
@@ -130,6 +131,7 @@ export class WorkspaceService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly router = inject(Router);
   private readonly languageService = inject(LanguageService);
+  private readonly settings = inject(SettingsService);
   private readonly opened = signal<CurrentWorkspace | null>(null);
   private previous: CurrentWorkspace | null = null;
   private origin: LoadOrigin = "splash";
@@ -164,7 +166,7 @@ export class WorkspaceService {
   async restoreCurrent(): Promise<CurrentWorkspace | null> {
     const current =
       await this.ipc.invoke<CurrentWorkspace | null>("workspace_current");
-    this.opened.set(current);
+    this.setOpened(current);
     return current;
   }
 
@@ -242,9 +244,16 @@ export class WorkspaceService {
   private async requestEnter(): Promise<EnterOutcome> {
     const outcome = await this.ipc.invoke<EnterOutcome>("workspace_enter");
     if (outcome.result === "entered") {
-      this.opened.set({ name: outcome.name, path: outcome.path });
+      this.setOpened({ name: outcome.name, path: outcome.path });
     }
     return outcome;
+  }
+
+  private setOpened(current: CurrentWorkspace | null): void {
+    this.opened.set(current);
+    if (current) {
+      void this.settings.load();
+    }
   }
 
   private nextRun(): number {

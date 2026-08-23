@@ -218,8 +218,8 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .kb-graph { position: relative; flex: 1; min-height: 0; background: var(--canvas); overflow: hidden; }
 .kbg-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
 .kbg-svg.is-drag { cursor: grabbing; }
-.gt-character { --c: var(--primary); }
-.gt-persona { --c: var(--acc-twilight); }
+.gt-character { --c: var(--acc-twilight); }
+.gt-persona { --c: var(--primary); }
 .gt-location { --c: var(--info); }
 .gt-organization { --c: var(--secondary); }
 .gt-artifact { --c: var(--warning); }

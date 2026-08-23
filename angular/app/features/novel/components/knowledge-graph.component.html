@@ -1,5 +1,5 @@
 <div class="kg" data-testid="novel-knowledge-graph">
   <div class="kb-graph" data-testid="novel-knowledge-graph-canvas">
-    <ds-graph [nodes]="nodes()" [edges]="edges()" [groups]="groups()" [flaggedIds]="flagged()" [flagLabel]="'novel.knowledge.graph.flag' | t" [labels]="labels()" [selectedId]="selected()" (selectedIdChange)="onSelect($event)" (nodeOpen)="onOpen($event)" data-testid="novel-knowledge-graph-view" />
+    <ds-graph [nodes]="nodes()" [edges]="edges()" [groups]="groups()" [hiddenGroups]="hiddenGroups" [flaggedIds]="flagged()" [flagLabel]="'novel.knowledge.graph.flag' | t" [labels]="labels()" [selectedId]="selected()" (selectedIdChange)="onSelect($event)" (nodeOpen)="onOpen($event)" data-testid="novel-knowledge-graph-view" />
   </div>
 </div>

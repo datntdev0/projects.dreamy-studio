@@ -128,8 +128,10 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 13);
+    assert_eq!(history_count(db.connection()), 15);
     for table in [
+        "ws_assistant_sessions",
+        "ws_assistant_messages",
         "ws_novels",
         "ws_novel_chapters",
         "ws_tags",
@@ -183,13 +185,81 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
             "local".to_string()
         )
     );
-    assert_eq!(history_count(db.connection()), 13);
+    assert_eq!(history_count(db.connection()), 15);
     assert!(table_exists(
         db.connection(),
         "ws_novel_translation_dictionary"
     ));
     assert!(table_exists(db.connection(), "ws_pipeline_history"));
     assert!(table_exists(db.connection(), "ws_pipeline_tasks"));
+    assert!(table_exists(db.connection(), "ws_assistant_sessions"));
+    assert!(table_exists(db.connection(), "ws_assistant_messages"));
+}
+
+#[test]
+fn workspace_upgrade_from_0_1_0_3_adds_assistant_tables() {
+    let dir = TempDir::new().unwrap();
+    let (_, mut db) = open_new(&dir);
+    let cancel = AtomicBool::new(false);
+    let old_scripts: Vec<Script> = workspace_scripts()
+        .unwrap()
+        .into_iter()
+        .filter(|script| script.version.to_string() != "0.2.0")
+        .collect();
+    Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
+    assert_eq!(history_count(db.connection()), 13);
+    assert!(!table_exists(db.connection(), "ws_assistant_sessions"));
+
+    Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
+
+    assert_eq!(history_count(db.connection()), 15);
+    assert!(table_exists(db.connection(), "ws_assistant_sessions"));
+    assert!(table_exists(db.connection(), "ws_assistant_messages"));
+    let conn = db.connection();
+    conn.execute(
+        "INSERT INTO ws_assistant_sessions (id, title, scope_kind, created_at, updated_at) \
+         VALUES ('s1', '', 'workspace', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO ws_assistant_messages (id, session_id, seq, role, text, created_at) \
+         VALUES ('m1', 's1', 1, 'user', 'hi', '2026-01-01T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+    let duplicate = conn.execute(
+        "INSERT INTO ws_assistant_messages (id, session_id, seq, role, text, created_at) \
+         VALUES ('m2', 's1', 1, 'assistant', 'dup', '2026-01-01T00:00:00Z')",
+        [],
+    );
+    assert!(duplicate.is_err());
+    let defaults: (i64, String, String, String, String) = conn
+        .query_row(
+            "SELECT s.message_count, s.preview, m.activities, m.citations, m.attachments \
+             FROM ws_assistant_sessions s, ws_assistant_messages m",
+            [],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        defaults,
+        (
+            0,
+            String::new(),
+            "[]".to_string(),
+            "[]".to_string(),
+            "[]".to_string()
+        )
+    );
 }
 
 #[test]

@@ -1,0 +1,198 @@
+use crate::features::assistant::models::AssistantCitation;
+use crate::features::assistant::models::AssistantMessage;
+use crate::features::assistant::models::AssistantScope;
+use crate::features::assistant::models::AssistantSessionSummary;
+use crate::features::assistant::models::Role;
+use crate::features::assistant::models::ScopeKind;
+use crate::features::assistant::models::SessionRecord;
+use rusqlite::Connection;
+use rusqlite::OptionalExtension;
+use rusqlite::Row;
+use rusqlite::params;
+use serde::de::DeserializeOwned;
+
+const SESSION_COLUMNS: &str =
+    "id, title, scope_kind, novel_id, message_count, preview, created_at, updated_at";
+
+pub struct AssistantRepository<'a> {
+    conn: &'a Connection,
+}
+
+impl<'a> AssistantRepository<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
+        Self { conn }
+    }
+
+    pub fn insert_session(&self, record: &SessionRecord) -> rusqlite::Result<()> {
+        let summary = &record.summary;
+        self.conn.execute(
+            "INSERT INTO ws_assistant_sessions \
+             (id, title, scope_kind, novel_id, provider, cli_session, message_count, preview, \
+              created_at, updated_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                summary.id,
+                summary.title,
+                summary.scope.kind.as_str(),
+                summary.scope.novel_id,
+                record.provider,
+                record.cli_session,
+                summary.message_count,
+                summary.preview,
+                summary.created_at,
+                summary.updated_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_session(&self, record: &SessionRecord) -> rusqlite::Result<()> {
+        let summary = &record.summary;
+        self.conn.execute(
+            "UPDATE ws_assistant_sessions \
+             SET title = ?2, scope_kind = ?3, novel_id = ?4, provider = ?5, cli_session = ?6, \
+                 message_count = ?7, preview = ?8, updated_at = ?9 \
+             WHERE id = ?1",
+            params![
+                summary.id,
+                summary.title,
+                summary.scope.kind.as_str(),
+                summary.scope.novel_id,
+                record.provider,
+                record.cli_session,
+                summary.message_count,
+                summary.preview,
+                summary.updated_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list(&self) -> rusqlite::Result<Vec<AssistantSessionSummary>> {
+        let mut statement = self.conn.prepare(&format!(
+            "SELECT {SESSION_COLUMNS} FROM ws_assistant_sessions \
+             WHERE message_count > 0 ORDER BY updated_at DESC, created_at DESC, id"
+        ))?;
+        let rows = statement.query_map([], row_to_summary)?;
+        rows.collect()
+    }
+
+    pub fn find(&self, id: &str) -> rusqlite::Result<Option<SessionRecord>> {
+        self.conn
+            .query_row(
+                &format!(
+                    "SELECT {SESSION_COLUMNS}, provider, cli_session \
+                     FROM ws_assistant_sessions WHERE id = ?1"
+                ),
+                params![id],
+                |row| {
+                    Ok(SessionRecord {
+                        summary: row_to_summary(row)?,
+                        provider: row.get(8)?,
+                        cli_session: row.get(9)?,
+                    })
+                },
+            )
+            .optional()
+    }
+
+    pub fn messages(&self, id: &str) -> rusqlite::Result<Vec<AssistantMessage>> {
+        let mut statement = self.conn.prepare(
+            "SELECT id, role, text, created_at, activities, citations, attachments \
+             FROM ws_assistant_messages WHERE session_id = ?1 ORDER BY seq",
+        )?;
+        let rows = statement.query_map(params![id], row_to_message)?;
+        rows.collect()
+    }
+
+    pub fn append(&self, session_id: &str, message: &AssistantMessage) -> rusqlite::Result<i64> {
+        let seq: i64 = self.conn.query_row(
+            "SELECT COALESCE(MAX(seq), 0) + 1 FROM ws_assistant_messages WHERE session_id = ?1",
+            params![session_id],
+            |row| row.get(0),
+        )?;
+        self.conn.execute(
+            "INSERT INTO ws_assistant_messages \
+             (id, session_id, seq, role, text, activities, citations, attachments, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                message.id,
+                session_id,
+                seq,
+                message.role.as_str(),
+                message.text,
+                to_json(&message.activities),
+                to_json(&message.citations),
+                to_json(&message.attachments),
+                message.created_at
+            ],
+        )?;
+        Ok(seq)
+    }
+
+    pub fn remove_message(&self, id: &str) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "DELETE FROM ws_assistant_messages WHERE id = ?1",
+            params![id],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete(&self, id: &str) -> rusqlite::Result<bool> {
+        let transaction = self.conn.unchecked_transaction()?;
+        transaction.execute(
+            "DELETE FROM ws_assistant_messages WHERE session_id = ?1",
+            params![id],
+        )?;
+        let deleted = transaction.execute(
+            "DELETE FROM ws_assistant_sessions WHERE id = ?1",
+            params![id],
+        )?;
+        transaction.commit()?;
+        Ok(deleted > 0)
+    }
+}
+
+fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<AssistantSessionSummary> {
+    let kind: String = row.get(2)?;
+    Ok(AssistantSessionSummary {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        scope: AssistantScope {
+            kind: ScopeKind::parse(&kind),
+            novel_id: row.get(3)?,
+        },
+        message_count: row.get(4)?,
+        preview: row.get(5)?,
+        created_at: row.get(6)?,
+        updated_at: row.get(7)?,
+    })
+}
+
+fn row_to_message(row: &Row<'_>) -> rusqlite::Result<AssistantMessage> {
+    let role: String = row.get(1)?;
+    let activities: String = row.get(4)?;
+    let citations: String = row.get(5)?;
+    let attachments: String = row.get(6)?;
+    Ok(AssistantMessage {
+        id: row.get(0)?,
+        role: Role::parse(&role),
+        text: row.get(2)?,
+        created_at: row.get(3)?,
+        activities: from_json::<String>(&activities),
+        citations: from_json::<AssistantCitation>(&citations),
+        attachments: from_json::<serde_json::Value>(&attachments),
+    })
+}
+
+fn from_json<T: DeserializeOwned>(raw: &str) -> Vec<T> {
+    serde_json::from_str(raw).unwrap_or_default()
+}
+
+fn to_json<T: serde::Serialize>(items: &[T]) -> String {
+    serde_json::to_string(items).unwrap_or_else(|_| "[]".to_string())
+}
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/repository.test.rs"]
+mod tests;

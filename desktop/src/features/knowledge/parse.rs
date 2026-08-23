@@ -21,6 +21,14 @@ const NOT_JSON: &str = "The model did not return a JSON result.";
 #[derive(Deserialize)]
 struct RawCandidates {
     entities: Option<Vec<RawCandidate>>,
+    facts: Option<Vec<RawLink>>,
+}
+
+#[derive(Deserialize)]
+struct RawLink {
+    pred: Option<String>,
+    subject: Option<String>,
+    object: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -30,7 +38,6 @@ struct RawCandidate {
     name: Option<String>,
     titles: Option<Vec<Value>>,
     aliases: Option<Vec<Value>>,
-    character: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -52,7 +59,6 @@ struct Candidate {
     name: String,
     titles: Vec<String>,
     aliases: Vec<String>,
-    character: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,10 +99,19 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
             fold(&mut unique, candidate);
         }
     }
-    same_spelling(&mut unique);
+    let links = links_of(reply.facts.unwrap_or_default(), &unique, &mut issues);
     let mut placed: Vec<Vec<Placed>> = vec![Vec::new(); chapters.len()];
-    for candidate in unique {
-        let names = names_of(&candidate);
+    for (position, candidate) in unique.iter().enumerate() {
+        if candidate.kind == CHARACTER {
+            if !links.iter().any(|link| link.1 == position) {
+                issues.push(format!(
+                    "entity \"{}\" (character): no persona_of fact links a persona to it; add the persona_of fact or drop the character",
+                    candidate.name
+                ));
+            }
+            continue;
+        }
+        let names = names_of(candidate);
         let mut found = false;
         for (index, paragraphs) in chapters.iter().enumerate() {
             let ev = found_in(paragraphs, &names);
@@ -105,6 +120,7 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
             }
             found = true;
             placed[index].push(Placed {
+                candidate: position,
                 entity: AnalysisEntity {
                     id: String::new(),
                     kind: candidate.kind.clone(),
@@ -113,7 +129,6 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
                     aliases: candidate.aliases.clone(),
                     ev,
                 },
-                character: candidate.character.clone(),
             });
         }
         if !found {
@@ -124,50 +139,105 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
         }
     }
     Ok(CandidateReading {
-        chapters: placed.into_iter().map(draft_of).collect(),
+        chapters: placed
+            .into_iter()
+            .map(|chapter| draft_of(chapter, &unique, &links))
+            .collect(),
         issues,
     })
 }
 
 #[derive(Clone)]
 struct Placed {
+    candidate: usize,
     entity: AnalysisEntity,
-    character: Option<String>,
 }
 
-fn draft_of(placed: Vec<Placed>) -> ChapterDraft {
-    let mut entities: Vec<AnalysisEntity> = placed.iter().map(|item| item.entity.clone()).collect();
+fn links_of(
+    raw: Vec<RawLink>,
+    unique: &[Candidate],
+    issues: &mut Vec<String>,
+) -> Vec<(usize, usize)> {
     let mut links: Vec<(usize, usize)> = Vec::new();
-    for (persona, item) in placed.iter().enumerate() {
-        let Some(name) = &item.character else {
+    for item in raw {
+        let pred = trimmed(item.pred).unwrap_or_default();
+        let subject = trimmed(item.subject);
+        let object = trimmed(item.object);
+        let label = format!(
+            "fact {} {} {}",
+            subject.as_deref().unwrap_or("?"),
+            if pred.is_empty() { "?" } else { &pred },
+            object.as_deref().unwrap_or("?")
+        );
+        if pred != PERSONA_OF {
+            issues.push(format!(
+                "{label}: only persona_of facts are listed in this step; the other facts come later"
+            ));
+            continue;
+        }
+        let (Some(subject), Some(object)) = (subject, object) else {
+            issues.push(format!("{label}: persona_of needs a subject and an object"));
             continue;
         };
-        let key = norm(name);
-        let position = entities
+        let persona = unique.iter().position(|item| {
+            item.kind == PERSONA
+                && names_of(item)
+                    .iter()
+                    .any(|name| norm(name) == norm(&subject))
+        });
+        let character = unique
             .iter()
-            .position(|entity| entity.kind == CHARACTER && norm(&entity.name) == key);
-        let character = match position {
-            Some(position) => position,
-            None => {
-                entities.push(AnalysisEntity {
-                    id: String::new(),
-                    kind: CHARACTER.to_string(),
-                    name: name.clone(),
-                    titles: Vec::new(),
-                    aliases: Vec::new(),
-                    ev: Vec::new(),
-                });
-                entities.len() - 1
+            .position(|item| item.kind == CHARACTER && norm(&item.name) == norm(&object));
+        let (Some(persona), Some(character)) = (persona, character) else {
+            if persona.is_none() {
+                issues.push(format!(
+                    "{label}: the subject \"{subject}\" is not a persona in the entity list"
+                ));
             }
+            if character.is_none() {
+                issues.push(format!(
+                    "{label}: the object \"{object}\" is not a character in the entity list"
+                ));
+            }
+            continue;
         };
-        let ev = item.entity.ev.clone();
-        merge_evidence(&mut entities[character].ev, ev);
-        links.push((persona, character));
+        if !links.contains(&(persona, character)) {
+            links.push((persona, character));
+        }
+    }
+    links
+}
+
+fn draft_of(placed: Vec<Placed>, unique: &[Candidate], links: &[(usize, usize)]) -> ChapterDraft {
+    let mut entities: Vec<AnalysisEntity> = placed.iter().map(|item| item.entity.clone()).collect();
+    let mut characters: Vec<(usize, usize)> = Vec::new();
+    let mut pairs: Vec<(usize, usize)> = Vec::new();
+    for (persona, item) in placed.iter().enumerate() {
+        for (_, character) in links.iter().filter(|link| link.0 == item.candidate) {
+            let position = match characters.iter().find(|known| known.0 == *character) {
+                Some(known) => known.1,
+                None => {
+                    entities.push(AnalysisEntity {
+                        id: String::new(),
+                        kind: CHARACTER.to_string(),
+                        name: unique[*character].name.clone(),
+                        titles: Vec::new(),
+                        aliases: Vec::new(),
+                        ev: Vec::new(),
+                    });
+                    characters.push((*character, entities.len() - 1));
+                    entities.len() - 1
+                }
+            };
+            let ev = item.entity.ev.clone();
+            merge_evidence(&mut entities[position].ev, ev);
+            pairs.push((persona, position));
+        }
     }
     for (index, entity) in entities.iter_mut().enumerate() {
         entity.id = entity_id(index);
     }
-    let facts = links
+    let facts = pairs
         .into_iter()
         .enumerate()
         .map(|(index, (persona, character))| AnalysisFact {
@@ -228,12 +298,6 @@ fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
         Some(name) => format!("entity \"{name}\""),
         None => "an entity without a name".to_string(),
     };
-    if kind.as_deref() == Some(CHARACTER) {
-        issues.push(format!(
-            "{label}: a character is not listed as an entity; set the character property of the persona instead"
-        ));
-        return None;
-    }
     let known = kind.as_deref().is_some_and(known_type);
     if !known {
         let found = kind.map_or("type is missing".to_string(), |kind| {
@@ -251,7 +315,6 @@ fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
         name,
         titles: Vec::new(),
         aliases: Vec::new(),
-        character: None,
     };
     if candidate.kind == PERSONA {
         merge_names(&mut candidate.titles, strings(raw.titles));
@@ -259,7 +322,6 @@ fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
         candidate
             .aliases
             .retain(|alias| norm(alias) != norm(&candidate.name));
-        candidate.character = trimmed(raw.character);
     }
     Some(candidate)
 }
@@ -273,24 +335,8 @@ fn fold(unique: &mut Vec<Candidate>, candidate: Candidate) {
         Some(target) => {
             merge_names(&mut target.titles, candidate.titles);
             merge_names(&mut target.aliases, candidate.aliases);
-            if target.character.is_none() {
-                target.character = candidate.character;
-            }
         }
         None => unique.push(candidate),
-    }
-}
-
-fn same_spelling(unique: &mut [Candidate]) {
-    let mut seen: Vec<String> = Vec::new();
-    for candidate in unique {
-        let Some(character) = candidate.character.as_mut() else {
-            continue;
-        };
-        match seen.iter().find(|item| norm(item) == norm(character)) {
-            Some(first) => *character = first.clone(),
-            None => seen.push(character.clone()),
-        }
     }
 }
 
@@ -328,7 +374,7 @@ impl FactCleaner<'_> {
         };
         if def.key == PERSONA_OF {
             self.issues.push(format!(
-                "{label}: persona_of is not listed in facts; it comes from the character of the persona"
+                "{label}: persona_of is extracted together with the entities, not here"
             ));
             return;
         }
@@ -509,17 +555,13 @@ fn trimmed(value: Option<String>) -> Option<String> {
 }
 
 fn known_type(kind: &str) -> bool {
-    Ontology::get()
-        .types
-        .iter()
-        .any(|item| item.key == kind && !item.abstract_)
+    Ontology::get().types.iter().any(|item| item.key == kind)
 }
 
 fn type_keys() -> String {
     let keys: Vec<&str> = Ontology::get()
         .types
         .iter()
-        .filter(|item| !item.abstract_)
         .map(|item| item.key.as_str())
         .collect();
     keys.join(", ")

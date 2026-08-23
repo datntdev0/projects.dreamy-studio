@@ -112,9 +112,12 @@ fn analyzer(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmAnalyzer {
 fn the_candidate_prompt_lists_the_entity_types_and_not_the_ontology_file() {
     let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
-    assert!(prompt.contains("Entity types:\n- persona: "));
-    assert!(!prompt.contains("- character: "));
-    assert!(prompt.contains("Properties: titles, aliases, character."));
+    assert!(prompt.contains(
+        "Entity types:
+- character: "
+    ));
+    assert!(prompt.contains("- persona: "));
+    assert!(prompt.contains("Properties: titles, aliases."));
     assert!(prompt.contains("- event: "));
     assert!(!prompt.contains("Predicates:"));
     assert!(!prompt.contains("```yaml"));
@@ -137,11 +140,11 @@ fn the_candidate_prompt_states_the_rules_and_the_reply_contract() {
     let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
     assert!(prompt.contains("Entities have no description."));
-    assert!(prompt.contains("titles, aliases and character only for personas"));
-    assert!(prompt.contains("Never list a character as an entity"));
-    assert!(prompt.contains("set the character property of the persona"));
+    assert!(prompt.contains("titles and aliases only for personas"));
+    assert!(prompt.contains("also list a persona_of fact for each persona of that character"));
+    assert!(prompt.contains("every character needs at least one persona_of fact"));
     assert!(prompt.contains(
-        "Reply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[],\"character\":\"...\"}]}."
+        "Reply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}],\"facts\":[{\"pred\":\"persona_of\",\"subject\":\"...\",\"object\":\"...\"}]}."
     ));
     assert!(
         prompt

@@ -37,15 +37,21 @@ fn candidates_go_to_the_chapters_that_mention_them_with_their_first_paragraph() 
     ]}));
 
     assert!(reading.issues.is_empty());
-    assert_eq!(names(&reading.chapters[0]), ["Wren", "The Guild", "Harbor"]);
-    assert_eq!(names(&reading.chapters[1]), ["Aldous"]);
-    let wren = &reading.chapters[0][0];
+    assert_eq!(
+        names(&reading.chapters[0].entities),
+        ["Wren", "The Guild", "Harbor"]
+    );
+    assert_eq!(names(&reading.chapters[1].entities), ["Aldous"]);
+    let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.id, "E1");
     assert_eq!(wren.titles, ["lamplighter"]);
     assert_eq!(wren.ev, [evidence(1, "Wren")]);
-    assert_eq!(reading.chapters[0][1].id, "E2");
-    assert_eq!(reading.chapters[0][1].ev, [evidence(2, "The Guild")]);
-    assert_eq!(reading.chapters[1][0].id, "E1");
+    assert_eq!(reading.chapters[0].entities[1].id, "E2");
+    assert_eq!(
+        reading.chapters[0].entities[1].ev,
+        [evidence(2, "The Guild")]
+    );
+    assert_eq!(reading.chapters[1].entities[0].id, "E1");
 }
 
 #[test]
@@ -54,10 +60,13 @@ fn an_alias_alone_places_the_entity_in_a_chapter() {
         {"type": "persona", "name": "Wren", "aliases": ["the Keeper"]}
     ]}));
 
-    assert_eq!(names(&reading.chapters[0]), ["Wren"]);
-    assert_eq!(names(&reading.chapters[1]), ["Wren"]);
-    assert_eq!(reading.chapters[0][0].ev, [evidence(1, "Wren")]);
-    assert_eq!(reading.chapters[1][0].ev, [evidence(1, "the Keeper")]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
+    assert_eq!(names(&reading.chapters[1].entities), ["Wren"]);
+    assert_eq!(reading.chapters[0].entities[0].ev, [evidence(1, "Wren")]);
+    assert_eq!(
+        reading.chapters[1].entities[0].ev,
+        [evidence(1, "the Keeper")]
+    );
 }
 
 #[test]
@@ -66,7 +75,7 @@ fn candidates_match_names_ignoring_case_spacing_and_composition() {
         {"type": "location", "name": "  the   HARBOR "}
     ]}));
 
-    assert_eq!(names(&reading.chapters[0]), ["the   HARBOR"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["the   HARBOR"]);
     assert!(reading.issues.is_empty());
 }
 
@@ -79,17 +88,17 @@ fn reports_entities_with_an_unknown_type_or_no_name() {
         {"type": "location", "name": "Harbor"}
     ]}));
 
-    assert_eq!(names(&reading.chapters[0]), ["Harbor"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Harbor"]);
     assert_eq!(reading.issues.len(), 3);
     assert!(reading.issues[0].starts_with(
-        "entity \"Mars\": type \"planet\" is not in the ontology; use one of: character, persona,"
+        "entity \"Mars\": type \"planet\" is not in the ontology; use one of: persona,"
     ));
     assert_eq!(
         reading.issues[1],
         "an entity without a name: the name is missing"
     );
     assert!(
-        reading.issues[2].starts_with("entity \"Harbor\": type is missing; use one of: character,")
+        reading.issues[2].starts_with("entity \"Harbor\": type is missing; use one of: persona,")
     );
 }
 
@@ -100,7 +109,7 @@ fn reports_an_entity_that_appears_in_no_chapter() {
         {"type": "persona", "name": "Wren"}
     ]}));
 
-    assert_eq!(names(&reading.chapters[0]), ["Wren"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
     assert_eq!(
         reading.issues,
         ["entity \"Ghost\" (persona): neither the name nor the aliases appear in the chapter text"]
@@ -114,10 +123,10 @@ fn keeps_titles_and_aliases_only_on_personas() {
         {"type": "location", "name": "Harbor", "titles": ["Port"], "aliases": ["Dock"]}
     ]}));
 
-    let wren = &reading.chapters[0][0];
+    let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.titles, ["Lamp", "Keeper"]);
     assert_eq!(wren.aliases, ["W."]);
-    let harbor = &reading.chapters[0][1];
+    let harbor = &reading.chapters[0].entities[1];
     assert!(harbor.titles.is_empty());
     assert!(harbor.aliases.is_empty());
 }
@@ -130,8 +139,8 @@ fn folds_candidates_with_the_same_type_and_name() {
         {"type": "persona", "name": "  WREN ", "titles": ["a", "B"], "aliases": ["Wr"]}
     ]}));
 
-    assert_eq!(reading.chapters[0].len(), 2);
-    let wren = &reading.chapters[0][0];
+    assert_eq!(reading.chapters[0].entities.len(), 2);
+    let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.name, "Wren");
     assert_eq!(wren.titles, ["A", "B"]);
     assert_eq!(wren.aliases, ["Wr"]);
@@ -146,7 +155,7 @@ fn reads_candidates_wrapped_in_prose_and_code_fences() {
 
     let reading = parse_candidates(&text, &chapters()).unwrap();
 
-    assert_eq!(names(&reading.chapters[0]), ["Wren"]);
+    assert_eq!(names(&reading.chapters[0].entities), ["Wren"]);
 }
 
 #[test]
@@ -173,7 +182,12 @@ fn accepts_an_empty_candidate_list() {
     let reading = candidates(json!({"entities": []}));
 
     assert!(reading.issues.is_empty());
-    assert!(reading.chapters.iter().all(Vec::is_empty));
+    assert!(
+        reading
+            .chapters
+            .iter()
+            .all(|draft| draft.entities.is_empty() && draft.facts.is_empty())
+    );
 }
 
 fn entity(id: &str, kind: &str, name: &str) -> AnalysisEntity {
@@ -212,7 +226,7 @@ fn facts(value: Value) -> FactReading {
 #[test]
 fn reads_valid_facts_and_numbers_them() {
     let reading = facts(json!({"facts": [
-        {"id": "x", "pred": "persona_of", "subject": "E1", "object": "E4", "ev": [{"p": 1, "q": "Wren lit the lamp."}]},
+        {"id": "x", "pred": "resides_at", "subject": "E1", "object": "E2", "ev": [{"p": 2, "q": "Harbor"}]},
         {"pred": "occupation", "subject": "E1", "ev": [{"p": 1, "q": "lit the lamp"}]},
         {"pred": "member_of", "subject": "E1", "object": "E3", "ev": [{"p": 2, "q": "The Guild met"}]}
     ]}));
@@ -220,7 +234,7 @@ fn reads_valid_facts_and_numbers_them() {
     assert!(reading.issues.is_empty());
     assert_eq!(reading.facts.len(), 3);
     assert_eq!(reading.facts[0].id, "F1");
-    assert_eq!(reading.facts[0].object.as_deref(), Some("E4"));
+    assert_eq!(reading.facts[0].object.as_deref(), Some("E2"));
     assert_eq!(reading.facts[1].id, "F2");
     assert_eq!(reading.facts[1].object, None);
     assert_eq!(reading.facts[1].ev, [evidence(1, "lit the lamp")]);
@@ -315,20 +329,89 @@ fn reports_facts_that_break_the_domain_or_the_range() {
 }
 
 #[test]
-fn tells_the_model_that_a_character_only_takes_persona_of() {
+fn tells_the_model_that_a_character_takes_no_facts() {
     let reading = facts(json!({"facts": [
-        {"id": "F1", "pred": "resides_at", "subject": "E4", "object": "E2"},
-        {"id": "F2", "pred": "persona_of", "subject": "E4", "object": "E4"}
+        {"id": "F1", "pred": "resides_at", "subject": "E4", "object": "E2"}
     ]}));
 
     assert_eq!(
         reading.issues[0],
         "fact F1: resides_at cannot be attached to the character Aldous; a character only takes persona_of, so attach the fact to a persona"
     );
+}
+
+#[test]
+fn persona_of_comes_from_the_character_property_and_is_not_a_listed_fact() {
+    let reading = facts(json!({"facts": [
+        {"id": "F1", "pred": "persona_of", "subject": "E1", "object": "E4", "ev": [{"p": 1, "q": "Wren"}]}
+    ]}));
+
+    assert!(reading.facts.is_empty());
     assert_eq!(
-        reading.issues[1],
-        "fact F2: the subject and the object are the same entity"
+        reading.issues,
+        ["fact F1: persona_of is not listed in facts; it comes from the character of the persona"]
     );
+}
+
+#[test]
+fn a_persona_with_a_character_gets_the_character_entity_and_a_persona_of_fact() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren", "character": " Aldous "},
+        {"type": "persona", "name": "Aldous", "aliases": ["the Keeper"], "character": "aldous"},
+        {"type": "location", "name": "Harbor"}
+    ]}));
+
+    assert!(reading.issues.is_empty());
+    let first = &reading.chapters[0];
+    assert_eq!(names(&first.entities), ["Wren", "Harbor", "Aldous"]);
+    assert_eq!(first.entities[2].kind, "character");
+    assert_eq!(first.entities[2].ev, [evidence(1, "Wren")]);
+    assert_eq!(first.facts.len(), 1);
+    assert_eq!(first.facts[0].id, "F1");
+    assert_eq!(first.facts[0].pred, "persona_of");
+    assert_eq!(first.facts[0].subject, "E1");
+    assert_eq!(first.facts[0].object.as_deref(), Some("E3"));
+    assert_eq!(first.facts[0].ev, [evidence(1, "Wren")]);
+    let second = &reading.chapters[1];
+    assert_eq!(names(&second.entities), ["Aldous", "Aldous"]);
+    assert_eq!(second.entities[0].kind, "persona");
+    assert_eq!(second.entities[1].kind, "character");
+    assert_eq!(second.entities[1].name, "Aldous");
+    assert_eq!(second.facts[0].object.as_deref(), Some("E2"));
+}
+
+#[test]
+fn personas_of_one_character_share_its_entity_within_a_chapter() {
+    let reading = candidates(json!({"entities": [
+        {"type": "persona", "name": "Wren", "character": "Mara Voss"},
+        {"type": "persona", "name": "Aldous", "aliases": ["the Keeper"], "character": "mara voss"}
+    ]}));
+
+    let first = &reading.chapters[0];
+    assert_eq!(names(&first.entities), ["Wren", "Mara Voss"]);
+    assert_eq!(first.facts.len(), 1);
+    let second = &reading.chapters[1];
+    assert_eq!(names(&second.entities), ["Aldous", "Mara Voss"]);
+    assert_eq!(second.facts[0].subject, "E1");
+    assert_eq!(second.facts[0].object.as_deref(), Some("E2"));
+}
+
+#[test]
+fn a_character_is_never_listed_as_an_entity_and_only_a_persona_has_one() {
+    let reading = candidates(json!({"entities": [
+        {"type": "character", "name": "Aldous"},
+        {"type": "location", "name": "Harbor", "character": "Aldous"},
+        {"type": "persona", "name": "Wren", "character": "  "}
+    ]}));
+
+    assert_eq!(
+        reading.issues,
+        [
+            "entity \"Aldous\": a character is not listed as an entity; set the character property of the persona instead"
+        ]
+    );
+    assert_eq!(names(&reading.chapters[0].entities), ["Harbor", "Wren"]);
+    assert!(reading.chapters[0].facts.is_empty());
 }
 
 #[test]

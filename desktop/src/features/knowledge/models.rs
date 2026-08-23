@@ -51,6 +51,12 @@ pub struct AnalysisEvidence {
     pub q: String,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ChapterDraft {
+    pub entities: Vec<AnalysisEntity>,
+    pub facts: Vec<AnalysisFact>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KnownEntity {
     pub kind: String,

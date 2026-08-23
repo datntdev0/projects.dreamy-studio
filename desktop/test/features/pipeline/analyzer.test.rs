@@ -112,9 +112,9 @@ fn analyzer(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmAnalyzer {
 fn the_candidate_prompt_lists_the_entity_types_and_not_the_ontology_file() {
     let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
-    assert!(prompt.contains("Entity types:\n- character: "));
-    assert!(prompt.contains("- persona: "));
-    assert!(prompt.contains("Properties: titles, aliases."));
+    assert!(prompt.contains("Entity types:\n- persona: "));
+    assert!(!prompt.contains("- character: "));
+    assert!(prompt.contains("Properties: titles, aliases, character."));
     assert!(prompt.contains("- event: "));
     assert!(!prompt.contains("Predicates:"));
     assert!(!prompt.contains("```yaml"));
@@ -137,10 +137,11 @@ fn the_candidate_prompt_states_the_rules_and_the_reply_contract() {
     let prompt = build_candidate_prompt(&candidate_job(Vec::new()));
 
     assert!(prompt.contains("Entities have no description."));
-    assert!(prompt.contains("titles and aliases only for personas"));
-    assert!(prompt.contains("reached only through persona_of"));
+    assert!(prompt.contains("titles, aliases and character only for personas"));
+    assert!(prompt.contains("Never list a character as an entity"));
+    assert!(prompt.contains("set the character property of the persona"));
     assert!(prompt.contains(
-        "Reply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}]}."
+        "Reply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[],\"character\":\"...\"}]}."
     ));
     assert!(
         prompt
@@ -189,7 +190,7 @@ fn the_candidate_prompt_lists_every_known_entity_before_the_chapters() {
     ));
     assert!(prompt.contains("- organization | The Guild\n"));
     assert!(prompt.contains("- persona | Mara | titles: Captain\n"));
-    assert!(prompt.contains("reuse its exact name and type"));
+    assert!(prompt.contains("reuse its exact name, type and character"));
     assert!(prompt.contains("never invent a new spelling"));
     assert!(prompt.find("- organization | The Guild").unwrap() < prompt.find("Chapter 3").unwrap());
 }
@@ -206,6 +207,31 @@ fn the_facts_prompt_lists_the_chapter_entities_with_their_ids() {
 }
 
 #[test]
+fn the_facts_prompt_hides_the_characters_of_the_chapter() {
+    let mut job = facts_job();
+    job.entities.push(cast_member("E9", "character", "Aldous"));
+
+    let prompt = build_facts_prompt(&job);
+
+    assert!(!prompt.contains("E9"));
+    assert!(!prompt.contains("| character | Aldous"));
+}
+
+#[test]
+fn the_candidate_prompt_leaves_characters_out_of_the_known_entities() {
+    let prompt = build_candidate_prompt(&candidate_job(vec![
+        KnownEntity {
+            character: Some("Aldous".to_string()),
+            ..known("persona", "Wren")
+        },
+        known("character", "Aldous"),
+    ]));
+
+    assert!(prompt.contains("- persona | Wren | character: Aldous\n"));
+    assert!(!prompt.contains("- character | Aldous"));
+}
+
+#[test]
 fn the_facts_prompt_lists_scalars_and_relationships_with_their_signatures() {
     let prompt = build_facts_prompt(&facts_job());
 
@@ -217,7 +243,7 @@ fn the_facts_prompt_lists_scalars_and_relationships_with_their_signatures() {
         prompt
             .contains("- owns: relationship; subject: persona or organization; object: artifact; ")
     );
-    assert!(prompt.contains("- persona_of: relationship; subject: persona; object: character; "));
+    assert!(!prompt.contains("- persona_of:"));
     assert!(!prompt.contains("severity"));
     assert!(!prompt.contains("```yaml"));
 }
@@ -232,7 +258,7 @@ fn the_facts_prompt_numbers_the_paragraphs_and_states_the_rules() {
     assert!(prompt.contains("Every subject and object is an id from the entity list."));
     assert!(prompt.contains("A scalar fact has no value and no object."));
     assert!(prompt.contains("copied verbatim from the paragraph numbered \"p\""));
-    assert!(prompt.contains("A character is reached only through persona_of"));
+    assert!(prompt.contains("Do not list persona_of; it is already known."));
     assert!(prompt.contains(
         "Reply with only one JSON object shaped like {\"facts\":[{\"pred\":\"occupation\",\"subject\":\"E1\",\"object\":\"E2\",\"ev\":[{\"p\":1,\"q\":\"...\"}]}]}."
     ));
@@ -252,7 +278,7 @@ const FACTS: &str = "{\"facts\":[{\"pred\":\"resides_at\",\"subject\":\"E1\",\"o
 
 const BAD_FACTS: &str = "{\"facts\":[{\"pred\":\"resides_at\",\"subject\":\"E2\",\"object\":\"E1\",\"ev\":[]},{\"pred\":\"occupation\",\"subject\":\"E1\",\"ev\":[{\"p\":1,\"q\":\"lit the lamp\"}]}]}";
 
-fn find(analyzer: &LlmAnalyzer) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError> {
+fn find(analyzer: &LlmAnalyzer) -> Result<Vec<ChapterDraft>, AnalyzeError> {
     analyzer.candidates(
         &candidate_job(Vec::new()),
         &TaskLog::none(),
@@ -322,11 +348,11 @@ fn finds_the_candidates_of_every_chapter_through_the_cli() {
 
     assert_eq!(cli.calls(), 1);
     assert_eq!(found.len(), 2);
-    assert_eq!(found[0].len(), 1);
-    assert_eq!(found[0][0].name, "Wren");
-    assert_eq!(found[0][0].ev[0].p, 1);
-    assert_eq!(found[1].len(), 1);
-    assert_eq!(found[1][0].name, "Harbor");
+    assert_eq!(found[0].entities.len(), 1);
+    assert_eq!(found[0].entities[0].name, "Wren");
+    assert_eq!(found[0].entities[0].ev[0].p, 1);
+    assert_eq!(found[1].entities.len(), 1);
+    assert_eq!(found[1].entities[0].name, "Harbor");
     let args = cli.args(1);
     assert!(args.contains("--session-id"));
     assert!(!args.contains("--no-session-persistence"));
@@ -373,7 +399,7 @@ fn sends_the_candidate_problems_back_into_the_same_claude_session() {
     assert!(retry.contains("Your reply breaks the ontology rules."));
     assert!(retry.contains("entity \"Mars\": type \"planet\" is not in the ontology"));
     assert!(!retry.contains("## Chapter"));
-    assert_eq!(found[0].len(), 1);
+    assert_eq!(found[0].entities.len(), 1);
 }
 
 #[test]
@@ -407,7 +433,7 @@ fn asks_again_when_the_reply_is_not_json() {
         cli.stdin(2)
             .contains("Your reply could not be used: The model did not return a JSON result.")
     );
-    assert_eq!(found[0].len(), 1);
+    assert_eq!(found[0].entities.len(), 1);
 }
 
 #[test]
@@ -449,8 +475,8 @@ fn keeps_the_earlier_result_when_a_retry_call_fails() {
     let found = find(&analyzer).unwrap();
 
     assert_eq!(cli.calls(), 2);
-    assert_eq!(found[0].len(), 1);
-    assert_eq!(found[0][0].name, "Wren");
+    assert_eq!(found[0].entities.len(), 1);
+    assert_eq!(found[0].entities[0].name, "Wren");
 }
 
 #[test]

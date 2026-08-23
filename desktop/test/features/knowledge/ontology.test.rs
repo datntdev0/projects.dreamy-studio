@@ -102,7 +102,7 @@ fn scalars_have_an_empty_range_and_relationships_have_one() {
 fn persona_is_the_only_type_with_properties() {
     for item in &Ontology::get().types {
         if item.key == "persona" {
-            assert_eq!(item.properties, vec!["titles", "aliases"]);
+            assert_eq!(item.properties, vec!["titles", "aliases", "character"]);
         } else {
             assert!(item.properties.is_empty(), "{}", item.key);
         }

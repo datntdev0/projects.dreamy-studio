@@ -769,12 +769,12 @@ fn known_entities_only_come_from_earlier_chapters() {
     assert!(!names(&before_third).contains(&"Late"));
     assert!(names(&before_third).contains(&"Ash"));
     assert!(!names(&before_second).contains(&"Ash"));
-    assert_eq!(before_second.len(), 3);
+    assert_eq!(before_second.len(), 2);
     assert!(before_first.is_empty());
 }
 
 #[test]
-fn known_entities_are_ordered_by_evidence_and_fill_the_character() {
+fn known_entities_are_ordered_by_evidence_fill_the_character_and_leave_characters_out() {
     let fixture = fixture();
     let (novel_id, _) = saved_story(&fixture);
 
@@ -783,12 +783,11 @@ fn known_entities_are_ordered_by_evidence_and_fill_the_character() {
         .known_entities(novel_id, KnowledgeLang::Src, 3, 50)
         .unwrap();
 
-    assert_eq!(known.len(), 4);
+    assert_eq!(known.len(), 3);
     assert_eq!(known[0].name, "Wren");
     assert_eq!(known[0].kind, "persona");
     assert_eq!(known[0].character.as_deref(), Some("Wren Aldous"));
-    assert_eq!(known[3].name, "Wren Aldous");
-    assert_eq!(known[3].kind, "character");
+    assert!(known.iter().all(|entity| entity.kind != "character"));
     assert!(known[1..].iter().all(|entity| entity.character.is_none()));
 }
 

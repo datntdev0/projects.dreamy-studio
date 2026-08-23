@@ -1,6 +1,7 @@
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisFact;
 use crate::features::knowledge::models::ChapterAnalysis;
+use crate::features::knowledge::models::ChapterDraft;
 use crate::features::knowledge::models::KnowledgeError;
 use crate::features::knowledge::models::KnowledgeErrorCode;
 use crate::features::knowledge::models::KnowledgeLang;
@@ -44,10 +45,12 @@ pub const KIND_ANALYSIS: &str = "analysis";
 pub const DEFAULT_BATCH_SIZE: usize = 5;
 pub const MAX_BATCH_SIZE: usize = 10;
 const KNOWN_LIMIT: usize = 200;
+const CHARACTER: &str = "character";
+const PERSONA_OF: &str = "persona_of";
 const WAIT_POLL: Duration = Duration::from_millis(50);
 const CANDIDATES_DONE: u8 = 50;
 
-type Candidates = Arc<HashMap<String, Vec<AnalysisEntity>>>;
+type Candidates = Arc<HashMap<String, ChapterDraft>>;
 
 #[derive(Clone)]
 enum BatchFailure {
@@ -213,7 +216,14 @@ impl AnalysisJob {
                 continue;
             };
             for id in &batch.chapters {
-                for entity in found.get(id).into_iter().flatten() {
+                let Some(draft) = found.get(id) else {
+                    continue;
+                };
+                for entity in draft
+                    .entities
+                    .iter()
+                    .filter(|entity| entity.kind != CHARACTER)
+                {
                     if known.len() >= KNOWN_LIMIT {
                         return Ok(known);
                     }
@@ -223,7 +233,7 @@ impl AnalysisJob {
                             name: entity.name.clone(),
                             titles: entity.titles.clone(),
                             aliases: entity.aliases.clone(),
-                            character: None,
+                            character: character_of(draft, &entity.id),
                         });
                     }
                 }
@@ -274,7 +284,7 @@ impl AnalysisJob {
             "candidates found: {}",
             found
                 .iter()
-                .map(|entities| entities.len().to_string())
+                .map(|draft| draft.entities.len().to_string())
                 .collect::<Vec<_>>()
                 .join(" + ")
         ));
@@ -287,7 +297,7 @@ impl AnalysisJob {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-    ) -> Result<Vec<AnalysisEntity>, TaskOutcome> {
+    ) -> Result<ChapterDraft, TaskOutcome> {
         let (index, batch) = match self.batch_of(&task.chapter_id) {
             Some((index, batch)) => (index, batch),
             None => (0, Arc::new(Batch::new(vec![task.chapter_id.clone()]))),
@@ -396,21 +406,28 @@ impl PipelineJob for AnalysisJob {
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<(), TaskOutcome> {
-        let entities = self.entities_of(task, log, progress, cancel)?;
+        let draft = self.entities_of(task, log, progress, cancel)?;
         if cancel.load(Ordering::SeqCst) {
             return Err(TaskOutcome::Cancelled);
         }
         progress(CANDIDATES_DONE);
         log.line(&format!(
-            "{} entities found in this chapter",
-            entities.len()
+            "{} entities and {} persona_of links found in this chapter",
+            draft.entities.len(),
+            draft.facts.len()
         ));
-        let facts = if entities.is_empty() {
-            Vec::new()
-        } else {
+        let entities = draft.entities;
+        let mut facts = draft.facts;
+        if !entities.is_empty() {
             let chapter = self.chapter(&task.chapter_id)?;
-            self.find_facts(chapter, entities.clone(), log, progress, cancel)?
-        };
+            let found = self.find_facts(chapter, entities.clone(), log, progress, cancel)?;
+            for fact in found {
+                facts.push(AnalysisFact {
+                    id: format!("F{}", facts.len() + 1),
+                    ..fact
+                });
+            }
+        }
         if cancel.load(Ordering::SeqCst) {
             return Err(TaskOutcome::Cancelled);
         }
@@ -483,6 +500,19 @@ impl JobFactory for AnalysisJobFactory {
         }
         Ok(Box::new(job))
     }
+}
+
+fn character_of(draft: &ChapterDraft, persona: &str) -> Option<String> {
+    let link = draft
+        .facts
+        .iter()
+        .find(|fact| fact.pred == PERSONA_OF && fact.subject == persona)?;
+    let object = link.object.as_deref()?;
+    draft
+        .entities
+        .iter()
+        .find(|entity| entity.id == object)
+        .map(|entity| entity.name.clone())
 }
 
 fn failed(error: PipelineError) -> TaskOutcome {

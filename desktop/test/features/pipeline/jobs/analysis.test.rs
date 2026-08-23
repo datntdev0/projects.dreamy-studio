@@ -1,5 +1,6 @@
 use super::*;
 use crate::features::knowledge::files::KnowledgeFiles;
+use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::ChapterAnalysis;
 use crate::features::knowledge::text::text_hash;
 use crate::features::novel::files::NovelFiles;
@@ -29,9 +30,13 @@ impl Analyzer for EagerAnalyzer {
         _log: &TaskLog,
         _progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-    ) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError> {
+    ) -> Result<Vec<ChapterDraft>, AnalyzeError> {
         cancel.store(true, Ordering::SeqCst);
-        Ok(job.chapters.iter().map(|_| Vec::new()).collect())
+        Ok(job
+            .chapters
+            .iter()
+            .map(|_| ChapterDraft::default())
+            .collect())
     }
 
     fn facts(
@@ -241,6 +246,71 @@ fn the_analyzer_receives_the_chapter_text_and_then_its_entities() {
     assert_eq!(facts[0].title, "Chapter");
     assert_eq!(facts[0].entities[0].id, "E1");
     assert_eq!(facts[0].entities[0].name, "Chapter");
+}
+
+fn wren_and_aldous() -> ChapterDraft {
+    let quote = vec![AnalysisEvidence {
+        p: 1,
+        q: "source".to_string(),
+    }];
+    let entity = |id: &str, kind: &str, name: &str| AnalysisEntity {
+        id: id.to_string(),
+        kind: kind.to_string(),
+        name: name.to_string(),
+        titles: Vec::new(),
+        aliases: Vec::new(),
+        ev: quote.clone(),
+    };
+    ChapterDraft {
+        entities: vec![
+            entity("E1", "persona", "Wren"),
+            entity("E2", "character", "Aldous"),
+        ],
+        facts: vec![AnalysisFact {
+            id: "F1".to_string(),
+            pred: "persona_of".to_string(),
+            subject: "E1".to_string(),
+            object: Some("E2".to_string()),
+            ev: quote.clone(),
+        }],
+    }
+}
+
+#[test]
+fn the_persona_of_links_of_the_candidates_are_saved_before_the_facts_of_the_chapter() {
+    let setup = setup();
+    let analyzer = Arc::new(FakeAnalyzer::new().with_draft("Chapter", wren_and_aldous()));
+
+    run(&job(&setup, &analyzer), &setup.fixture.chapter_id).unwrap();
+
+    let analysis = stored(&setup, KnowledgeLang::Src, &setup.fixture.chapter_id).unwrap();
+    assert_eq!(analysis.entities.len(), 2);
+    let preds: Vec<(&str, &str)> = analysis
+        .facts
+        .iter()
+        .map(|fact| (fact.id.as_str(), fact.pred.as_str()))
+        .collect();
+    assert_eq!(preds, [("F1", "persona_of"), ("F2", "occupation")]);
+    assert_eq!(analysis.facts[0].object.as_deref(), Some("E2"));
+    assert_eq!(analysis.facts[1].subject, "E1");
+    assert_eq!(analyzer.fact_calls()[0].entities.len(), 2);
+}
+
+#[test]
+fn a_later_batch_knows_the_character_of_a_persona_but_not_the_character_entity() {
+    let setup = setup();
+    let ids = six_chapters(&setup);
+    let analyzer = Arc::new(FakeAnalyzer::new().with_draft("Chapter", wren_and_aldous()));
+    let job = job(&setup, &analyzer);
+    job.validate(&tasks_of(&ids)).unwrap();
+
+    run(&job, &ids[0]).unwrap();
+    run(&job, &ids[5]).unwrap();
+
+    let call = analyzer.candidates_with("Six").unwrap();
+    assert_eq!(known_names(&call)[0], "Wren");
+    assert_eq!(call.known[0].character.as_deref(), Some("Aldous"));
+    assert!(call.known.iter().all(|entity| entity.kind != "character"));
 }
 
 #[test]
@@ -749,7 +819,7 @@ fn a_batch_run_logs_the_command_prompts_and_responses_of_both_phases() {
         "candidates: reply accepted",
         "candidates found: 1 + 1",
         "the candidates of this chapter came from its batch",
-        "1 entities found in this chapter",
+        "1 entities and 0 persona_of links found in this chapter",
         "(facts, new session): ",
         "facts: reply accepted",
         "saved 1 entities and 1 facts",

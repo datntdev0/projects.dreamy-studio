@@ -233,8 +233,8 @@ fn known_from(knowledge: &WireKnowledge, limit: usize) -> Vec<KnownEntity> {
         .items
         .iter()
         .filter_map(|item| match item {
-            KnowledgeItem::Entity(entity) => Some(entity),
-            KnowledgeItem::Fact(_) => None,
+            KnowledgeItem::Entity(entity) if entity.entity_type != "character" => Some(entity),
+            _ => None,
         })
         .collect();
     entities.sort_by_key(|entity| std::cmp::Reverse(entity.ev.len()));

@@ -1,5 +1,6 @@
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisFact;
+use crate::features::knowledge::models::ChapterDraft;
 use crate::features::knowledge::models::KnownEntity;
 use crate::features::knowledge::ontology::Ontology;
 use crate::features::knowledge::ontology::PredicateKind;
@@ -15,6 +16,8 @@ use std::sync::atomic::AtomicBool;
 pub const FEATURE: &str = "knowledge";
 pub const PURPOSE_CANDIDATES: &str = "candidates";
 pub const PURPOSE_FACTS: &str = "facts";
+const CHARACTER: &str = "character";
+const PERSONA_OF: &str = "persona_of";
 const LABEL: &str = "knowledge analysis";
 const MAX_RETRIES: usize = 2;
 const MAX_LISTED: usize = 30;
@@ -24,15 +27,15 @@ const CANDIDATE_INTRO: &str = "You are a literary analyst. Read the novel chapte
 const CANDIDATE_RULES: &str = "\nRules:\n\
 - Entities have no description.\n\
 - Copy every name exactly as it is written in the text, and keep one entity per (type, name).\n\
-- Give titles and aliases only for personas: put the other names of a persona in aliases and its honorifics or epithets in titles.\n\
-- Facts about people belong to personas. List a character only when the text makes clear that several personas are the same person; a character is reached only through persona_of in the next step.\n\
+- Give titles, aliases and character only for personas: put the other names of a persona in aliases and its honorifics or epithets in titles.\n\
+- Facts about people belong to personas. Never list a character as an entity. When the text makes clear who the real person behind a persona is (for example one person appearing under several personas), set the character property of the persona to that person's name, the same string on every persona of that person; otherwise leave character out.\n\
 - List only entities that are named in the text.\n";
 
 const KNOWN_INTRO: &str = "\nKnown entities from earlier chapters, one per line as `- type | name | aliases | titles | character`:\n";
 
-const KNOWN_RULES: &str = "When the text refers to one of these entities, reuse its exact name and type, and never invent a new spelling for it. A known entity does not need to appear in the reply unless these chapters mention it.\n";
+const KNOWN_RULES: &str = "When the text refers to one of these entities, reuse its exact name, type and character, and never invent a new spelling for it. A known entity does not need to appear in the reply unless these chapters mention it.\n";
 
-const CANDIDATE_CONTRACT: &str = "\nReply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[]}]}. Do not add commentary or code fences.\n";
+const CANDIDATE_CONTRACT: &str = "\nReply with only one JSON object shaped like {\"entities\":[{\"type\":\"persona\",\"name\":\"...\",\"titles\":[],\"aliases\":[],\"character\":\"...\"}]}. Omit `character` when it is unknown. Do not add commentary or code fences.\n";
 
 const FACTS_INTRO: &str = "You are a literary analyst. Read the novel chapter below and extract the facts it states, using only the listed entities and predicates.\n";
 
@@ -40,7 +43,7 @@ const FACTS_RULES: &str = "\nRules:\n\
 - Every subject and object is an id from the entity list.\n\
 - A scalar fact has no value and no object. Quote the sentence that carries the information as its evidence.\n\
 - A relationship fact needs an object that fits the predicate.\n\
-- A character is reached only through persona_of; all other facts about people are attached to personas.\n\
+- All facts about people are attached to personas. Do not list persona_of; it is already known.\n\
 - Every \"q\" must be copied verbatim from the paragraph numbered \"p\" (the number in square brackets, starting at 1).\n\
 - State only what the text says. List one fact per (pred, subject, object); a scalar fact lists all its quotes in \"ev\".\n";
 
@@ -83,7 +86,7 @@ pub trait Analyzer: Send + Sync {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-    ) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError>;
+    ) -> Result<Vec<ChapterDraft>, AnalyzeError>;
 
     fn facts(
         &self,
@@ -205,7 +208,7 @@ impl Analyzer for LlmAnalyzer {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-    ) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError> {
+    ) -> Result<Vec<ChapterDraft>, AnalyzeError> {
         let chapters: Vec<Vec<String>> = job
             .chapters
             .iter()
@@ -303,7 +306,7 @@ pub fn build_facts_prompt(job: &FactsJob) -> String {
 
 fn types_section() -> String {
     let mut section = String::from("\nEntity types:\n");
-    for item in &Ontology::get().types {
+    for item in Ontology::get().types.iter().filter(|item| !item.abstract_) {
         section.push_str(&format!("- {}: {}", item.key, item.hint));
         if !item.properties.is_empty() {
             section.push_str(&format!(" Properties: {}.", item.properties.join(", ")));
@@ -315,7 +318,11 @@ fn types_section() -> String {
 
 fn predicates_section() -> String {
     let mut section = String::from("\nPredicates:\n");
-    for item in &Ontology::get().predicates {
+    for item in Ontology::get()
+        .predicates
+        .iter()
+        .filter(|item| item.key != PERSONA_OF)
+    {
         let subject = item.domain.join(" or ");
         match item.kind {
             PredicateKind::Scalar => section.push_str(&format!(
@@ -337,7 +344,7 @@ fn entities_section(entities: &[AnalysisEntity]) -> String {
     let mut section = String::from(
         "\nEntities of this chapter, one per line as `- id | type | name | aliases | titles`:\n",
     );
-    for entity in entities {
+    for entity in entities.iter().filter(|entity| entity.kind != CHARACTER) {
         section.push_str(&format!(
             "- {} | {} | {}",
             entity.id, entity.kind, entity.name
@@ -358,7 +365,7 @@ fn known_section(known: &[KnownEntity]) -> String {
         return String::new();
     }
     let mut section = String::from(KNOWN_INTRO);
-    for entity in known {
+    for entity in known.iter().filter(|entity| entity.kind != CHARACTER) {
         section.push_str(&known_line(entity));
         section.push('\n');
     }

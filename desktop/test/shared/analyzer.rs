@@ -1,6 +1,7 @@
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::AnalysisFact;
+use crate::features::knowledge::models::ChapterDraft;
 use crate::features::pipeline::analyzer::AnalyzeError;
 use crate::features::pipeline::analyzer::Analyzer;
 use crate::features::pipeline::analyzer::CandidateJob;
@@ -17,7 +18,7 @@ use std::time::Instant;
 #[derive(Debug, Default)]
 pub struct FakeAnalyzer {
     delay: Duration,
-    entities: HashMap<String, Vec<AnalysisEntity>>,
+    drafts: HashMap<String, ChapterDraft>,
     facts: HashMap<String, Vec<AnalysisFact>>,
     failing_facts: Vec<String>,
     failing_candidates: Vec<String>,
@@ -35,8 +36,18 @@ impl FakeAnalyzer {
         self
     }
 
-    pub fn with_entities(mut self, title: &str, entities: Vec<AnalysisEntity>) -> Self {
-        self.entities.insert(title.to_string(), entities);
+    pub fn with_entities(self, title: &str, entities: Vec<AnalysisEntity>) -> Self {
+        self.with_draft(
+            title,
+            ChapterDraft {
+                entities,
+                facts: Vec::new(),
+            },
+        )
+    }
+
+    pub fn with_draft(mut self, title: &str, draft: ChapterDraft) -> Self {
+        self.drafts.insert(title.to_string(), draft);
         self
     }
 
@@ -128,7 +139,7 @@ impl Analyzer for FakeAnalyzer {
         _log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-    ) -> Result<Vec<Vec<AnalysisEntity>>, AnalyzeError> {
+    ) -> Result<Vec<ChapterDraft>, AnalyzeError> {
         self.candidate_calls
             .lock()
             .unwrap_or_else(|error| error.into_inner())
@@ -146,10 +157,12 @@ impl Analyzer for FakeAnalyzer {
             .chapters
             .iter()
             .map(|chapter| {
-                self.entities
-                    .get(&chapter.title)
-                    .cloned()
-                    .unwrap_or_else(|| default_entities(&chapter.title, &chapter.paragraphs))
+                self.drafts.get(&chapter.title).cloned().unwrap_or_else(|| {
+                    ChapterDraft {
+                        entities: default_entities(&chapter.title, &chapter.paragraphs),
+                        facts: Vec::new(),
+                    }
+                })
             })
             .collect())
     }

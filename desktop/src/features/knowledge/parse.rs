@@ -1,6 +1,7 @@
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::AnalysisFact;
+use crate::features::knowledge::models::ChapterDraft;
 use crate::features::knowledge::ontology::Ontology;
 use crate::features::knowledge::ontology::PredicateDef;
 use crate::features::knowledge::ontology::PredicateKind;
@@ -29,6 +30,7 @@ struct RawCandidate {
     name: Option<String>,
     titles: Option<Vec<Value>>,
     aliases: Option<Vec<Value>>,
+    character: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -50,11 +52,12 @@ struct Candidate {
     name: String,
     titles: Vec<String>,
     aliases: Vec<String>,
+    character: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CandidateReading {
-    pub chapters: Vec<Vec<AnalysisEntity>>,
+    pub chapters: Vec<ChapterDraft>,
     pub issues: Vec<String>,
 }
 
@@ -90,7 +93,8 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
             fold(&mut unique, candidate);
         }
     }
-    let mut placed: Vec<Vec<AnalysisEntity>> = vec![Vec::new(); chapters.len()];
+    same_spelling(&mut unique);
+    let mut placed: Vec<Vec<Placed>> = vec![Vec::new(); chapters.len()];
     for candidate in unique {
         let names = names_of(&candidate);
         let mut found = false;
@@ -100,13 +104,16 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
                 continue;
             }
             found = true;
-            placed[index].push(AnalysisEntity {
-                id: String::new(),
-                kind: candidate.kind.clone(),
-                name: candidate.name.clone(),
-                titles: candidate.titles.clone(),
-                aliases: candidate.aliases.clone(),
-                ev,
+            placed[index].push(Placed {
+                entity: AnalysisEntity {
+                    id: String::new(),
+                    kind: candidate.kind.clone(),
+                    name: candidate.name.clone(),
+                    titles: candidate.titles.clone(),
+                    aliases: candidate.aliases.clone(),
+                    ev,
+                },
+                character: candidate.character.clone(),
             });
         }
         if !found {
@@ -116,15 +123,62 @@ pub fn parse_candidates(text: &str, chapters: &[Vec<String>]) -> Result<Candidat
             ));
         }
     }
-    for entities in &mut placed {
-        for (index, entity) in entities.iter_mut().enumerate() {
-            entity.id = entity_id(index);
-        }
-    }
     Ok(CandidateReading {
-        chapters: placed,
+        chapters: placed.into_iter().map(draft_of).collect(),
         issues,
     })
+}
+
+#[derive(Clone)]
+struct Placed {
+    entity: AnalysisEntity,
+    character: Option<String>,
+}
+
+fn draft_of(placed: Vec<Placed>) -> ChapterDraft {
+    let mut entities: Vec<AnalysisEntity> = placed.iter().map(|item| item.entity.clone()).collect();
+    let mut links: Vec<(usize, usize)> = Vec::new();
+    for (persona, item) in placed.iter().enumerate() {
+        let Some(name) = &item.character else {
+            continue;
+        };
+        let key = norm(name);
+        let position = entities
+            .iter()
+            .position(|entity| entity.kind == CHARACTER && norm(&entity.name) == key);
+        let character = match position {
+            Some(position) => position,
+            None => {
+                entities.push(AnalysisEntity {
+                    id: String::new(),
+                    kind: CHARACTER.to_string(),
+                    name: name.clone(),
+                    titles: Vec::new(),
+                    aliases: Vec::new(),
+                    ev: Vec::new(),
+                });
+                entities.len() - 1
+            }
+        };
+        let ev = item.entity.ev.clone();
+        merge_evidence(&mut entities[character].ev, ev);
+        links.push((persona, character));
+    }
+    for (index, entity) in entities.iter_mut().enumerate() {
+        entity.id = entity_id(index);
+    }
+    let facts = links
+        .into_iter()
+        .enumerate()
+        .map(|(index, (persona, character))| AnalysisFact {
+            id: format!("F{}", index + 1),
+            pred: PERSONA_OF.to_string(),
+            subject: entities[persona].id.clone(),
+            object: Some(entities[character].id.clone()),
+            ev: entities[persona].ev.clone(),
+        })
+        .collect();
+    ChapterDraft { entities, facts }
 }
 
 pub fn parse_facts(
@@ -174,6 +228,12 @@ fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
         Some(name) => format!("entity \"{name}\""),
         None => "an entity without a name".to_string(),
     };
+    if kind.as_deref() == Some(CHARACTER) {
+        issues.push(format!(
+            "{label}: a character is not listed as an entity; set the character property of the persona instead"
+        ));
+        return None;
+    }
     let known = kind.as_deref().is_some_and(known_type);
     if !known {
         let found = kind.map_or("type is missing".to_string(), |kind| {
@@ -191,6 +251,7 @@ fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
         name,
         titles: Vec::new(),
         aliases: Vec::new(),
+        character: None,
     };
     if candidate.kind == PERSONA {
         merge_names(&mut candidate.titles, strings(raw.titles));
@@ -198,6 +259,7 @@ fn candidate(raw: RawCandidate, issues: &mut Vec<String>) -> Option<Candidate> {
         candidate
             .aliases
             .retain(|alias| norm(alias) != norm(&candidate.name));
+        candidate.character = trimmed(raw.character);
     }
     Some(candidate)
 }
@@ -211,8 +273,24 @@ fn fold(unique: &mut Vec<Candidate>, candidate: Candidate) {
         Some(target) => {
             merge_names(&mut target.titles, candidate.titles);
             merge_names(&mut target.aliases, candidate.aliases);
+            if target.character.is_none() {
+                target.character = candidate.character;
+            }
         }
         None => unique.push(candidate),
+    }
+}
+
+fn same_spelling(unique: &mut [Candidate]) {
+    let mut seen: Vec<String> = Vec::new();
+    for candidate in unique {
+        let Some(character) = candidate.character.as_mut() else {
+            continue;
+        };
+        match seen.iter().find(|item| norm(item) == norm(character)) {
+            Some(first) => *character = first.clone(),
+            None => seen.push(character.clone()),
+        }
     }
 }
 
@@ -248,6 +326,12 @@ impl FactCleaner<'_> {
             ));
             return;
         };
+        if def.key == PERSONA_OF {
+            self.issues.push(format!(
+                "{label}: persona_of is not listed in facts; it comes from the character of the persona"
+            ));
+            return;
+        }
         let Some((subject, object)) = self.ends(def, &raw, &label) else {
             return;
         };
@@ -425,13 +509,17 @@ fn trimmed(value: Option<String>) -> Option<String> {
 }
 
 fn known_type(kind: &str) -> bool {
-    Ontology::get().types.iter().any(|item| item.key == kind)
+    Ontology::get()
+        .types
+        .iter()
+        .any(|item| item.key == kind && !item.abstract_)
 }
 
 fn type_keys() -> String {
     let keys: Vec<&str> = Ontology::get()
         .types
         .iter()
+        .filter(|item| !item.abstract_)
         .map(|item| item.key.as_str())
         .collect();
     keys.join(", ")

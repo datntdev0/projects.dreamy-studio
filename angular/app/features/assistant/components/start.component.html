@@ -1,0 +1,74 @@
+<section class="asst" [attr.aria-label]="'assistant.start.label' | t" data-testid="assistant-start">
+  <header class="asst-bar" data-testid="assistant-start-bar">
+    <span class="asst-bar-title" data-testid="assistant-start-title"><ds-icon name="spark" [size]="15" />{{ "assistant.start.title" | t }}</span>
+    <span class="spacer"></span>
+    <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.history.open' | t" [attr.title]="'assistant.history.open' | t" data-testid="assistant-start-history" (pressed)="assistant.showSessions()"><ds-icon name="clock" [size]="16" /></ds-button>
+  </header>
+  <div class="asst-body" data-testid="assistant-start-body">
+    <div class="asst-hero" data-testid="assistant-start-hero">
+      <div class="cs-ico"><ds-icon name="spark" [size]="26" /></div>
+      <h3 class="t-display-xs" data-testid="assistant-title">{{ "main.assistant.title" | t }}</h3>
+      <p class="t-sm t-mute" data-testid="assistant-description">{{ "assistant.start.description" | t }}</p>
+    </div>
+
+    <div class="asst-scope" role="group" [attr.aria-label]="'assistant.scope.group' | t" data-testid="assistant-scope" (keydown)="onKeydown($event)">
+      <span class="asst-label" data-testid="assistant-scope-legend">{{ "assistant.scope.label" | t }}</span>
+      <button #toggleButton type="button" class="asst-pick" [class.is-open]="expanded()" aria-controls="assistant-scope-panel" [attr.aria-expanded]="expanded()" data-testid="assistant-scope-toggle" (click)="toggle()">
+        <span class="asst-scope-ico" data-testid="assistant-scope-icon"><ds-icon [name]="currentIcon()" [size]="16" /></span>
+        <span class="asst-scope-text" data-testid="assistant-scope-text"><span class="t-ink" data-testid="assistant-scope-current">{{ currentLabel() }}</span><span class="t-sm t-mute" data-testid="assistant-scope-meta">{{ currentMeta() }}</span></span>
+        <span class="sr-only" data-testid="assistant-scope-change">{{ "assistant.scope.change" | t }}</span>
+        <span class="asst-pick-chev" data-testid="assistant-scope-chevron"><ds-icon name="chev-d" [size]="14" /></span>
+      </button>
+      @if (expanded()) {
+        <div #panel class="asst-pick-panel" id="assistant-scope-panel" data-testid="assistant-scope-panel">
+          <label class="search asst-pick-search" data-testid="assistant-scope-search-label">
+            <span class="sr-only" data-testid="assistant-scope-search-text">{{ "assistant.scope.search" | t }}</span>
+            <input #searchField class="input" type="search" autocomplete="off" [value]="query()" [attr.placeholder]="'assistant.scope.search' | t" data-nav data-testid="assistant-scope-search" (input)="onQuery($event)" />
+          </label>
+          <div class="asst-pick-list" role="listbox" [attr.aria-label]="'assistant.scope.list' | t" data-testid="assistant-scope-list">
+            <button type="button" role="option" class="asst-pick-opt" [class.is-active]="isChosen(workspaceScope)" [attr.aria-selected]="isChosen(workspaceScope)" data-nav data-scope="workspace" data-testid="assistant-scope-option" (click)="chooseWorkspace()">
+              <ds-icon name="globe" [size]="14" />
+              <span class="asst-pick-name" data-testid="assistant-scope-option-name">{{ "assistant.scope.workspace" | t }}</span>
+              <span class="asst-pick-meta t-sm t-mute" data-testid="assistant-scope-option-meta">{{ "assistant.scope.workspaceShort" | t: { count: novels.novels().length } }}</span>
+              @if (isChosen(workspaceScope)) { <ds-icon name="check" [size]="14" /> }
+            </button>
+            <div class="asst-pick-scroll" role="group" data-testid="assistant-scope-scroll">
+              @for (novel of options(); track novel.id) {
+                <button type="button" role="option" class="asst-pick-opt" [class.is-active]="isNovelChosen(novel)" [attr.aria-selected]="isNovelChosen(novel)" [attr.title]="nameOf(novel)" data-nav [attr.data-scope]="'novel-' + novel.id" data-testid="assistant-scope-option" (click)="chooseNovel(novel)">
+                  <ds-icon name="book" [size]="14" />
+                  <span class="asst-pick-name" data-testid="assistant-scope-option-name">{{ nameOf(novel) }}</span>
+                  <span class="asst-pick-meta t-sm t-mute" data-testid="assistant-scope-option-meta">{{ novelShort(novel) }}</span>
+                  @if (isNovelChosen(novel)) { <ds-icon name="check" [size]="14" /> }
+                </button>
+              }
+            </div>
+          </div>
+          @if (options().length === 0 && query().trim() !== "") {
+            <p class="asst-pick-empty t-sm t-mute" role="status" data-testid="assistant-scope-empty">{{ "assistant.scope.noMatch" | t }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    @if (assistant.recent().length > 0) {
+      <div class="asst-recent" data-testid="assistant-recent">
+        <div class="asst-recent-head" data-testid="assistant-recent-head">
+          <span class="asst-label">{{ "assistant.recent.label" | t }}</span>
+          <button type="button" class="btn btn-sm btn-ghost" data-testid="assistant-recent-all" (click)="assistant.showSessions()">{{ "assistant.recent.all" | t: { count: assistant.sessions().length } }}</button>
+        </div>
+        @for (session of assistant.recent(); track session.id) {
+          <button type="button" class="asst-recent-item" [attr.data-session-id]="session.id" data-testid="assistant-recent-item" (click)="assistant.open(session.id)">
+            <span class="asst-recent-title t-ink">{{ session.title }}</span>
+            <span class="asst-meta t-sm t-mute" data-testid="assistant-recent-meta"><ds-icon [name]="assistant.scopeIcon(session.scope)" [size]="12" /><span class="asst-meta-scope">{{ assistant.scopeLabel(session.scope) }}</span><span class="asst-meta-end"><span class="mono">{{ stampOf(session) }}</span></span></span>
+          </button>
+        }
+      </div>
+    }
+
+    @if (assistant.sendError(); as failure) {
+      <div class="asst-error" role="alert" data-testid="assistant-start-error"><ds-icon name="alert" [size]="15" /><span>{{ "assistant.error.send" | t: { detail: failure } }}</span><button type="button" class="btn btn-xs btn-ghost" [attr.aria-label]="'assistant.error.dismiss' | t" data-testid="assistant-start-error-dismiss" (click)="assistant.dismissError()"><ds-icon name="x" [size]="13" /></button></div>
+    }
+  </div>
+  <div class="asst-scope-now t-sm t-mute" data-testid="assistant-start-scope"><ds-icon [name]="assistant.scopeIcon(assistant.draftScope())" [size]="13" />{{ "assistant.scope.current" | t: { scope: assistant.scopeLabel(assistant.draftScope()) } }}</div>
+  <app-assistant-composer />
+</section>

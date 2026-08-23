@@ -1,0 +1,58 @@
+@let data = changeSet();
+<section class="asst-card" [class]="'asst-card is-' + data.status" [attr.aria-label]="'assistant.kb.label' | t" data-testid="assistant-changes-card">
+  <header class="asst-card-head" data-testid="assistant-changes-head">
+    <span class="asst-card-ico" data-testid="assistant-changes-icon"><ds-icon name="nodes" [size]="15" /></span>
+    <div class="asst-card-title" data-testid="assistant-changes-title">
+      <span class="t-ink">{{ data.title }}</span>
+      <span class="t-sm t-mute">{{ "assistant.kb.meta" | t: { changes: data.changes.length, edits: data.edits } }}</span>
+    </div>
+  </header>
+
+  @if (data.validation.ok) {
+    <div class="asst-valid is-ok" data-testid="assistant-changes-valid"><ds-icon name="shield" [size]="14" /><span>{{ "assistant.kb.valid" | t: { count: data.validation.resolves } }}</span></div>
+  } @else {
+    <div class="asst-valid is-warn" data-testid="assistant-changes-invalid">
+      <ds-icon name="alert" [size]="14" />
+      <div><span>{{ "assistant.kb.invalid" | t: { count: data.validation.introduces.length } }}</span>
+        <ul>
+          @for (issue of data.validation.introduces; track $index) { <li data-testid="assistant-changes-invalid-item">{{ issue }}</li> }
+        </ul>
+      </div>
+    </div>
+  }
+
+  <ol class="asst-changes" data-testid="assistant-changes-list">
+    @for (change of data.changes; track change.id) {
+      <li class="asst-change" [attr.data-op]="change.op" [attr.data-change-id]="change.id" data-testid="assistant-change">
+        <div class="asst-change-top" data-testid="assistant-change-top">
+          <span class="asst-op" [attr.data-op]="change.op" data-testid="assistant-change-op"><ds-icon [name]="opIcon(change)" [size]="12" />{{ opKey(change) | t }}</span>
+          <span class="asst-change-target t-ink" data-testid="assistant-change-target">{{ change.target }}</span>
+        </div>
+        @if (change.before !== null || change.after !== null) {
+          <div class="asst-diff" data-testid="assistant-change-diff">
+            @if (change.before !== null) { <div class="asst-diff-row is-del" data-testid="assistant-change-before"><span class="asst-diff-sign" aria-hidden="true">−</span><span><span class="sr-only">{{ "assistant.kb.before" | t }}</span>{{ change.before }}</span></div> }
+            @if (change.after !== null) { <div class="asst-diff-row is-ins" data-testid="assistant-change-after"><span class="asst-diff-sign" aria-hidden="true">+</span><span><span class="sr-only">{{ "assistant.kb.after" | t }}</span>{{ change.after }}</span></div> }
+          </div>
+        }
+        <p class="asst-change-reason t-sm t-mute" data-testid="assistant-change-reason">{{ change.reason }}</p>
+        @if (change.ev.length > 0) {
+          <div class="asst-cites asst-cites-flat" data-testid="assistant-change-evidence">
+            @for (citation of change.ev; track $index) {
+              <span class="chip is-static asst-cite" [attr.title]="citation.quote" data-testid="assistant-change-citation"><ds-icon name="book" [size]="11" />{{ citationLabel(citation) }}</span>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ol>
+
+  <footer class="asst-card-foot" data-testid="assistant-changes-foot">
+    @if (data.status === "pending") {
+      <span class="t-sm t-mute asst-card-note" data-testid="assistant-changes-note">{{ "assistant.kb.atomic" | t }}</span>
+      <button type="button" class="btn btn-sm btn-ghost" [disabled]="busy()" data-testid="assistant-changes-reject" (click)="reject()">{{ "assistant.proposal.reject" | t }}</button>
+      <button type="button" class="btn btn-sm btn-primary" [disabled]="busy() || !data.validation.ok" data-testid="assistant-changes-apply" (click)="apply()"><ds-icon name="check" [size]="14" />{{ "assistant.kb.apply" | t: { count: data.changes.length } }}</button>
+    } @else {
+      <span class="asst-status" [class]="'asst-status is-' + data.status" data-testid="assistant-changes-status"><ds-icon [name]="data.status === 'applied' ? 'check-circle' : 'x-circle'" [size]="13" />{{ statusKey(data.status) | t }}</span>
+    }
+  </footer>
+</section>

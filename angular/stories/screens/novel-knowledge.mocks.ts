@@ -289,6 +289,10 @@ function handlersFor(scenario: KnowledgeScenario): IpcHandlers {
   return knowledgeHandlers(stateFor(scenario), translationHandlers(translation));
 }
 
+export function knowledgeScreenHandlers(scenario: KnowledgeScenario = {}): IpcHandlers {
+  return handlersFor(scenario);
+}
+
 export function withKnowledge(scenario: KnowledgeScenario = {}): { decorators: Decorator[] } {
   return { decorators: [applicationConfig({ providers: screenProviders(handlersFor(scenario)) })] };
 }

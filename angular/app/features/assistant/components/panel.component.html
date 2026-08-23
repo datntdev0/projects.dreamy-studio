@@ -1,0 +1,7 @@
+<div class="asst-panel" [attr.data-view]="assistant.view()" data-testid="assistant">
+  @switch (assistant.view()) {
+    @case ("sessions") { <app-assistant-sessions /> }
+    @case ("chat") { <app-assistant-chat /> }
+    @default { <app-assistant-start /> }
+  }
+</div>

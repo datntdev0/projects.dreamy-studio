@@ -2,6 +2,8 @@ import { Component, ElementRef, computed, effect, inject, input, signal, untrack
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
 import { CoreModule } from "@app/core/core.module";
+import { AssistantService } from "@app/features/assistant/assistant.service";
+import { novelScope } from "@app/features/assistant/assistant.rules";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../novel.models";
@@ -31,6 +33,7 @@ export class NovelTranslationResult {
   private readonly translation = inject(NovelTranslationService);
   private token = 0;
 
+  readonly assistant = inject(AssistantService);
   readonly novelId = input.required<number>();
   readonly source = signal<ParagraphRow[]>([]);
   readonly editing = signal<number | null>(null);
@@ -97,6 +100,16 @@ export class NovelTranslationResult {
 
   onOnly(event: Event): void {
     this.onlyReview.set((event.target as HTMLInputElement).checked);
+  }
+
+  askReview(): void {
+    const chapter = this.chapter();
+    if (!chapter || !this.translated()) {
+      return;
+    }
+    const target = this.translation.targetOf(this.novelId());
+    const text = this.languageService.translate("assistant.ask.translation", { n: chapter.seq, title: chapter.title });
+    void this.assistant.ask(novelScope(this.novelId()), text, { kind: "translation_review", chapterId: chapter.id, target });
   }
 
   translateThis(): void {

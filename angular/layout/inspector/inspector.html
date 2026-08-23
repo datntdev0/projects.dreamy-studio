@@ -9,19 +9,7 @@
   </header>
   <div class="pane-body" data-testid="inspector-body">
     @if (layout.rightTab() === "assistant") {
-      <div class="asst" data-testid="assistant">
-        <div class="asst-body" data-testid="assistant-empty">
-          <div class="ins-empty">
-            <div class="cs-ico"><ds-icon name="spark" [size]="26" /></div>
-            <h3 class="t-display-xs" data-testid="assistant-title">{{ "main.assistant.title" | t }}</h3>
-            <p class="t-sm" data-testid="assistant-description">{{ "main.assistant.description" | t }}</p>
-          </div>
-        </div>
-        <div class="asst-input" data-testid="assistant-input">
-          <input class="input" [attr.placeholder]="'main.assistant.placeholder' | t" [attr.aria-label]="'main.assistant.placeholder' | t" disabled data-testid="assistant-field" />
-          <ds-button variant="primary" [iconOnly]="true" [disabled]="true" [label]="'main.assistant.send' | t" data-testid="assistant-send"><ds-icon name="send-up" [size]="17" /></ds-button>
-        </div>
-      </div>
+      <app-assistant-panel />
     } @else {
       @switch (editorTabs.active().kind) {
         @case ("projects") {

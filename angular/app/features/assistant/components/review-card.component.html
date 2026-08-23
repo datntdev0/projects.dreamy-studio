@@ -1,0 +1,79 @@
+@let data = review();
+<section class="asst-card" [attr.aria-label]="'assistant.review.label' | t" data-testid="assistant-review-card">
+  <header class="asst-card-head" data-testid="assistant-review-head">
+    <span class="asst-card-ico" data-testid="assistant-review-icon"><ds-icon name="lang" [size]="15" /></span>
+    <div class="asst-card-title" data-testid="assistant-review-title">
+      <span class="t-ink">{{ "assistant.review.title" | t: { n: data.chapter, title: data.chapterTitle } }}</span>
+      <span class="t-sm t-mute">{{ "assistant.review.meta" | t: { checked: data.checked, findings: data.findings.length, target: data.target } }}</span>
+    </div>
+  </header>
+  <div class="asst-card-stats" data-testid="assistant-review-stats">
+    @if (errors() > 0) { <span class="badge badge-danger" data-testid="assistant-review-stat-error">{{ "assistant.review.count.error" | t: { count: errors() } }}</span> }
+    @if (warnings() > 0) { <span class="badge badge-warning" data-testid="assistant-review-stat-warning">{{ "assistant.review.count.warning" | t: { count: warnings() } }}</span> }
+    @if (infos() > 0) { <span class="badge badge-info" data-testid="assistant-review-stat-info">{{ "assistant.review.count.info" | t: { count: infos() } }}</span> }
+    <span class="spacer"></span>
+    <span class="t-sm t-mute" data-testid="assistant-review-progress">{{ "assistant.proposal.progress" | t: { done: done(), total: total() } }}</span>
+  </div>
+
+  <ol class="asst-findings" data-testid="assistant-review-findings">
+    @for (finding of data.findings; track finding.id) {
+      @let current = currentOf(finding);
+      @let suggested = suggestedOf(finding);
+      <li class="asst-finding" [class]="'asst-finding is-' + finding.status" [attr.data-finding-id]="finding.id" data-testid="assistant-review-finding">
+        <div class="asst-finding-top" data-testid="assistant-review-finding-top">
+          <span class="badge" [class]="'badge ' + severityBadge(finding)" data-testid="assistant-review-finding-severity">{{ severityKey(finding) | t }}</span>
+          <span class="t-sm t-ink" data-testid="assistant-review-finding-category">{{ categoryKey(finding) | t }}</span>
+          <span class="spacer"></span>
+          <span class="chip is-static asst-cite" data-testid="assistant-review-finding-ref"><ds-icon name="book" [size]="11" />¶{{ finding.n }}</span>
+        </div>
+        <p class="asst-finding-reason t-sm" data-testid="assistant-review-finding-reason">{{ finding.reason }}</p>
+        <blockquote class="asst-finding-src t-sm t-mute" data-testid="assistant-review-finding-source">{{ finding.source }}</blockquote>
+        <div class="asst-diff" data-testid="assistant-review-finding-diff">
+          <div class="asst-diff-row is-del" data-testid="assistant-review-finding-current"><span class="asst-diff-sign" aria-hidden="true">−</span><span><span class="sr-only">{{ "assistant.review.current" | t }}</span>{{ current.before }}<del>{{ current.mark }}</del>{{ current.after }}</span></div>
+          <div class="asst-diff-row is-ins" data-testid="assistant-review-finding-suggested"><span class="asst-diff-sign" aria-hidden="true">+</span><span><span class="sr-only">{{ "assistant.review.suggested" | t }}</span>{{ suggested.before }}<ins>{{ suggested.mark }}</ins>{{ suggested.after }}</span></div>
+        </div>
+        <div class="asst-finding-act" data-testid="assistant-review-finding-actions">
+          @if (finding.status === "pending") {
+            <button type="button" class="btn btn-sm btn-ghost" [disabled]="busy()" data-testid="assistant-review-finding-reject" (click)="rejectOne(finding)">{{ "assistant.proposal.reject" | t }}</button>
+            <button type="button" class="btn btn-sm" [disabled]="busy()" data-testid="assistant-review-finding-apply" (click)="applyOne(finding)"><ds-icon name="check" [size]="14" />{{ "assistant.review.applyEdit" | t }}</button>
+          } @else {
+            <span class="asst-status" [class]="'asst-status is-' + finding.status" data-testid="assistant-review-finding-status"><ds-icon [name]="finding.status === 'applied' ? 'check-circle' : 'x-circle'" [size]="13" />{{ statusKey(finding.status) | t }}</span>
+          }
+        </div>
+      </li>
+    }
+  </ol>
+
+  @if (data.dictionary.length > 0) {
+    <div class="asst-card-sec" data-testid="assistant-review-dictionary">
+      <span class="asst-label" data-testid="assistant-review-dictionary-label">{{ "assistant.review.dictionary" | t }}</span>
+      <ul class="asst-dict" data-testid="assistant-review-dictionary-list">
+        @for (entry of data.dictionary; track entry.id) {
+          <li class="asst-dict-row" [class]="'asst-dict-row is-' + entry.status" [attr.data-dict-id]="entry.id" data-testid="assistant-review-dict">
+            <div class="asst-dict-main" data-testid="assistant-review-dict-main">
+              <span class="asst-dict-pair"><span class="t-ink">{{ entry.src }}</span><ds-icon name="chev-r" [size]="12" /><span class="t-ink">{{ entry.dst }}</span></span>
+              <span class="t-sm t-mute"><span class="mono">{{ entry.type }}</span><span class="asst-sep">·</span>{{ "assistant.review.occurrences" | t: { count: entry.occurrences } }}@if (entry.note) {<span class="asst-sep">·</span>{{ entry.note }}}</span>
+            </div>
+            @if (entry.status === "pending") {
+              <div class="asst-dict-act" data-testid="assistant-review-dict-actions">
+                <button type="button" class="btn btn-xs btn-ghost" [disabled]="busy()" [attr.aria-label]="'assistant.proposal.reject' | t" [attr.title]="'assistant.proposal.reject' | t" data-testid="assistant-review-dict-reject" (click)="rejectOne(entry)"><ds-icon name="x" [size]="13" /></button>
+                <button type="button" class="btn btn-xs" [disabled]="busy()" [attr.aria-label]="'assistant.review.addDict' | t" [attr.title]="'assistant.review.addDict' | t" data-testid="assistant-review-dict-apply" (click)="applyOne(entry)"><ds-icon name="plus" [size]="13" /></button>
+              </div>
+            } @else {
+              <span class="asst-status" [class]="'asst-status is-' + entry.status" data-testid="assistant-review-dict-status"><ds-icon [name]="entry.status === 'applied' ? 'check-circle' : 'x-circle'" [size]="13" />{{ statusKey(entry.status) | t }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <footer class="asst-card-foot" data-testid="assistant-review-foot">
+    @if (pending().length > 0) {
+      <button type="button" class="btn btn-sm btn-ghost" [disabled]="busy()" data-testid="assistant-review-reject-all" (click)="rejectAll()">{{ "assistant.proposal.rejectAll" | t }}</button>
+      <button type="button" class="btn btn-sm btn-primary" [disabled]="busy()" data-testid="assistant-review-apply-all" (click)="applyAll()"><ds-icon name="check" [size]="14" />{{ "assistant.proposal.applyAll" | t: { count: pending().length } }}</button>
+    } @else {
+      <span class="asst-status is-applied" data-testid="assistant-review-finished"><ds-icon name="check-circle" [size]="13" />{{ "assistant.proposal.finished" | t }}</span>
+    }
+  </footer>
+</section>

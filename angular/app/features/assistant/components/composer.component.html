@@ -1,0 +1,10 @@
+<div class="asst-input asst-composer" data-testid="assistant-composer">
+  <label class="asst-composer-field" data-testid="assistant-composer-label">
+    <span class="sr-only">{{ "main.assistant.placeholder" | t }}</span>
+    <textarea #field class="textarea" rows="2" [value]="assistant.draft()" [attr.placeholder]="'main.assistant.placeholder' | t" data-testid="assistant-field" (input)="onInput($event)" (keydown)="onKeydown($event)"></textarea>
+  </label>
+  <div class="asst-composer-bar" data-testid="assistant-composer-bar">
+    <span class="t-sm t-mute" data-testid="assistant-composer-hint">{{ "assistant.composer.hint" | t }}</span>
+    <ds-button variant="primary" size="small" [iconOnly]="true" [disabled]="assistant.sending() || assistant.draft().trim() === ''" [label]="'main.assistant.send' | t" [attr.title]="'main.assistant.send' | t" data-testid="assistant-send" (pressed)="submit()"><ds-icon name="send-up" [size]="16" /></ds-button>
+  </div>
+</div>

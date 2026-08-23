@@ -1,0 +1,135 @@
+export type AssistantScopeKind = "workspace" | "novel";
+
+export type AssistantRole = "user" | "assistant";
+
+export type AssistantView = "start" | "sessions" | "chat";
+
+export type AssistantScopeFilter = "all" | "workspace" | number;
+
+export interface AssistantScope {
+  kind: AssistantScopeKind;
+  novelId: number | null;
+}
+
+export interface AssistantCitation {
+  chapter: number;
+  p: number;
+  quote: string;
+}
+
+export type ProposalStatus = "pending" | "applied" | "rejected";
+
+export type ProposalDecision = "applied" | "rejected";
+
+export type FindingSeverity = "error" | "warning" | "info";
+
+export type FindingCategory = "name" | "dict" | "meaning" | "omission" | "style";
+
+export interface TranslationFinding {
+  id: string;
+  n: number;
+  severity: FindingSeverity;
+  category: FindingCategory;
+  source: string;
+  current: string;
+  suggested: string;
+  from: string;
+  to: string;
+  reason: string;
+  status: ProposalStatus;
+}
+
+export interface DictProposal {
+  id: string;
+  src: string;
+  dst: string;
+  type: string;
+  note: string;
+  occurrences: number;
+  status: ProposalStatus;
+}
+
+export interface TranslationReview {
+  kind: "translation_review";
+  chapter: number;
+  chapterTitle: string;
+  target: string;
+  checked: number;
+  findings: TranslationFinding[];
+  dictionary: DictProposal[];
+}
+
+export type KnowledgeChangeOp = "merge" | "rename" | "retype" | "add_entity" | "add_fact" | "fact" | "del" | "props";
+
+export interface KnowledgeChange {
+  id: string;
+  op: KnowledgeChangeOp;
+  target: string;
+  before: string | null;
+  after: string | null;
+  reason: string;
+  ev: AssistantCitation[];
+}
+
+export interface KnowledgeValidation {
+  ok: boolean;
+  resolves: number;
+  introduces: string[];
+}
+
+export interface KnowledgeChangeSet {
+  kind: "knowledge_changes";
+  id: string;
+  title: string;
+  edits: number;
+  validation: KnowledgeValidation;
+  changes: KnowledgeChange[];
+  status: ProposalStatus;
+}
+
+export type AssistantAttachment = TranslationReview | KnowledgeChangeSet;
+
+export type AssistantContext =
+  | { kind: "translation_review"; chapterId: string; target: string }
+  | { kind: "knowledge_review"; lang: string; issueIds: string[] };
+
+export interface ProposalResolution {
+  messageId: string;
+  itemIds: string[];
+  status: ProposalDecision;
+}
+
+export interface MarkedText {
+  before: string;
+  mark: string;
+  after: string;
+}
+
+export interface AssistantMessage {
+  id: string;
+  role: AssistantRole;
+  text: string;
+  createdAt: string;
+  activities: string[];
+  citations: AssistantCitation[];
+  attachments?: AssistantAttachment[];
+}
+
+export interface AssistantSessionSummary {
+  id: string;
+  title: string;
+  scope: AssistantScope;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+  preview: string;
+}
+
+export interface AssistantSession extends AssistantSessionSummary {
+  messages: AssistantMessage[];
+}
+
+export interface AssistantBlock {
+  kind: "p" | "ul";
+  lines: string[];
+}

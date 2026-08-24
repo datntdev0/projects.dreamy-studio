@@ -79,6 +79,32 @@ fn client(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmClient {
     LlmClient::new(repository, "knowledge", "knowledge analysis")
 }
 
+fn assistant_client(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmClient {
+    let repository = SettingsRepository::new(dir.path().join("settings.json"));
+    let mut settings = AppSettings::default();
+    if let Some((id, path)) = provider {
+        settings.llm.providers.insert(
+            id.to_string(),
+            CliSettings {
+                path: Some(path.to_string()),
+            },
+        );
+        settings.llm.features.insert(
+            "assistant".to_string(),
+            FeatureSettings {
+                provider: Some(id.to_string()),
+                ..FeatureSettings::default()
+            },
+        );
+    }
+    repository.save(&settings).unwrap();
+    LlmClient::new(repository, "assistant", "assistant")
+}
+
+fn strings(items: &[&str]) -> Vec<String> {
+    items.iter().map(|item| item.to_string()).collect()
+}
+
 fn translator(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmTranslator {
     let repository = SettingsRepository::new(dir.path().join("settings.json"));
     let mut settings = AppSettings::default();
@@ -375,6 +401,8 @@ fn client_rejects_an_unsupported_cli_with_its_label() {
         &FeatureSettings::default(),
         "knowledge analysis",
         Mode::Once,
+        true,
+        &[],
     )
     .unwrap_err();
 
@@ -448,8 +476,8 @@ fn client_reports_the_cli_failure_detail() {
 fn claude_session_arguments_name_or_resume_the_session() {
     let feature = FeatureSettings::default();
 
-    let start = build_args(CLAUDE, &feature, "x", Mode::Start("abc")).unwrap();
-    let resume = build_args(CLAUDE, &feature, "x", Mode::Resume("abc")).unwrap();
+    let start = build_args(CLAUDE, &feature, "x", Mode::Start("abc"), true, &[]).unwrap();
+    let resume = build_args(CLAUDE, &feature, "x", Mode::Resume("abc"), true, &[]).unwrap();
 
     assert!(start.windows(2).any(|pair| pair == ["--session-id", "abc"]));
     assert!(resume.windows(2).any(|pair| pair == ["--resume", "abc"]));
@@ -461,8 +489,8 @@ fn claude_session_arguments_name_or_resume_the_session() {
 fn codex_session_arguments_read_json_and_resume_by_thread() {
     let feature = feature(Some("gpt"), None, None);
 
-    let start = build_args(CODEX, &feature, "x", Mode::Start("ignored")).unwrap();
-    let resume = build_args(CODEX, &feature, "x", Mode::Resume("thread-1")).unwrap();
+    let start = build_args(CODEX, &feature, "x", Mode::Start("ignored"), true, &[]).unwrap();
+    let resume = build_args(CODEX, &feature, "x", Mode::Resume("thread-1"), true, &[]).unwrap();
 
     assert!(start.contains(&"--json".to_string()));
     assert!(!start.contains(&"--ephemeral".to_string()));
@@ -647,4 +675,190 @@ fn a_failing_call_logs_the_failure_and_keeps_the_stderr() {
     let stderr =
         std::fs::read_to_string(folder.join("t1-chp0001-exchange-1-test-stderr.txt")).unwrap();
     assert!(stderr.contains("not signed in"));
+}
+
+#[test]
+fn extra_arguments_close_the_claude_arguments() {
+    let args = build_args(
+        CLAUDE,
+        &feature(Some("sonnet"), None, Some("--verbose")),
+        "x",
+        Mode::Start("abc"),
+        true,
+        &strings(&["--mcp-config", "m.json"]),
+    )
+    .unwrap();
+
+    assert_eq!(
+        args[args.len() - 3..],
+        ["--verbose", "--mcp-config", "m.json"]
+    );
+}
+
+#[test]
+fn extra_arguments_precede_the_codex_resume_id_and_the_stdin_marker() {
+    let extras = strings(&["-c", "mcp_servers.dreamy.enabled=true"]);
+    let feature = feature(Some("gpt"), None, Some("--color never"));
+
+    let resume = build_args(CODEX, &feature, "x", Mode::Resume("t1"), true, &extras).unwrap();
+    let start = build_args(CODEX, &feature, "x", Mode::Start("x"), true, &extras).unwrap();
+
+    assert_eq!(
+        resume[resume.len() - 5..],
+        ["never", "-c", "mcp_servers.dreamy.enabled=true", "t1", "-"]
+    );
+    assert_eq!(
+        start[start.len() - 4..],
+        ["never", "-c", "mcp_servers.dreamy.enabled=true", "-"]
+    );
+}
+
+#[test]
+fn empty_extras_leave_the_arguments_unchanged() {
+    let feature = feature(Some("sonnet"), Some(Effort::High), Some("--verbose"));
+
+    let with = build_args(CLAUDE, &feature, "x", Mode::Once, true, &[]).unwrap();
+
+    assert_eq!(with, invocation_args(CLAUDE, &feature).unwrap());
+    assert!(with.windows(2).any(|pair| pair == ["--tools", ""]));
+}
+
+#[test]
+fn claude_keeps_its_tools_off_only_when_asked() {
+    let feature = FeatureSettings::default();
+
+    let off = build_args(CLAUDE, &feature, "x", Mode::Once, true, &[]).unwrap();
+    let on = build_args(CLAUDE, &feature, "x", Mode::Once, false, &[]).unwrap();
+
+    assert!(off.contains(&"--tools".to_string()));
+    assert!(!on.contains(&"--tools".to_string()));
+}
+
+#[test]
+fn the_assistant_runs_claude_without_the_tools_flag() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one"]);
+    let client = assistant_client(&dir, Some(("claude", &cli.path)));
+
+    client
+        .start(
+            "test",
+            "hi".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    assert!(cli.args(1).contains("--session-id"));
+    assert!(!cli.args(1).contains("--tools"));
+}
+
+#[test]
+fn translation_and_knowledge_runs_keep_the_tools_flag() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one"]);
+    let client = client(&dir, Some(("claude", &cli.path)));
+
+    client
+        .start(
+            "test",
+            "hi".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    assert!(cli.args(1).contains("--tools"));
+}
+
+#[test]
+fn start_with_and_resume_with_pass_extra_arguments_and_environment() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one", "two"]);
+    let client = assistant_client(&dir, Some(("claude", &cli.path)));
+    let extras = Extras {
+        args: strings(&["--mcp-config", "m.json"]),
+        env: vec![("DREAMY_MCP_TOKEN".to_string(), "tok-123".to_string())],
+    };
+    let cancel = AtomicBool::new(false);
+
+    let first = client
+        .start_with(
+            "test",
+            "hello".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &cancel,
+            &extras,
+        )
+        .unwrap();
+    client
+        .resume_with(
+            "test",
+            &first.session,
+            "again".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &cancel,
+            &extras,
+        )
+        .unwrap();
+
+    assert!(cli.args(1).contains("--mcp-config m.json"));
+    assert!(cli.args(2).contains("--mcp-config m.json"));
+    assert_eq!(cli.token(1), "tok-123");
+    assert_eq!(cli.token(2), "tok-123");
+}
+
+#[test]
+fn the_environment_is_left_alone_without_extras() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one"]);
+    let client = assistant_client(&dir, Some(("claude", &cli.path)));
+
+    client
+        .start(
+            "test",
+            "hello".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    assert!(!cli.token(1).contains("tok-123"));
+}
+
+#[test]
+fn provider_returns_the_configured_cli_id() {
+    let dir = TempDir::new().unwrap();
+    let client = assistant_client(&dir, Some(("codex", "unused")));
+
+    assert_eq!(client.provider().unwrap(), "codex");
+}
+
+#[test]
+fn provider_fails_when_none_is_set_or_the_cli_lacks_the_feature() {
+    let first = TempDir::new().unwrap();
+    let second = TempDir::new().unwrap();
+    let unset = assistant_client(&first, None);
+    let unknown = assistant_client(&second, Some(("unknown", "unused")));
+
+    match unset.provider() {
+        Err(ClientError::Failed(message)) => {
+            assert_eq!(
+                message,
+                "No LLM provider is set for assistant. Choose one in Settings > LLM."
+            )
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
+    match unknown.provider() {
+        Err(ClientError::Failed(message)) => {
+            assert_eq!(message, "unknown cannot be used for assistant.")
+        }
+        other => panic!("unexpected result: {other:?}"),
+    }
 }

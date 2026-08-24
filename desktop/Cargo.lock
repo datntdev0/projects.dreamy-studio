@@ -900,6 +900,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tempfile",
  "tiny_http",
+ "toml_edit 0.25.19+spec-1.1.0",
  "unicode-normalization",
  "uuid",
  "zip",
@@ -4419,6 +4420,7 @@ dependencies = [
  "indexmap 2.14.2",
  "toml_datetime 1.1.3+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 1.0.5",
 ]
 

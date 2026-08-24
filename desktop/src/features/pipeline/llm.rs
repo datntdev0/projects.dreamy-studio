@@ -2,10 +2,12 @@ use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::translator::TranslateError;
 use crate::features::pipeline::translator::TranslateJob;
 use crate::features::pipeline::translator::Translator;
+use crate::features::settings::home::MCP_TOKEN_ENV;
 use crate::features::settings::llm::CliSpec;
 use crate::features::settings::llm::Effort;
 use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::llm::LLM_DIR;
+use crate::features::settings::llm::LlmSettings;
 use crate::features::settings::llm::spec;
 use crate::features::settings::probe::hide_window;
 use crate::features::settings::probe::locate;
@@ -32,6 +34,7 @@ use std::time::Instant;
 use uuid::Uuid;
 
 pub const FEATURE: &str = "translation";
+const ASSISTANT_FEATURE: &str = "assistant";
 const RUN_TIMEOUT: Duration = Duration::from_secs(900);
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 const WORK_DIR: &str = "work";
@@ -101,8 +104,20 @@ impl LlmClient {
         cancel: &AtomicBool,
     ) -> Result<String, ClientError> {
         Ok(self
-            .exchange(Mode::Once, purpose, prompt, log, progress, cancel)?
+            .exchange(
+                Mode::Once,
+                purpose,
+                prompt,
+                log,
+                progress,
+                cancel,
+                &Extras::default(),
+            )?
             .0)
+    }
+
+    pub(crate) fn provider(&self) -> Result<String, ClientError> {
+        Ok(self.select()?.cli.id.to_string())
     }
 
     pub(crate) fn start(
@@ -113,9 +128,28 @@ impl LlmClient {
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<Turn, ClientError> {
+        self.start_with(purpose, prompt, log, progress, cancel, &Extras::default())
+    }
+
+    pub(crate) fn start_with(
+        &self,
+        purpose: &str,
+        prompt: String,
+        log: &TaskLog,
+        progress: &dyn Fn(u8),
+        cancel: &AtomicBool,
+        extras: &Extras,
+    ) -> Result<Turn, ClientError> {
         let id = Uuid::new_v4().to_string();
-        let (text, session) =
-            self.exchange(Mode::Start(&id), purpose, prompt, log, progress, cancel)?;
+        let (text, session) = self.exchange(
+            Mode::Start(&id),
+            purpose,
+            prompt,
+            log,
+            progress,
+            cancel,
+            extras,
+        )?;
         Ok(Turn {
             text,
             session: session.unwrap_or(id),
@@ -131,6 +165,28 @@ impl LlmClient {
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
     ) -> Result<Turn, ClientError> {
+        self.resume_with(
+            purpose,
+            session,
+            prompt,
+            log,
+            progress,
+            cancel,
+            &Extras::default(),
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn resume_with(
+        &self,
+        purpose: &str,
+        session: &str,
+        prompt: String,
+        log: &TaskLog,
+        progress: &dyn Fn(u8),
+        cancel: &AtomicBool,
+        extras: &Extras,
+    ) -> Result<Turn, ClientError> {
         let (text, _) = self.exchange(
             Mode::Resume(session),
             purpose,
@@ -138,6 +194,7 @@ impl LlmClient {
             log,
             progress,
             cancel,
+            extras,
         )?;
         Ok(Turn {
             text,
@@ -162,6 +219,7 @@ impl LlmClient {
         remove_session(&root, session, SESSION_DEPTH);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn exchange(
         &self,
         mode: Mode,
@@ -170,8 +228,9 @@ impl LlmClient {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
+        extras: &Extras,
     ) -> Result<(String, Option<String>), ClientError> {
-        let result = self.exchange_once(mode, purpose, prompt, log, progress, cancel);
+        let result = self.exchange_once(mode, purpose, prompt, log, progress, cancel, extras);
         match &result {
             Err(ClientError::Cancelled) => log.line("exchange cancelled"),
             Err(ClientError::Failed(message)) => log.line(&format!("exchange failed: {message}")),
@@ -180,6 +239,7 @@ impl LlmClient {
         result
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn exchange_once(
         &self,
         mode: Mode,
@@ -188,11 +248,12 @@ impl LlmClient {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
+        extras: &Extras,
     ) -> Result<(String, Option<String>), ClientError> {
         if cancel.load(Ordering::SeqCst) {
             return Err(ClientError::Cancelled);
         }
-        let provider = self.resolve(mode)?;
+        let provider = self.resolve(mode, extras)?;
         let command = self.command(&provider)?;
         if !matches!(mode, Mode::Resume(_)) {
             progress(STARTED_PROGRESS);
@@ -216,7 +277,7 @@ impl LlmClient {
             .unwrap_or_default()
     }
 
-    fn resolve(&self, mode: Mode) -> Result<Provider, ClientError> {
+    fn select(&self) -> Result<Selection, ClientError> {
         let settings = self
             .repository
             .load()
@@ -232,15 +293,41 @@ impl LlmClient {
         let cli = spec(&id)
             .filter(|cli| cli.caps.contains(&self.feature))
             .ok_or_else(|| failed(format!("{id} cannot be used for {}.", self.label)))?;
-        let configured = settings.provider(&id).normalized();
+        Ok(Selection {
+            settings,
+            feature,
+            cli,
+        })
+    }
+
+    fn resolve(&self, mode: Mode, extras: &Extras) -> Result<Provider, ClientError> {
+        let Selection {
+            settings,
+            feature,
+            cli,
+        } = self.select()?;
+        let configured = settings.provider(cli.id).normalized();
         let path = locate(cli, configured.path()).ok_or_else(|| {
             failed(format!(
                 "{} was not found. Check its path in Settings > LLM.",
                 cli.name
             ))
         })?;
-        let args = build_args(cli, &feature, self.label, mode).map_err(failed)?;
-        Ok(Provider { cli, path, args })
+        let args = build_args(
+            cli,
+            &feature,
+            self.label,
+            mode,
+            self.feature != ASSISTANT_FEATURE,
+            &extras.args,
+        )
+        .map_err(failed)?;
+        Ok(Provider {
+            cli,
+            path,
+            args,
+            env: extras.env.clone(),
+        })
     }
 
     fn command(&self, provider: &Provider) -> Result<Command, ClientError> {
@@ -259,6 +346,7 @@ impl LlmClient {
         if let Some(name) = provider.cli.profile_env {
             command.env(name, provider.cli.profile_dir(&data_dir));
         }
+        command.envs(provider.env.iter().map(|(name, value)| (name, value)));
         hide_window(&mut command);
         Ok(command)
     }
@@ -292,10 +380,23 @@ enum Mode<'a> {
     Resume(&'a str),
 }
 
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Extras {
+    pub args: Vec<String>,
+    pub env: Vec<(String, String)>,
+}
+
+struct Selection {
+    settings: LlmSettings,
+    feature: FeatureSettings,
+    cli: &'static CliSpec,
+}
+
 struct Provider {
     cli: &'static CliSpec,
     path: PathBuf,
     args: Vec<String>,
+    env: Vec<(String, String)>,
 }
 
 struct Captured {
@@ -317,10 +418,15 @@ fn failed(message: impl Into<String>) -> ClientError {
 }
 
 pub fn invocation_args(cli: &CliSpec, feature: &FeatureSettings) -> Result<Vec<String>, String> {
-    build_args(cli, feature, FEATURE, Mode::Once)
+    build_args(cli, feature, FEATURE, Mode::Once, true, &[])
 }
 
-fn base_args(cli: &CliSpec, label: &str, mode: Mode) -> Result<Vec<String>, String> {
+fn base_args(
+    cli: &CliSpec,
+    label: &str,
+    mode: Mode,
+    tools_off: bool,
+) -> Result<Vec<String>, String> {
     let args: Vec<&str> = match (cli.id, mode) {
         ("claude", Mode::Once) => vec!["-p", "--output-format", "text", "--no-session-persistence"],
         ("claude", Mode::Start(id)) => vec!["-p", "--output-format", "text", "--session-id", id],
@@ -350,7 +456,7 @@ fn base_args(cli: &CliSpec, label: &str, mode: Mode) -> Result<Vec<String>, Stri
         _ => return Err(format!("{} cannot be used for {label} yet.", cli.name)),
     };
     let mut args: Vec<String> = args.into_iter().map(String::from).collect();
-    if cli.id == "claude" {
+    if cli.id == "claude" && tools_off {
         args.extend(["--tools".to_string(), String::new()]);
     }
     Ok(args)
@@ -361,8 +467,10 @@ fn build_args(
     feature: &FeatureSettings,
     label: &str,
     mode: Mode,
+    tools_off: bool,
+    extras: &[String],
 ) -> Result<Vec<String>, String> {
-    let mut args = base_args(cli, label, mode)?;
+    let mut args = base_args(cli, label, mode, tools_off)?;
     if let Some(model) = &feature.model {
         args.extend(model_args(cli.id, model));
     }
@@ -372,6 +480,7 @@ fn build_args(
     if let Some(extra) = &feature.args {
         args.extend(split_args(extra));
     }
+    args.extend(extras.iter().cloned());
     if let (Mode::Resume(id), "codex") = (mode, cli.id) {
         args.push(id.to_string());
     }
@@ -455,10 +564,14 @@ fn record_call(
     }
     for (name, value) in command.get_envs() {
         if let Some(value) = value {
-            log.line(&format!(
-                "exchange {number} environment: {}={}",
-                name.to_string_lossy(),
+            let shown = if name == MCP_TOKEN_ENV {
+                "***".into()
+            } else {
                 value.to_string_lossy()
+            };
+            log.line(&format!(
+                "exchange {number} environment: {}={shown}",
+                name.to_string_lossy()
             ));
         }
     }

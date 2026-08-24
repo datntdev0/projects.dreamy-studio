@@ -27,6 +27,10 @@ impl ScriptedCli {
         self.read(&format!("args{call}.txt"))
     }
 
+    pub fn token(&self, call: usize) -> String {
+        self.read(&format!("env{call}.txt")).trim().to_string()
+    }
+
     pub fn stdin(&self, call: usize) -> String {
         self.read(&format!("stdin{call}.txt"))
     }
@@ -41,7 +45,7 @@ fn write_script(folder: &Path) -> String {
     let path = folder.join("cli.cmd");
     let dir = folder.display();
     let body = format!(
-        "@echo off\r\nsetlocal enabledelayedexpansion\r\nset n=0\r\nif exist \"{dir}\\count\" set /p n=<\"{dir}\\count\"\r\nset /a n+=1\r\necho !n!>\"{dir}\\count\"\r\necho %* >\"{dir}\\args!n!.txt\"\r\nfindstr \"^\" >\"{dir}\\stdin!n!.txt\"\r\nif not exist \"{dir}\\reply!n!.txt\" exit /b 9\r\ntype \"{dir}\\reply!n!.txt\"\r\nexit /b 0\r\n"
+        "@echo off\r\nsetlocal enabledelayedexpansion\r\nset n=0\r\nif exist \"{dir}\\count\" set /p n=<\"{dir}\\count\"\r\nset /a n+=1\r\necho !n!>\"{dir}\\count\"\r\necho %* >\"{dir}\\args!n!.txt\"\r\n>\"{dir}\\env!n!.txt\" echo %DREAMY_MCP_TOKEN%\r\nfindstr \"^\" >\"{dir}\\stdin!n!.txt\"\r\nif not exist \"{dir}\\reply!n!.txt\" exit /b 9\r\ntype \"{dir}\\reply!n!.txt\"\r\nexit /b 0\r\n"
     );
     std::fs::write(&path, body).unwrap();
     path.to_string_lossy().into_owned()
@@ -53,7 +57,7 @@ fn write_script(folder: &Path) -> String {
     let path = folder.join("cli");
     let dir = folder.display();
     let body = format!(
-        "#!/bin/sh\nd=\"{dir}\"\nn=$(cat \"$d/count\" 2>/dev/null || echo 0)\nn=$((n+1))\necho $n > \"$d/count\"\necho \"$@\" > \"$d/args$n.txt\"\ncat > \"$d/stdin$n.txt\"\n[ -f \"$d/reply$n.txt\" ] || exit 9\ncat \"$d/reply$n.txt\"\n"
+        "#!/bin/sh\nd=\"{dir}\"\nn=$(cat \"$d/count\" 2>/dev/null || echo 0)\nn=$((n+1))\necho $n > \"$d/count\"\necho \"$@\" > \"$d/args$n.txt\"\necho \"$DREAMY_MCP_TOKEN\" > \"$d/env$n.txt\"\ncat > \"$d/stdin$n.txt\"\n[ -f \"$d/reply$n.txt\" ] || exit 9\ncat \"$d/reply$n.txt\"\n"
     );
     std::fs::write(&path, body).unwrap();
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();

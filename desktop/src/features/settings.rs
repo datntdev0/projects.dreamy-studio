@@ -1,4 +1,5 @@
 pub mod check;
+pub mod home;
 pub mod llm;
 pub mod models;
 pub mod probe;

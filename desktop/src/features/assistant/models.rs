@@ -110,6 +110,24 @@ pub struct SessionRecord {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum AssistantEvent {
     Activity { label: String },
+    Changed(AssistantChange),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangeTarget {
+    Novel,
+    Chapter,
+    Knowledge,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantChange {
+    pub target: ChangeTarget,
+    pub novel_id: i64,
+    pub chapter_id: Option<String>,
+    pub lang: Option<String>,
 }
 
 pub trait AssistantEventSink: Send + Sync {
@@ -194,3 +212,7 @@ impl From<SqliteError> for AssistantError {
         Self::storage(source.to_string())
     }
 }
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/models.test.rs"]
+mod tests;

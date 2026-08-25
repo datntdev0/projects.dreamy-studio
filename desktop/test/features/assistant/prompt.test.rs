@@ -1,7 +1,7 @@
 use super::*;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
-use crate::features::assistant::tools::NovelSource;
+use crate::features::assistant::sources::NovelSource;
 use crate::testing::assistant::FakeNovels;
 
 fn workspace() -> AssistantScope {

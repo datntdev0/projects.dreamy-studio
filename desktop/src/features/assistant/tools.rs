@@ -1,33 +1,30 @@
+use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
+use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::sources::Sources;
+use crate::features::knowledge::models::KnowledgeEntity;
+use crate::features::knowledge::models::KnowledgeEvidence;
+use crate::features::knowledge::models::KnowledgeFact;
+use crate::features::knowledge::models::KnowledgeItem;
+use crate::features::knowledge::service::parse_lang;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
-use crate::features::novel::service::NovelWorkspace;
 use serde_json::Value;
 use serde_json::json;
+use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 pub const PAGE_PARAGRAPHS: usize = 60;
 pub const PAGE_CHARS: usize = 12_000;
+pub const PAGE_ENTITIES: usize = 80;
+pub const MAX_PAGE_ENTITIES: usize = 400;
 
-pub trait NovelSource {
-    fn list(&self) -> Result<Vec<NovelSummary>, String>;
-    fn chapters(&self, novel_id: i64) -> Result<Vec<ChapterRow>, String>;
-    fn chapter_read(&self, novel_id: i64, chapter_id: &str) -> Result<Vec<ParagraphRow>, String>;
-}
-
-impl NovelSource for NovelWorkspace {
-    fn list(&self) -> Result<Vec<NovelSummary>, String> {
-        NovelWorkspace::list(self).map_err(|error| error.to_string())
-    }
-
-    fn chapters(&self, novel_id: i64) -> Result<Vec<ChapterRow>, String> {
-        NovelWorkspace::chapters(self, novel_id).map_err(|error| error.to_string())
-    }
-
-    fn chapter_read(&self, novel_id: i64, chapter_id: &str) -> Result<Vec<ParagraphRow>, String> {
-        NovelWorkspace::chapter_read(self, novel_id, chapter_id).map_err(|error| error.to_string())
-    }
+pub struct ToolContext<'a> {
+    pub scope: &'a AssistantScope,
+    pub can_edit: bool,
+    pub sink: &'a dyn TurnSink,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,6 +70,23 @@ pub fn definitions() -> Value {
                 "required": ["novelId", "chapter"],
                 "additionalProperties": false
             }
+        },
+        {
+            "name": "read_novel_knowledge",
+            "description": "Read the knowledge base of one novel: its entities (id, type, name, titles, aliases, chapters where they appear) and the facts that touch them. `types` and `predicates` list the keys the ontology allows. Entities can be filtered by `type` and by a case-insensitive `query` on name, titles or aliases. A page holds 80 entities by default; when `next` is not null, call again with offset set to `next`.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
+                    "query": { "type": "string", "description": "Keep only entities whose name, titles or aliases contain this text." },
+                    "type": { "type": "string", "description": "Keep only entities of this type key." },
+                    "offset": { "type": "integer", "minimum": 0, "description": "Entities to skip, default 0." },
+                    "limit": { "type": "integer", "minimum": 1, "description": "Entities per page, default 80, at most 400." }
+                },
+                "required": ["novelId", "lang"],
+                "additionalProperties": false
+            }
         }
     ])
 }
@@ -80,13 +94,15 @@ pub fn definitions() -> Value {
 pub fn call(
     name: &str,
     args: &Value,
-    scope: &AssistantScope,
-    source: &dyn NovelSource,
+    ctx: &ToolContext,
+    sources: &Sources,
 ) -> Result<ToolOutput, String> {
+    let novels = sources.novels.as_ref();
     match name {
-        "list_novel" => list_novel(scope, source),
-        "read_novel" => read_novel(args, scope, source),
-        "read_novel_chapter" => read_novel_chapter(args, scope, source),
+        "list_novel" => list_novel(ctx.scope, novels),
+        "read_novel" => read_novel(args, ctx.scope, novels),
+        "read_novel_chapter" => read_novel_chapter(args, ctx.scope, novels),
+        "read_novel_knowledge" => read_novel_knowledge(args, ctx.scope, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
@@ -161,6 +177,110 @@ fn read_novel_chapter(
     Ok(output(value, label))
 }
 
+fn read_novel_knowledge(
+    args: &Value,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> Result<ToolOutput, String> {
+    let novel_id = required_int(args, "novelId")?;
+    let raw_lang = required_str(args, "lang")?;
+    let lang = parse_lang(&raw_lang).map_err(|error| error.to_string())?;
+    let query = optional_str(args, "query")?
+        .map(|text| text.trim().to_lowercase())
+        .filter(|text| !text.is_empty());
+    let kind = optional_str(args, "type")?;
+    let offset = optional_int(args, "offset")?.unwrap_or(0).max(0) as usize;
+    let limit = optional_int(args, "limit")?.map_or(PAGE_ENTITIES, |value| {
+        value.clamp(1, MAX_PAGE_ENTITIES as i64) as usize
+    });
+    find_novel(scope, sources.novels.as_ref(), novel_id)?;
+    let knowledge = sources.knowledge.get(novel_id, lang.as_str())?;
+    let entities: Vec<&KnowledgeEntity> = knowledge
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            KnowledgeItem::Entity(entity) => Some(entity),
+            KnowledgeItem::Fact(_) => None,
+        })
+        .filter(|entity| kind.as_deref().is_none_or(|key| entity.entity_type == key))
+        .filter(|entity| {
+            query
+                .as_deref()
+                .is_none_or(|text| matches_query(entity, text))
+        })
+        .collect();
+    let total = entities.len();
+    let page: Vec<&KnowledgeEntity> = entities.into_iter().skip(offset).take(limit).collect();
+    let end = offset + page.len();
+    let ids: HashSet<&str> = page.iter().map(|entity| entity.id.as_str()).collect();
+    let facts: Vec<Value> = knowledge
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            KnowledgeItem::Fact(fact) if touches(fact, &ids) => Some(fact_json(fact)),
+            _ => None,
+        })
+        .collect();
+    let next = if end < total { json!(end) } else { Value::Null };
+    let label = format!(
+        "read_novel_knowledge(novel {novel_id}, {}) → {} thực thể, {} sự kiện",
+        lang.as_str(),
+        page.len(),
+        facts.len()
+    );
+    let value = json!({
+        "lang": lang.as_str(),
+        "types": knowledge.ontology.types.iter().map(|item| item.key.as_str()).collect::<Vec<_>>(),
+        "predicates": knowledge.ontology.predicates.iter().map(|item| item.key.as_str()).collect::<Vec<_>>(),
+        "entities": page.iter().map(|entity| entity_json(entity)).collect::<Vec<_>>(),
+        "facts": facts,
+        "total": total,
+        "next": next,
+    });
+    Ok(output(value, label))
+}
+
+fn matches_query(entity: &KnowledgeEntity, query: &str) -> bool {
+    std::iter::once(&entity.name)
+        .chain(&entity.titles)
+        .chain(&entity.aliases)
+        .any(|text| text.to_lowercase().contains(query))
+}
+
+fn touches(fact: &KnowledgeFact, ids: &HashSet<&str>) -> bool {
+    ids.contains(fact.subject.as_str())
+        || fact
+            .object
+            .as_deref()
+            .is_some_and(|object| ids.contains(object))
+}
+
+fn entity_json(entity: &KnowledgeEntity) -> Value {
+    json!({
+        "id": entity.id,
+        "type": entity.entity_type,
+        "name": entity.name,
+        "titles": entity.titles,
+        "aliases": entity.aliases,
+        "chapters": chapters_of(&entity.ev),
+    })
+}
+
+fn fact_json(fact: &KnowledgeFact) -> Value {
+    json!({
+        "id": fact.id,
+        "pred": fact.pred,
+        "subject": fact.subject,
+        "object": fact.object,
+        "chapters": chapters_of(&fact.ev),
+    })
+}
+
+fn chapters_of(evidence: &[KnowledgeEvidence]) -> Vec<i64> {
+    let chapters: BTreeSet<i64> = evidence.iter().map(|item| item.chapter).collect();
+    chapters.into_iter().collect()
+}
+
 fn page_bounds(rows: &[ParagraphRow], from: Option<i64>, to: Option<i64>) -> (usize, usize) {
     let total = rows.len();
     if total == 0 {
@@ -209,6 +329,20 @@ fn find_novel(
 
 fn required_int(args: &Value, key: &str) -> Result<i64, String> {
     optional_int(args, key)?.ok_or_else(|| format!("missing integer argument '{key}'"))
+}
+
+fn required_str(args: &Value, key: &str) -> Result<String, String> {
+    optional_str(args, key)?.ok_or_else(|| format!("missing string argument '{key}'"))
+}
+
+fn optional_str(args: &Value, key: &str) -> Result<Option<String>, String> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => value
+            .as_str()
+            .map(|text| Some(text.to_string()))
+            .ok_or_else(|| format!("argument '{key}' must be a string")),
+    }
 }
 
 fn optional_int(args: &Value, key: &str) -> Result<Option<i64>, String> {

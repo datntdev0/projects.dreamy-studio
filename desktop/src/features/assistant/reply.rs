@@ -1,5 +1,5 @@
 use crate::features::assistant::models::AssistantCitation;
-use crate::features::assistant::tools::NovelSource;
+use crate::features::assistant::sources::NovelSource;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::ParagraphRow;
 use serde_json::Value;

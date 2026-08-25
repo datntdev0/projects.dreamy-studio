@@ -2,8 +2,9 @@ use crate::features::assistant::grants::Grant;
 use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::protocol;
 use crate::features::assistant::protocol::ToolCaller;
+use crate::features::assistant::sources::Sources;
 use crate::features::assistant::tools;
-use crate::features::assistant::tools::NovelSource;
+use crate::features::assistant::tools::ToolContext;
 use serde_json::Value;
 use serde_json::json;
 use std::io::Read;
@@ -21,7 +22,7 @@ const MAX_BODY_BYTES: usize = 1024 * 1024;
 const PARSE_ERROR: i64 = -32700;
 
 pub trait McpHost: Send + Sync {
-    fn source(&self, grant: &Grant) -> Result<Box<dyn NovelSource>, String>;
+    fn open(&self, grant: &Grant) -> Result<Sources, String>;
 }
 
 struct Running {
@@ -87,9 +88,14 @@ impl ToolCaller for GrantCaller<'_> {
     }
 
     fn call(&self, name: &str, args: &Value) -> Result<String, String> {
-        let source = self.host.source(self.grant)?;
-        let output = tools::call(name, args, &self.grant.scope, source.as_ref())?;
-        self.grant.activities.record(output.label);
+        let sources = self.host.open(self.grant)?;
+        let ctx = ToolContext {
+            scope: &self.grant.scope,
+            can_edit: self.grant.can_edit,
+            sink: self.grant.sink.as_ref(),
+        };
+        let output = tools::call(name, args, &ctx, &sources)?;
+        ctx.sink.record(output.label);
         Ok(output.text)
     }
 }

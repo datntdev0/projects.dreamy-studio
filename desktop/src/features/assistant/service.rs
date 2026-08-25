@@ -1,6 +1,7 @@
-use crate::features::assistant::grants::ActivitySink;
 use crate::features::assistant::grants::Grant;
 use crate::features::assistant::grants::McpGrants;
+use crate::features::assistant::grants::TurnSink;
+use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantCitation;
 use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantEvent;
@@ -16,7 +17,7 @@ use crate::features::assistant::models::SessionRecord;
 use crate::features::assistant::prompt;
 use crate::features::assistant::reply;
 use crate::features::assistant::repository::AssistantRepository;
-use crate::features::assistant::tools::NovelSource;
+use crate::features::assistant::sources::NovelSource;
 use crate::features::pipeline::llm::ClientError;
 use crate::features::pipeline::llm::Extras;
 use crate::features::pipeline::llm::LlmClient;
@@ -305,7 +306,8 @@ impl AssistantWorkspace {
         let token = self.service.grants.issue(Grant {
             workspace: self.dir.to_string_lossy().into_owned(),
             scope: record.summary.scope.clone(),
-            activities: collector.clone(),
+            can_edit: record.summary.edit_granted,
+            sink: collector.clone(),
         });
         let resumable = match (&record.cli_session, &record.provider) {
             (Some(session), Some(owner)) if *owner == provider => Some(session),
@@ -433,10 +435,14 @@ impl Collector {
     }
 }
 
-impl ActivitySink for Collector {
+impl TurnSink for Collector {
     fn record(&self, label: String) {
         lock(&self.labels).push(label.clone());
         self.sink.emit(AssistantEvent::Activity { label });
+    }
+
+    fn changed(&self, change: AssistantChange) {
+        self.sink.emit(AssistantEvent::Changed(change));
     }
 }
 

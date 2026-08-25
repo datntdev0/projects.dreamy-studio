@@ -8,7 +8,8 @@ use crate::features::assistant::models::AssistantSession;
 use crate::features::assistant::models::AssistantSessionSummary;
 use crate::features::assistant::server::McpHost;
 use crate::features::assistant::service::AssistantService;
-use crate::features::assistant::tools::NovelSource;
+use crate::features::assistant::sources::Sources;
+use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
 use crate::features::workspace::session::WorkspaceSession;
@@ -32,23 +33,29 @@ impl AssistantEventSink for ChannelSink {
 pub struct AppMcpHost(pub AppHandle);
 
 impl McpHost for AppMcpHost {
-    fn source(&self, grant: &Grant) -> Result<Box<dyn NovelSource>, String> {
+    fn open(&self, grant: &Grant) -> Result<Sources, String> {
         let novels = self.0.state::<NovelService>();
+        let knowledge = self.0.state::<KnowledgeService>();
         let session = self.0.state::<WorkspaceSession>();
-        open_source(&novels, &session, grant)
+        open_sources(&novels, &knowledge, &session, grant)
     }
 }
 
-pub fn open_source(
+pub fn open_sources(
     novels: &NovelService,
+    knowledge: &KnowledgeService,
     session: &WorkspaceSession,
     grant: &Grant,
-) -> Result<Box<dyn NovelSource>, String> {
+) -> Result<Sources, String> {
     if !session.is_current(&grant.workspace) {
         return Err(WORKSPACE_CLOSED.to_string());
     }
-    let workspace = novels.open(session).map_err(|error| error.to_string())?;
-    Ok(Box::new(workspace))
+    let novels = novels.open(session).map_err(|error| error.to_string())?;
+    let knowledge = knowledge.open(session).map_err(|error| error.to_string())?;
+    Ok(Sources {
+        novels: Box::new(novels),
+        knowledge: Box::new(knowledge),
+    })
 }
 
 pub fn list_sessions(

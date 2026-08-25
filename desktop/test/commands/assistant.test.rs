@@ -10,8 +10,8 @@ use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
 use crate::testing::assistant::FakeLlm;
-use crate::testing::assistant::RecordingActivities;
 use crate::testing::assistant::RecordingEvents;
+use crate::testing::assistant::RecordingSink;
 use crate::testing::backend::StubBackend;
 use tempfile::TempDir;
 
@@ -20,6 +20,7 @@ struct Fixture {
     workspace: String,
     session: WorkspaceSession,
     novels: NovelService,
+    knowledge: KnowledgeService,
     service: AssistantService,
 }
 
@@ -47,6 +48,7 @@ fn entered_fixture() -> Fixture {
         workspace: session.current().unwrap().path,
         session,
         novels: NovelService::new(),
+        knowledge: KnowledgeService::new(),
         service: service(),
     }
 }
@@ -62,7 +64,8 @@ fn grant_for(workspace: &str) -> Grant {
     Grant {
         workspace: workspace.to_string(),
         scope: workspace_scope(),
-        activities: Arc::new(RecordingActivities::new()),
+        can_edit: false,
+        sink: Arc::new(RecordingSink::new()),
     }
 }
 
@@ -159,15 +162,21 @@ fn every_operation_reports_no_workspace_without_a_current_workspace() {
 }
 
 #[test]
-fn host_opens_a_source_for_the_current_workspace() {
+fn host_opens_sources_for_the_current_workspace() {
     let fixture = entered_fixture();
     let grant = grant_for(&fixture.workspace);
 
-    let source = open_source(&fixture.novels, &fixture.session, &grant)
-        .ok()
-        .unwrap();
+    let sources = open_sources(
+        &fixture.novels,
+        &fixture.knowledge,
+        &fixture.session,
+        &grant,
+    )
+    .ok()
+    .unwrap();
 
-    assert!(source.list().unwrap().is_empty());
+    assert!(sources.novels.list().unwrap().is_empty());
+    assert!(sources.knowledge.get(1, "src").is_err());
 }
 
 #[test]
@@ -176,7 +185,12 @@ fn host_refuses_a_grant_for_a_workspace_that_is_not_current() {
     let other = fixture.dir.path().join("elsewhere");
     let grant = grant_for(other.to_str().unwrap());
 
-    let refused = open_source(&fixture.novels, &fixture.session, &grant);
+    let refused = open_sources(
+        &fixture.novels,
+        &fixture.knowledge,
+        &fixture.session,
+        &grant,
+    );
 
     assert_eq!(refused.err().unwrap(), "workspace is no longer open");
 }
@@ -185,7 +199,12 @@ fn host_refuses_a_grant_for_a_workspace_that_is_not_current() {
 fn host_refuses_every_grant_when_no_workspace_is_open() {
     let grant = grant_for("anywhere");
 
-    let refused = open_source(&NovelService::new(), &WorkspaceSession::new(), &grant);
+    let refused = open_sources(
+        &NovelService::new(),
+        &KnowledgeService::new(),
+        &WorkspaceSession::new(),
+        &grant,
+    );
 
     assert_eq!(refused.err().unwrap(), "workspace is no longer open");
 }

@@ -1,8 +1,10 @@
 use super::*;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
+use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
-use crate::testing::assistant::RecordingActivities;
+use crate::testing::assistant::RecordingSink;
+use crate::testing::assistant::sources_of;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
@@ -10,25 +12,25 @@ use std::net::TcpStream;
 struct FakeHost;
 
 impl McpHost for FakeHost {
-    fn source(&self, grant: &Grant) -> Result<Box<dyn NovelSource>, String> {
+    fn open(&self, grant: &Grant) -> Result<Sources, String> {
         if grant.workspace == "broken" {
             return Err("workspace is not available".to_string());
         }
-        Ok(Box::new(
-            FakeNovels::new().with_novel(1, "Alpha").with_chapter(
-                1,
-                1,
-                "One",
-                &["first", "second"],
-            ),
-        ))
+        let novels = FakeNovels::new().with_novel(1, "Alpha").with_chapter(
+            1,
+            1,
+            "One",
+            &["first", "second"],
+        );
+        let knowledge = FakeKnowledge::new().with_entity("e1", "persona", "Lan", &[], &[], &[1]);
+        Ok(sources_of(&novels, &knowledge))
     }
 }
 
 struct Fixture {
     server: McpServer,
     grants: McpGrants,
-    activities: Arc<RecordingActivities>,
+    sink: Arc<RecordingSink>,
 }
 
 impl Fixture {
@@ -38,7 +40,7 @@ impl Fixture {
         Fixture {
             server,
             grants,
-            activities: Arc::new(RecordingActivities::new()),
+            sink: Arc::new(RecordingSink::new()),
         }
     }
 
@@ -49,7 +51,8 @@ impl Fixture {
                 kind: ScopeKind::Workspace,
                 novel_id: None,
             },
-            activities: self.activities.clone(),
+            can_edit: false,
+            sink: self.sink.clone(),
         })
     }
 
@@ -176,7 +179,7 @@ fn initialize_returns_json() {
 }
 
 #[test]
-fn tools_list_returns_the_three_tools() {
+fn tools_list_returns_the_read_tools() {
     let fixture = Fixture::new();
     let token = fixture.issue("ws");
     let (status, body) = fixture.post(
@@ -186,7 +189,7 @@ fn tools_list_returns_the_three_tools() {
     assert_eq!(status, 200);
     assert_eq!(
         parsed(&body)["result"]["tools"].as_array().unwrap().len(),
-        3
+        4
     );
 }
 
@@ -203,9 +206,25 @@ fn a_tool_call_returns_json_and_records_the_activity() {
     assert_eq!(value["result"]["isError"], false);
     let text = value["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("Alpha"));
-    let labels = fixture.activities.labels();
+    let labels = fixture.sink.labels();
     assert_eq!(labels.len(), 1);
     assert!(labels[0].starts_with("list_novel"));
+}
+
+#[test]
+fn read_novel_knowledge_is_served_through_the_host_sources() {
+    let fixture = Fixture::new();
+    let token = fixture.issue("ws");
+    let (status, body) = fixture.post(
+        Some(&token),
+        &json!({"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"read_novel_knowledge","arguments":{"novelId":1,"lang":"src"}}}),
+    );
+    assert_eq!(status, 200);
+    let value = parsed(&body);
+    assert_eq!(value["result"]["isError"], false);
+    let text = value["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("Lan"));
+    assert!(fixture.sink.labels()[0].starts_with("read_novel_knowledge"));
 }
 
 #[test]
@@ -223,7 +242,7 @@ fn a_host_error_becomes_a_tool_error_without_an_activity() {
         value["result"]["content"][0]["text"],
         "workspace is not available"
     );
-    assert!(fixture.activities.labels().is_empty());
+    assert!(fixture.sink.labels().is_empty());
 }
 
 #[test]

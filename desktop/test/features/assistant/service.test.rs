@@ -1,6 +1,8 @@
 use super::*;
+use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantErrorCode;
 use crate::features::assistant::models::AssistantEvent;
+use crate::features::assistant::models::ChangeTarget;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::assistant::CallKind;
@@ -432,8 +434,9 @@ fn activities_are_stored_on_the_reply_and_emitted_to_the_sink() {
     let emitted: Vec<String> = sink
         .events()
         .into_iter()
-        .map(|event| match event {
-            AssistantEvent::Activity { label } => label,
+        .filter_map(|event| match event {
+            AssistantEvent::Activity { label } => Some(label),
+            AssistantEvent::Changed(_) => None,
         })
         .collect();
     assert_eq!(emitted, expected);
@@ -463,6 +466,60 @@ fn the_grant_carries_the_workspace_and_scope_only_during_the_turn() {
         fixture._dir.path().to_string_lossy().into_owned()
     );
     assert_eq!(grant.scope, workspace_scope());
+}
+
+#[test]
+fn the_grant_copies_the_edit_flag_from_the_session_at_the_start_of_each_turn() {
+    let fixture = fixture();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let grants = fixture.grants.clone();
+    let slot = seen.clone();
+    fixture.llm.set_hook(move |token| {
+        slot.lock()
+            .unwrap()
+            .push(grants.get(token).unwrap().can_edit);
+    });
+    let id = fixture
+        .workspace
+        .create(workspace_scope())
+        .unwrap()
+        .summary
+        .id;
+    send(&fixture, &id, "first", &novels()).unwrap();
+    fixture.workspace.permit(&id, true).unwrap();
+    send(&fixture, &id, "second", &novels()).unwrap();
+    fixture.workspace.permit(&id, false).unwrap();
+    send(&fixture, &id, "third", &novels()).unwrap();
+    assert_eq!(*seen.lock().unwrap(), vec![false, true, false]);
+}
+
+#[test]
+fn changes_are_forwarded_to_the_event_sink_without_becoming_activities() {
+    let fixture = fixture();
+    let change = AssistantChange {
+        target: ChangeTarget::Chapter,
+        novel_id: 1,
+        chapter_id: Some("chapter-1-1".to_string()),
+        lang: None,
+    };
+    let grants = fixture.grants.clone();
+    let sent = change.clone();
+    fixture.llm.set_hook(move |token| {
+        grants.get(token).unwrap().sink.changed(sent.clone());
+    });
+    let id = fixture
+        .workspace
+        .create(workspace_scope())
+        .unwrap()
+        .summary
+        .id;
+    let sink = events();
+    let session = fixture
+        .workspace
+        .send(&id, "rename it", None, sink.clone(), &novels())
+        .unwrap();
+    assert_eq!(sink.events(), vec![AssistantEvent::Changed(change)]);
+    assert!(session.messages[1].activities.is_empty());
 }
 
 #[test]

@@ -1,18 +1,21 @@
+use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantScope;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 use uuid::Uuid;
 
-pub trait ActivitySink: Send + Sync {
+pub trait TurnSink: Send + Sync {
     fn record(&self, label: String);
+    fn changed(&self, change: AssistantChange);
 }
 
 #[derive(Clone)]
 pub struct Grant {
     pub workspace: String,
     pub scope: AssistantScope,
-    pub activities: Arc<dyn ActivitySink>,
+    pub can_edit: bool,
+    pub sink: Arc<dyn TurnSink>,
 }
 
 #[derive(Clone, Default)]

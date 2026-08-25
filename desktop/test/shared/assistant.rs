@@ -1,23 +1,62 @@
-use crate::features::assistant::grants::ActivitySink;
 use crate::features::assistant::grants::McpGrants;
+use crate::features::assistant::grants::TurnSink;
+use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
 use crate::features::assistant::service::AssistantLlm;
-use crate::features::assistant::tools::NovelSource;
+use crate::features::assistant::sources::KnowledgeSource;
+use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::sources::Sources;
+use crate::features::knowledge::models::KnowledgeEdit;
+use crate::features::knowledge::models::KnowledgeEditResult;
+use crate::features::knowledge::models::KnowledgeEntity;
+use crate::features::knowledge::models::KnowledgeEvidence;
+use crate::features::knowledge::models::KnowledgeFact;
+use crate::features::knowledge::models::KnowledgeItem;
+use crate::features::knowledge::models::WireKnowledge;
+use crate::features::knowledge::ontology::Ontology;
 use crate::features::novel::models::ChapterRow;
+use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::pipeline::llm::Turn;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NovelWrite {
+    Update {
+        novel_id: i64,
+        patch: NovelPatch,
+    },
+    Paragraph {
+        novel_id: i64,
+        chapter_id: String,
+        n: usize,
+        text: String,
+    },
+    Rename {
+        novel_id: i64,
+        chapter_id: String,
+        title: String,
+    },
+}
+
 #[derive(Default)]
-pub struct FakeNovels {
+struct NovelState {
     novels: Vec<NovelSummary>,
     chapters: HashMap<i64, Vec<ChapterRow>>,
     paragraphs: HashMap<String, Vec<String>>,
+    writes: Vec<NovelWrite>,
+}
+
+#[derive(Clone, Default)]
+pub struct FakeNovels {
+    state: Arc<Mutex<NovelState>>,
 }
 
 impl FakeNovels {
@@ -25,86 +64,96 @@ impl FakeNovels {
         Self::default()
     }
 
-    pub fn with_novel(mut self, id: i64, title: &str) -> Self {
-        self.novels.push(NovelSummary {
-            id,
-            title: title.to_string(),
-            name: format!("{title} name"),
-            author: "Author".to_string(),
-            lang: "zh".to_string(),
-            description: format!("About {title}"),
-            origin: "created".to_string(),
-            created_at: "2026-01-01T00:00:00Z".to_string(),
-            updated_at: "2026-01-01T00:00:00Z".to_string(),
-            chapter_count: 0,
-            word_count: 0,
-            translated_count: 0,
-            analyzed_count: 0,
-            tags: vec!["tag".to_string()],
-        });
-        self.chapters.entry(id).or_default();
-        self
+    pub fn writes(&self) -> Vec<NovelWrite> {
+        guard(&self.state).writes.clone()
     }
 
-    pub fn with_chapter(
-        mut self,
-        novel_id: i64,
-        seq: i64,
-        title: &str,
-        paragraphs: &[&str],
-    ) -> Self {
-        let id = format!("chapter-{novel_id}-{seq}");
-        let words: i64 = paragraphs
-            .iter()
-            .map(|text| text.split_whitespace().count() as i64)
-            .sum();
-        let rows = self.chapters.entry(novel_id).or_default();
-        rows.push(ChapterRow {
-            id: id.clone(),
-            novel_id,
-            seq,
-            title: title.to_string(),
-            word_count: words,
-            translation_status: "none".to_string(),
-            analysis_status: "none".to_string(),
-            created_at: "2026-01-01T00:00:00Z".to_string(),
-            updated_at: "2026-01-01T00:00:00Z".to_string(),
-        });
-        let count = rows.len() as i64;
-        if let Some(novel) = self.novels.iter_mut().find(|novel| novel.id == novel_id) {
-            novel.chapter_count = count;
-            novel.word_count += words;
-        }
-        self.paragraphs
-            .insert(id, paragraphs.iter().map(|text| text.to_string()).collect());
-        self
+    pub fn paragraph_texts(&self, chapter_id: &str) -> Vec<String> {
+        guard(&self.state)
+            .paragraphs
+            .get(chapter_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
-    pub fn with_statuses(
-        mut self,
-        novel_id: i64,
-        seq: i64,
-        translation: &str,
-        analysis: &str,
-    ) -> Self {
-        if let Some(chapter) = self
-            .chapters
-            .get_mut(&novel_id)
-            .and_then(|rows| rows.iter_mut().find(|row| row.seq == seq))
+    pub fn with_novel(self, id: i64, title: &str) -> Self {
         {
-            chapter.translation_status = translation.to_string();
-            chapter.analysis_status = analysis.to_string();
+            let mut state = guard(&self.state);
+            state.novels.push(NovelSummary {
+                id,
+                title: title.to_string(),
+                name: format!("{title} name"),
+                author: "Author".to_string(),
+                lang: "zh".to_string(),
+                description: format!("About {title}"),
+                origin: "created".to_string(),
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                chapter_count: 0,
+                word_count: 0,
+                translated_count: 0,
+                analyzed_count: 0,
+                tags: vec!["tag".to_string()],
+            });
+            state.chapters.entry(id).or_default();
         }
-        if let Some(novel) = self.novels.iter_mut().find(|novel| novel.id == novel_id) {
-            let rows = &self.chapters[&novel_id];
-            novel.translated_count = rows
+        self
+    }
+
+    pub fn with_chapter(self, novel_id: i64, seq: i64, title: &str, paragraphs: &[&str]) -> Self {
+        {
+            let state = &mut *guard(&self.state);
+            let id = format!("chapter-{novel_id}-{seq}");
+            let words: i64 = paragraphs
                 .iter()
-                .filter(|row| row.translation_status != "none")
-                .count() as i64;
-            novel.analyzed_count = rows
-                .iter()
-                .filter(|row| row.analysis_status != "none")
-                .count() as i64;
+                .map(|text| text.split_whitespace().count() as i64)
+                .sum();
+            let rows = state.chapters.entry(novel_id).or_default();
+            rows.push(ChapterRow {
+                id: id.clone(),
+                novel_id,
+                seq,
+                title: title.to_string(),
+                word_count: words,
+                translation_status: "none".to_string(),
+                analysis_status: "none".to_string(),
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+            });
+            let count = rows.len() as i64;
+            if let Some(novel) = state.novels.iter_mut().find(|novel| novel.id == novel_id) {
+                novel.chapter_count = count;
+                novel.word_count += words;
+            }
+            state
+                .paragraphs
+                .insert(id, paragraphs.iter().map(|text| text.to_string()).collect());
+        }
+        self
+    }
+
+    pub fn with_statuses(self, novel_id: i64, seq: i64, translation: &str, analysis: &str) -> Self {
+        {
+            let state = &mut *guard(&self.state);
+            if let Some(chapter) = state
+                .chapters
+                .get_mut(&novel_id)
+                .and_then(|rows| rows.iter_mut().find(|row| row.seq == seq))
+            {
+                chapter.translation_status = translation.to_string();
+                chapter.analysis_status = analysis.to_string();
+            }
+            if let Some(novel) = state.novels.iter_mut().find(|novel| novel.id == novel_id) {
+                let rows = &state.chapters[&novel_id];
+                novel.translated_count = rows
+                    .iter()
+                    .filter(|row| row.translation_status != "none")
+                    .count() as i64;
+                novel.analyzed_count = rows
+                    .iter()
+                    .filter(|row| row.analysis_status != "none")
+                    .count() as i64;
+            }
         }
         self
     }
@@ -112,22 +161,24 @@ impl FakeNovels {
 
 impl NovelSource for FakeNovels {
     fn list(&self) -> Result<Vec<NovelSummary>, String> {
-        Ok(self.novels.clone())
+        Ok(guard(&self.state).novels.clone())
     }
 
     fn chapters(&self, novel_id: i64) -> Result<Vec<ChapterRow>, String> {
-        self.chapters
+        guard(&self.state)
+            .chapters
             .get(&novel_id)
             .cloned()
             .ok_or_else(|| format!("novel {novel_id} not found"))
     }
 
     fn chapter_read(&self, novel_id: i64, chapter_id: &str) -> Result<Vec<ParagraphRow>, String> {
-        let known = self
+        let state = guard(&self.state);
+        let known = state
             .chapters
             .get(&novel_id)
             .is_some_and(|rows| rows.iter().any(|row| row.id == chapter_id));
-        let texts = match self.paragraphs.get(chapter_id) {
+        let texts = match state.paragraphs.get(chapter_id) {
             Some(texts) if known => texts,
             _ => return Err(format!("chapter {chapter_id} not found")),
         };
@@ -141,32 +192,281 @@ impl NovelSource for FakeNovels {
             })
             .collect())
     }
+
+    fn update(&self, novel_id: i64, patch: NovelPatch) -> Result<NovelSummary, String> {
+        let mut state = guard(&self.state);
+        let novel = state
+            .novels
+            .iter_mut()
+            .find(|novel| novel.id == novel_id)
+            .ok_or_else(|| format!("novel {novel_id} not found"))?;
+        if let Some(title) = &patch.title {
+            novel.title = title.clone();
+        }
+        if let Some(name) = &patch.name {
+            novel.name = name.clone();
+        }
+        if let Some(author) = &patch.author {
+            novel.author = author.clone();
+        }
+        if let Some(description) = &patch.description {
+            novel.description = description.clone();
+        }
+        if let Some(tags) = &patch.tags {
+            novel.tags = tags.clone();
+        }
+        let updated = novel.clone();
+        state.writes.push(NovelWrite::Update { novel_id, patch });
+        Ok(updated)
+    }
+
+    fn paragraph_update(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        n: usize,
+        text: &str,
+    ) -> Result<ChapterRow, String> {
+        let state = &mut *guard(&self.state);
+        let row = find_chapter(&state.chapters, novel_id, chapter_id)?;
+        let texts = state
+            .paragraphs
+            .get_mut(chapter_id)
+            .ok_or_else(|| format!("chapter {chapter_id} not found"))?;
+        let slot = n
+            .checked_sub(1)
+            .and_then(|index| texts.get_mut(index))
+            .ok_or_else(|| format!("paragraph {n} not found"))?;
+        *slot = text.to_string();
+        state.writes.push(NovelWrite::Paragraph {
+            novel_id,
+            chapter_id: chapter_id.to_string(),
+            n,
+            text: text.to_string(),
+        });
+        Ok(row)
+    }
+
+    fn chapter_rename(
+        &self,
+        novel_id: i64,
+        chapter_id: &str,
+        title: &str,
+    ) -> Result<ChapterRow, String> {
+        let state = &mut *guard(&self.state);
+        find_chapter(&state.chapters, novel_id, chapter_id)?;
+        let row = state
+            .chapters
+            .get_mut(&novel_id)
+            .and_then(|rows| rows.iter_mut().find(|row| row.id == chapter_id))
+            .ok_or_else(|| format!("chapter {chapter_id} not found"))?;
+        row.title = title.to_string();
+        let renamed = row.clone();
+        state.writes.push(NovelWrite::Rename {
+            novel_id,
+            chapter_id: chapter_id.to_string(),
+            title: title.to_string(),
+        });
+        Ok(renamed)
+    }
+}
+
+fn find_chapter(
+    chapters: &HashMap<i64, Vec<ChapterRow>>,
+    novel_id: i64,
+    chapter_id: &str,
+) -> Result<ChapterRow, String> {
+    chapters
+        .get(&novel_id)
+        .and_then(|rows| rows.iter().find(|row| row.id == chapter_id))
+        .cloned()
+        .ok_or_else(|| format!("chapter {chapter_id} not found"))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KnowledgeCall {
+    pub novel_id: i64,
+    pub lang: String,
+    pub edits: Vec<KnowledgeEdit>,
+}
+
+struct KnowledgeState {
+    items: Vec<KnowledgeItem>,
+    calls: Vec<KnowledgeCall>,
+    failure: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct FakeKnowledge {
+    state: Arc<Mutex<KnowledgeState>>,
+}
+
+impl FakeKnowledge {
+    pub fn new() -> Self {
+        Self {
+            state: Arc::new(Mutex::new(KnowledgeState {
+                items: Vec::new(),
+                calls: Vec::new(),
+                failure: None,
+            })),
+        }
+    }
+
+    pub fn with_entity(
+        self,
+        id: &str,
+        kind: &str,
+        name: &str,
+        titles: &[&str],
+        aliases: &[&str],
+        chapters: &[i64],
+    ) -> Self {
+        guard(&self.state)
+            .items
+            .push(KnowledgeItem::Entity(KnowledgeEntity {
+                id: id.to_string(),
+                entity_type: kind.to_string(),
+                name: name.to_string(),
+                titles: strings(titles),
+                aliases: strings(aliases),
+                ev: evidence(chapters),
+                stale: Vec::new(),
+            }));
+        self
+    }
+
+    pub fn with_fact(
+        self,
+        id: &str,
+        pred: &str,
+        subject: &str,
+        object: Option<&str>,
+        chapters: &[i64],
+    ) -> Self {
+        guard(&self.state)
+            .items
+            .push(KnowledgeItem::Fact(KnowledgeFact {
+                id: id.to_string(),
+                pred: pred.to_string(),
+                subject: subject.to_string(),
+                object: object.map(str::to_string),
+                ev: evidence(chapters),
+                stale: Vec::new(),
+            }));
+        self
+    }
+
+    pub fn with_knowledge(self, knowledge: WireKnowledge) -> Self {
+        guard(&self.state).items = knowledge.items;
+        self
+    }
+
+    pub fn failing(self, message: &str) -> Self {
+        guard(&self.state).failure = Some(message.to_string());
+        self
+    }
+
+    pub fn calls(&self) -> Vec<KnowledgeCall> {
+        guard(&self.state).calls.clone()
+    }
+
+    fn snapshot(&self, lang: &str) -> WireKnowledge {
+        WireKnowledge {
+            lang: lang.to_string(),
+            ontology: Ontology::get().view(),
+            items: guard(&self.state).items.clone(),
+            analyzed: BTreeMap::new(),
+        }
+    }
+}
+
+impl Default for FakeKnowledge {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl KnowledgeSource for FakeKnowledge {
+    fn get(&self, _novel_id: i64, lang: &str) -> Result<WireKnowledge, String> {
+        let failure = guard(&self.state).failure.clone();
+        match failure {
+            Some(message) => Err(message),
+            None => Ok(self.snapshot(lang)),
+        }
+    }
+
+    fn edit(
+        &self,
+        novel_id: i64,
+        lang: &str,
+        edits: Vec<KnowledgeEdit>,
+    ) -> Result<KnowledgeEditResult, String> {
+        let failure = guard(&self.state).failure.clone();
+        if let Some(message) = failure {
+            return Err(message);
+        }
+        guard(&self.state).calls.push(KnowledgeCall {
+            novel_id,
+            lang: lang.to_string(),
+            edits,
+        });
+        Ok(KnowledgeEditResult {
+            knowledge: self.snapshot(lang),
+            remap: BTreeMap::new(),
+        })
+    }
+}
+
+pub fn sources_of(novels: &FakeNovels, knowledge: &FakeKnowledge) -> Sources {
+    Sources {
+        novels: Box::new(novels.clone()),
+        knowledge: Box::new(knowledge.clone()),
+    }
+}
+
+fn strings(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| value.to_string()).collect()
+}
+
+fn evidence(chapters: &[i64]) -> Vec<KnowledgeEvidence> {
+    chapters
+        .iter()
+        .map(|chapter| KnowledgeEvidence {
+            chapter: *chapter,
+            p: 1,
+            q: "quote".to_string(),
+            verified: true,
+        })
+        .collect()
 }
 
 #[derive(Default)]
-pub struct RecordingActivities {
+pub struct RecordingSink {
     labels: Mutex<Vec<String>>,
+    changes: Mutex<Vec<AssistantChange>>,
 }
 
-impl RecordingActivities {
+impl RecordingSink {
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn labels(&self) -> Vec<String> {
-        self.labels
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .clone()
+        guard(&self.labels).clone()
+    }
+
+    pub fn changes(&self) -> Vec<AssistantChange> {
+        guard(&self.changes).clone()
     }
 }
 
-impl ActivitySink for RecordingActivities {
+impl TurnSink for RecordingSink {
     fn record(&self, label: String) {
-        self.labels
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .push(label);
+        guard(&self.labels).push(label);
+    }
+
+    fn changed(&self, change: AssistantChange) {
+        guard(&self.changes).push(change);
     }
 }
 
@@ -232,7 +532,7 @@ impl FakeLlm {
         self.set_hook(move |token| {
             if let Some(grant) = grants.get(token) {
                 for label in &labels {
-                    grant.activities.record(label.clone());
+                    grant.sink.record(label.clone());
                 }
             }
         });

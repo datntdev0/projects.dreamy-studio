@@ -2,7 +2,9 @@ import { Component, ElementRef, effect, inject, viewChild } from "@angular/core"
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { CoreModule } from "@app/core/core.module";
-import { formatStamp } from "@app/features/novel/novel.rules";
+import { LanguageService } from "@app/core/language/language.service";
+import { displayName, formatStamp } from "@app/features/novel/novel.rules";
+import { NovelService } from "@app/features/novel/novel.service";
 import { AssistantAttachment, AssistantBlock, AssistantCitation, AssistantMessage, AssistantSession, KnowledgeChangeSet, ProposalResolution, TranslationReview } from "../assistant.models";
 import { blocksOf } from "../assistant.rules";
 import { AssistantService } from "../assistant.service";
@@ -18,6 +20,9 @@ import { AssistantReviewCard } from "./review-card.component";
 })
 export class AssistantChat {
   private readonly scroller = viewChild<ElementRef<HTMLElement>>("scroller");
+
+  private readonly languageService = inject(LanguageService);
+  private readonly novels = inject(NovelService);
 
   readonly assistant = inject(AssistantService);
   private followKey = "";
@@ -35,7 +40,8 @@ export class AssistantChat {
   }
 
   citationLabel(citation: AssistantCitation): string {
-    return `Ch.${citation.chapter} ¶${citation.p}`;
+    const novel = this.novels.novelById(citation.novelId);
+    return this.languageService.translate("assistant.cite.novel", { novel: novel ? displayName(novel) : `#${citation.novelId}`, chapter: citation.chapter, p: citation.p });
   }
 
   title(session: AssistantSession | null): string {

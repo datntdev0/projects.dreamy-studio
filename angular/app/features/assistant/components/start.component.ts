@@ -7,7 +7,7 @@ import { NovelSummary } from "@app/features/novel/novel.models";
 import { displayName, formatCount } from "@app/features/novel/novel.rules";
 import { NovelService } from "@app/features/novel/novel.service";
 import { AssistantScope, AssistantSessionSummary } from "../assistant.models";
-import { WORKSPACE_SCOPE, novelScope, sameScope, scopeNovels, shortStamp } from "../assistant.rules";
+import { NOVEL_SCOPES, WORKSPACE_SCOPE, novelScope, sameScope, scopeNovels, shortStamp } from "../assistant.rules";
 import { AssistantService } from "../assistant.service";
 import { AssistantComposer } from "./composer.component";
 
@@ -28,6 +28,7 @@ export class AssistantStart {
   readonly assistant = inject(AssistantService);
   readonly novels = inject(NovelService);
   readonly workspaceScope = WORKSPACE_SCOPE;
+  readonly novelScopes = NOVEL_SCOPES;
   readonly expanded = signal(false);
   readonly query = signal("");
   readonly options = computed(this.buildOptions.bind(this));
@@ -126,7 +127,8 @@ export class AssistantStart {
   }
 
   private focusSearch(): void {
-    this.searchField()?.nativeElement.focus();
+    const target = this.searchField()?.nativeElement ?? this.panel()?.nativeElement.querySelector<HTMLElement>("[data-nav]");
+    target?.focus();
   }
 
   private focusToggle(): void {

@@ -2,8 +2,6 @@ import { Component, computed, inject, input } from "@angular/core";
 import { Icon } from "@components/icon";
 import { LanguageKey } from "@app/core/language/language.models";
 import { CoreModule } from "@app/core/core.module";
-import { AssistantService } from "@app/features/assistant/assistant.service";
-import { novelScope } from "@app/features/assistant/assistant.rules";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
@@ -44,7 +42,6 @@ export class NovelKnowledgeReview {
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
 
-  readonly assistant = inject(AssistantService);
   readonly novelId = input.required<number>();
 
   readonly view = computed(this.buildView.bind(this));
@@ -52,16 +49,6 @@ export class NovelKnowledgeReview {
   readonly issues = computed(this.buildIssues.bind(this));
   readonly counts = computed(this.buildCounts.bind(this));
   readonly cards = computed(this.buildCards.bind(this));
-
-  askAssistant(): void {
-    const cards = this.cards();
-    if (cards.length === 0) {
-      return;
-    }
-    const text = this.languageService.translate("assistant.ask.knowledge", { count: cards.length });
-    const issueIds = cards.map(this.issueIdOf.bind(this));
-    void this.assistant.ask(novelScope(this.novelId()), text, { kind: "knowledge_review", lang: this.view().lang, issueIds });
-  }
 
   onRule(event: Event): void {
     this.knowledge.patchView(this.novelId(), { rule: (event.target as HTMLSelectElement).value as RuleId | "all" });
@@ -193,9 +180,5 @@ export class NovelKnowledgeReview {
       });
     }
     return out;
-  }
-
-  private issueIdOf(card: IssueCard): string {
-    return card.issue.id;
   }
 }

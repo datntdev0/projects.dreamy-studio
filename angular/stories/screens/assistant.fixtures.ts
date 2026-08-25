@@ -1,4 +1,5 @@
 import { KnowledgeChangeSet, TranslationReview } from "@app/features/assistant/assistant.models";
+import { NOVEL_ID } from "./novel-translation.mocks";
 
 export function translationReview(chapter: number, chapterTitle: string): TranslationReview {
   return {
@@ -84,7 +85,7 @@ export function knowledgeChanges(): KnowledgeChangeSet {
         before: "2 persona: “Wren · người giữ đèn”, “Người giữ đèn”",
         after: "1 persona “Wren · người giữ đèn”, giữ toàn bộ evidence và fact của cả hai",
         reason: "Cùng một nhân dạng: chương 1 gọi Wren là “người giữ đèn cuối cùng”, và chưa có người giữ đèn nào khác xuất hiện.",
-        ev: [{ chapter: 1, p: 2, quote: "Wren là người giữ đèn cuối cùng của Harrowmere." }],
+        ev: [{ novelId: NOVEL_ID, chapter: 1, p: 2, quote: "Wren là người giữ đèn cuối cùng của Harrowmere." }],
       },
       {
         id: "c-props",
@@ -102,7 +103,7 @@ export function knowledgeChanges(): KnowledgeChangeSet {
         before: "Wren (character) → Tháp Đèn",
         after: "Wren · người giữ đèn (persona) → Tháp Đèn",
         reason: "Theo ontology, fact về một người phải gắn vào persona, không gắn trực tiếp vào character (rule character_predicate).",
-        ev: [{ chapter: 1, p: 5, quote: "Cô sống một mình trên đỉnh Tháp Đèn." }],
+        ev: [{ novelId: NOVEL_ID, chapter: 1, p: 5, quote: "Cô sống một mình trên đỉnh Tháp Đèn." }],
       },
       {
         id: "c-retype",
@@ -111,7 +112,7 @@ export function knowledgeChanges(): KnowledgeChangeSet {
         before: "term",
         after: "event",
         reason: "“Kiểm kê” là cuộc kiểm kê do Hội đồng tiến hành ở chương 2, không phải khái niệm trong thế giới truyện. Fact participates_in của Maro đang trỏ tới nó.",
-        ev: [{ chapter: 2, p: 3, quote: "Tôi được cử đến để đếm những gì còn lại." }],
+        ev: [{ novelId: NOVEL_ID, chapter: 2, p: 3, quote: "Tôi được cử đến để đếm những gì còn lại." }],
       },
     ],
   };

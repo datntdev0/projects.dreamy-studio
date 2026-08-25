@@ -61,7 +61,7 @@ const NAMES_TURNS: Turn[] = [
     role: "assistant",
     text: "Mình đã đối chiếu 14 tên riêng trong KB với bản dịch chương 1–2. Có 2 tên chưa nhất quán:\n\n- “Harrowmere”: 9 lần giữ nguyên, 2 lần dịch thành “Cảng Sương”.\n- “守灯人”: 6 lần “người giữ đèn”, 1 lần “người canh đèn”.\n\nĐề xuất thêm vào từ điển: Harrowmere → Harrowmere (place), 守灯人 → người giữ đèn (title). Bạn có muốn mình thêm và sửa lại 3 đoạn bị lệch không?",
     activities: ["kb_search(type=persona|location) → 14 entity", "name_renderings(14 tên) → 2 chương", "dictionary_list → 8 mục"],
-    citations: [{ chapter: 1, p: 4, quote: "Sương mù trên Cảng Sương dày đến mức…" }, { chapter: 2, p: 11, quote: "Người canh đèn không trả lời." }],
+    citations: [{ novelId: NOVEL_ID, chapter: 1, p: 4, quote: "Sương mù trên Cảng Sương dày đến mức…" }, { novelId: NOVEL_ID, chapter: 2, p: 11, quote: "Người canh đèn không trả lời." }],
   },
   { role: "user", text: "Thêm vào từ điển giúp tôi." },
   {
@@ -77,7 +77,7 @@ const RELATION_TURNS: Turn[] = [
     role: "assistant",
     text: "Theo knowledgebase (đến chương 3), Wren là người giữ đèn cuối cùng của Harrowmere, còn Maro Quill là thư lại được Hội đồng phái đến để kiểm kê.\n\nHọ chưa có quan hệ đồng minh được văn bản xác nhận. Ban đầu Maro đến với tư cách người đánh giá, nhưng ở chương 3 Wren đưa Maro lên Tháp Đèn. Đây là dấu hiệu tin tưởng (suy luận, chưa có fact ally_of).",
     activities: ["kb_entity(Wren · người giữ đèn)", "kb_facts(subject=Wren, object=Maro)", "read_paragraphs(ch3 ¶2–¶8)"],
-    citations: [{ chapter: 2, p: 3, quote: "Tôi được cử đến để đếm những gì còn lại." }, { chapter: 3, p: 6, quote: "Wren dẫn anh lên bậc thang xoắn của Tháp Đèn." }],
+    citations: [{ novelId: NOVEL_ID, chapter: 2, p: 3, quote: "Tôi được cử đến để đếm những gì còn lại." }, { novelId: NOVEL_ID, chapter: 3, p: 6, quote: "Wren dẫn anh lên bậc thang xoắn của Tháp Đèn." }],
   },
 ];
 
@@ -113,7 +113,7 @@ ${rest} xung đột còn lại (Evidence, Source changed) cần phân tích lạ
 
 Bộ thay đổi dưới đây đã chạy thử với ontology và không tạo xung đột mới.`,
     activities: [`kb_issues(rule=all) → ${count} xung đột`, "kb_entity × 3", "read_paragraphs(ch1 ¶2–¶5, ch2 ¶3)", "propose_kb(6 edits) → dry-run OK"],
-    citations: [{ chapter: 1, p: 2, quote: "Wren là người giữ đèn cuối cùng của Harrowmere." }],
+    citations: [{ novelId: NOVEL_ID, chapter: 1, p: 2, quote: "Wren là người giữ đèn cuối cùng của Harrowmere." }],
     attachments: [knowledgeChanges()],
   };
 }
@@ -182,7 +182,7 @@ function replyFor(text: string, scope: AssistantScope, context: AssistantContext
     role: "assistant",
     text: "Mình đã đọc các chương liên quan trong phạm vi novel này.\n\nĐây là câu trả lời mẫu trong Storybook. Khi nối backend, nội dung sẽ được sinh bởi provider đã cấu hình trong Settings > LLM > Assistant.",
     activities: ["novel_outline", "search_text(\"" + titleOf(text).slice(0, 24) + "\")"],
-    citations: [{ chapter: 1, p: 2, quote: "Ngọn đèn cuối cùng vẫn còn cháy." }],
+    citations: [{ novelId: NOVEL_ID, chapter: 1, p: 2, quote: "Ngọn đèn cuối cùng vẫn còn cháy." }],
   };
 }
 
@@ -198,15 +198,27 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function playActivities(args: Record<string, unknown>, activities: string[], total: number): Promise<void> {
+  const channel = args["onEvent"] as { emit: (event: { kind: "activity"; label: string }) => void } | undefined;
+  const gap = total / (activities.length + 1);
+  for (const label of activities) {
+    await delay(gap);
+    channel?.emit({ kind: "activity", label });
+  }
+  await delay(gap);
+}
+
 async function send(state: MockState, args: Record<string, unknown>): Promise<AssistantSession> {
-  await delay(state.scenario.replyDelayMs ?? REPLY_DELAY_MS);
+  const total = state.scenario.replyDelayMs ?? REPLY_DELAY_MS;
   if (state.scenario.failSend) {
+    await delay(total);
     throw { code: "task", detail: "Claude Code CLI exited with exit code: 1: not logged in." };
   }
   const target = find(state, String(args["sessionId"]));
   const text = String(args["text"]);
-  const now = new Date().toISOString();
   const reply = replyFor(text, target.scope, (args["context"] as AssistantContext | null | undefined) ?? null);
+  await playActivities(args, reply.activities ?? [], total);
+  const now = new Date().toISOString();
   target.messages.push(message(`m-${state.nextMessage++}`, { role: "user", text }, now));
   target.messages.push(message(`m-${state.nextMessage++}`, reply, now));
   target.title = target.title || titleOf(text);

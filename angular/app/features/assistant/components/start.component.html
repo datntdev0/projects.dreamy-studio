@@ -21,10 +21,12 @@
       </button>
       @if (expanded()) {
         <div #panel class="asst-pick-panel" id="assistant-scope-panel" data-testid="assistant-scope-panel">
-          <label class="search asst-pick-search" data-testid="assistant-scope-search-label">
-            <span class="sr-only" data-testid="assistant-scope-search-text">{{ "assistant.scope.search" | t }}</span>
-            <input #searchField class="input" type="search" autocomplete="off" [value]="query()" [attr.placeholder]="'assistant.scope.search' | t" data-nav data-testid="assistant-scope-search" (input)="onQuery($event)" />
-          </label>
+          @if (novelScopes) {
+            <label class="search asst-pick-search" data-testid="assistant-scope-search-label">
+              <span class="sr-only" data-testid="assistant-scope-search-text">{{ "assistant.scope.search" | t }}</span>
+              <input #searchField class="input" type="search" autocomplete="off" [value]="query()" [attr.placeholder]="'assistant.scope.search' | t" data-nav data-testid="assistant-scope-search" (input)="onQuery($event)" />
+            </label>
+          }
           <div class="asst-pick-list" role="listbox" [attr.aria-label]="'assistant.scope.list' | t" data-testid="assistant-scope-list">
             <button type="button" role="option" class="asst-pick-opt" [class.is-active]="isChosen(workspaceScope)" [attr.aria-selected]="isChosen(workspaceScope)" data-nav data-scope="workspace" data-testid="assistant-scope-option" (click)="chooseWorkspace()">
               <ds-icon name="globe" [size]="14" />
@@ -32,18 +34,20 @@
               <span class="asst-pick-meta t-sm t-mute" data-testid="assistant-scope-option-meta">{{ "assistant.scope.workspaceShort" | t: { count: novels.novels().length } }}</span>
               @if (isChosen(workspaceScope)) { <ds-icon name="check" [size]="14" /> }
             </button>
-            <div class="asst-pick-scroll" role="group" data-testid="assistant-scope-scroll">
-              @for (novel of options(); track novel.id) {
-                <button type="button" role="option" class="asst-pick-opt" [class.is-active]="isNovelChosen(novel)" [attr.aria-selected]="isNovelChosen(novel)" [attr.title]="nameOf(novel)" data-nav [attr.data-scope]="'novel-' + novel.id" data-testid="assistant-scope-option" (click)="chooseNovel(novel)">
-                  <ds-icon name="book" [size]="14" />
-                  <span class="asst-pick-name" data-testid="assistant-scope-option-name">{{ nameOf(novel) }}</span>
-                  <span class="asst-pick-meta t-sm t-mute" data-testid="assistant-scope-option-meta">{{ novelShort(novel) }}</span>
-                  @if (isNovelChosen(novel)) { <ds-icon name="check" [size]="14" /> }
-                </button>
-              }
-            </div>
+            @if (novelScopes) {
+              <div class="asst-pick-scroll" role="group" data-testid="assistant-scope-scroll">
+                @for (novel of options(); track novel.id) {
+                  <button type="button" role="option" class="asst-pick-opt" [class.is-active]="isNovelChosen(novel)" [attr.aria-selected]="isNovelChosen(novel)" [attr.title]="nameOf(novel)" data-nav [attr.data-scope]="'novel-' + novel.id" data-testid="assistant-scope-option" (click)="chooseNovel(novel)">
+                    <ds-icon name="book" [size]="14" />
+                    <span class="asst-pick-name" data-testid="assistant-scope-option-name">{{ nameOf(novel) }}</span>
+                    <span class="asst-pick-meta t-sm t-mute" data-testid="assistant-scope-option-meta">{{ novelShort(novel) }}</span>
+                    @if (isNovelChosen(novel)) { <ds-icon name="check" [size]="14" /> }
+                  </button>
+                }
+              </div>
+            }
           </div>
-          @if (options().length === 0 && query().trim() !== "") {
+          @if (novelScopes && options().length === 0 && query().trim() !== "") {
             <p class="asst-pick-empty t-sm t-mute" role="status" data-testid="assistant-scope-empty">{{ "assistant.scope.noMatch" | t }}</p>
           }
         </div>

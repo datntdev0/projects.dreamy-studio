@@ -4,6 +4,8 @@ import { AssistantBlock, AssistantScope, AssistantScopeFilter, AssistantSessionS
 
 export const RECENT_SESSIONS = 3;
 
+export const NOVEL_SCOPES = false;
+
 export const WORKSPACE_SCOPE: AssistantScope = { kind: "workspace", novelId: null };
 
 export function novelScope(novelId: number): AssistantScope {

@@ -260,6 +260,7 @@
   "assistant.toast.rejected": "Proposals dismissed: {count}.",
   "assistant.error.resolve": "Could not handle the proposal: {detail}",
   "novel.knowledge.review.ask": "Ask Assistant for fixes",
+  "novel.knowledge.review.askSoon": "Coming soon",
   "assistant.cap": "Assistant",
   "assistant.new": "New chat",
   "assistant.back": "Back",
@@ -302,7 +303,9 @@
   "assistant.chat.log": "Messages",
   "assistant.chat.loading": "Opening chat…",
   "assistant.chat.thinking": "Assistant is replying…",
+  "assistant.chat.working": "Searching the workspace…",
   "assistant.chat.activities": "Tool calls: {count}",
+  "assistant.cite.novel": "{novel} · Ch.{chapter} ¶{p}",
   "assistant.delete.title": "Delete chat?",
   "assistant.delete.meta": "{scope} · Messages: {count}",
   "assistant.delete.warn": "All messages in this chat are deleted permanently. Edits already applied to the novel are not affected.",
@@ -1227,6 +1230,7 @@
   ,"novel.translation.warn.filter.dict": "Dictionary"
   ,"novel.translation.trans.cancel": "Cancel"
   ,"novel.translation.result.review": "Ask the Assistant to review"
+  ,"novel.translation.result.reviewSoon": "Coming soon"
   ,"novel.translation.guide.prompt": "Prompt"
   ,"novel.translation.guide.placeholder": "e.g. Translate for internal research. Keep a neutral tone, address characters as “anh/chị”, keep place names in the dictionary…"
   ,"novel.translation.summary.guideSet": "Written"

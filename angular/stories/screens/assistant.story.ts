@@ -50,3 +50,9 @@ export const SendFailed: Story = screen({ failSend: true, replyDelayMs: 200 }, a
   await send(root, "Giữ “Chuông triều” là term riêng.");
   await waitFor(root, '[data-testid="assistant-chat-error"]');
 });
+
+export const Working: Story = screen({ replyDelayMs: 4000 }, async (root) => {
+  await openSession(root, "s-terms");
+  await send(root, "Giữ “Chuông triều” là term riêng.");
+  await waitFor(root, '[data-testid="assistant-live-activity"]');
+});

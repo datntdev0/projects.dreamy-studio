@@ -8,8 +8,8 @@ import { displayName, toNovelError } from "@app/features/novel/novel.rules";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { LayoutService } from "@layout/layout.service";
 import { TabsService } from "@layout/tabs.service";
-import { AssistantContext, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from "./assistant.models";
-import { RECENT_SESSIONS, WORKSPACE_SCOPE, compareRecentFirst, novelScope } from "./assistant.rules";
+import { AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from "./assistant.models";
+import { NOVEL_SCOPES, RECENT_SESSIONS, WORKSPACE_SCOPE, compareRecentFirst, novelScope } from "./assistant.rules";
 
 function summaryOf(session: AssistantSession): AssistantSessionSummary {
   return {
@@ -45,6 +45,7 @@ export class AssistantService {
   readonly opening = signal(false);
   readonly sending = signal(false);
   readonly pendingText = signal<string | null>(null);
+  readonly liveActivities = signal<string[]>([]);
   readonly sendError = signal<string | null>(null);
   readonly resolving = signal<string | null>(null);
   readonly draft = signal("");
@@ -85,6 +86,9 @@ export class AssistantService {
   }
 
   contextScope(): AssistantScope {
+    if (!NOVEL_SCOPES) {
+      return WORKSPACE_SCOPE;
+    }
     const novelId = this.tabs.active().novelId ?? this.novels.selectedId();
     return novelId !== null && this.novels.novelById(novelId) ? novelScope(novelId) : WORKSPACE_SCOPE;
   }
@@ -186,10 +190,11 @@ export class AssistantService {
     this.sending.set(true);
     this.sendError.set(null);
     this.pendingText.set(body);
+    this.liveActivities.set([]);
     this.view.set("chat");
     try {
       const session = this.active() ?? (await this.create());
-      const next = await this.ipc.invoke<AssistantSession>("assistant_message_send", { sessionId: session.id, text: body, context });
+      const next = await this.ipc.invoke<AssistantSession>("assistant_message_send", { sessionId: session.id, text: body, context, onEvent: this.ipc.channel<AssistantEvent>(this.onEvent.bind(this)) });
       if (epoch === this.epoch && this.active()?.id === next.id) {
         this.active.set(next);
         this.upsert(summaryOf(next));
@@ -207,6 +212,7 @@ export class AssistantService {
       if (epoch === this.epoch) {
         this.sending.set(false);
         this.pendingText.set(null);
+        this.liveActivities.set([]);
       }
     }
   }
@@ -254,11 +260,22 @@ export class AssistantService {
     this.opening.set(false);
     this.sending.set(false);
     this.pendingText.set(null);
+    this.liveActivities.set([]);
     this.sendError.set(null);
     this.resolving.set(null);
     this.draft.set("");
     this.draftScope.set(WORKSPACE_SCOPE);
     this.view.set("start");
+  }
+
+  private onEvent(event: AssistantEvent): void {
+    if (event.kind === "activity") {
+      this.liveActivities.update(this.withLabel.bind(this, event.label));
+    }
+  }
+
+  private withLabel(label: string, labels: string[]): string[] {
+    return [...labels, label];
   }
 
   private async create(): Promise<AssistantSession> {

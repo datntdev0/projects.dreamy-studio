@@ -76,6 +76,16 @@
         <div class="asst-msg asst-msg-bot" data-testid="assistant-typing">
           <header class="asst-msg-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-sm t-mute">{{ "assistant.chat.thinking" | t }}</span></header>
           <span class="asst-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          @if (assistant.sending()) {
+            <div class="asst-live" data-testid="assistant-live">
+              <span class="t-sm t-mute" data-testid="assistant-live-label">{{ "assistant.chat.working" | t }}</span>
+              <ul class="asst-live-list" data-testid="assistant-live-list">
+                @for (activity of assistant.liveActivities(); track $index) {
+                  <li class="t-sm t-mute" data-testid="assistant-live-activity">{{ activity }}</li>
+                }
+              </ul>
+            </div>
+          }
         </div>
       }
       @if (assistant.sendError(); as failure) {

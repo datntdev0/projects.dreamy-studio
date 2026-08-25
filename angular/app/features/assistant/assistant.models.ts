@@ -12,9 +12,15 @@ export interface AssistantScope {
 }
 
 export interface AssistantCitation {
+  novelId: number;
   chapter: number;
   p: number;
   quote: string;
+}
+
+export interface AssistantEvent {
+  kind: "activity";
+  label: string;
 }
 
 export type ProposalStatus = "pending" | "applied" | "rejected";

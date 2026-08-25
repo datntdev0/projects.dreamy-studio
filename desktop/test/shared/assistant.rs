@@ -1,10 +1,17 @@
 use crate::features::assistant::grants::ActivitySink;
+use crate::features::assistant::grants::McpGrants;
+use crate::features::assistant::models::AssistantEvent;
+use crate::features::assistant::models::AssistantEventSink;
+use crate::features::assistant::service::AssistantLlm;
 use crate::features::assistant::tools::NovelSource;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
+use crate::features::pipeline::llm::Turn;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 #[derive(Default)]
 pub struct FakeNovels {
@@ -161,4 +168,161 @@ impl ActivitySink for RecordingActivities {
             .unwrap_or_else(|error| error.into_inner())
             .push(label);
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallKind {
+    Start,
+    Resume,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LlmCall {
+    pub kind: CallKind,
+    pub cli_session: Option<String>,
+    pub prompt: String,
+    pub token: String,
+}
+
+type Hook = Box<dyn Fn(&str) + Send + Sync>;
+
+pub struct FakeLlm {
+    provider: Mutex<Result<String, String>>,
+    replies: Mutex<VecDeque<Result<String, String>>>,
+    calls: Mutex<Vec<LlmCall>>,
+    forgotten: Mutex<Vec<String>>,
+    hook: Mutex<Option<Hook>>,
+    started: Mutex<usize>,
+}
+
+impl FakeLlm {
+    pub fn new() -> Self {
+        Self {
+            provider: Mutex::new(Ok("claude".to_string())),
+            replies: Mutex::new(VecDeque::new()),
+            calls: Mutex::new(Vec::new()),
+            forgotten: Mutex::new(Vec::new()),
+            hook: Mutex::new(None),
+            started: Mutex::new(0),
+        }
+    }
+
+    pub fn set_provider(&self, id: &str) {
+        *guard(&self.provider) = Ok(id.to_string());
+    }
+
+    pub fn fail_provider(&self, message: &str) {
+        *guard(&self.provider) = Err(message.to_string());
+    }
+
+    pub fn push_reply(&self, text: &str) {
+        guard(&self.replies).push_back(Ok(text.to_string()));
+    }
+
+    pub fn push_error(&self, message: &str) {
+        guard(&self.replies).push_back(Err(message.to_string()));
+    }
+
+    pub fn set_hook(&self, hook: impl Fn(&str) + Send + Sync + 'static) {
+        *guard(&self.hook) = Some(Box::new(hook));
+    }
+
+    pub fn record_activities(&self, grants: McpGrants, labels: &[&str]) {
+        let labels: Vec<String> = labels.iter().map(|label| label.to_string()).collect();
+        self.set_hook(move |token| {
+            if let Some(grant) = grants.get(token) {
+                for label in &labels {
+                    grant.activities.record(label.clone());
+                }
+            }
+        });
+    }
+
+    pub fn calls(&self) -> Vec<LlmCall> {
+        guard(&self.calls).clone()
+    }
+
+    pub fn forgotten(&self) -> Vec<String> {
+        guard(&self.forgotten).clone()
+    }
+
+    fn run(
+        &self,
+        kind: CallKind,
+        cli_session: Option<&str>,
+        prompt: String,
+        token: &str,
+    ) -> Result<String, String> {
+        guard(&self.calls).push(LlmCall {
+            kind,
+            cli_session: cli_session.map(str::to_string),
+            prompt,
+            token: token.to_string(),
+        });
+        if let Some(hook) = guard(&self.hook).as_ref() {
+            hook(token);
+        }
+        guard(&self.replies)
+            .pop_front()
+            .unwrap_or_else(|| Ok("ok".to_string()))
+    }
+}
+
+impl Default for FakeLlm {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AssistantLlm for FakeLlm {
+    fn provider(&self) -> Result<String, String> {
+        guard(&self.provider).clone()
+    }
+
+    fn start(&self, prompt: String, token: &str) -> Result<Turn, String> {
+        let text = self.run(CallKind::Start, None, prompt, token)?;
+        let mut started = guard(&self.started);
+        *started += 1;
+        Ok(Turn {
+            text,
+            session: format!("cli-{}", *started),
+        })
+    }
+
+    fn resume(&self, session: &str, prompt: String, token: &str) -> Result<Turn, String> {
+        let text = self.run(CallKind::Resume, Some(session), prompt, token)?;
+        Ok(Turn {
+            text,
+            session: session.to_string(),
+        })
+    }
+
+    fn forget(&self, session: &str) {
+        guard(&self.forgotten).push(session.to_string());
+    }
+}
+
+#[derive(Default)]
+pub struct RecordingEvents {
+    events: Mutex<Vec<AssistantEvent>>,
+}
+
+impl RecordingEvents {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn events(&self) -> Vec<AssistantEvent> {
+        guard(&self.events).clone()
+    }
+}
+
+impl AssistantEventSink for RecordingEvents {
+    fn emit(&self, event: AssistantEvent) {
+        guard(&self.events).push(event);
+    }
+}
+
+fn guard<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|error| error.into_inner())
 }

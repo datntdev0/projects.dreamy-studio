@@ -1,6 +1,9 @@
 pub mod grants;
 pub mod models;
+pub mod prompt;
 pub mod protocol;
+pub mod reply;
 pub mod repository;
 pub mod server;
+pub mod service;
 pub mod tools;

@@ -3,8 +3,17 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri::RunEvent;
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use crate::commands;
+use crate::commands::assistant::AppMcpHost;
 use crate::container::AppContainer;
+use crate::features::assistant::grants::McpGrants;
+use crate::features::assistant::server::McpServer;
+use crate::features::assistant::service::AssistantService;
+use crate::features::assistant::service::CliAssistantLlm;
+use crate::features::assistant::service::McpEndpoint;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::analyzer::LlmAnalyzer;
@@ -101,6 +110,11 @@ pub fn run() {
             commands::knowledge::knowledge_get,
             commands::knowledge::knowledge_edit,
             commands::knowledge::knowledge_stale_accept,
+            commands::assistant::assistant_session_list,
+            commands::assistant::assistant_session_get,
+            commands::assistant::assistant_session_create,
+            commands::assistant::assistant_message_send,
+            commands::assistant::assistant_session_delete,
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
             commands::pipeline::pipeline_history_list,
@@ -165,6 +179,9 @@ fn handle_run_event(app: &AppHandle, event: RunEvent) {
         if let Some(executor) = app.try_state::<PipelineExecutor>() {
             executor.cancel();
         }
+        if let Some(server) = app.try_state::<McpServer>() {
+            server.stop();
+        }
         if let Some(container) = app.try_state::<AppContainer>() {
             container.backend.stop();
             container.logger.info("app", "backend stopped on exit");
@@ -176,6 +193,7 @@ fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let container = AppContainer::new(app)?;
     log_startup(app, &container);
     manage_workspace(app, &container);
+    manage_assistant(app, &container);
     app.manage(container);
     prepare_window(app);
     Ok(())
@@ -206,6 +224,29 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     manage_pipeline(app, container);
     app.manage(crate::features::project::service::ProjectService::new());
     app.manage(crate::features::library::service::LibraryService::new());
+}
+
+fn manage_assistant(app: &App, container: &AppContainer) {
+    let grants = McpGrants::new();
+    let endpoint: McpEndpoint = Arc::new(Mutex::new(None));
+    let llm = Arc::new(CliAssistantLlm::new(
+        SettingsRepository::new(container.settings_path.clone()),
+        Some(container.directories.logs.clone()),
+        endpoint.clone(),
+    ));
+    app.manage(AssistantService::new(llm, grants.clone()));
+    let host = Arc::new(AppMcpHost(app.handle().clone()));
+    match McpServer::start(grants.clone(), host) {
+        Ok(server) => {
+            *endpoint.lock().unwrap_or_else(|error| error.into_inner()) = Some(server.endpoint());
+            app.manage(server);
+        }
+        Err(error) => {
+            let message = format!("assistant server did not start: {error}");
+            container.logger.log("WARN", "assistant", &message);
+        }
+    }
+    app.manage(grants);
 }
 
 fn manage_pipeline(app: &App, container: &AppContainer) {

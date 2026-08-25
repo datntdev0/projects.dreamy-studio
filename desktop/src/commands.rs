@@ -1,4 +1,5 @@
 pub mod app;
+pub mod assistant;
 pub mod knowledge;
 pub mod library;
 pub mod library_stream;

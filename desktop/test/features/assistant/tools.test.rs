@@ -79,7 +79,7 @@ fn positions(page: &Value) -> Vec<i64> {
 }
 
 #[test]
-fn definitions_describe_the_read_tools() {
+fn definitions_describe_the_tools() {
     let tools = definitions();
     let list = tools.as_array().unwrap();
     let names: Vec<&str> = list
@@ -92,7 +92,10 @@ fn definitions_describe_the_read_tools() {
             "list_novel",
             "read_novel",
             "read_novel_chapter",
-            "read_novel_knowledge"
+            "read_novel_knowledge",
+            "edit_novel",
+            "edit_novel_chapter",
+            "edit_novel_knowledge"
         ]
     );
     for tool in list {

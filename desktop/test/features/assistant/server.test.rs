@@ -179,7 +179,7 @@ fn initialize_returns_json() {
 }
 
 #[test]
-fn tools_list_returns_the_read_tools() {
+fn tools_list_returns_the_read_and_edit_tools() {
     let fixture = Fixture::new();
     let token = fixture.issue("ws");
     let (status, body) = fixture.post(
@@ -189,7 +189,7 @@ fn tools_list_returns_the_read_tools() {
     assert_eq!(status, 200);
     assert_eq!(
         parsed(&body)["result"]["tools"].as_array().unwrap().len(),
-        4
+        7
     );
 }
 

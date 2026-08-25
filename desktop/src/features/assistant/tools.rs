@@ -1,3 +1,4 @@
+use crate::features::assistant::edits;
 use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
@@ -87,6 +88,76 @@ pub fn definitions() -> Value {
                 "required": ["novelId", "lang"],
                 "additionalProperties": false
             }
+        },
+        {
+            "name": "edit_novel",
+            "description": "Change the metadata of one novel. Only the fields you pass are changed; the novel language cannot be changed. Requires editing to be enabled for the session.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "title": { "type": "string", "description": "New display title." },
+                    "name": { "type": "string", "description": "New name." },
+                    "author": { "type": "string", "description": "New author." },
+                    "description": { "type": "string", "description": "New description." },
+                    "tags": { "type": "array", "items": { "type": "string" }, "description": "New full list of tags; it replaces the old list." }
+                },
+                "required": ["novelId"],
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "edit_novel_chapter",
+            "description": "Rename a chapter and/or replace the text of some of its paragraphs. For every paragraph pass `expected`, its current text exactly as read_novel_chapter returned it. All `expected` values are checked first; if any differs, nothing is written. Requires editing to be enabled for the session.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
+                    "title": { "type": "string", "description": "New chapter title." },
+                    "paragraphs": {
+                        "type": "array",
+                        "description": "Paragraph replacements.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "p": { "type": "integer", "minimum": 1, "description": "1-based paragraph position." },
+                                "expected": { "type": "string", "description": "Current text of the paragraph, exactly as read." },
+                                "text": { "type": "string", "description": "New text of the paragraph." }
+                            },
+                            "required": ["p", "expected", "text"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["novelId", "chapter"],
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "edit_novel_knowledge",
+            "description": "Apply edits to the knowledge base of one novel atomically: if any edit is invalid, none is applied. Returns {applied, remap}, where remap maps the `ref` of each added item to its new id. Requires editing to be enabled for the session. `edits` is an array of objects, each with a required \"k\" naming the edit and these fields: rename {id, name}; retype {id, type}; del {id}; merge {sources: [id], target: id}; fact {id, pred?, subject?, object?} to change a fact; props {id, titles?, aliases?} to replace the titles or aliases of an entity; evidence {id, add?: [{chapter, p, q}], remove?: [{chapter, p, q}]}; add_entity {ref, type, name, titles?, aliases?, ev: [{chapter, p, q}]}; add_fact {ref, pred, subject, object?, ev: [{chapter, p, q}]}. In evidence, `chapter` is the chapter number, `p` the 1-based paragraph position and `q` a quote from that paragraph. Ids, `type` keys and `pred` keys come from read_novel_knowledge.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
+                    "edits": {
+                        "type": "array",
+                        "minItems": 1,
+                        "description": "Edits to apply in order.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "k": { "type": "string", "enum": ["rename", "retype", "del", "merge", "fact", "props", "evidence", "add_entity", "add_fact"], "description": "Edit kind." }
+                            },
+                            "required": ["k"]
+                        }
+                    }
+                },
+                "required": ["novelId", "lang", "edits"],
+                "additionalProperties": false
+            }
         }
     ])
 }
@@ -103,6 +174,9 @@ pub fn call(
         "read_novel" => read_novel(args, ctx.scope, novels),
         "read_novel_chapter" => read_novel_chapter(args, ctx.scope, novels),
         "read_novel_knowledge" => read_novel_knowledge(args, ctx.scope, sources),
+        "edit_novel" => edits::edit_novel(args, ctx, novels),
+        "edit_novel_chapter" => edits::edit_novel_chapter(args, ctx, novels),
+        "edit_novel_knowledge" => edits::edit_novel_knowledge(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
@@ -312,7 +386,7 @@ fn allowed(scope: &AssistantScope, novel_id: i64) -> bool {
     }
 }
 
-fn find_novel(
+pub(crate) fn find_novel(
     scope: &AssistantScope,
     source: &dyn NovelSource,
     novel_id: i64,
@@ -327,15 +401,15 @@ fn find_novel(
         .ok_or_else(|| format!("novel {novel_id} not found"))
 }
 
-fn required_int(args: &Value, key: &str) -> Result<i64, String> {
+pub(crate) fn required_int(args: &Value, key: &str) -> Result<i64, String> {
     optional_int(args, key)?.ok_or_else(|| format!("missing integer argument '{key}'"))
 }
 
-fn required_str(args: &Value, key: &str) -> Result<String, String> {
+pub(crate) fn required_str(args: &Value, key: &str) -> Result<String, String> {
     optional_str(args, key)?.ok_or_else(|| format!("missing string argument '{key}'"))
 }
 
-fn optional_str(args: &Value, key: &str) -> Result<Option<String>, String> {
+pub(crate) fn optional_str(args: &Value, key: &str) -> Result<Option<String>, String> {
     match args.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(value) => value
@@ -345,7 +419,7 @@ fn optional_str(args: &Value, key: &str) -> Result<Option<String>, String> {
     }
 }
 
-fn optional_int(args: &Value, key: &str) -> Result<Option<i64>, String> {
+pub(crate) fn optional_int(args: &Value, key: &str) -> Result<Option<i64>, String> {
     match args.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(value) => value
@@ -380,7 +454,7 @@ fn chapter_json(chapter: &ChapterRow) -> Value {
     })
 }
 
-fn output(value: Value, label: String) -> ToolOutput {
+pub(crate) fn output(value: Value, label: String) -> ToolOutput {
     ToolOutput {
         text: value.to_string(),
         label,

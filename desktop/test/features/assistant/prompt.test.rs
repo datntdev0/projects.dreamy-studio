@@ -39,6 +39,16 @@ fn opening_names_tools_rules_and_format() {
     assert!(prompt.contains("list_novel"));
     assert!(prompt.contains("read_novel"));
     assert!(prompt.contains("read_novel_chapter"));
+    assert!(prompt.contains("read_novel_knowledge"));
+    assert!(prompt.contains("`edit_novel`"));
+    assert!(prompt.contains("edit_novel_chapter"));
+    assert!(prompt.contains("edit_novel_knowledge"));
+    assert!(prompt.contains("expected"));
+    assert!(prompt.contains("Edit only when the user asks you to change something."));
+    assert!(prompt.contains("Read before you edit."));
+    assert!(prompt.contains("editing is not enabled"));
+    assert!(prompt.contains("turn it on in the assistant panel"));
+    assert!(!prompt.contains("read-only"));
     assert!(prompt.contains("`next`") || prompt.contains("next"));
     assert!(prompt.contains("user's language"));
     assert!(prompt.contains("<citations>["));

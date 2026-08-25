@@ -15,6 +15,7 @@ pub const MCP_TOKEN_ENV: &str = "DREAMY_MCP_TOKEN";
 pub const CLAUDE_MCP_FILE: &str = "dreamy-mcp.json";
 pub const CLAUDE_SETTINGS_FILE: &str = "settings.json";
 pub const CODEX_CONFIG_FILE: &str = "config.toml";
+pub const CODEX_APPROVAL_MODE: &str = "approve";
 
 const CLAUDE_ALLOW: [&str; 1] = ["mcp__dreamy"];
 const CLAUDE_DENY: [&str; 10] = [
@@ -60,6 +61,7 @@ pub fn codex_config(existing: &str, endpoint: &str) -> Result<String, String> {
     let server = child_table(servers, MCP_SERVER)?;
     set_text(server, "url", endpoint);
     set_text(server, "bearer_token_env_var", MCP_TOKEN_ENV);
+    set_text(server, "default_tools_approval_mode", CODEX_APPROVAL_MODE);
     if !server.contains_key("enabled") {
         server["enabled"] = value(false);
     }

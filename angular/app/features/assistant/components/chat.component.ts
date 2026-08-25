@@ -2,10 +2,8 @@ import { Component, ElementRef, effect, inject, viewChild } from "@angular/core"
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { CoreModule } from "@app/core/core.module";
-import { LanguageService } from "@app/core/language/language.service";
-import { displayName, formatStamp } from "@app/features/novel/novel.rules";
-import { NovelService } from "@app/features/novel/novel.service";
-import { AssistantAttachment, AssistantBlock, AssistantCitation, AssistantMessage, AssistantSession, KnowledgeChangeSet, ProposalResolution, TranslationReview } from "../assistant.models";
+import { formatStamp } from "@app/features/novel/novel.rules";
+import { AssistantAttachment, AssistantBlock, AssistantMessage, AssistantSession, KnowledgeChangeSet, ProposalResolution, TranslationReview } from "../assistant.models";
 import { blocksOf } from "../assistant.rules";
 import { AssistantService } from "../assistant.service";
 import { AssistantChangesCard } from "./changes-card.component";
@@ -20,9 +18,6 @@ import { AssistantReviewCard } from "./review-card.component";
 })
 export class AssistantChat {
   private readonly scroller = viewChild<ElementRef<HTMLElement>>("scroller");
-
-  private readonly languageService = inject(LanguageService);
-  private readonly novels = inject(NovelService);
 
   readonly assistant = inject(AssistantService);
   private followKey = "";
@@ -39,10 +34,6 @@ export class AssistantChat {
     return formatStamp(message.createdAt).slice(11);
   }
 
-  citationLabel(citation: AssistantCitation): string {
-    const novel = this.novels.novelById(citation.novelId);
-    return this.languageService.translate("assistant.cite.novel", { novel: novel ? displayName(novel) : `#${citation.novelId}`, chapter: citation.chapter, p: citation.p });
-  }
 
   title(session: AssistantSession | null): string {
     return session?.title ?? this.assistant.pendingText() ?? "";

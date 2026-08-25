@@ -92,6 +92,10 @@ fn codex_config_adds_a_disabled_server_to_empty_text() {
         server["bearer_token_env_var"].as_str(),
         Some("DREAMY_MCP_TOKEN")
     );
+    assert_eq!(
+        server["default_tools_approval_mode"].as_str(),
+        Some("approve")
+    );
     assert_eq!(server["enabled"].as_bool(), Some(false));
 }
 

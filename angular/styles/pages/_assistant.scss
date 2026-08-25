@@ -94,7 +94,7 @@ app-assistant-panel, app-assistant-start, app-assistant-sessions, app-assistant-
 .asst-scope-chip[data-scope="novel"] { background: var(--primary-soft); color: var(--primary-text); }
 .asst-scope-chip .ic { flex: none; }
 .asst-chat-scope .t-mute { white-space: nowrap; }
-.asst-thread { gap: var(--sp-lg); }
+.asst-thread { gap: var(--sp-lg); overflow-x: hidden; }
 .asst-msg { display: grid; gap: var(--sp-xs); min-width: 0; }
 .asst-msg-user { justify-items: end; }
 .asst-msg-user.is-pending { opacity: 0.7; }
@@ -103,6 +103,7 @@ app-assistant-panel, app-assistant-start, app-assistant-sessions, app-assistant-
 .asst-msg-head { display: flex; align-items: center; gap: var(--sp-sm); font-size: 12.5px; }
 .asst-msg-head .asst-msg-time { margin-left: auto; }
 .asst-avatar { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--primary); color: var(--on-primary); }
+.asst-avatar .ic { transform: translate(0.5px, 1px); }
 .asst-acts { margin-left: 28px; }
 .asst-acts summary { display: inline-flex; align-items: center; gap: var(--sp-xs); cursor: pointer; list-style: none; }
 .asst-acts summary::-webkit-details-marker { display: none; }
@@ -118,16 +119,16 @@ app-assistant-panel, app-assistant-start, app-assistant-sessions, app-assistant-
 .asst-text ul { margin: 0 0 var(--sp-sm); padding-left: var(--sp-xl); }
 .asst-text li { margin-bottom: 2px; }
 .asst-text > :last-child { margin-bottom: 0; }
-.asst-cites { margin-left: 28px; display: flex; flex-wrap: wrap; }
-.asst-cite { gap: var(--sp-xs); font-family: var(--font-mono); font-size: 11px; }
-.asst-dots { margin-left: 28px; display: inline-flex; gap: 4px; }
-.asst-dots i { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--mute); animation: asst-dot 1.2s infinite ease-in-out; }
-.asst-dots i:nth-child(2) { animation-delay: 0.15s; }
-.asst-dots i:nth-child(3) { animation-delay: 0.3s; }
+.asst-cites { margin-left: 28px; display: flex; flex-wrap: wrap; min-width: 0; }
+.asst-cite { gap: var(--sp-xs); max-width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 11px; }
+.asst-dots { display: inline-flex; align-items: flex-end; gap: 3px; height: 9px; margin-left: -5px; }
+.asst-dots i { width: 4px; height: 4px; border-radius: var(--r-full); background: var(--mute); animation: asst-dot 1.2s infinite ease-in-out; }
+.asst-dots i:nth-child(2) { animation-delay: 0.2s; }
+.asst-dots i:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes asst-dot {
-  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-2px); }
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
 }
 
 @keyframes asst-live {
@@ -135,7 +136,24 @@ app-assistant-panel, app-assistant-start, app-assistant-sessions, app-assistant-
   50% { opacity: 0.55; }
 }
 
+.asst-msg-bot.is-typing .asst-avatar { animation: asst-blink 1.4s infinite ease-in-out; }
+.asst-thinking { color: transparent; background: linear-gradient(90deg, var(--mute) 0%, var(--mute) 35%, var(--ink) 50%, var(--mute) 65%, var(--mute) 100%); background-size: 250% 100%; background-clip: text; -webkit-background-clip: text; animation: asst-shimmer 1.8s infinite linear; }
+
+@keyframes asst-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes asst-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -150% 0; }
+}
+
+@keyframes asst-fade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .asst-dots i { animation: none; opacity: 0.6; }
-  .asst-live-list li:last-child { animation: none; }
+  .asst-thinking { color: var(--mute); background: none; animation: asst-fade 1.8s infinite ease-in-out; }
 }

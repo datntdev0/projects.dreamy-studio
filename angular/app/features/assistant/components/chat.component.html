@@ -52,13 +52,6 @@
                 }
               }
             </div>
-            @if (message.citations.length > 0) {
-              <div class="asst-cites" data-testid="assistant-message-citations">
-                @for (citation of message.citations; track $index) {
-                  <button type="button" class="chip asst-cite" [attr.title]="citation.quote" data-testid="assistant-message-citation"><ds-icon name="book" [size]="11" />{{ citationLabel(citation) }}</button>
-                }
-              </div>
-            }
             @for (attachment of attachmentsOf(message); track $index) {
               @if (asReview(attachment); as review) {
                 <app-assistant-review-card [review]="review" [messageId]="message.id" [busy]="isResolving(message)" (resolved)="onResolved($event)" />
@@ -73,9 +66,8 @@
         <div class="asst-msg asst-msg-user is-pending" data-testid="assistant-message-pending">
           <div class="asst-bubble" data-testid="assistant-message-pending-bubble">{{ pending }}</div>
         </div>
-        <div class="asst-msg asst-msg-bot" data-testid="assistant-typing">
-          <header class="asst-msg-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-sm t-mute">{{ "assistant.chat.thinking" | t }}</span></header>
-          <span class="asst-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div class="asst-msg asst-msg-bot is-typing" data-testid="assistant-typing">
+          <header class="asst-msg-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-sm asst-thinking" data-testid="assistant-typing-label">{{ "assistant.chat.thinking" | t }}</span><span class="asst-dots" aria-hidden="true" data-testid="assistant-typing-dots"><i></i><i></i><i></i></span></header>
           @if (assistant.sending()) {
             <div class="asst-live" data-testid="assistant-live">
               <span class="t-sm t-mute" data-testid="assistant-live-label">{{ "assistant.chat.working" | t }}</span>

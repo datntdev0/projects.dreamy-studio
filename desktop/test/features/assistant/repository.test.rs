@@ -43,6 +43,7 @@ fn record(id: &str, count: i64, updated_at: &str) -> SessionRecord {
             updated_at: updated_at.to_string(),
             message_count: count,
             preview: format!("preview {id}"),
+            edit_granted: false,
         },
         provider: None,
         cli_session: None,
@@ -83,6 +84,29 @@ fn round_trips_a_session_record() {
     stored.cli_session = None;
     repo.update_session(&stored).unwrap();
     assert_eq!(repo.find("s1").unwrap(), Some(stored));
+}
+
+#[test]
+fn round_trips_the_edit_grant() {
+    let fixture = fixture();
+    let repo = AssistantRepository::new(fixture.database.connection());
+    let mut granted = record("s1", 1, "2026-11-01T00:00:00+00:00");
+    granted.summary.edit_granted = true;
+    repo.insert_session(&granted).unwrap();
+    repo.insert_session(&record("s2", 1, "2026-11-02T00:00:00+00:00"))
+        .unwrap();
+    assert!(repo.find("s1").unwrap().unwrap().summary.edit_granted);
+    assert!(!repo.find("s2").unwrap().unwrap().summary.edit_granted);
+    let listed: Vec<bool> = repo
+        .list()
+        .unwrap()
+        .into_iter()
+        .map(|item| item.edit_granted)
+        .collect();
+    assert_eq!(listed, vec![false, true]);
+    granted.summary.edit_granted = false;
+    repo.update_session(&granted).unwrap();
+    assert!(!repo.find("s1").unwrap().unwrap().summary.edit_granted);
 }
 
 #[test]
@@ -208,6 +232,7 @@ fn serializes_session_in_wire_format() {
     };
     let value = serde_json::to_value(&session).unwrap();
     assert_eq!(value["messageCount"], 1);
+    assert_eq!(value["editGranted"], false);
     assert_eq!(
         value["scope"],
         json!({"kind": "workspace", "novelId": null})

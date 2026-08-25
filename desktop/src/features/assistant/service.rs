@@ -215,6 +215,7 @@ impl AssistantWorkspace {
                 updated_at: now,
                 message_count: 0,
                 preview: String::new(),
+                edit_granted: false,
             },
             provider: None,
             cli_session: None,
@@ -225,6 +226,19 @@ impl AssistantWorkspace {
         Ok(AssistantSession {
             summary: record.summary,
             messages: Vec::new(),
+        })
+    }
+
+    pub fn permit(&self, id: &str, granted: bool) -> AssistantResult<AssistantSession> {
+        let _gate = lock(&self.service.gate);
+        let db = self.database()?;
+        let repo = AssistantRepository::new(db.connection());
+        let mut record = find(&repo, id)?;
+        record.summary.edit_granted = granted;
+        repo.update_session(&record)?;
+        Ok(AssistantSession {
+            summary: record.summary,
+            messages: repo.messages(id)?,
         })
     }
 
@@ -330,6 +344,7 @@ impl AssistantWorkspace {
         let _gate = lock(&self.service.gate);
         let db = self.database()?;
         let repo = AssistantRepository::new(db.connection());
+        record.summary.edit_granted = find(&repo, &id)?.summary.edit_granted;
         repo.append(&id, &assistant)?;
         let messages = repo.messages(&id)?;
         if record.summary.title.is_empty() {

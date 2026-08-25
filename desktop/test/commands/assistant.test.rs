@@ -83,6 +83,23 @@ fn creates_lists_gets_and_deletes_a_session() {
 }
 
 #[test]
+fn permits_and_revokes_editing_for_a_session() {
+    let fixture = entered_fixture();
+    let created = create_session(&fixture.service, &fixture.session, workspace_scope()).unwrap();
+    let id = created.summary.id;
+
+    let on = permit_session(&fixture.service, &fixture.session, &id, true).unwrap();
+    let fetched = get_session(&fixture.service, &fixture.session, &id).unwrap();
+    let off = permit_session(&fixture.service, &fixture.session, &id, false).unwrap();
+    let missing = permit_session(&fixture.service, &fixture.session, "missing", true);
+
+    assert!(on.summary.edit_granted);
+    assert!(fetched.summary.edit_granted);
+    assert!(!off.summary.edit_granted);
+    assert_eq!(missing.unwrap_err().code, AssistantErrorCode::NotFound);
+}
+
+#[test]
 fn sends_a_message_and_lists_the_session_afterwards() {
     let fixture = entered_fixture();
     let created = create_session(&fixture.service, &fixture.session, workspace_scope()).unwrap();
@@ -132,6 +149,7 @@ fn every_operation_reports_no_workspace_without_a_current_workspace() {
         get_session(&service, &session, "id").unwrap_err(),
         create_session(&service, &session, workspace_scope()).unwrap_err(),
         delete_session(&service, &session, "id").unwrap_err(),
+        permit_session(&service, &session, "id", true).unwrap_err(),
         send_message(&service, &novels, &session, "id", "hi", None, sink).unwrap_err(),
     ];
 

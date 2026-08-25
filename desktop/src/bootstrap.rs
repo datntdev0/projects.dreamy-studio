@@ -113,6 +113,7 @@ pub fn run() {
             commands::assistant::assistant_session_list,
             commands::assistant::assistant_session_get,
             commands::assistant::assistant_session_create,
+            commands::assistant::assistant_session_permit,
             commands::assistant::assistant_message_send,
             commands::assistant::assistant_session_delete,
             commands::pipeline::pipeline_start,

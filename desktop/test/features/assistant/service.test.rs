@@ -104,6 +104,50 @@ fn create_makes_an_empty_session_hidden_from_the_list() {
 }
 
 #[test]
+fn create_stores_editing_as_not_granted() {
+    let fixture = fixture();
+    let session = fixture.workspace.create(workspace_scope()).unwrap();
+    assert!(!session.summary.edit_granted);
+}
+
+#[test]
+fn permit_turns_editing_on_and_off_without_touching_updated_at() {
+    let fixture = fixture();
+    let created = fixture.workspace.create(workspace_scope()).unwrap();
+    let id = created.summary.id.clone();
+    let on = fixture.workspace.permit(&id, true).unwrap();
+    assert!(on.summary.edit_granted);
+    assert_eq!(on.summary.updated_at, created.summary.updated_at);
+    assert!(fixture.workspace.get(&id).unwrap().summary.edit_granted);
+    let off = fixture.workspace.permit(&id, false).unwrap();
+    assert!(!off.summary.edit_granted);
+    assert_eq!(off.summary.updated_at, created.summary.updated_at);
+    assert!(!fixture.workspace.get(&id).unwrap().summary.edit_granted);
+}
+
+#[test]
+fn permit_unknown_session_is_not_found() {
+    let fixture = fixture();
+    let error = fixture.workspace.permit("missing", true).unwrap_err();
+    assert_eq!(error.code, AssistantErrorCode::NotFound);
+}
+
+#[test]
+fn send_keeps_the_edit_grant_set_before_the_turn() {
+    let fixture = fixture();
+    let id = fixture
+        .workspace
+        .create(workspace_scope())
+        .unwrap()
+        .summary
+        .id;
+    fixture.workspace.permit(&id, true).unwrap();
+    let answered = send(&fixture, &id, "Hello", &novels()).unwrap();
+    assert!(answered.summary.edit_granted);
+    assert!(fixture.workspace.list().unwrap()[0].edit_granted);
+}
+
+#[test]
 fn get_unknown_session_is_not_found() {
     let fixture = fixture();
     let error = fixture.workspace.get("missing").unwrap_err();

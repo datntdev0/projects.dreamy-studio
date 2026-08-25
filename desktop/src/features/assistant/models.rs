@@ -88,6 +88,7 @@ pub struct AssistantSessionSummary {
     pub updated_at: String,
     pub message_count: i64,
     pub preview: String,
+    pub edit_granted: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

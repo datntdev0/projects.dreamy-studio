@@ -74,6 +74,15 @@ pub fn create_session(
     service.open(session)?.create(scope)
 }
 
+pub fn permit_session(
+    service: &AssistantService,
+    session: &WorkspaceSession,
+    id: &str,
+    granted: bool,
+) -> AssistantResult<AssistantSession> {
+    service.open(session)?.permit(id, granted)
+}
+
 pub fn delete_session(
     service: &AssistantService,
     session: &WorkspaceSession,
@@ -163,6 +172,18 @@ pub async fn assistant_message_send(
     let sink: Arc<dyn AssistantEventSink> = Arc::new(ChannelSink(on_event));
     run_blocking(app, move |service, novels, session| {
         send_message(service, novels, session, &session_id, &text, context, sink)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn assistant_session_permit(
+    app: AppHandle,
+    id: String,
+    edit_granted: bool,
+) -> AssistantResult<AssistantSession> {
+    run_blocking(app, move |service, _, session| {
+        permit_session(service, session, &id, edit_granted)
     })
     .await
 }

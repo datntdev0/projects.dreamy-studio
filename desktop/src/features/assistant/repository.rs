@@ -12,7 +12,7 @@ use rusqlite::params;
 use serde::de::DeserializeOwned;
 
 const SESSION_COLUMNS: &str =
-    "id, title, scope_kind, novel_id, message_count, preview, created_at, updated_at";
+    "id, title, scope_kind, novel_id, message_count, preview, created_at, updated_at, edit_granted";
 
 pub struct AssistantRepository<'a> {
     conn: &'a Connection,
@@ -28,8 +28,8 @@ impl<'a> AssistantRepository<'a> {
         self.conn.execute(
             "INSERT INTO ws_assistant_sessions \
              (id, title, scope_kind, novel_id, provider, cli_session, message_count, preview, \
-              created_at, updated_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+              created_at, updated_at, edit_granted) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 summary.id,
                 summary.title,
@@ -40,7 +40,8 @@ impl<'a> AssistantRepository<'a> {
                 summary.message_count,
                 summary.preview,
                 summary.created_at,
-                summary.updated_at
+                summary.updated_at,
+                summary.edit_granted
             ],
         )?;
         Ok(())
@@ -51,7 +52,7 @@ impl<'a> AssistantRepository<'a> {
         self.conn.execute(
             "UPDATE ws_assistant_sessions \
              SET title = ?2, scope_kind = ?3, novel_id = ?4, provider = ?5, cli_session = ?6, \
-                 message_count = ?7, preview = ?8, updated_at = ?9 \
+                 message_count = ?7, preview = ?8, updated_at = ?9, edit_granted = ?10 \
              WHERE id = ?1",
             params![
                 summary.id,
@@ -62,7 +63,8 @@ impl<'a> AssistantRepository<'a> {
                 record.cli_session,
                 summary.message_count,
                 summary.preview,
-                summary.updated_at
+                summary.updated_at,
+                summary.edit_granted
             ],
         )?;
         Ok(())
@@ -88,8 +90,8 @@ impl<'a> AssistantRepository<'a> {
                 |row| {
                     Ok(SessionRecord {
                         summary: row_to_summary(row)?,
-                        provider: row.get(8)?,
-                        cli_session: row.get(9)?,
+                        provider: row.get(9)?,
+                        cli_session: row.get(10)?,
                     })
                 },
             )
@@ -166,6 +168,7 @@ fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<AssistantSessionSummary> {
         preview: row.get(5)?,
         created_at: row.get(6)?,
         updated_at: row.get(7)?,
+        edit_granted: row.get(8)?,
     })
 }
 

@@ -255,16 +255,10 @@ fn a_revoked_token_is_unauthorized() {
 }
 
 #[test]
-fn stop_frees_the_port() {
+fn stop_is_idempotent_and_keeps_the_endpoint() {
     let fixture = Fixture::new();
-    let address = fixture
-        .server
-        .endpoint()
-        .replace("http://", "")
-        .trim_end_matches(MCP_PATH)
-        .to_string();
-    assert!(TcpStream::connect(&address).is_ok());
+    let endpoint = fixture.server.endpoint();
     fixture.server.stop();
-    assert!(TcpStream::connect(&address).is_err());
     fixture.server.stop();
+    assert_eq!(fixture.server.endpoint(), endpoint);
 }

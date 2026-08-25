@@ -35,6 +35,14 @@ export class AssistantChat {
   }
 
 
+  editOn(): boolean {
+    return this.assistant.active()?.editGranted === true;
+  }
+
+  toggleEdit(): void {
+    void this.assistant.setEdit(!this.editOn());
+  }
+
   title(session: AssistantSession | null): string {
     return session?.title ?? this.assistant.pendingText() ?? "";
   }

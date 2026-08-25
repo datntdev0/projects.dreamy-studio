@@ -4,11 +4,15 @@
     <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.history.open' | t" [attr.title]="'assistant.history.open' | t" data-testid="assistant-chat-history" (pressed)="assistant.showSessions()"><ds-icon name="arrow-left" [size]="16" /></ds-button>
     <span class="asst-bar-title asst-chat-title" [attr.title]="title(session)" data-testid="assistant-chat-title">{{ title(session) }}</span>
     <span class="spacer"></span>
+    <button type="button" class="btn btn-sm btn-ghost asst-edit" [attr.aria-pressed]="editOn()" [disabled]="assistant.permitting() || !session" data-testid="assistant-chat-edit" (click)="toggleEdit()"><ds-icon name="pen" [size]="14" data-testid="assistant-chat-edit-icon" /><span data-testid="assistant-chat-edit-label">{{ (editOn() ? "assistant.edit.on" : "assistant.edit.off") | t }}</span></button>
     <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.new' | t" [attr.title]="'assistant.new' | t" data-testid="assistant-chat-new" (pressed)="assistant.startNew()"><ds-icon name="plus" [size]="16" /></ds-button>
     @if (session) {
       <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.delete.short' | t" [attr.title]="'assistant.delete.short' | t" data-testid="assistant-chat-delete" (pressed)="remove(session)"><ds-icon name="trash" [size]="15" /></ds-button>
     }
   </header>
+  @if (editOn()) {
+    <div class="asst-edit-notice t-sm" role="status" data-testid="assistant-chat-edit-notice"><ds-icon name="alert" [size]="13" data-testid="assistant-chat-edit-notice-icon" /><span data-testid="assistant-chat-edit-notice-text">{{ "assistant.edit.notice" | t }}</span></div>
+  }
   <div class="asst-chat-scope t-sm" data-testid="assistant-chat-scope">
     @let scope = session?.scope ?? assistant.draftScope();
     <span class="asst-scope-chip" [attr.data-scope]="scope.kind" data-testid="assistant-chat-scope-chip"><ds-icon [name]="assistant.scopeIcon(scope)" [size]="12" />{{ assistant.scopeLabel(scope) }}</span>

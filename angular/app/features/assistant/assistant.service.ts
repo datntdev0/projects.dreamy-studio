@@ -3,12 +3,15 @@ import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { DialogService } from "@app/core/dialog/dialog.service";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
+import { KnowledgeLang } from "@app/features/novel/novel.knowledge.models";
+import { NovelKnowledgeService } from "@app/features/novel/novel.knowledge.service";
+import { NovelReaderService } from "@app/features/novel/novel.reader.service";
 import { NovelService } from "@app/features/novel/novel.service";
 import { displayName, toNovelError } from "@app/features/novel/novel.rules";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { LayoutService } from "@layout/layout.service";
 import { TabsService } from "@layout/tabs.service";
-import { AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from "./assistant.models";
+import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from "./assistant.models";
 import { NOVEL_SCOPES, RECENT_SESSIONS, WORKSPACE_SCOPE, compareRecentFirst, novelScope } from "./assistant.rules";
 
 function summaryOf(session: AssistantSession): AssistantSessionSummary {
@@ -20,6 +23,7 @@ function summaryOf(session: AssistantSession): AssistantSessionSummary {
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,
     preview: session.preview,
+    editGranted: session.editGranted,
   };
 }
 
@@ -30,6 +34,8 @@ export class AssistantService {
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly novels = inject(NovelService);
+  private readonly reader = inject(NovelReaderService);
+  private readonly knowledge = inject(NovelKnowledgeService);
   private readonly tabs = inject(TabsService);
   private readonly layout = inject(LayoutService);
   private readonly workspace = inject(WorkspaceService);
@@ -48,6 +54,7 @@ export class AssistantService {
   readonly liveActivities = signal<string[]>([]);
   readonly sendError = signal<string | null>(null);
   readonly resolving = signal<string | null>(null);
+  readonly permitting = signal(false);
   readonly draft = signal("");
   readonly draftScope = signal<AssistantScope>(WORKSPACE_SCOPE);
   readonly sessions = computed(this.buildSessions.bind(this));
@@ -181,6 +188,31 @@ export class AssistantService {
     }
   }
 
+  async setEdit(granted: boolean): Promise<void> {
+    const session = this.active();
+    if (!session || this.permitting() || session.editGranted === granted) {
+      return;
+    }
+    if (granted) {
+      await this.dialogs.ask({
+        title: this.languageService.translate("assistant.edit.confirm.title"),
+        eyebrow: this.languageService.translate("assistant.cap"),
+        closeLabel: this.languageService.translate("assistant.dialog.close"),
+        items: [{ name: session.title, meta: this.scopeLabel(session.scope), icon: "pen" }],
+        warning: this.languageService.translate("assistant.edit.confirm.warn"),
+        confirmLabel: this.languageService.translate("assistant.edit.confirm.ok"),
+        confirmIcon: "pen",
+        onConfirm: this.permit.bind(this, session.id, true),
+      });
+      return;
+    }
+    try {
+      await this.permit(session.id, false);
+    } catch (cause) {
+      this.toasts.show(cause instanceof Error ? cause.message : String(cause), "danger");
+    }
+  }
+
   async send(text: string, context: AssistantContext | null = null): Promise<boolean> {
     const body = text.trim();
     if (body === "" || this.sending()) {
@@ -263,6 +295,7 @@ export class AssistantService {
     this.liveActivities.set([]);
     this.sendError.set(null);
     this.resolving.set(null);
+    this.permitting.set(false);
     this.draft.set("");
     this.draftScope.set(WORKSPACE_SCOPE);
     this.view.set("start");
@@ -271,6 +304,41 @@ export class AssistantService {
   private onEvent(event: AssistantEvent): void {
     if (event.kind === "activity") {
       this.liveActivities.update(this.withLabel.bind(this, event.label));
+    } else {
+      void this.refresh(event);
+    }
+  }
+
+  private async refresh(change: AssistantChange): Promise<void> {
+    if (change.target === "novel") {
+      await this.novels.load();
+    } else if (change.target === "chapter") {
+      await this.novels.loadChapters(change.novelId);
+      if (change.chapterId !== null) {
+        await this.reader.invalidate(change.novelId, change.chapterId);
+      }
+    } else if (change.lang !== null) {
+      await this.knowledge.load(change.novelId, change.lang as KnowledgeLang);
+    }
+  }
+
+  private async permit(id: string, granted: boolean): Promise<void> {
+    const epoch = this.epoch;
+    this.permitting.set(true);
+    try {
+      const next = await this.ipc.invoke<AssistantSession>("assistant_session_permit", { id, editGranted: granted });
+      if (epoch === this.epoch) {
+        if (this.active()?.id === next.id) {
+          this.active.set(next);
+        }
+        this.upsert(summaryOf(next));
+      }
+    } catch (cause) {
+      throw new Error(this.languageService.translate("assistant.error.permit", { detail: toNovelError(cause).detail }));
+    } finally {
+      if (epoch === this.epoch) {
+        this.permitting.set(false);
+      }
     }
   }
 

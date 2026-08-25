@@ -18,10 +18,16 @@ export interface AssistantCitation {
   quote: string;
 }
 
-export interface AssistantEvent {
-  kind: "activity";
-  label: string;
+export type AssistantChangeTarget = "novel" | "chapter" | "knowledge";
+
+export interface AssistantChange {
+  target: AssistantChangeTarget;
+  novelId: number;
+  chapterId: string | null;
+  lang: string | null;
 }
+
+export type AssistantEvent = { kind: "activity"; label: string } | ({ kind: "changed" } & AssistantChange);
 
 export type ProposalStatus = "pending" | "applied" | "rejected";
 
@@ -129,6 +135,7 @@ export interface AssistantSessionSummary {
   updatedAt: string;
   messageCount: number;
   preview: string;
+  editGranted: boolean;
 }
 
 export interface AssistantSession extends AssistantSessionSummary {

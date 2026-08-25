@@ -56,3 +56,10 @@ export const Working: Story = screen({ replyDelayMs: 4000 }, async (root) => {
   await send(root, "Giữ “Chuông triều” là term riêng.");
   await waitFor(root, '[data-testid="assistant-live-activity"]');
 });
+
+export const EditEnabled: Story = screen({}, async (root) => {
+  await openSession(root, "s-terms");
+  await click(root, '[data-testid="assistant-chat-edit"]');
+  await click(root, '[data-testid="dialog-host-accept"] button');
+  await waitFor(root, '[data-testid="assistant-chat-edit-notice"]');
+});

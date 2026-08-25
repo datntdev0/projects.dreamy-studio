@@ -52,7 +52,7 @@ function session(id: string, title: string, scope: AssistantScope, updatedMs: nu
   const step = 2 * 60 * 1000;
   const messages = turns.map((turn, index) => message(`${id}-m${index + 1}`, turn, ago(updatedMs + (turns.length - 1 - index) * step)));
   const last = turns[turns.length - 1];
-  return { id, title, scope, createdAt: messages[0]?.createdAt ?? updatedAt, updatedAt, messageCount: messages.length, preview: last ? last.text.split("\n")[0] : "", messages };
+  return { id, title, scope, createdAt: messages[0]?.createdAt ?? updatedAt, updatedAt, messageCount: messages.length, preview: last ? last.text.split("\n")[0] : "", editGranted: false, messages };
 }
 
 const NAMES_TURNS: Turn[] = [
@@ -189,7 +189,7 @@ function replyFor(text: string, scope: AssistantScope, context: AssistantContext
 function create(state: MockState, args: Record<string, unknown>): AssistantSession {
   const scope = args["scope"] as AssistantScope;
   const now = new Date().toISOString();
-  const created: AssistantSession = { id: `s-new-${state.nextSession++}`, title: "", scope: { ...scope }, createdAt: now, updatedAt: now, messageCount: 0, preview: "", messages: [] };
+  const created: AssistantSession = { id: `s-new-${state.nextSession++}`, title: "", scope: { ...scope }, createdAt: now, updatedAt: now, messageCount: 0, preview: "", editGranted: false, messages: [] };
   state.sessions.unshift(created);
   return clone(created);
 }
@@ -336,6 +336,11 @@ function assistantHandlers(scenario: AssistantScenario): IpcHandlers {
     assistant_session_create: (args) => create(state, args),
     assistant_message_send: (args) => send(state, args),
     assistant_proposal_resolve: (args) => resolveProposal(state, args),
+    assistant_session_permit: (args) => {
+      const target = find(state, String(args["id"]));
+      target.editGranted = Boolean(args["editGranted"]);
+      return clone(target);
+    },
     assistant_session_delete: (args) => {
       state.sessions = state.sessions.filter((item) => item.id !== String(args["id"]));
       return null;

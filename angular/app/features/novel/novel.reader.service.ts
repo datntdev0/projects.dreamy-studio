@@ -249,6 +249,12 @@ export class NovelReaderService {
     }
   }
 
+  async invalidate(novelId: number, chapterId: string): Promise<void> {
+    if (this.novelId() === novelId && this.current()?.id === chapterId) {
+      await this.readParagraphs(novelId, chapterId);
+    }
+  }
+
   consumeFocus(): number | null {
     const target = this.focus();
     this.focus.set(null);

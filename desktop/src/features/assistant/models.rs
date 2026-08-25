@@ -119,6 +119,7 @@ pub enum ChangeTarget {
     Novel,
     Chapter,
     Knowledge,
+    Translation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -128,6 +129,7 @@ pub struct AssistantChange {
     pub novel_id: i64,
     pub chapter_id: Option<String>,
     pub lang: Option<String>,
+    pub translation_target: Option<String>,
 }
 
 pub trait AssistantEventSink: Send + Sync {

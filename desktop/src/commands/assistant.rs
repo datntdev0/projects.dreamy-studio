@@ -12,6 +12,7 @@ use crate::features::assistant::sources::Sources;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
+use crate::features::translation::service::TranslationService;
 use crate::features::workspace::session::WorkspaceSession;
 use serde_json::Value;
 use std::sync::Arc;
@@ -36,14 +37,16 @@ impl McpHost for AppMcpHost {
     fn open(&self, grant: &Grant) -> Result<Sources, String> {
         let novels = self.0.state::<NovelService>();
         let knowledge = self.0.state::<KnowledgeService>();
+        let translation = self.0.state::<TranslationService>();
         let session = self.0.state::<WorkspaceSession>();
-        open_sources(&novels, &knowledge, &session, grant)
+        open_sources(&novels, &knowledge, &translation, &session, grant)
     }
 }
 
 pub fn open_sources(
     novels: &NovelService,
     knowledge: &KnowledgeService,
+    translation: &TranslationService,
     session: &WorkspaceSession,
     grant: &Grant,
 ) -> Result<Sources, String> {
@@ -52,9 +55,13 @@ pub fn open_sources(
     }
     let novels = novels.open(session).map_err(|error| error.to_string())?;
     let knowledge = knowledge.open(session).map_err(|error| error.to_string())?;
+    let translation = translation
+        .open(session)
+        .map_err(|error| error.to_string())?;
     Ok(Sources {
         novels: Box::new(novels),
         knowledge: Box::new(knowledge),
+        translation: Box::new(translation),
     })
 }
 
@@ -75,10 +82,13 @@ pub fn get_session(
 
 pub fn create_session(
     service: &AssistantService,
+    novels: &NovelService,
     session: &WorkspaceSession,
     scope: AssistantScope,
 ) -> AssistantResult<AssistantSession> {
-    service.open(session)?.create(scope)
+    let workspace = service.open(session)?;
+    let source = novels.open(session).map_err(novel_failure)?;
+    workspace.create(scope, &source)
 }
 
 pub fn permit_session(
@@ -162,8 +172,8 @@ pub async fn assistant_session_create(
     app: AppHandle,
     scope: AssistantScope,
 ) -> AssistantResult<AssistantSession> {
-    run_blocking(app, move |service, _, session| {
-        create_session(service, session, scope)
+    run_blocking(app, move |service, novels, session| {
+        create_session(service, novels, session, scope)
     })
     .await
 }

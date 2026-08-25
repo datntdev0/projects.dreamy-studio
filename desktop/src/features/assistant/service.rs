@@ -197,21 +197,18 @@ impl AssistantWorkspace {
         })
     }
 
-    pub fn create(&self, scope: AssistantScope) -> AssistantResult<AssistantSession> {
-        if scope.kind != ScopeKind::Workspace {
-            return Err(AssistantError::invalid(
-                "only the workspace scope is supported",
-            ));
-        }
+    pub fn create(
+        &self,
+        scope: AssistantScope,
+        novels: &dyn NovelSource,
+    ) -> AssistantResult<AssistantSession> {
+        let scope = checked_scope(scope, novels)?;
         let now = now();
         let record = SessionRecord {
             summary: AssistantSessionSummary {
                 id: Uuid::new_v4().to_string(),
                 title: String::new(),
-                scope: AssistantScope {
-                    kind: ScopeKind::Workspace,
-                    novel_id: None,
-                },
+                scope,
                 created_at: now.clone(),
                 updated_at: now,
                 message_count: 0,
@@ -443,6 +440,32 @@ impl TurnSink for Collector {
 
     fn changed(&self, change: AssistantChange) {
         self.sink.emit(AssistantEvent::Changed(change));
+    }
+}
+
+fn checked_scope(
+    scope: AssistantScope,
+    novels: &dyn NovelSource,
+) -> AssistantResult<AssistantScope> {
+    match scope.kind {
+        ScopeKind::Workspace => Ok(AssistantScope {
+            kind: ScopeKind::Workspace,
+            novel_id: None,
+        }),
+        ScopeKind::Novel => {
+            let id = scope
+                .novel_id
+                .ok_or_else(|| AssistantError::invalid("a novel scope needs a novelId"))?;
+            let known = novels.list().map_err(AssistantError::storage)?;
+            if known.iter().any(|novel| novel.id == id) {
+                Ok(AssistantScope {
+                    kind: ScopeKind::Novel,
+                    novel_id: Some(id),
+                })
+            } else {
+                Err(AssistantError::invalid(format!("novel {id} not found")))
+            }
+        }
     }
 }
 

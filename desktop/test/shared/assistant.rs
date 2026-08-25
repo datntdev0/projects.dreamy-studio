@@ -7,6 +7,7 @@ use crate::features::assistant::service::AssistantLlm;
 use crate::features::assistant::sources::KnowledgeSource;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::Sources;
+use crate::features::assistant::sources::TranslationSource;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::KnowledgeEntity;
@@ -20,6 +21,14 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::pipeline::llm::Turn;
+use crate::features::translation::models::DictEntry;
+use crate::features::translation::models::DictInput;
+use crate::features::translation::models::DictPatch;
+use crate::features::translation::service::ChapterTranslation;
+use crate::features::translation::service::DictChange;
+use crate::features::translation::service::NovelTranslation;
+use crate::features::translation::service::PassageTranslation;
+use crate::features::translation::warnings::TranslationWarning;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -417,10 +426,358 @@ impl KnowledgeSource for FakeKnowledge {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TranslationWrite {
+    Passage {
+        novel_id: i64,
+        target: String,
+        chapter_id: String,
+        n: usize,
+        text: String,
+    },
+    DictAdd {
+        novel_id: i64,
+        target: String,
+        input: DictInput,
+    },
+    DictUpdate {
+        novel_id: i64,
+        id: i64,
+        patch: DictPatch,
+    },
+    DictDelete {
+        novel_id: i64,
+        id: i64,
+    },
+}
+
+#[derive(Default)]
+struct TranslationState {
+    books: HashMap<(i64, String), NovelTranslation>,
+    next_id: i64,
+    writes: Vec<TranslationWrite>,
+    failure: Option<String>,
+}
+
+#[derive(Clone, Default)]
+pub struct FakeTranslation {
+    state: Arc<Mutex<TranslationState>>,
+}
+
+impl FakeTranslation {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn writes(&self) -> Vec<TranslationWrite> {
+        guard(&self.state).writes.clone()
+    }
+
+    pub fn book(&self, novel_id: i64, target: &str) -> NovelTranslation {
+        let state = guard(&self.state);
+        state
+            .books
+            .get(&book_key(novel_id, target))
+            .cloned()
+            .unwrap_or_else(empty_book)
+    }
+
+    pub fn passage_text(&self, novel_id: i64, target: &str, chapter_id: &str, n: usize) -> String {
+        self.book(novel_id, target)
+            .chapters
+            .get(chapter_id)
+            .and_then(|chapter| chapter.paragraphs.get(n - 1))
+            .map(|passage| passage.text.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn with_guidelines(self, novel_id: i64, target: &str, text: &str) -> Self {
+        self.edit_book(novel_id, target, |book, _| {
+            book.guidelines = text.to_string();
+        })
+    }
+
+    pub fn with_translated_chapter(
+        self,
+        novel_id: i64,
+        target: &str,
+        chapter_id: &str,
+        title: &str,
+        texts: &[&str],
+    ) -> Self {
+        self.edit_book(novel_id, target, |book, _| {
+            let paragraphs = texts
+                .iter()
+                .enumerate()
+                .map(|(index, text)| PassageTranslation {
+                    n: index + 1,
+                    original_hashcheck: format!("hash-{}", index + 1),
+                    text: text.to_string(),
+                    note: String::new(),
+                })
+                .collect();
+            book.chapters.insert(
+                chapter_id.to_string(),
+                ChapterTranslation {
+                    title: title.to_string(),
+                    paragraphs,
+                },
+            );
+        })
+    }
+
+    pub fn with_note(
+        self,
+        novel_id: i64,
+        target: &str,
+        chapter_id: &str,
+        n: usize,
+        note: &str,
+    ) -> Self {
+        self.edit_book(novel_id, target, |book, _| {
+            if let Some(passage) = book
+                .chapters
+                .get_mut(chapter_id)
+                .and_then(|chapter| chapter.paragraphs.get_mut(n - 1))
+            {
+                passage.note = note.to_string();
+            }
+        })
+    }
+
+    pub fn with_entry(
+        self,
+        novel_id: i64,
+        target: &str,
+        src: &str,
+        dst: &str,
+        kind: &str,
+        note: &str,
+    ) -> Self {
+        self.edit_book(novel_id, target, |book, next| {
+            *next += 1;
+            book.dict.push(DictEntry {
+                id: *next,
+                src: src.to_string(),
+                dst: dst.to_string(),
+                kind: kind.to_string(),
+                note: note.to_string(),
+            });
+        })
+    }
+
+    pub fn with_warning(self, novel_id: i64, target: &str, warning: TranslationWarning) -> Self {
+        self.edit_book(novel_id, target, |book, _| book.warnings.push(warning))
+    }
+
+    pub fn failing(self, message: &str) -> Self {
+        guard(&self.state).failure = Some(message.to_string());
+        self
+    }
+
+    fn edit_book(
+        self,
+        novel_id: i64,
+        target: &str,
+        change: impl FnOnce(&mut NovelTranslation, &mut i64),
+    ) -> Self {
+        {
+            let state = &mut *guard(&self.state);
+            let book = state
+                .books
+                .entry(book_key(novel_id, target))
+                .or_insert_with(empty_book);
+            change(book, &mut state.next_id);
+        }
+        self
+    }
+}
+
+impl TranslationSource for FakeTranslation {
+    fn get(&self, novel_id: i64, target: &str) -> Result<NovelTranslation, String> {
+        check_target(target)?;
+        if let Some(message) = guard(&self.state).failure.clone() {
+            return Err(message);
+        }
+        Ok(self.book(novel_id, target))
+    }
+
+    fn passage_save(
+        &self,
+        novel_id: i64,
+        target: &str,
+        chapter_id: &str,
+        n: usize,
+        text: &str,
+    ) -> Result<ChapterTranslation, String> {
+        check_target(target)?;
+        let state = &mut *guard(&self.state);
+        if let Some(message) = state.failure.clone() {
+            return Err(message);
+        }
+        let book = state
+            .books
+            .get_mut(&book_key(novel_id, target))
+            .ok_or_else(|| format!("translation for chapter {chapter_id} does not exist"))?;
+        let chapter = book
+            .chapters
+            .get_mut(chapter_id)
+            .ok_or_else(|| format!("translation for chapter {chapter_id} does not exist"))?;
+        let passage = n
+            .checked_sub(1)
+            .and_then(|index| chapter.paragraphs.get_mut(index))
+            .ok_or_else(|| format!("paragraph {n} is out of range"))?;
+        passage.text = text.trim().to_string();
+        let saved = chapter.clone();
+        state.writes.push(TranslationWrite::Passage {
+            novel_id,
+            target: target.to_string(),
+            chapter_id: chapter_id.to_string(),
+            n,
+            text: text.to_string(),
+        });
+        Ok(saved)
+    }
+
+    fn dict_add(
+        &self,
+        novel_id: i64,
+        target: &str,
+        input: DictInput,
+    ) -> Result<DictChange, String> {
+        check_target(target)?;
+        let state = &mut *guard(&self.state);
+        if let Some(message) = state.failure.clone() {
+            return Err(message);
+        }
+        let src = input.src.trim().to_string();
+        let dst = input.dst.trim().to_string();
+        if src.is_empty() || dst.is_empty() {
+            return Err("dictionary source and destination must not be empty".to_string());
+        }
+        let book = state
+            .books
+            .entry(book_key(novel_id, target))
+            .or_insert_with(empty_book);
+        if book.dict.iter().any(|entry| entry.src == src) {
+            return Err("a dictionary entry with this source already exists".to_string());
+        }
+        state.next_id += 1;
+        let entry = DictEntry {
+            id: state.next_id,
+            src,
+            dst,
+            kind: input.kind.trim().to_string(),
+            note: input.note.trim().to_string(),
+        };
+        book.dict.push(entry.clone());
+        state.writes.push(TranslationWrite::DictAdd {
+            novel_id,
+            target: target.to_string(),
+            input,
+        });
+        Ok(DictChange { entry, flagged: 0 })
+    }
+
+    fn dict_update(&self, novel_id: i64, id: i64, patch: DictPatch) -> Result<DictChange, String> {
+        let state = &mut *guard(&self.state);
+        if let Some(message) = state.failure.clone() {
+            return Err(message);
+        }
+        let book = state
+            .books
+            .iter_mut()
+            .filter(|(key, _)| key.0 == novel_id)
+            .map(|(_, book)| book)
+            .find(|book| book.dict.iter().any(|entry| entry.id == id))
+            .ok_or_else(|| format!("dictionary entry {id} does not exist"))?;
+        let clash = patch.src.as_deref().map(str::trim).is_some_and(|src| {
+            book.dict
+                .iter()
+                .any(|entry| entry.id != id && entry.src == src)
+        });
+        if clash {
+            return Err("a dictionary entry with this source already exists".to_string());
+        }
+        let entry = book
+            .dict
+            .iter_mut()
+            .find(|entry| entry.id == id)
+            .ok_or_else(|| format!("dictionary entry {id} does not exist"))?;
+        if let Some(src) = &patch.src {
+            entry.src = src.trim().to_string();
+        }
+        if let Some(dst) = &patch.dst {
+            entry.dst = dst.trim().to_string();
+        }
+        if let Some(kind) = &patch.kind {
+            entry.kind = kind.trim().to_string();
+        }
+        if let Some(note) = &patch.note {
+            entry.note = note.trim().to_string();
+        }
+        let entry = entry.clone();
+        state.writes.push(TranslationWrite::DictUpdate {
+            novel_id,
+            id,
+            patch,
+        });
+        Ok(DictChange { entry, flagged: 0 })
+    }
+
+    fn dict_delete(&self, novel_id: i64, id: i64) -> Result<(), String> {
+        let state = &mut *guard(&self.state);
+        if let Some(message) = state.failure.clone() {
+            return Err(message);
+        }
+        let book = state
+            .books
+            .iter_mut()
+            .filter(|(key, _)| key.0 == novel_id)
+            .map(|(_, book)| book)
+            .find(|book| book.dict.iter().any(|entry| entry.id == id))
+            .ok_or_else(|| format!("dictionary entry {id} does not exist"))?;
+        book.dict.retain(|entry| entry.id != id);
+        state
+            .writes
+            .push(TranslationWrite::DictDelete { novel_id, id });
+        Ok(())
+    }
+}
+
+fn book_key(novel_id: i64, target: &str) -> (i64, String) {
+    (novel_id, target.trim().to_ascii_uppercase())
+}
+
+fn empty_book() -> NovelTranslation {
+    NovelTranslation {
+        guidelines: String::new(),
+        dict: Vec::new(),
+        chapters: BTreeMap::new(),
+        warnings: Vec::new(),
+    }
+}
+
+fn check_target(target: &str) -> Result<(), String> {
+    match target.trim().to_ascii_uppercase().as_str() {
+        "VI" | "EN" => Ok(()),
+        _ => Err(format!("unsupported target '{target}'")),
+    }
+}
+
 pub fn sources_of(novels: &FakeNovels, knowledge: &FakeKnowledge) -> Sources {
+    sources_with(novels, knowledge, &FakeTranslation::new())
+}
+
+pub fn sources_with(
+    novels: &FakeNovels,
+    knowledge: &FakeKnowledge,
+    translation: &FakeTranslation,
+) -> Sources {
     Sources {
         novels: Box::new(novels.clone()),
         knowledge: Box::new(knowledge.clone()),
+        translation: Box::new(translation.clone()),
     }
 }
 

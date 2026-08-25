@@ -7,6 +7,7 @@ fn change(target: ChangeTarget) -> AssistantChange {
         novel_id: 4,
         chapter_id: Some("chapter-1".to_string()),
         lang: None,
+        translation_target: None,
     }
 }
 
@@ -24,6 +25,7 @@ fn changed_event_is_flattened_under_the_changed_kind() {
             "novelId": 4,
             "chapterId": "chapter-1",
             "lang": null,
+            "translationTarget": null,
         })
     );
 }
@@ -34,6 +36,7 @@ fn change_targets_serialize_in_snake_case() {
         ChangeTarget::Novel,
         ChangeTarget::Chapter,
         ChangeTarget::Knowledge,
+        ChangeTarget::Translation,
     ];
 
     let values: Vec<_> = targets
@@ -43,7 +46,12 @@ fn change_targets_serialize_in_snake_case() {
 
     assert_eq!(
         values,
-        vec![json!("novel"), json!("chapter"), json!("knowledge")]
+        vec![
+            json!("novel"),
+            json!("chapter"),
+            json!("knowledge"),
+            json!("translation")
+        ]
     );
 }
 
@@ -54,6 +62,7 @@ fn knowledge_change_carries_the_lang() {
         novel_id: 2,
         chapter_id: None,
         lang: Some("VI".to_string()),
+        translation_target: None,
     });
 
     let value = serde_json::to_value(&event).unwrap();
@@ -61,6 +70,31 @@ fn knowledge_change_carries_the_lang() {
     assert_eq!(value["target"], "knowledge");
     assert_eq!(value["chapterId"], serde_json::Value::Null);
     assert_eq!(value["lang"], "VI");
+}
+
+#[test]
+fn translation_change_carries_the_translation_target() {
+    let event = AssistantEvent::Changed(AssistantChange {
+        target: ChangeTarget::Translation,
+        novel_id: 2,
+        chapter_id: Some("chapter-1".to_string()),
+        lang: None,
+        translation_target: Some("VI".to_string()),
+    });
+
+    let value = serde_json::to_value(&event).unwrap();
+
+    assert_eq!(
+        value,
+        json!({
+            "kind": "changed",
+            "target": "translation",
+            "novelId": 2,
+            "chapterId": "chapter-1",
+            "lang": null,
+            "translationTarget": "VI",
+        })
+    );
 }
 
 #[test]

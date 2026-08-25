@@ -11,7 +11,10 @@ use crate::features::knowledge::models::KnowledgeItem;
 use crate::features::knowledge::service::parse_lang;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
-use crate::features::novel::models::ParagraphRow;
+use crate::features::translation::models::DictEntry;
+use crate::features::translation::models::TranslationTarget;
+use crate::features::translation::warnings::TranslationWarning;
+use crate::features::translation::warnings::WarningKind;
 use serde_json::Value;
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -90,6 +93,35 @@ pub fn definitions() -> Value {
             }
         },
         {
+            "name": "read_translation",
+            "description": "Read the paragraphs of one translated chapter next to their source text. Paragraph positions are 1-based. A page holds at most 60 paragraphs or 12000 characters (source and translation together); when `next` is not null, call again with from set to `next`. It is an error when the chapter has no translation for the target yet.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
+                    "from": { "type": "integer", "minimum": 1, "description": "First paragraph position, default 1." },
+                    "to": { "type": "integer", "minimum": 1, "description": "Last paragraph position, default the end of the chapter." }
+                },
+                "required": ["novelId", "target", "chapter"],
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "read_translation_guide",
+            "description": "Read the translation rules of one novel for one target language: the translation guidelines, the dictionary entries (id, src, dst, type, note) and the consistency warnings found in the translated chapters.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." }
+                },
+                "required": ["novelId", "target"],
+                "additionalProperties": false
+            }
+        },
+        {
             "name": "edit_novel",
             "description": "Change the metadata of one novel. Only the fields you pass are changed; the novel language cannot be changed. Requires editing to be enabled for the session.",
             "inputSchema": {
@@ -158,6 +190,72 @@ pub fn definitions() -> Value {
                 "required": ["novelId", "lang", "edits"],
                 "additionalProperties": false
             }
+        },
+        {
+            "name": "edit_translation_passage",
+            "description": "Replace the text of one translated paragraph. Pass `expected`, the current translation exactly as read_translation returned it; if it differs, nothing is written. Requires editing to be enabled for the session.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
+                    "p": { "type": "integer", "minimum": 1, "description": "1-based paragraph position." },
+                    "expected": { "type": "string", "description": "Current translation of the paragraph, exactly as read." },
+                    "text": { "type": "string", "description": "New translation of the paragraph." }
+                },
+                "required": ["novelId", "target", "chapter", "p", "expected", "text"],
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "edit_dictionary",
+            "description": "Add, update and remove translation dictionary entries of one novel for one target language. Entries are checked first; if one is invalid (a duplicate `src`, an unknown id), nothing is written. Entry types are name, place, org, title and term. Requires editing to be enabled for the session.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "add": {
+                        "type": "array",
+                        "description": "Entries to add.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "src": { "type": "string", "description": "Source term." },
+                                "dst": { "type": "string", "description": "Translated term." },
+                                "type": { "type": "string", "enum": ["name", "place", "org", "title", "term"], "description": "Entry type." },
+                                "note": { "type": "string", "description": "Optional note." }
+                            },
+                            "required": ["src", "dst", "type"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "update": {
+                        "type": "array",
+                        "description": "Entries to change; only the fields you pass are changed.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": { "type": "integer", "description": "Entry id from read_translation_guide." },
+                                "src": { "type": "string", "description": "New source term." },
+                                "dst": { "type": "string", "description": "New translated term." },
+                                "type": { "type": "string", "enum": ["name", "place", "org", "title", "term"], "description": "New entry type." },
+                                "note": { "type": "string", "description": "New note." }
+                            },
+                            "required": ["id"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "remove": {
+                        "type": "array",
+                        "description": "Ids of the entries to delete.",
+                        "items": { "type": "integer" }
+                    }
+                },
+                "required": ["novelId", "target"],
+                "additionalProperties": false
+            }
         }
     ])
 }
@@ -174,9 +272,13 @@ pub fn call(
         "read_novel" => read_novel(args, ctx.scope, novels),
         "read_novel_chapter" => read_novel_chapter(args, ctx.scope, novels),
         "read_novel_knowledge" => read_novel_knowledge(args, ctx.scope, sources),
+        "read_translation" => read_translation(args, ctx.scope, sources),
+        "read_translation_guide" => read_translation_guide(args, ctx.scope, sources),
         "edit_novel" => edits::edit_novel(args, ctx, novels),
         "edit_novel_chapter" => edits::edit_novel_chapter(args, ctx, novels),
         "edit_novel_knowledge" => edits::edit_novel_knowledge(args, ctx, sources),
+        "edit_translation_passage" => edits::edit_translation_passage(args, ctx, sources),
+        "edit_dictionary" => edits::edit_dictionary(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
@@ -224,7 +326,8 @@ fn read_novel_chapter(
         .ok_or_else(|| format!("chapter {seq} not found in novel {novel_id}"))?;
     let rows = source.chapter_read(novel_id, &chapter.id)?;
     let total = rows.len();
-    let (start, end) = page_bounds(&rows, from, to);
+    let sizes: Vec<usize> = rows.iter().map(|row| row.text.chars().count()).collect();
+    let (start, end) = page_bounds(&sizes, from, to);
     let paragraphs: Vec<Value> = rows[start.saturating_sub(1)..end]
         .iter()
         .map(|row| json!({ "p": row.n, "text": row.text }))
@@ -314,6 +417,148 @@ fn read_novel_knowledge(
     Ok(output(value, label))
 }
 
+fn read_translation(
+    args: &Value,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> Result<ToolOutput, String> {
+    let novel_id = required_int(args, "novelId")?;
+    let target = required_target(args)?;
+    let seq = required_int(args, "chapter")?;
+    let from = optional_int(args, "from")?;
+    let to = optional_int(args, "to")?;
+    let novels = sources.novels.as_ref();
+    find_novel(scope, novels, novel_id)?;
+    let chapter = chapter_by_seq(novels, novel_id, seq)?;
+    let rows = novels.chapter_read(novel_id, &chapter.id)?;
+    let book = sources.translation.get(novel_id, target.as_str())?;
+    let translated = book
+        .chapters
+        .get(&chapter.id)
+        .ok_or_else(|| format!("chapter {seq} has no {} translation yet", target.as_str()))?;
+    let total = rows.len();
+    let sizes: Vec<usize> = rows
+        .iter()
+        .map(|row| {
+            let own = translated.paragraphs.get(row.n - 1);
+            row.text.chars().count() + own.map_or(0, |item| item.text.chars().count())
+        })
+        .collect();
+    let (start, end) = page_bounds(&sizes, from, to);
+    let paragraphs: Vec<Value> = rows[start.saturating_sub(1)..end]
+        .iter()
+        .map(|row| {
+            let own = translated.paragraphs.get(row.n - 1);
+            json!({
+                "p": row.n,
+                "source": row.text,
+                "translation": own.map(|item| item.text.as_str()),
+                "note": own.map_or("", |item| item.note.as_str()),
+            })
+        })
+        .collect();
+    let next = if end < total {
+        json!(end + 1)
+    } else {
+        Value::Null
+    };
+    let label = format!(
+        "read_translation(novel {novel_id}, ch {seq}, {}, ¶{start}–{end}) → {} đoạn",
+        target.as_str(),
+        paragraphs.len()
+    );
+    let value = json!({
+        "novelId": novel_id,
+        "chapter": seq,
+        "title": translated.title,
+        "target": target.as_str(),
+        "total": total,
+        "from": start,
+        "to": end,
+        "paragraphs": paragraphs,
+        "next": next,
+    });
+    Ok(output(value, label))
+}
+
+fn read_translation_guide(
+    args: &Value,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> Result<ToolOutput, String> {
+    let novel_id = required_int(args, "novelId")?;
+    let target = required_target(args)?;
+    let novels = sources.novels.as_ref();
+    find_novel(scope, novels, novel_id)?;
+    let chapters = novels.chapters(novel_id)?;
+    let book = sources.translation.get(novel_id, target.as_str())?;
+    let dictionary: Vec<Value> = book.dict.iter().map(dict_json).collect();
+    let warnings: Vec<Value> = book
+        .warnings
+        .iter()
+        .map(|warning| warning_json(warning, &chapters))
+        .collect();
+    let label = format!(
+        "read_translation_guide(novel {novel_id}, {}) → {} mục từ, {} cảnh báo",
+        target.as_str(),
+        dictionary.len(),
+        warnings.len()
+    );
+    let value = json!({
+        "novelId": novel_id,
+        "target": target.as_str(),
+        "guidelines": book.guidelines,
+        "dictionary": dictionary,
+        "warnings": warnings,
+    });
+    Ok(output(value, label))
+}
+
+fn warning_json(warning: &TranslationWarning, chapters: &[ChapterRow]) -> Value {
+    let kind = match warning.kind {
+        WarningKind::Source => "source",
+        WarningKind::Dict => "dict",
+    };
+    let chapter = chapters
+        .iter()
+        .find(|row| row.id == warning.chapter_id)
+        .map(|row| row.seq);
+    json!({
+        "kind": kind,
+        "chapter": chapter,
+        "p": warning.n,
+        "entryId": warning.entry_id,
+    })
+}
+
+pub(crate) fn dict_json(entry: &DictEntry) -> Value {
+    json!({
+        "id": entry.id,
+        "src": entry.src,
+        "dst": entry.dst,
+        "type": entry.kind,
+        "note": entry.note,
+    })
+}
+
+pub(crate) fn required_target(args: &Value) -> Result<TranslationTarget, String> {
+    let raw = required_str(args, "target")?;
+    TranslationTarget::parse(&raw)
+        .ok_or_else(|| format!("unsupported target '{raw}'; use VI or EN"))
+}
+
+pub(crate) fn chapter_by_seq(
+    source: &dyn NovelSource,
+    novel_id: i64,
+    seq: i64,
+) -> Result<ChapterRow, String> {
+    source
+        .chapters(novel_id)?
+        .into_iter()
+        .find(|row| row.seq == seq)
+        .ok_or_else(|| format!("chapter {seq} not found in novel {novel_id}"))
+}
+
 fn matches_query(entity: &KnowledgeEntity, query: &str) -> bool {
     std::iter::once(&entity.name)
         .chain(&entity.titles)
@@ -355,8 +600,8 @@ fn chapters_of(evidence: &[KnowledgeEvidence]) -> Vec<i64> {
     chapters.into_iter().collect()
 }
 
-fn page_bounds(rows: &[ParagraphRow], from: Option<i64>, to: Option<i64>) -> (usize, usize) {
-    let total = rows.len();
+fn page_bounds(sizes: &[usize], from: Option<i64>, to: Option<i64>) -> (usize, usize) {
+    let total = sizes.len();
     if total == 0 {
         return (1, 0);
     }
@@ -364,12 +609,11 @@ fn page_bounds(rows: &[ParagraphRow], from: Option<i64>, to: Option<i64>) -> (us
     let wanted = clamp_position(to.unwrap_or(total as i64), start, total);
     let mut end = start - 1;
     let mut chars = 0;
-    for row in &rows[start - 1..wanted] {
-        let size = row.text.chars().count();
-        if end >= start && (end - start + 1 >= PAGE_PARAGRAPHS || chars + size > PAGE_CHARS) {
+    for size in &sizes[start - 1..wanted] {
+        if end >= start && (end - start + 1 >= PAGE_PARAGRAPHS || chars + *size > PAGE_CHARS) {
             break;
         }
-        chars += size;
+        chars += *size;
         end += 1;
     }
     (start, end)

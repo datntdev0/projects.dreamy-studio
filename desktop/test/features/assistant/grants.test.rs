@@ -82,6 +82,7 @@ fn grant_sink_receives_changes() {
         novel_id: 3,
         chapter_id: None,
         lang: None,
+        translation_target: None,
     };
     grants.get(&token).unwrap().sink.changed(change.clone());
     assert_eq!(sink.changes(), vec![change]);

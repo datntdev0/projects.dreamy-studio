@@ -7,6 +7,12 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::novel::service::NovelWorkspace;
+use crate::features::translation::models::DictInput;
+use crate::features::translation::models::DictPatch;
+use crate::features::translation::service::ChapterTranslation;
+use crate::features::translation::service::DictChange;
+use crate::features::translation::service::NovelTranslation;
+use crate::features::translation::service::TranslationWorkspace;
 
 pub trait NovelSource {
     fn list(&self) -> Result<Vec<NovelSummary>, String>;
@@ -38,9 +44,26 @@ pub trait KnowledgeSource {
     ) -> Result<KnowledgeEditResult, String>;
 }
 
+pub trait TranslationSource {
+    fn get(&self, novel_id: i64, target: &str) -> Result<NovelTranslation, String>;
+    fn passage_save(
+        &self,
+        novel_id: i64,
+        target: &str,
+        chapter_id: &str,
+        n: usize,
+        text: &str,
+    ) -> Result<ChapterTranslation, String>;
+    fn dict_add(&self, novel_id: i64, target: &str, input: DictInput)
+    -> Result<DictChange, String>;
+    fn dict_update(&self, novel_id: i64, id: i64, patch: DictPatch) -> Result<DictChange, String>;
+    fn dict_delete(&self, novel_id: i64, id: i64) -> Result<(), String>;
+}
+
 pub struct Sources {
     pub novels: Box<dyn NovelSource>,
     pub knowledge: Box<dyn KnowledgeSource>,
+    pub translation: Box<dyn TranslationSource>,
 }
 
 impl NovelSource for NovelWorkspace {
@@ -94,6 +117,43 @@ impl KnowledgeSource for KnowledgeWorkspace {
         edits: Vec<KnowledgeEdit>,
     ) -> Result<KnowledgeEditResult, String> {
         KnowledgeWorkspace::edit(self, novel_id, lang, edits).map_err(|error| error.to_string())
+    }
+}
+
+impl TranslationSource for TranslationWorkspace {
+    fn get(&self, novel_id: i64, target: &str) -> Result<NovelTranslation, String> {
+        TranslationWorkspace::get(self, novel_id, target).map_err(|error| error.to_string())
+    }
+
+    fn passage_save(
+        &self,
+        novel_id: i64,
+        target: &str,
+        chapter_id: &str,
+        n: usize,
+        text: &str,
+    ) -> Result<ChapterTranslation, String> {
+        TranslationWorkspace::passage_save(self, novel_id, target, chapter_id, n, text)
+            .map_err(|error| error.to_string())
+    }
+
+    fn dict_add(
+        &self,
+        novel_id: i64,
+        target: &str,
+        input: DictInput,
+    ) -> Result<DictChange, String> {
+        TranslationWorkspace::dict_add(self, novel_id, target, input)
+            .map_err(|error| error.to_string())
+    }
+
+    fn dict_update(&self, novel_id: i64, id: i64, patch: DictPatch) -> Result<DictChange, String> {
+        TranslationWorkspace::dict_update(self, novel_id, id, patch)
+            .map_err(|error| error.to_string())
+    }
+
+    fn dict_delete(&self, novel_id: i64, id: i64) -> Result<(), String> {
+        TranslationWorkspace::dict_delete(self, novel_id, id).map_err(|error| error.to_string())
     }
 }
 

@@ -7,13 +7,16 @@ use crate::features::knowledge::models::KnowledgeItem;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::text::text_hash;
 use crate::features::novel::models::NovelInput;
+use crate::features::translation::service::TranslatedRun;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::infra::storage::database::Database;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::NovelWrite;
+use crate::testing::assistant::TranslationWrite;
 use std::sync::atomic::AtomicBool;
 use tempfile::TempDir;
 
@@ -23,6 +26,7 @@ struct Fixture {
     _dir: TempDir,
     workspace: NovelWorkspace,
     knowledge: KnowledgeWorkspace,
+    translation: TranslationWorkspace,
     novel_id: i64,
     chapter_id: String,
 }
@@ -39,6 +43,7 @@ fn fixture() -> Fixture {
     drop(db);
     let workspace = NovelWorkspace::new(dir.path().to_path_buf());
     let knowledge = KnowledgeWorkspace::new(dir.path().to_path_buf());
+    let translation = TranslationWorkspace::new(dir.path().to_path_buf());
     let novel = workspace
         .create(NovelInput {
             title: "Book".to_string(),
@@ -60,6 +65,7 @@ fn fixture() -> Fixture {
         _dir: dir,
         workspace,
         knowledge,
+        translation,
         novel_id: novel.id,
         chapter_id: chapter.id,
     }
@@ -314,4 +320,228 @@ fn fake_knowledge_serves_configured_items_and_records_edits() {
             edits,
         }]
     );
+}
+
+fn translate(fixture: &Fixture) {
+    fixture
+        .translation
+        .save_run(
+            fixture.novel_id,
+            "VI",
+            &fixture.chapter_id,
+            None,
+            TranslatedRun {
+                title: "Chuong mot".to_string(),
+                paragraphs: vec!["Lam Mo rut kiem.".to_string(), "Mua roi.".to_string()],
+            },
+        )
+        .unwrap();
+}
+
+fn entry(src: &str, dst: &str) -> DictInput {
+    DictInput {
+        src: src.to_string(),
+        dst: dst.to_string(),
+        kind: "name".to_string(),
+        note: String::new(),
+    }
+}
+
+#[test]
+fn translation_adapter_reads_the_translation_of_a_novel() {
+    let fixture = fixture();
+    translate(&fixture);
+    let source: &dyn TranslationSource = &fixture.translation;
+
+    let book = source.get(fixture.novel_id, "VI").unwrap();
+    let empty = source.get(fixture.novel_id, "EN").unwrap();
+
+    let chapter = &book.chapters[&fixture.chapter_id];
+    assert_eq!(chapter.title, "Chuong mot");
+    assert_eq!(chapter.paragraphs.len(), 2);
+    assert_eq!(chapter.paragraphs[0].text, "Lam Mo rut kiem.");
+    assert!(book.dict.is_empty());
+    assert!(empty.chapters.is_empty());
+}
+
+#[test]
+fn translation_adapter_saves_a_passage() {
+    let fixture = fixture();
+    translate(&fixture);
+    let source: &dyn TranslationSource = &fixture.translation;
+
+    let saved = source
+        .passage_save(fixture.novel_id, "VI", &fixture.chapter_id, 2, "Tuyet roi.")
+        .unwrap();
+    let reread = source.get(fixture.novel_id, "VI").unwrap();
+
+    assert_eq!(saved.paragraphs[1].text, "Tuyet roi.");
+    assert_eq!(
+        reread.chapters[&fixture.chapter_id].paragraphs[1].text,
+        "Tuyet roi."
+    );
+    assert_eq!(
+        reread.chapters[&fixture.chapter_id].paragraphs[0].text,
+        "Lam Mo rut kiem."
+    );
+}
+
+#[test]
+fn translation_adapter_adds_updates_and_deletes_dictionary_entries() {
+    let fixture = fixture();
+    let source: &dyn TranslationSource = &fixture.translation;
+
+    let added = source
+        .dict_add(fixture.novel_id, "VI", entry("Lin Mo", "Lam Mo"))
+        .unwrap();
+    let patch = DictPatch {
+        dst: Some("Lam Mac".to_string()),
+        ..DictPatch::default()
+    };
+    let updated = source
+        .dict_update(fixture.novel_id, added.entry.id, patch)
+        .unwrap();
+    let listed = source.get(fixture.novel_id, "VI").unwrap().dict;
+    source
+        .dict_delete(fixture.novel_id, added.entry.id)
+        .unwrap();
+    let after = source.get(fixture.novel_id, "VI").unwrap().dict;
+
+    assert_eq!(added.entry.src, "Lin Mo");
+    assert_eq!(updated.entry.dst, "Lam Mac");
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].dst, "Lam Mac");
+    assert!(after.is_empty());
+}
+
+#[test]
+fn translation_adapter_reports_failures_as_text() {
+    let fixture = fixture();
+    translate(&fixture);
+    let source: &dyn TranslationSource = &fixture.translation;
+    source
+        .dict_add(fixture.novel_id, "VI", entry("Lin Mo", "Lam Mo"))
+        .unwrap();
+
+    let target = source.get(fixture.novel_id, "FR").unwrap_err();
+    let novel = source.get(fixture.novel_id + 100, "VI").unwrap_err();
+    let passage = source
+        .passage_save(fixture.novel_id, "VI", &fixture.chapter_id, 9, "x")
+        .unwrap_err();
+    let duplicate = source
+        .dict_add(fixture.novel_id, "VI", entry("Lin Mo", "Other"))
+        .unwrap_err();
+    let update = source
+        .dict_update(fixture.novel_id, 999, DictPatch::default())
+        .unwrap_err();
+    let delete = source.dict_delete(fixture.novel_id, 999).unwrap_err();
+
+    assert!(target.contains("unsupported target"));
+    assert!(!novel.is_empty());
+    assert!(passage.contains("out of range"));
+    assert!(duplicate.contains("already exists"));
+    assert!(update.contains("does not exist"));
+    assert!(delete.contains("does not exist"));
+}
+
+#[test]
+fn fake_translation_serves_books_per_novel_and_target() {
+    let fake = FakeTranslation::new()
+        .with_guidelines(1, "VI", "natural")
+        .with_translated_chapter(1, "vi", "c1", "One", &["a", "b"])
+        .with_entry(1, "VI", "Lin", "Lam", "name", "");
+    let source: &dyn TranslationSource = &fake;
+
+    let book = source.get(1, "VI").unwrap();
+
+    assert_eq!(book.guidelines, "natural");
+    assert_eq!(book.chapters["c1"].paragraphs.len(), 2);
+    assert_eq!(book.dict[0].id, 1);
+    assert!(source.get(1, "EN").unwrap().dict.is_empty());
+    assert!(source.get(2, "VI").unwrap().chapters.is_empty());
+    assert!(source.get(1, "FR").is_err());
+}
+
+#[test]
+fn fake_translation_applies_and_records_writes_in_memory() {
+    let fake = FakeTranslation::new()
+        .with_translated_chapter(1, "VI", "c1", "One", &["a", "b"])
+        .with_entry(1, "VI", "Lin", "Lam", "name", "");
+    let source: &dyn TranslationSource = &fake;
+    let patch = DictPatch {
+        note: Some("hero".to_string()),
+        ..DictPatch::default()
+    };
+
+    source.passage_save(1, "VI", "c1", 2, "changed").unwrap();
+    let added = source.dict_add(1, "VI", entry("Moon", "Trang")).unwrap();
+    let updated = source.dict_update(1, 1, patch.clone()).unwrap();
+    source.dict_delete(1, added.entry.id).unwrap();
+
+    assert_eq!(fake.passage_text(1, "VI", "c1", 2), "changed");
+    assert_eq!(updated.entry.note, "hero");
+    assert_eq!(fake.book(1, "VI").dict.len(), 1);
+    assert_eq!(
+        fake.writes(),
+        vec![
+            TranslationWrite::Passage {
+                novel_id: 1,
+                target: "VI".to_string(),
+                chapter_id: "c1".to_string(),
+                n: 2,
+                text: "changed".to_string(),
+            },
+            TranslationWrite::DictAdd {
+                novel_id: 1,
+                target: "VI".to_string(),
+                input: entry("Moon", "Trang"),
+            },
+            TranslationWrite::DictUpdate {
+                novel_id: 1,
+                id: 1,
+                patch,
+            },
+            TranslationWrite::DictDelete {
+                novel_id: 1,
+                id: added.entry.id,
+            },
+        ]
+    );
+}
+
+#[test]
+fn fake_translation_refuses_bad_writes_without_recording_them() {
+    let fake = FakeTranslation::new()
+        .with_translated_chapter(1, "VI", "c1", "One", &["a"])
+        .with_entry(1, "VI", "Lin", "Lam", "name", "");
+    let source: &dyn TranslationSource = &fake;
+
+    assert!(source.passage_save(1, "VI", "c9", 1, "x").is_err());
+    assert!(source.passage_save(1, "VI", "c1", 2, "x").is_err());
+    assert!(source.dict_add(1, "VI", entry("Lin", "x")).is_err());
+    assert!(source.dict_add(1, "VI", entry(" ", "x")).is_err());
+    assert!(source.dict_update(1, 9, DictPatch::default()).is_err());
+    assert!(source.dict_delete(1, 9).is_err());
+    assert!(fake.writes().is_empty());
+}
+
+#[test]
+fn failing_fake_translation_rejects_every_call() {
+    let fake = FakeTranslation::new().failing("boom");
+    let source: &dyn TranslationSource = &fake;
+
+    assert_eq!(source.get(1, "VI").unwrap_err(), "boom");
+    assert_eq!(
+        source.passage_save(1, "VI", "c", 1, "x").unwrap_err(),
+        "boom"
+    );
+    assert_eq!(
+        source.dict_add(1, "VI", entry("a", "b")).unwrap_err(),
+        "boom"
+    );
+    assert_eq!(
+        source.dict_update(1, 1, DictPatch::default()).unwrap_err(),
+        "boom"
+    );
+    assert_eq!(source.dict_delete(1, 1).unwrap_err(), "boom");
 }

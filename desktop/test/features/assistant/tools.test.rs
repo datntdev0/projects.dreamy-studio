@@ -1,8 +1,12 @@
 use super::*;
+use crate::features::translation::warnings::TranslationWarning;
+use crate::features::translation::warnings::WarningKind;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::RecordingSink;
 use crate::testing::assistant::sources_of;
+use crate::testing::assistant::sources_with;
 use serde_json::from_str;
 
 fn workspace() -> AssistantScope {
@@ -93,9 +97,13 @@ fn definitions_describe_the_tools() {
             "read_novel",
             "read_novel_chapter",
             "read_novel_knowledge",
+            "read_translation",
+            "read_translation_guide",
             "edit_novel",
             "edit_novel_chapter",
-            "edit_novel_knowledge"
+            "edit_novel_knowledge",
+            "edit_translation_passage",
+            "edit_dictionary"
         ]
     );
     for tool in list {
@@ -109,6 +117,22 @@ fn definitions_describe_the_tools() {
     assert_eq!(
         list[3]["inputSchema"]["required"],
         json!(["novelId", "lang"])
+    );
+    assert_eq!(
+        list[4]["inputSchema"]["required"],
+        json!(["novelId", "target", "chapter"])
+    );
+    assert_eq!(
+        list[5]["inputSchema"]["required"],
+        json!(["novelId", "target"])
+    );
+    assert_eq!(
+        list[9]["inputSchema"]["required"],
+        json!(["novelId", "target", "chapter", "p", "expected", "text"])
+    );
+    assert_eq!(
+        list[10]["inputSchema"]["required"],
+        json!(["novelId", "target"])
     );
 }
 
@@ -631,4 +655,305 @@ fn read_novel_knowledge_respects_the_novel_scope() {
     );
     assert!(outside.contains("scope"));
     assert!(inside.is_ok());
+}
+
+const CHAPTER_ID: &str = "chapter-1-3";
+
+fn translated_novels() -> FakeNovels {
+    FakeNovels::new()
+        .with_novel(1, "First")
+        .with_chapter(1, 3, "Third", &["source a", "source b"])
+        .with_chapter(1, 4, "Fourth", &["source c"])
+        .with_novel(2, "Second")
+}
+
+fn translated_book() -> FakeTranslation {
+    FakeTranslation::new()
+        .with_translated_chapter(1, "VI", CHAPTER_ID, "Chuong ba", &["dich a", "dich b"])
+        .with_note(1, "VI", CHAPTER_ID, 2, "ghi chu")
+}
+
+fn translation_tool(
+    name: &str,
+    args: Value,
+    scope: &AssistantScope,
+    novels: &FakeNovels,
+    translation: &FakeTranslation,
+) -> Result<ToolOutput, String> {
+    let sink = RecordingSink::new();
+    let ctx = ToolContext {
+        scope,
+        can_edit: false,
+        sink: &sink,
+    };
+    let sources = sources_with(novels, &FakeKnowledge::new(), translation);
+    call(name, &args, &ctx, &sources)
+}
+
+fn read_translated(args: Value) -> Result<Value, String> {
+    let output = translation_tool(
+        "read_translation",
+        args,
+        &workspace(),
+        &translated_novels(),
+        &translated_book(),
+    )?;
+    Ok(from_str(&output.text).unwrap())
+}
+
+#[test]
+fn read_translation_pairs_source_and_translation_per_paragraph() {
+    let value = read_translated(json!({"novelId": 1, "target": "vi", "chapter": 3})).unwrap();
+
+    assert_eq!(
+        value,
+        json!({
+            "novelId": 1,
+            "chapter": 3,
+            "title": "Chuong ba",
+            "target": "VI",
+            "total": 2,
+            "from": 1,
+            "to": 2,
+            "paragraphs": [
+                {"p": 1, "source": "source a", "translation": "dich a", "note": ""},
+                {"p": 2, "source": "source b", "translation": "dich b", "note": "ghi chu"},
+            ],
+            "next": null,
+        })
+    );
+}
+
+#[test]
+fn read_translation_label_names_the_range() {
+    let output = translation_tool(
+        "read_translation",
+        json!({"novelId": 1, "target": "VI", "chapter": 3, "from": 2}),
+        &workspace(),
+        &translated_novels(),
+        &translated_book(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        output.label,
+        "read_translation(novel 1, ch 3, VI, ¶2–2) → 1 đoạn"
+    );
+}
+
+#[test]
+fn read_translation_pages_like_a_chapter() {
+    let source = novels_with(&texts(70));
+    let own: Vec<String> = (1..=70).map(|n| format!("dich {n}")).collect();
+    let refs: Vec<&str> = own.iter().map(String::as_str).collect();
+    let translation =
+        FakeTranslation::new().with_translated_chapter(1, "VI", CHAPTER_ID, "Ba", &refs);
+    let read = |args: Value| -> Value {
+        let output = translation_tool(
+            "read_translation",
+            args,
+            &workspace(),
+            &source,
+            &translation,
+        )
+        .unwrap();
+        from_str(&output.text).unwrap()
+    };
+
+    let first = read(json!({"novelId": 1, "target": "VI", "chapter": 3}));
+    let second = read(json!({"novelId": 1, "target": "VI", "chapter": 3, "from": 61}));
+
+    assert_eq!(positions(&first).len(), PAGE_PARAGRAPHS);
+    assert_eq!(first["next"], 61);
+    assert_eq!(first["total"], 70);
+    assert_eq!(positions(&second), (61..=70).collect::<Vec<i64>>());
+    assert!(second["next"].is_null());
+}
+
+#[test]
+fn read_translation_caps_a_page_by_source_and_translation_characters() {
+    let long = "x".repeat(4000);
+    let source = novels_with(&[long.clone(), long.clone(), long.clone(), long.clone()]);
+    let translation = FakeTranslation::new().with_translated_chapter(
+        1,
+        "VI",
+        CHAPTER_ID,
+        "Ba",
+        &[&long, &long, &long, &long],
+    );
+    let output = translation_tool(
+        "read_translation",
+        json!({"novelId": 1, "target": "VI", "chapter": 3}),
+        &workspace(),
+        &source,
+        &translation,
+    )
+    .unwrap();
+    let value: Value = from_str(&output.text).unwrap();
+
+    assert_eq!(positions(&value), vec![1]);
+    assert_eq!(value["next"], 2);
+}
+
+#[test]
+fn read_translation_reports_a_missing_translation_for_unfinished_paragraphs() {
+    let translation =
+        FakeTranslation::new().with_translated_chapter(1, "VI", CHAPTER_ID, "Ba", &["dich a"]);
+    let output = translation_tool(
+        "read_translation",
+        json!({"novelId": 1, "target": "VI", "chapter": 3}),
+        &workspace(),
+        &translated_novels(),
+        &translation,
+    )
+    .unwrap();
+    let value: Value = from_str(&output.text).unwrap();
+
+    assert_eq!(value["paragraphs"][1]["translation"], Value::Null);
+    assert_eq!(value["paragraphs"][1]["source"], "source b");
+}
+
+#[test]
+fn read_translation_of_an_untranslated_chapter_is_an_error() {
+    let error = read_translated(json!({"novelId": 1, "target": "VI", "chapter": 4})).unwrap_err();
+    let other = read_translated(json!({"novelId": 1, "target": "EN", "chapter": 3})).unwrap_err();
+
+    assert!(error.contains("has no VI translation yet"));
+    assert!(other.contains("has no EN translation yet"));
+}
+
+#[test]
+fn read_translation_validates_its_arguments() {
+    let target = read_translated(json!({"novelId": 1, "target": "FR", "chapter": 3}));
+    let missing = read_translated(json!({"novelId": 1, "chapter": 3}));
+    let chapter = read_translated(json!({"novelId": 1, "target": "VI", "chapter": 9}));
+    let novel = read_translated(json!({"novelId": 9, "target": "VI", "chapter": 3}));
+
+    assert!(target.unwrap_err().contains("unsupported target 'FR'"));
+    assert!(missing.unwrap_err().contains("target"));
+    assert!(chapter.unwrap_err().contains("chapter 9 not found"));
+    assert!(novel.unwrap_err().contains("not found"));
+}
+
+#[test]
+fn read_translation_tools_respect_the_novel_scope() {
+    let args = json!({"novelId": 2, "target": "VI", "chapter": 1});
+    let guide = json!({"novelId": 2, "target": "VI"});
+    let novels = translated_novels();
+    let translation = translated_book();
+
+    let read = translation_tool(
+        "read_translation",
+        args,
+        &novel_scope(1),
+        &novels,
+        &translation,
+    );
+    let read_guide = translation_tool(
+        "read_translation_guide",
+        guide,
+        &novel_scope(1),
+        &novels,
+        &translation,
+    );
+
+    assert!(read.unwrap_err().contains("outside the current scope"));
+    assert!(
+        read_guide
+            .unwrap_err()
+            .contains("outside the current scope")
+    );
+}
+
+#[test]
+fn read_translation_reports_source_errors() {
+    let translation = translated_book().failing("disk on fire");
+
+    let error = translation_tool(
+        "read_translation",
+        json!({"novelId": 1, "target": "VI", "chapter": 3}),
+        &workspace(),
+        &translated_novels(),
+        &translation,
+    )
+    .unwrap_err();
+
+    assert_eq!(error, "disk on fire");
+}
+
+#[test]
+fn read_translation_guide_returns_guidelines_dictionary_and_warnings() {
+    let translation = translated_book()
+        .with_guidelines(1, "VI", "Dich tu nhien")
+        .with_entry(1, "VI", "Lin", "Lam", "name", "nhan vat")
+        .with_entry(1, "VI", "Sword", "Kiem", "term", "")
+        .with_entry(1, "EN", "Lin", "Lin", "name", "")
+        .with_warning(
+            1,
+            "VI",
+            TranslationWarning {
+                kind: WarningKind::Dict,
+                chapter_id: CHAPTER_ID.to_string(),
+                n: 2,
+                entry_id: Some(1),
+            },
+        )
+        .with_warning(
+            1,
+            "VI",
+            TranslationWarning {
+                kind: WarningKind::Source,
+                chapter_id: "unknown".to_string(),
+                n: 1,
+                entry_id: None,
+            },
+        );
+
+    let output = translation_tool(
+        "read_translation_guide",
+        json!({"novelId": 1, "target": "vi"}),
+        &workspace(),
+        &translated_novels(),
+        &translation,
+    )
+    .unwrap();
+    let value: Value = from_str(&output.text).unwrap();
+
+    assert_eq!(
+        value,
+        json!({
+            "novelId": 1,
+            "target": "VI",
+            "guidelines": "Dich tu nhien",
+            "dictionary": [
+                {"id": 1, "src": "Lin", "dst": "Lam", "type": "name", "note": "nhan vat"},
+                {"id": 2, "src": "Sword", "dst": "Kiem", "type": "term", "note": ""},
+            ],
+            "warnings": [
+                {"kind": "dict", "chapter": 3, "p": 2, "entryId": 1},
+                {"kind": "source", "chapter": null, "p": 1, "entryId": null},
+            ],
+        })
+    );
+    assert_eq!(
+        output.label,
+        "read_translation_guide(novel 1, VI) → 2 mục từ, 2 cảnh báo"
+    );
+}
+
+#[test]
+fn read_translation_guide_is_empty_for_a_fresh_target() {
+    let output = translation_tool(
+        "read_translation_guide",
+        json!({"novelId": 1, "target": "EN"}),
+        &workspace(),
+        &translated_novels(),
+        &FakeTranslation::new(),
+    )
+    .unwrap();
+    let value: Value = from_str(&output.text).unwrap();
+
+    assert_eq!(value["guidelines"], "");
+    assert_eq!(value["dictionary"], json!([]));
+    assert_eq!(value["warnings"], json!([]));
 }

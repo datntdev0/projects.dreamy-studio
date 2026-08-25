@@ -89,12 +89,13 @@ fn paragraph_rows<'a>(
     paragraphs: &'a mut ParagraphCache,
 ) -> Option<&'a Vec<ParagraphRow>> {
     let key = (citation.novel_id, citation.chapter);
-    if !paragraphs.contains_key(&key) {
-        let rows = chapter_id(citation, source, chapters)
-            .and_then(|id| source.chapter_read(citation.novel_id, &id).ok());
-        paragraphs.insert(key, rows);
-    }
-    paragraphs.get(&key).and_then(Option::as_ref)
+    paragraphs
+        .entry(key)
+        .or_insert_with(|| {
+            chapter_id(citation, source, chapters)
+                .and_then(|id| source.chapter_read(citation.novel_id, &id).ok())
+        })
+        .as_ref()
 }
 
 fn chapter_id(

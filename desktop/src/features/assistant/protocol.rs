@@ -42,9 +42,7 @@ fn handle_one(message: &Value, caller: &dyn ToolCaller) -> Option<Value> {
             "request must be an object",
         ));
     };
-    let Some(id) = object.get("id") else {
-        return None;
-    };
+    let id = object.get("id")?;
     if !(id.is_string() || id.is_number()) {
         return Some(failure(
             Value::Null,

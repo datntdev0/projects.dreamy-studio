@@ -30,10 +30,10 @@ pub fn opening(
     prompt.push_str("- Answer in the user's language.\n");
     prompt.push_str("- State only facts you read through the tools. If you did not read it or you are unsure, say so instead of guessing.\n");
     prompt.push_str("- Keep the answer concise and in plain text.\n");
-    if scope.kind == ScopeKind::Novel {
-        if let Some(novel_id) = scope.novel_id {
-            prompt.push_str(&format!("- Focus on the novel with id {novel_id}.\n"));
-        }
+    if scope.kind == ScopeKind::Novel
+        && let Some(novel_id) = scope.novel_id
+    {
+        prompt.push_str(&format!("- Focus on the novel with id {novel_id}.\n"));
     }
     prompt.push_str("\n## Citations\n");
     prompt.push_str("After the answer you may append exactly one block, with nothing after it:\n");

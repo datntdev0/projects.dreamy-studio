@@ -15,6 +15,7 @@ use crate::testing::assistant::FakeLlm;
 use crate::testing::assistant::RecordingEvents;
 use crate::testing::assistant::RecordingSink;
 use crate::testing::backend::StubBackend;
+use serde_json::json;
 use tempfile::TempDir;
 
 struct Fixture {
@@ -54,6 +55,22 @@ fn entered_fixture() -> Fixture {
         knowledge: KnowledgeService::new(),
         translation: TranslationService::new(),
         service: service(),
+    }
+}
+
+fn services(fixture: &Fixture) -> SourceServices<'_> {
+    SourceServices {
+        novels: &fixture.novels,
+        knowledge: &fixture.knowledge,
+        translation: &fixture.translation,
+    }
+}
+
+fn input<'a>(session_id: &'a str, text: &'a str, context: Option<Value>) -> SendInput<'a> {
+    SendInput {
+        session_id,
+        text,
+        context,
     }
 }
 
@@ -132,11 +149,9 @@ fn sends_a_message_and_lists_the_session_afterwards() {
 
     let answered = send_message(
         &fixture.service,
-        &fixture.novels,
+        &services(&fixture),
         &fixture.session,
-        &created.summary.id,
-        "What novels are here?",
-        None,
+        input(&created.summary.id, "What novels are here?", None),
         events,
     )
     .unwrap();
@@ -203,6 +218,13 @@ fn rejects_a_novel_scope_for_an_unknown_or_missing_novel() {
 fn every_operation_reports_no_workspace_without_a_current_workspace() {
     let service = service();
     let novels = NovelService::new();
+    let knowledge = KnowledgeService::new();
+    let translation = TranslationService::new();
+    let services = SourceServices {
+        novels: &novels,
+        knowledge: &knowledge,
+        translation: &translation,
+    };
     let session = WorkspaceSession::new();
     let sink = Arc::new(RecordingEvents::new());
 
@@ -212,7 +234,7 @@ fn every_operation_reports_no_workspace_without_a_current_workspace() {
         create_session(&service, &novels, &session, workspace_scope()).unwrap_err(),
         delete_session(&service, &session, "id").unwrap_err(),
         permit_session(&service, &session, "id", true).unwrap_err(),
-        send_message(&service, &novels, &session, "id", "hi", None, sink).unwrap_err(),
+        send_message(&service, &services, &session, input("id", "hi", None), sink).unwrap_err(),
     ];
 
     for error in errors {
@@ -270,4 +292,67 @@ fn host_refuses_every_grant_when_no_workspace_is_open() {
     );
 
     assert_eq!(refused.err().unwrap(), "workspace is no longer open");
+}
+
+#[test]
+fn a_bad_context_shape_is_invalid_and_null_means_no_context() {
+    let fixture = entered_fixture();
+    let created = create_session(
+        &fixture.service,
+        &fixture.novels,
+        &fixture.session,
+        workspace_scope(),
+    )
+    .unwrap();
+    let id = created.summary.id;
+    let bad = [
+        json!({ "kind": "nope" }),
+        json!({ "kind": "translation_review" }),
+        json!("review"),
+    ];
+
+    for context in bad {
+        let error = send_message(
+            &fixture.service,
+            &services(&fixture),
+            &fixture.session,
+            input(&id, "hi", Some(context)),
+            Arc::new(RecordingEvents::new()),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, AssistantErrorCode::Invalid);
+    }
+    let null = send_message(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        input(&id, "hi", Some(Value::Null)),
+        Arc::new(RecordingEvents::new()),
+    );
+
+    assert!(null.is_ok());
+}
+
+#[test]
+fn a_review_context_in_workspace_scope_is_invalid() {
+    let fixture = entered_fixture();
+    let created = create_session(
+        &fixture.service,
+        &fixture.novels,
+        &fixture.session,
+        workspace_scope(),
+    )
+    .unwrap();
+    let context = json!({ "kind": "translation_review", "chapterId": "c1", "target": "VI" });
+
+    let error = send_message(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        input(&created.summary.id, "hi", Some(context)),
+        Arc::new(RecordingEvents::new()),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Invalid);
 }

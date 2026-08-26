@@ -429,7 +429,7 @@ impl DictionaryPlan {
     }
 }
 
-fn list_of<'a>(args: &'a Value, key: &str) -> Result<&'a [Value], String> {
+pub(crate) fn list_of<'a>(args: &'a Value, key: &str) -> Result<&'a [Value], String> {
     match args.get(key) {
         None | Some(Value::Null) => Ok(&[]),
         Some(Value::Array(items)) => Ok(items),

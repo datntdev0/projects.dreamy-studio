@@ -3,6 +3,7 @@ use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantCitation;
+use crate::features::assistant::models::AssistantContext;
 use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
@@ -17,7 +18,11 @@ use crate::features::assistant::models::SessionRecord;
 use crate::features::assistant::prompt;
 use crate::features::assistant::reply;
 use crate::features::assistant::repository::AssistantRepository;
+use crate::features::assistant::skills;
 use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::sources::Sources;
+use crate::features::novel::models::ChapterRow;
+use crate::features::novel::models::NovelSummary;
 use crate::features::pipeline::llm::ClientError;
 use crate::features::pipeline::llm::Extras;
 use crate::features::pipeline::llm::LlmClient;
@@ -27,11 +32,13 @@ use crate::features::pipeline::log::TaskLog;
 use crate::features::settings::home;
 use crate::features::settings::llm::spec;
 use crate::features::settings::repository::SettingsRepository;
+use crate::features::translation::models::TranslationTarget;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
 use chrono::Local;
 use chrono::Utc;
+use serde_json::Value;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
@@ -260,23 +267,24 @@ impl AssistantWorkspace {
         &self,
         session_id: &str,
         text: &str,
-        context: Option<serde_json::Value>,
+        context: Option<AssistantContext>,
         sink: Arc<dyn AssistantEventSink>,
-        source: &dyn NovelSource,
+        sources: &Sources,
     ) -> AssistantResult<AssistantSession> {
-        if context.as_ref().is_some_and(|value| !value.is_null()) {
-            return Err(AssistantError::invalid("context is not supported yet"));
-        }
         let text = text.trim();
         if text.is_empty() {
             return Err(AssistantError::invalid("message is empty"));
         }
         let _guard = self.claim(session_id)?;
         let record = self.load(session_id)?;
+        let skill = match context {
+            Some(context) => Some(skill_of(context, &record.summary.scope, sources)?),
+            None => None,
+        };
         let history = self.history(session_id)?;
         let user = new_message(Role::User, text, Vec::new(), Vec::new());
         self.append(session_id, &user)?;
-        let exchange = self.exchange(&record, &history, text, sink, source);
+        let exchange = self.exchange(&record, &history, text, skill.as_ref(), sink, sources);
         match exchange {
             Ok(done) => self.finish(record, user, done),
             Err(error) => {
@@ -291,13 +299,15 @@ impl AssistantWorkspace {
         record: &SessionRecord,
         history: &[AssistantMessage],
         text: &str,
+        skill: Option<&Skill>,
         sink: Arc<dyn AssistantEventSink>,
-        source: &dyn NovelSource,
+        sources: &Sources,
     ) -> AssistantResult<Exchange> {
         let llm = &self.service.llm;
         let provider = llm.provider().map_err(AssistantError::llm)?;
         let collector = Arc::new(Collector {
             labels: Mutex::new(Vec::new()),
+            attachments: Mutex::new(Vec::new()),
             sink,
         });
         let token = self.service.grants.issue(Grant {
@@ -311,13 +321,13 @@ impl AssistantWorkspace {
             _ => None,
         };
         let turn = match resumable {
-            Some(session) => llm.resume(session, prompt::follow_up(text), &token),
+            Some(session) => llm.resume(session, resume_prompt(text, skill), &token),
             None => {
                 let start = history.len().saturating_sub(HISTORY_LIMIT);
-                let novels = source.list().unwrap_or_default();
+                let novels = sources.novels.list().unwrap_or_default();
                 let opening =
                     prompt::opening(&record.summary.scope, &history[start..], text, &novels);
-                llm.start(opening, &token)
+                llm.start(start_prompt(opening, skill), &token)
             }
         };
         self.service.grants.revoke(&token);
@@ -327,8 +337,9 @@ impl AssistantWorkspace {
             provider,
             session: turn.session,
             text: answer,
-            citations: reply::verify(citations, source),
+            citations: reply::verify(citations, sources.novels.as_ref()),
             activities: collector.labels(),
+            attachments: collector.attachments(),
         })
     }
 
@@ -338,7 +349,9 @@ impl AssistantWorkspace {
         user: AssistantMessage,
         done: Exchange,
     ) -> AssistantResult<AssistantSession> {
-        let assistant = new_message(Role::Assistant, &done.text, done.activities, done.citations);
+        let mut assistant =
+            new_message(Role::Assistant, &done.text, done.activities, done.citations);
+        assistant.attachments = done.attachments;
         let id = record.summary.id.clone();
         let _gate = lock(&self.service.gate);
         let db = self.database()?;
@@ -408,6 +421,13 @@ struct Exchange {
     text: String,
     citations: Vec<AssistantCitation>,
     activities: Vec<String>,
+    attachments: Vec<Value>,
+}
+
+struct Skill {
+    novel: NovelSummary,
+    chapter: ChapterRow,
+    target: String,
 }
 
 struct BusyGuard {
@@ -423,12 +443,17 @@ impl Drop for BusyGuard {
 
 struct Collector {
     labels: Mutex<Vec<String>>,
+    attachments: Mutex<Vec<Value>>,
     sink: Arc<dyn AssistantEventSink>,
 }
 
 impl Collector {
     fn labels(&self) -> Vec<String> {
         lock(&self.labels).clone()
+    }
+
+    fn attachments(&self) -> Vec<Value> {
+        lock(&self.attachments).clone()
     }
 }
 
@@ -440,6 +465,86 @@ impl TurnSink for Collector {
 
     fn changed(&self, change: AssistantChange) {
         self.sink.emit(AssistantEvent::Changed(change));
+    }
+
+    fn attach(&self, attachment: Value) {
+        let mut stored = lock(&self.attachments);
+        let kind = attachment.get("kind").cloned();
+        match stored
+            .iter_mut()
+            .find(|item| item.get("kind") == kind.as_ref())
+        {
+            Some(slot) => *slot = attachment,
+            None => stored.push(attachment),
+        }
+    }
+}
+
+fn skill_of(
+    context: AssistantContext,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> AssistantResult<Skill> {
+    let AssistantContext::TranslationReview { chapter_id, target } = context;
+    let novel_id = match (scope.kind, scope.novel_id) {
+        (ScopeKind::Novel, Some(id)) => id,
+        _ => {
+            return Err(AssistantError::invalid(
+                "a translation review needs a novel scope",
+            ));
+        }
+    };
+    let target = TranslationTarget::parse(&target)
+        .ok_or_else(|| AssistantError::invalid(format!("unsupported target '{target}'")))?;
+    let chapter = sources
+        .novels
+        .chapters(novel_id)
+        .map_err(AssistantError::storage)?
+        .into_iter()
+        .find(|row| row.id == chapter_id)
+        .ok_or_else(|| {
+            AssistantError::invalid(format!("chapter {chapter_id} is not in novel {novel_id}"))
+        })?;
+    let book = sources
+        .translation
+        .get(novel_id, target.as_str())
+        .map_err(AssistantError::storage)?;
+    if !book.chapters.contains_key(&chapter.id) {
+        return Err(AssistantError::invalid(format!(
+            "chapter {} has no {} translation yet",
+            chapter.seq,
+            target.as_str()
+        )));
+    }
+    let novel = sources
+        .novels
+        .list()
+        .map_err(AssistantError::storage)?
+        .into_iter()
+        .find(|row| row.id == novel_id)
+        .ok_or_else(|| AssistantError::invalid(format!("novel {novel_id} not found")))?;
+    Ok(Skill {
+        novel,
+        chapter,
+        target: target.as_str().to_string(),
+    })
+}
+
+fn start_prompt(opening: String, skill: Option<&Skill>) -> String {
+    match skill {
+        Some(skill) => {
+            skills::review_translation(&skill.novel, &skill.chapter, &skill.target, Some(opening))
+        }
+        None => opening,
+    }
+}
+
+fn resume_prompt(text: &str, skill: Option<&Skill>) -> String {
+    match skill {
+        Some(skill) => {
+            skills::review_translation(&skill.novel, &skill.chapter, &skill.target, None)
+        }
+        None => prompt::follow_up(text),
     }
 }
 

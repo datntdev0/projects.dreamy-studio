@@ -801,6 +801,7 @@ fn evidence(chapters: &[i64]) -> Vec<KnowledgeEvidence> {
 pub struct RecordingSink {
     labels: Mutex<Vec<String>>,
     changes: Mutex<Vec<AssistantChange>>,
+    attachments: Mutex<Vec<serde_json::Value>>,
 }
 
 impl RecordingSink {
@@ -815,6 +816,10 @@ impl RecordingSink {
     pub fn changes(&self) -> Vec<AssistantChange> {
         guard(&self.changes).clone()
     }
+
+    pub fn attachments(&self) -> Vec<serde_json::Value> {
+        guard(&self.attachments).clone()
+    }
 }
 
 impl TurnSink for RecordingSink {
@@ -824,6 +829,10 @@ impl TurnSink for RecordingSink {
 
     fn changed(&self, change: AssistantChange) {
         guard(&self.changes).push(change);
+    }
+
+    fn attach(&self, attachment: serde_json::Value) {
+        guard(&self.attachments).push(attachment);
     }
 }
 

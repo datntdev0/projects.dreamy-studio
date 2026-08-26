@@ -103,7 +103,8 @@ fn definitions_describe_the_tools() {
             "edit_novel_chapter",
             "edit_novel_knowledge",
             "edit_translation_passage",
-            "edit_dictionary"
+            "edit_dictionary",
+            "submit_translation_review"
         ]
     );
     for tool in list {

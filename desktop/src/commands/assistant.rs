@@ -1,4 +1,5 @@
 use crate::features::assistant::grants::Grant;
+use crate::features::assistant::models::AssistantContext;
 use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
@@ -53,6 +54,15 @@ pub fn open_sources(
     if !session.is_current(&grant.workspace) {
         return Err(WORKSPACE_CLOSED.to_string());
     }
+    build_sources(novels, knowledge, translation, session)
+}
+
+fn build_sources(
+    novels: &NovelService,
+    knowledge: &KnowledgeService,
+    translation: &TranslationService,
+    session: &WorkspaceSession,
+) -> Result<Sources, String> {
     let novels = novels.open(session).map_err(|error| error.to_string())?;
     let knowledge = knowledge.open(session).map_err(|error| error.to_string())?;
     let translation = translation
@@ -108,18 +118,44 @@ pub fn delete_session(
     service.open(session)?.delete(id)
 }
 
+pub struct SendInput<'a> {
+    pub session_id: &'a str,
+    pub text: &'a str,
+    pub context: Option<Value>,
+}
+
+pub struct SourceServices<'a> {
+    pub novels: &'a NovelService,
+    pub knowledge: &'a KnowledgeService,
+    pub translation: &'a TranslationService,
+}
+
 pub fn send_message(
     service: &AssistantService,
-    novels: &NovelService,
+    services: &SourceServices,
     session: &WorkspaceSession,
-    session_id: &str,
-    text: &str,
-    context: Option<Value>,
+    input: SendInput,
     sink: Arc<dyn AssistantEventSink>,
 ) -> AssistantResult<AssistantSession> {
     let workspace = service.open(session)?;
-    let source = novels.open(session).map_err(novel_failure)?;
-    workspace.send(session_id, text, context, sink, &source)
+    let context = parse_context(input.context)?;
+    let sources = build_sources(
+        services.novels,
+        services.knowledge,
+        services.translation,
+        session,
+    )
+    .map_err(AssistantError::storage)?;
+    workspace.send(input.session_id, input.text, context, sink, &sources)
+}
+
+fn parse_context(context: Option<Value>) -> AssistantResult<Option<AssistantContext>> {
+    match context {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => serde_json::from_value(value)
+            .map(Some)
+            .map_err(|error| AssistantError::invalid(format!("bad context: {error}"))),
+    }
 }
 
 fn novel_failure(error: NovelError) -> AssistantError {
@@ -187,8 +223,21 @@ pub async fn assistant_message_send(
     on_event: Channel<AssistantEvent>,
 ) -> AssistantResult<AssistantSession> {
     let sink: Arc<dyn AssistantEventSink> = Arc::new(ChannelSink(on_event));
+    let handle = app.clone();
     run_blocking(app, move |service, novels, session| {
-        send_message(service, novels, session, &session_id, &text, context, sink)
+        let knowledge = handle.state::<KnowledgeService>();
+        let translation = handle.state::<TranslationService>();
+        let services = SourceServices {
+            novels,
+            knowledge: &knowledge,
+            translation: &translation,
+        };
+        let input = SendInput {
+            session_id: &session_id,
+            text: &text,
+            context,
+        };
+        send_message(service, &services, session, input, sink)
     })
     .await
 }

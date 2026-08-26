@@ -2,6 +2,7 @@ use crate::features::assistant::edits;
 use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
+use crate::features::assistant::proposals;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::knowledge::models::KnowledgeEntity;
@@ -256,6 +257,53 @@ pub fn definitions() -> Value {
                 "required": ["novelId", "target"],
                 "additionalProperties": false
             }
+        },
+        {
+            "name": "submit_translation_review",
+            "description": "Submit the result of a translation review as a card the user can apply or reject item by item. Call it exactly once, after reading the whole chapter; a later call replaces the earlier one. Nothing is written to the novel. Each finding quotes `from`, a snippet copied verbatim from the current translation of paragraph `n`, and the `to` that replaces its first occurrence. Findings whose paragraph or snippet does not match, and dictionary entries whose `src` already exists, are dropped; the result lists them in `dropped` (with the 0-based `index` into the array you sent) so you can fix and submit again.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
+                    "checked": { "type": "integer", "minimum": 0, "description": "Number of paragraphs you checked." },
+                    "findings": {
+                        "type": "array",
+                        "description": "Problems found in the translation.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "n": { "type": "integer", "minimum": 1, "description": "1-based paragraph position." },
+                                "severity": { "type": "string", "enum": ["error", "warning", "info"], "description": "How serious the problem is." },
+                                "category": { "type": "string", "enum": ["name", "dict", "meaning", "omission", "style"], "description": "Kind of problem." },
+                                "from": { "type": "string", "description": "Snippet of the current translation, copied verbatim. Must not be empty." },
+                                "to": { "type": "string", "description": "Text that replaces the first occurrence of `from`." },
+                                "reason": { "type": "string", "description": "Why the change is needed, in the user's language." }
+                            },
+                            "required": ["n", "severity", "category", "from", "to", "reason"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "dictionary": {
+                        "type": "array",
+                        "description": "Dictionary entries worth adding. Terms already in the dictionary are dropped.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "src": { "type": "string", "description": "Source term." },
+                                "dst": { "type": "string", "description": "Translated term." },
+                                "type": { "type": "string", "enum": ["name", "place", "org", "title", "term"], "description": "Entry type." },
+                                "note": { "type": "string", "description": "Optional note." }
+                            },
+                            "required": ["src", "dst", "type"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["novelId", "target", "chapter", "checked", "findings", "dictionary"],
+                "additionalProperties": false
+            }
         }
     ])
 }
@@ -279,6 +327,7 @@ pub fn call(
         "edit_novel_knowledge" => edits::edit_novel_knowledge(args, ctx, sources),
         "edit_translation_passage" => edits::edit_translation_passage(args, ctx, sources),
         "edit_dictionary" => edits::edit_dictionary(args, ctx, sources),
+        "submit_translation_review" => proposals::submit_translation_review(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }

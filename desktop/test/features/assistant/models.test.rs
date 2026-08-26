@@ -110,3 +110,28 @@ fn activity_event_keeps_its_shape() {
         json!({ "kind": "activity", "label": "list_novel()" })
     );
 }
+
+#[test]
+fn a_translation_review_context_reads_camel_case_fields() {
+    let context: AssistantContext = serde_json::from_value(json!({
+        "kind": "translation_review",
+        "chapterId": "c1",
+        "target": "VI",
+    }))
+    .unwrap();
+
+    assert_eq!(
+        context,
+        AssistantContext::TranslationReview {
+            chapter_id: "c1".to_string(),
+            target: "VI".to_string(),
+        }
+    );
+}
+
+#[test]
+fn an_unknown_context_kind_is_rejected() {
+    let parsed = serde_json::from_value::<AssistantContext>(json!({ "kind": "nope" }));
+
+    assert!(parsed.is_err());
+}

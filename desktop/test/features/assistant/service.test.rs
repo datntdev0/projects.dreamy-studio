@@ -6,9 +6,13 @@ use crate::features::assistant::models::ChangeTarget;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::assistant::CallKind;
+use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeLlm;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::RecordingEvents;
+use crate::testing::assistant::sources_of;
+use crate::testing::assistant::sources_with;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -57,6 +61,10 @@ fn novels() -> FakeNovels {
     )
 }
 
+fn sources(novels: &FakeNovels) -> Sources {
+    sources_of(novels, &FakeKnowledge::new())
+}
+
 fn events() -> Arc<RecordingEvents> {
     Arc::new(RecordingEvents::new())
 }
@@ -67,7 +75,9 @@ fn send(
     text: &str,
     source: &FakeNovels,
 ) -> AssistantResult<AssistantSession> {
-    fixture.workspace.send(id, text, None, events(), source)
+    fixture
+        .workspace
+        .send(id, text, None, events(), &sources(source))
 }
 
 fn code(result: AssistantResult<AssistantSession>) -> AssistantErrorCode {
@@ -311,8 +321,58 @@ fn history_in_the_opening_prompt_is_limited_to_the_last_ten_messages() {
     assert!(prompt.contains("ask-7"));
 }
 
+fn review_context(chapter_id: &str, target: &str) -> Option<AssistantContext> {
+    Some(AssistantContext::TranslationReview {
+        chapter_id: chapter_id.to_string(),
+        target: target.to_string(),
+    })
+}
+
+fn review_novels() -> FakeNovels {
+    novels()
+        .with_novel(2, "Beta")
+        .with_chapter(2, 1, "Other", &["Elsewhere."])
+        .with_statuses(1, 1, "done", "none")
+}
+
+fn review_translation() -> FakeTranslation {
+    FakeTranslation::new()
+        .with_translated_chapter(
+            1,
+            "VI",
+            "chapter-1-1",
+            "Một",
+            &["Anh rút kiếm.", "Mưa rơi."],
+        )
+        .with_translated_chapter(2, "VI", "chapter-2-1", "Khác", &["Nơi khác."])
+}
+
+fn send_review(
+    fixture: &Fixture,
+    id: &str,
+    context: Option<AssistantContext>,
+) -> AssistantResult<AssistantSession> {
+    let sources = sources_with(
+        &review_novels(),
+        &FakeKnowledge::new(),
+        &review_translation(),
+    );
+    fixture
+        .workspace
+        .send(id, "Review it", context, events(), &sources)
+}
+
+fn novel_session(fixture: &Fixture, novel_id: i64) -> String {
+    fixture
+        .workspace
+        .create(novel_scope(Some(novel_id)), &review_novels())
+        .unwrap()
+        .summary
+        .id
+}
+
 #[test]
-fn non_null_context_is_invalid() {
+fn a_review_context_in_workspace_scope_is_invalid() {
     let fixture = fixture();
     let id = fixture
         .workspace
@@ -320,18 +380,101 @@ fn non_null_context_is_invalid() {
         .unwrap()
         .summary
         .id;
-    let result = fixture.workspace.send(
-        &id,
-        "hello",
-        Some(json!({ "kind": "review" })),
-        events(),
-        &novels(),
-    );
+    let result = send_review(&fixture, &id, review_context("chapter-1-1", "VI"));
     assert_eq!(code(result), AssistantErrorCode::Invalid);
-    let null = fixture
-        .workspace
-        .send(&id, "hello", Some(json!(null)), events(), &novels());
-    assert!(null.is_ok());
+    assert!(fixture.llm.calls().is_empty());
+    assert!(fixture.workspace.get(&id).unwrap().messages.is_empty());
+}
+
+#[test]
+fn a_review_context_for_a_chapter_of_another_novel_is_invalid() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    let result = send_review(&fixture, &id, review_context("chapter-2-1", "VI"));
+    assert_eq!(code(result), AssistantErrorCode::Invalid);
+    let unknown = send_review(&fixture, &id, review_context("nope", "VI"));
+    assert_eq!(code(unknown), AssistantErrorCode::Invalid);
+    assert!(fixture.llm.calls().is_empty());
+}
+
+#[test]
+fn a_review_context_for_an_untranslated_chapter_or_a_bad_target_is_invalid() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    let untranslated = send_review(&fixture, &id, review_context("chapter-1-1", "EN"));
+    let target = send_review(&fixture, &id, review_context("chapter-1-1", "FR"));
+    assert_eq!(code(untranslated), AssistantErrorCode::Invalid);
+    assert_eq!(code(target), AssistantErrorCode::Invalid);
+    assert!(fixture.llm.calls().is_empty());
+}
+
+#[test]
+fn a_review_context_replaces_the_prompt_and_keeps_the_opening_when_starting() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    send_review(&fixture, &id, review_context("chapter-1-1", "vi")).unwrap();
+    let calls = fixture.llm.calls();
+    assert_eq!(calls[0].kind, CallKind::Start);
+    assert!(
+        calls[0]
+            .prompt
+            .contains("You are the Dreamy Studio assistant")
+    );
+    assert!(calls[0].prompt.contains("Review it"));
+    assert!(calls[0].prompt.contains("submit_translation_review"));
+    assert!(calls[0].prompt.contains("\"VI\""));
+    assert!(calls[0].prompt.contains("chapter 1"));
+}
+
+#[test]
+fn a_resumed_cli_session_still_gets_the_skill_prompt() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    send(&fixture, &id, "Hello", &review_novels()).unwrap();
+    send_review(&fixture, &id, review_context("chapter-1-1", "VI")).unwrap();
+    let calls = fixture.llm.calls();
+    assert_eq!(calls[1].kind, CallKind::Resume);
+    assert!(calls[1].prompt.contains("submit_translation_review"));
+    assert!(calls[1].prompt.contains("read_translation_guide"));
+    assert!(
+        !calls[1]
+            .prompt
+            .contains("You are the Dreamy Studio assistant")
+    );
+}
+
+#[test]
+fn a_plain_message_has_no_skill_prompt() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    send_review(&fixture, &id, None).unwrap();
+    assert!(
+        !fixture.llm.calls()[0]
+            .prompt
+            .contains("submit_translation_review")
+    );
+}
+
+#[test]
+fn attachments_are_stored_on_the_reply_keeping_the_last_one_of_each_kind() {
+    let fixture = fixture();
+    let grants = fixture.grants.clone();
+    fixture.llm.set_hook(move |token| {
+        let sink = grants.get(token).unwrap().sink;
+        sink.attach(json!({ "kind": "translation_review", "checked": 1 }));
+        sink.attach(json!({ "kind": "other", "checked": 5 }));
+        sink.attach(json!({ "kind": "translation_review", "checked": 2 }));
+    });
+    let id = novel_session(&fixture, 1);
+    let session = send_review(&fixture, &id, review_context("chapter-1-1", "VI")).unwrap();
+    let expected = vec![
+        json!({ "kind": "translation_review", "checked": 2 }),
+        json!({ "kind": "other", "checked": 5 }),
+    ];
+    assert!(session.messages[0].attachments.is_empty());
+    assert_eq!(session.messages[1].attachments, expected);
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments, expected);
 }
 
 #[test]
@@ -375,7 +518,7 @@ fn concurrent_send_is_busy_and_releases_afterwards() {
     let seen = inner.clone();
     fixture.llm.set_hook(move |_token| {
         let source = FakeNovels::new();
-        let result = workspace.send(&session_id, "again", None, events(), &source);
+        let result = workspace.send(&session_id, "again", None, events(), &sources(&source));
         *seen.lock().unwrap() = Some(code(result));
     });
     send(&fixture, &id, "first", &novels()).unwrap();
@@ -474,7 +617,13 @@ fn activities_are_stored_on_the_reply_and_emitted_to_the_sink() {
     let sink = events();
     let session = fixture
         .workspace
-        .send(&id, "what is here?", None, sink.clone(), &novels())
+        .send(
+            &id,
+            "what is here?",
+            None,
+            sink.clone(),
+            &sources(&novels()),
+        )
         .unwrap();
     let expected = vec!["list_novel() → 1".to_string(), "read_novel(1)".to_string()];
     assert!(session.messages[0].activities.is_empty());
@@ -565,7 +714,7 @@ fn changes_are_forwarded_to_the_event_sink_without_becoming_activities() {
     let sink = events();
     let session = fixture
         .workspace
-        .send(&id, "rename it", None, sink.clone(), &novels())
+        .send(&id, "rename it", None, sink.clone(), &sources(&novels()))
         .unwrap();
     assert_eq!(sink.events(), vec![AssistantEvent::Changed(change)]);
     assert!(session.messages[1].activities.is_empty());

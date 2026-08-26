@@ -280,7 +280,6 @@ pub fn edit_dictionary(
     Ok(output(value, label))
 }
 
-#[allow(dead_code)]
 pub(crate) fn replace_in_passage(
     sources: &Sources,
     novel_id: i64,

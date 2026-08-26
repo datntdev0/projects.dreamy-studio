@@ -1,5 +1,7 @@
 use super::*;
+use crate::features::assistant::models::AssistantErrorCode;
 use crate::features::assistant::models::AssistantScope;
+use crate::features::assistant::models::ChangeTarget;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::tools::call;
 use crate::testing::assistant::FakeKnowledge;
@@ -352,5 +354,326 @@ fn nothing_is_written_to_the_translation() {
     assert_eq!(
         run.translation.passage_text(1, "VI", "chapter-1-3", 1),
         "Sương phủ Cảng Sương."
+    );
+}
+
+fn review(findings: Value, dictionary: Value) -> Vec<Value> {
+    submit(&args(findings, dictionary)).sink.attachments()
+}
+
+fn ids(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| value.to_string()).collect()
+}
+
+fn resolve_with(
+    translation: &FakeTranslation,
+    attachments: &mut [Value],
+    selected: &[&str],
+    status: Decision,
+) -> AssistantResult<Vec<AssistantChange>> {
+    let sources = sources_with(&novels(), &FakeKnowledge::new(), translation);
+    resolve(attachments, &ids(selected), status, &sources, 1)
+}
+
+fn statuses(attachment: &Value, list: &str) -> Vec<String> {
+    attachment[list]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["status"].as_str().unwrap().to_string())
+        .collect()
+}
+
+fn full_review() -> Vec<Value> {
+    review(
+        json!([
+            finding(1, "Cảng Sương", "Harrowmere"),
+            finding(2, "canh", "giữ")
+        ]),
+        json!([{ "src": "哈罗米尔", "dst": "Harrowmere", "type": "place", "note": "port" }]),
+    )
+}
+
+#[test]
+fn applying_writes_each_finding_and_dictionary_item_and_marks_them_applied() {
+    let translation = translation();
+    let mut attachments = full_review();
+
+    let changes = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2", "d1"],
+        Decision::Applied,
+    )
+    .unwrap();
+
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-3", 1),
+        "Sương phủ Harrowmere."
+    );
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-3", 2),
+        "Người giữ đèn không trả lời. Cảng Sương."
+    );
+    let book = translation.book(1, "VI");
+    let added = book
+        .dict
+        .iter()
+        .find(|entry| entry.src == "哈罗米尔")
+        .unwrap();
+    assert_eq!(added.dst, "Harrowmere");
+    assert_eq!(added.kind, "place");
+    assert_eq!(added.note, "port");
+    assert_eq!(
+        statuses(&attachments[0], "findings"),
+        ["applied", "applied"]
+    );
+    assert_eq!(statuses(&attachments[0], "dictionary"), ["applied"]);
+    assert_eq!(translation.writes().len(), 3);
+    assert_eq!(changes.len(), 2);
+    assert!(
+        changes
+            .iter()
+            .all(|change| change.target == ChangeTarget::Translation)
+    );
+    assert!(changes.iter().all(|change| change.novel_id == 1));
+    assert!(
+        changes
+            .iter()
+            .all(|change| change.translation_target.as_deref() == Some("VI"))
+    );
+    let chapters: Vec<Option<&str>> = changes
+        .iter()
+        .map(|change| change.chapter_id.as_deref())
+        .collect();
+    assert_eq!(chapters, vec![Some("chapter-1-3"), None]);
+}
+
+#[test]
+fn repeated_findings_in_one_paragraph_emit_one_change() {
+    let translation = translation();
+    let mut attachments = review(
+        json!([
+            finding(1, "Sương", "Mù"),
+            finding(1, "Cảng Sương", "Harrowmere")
+        ]),
+        json!([]),
+    );
+
+    let changes = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2"],
+        Decision::Applied,
+    )
+    .unwrap();
+
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-3", 1),
+        "Mù phủ Harrowmere."
+    );
+    assert_eq!(changes.len(), 1);
+}
+
+#[test]
+fn only_the_selected_pending_items_are_applied() {
+    let translation = translation();
+    let mut attachments = full_review();
+
+    resolve_with(
+        &translation,
+        &mut attachments,
+        &["f2", "nope"],
+        Decision::Applied,
+    )
+    .unwrap();
+
+    assert_eq!(
+        statuses(&attachments[0], "findings"),
+        ["pending", "applied"]
+    );
+    assert_eq!(statuses(&attachments[0], "dictionary"), ["pending"]);
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-3", 1),
+        "Sương phủ Cảng Sương."
+    );
+    assert_eq!(translation.writes().len(), 1);
+}
+
+#[test]
+fn rejecting_only_sets_the_status() {
+    let translation = translation();
+    let mut attachments = full_review();
+
+    let changes = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "d1"],
+        Decision::Rejected,
+    )
+    .unwrap();
+
+    assert!(changes.is_empty());
+    assert!(translation.writes().is_empty());
+    assert_eq!(
+        statuses(&attachments[0], "findings"),
+        ["rejected", "pending"]
+    );
+    assert_eq!(statuses(&attachments[0], "dictionary"), ["rejected"]);
+}
+
+#[test]
+fn a_changed_passage_is_a_conflict_that_applies_nothing() {
+    let translation = translation();
+    let mut attachments = full_review();
+    let sources = sources_with(&novels(), &FakeKnowledge::new(), &translation);
+    sources
+        .translation
+        .passage_save(1, "VI", "chapter-1-3", 2, "Người im lặng.")
+        .unwrap();
+
+    let error = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2", "d1"],
+        Decision::Applied,
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("f2"));
+    assert!(!error.detail.contains("f1"));
+    assert!(!error.detail.contains("d1"));
+    assert_eq!(translation.writes().len(), 1);
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-3", 1),
+        "Sương phủ Cảng Sương."
+    );
+    assert_eq!(
+        statuses(&attachments[0], "findings"),
+        ["pending", "pending"]
+    );
+    assert_eq!(statuses(&attachments[0], "dictionary"), ["pending"]);
+}
+
+#[test]
+fn a_dictionary_source_added_meanwhile_is_a_conflict() {
+    let translation = translation();
+    let mut attachments = full_review();
+    let sources = sources_with(&novels(), &FakeKnowledge::new(), &translation);
+    let input = DictInput {
+        src: "哈罗米尔".to_string(),
+        dst: "Khác".to_string(),
+        kind: "place".to_string(),
+        note: String::new(),
+    };
+    sources.translation.dict_add(1, "VI", input).unwrap();
+
+    let error = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "d1"],
+        Decision::Applied,
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("d1"));
+    assert_eq!(translation.writes().len(), 1);
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-3", 1),
+        "Sương phủ Cảng Sương."
+    );
+}
+
+#[test]
+fn a_finding_whose_snippet_was_consumed_by_an_earlier_one_conflicts() {
+    let translation = translation();
+    let mut attachments = review(
+        json!([
+            finding(1, "Sương phủ", "Mù"),
+            finding(1, "Sương phủ Cảng", "Mù")
+        ]),
+        json!([]),
+    );
+
+    let error = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2"],
+        Decision::Applied,
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("f2"));
+    assert!(translation.writes().is_empty());
+}
+
+#[test]
+fn a_chapter_that_left_the_novel_conflicts() {
+    let translation = translation();
+    let mut attachments = full_review();
+    attachments[0]["chapter"] = json!(99);
+
+    let error = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2"],
+        Decision::Applied,
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("f1") && error.detail.contains("f2"));
+    assert!(translation.writes().is_empty());
+}
+
+#[test]
+fn already_resolved_items_are_ignored() {
+    let translation = translation();
+    let mut attachments = full_review();
+    resolve_with(&translation, &mut attachments, &["f1"], Decision::Applied).unwrap();
+    resolve_with(&translation, &mut attachments, &["f2"], Decision::Rejected).unwrap();
+    let writes = translation.writes().len();
+
+    let again = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2"],
+        Decision::Applied,
+    )
+    .unwrap();
+    let flipped = resolve_with(
+        &translation,
+        &mut attachments,
+        &["f1", "f2"],
+        Decision::Rejected,
+    )
+    .unwrap();
+
+    assert!(again.is_empty() && flipped.is_empty());
+    assert_eq!(translation.writes().len(), writes);
+    assert_eq!(
+        statuses(&attachments[0], "findings"),
+        ["applied", "rejected"]
+    );
+}
+
+#[test]
+fn attachments_of_other_kinds_are_left_alone() {
+    let translation = translation();
+    let mut attachments = full_review();
+    attachments.insert(
+        0,
+        json!({ "kind": "other", "findings": [{ "id": "f1", "status": "pending" }] }),
+    );
+
+    resolve_with(&translation, &mut attachments, &["f1"], Decision::Rejected).unwrap();
+
+    assert_eq!(attachments[0]["findings"][0]["status"], "pending");
+    assert_eq!(
+        statuses(&attachments[1], "findings"),
+        ["rejected", "pending"]
     );
 }

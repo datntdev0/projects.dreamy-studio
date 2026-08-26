@@ -12,10 +12,12 @@ use crate::features::assistant::models::AssistantResult;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::AssistantSession;
 use crate::features::assistant::models::AssistantSessionSummary;
+use crate::features::assistant::models::Decision;
 use crate::features::assistant::models::Role;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::models::SessionRecord;
 use crate::features::assistant::prompt;
+use crate::features::assistant::proposals;
 use crate::features::assistant::reply;
 use crate::features::assistant::repository::AssistantRepository;
 use crate::features::assistant::skills;
@@ -294,6 +296,45 @@ impl AssistantWorkspace {
         }
     }
 
+    pub fn resolve(
+        &self,
+        session_id: &str,
+        message_id: &str,
+        item_ids: &[String],
+        status: Decision,
+        sources: &Sources,
+    ) -> AssistantResult<AssistantSession> {
+        let _guard = self.claim(session_id)?;
+        let record = self.load(session_id)?;
+        let novel_id = match (record.summary.scope.kind, record.summary.scope.novel_id) {
+            (ScopeKind::Novel, Some(id)) => id,
+            _ => {
+                return Err(AssistantError::invalid(
+                    "proposals can only be resolved in a novel scope",
+                ));
+            }
+        };
+        let mut message = self
+            .message(session_id, message_id)?
+            .ok_or_else(|| AssistantError::not_found(format!("message {message_id} not found")))?;
+        let outcome = proposals::resolve(
+            &mut message.attachments,
+            item_ids,
+            status,
+            sources,
+            novel_id,
+        );
+        let _gate = lock(&self.service.gate);
+        let db = self.database()?;
+        let repo = AssistantRepository::new(db.connection());
+        repo.update_attachments(message_id, &message.attachments)?;
+        outcome?;
+        Ok(AssistantSession {
+            summary: record.summary,
+            messages: repo.messages(session_id)?,
+        })
+    }
+
     fn exchange(
         &self,
         record: &SessionRecord,
@@ -382,6 +423,11 @@ impl AssistantWorkspace {
     fn history(&self, id: &str) -> AssistantResult<Vec<AssistantMessage>> {
         let db = self.database()?;
         Ok(AssistantRepository::new(db.connection()).messages(id)?)
+    }
+
+    fn message(&self, session_id: &str, id: &str) -> AssistantResult<Option<AssistantMessage>> {
+        let db = self.database()?;
+        Ok(AssistantRepository::new(db.connection()).find_message(session_id, id)?)
     }
 
     fn append(&self, session_id: &str, message: &AssistantMessage) -> AssistantResult<()> {

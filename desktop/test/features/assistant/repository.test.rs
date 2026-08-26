@@ -189,6 +189,52 @@ fn remove_message_drops_only_that_message() {
 }
 
 #[test]
+fn find_message_is_scoped_to_its_session() {
+    let fixture = fixture();
+    let repo = AssistantRepository::new(fixture.database.connection());
+    let mut reply = message("m1", Role::Assistant);
+    reply.attachments = vec![json!({"kind": "translation_review"})];
+    repo.append("s1", &reply).unwrap();
+    repo.append("s2", &message("m2", Role::User)).unwrap();
+    assert_eq!(repo.find_message("s1", "m1").unwrap(), Some(reply));
+    assert_eq!(repo.find_message("s2", "m1").unwrap(), None);
+    assert_eq!(repo.find_message("s1", "missing").unwrap(), None);
+}
+
+#[test]
+fn update_attachments_replaces_only_that_message() {
+    let fixture = fixture();
+    let repo = AssistantRepository::new(fixture.database.connection());
+    repo.append("s1", &message("m1", Role::Assistant)).unwrap();
+    repo.append("s1", &message("m2", Role::Assistant)).unwrap();
+    let attachments = vec![
+        json!({"kind": "translation_review", "checked": 3}),
+        json!(1),
+    ];
+    repo.update_attachments("m1", &attachments).unwrap();
+    assert_eq!(
+        repo.find_message("s1", "m1").unwrap().unwrap().attachments,
+        attachments
+    );
+    assert!(
+        repo.find_message("s1", "m2")
+            .unwrap()
+            .unwrap()
+            .attachments
+            .is_empty()
+    );
+    repo.update_attachments("m1", &[]).unwrap();
+    assert!(
+        repo.find_message("s1", "m1")
+            .unwrap()
+            .unwrap()
+            .attachments
+            .is_empty()
+    );
+    repo.update_attachments("missing", &attachments).unwrap();
+}
+
+#[test]
 fn delete_removes_session_and_its_messages() {
     let fixture = fixture();
     let repo = AssistantRepository::new(fixture.database.connection());

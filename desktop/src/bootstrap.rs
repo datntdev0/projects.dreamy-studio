@@ -115,6 +115,7 @@ pub fn run() {
             commands::assistant::assistant_session_create,
             commands::assistant::assistant_session_permit,
             commands::assistant::assistant_message_send,
+            commands::assistant::assistant_proposal_resolve,
             commands::assistant::assistant_session_delete,
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
@@ -261,7 +262,9 @@ fn manage_pipeline(app: &App, container: &AppContainer) {
     )));
     app.manage(translation.clone());
     app.manage(knowledge.clone());
-    app.manage(PipelineExecutor::with_logs(container.directories.logs.clone()));
+    app.manage(PipelineExecutor::with_logs(
+        container.directories.logs.clone(),
+    ));
     app.manage(
         JobRegistry::new()
             .register(std::sync::Arc::new(TranslationJobFactory::new(

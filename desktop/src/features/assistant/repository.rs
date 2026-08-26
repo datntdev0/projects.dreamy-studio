@@ -132,6 +132,32 @@ impl<'a> AssistantRepository<'a> {
         Ok(seq)
     }
 
+    pub fn find_message(
+        &self,
+        session_id: &str,
+        message_id: &str,
+    ) -> rusqlite::Result<Option<AssistantMessage>> {
+        self.conn
+            .query_row(
+                "SELECT id, role, text, created_at, activities, citations, attachments                  FROM ws_assistant_messages WHERE session_id = ?1 AND id = ?2",
+                params![session_id, message_id],
+                row_to_message,
+            )
+            .optional()
+    }
+
+    pub fn update_attachments(
+        &self,
+        message_id: &str,
+        attachments: &[serde_json::Value],
+    ) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE ws_assistant_messages SET attachments = ?2 WHERE id = ?1",
+            params![message_id, to_json(attachments)],
+        )?;
+        Ok(())
+    }
+
     pub fn remove_message(&self, id: &str) -> rusqlite::Result<()> {
         self.conn.execute(
             "DELETE FROM ws_assistant_messages WHERE id = ?1",

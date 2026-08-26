@@ -3,6 +3,7 @@ use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantErrorCode;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::ChangeTarget;
+use crate::features::assistant::models::Decision;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::assistant::CallKind;
@@ -475,6 +476,292 @@ fn attachments_are_stored_on_the_reply_keeping_the_last_one_of_each_kind() {
     assert_eq!(session.messages[1].attachments, expected);
     let stored = fixture.workspace.get(&id).unwrap();
     assert_eq!(stored.messages[1].attachments, expected);
+}
+
+fn pending_review() -> serde_json::Value {
+    json!({
+        "kind": "translation_review",
+        "chapter": 1,
+        "chapterTitle": "One",
+        "target": "VI",
+        "checked": 2,
+        "findings": [
+            {
+                "id": "f1", "n": 1, "severity": "error", "category": "name",
+                "source": "The hero drew his sword.", "current": "Anh rút kiếm.",
+                "suggested": "Hắn rút kiếm.", "from": "Anh", "to": "Hắn",
+                "reason": "r", "status": "pending"
+            },
+            {
+                "id": "f2", "n": 2, "severity": "info", "category": "style",
+                "source": "Rain fell.", "current": "Mưa rơi.",
+                "suggested": "Tuyết rơi.", "from": "Mưa", "to": "Tuyết",
+                "reason": "r", "status": "pending"
+            }
+        ],
+        "dictionary": [
+            {
+                "id": "d1", "src": "英雄", "dst": "anh hùng", "type": "term",
+                "note": "", "occurrences": 1, "status": "pending"
+            }
+        ]
+    })
+}
+
+fn resolve_sources(translation: &FakeTranslation) -> Sources {
+    sources_with(&review_novels(), &FakeKnowledge::new(), translation)
+}
+
+fn reviewed(fixture: &Fixture, translation: &FakeTranslation) -> (String, String) {
+    let grants = fixture.grants.clone();
+    fixture.llm.set_hook(move |token| {
+        grants.get(token).unwrap().sink.attach(pending_review());
+    });
+    let id = novel_session(fixture, 1);
+    let sources = resolve_sources(translation);
+    let session = fixture
+        .workspace
+        .send(
+            &id,
+            "Review it",
+            review_context("chapter-1-1", "VI"),
+            events(),
+            &sources,
+        )
+        .unwrap();
+    let message = session.messages[1].id.clone();
+    (id, message)
+}
+
+fn resolve(
+    fixture: &Fixture,
+    translation: &FakeTranslation,
+    ids: (&str, &str),
+    items: &[&str],
+    status: Decision,
+) -> AssistantResult<AssistantSession> {
+    let items: Vec<String> = items.iter().map(|item| item.to_string()).collect();
+    fixture
+        .workspace
+        .resolve(ids.0, ids.1, &items, status, &resolve_sources(translation))
+}
+
+fn item_statuses(session: &AssistantSession, list: &str) -> Vec<String> {
+    session.messages[1].attachments[0][list]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["status"].as_str().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn resolve_applies_the_selected_items_and_persists_the_statuses() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let (id, message) = reviewed(&fixture, &translation);
+
+    let session = resolve(
+        &fixture,
+        &translation,
+        (&id, &message),
+        &["f1", "d1"],
+        Decision::Applied,
+    )
+    .unwrap();
+
+    assert_eq!(session.summary.id, id);
+    assert_eq!(session.messages.len(), 2);
+    assert_eq!(item_statuses(&session, "findings"), ["applied", "pending"]);
+    assert_eq!(item_statuses(&session, "dictionary"), ["applied"]);
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-1", 1),
+        "Hắn rút kiếm."
+    );
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-1", 2),
+        "Mưa rơi."
+    );
+    assert!(
+        translation
+            .book(1, "VI")
+            .dict
+            .iter()
+            .any(|entry| entry.src == "英雄")
+    );
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(
+        stored.messages[1].attachments,
+        session.messages[1].attachments
+    );
+}
+
+#[test]
+fn resolve_rejecting_only_changes_the_status() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let (id, message) = reviewed(&fixture, &translation);
+
+    let session = resolve(
+        &fixture,
+        &translation,
+        (&id, &message),
+        &["f2"],
+        Decision::Rejected,
+    )
+    .unwrap();
+
+    assert_eq!(item_statuses(&session, "findings"), ["pending", "rejected"]);
+    assert!(translation.writes().is_empty());
+}
+
+#[test]
+fn resolve_conflict_keeps_everything_pending_and_writes_nothing() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let (id, message) = reviewed(&fixture, &translation);
+    resolve_sources(&translation)
+        .translation
+        .passage_save(1, "VI", "chapter-1-1", 2, "Trời nắng.")
+        .unwrap();
+
+    let error = resolve(
+        &fixture,
+        &translation,
+        (&id, &message),
+        &["f1", "f2", "d1"],
+        Decision::Applied,
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("f2"));
+    assert_eq!(
+        translation.passage_text(1, "VI", "chapter-1-1", 1),
+        "Anh rút kiếm."
+    );
+    assert_eq!(translation.writes().len(), 1);
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(item_statuses(&stored, "findings"), ["pending", "pending"]);
+    assert_eq!(item_statuses(&stored, "dictionary"), ["pending"]);
+}
+
+#[test]
+fn resolve_ignores_items_that_are_already_resolved() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let (id, message) = reviewed(&fixture, &translation);
+    let ids = (id.as_str(), message.as_str());
+    resolve(&fixture, &translation, ids, &["f1"], Decision::Applied).unwrap();
+    let writes = translation.writes().len();
+
+    let session = resolve(
+        &fixture,
+        &translation,
+        ids,
+        &["f1", "f2"],
+        Decision::Rejected,
+    )
+    .unwrap();
+
+    assert_eq!(item_statuses(&session, "findings"), ["applied", "rejected"]);
+    assert_eq!(translation.writes().len(), writes);
+}
+
+#[test]
+fn resolve_unknown_session_or_message_is_not_found() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let (id, message) = reviewed(&fixture, &translation);
+    let other = novel_session(&fixture, 1);
+
+    let results = [
+        resolve(
+            &fixture,
+            &translation,
+            ("missing", &message),
+            &["f1"],
+            Decision::Applied,
+        ),
+        resolve(
+            &fixture,
+            &translation,
+            (&id, "missing"),
+            &["f1"],
+            Decision::Applied,
+        ),
+        resolve(
+            &fixture,
+            &translation,
+            (&other, &message),
+            &["f1"],
+            Decision::Applied,
+        ),
+    ];
+
+    for result in results {
+        assert_eq!(code(result), AssistantErrorCode::NotFound);
+    }
+    assert!(translation.writes().is_empty());
+}
+
+#[test]
+fn resolve_in_a_workspace_scope_is_invalid() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let id = fixture
+        .workspace
+        .create(workspace_scope(), &novels())
+        .unwrap()
+        .summary
+        .id;
+    let session = send(&fixture, &id, "hello", &novels()).unwrap();
+
+    let result = resolve(
+        &fixture,
+        &translation,
+        (&id, &session.messages[1].id),
+        &["f1"],
+        Decision::Applied,
+    );
+
+    assert_eq!(code(result), AssistantErrorCode::Invalid);
+}
+
+#[test]
+fn resolve_is_busy_while_a_turn_runs_and_free_afterwards() {
+    let fixture = fixture();
+    let translation = review_translation();
+    let (id, message) = reviewed(&fixture, &translation);
+    let inner = Arc::new(Mutex::new(None));
+    let seen = inner.clone();
+    let workspace = fixture.workspace.clone();
+    let (session_id, message_id) = (id.clone(), message.clone());
+    let probe = translation.clone();
+    fixture.llm.set_hook(move |_token| {
+        let items = vec!["f1".to_string()];
+        let result = workspace.resolve(
+            &session_id,
+            &message_id,
+            &items,
+            Decision::Applied,
+            &resolve_sources(&probe),
+        );
+        *seen.lock().unwrap() = Some(code(result));
+    });
+
+    send(&fixture, &id, "again", &novels()).unwrap();
+
+    assert_eq!(*inner.lock().unwrap(), Some(AssistantErrorCode::Busy));
+    assert!(translation.writes().is_empty());
+    let free = resolve(
+        &fixture,
+        &translation,
+        (&id, &message),
+        &["f1"],
+        Decision::Rejected,
+    );
+    assert!(free.is_ok());
 }
 
 #[test]

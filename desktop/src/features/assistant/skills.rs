@@ -39,8 +39,7 @@ pub fn review_translation(
     ));
     prompt.push_str("   - Each finding has `n` (paragraph position), `severity` (error, warning or info), `category` (name, dict, meaning, omission or style), `from`, `to` and `reason`.\n");
     prompt.push_str("   - `from` must be a snippet copied verbatim from the current translation of paragraph `n`, as short as possible but unique in that paragraph; `to` replaces its first occurrence. Write `reason` in the user's language.\n");
-    prompt.push_str("   - For an omission, set `from` to the snippet just before the missing text and `to` to that snippet followed by the missing translation.
-");
+    prompt.push_str("   - For an omission, set `from` to the snippet just before the missing text and `to` to that snippet followed by the missing translation.\n");
     prompt.push_str("   - `dictionary` lists terms worth adding, each with `src`, `dst`, `type` (name, place, org, title or term) and an optional `note`.\n");
     prompt.push_str("   - If the result lists `dropped` items, you may fix them and call the tool once more; the last call replaces the earlier one.\n");
     prompt.push_str("6. Do not edit the translation, the dictionary or the novel yourself. The user applies or rejects each item on the review card.\n");

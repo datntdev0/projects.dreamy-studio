@@ -135,3 +135,22 @@ fn an_unknown_context_kind_is_rejected() {
 
     assert!(parsed.is_err());
 }
+
+#[test]
+fn the_conflict_error_code_serializes_in_snake_case() {
+    let error = AssistantError::conflict("changed");
+
+    let value = serde_json::to_value(&error).unwrap();
+
+    assert_eq!(error.code.as_str(), "conflict");
+    assert_eq!(value, json!({ "code": "conflict", "detail": "changed" }));
+}
+
+#[test]
+fn a_decision_parses_only_applied_and_rejected() {
+    assert_eq!(Decision::parse("applied"), Some(Decision::Applied));
+    assert_eq!(Decision::parse("rejected"), Some(Decision::Rejected));
+    assert_eq!(Decision::parse("pending"), None);
+    assert_eq!(Decision::Applied.as_str(), "applied");
+    assert_eq!(Decision::Rejected.as_str(), "rejected");
+}

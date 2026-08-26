@@ -113,6 +113,29 @@ pub enum AssistantContext {
     TranslationReview { chapter_id: String, target: String },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Decision {
+    Applied,
+    Rejected,
+}
+
+impl Decision {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Decision::Applied => "applied",
+            Decision::Rejected => "rejected",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "applied" => Some(Decision::Applied),
+            "rejected" => Some(Decision::Rejected),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum AssistantEvent {
@@ -152,6 +175,7 @@ pub enum AssistantErrorCode {
     NoWorkspace,
     Llm,
     Storage,
+    Conflict,
 }
 
 impl AssistantErrorCode {
@@ -163,6 +187,7 @@ impl AssistantErrorCode {
             AssistantErrorCode::NoWorkspace => "no_workspace",
             AssistantErrorCode::Llm => "llm",
             AssistantErrorCode::Storage => "storage",
+            AssistantErrorCode::Conflict => "conflict",
         }
     }
 }
@@ -203,6 +228,10 @@ impl AssistantError {
 
     pub fn storage(detail: impl Into<String>) -> Self {
         Self::new(AssistantErrorCode::Storage, detail)
+    }
+
+    pub fn conflict(detail: impl Into<String>) -> Self {
+        Self::new(AssistantErrorCode::Conflict, detail)
     }
 }
 

@@ -7,6 +7,7 @@ use crate::features::assistant::models::AssistantResult;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::AssistantSession;
 use crate::features::assistant::models::AssistantSessionSummary;
+use crate::features::assistant::models::Decision;
 use crate::features::assistant::server::McpHost;
 use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::sources::Sources;
@@ -149,6 +150,38 @@ pub fn send_message(
     workspace.send(input.session_id, input.text, context, sink, &sources)
 }
 
+pub struct ResolveInput<'a> {
+    pub session_id: &'a str,
+    pub message_id: &'a str,
+    pub item_ids: &'a [String],
+    pub status: &'a str,
+}
+
+pub fn resolve_proposal(
+    service: &AssistantService,
+    services: &SourceServices,
+    session: &WorkspaceSession,
+    input: ResolveInput,
+) -> AssistantResult<AssistantSession> {
+    let workspace = service.open(session)?;
+    let status = Decision::parse(input.status)
+        .ok_or_else(|| AssistantError::invalid(format!("unknown decision '{}'", input.status)))?;
+    let sources = build_sources(
+        services.novels,
+        services.knowledge,
+        services.translation,
+        session,
+    )
+    .map_err(AssistantError::storage)?;
+    workspace.resolve(
+        input.session_id,
+        input.message_id,
+        input.item_ids,
+        status,
+        &sources,
+    )
+}
+
 fn parse_context(context: Option<Value>) -> AssistantResult<Option<AssistantContext>> {
     match context {
         None | Some(Value::Null) => Ok(None),
@@ -238,6 +271,34 @@ pub async fn assistant_message_send(
             context,
         };
         send_message(service, &services, session, input, sink)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn assistant_proposal_resolve(
+    app: AppHandle,
+    session_id: String,
+    message_id: String,
+    item_ids: Vec<String>,
+    status: String,
+) -> AssistantResult<AssistantSession> {
+    let handle = app.clone();
+    run_blocking(app, move |service, novels, session| {
+        let knowledge = handle.state::<KnowledgeService>();
+        let translation = handle.state::<TranslationService>();
+        let services = SourceServices {
+            novels,
+            knowledge: &knowledge,
+            translation: &translation,
+        };
+        let input = ResolveInput {
+            session_id: &session_id,
+            message_id: &message_id,
+            item_ids: &item_ids,
+            status: &status,
+        };
+        resolve_proposal(service, &services, session, input)
     })
     .await
 }

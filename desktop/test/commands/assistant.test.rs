@@ -235,6 +235,13 @@ fn every_operation_reports_no_workspace_without_a_current_workspace() {
         delete_session(&service, &session, "id").unwrap_err(),
         permit_session(&service, &session, "id", true).unwrap_err(),
         send_message(&service, &services, &session, input("id", "hi", None), sink).unwrap_err(),
+        resolve_proposal(
+            &service,
+            &services,
+            &session,
+            resolve_input("id", "m", "applied"),
+        )
+        .unwrap_err(),
     ];
 
     for error in errors {
@@ -355,4 +362,165 @@ fn a_review_context_in_workspace_scope_is_invalid() {
     .unwrap_err();
 
     assert_eq!(error.code, AssistantErrorCode::Invalid);
+}
+
+const NO_ITEMS: &[String] = &[];
+
+fn resolve_input<'a>(
+    session_id: &'a str,
+    message_id: &'a str,
+    status: &'a str,
+) -> ResolveInput<'a> {
+    ResolveInput {
+        session_id,
+        message_id,
+        item_ids: NO_ITEMS,
+        status,
+    }
+}
+
+fn novel_session(fixture: &Fixture) -> String {
+    let novel = fixture
+        .novels
+        .open(&fixture.session)
+        .unwrap()
+        .create(novel_input())
+        .unwrap();
+    create_session(
+        &fixture.service,
+        &fixture.novels,
+        &fixture.session,
+        novel_scope(Some(novel.id)),
+    )
+    .unwrap()
+    .summary
+    .id
+}
+
+#[test]
+fn resolving_an_unknown_message_is_not_found() {
+    let fixture = entered_fixture();
+    let id = novel_session(&fixture);
+
+    let error = resolve_proposal(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        resolve_input(&id, "missing", "rejected"),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::NotFound);
+}
+
+#[test]
+fn resolving_an_unknown_session_is_not_found() {
+    let fixture = entered_fixture();
+
+    let error = resolve_proposal(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        resolve_input("missing", "m", "applied"),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::NotFound);
+}
+
+#[test]
+fn an_unknown_decision_is_invalid() {
+    let fixture = entered_fixture();
+    let id = novel_session(&fixture);
+
+    for status in ["pending", "", "Applied"] {
+        let error = resolve_proposal(
+            &fixture.service,
+            &services(&fixture),
+            &fixture.session,
+            resolve_input(&id, "m", status),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, AssistantErrorCode::Invalid);
+    }
+}
+
+#[test]
+fn resolving_in_a_workspace_scope_is_invalid() {
+    let fixture = entered_fixture();
+    let created = create_session(
+        &fixture.service,
+        &fixture.novels,
+        &fixture.session,
+        workspace_scope(),
+    )
+    .unwrap();
+    let answered = send_message(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        input(&created.summary.id, "hi", None),
+        Arc::new(RecordingEvents::new()),
+    )
+    .unwrap();
+
+    let error = resolve_proposal(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        resolve_input(&created.summary.id, &answered.messages[1].id, "applied"),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Invalid);
+}
+
+#[test]
+fn rejecting_a_proposal_updates_the_stored_review() {
+    let mut fixture = entered_fixture();
+    let llm = Arc::new(FakeLlm::new());
+    let grants = McpGrants::new();
+    fixture.service = AssistantService::new(llm.clone(), grants.clone());
+    llm.set_hook(move |token| {
+        let review = json!({
+            "kind": "translation_review",
+            "findings": [{ "id": "f1", "status": "pending" }, { "id": "f2", "status": "pending" }],
+            "dictionary": [{ "id": "d1", "status": "pending" }],
+        });
+        grants.get(token).unwrap().sink.attach(review);
+    });
+    let id = novel_session(&fixture);
+    let answered = send_message(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        input(&id, "review", None),
+        Arc::new(RecordingEvents::new()),
+    )
+    .unwrap();
+    let items = vec!["f2".to_string(), "d1".to_string()];
+    let resolve = ResolveInput {
+        session_id: &id,
+        message_id: &answered.messages[1].id,
+        item_ids: &items,
+        status: "rejected",
+    };
+
+    let resolved = resolve_proposal(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        resolve,
+    )
+    .unwrap();
+
+    let review = &resolved.messages[1].attachments[0];
+    assert_eq!(review["findings"][0]["status"], "pending");
+    assert_eq!(review["findings"][1]["status"], "rejected");
+    assert_eq!(review["dictionary"][0]["status"], "rejected");
+    let stored = get_session(&fixture.service, &fixture.session, &id).unwrap();
+    assert_eq!(
+        stored.messages[1].attachments,
+        resolved.messages[1].attachments
+    );
 }

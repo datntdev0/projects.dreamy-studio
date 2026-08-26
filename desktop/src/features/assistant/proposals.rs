@@ -1,4 +1,11 @@
+use crate::features::assistant::edits::add_dictionary;
 use crate::features::assistant::edits::list_of;
+use crate::features::assistant::edits::replace_in_passage;
+use crate::features::assistant::edits::translation_change;
+use crate::features::assistant::models::AssistantChange;
+use crate::features::assistant::models::AssistantError;
+use crate::features::assistant::models::AssistantResult;
+use crate::features::assistant::models::Decision;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::tools::ToolContext;
 use crate::features::assistant::tools::ToolOutput;
@@ -10,13 +17,21 @@ use crate::features::assistant::tools::required_int;
 use crate::features::assistant::tools::required_target;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::translation::models::DictEntry;
+use crate::features::translation::models::DictInput;
 use crate::features::translation::service::ChapterTranslation;
 use serde_json::Value;
 use serde_json::json;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::btree_map::Entry;
 
 const SEVERITIES: [&str; 3] = ["error", "warning", "info"];
 const CATEGORIES: [&str; 5] = ["name", "dict", "meaning", "omission", "style"];
 const DICT_TYPES: [&str; 5] = ["name", "place", "org", "title", "term"];
+
+const REVIEW_KIND: &str = "translation_review";
+const LISTS: [&str; 2] = ["findings", "dictionary"];
 
 struct Dropped {
     index: usize,
@@ -223,6 +238,231 @@ fn dropped_json(dropped: &[Dropped]) -> Vec<Value> {
         .iter()
         .map(|item| json!({ "index": item.index, "kind": item.kind, "reason": item.reason }))
         .collect()
+}
+
+enum Work {
+    Replace { n: usize, from: String, to: String },
+    Define(DictInput),
+}
+
+struct Pick {
+    review: usize,
+    list: &'static str,
+    index: usize,
+}
+
+struct Book {
+    chapter_id: Option<String>,
+    target: String,
+    chapter: Option<ChapterTranslation>,
+    defined: HashSet<String>,
+    edited: HashMap<usize, String>,
+}
+
+impl Book {
+    fn open(attachment: &Value, sources: &Sources, novel_id: i64) -> AssistantResult<Self> {
+        let target = attachment
+            .get("target")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        let chapter_id = attachment
+            .get("chapter")
+            .and_then(Value::as_i64)
+            .and_then(|seq| chapter_by_seq(sources.novels.as_ref(), novel_id, seq).ok())
+            .map(|row| row.id);
+        let book = sources
+            .translation
+            .get(novel_id, &target)
+            .map_err(AssistantError::storage)?;
+        let chapter = chapter_id
+            .as_ref()
+            .and_then(|id| book.chapters.get(id))
+            .cloned();
+        let defined = book
+            .dict
+            .iter()
+            .map(|entry| entry.src.trim().to_string())
+            .collect();
+        Ok(Self {
+            chapter_id,
+            target,
+            chapter,
+            defined,
+            edited: HashMap::new(),
+        })
+    }
+
+    fn accept(&mut self, work: &Work) -> bool {
+        match work {
+            Work::Replace { n, from, to } => {
+                let Some(current) = self.current(*n) else {
+                    return false;
+                };
+                if from.is_empty() || !current.contains(from.as_str()) {
+                    return false;
+                }
+                self.edited
+                    .insert(*n, current.replacen(from.as_str(), to, 1));
+                true
+            }
+            Work::Define(input) => {
+                let src = input.src.trim();
+                !src.is_empty()
+                    && !input.dst.trim().is_empty()
+                    && self.defined.insert(src.to_string())
+            }
+        }
+    }
+
+    fn current(&self, n: usize) -> Option<String> {
+        if let Some(text) = self.edited.get(&n) {
+            return Some(text.clone());
+        }
+        let chapter = self.chapter.as_ref()?;
+        n.checked_sub(1)
+            .and_then(|index| chapter.paragraphs.get(index))
+            .map(|passage| passage.text.clone())
+    }
+}
+
+pub fn resolve(
+    attachments: &mut [Value],
+    item_ids: &[String],
+    status: Decision,
+    sources: &Sources,
+    novel_id: i64,
+) -> AssistantResult<Vec<AssistantChange>> {
+    let picks = select(attachments, item_ids);
+    match status {
+        Decision::Rejected => {
+            for pick in &picks {
+                mark(attachments, pick, Decision::Rejected);
+            }
+            Ok(Vec::new())
+        }
+        Decision::Applied => apply(attachments, &picks, sources, novel_id),
+    }
+}
+
+fn select(attachments: &[Value], item_ids: &[String]) -> Vec<Pick> {
+    let mut picks = Vec::new();
+    for (review, attachment) in attachments.iter().enumerate() {
+        if attachment.get("kind").and_then(Value::as_str) != Some(REVIEW_KIND) {
+            continue;
+        }
+        for list in LISTS {
+            let items = attachment.get(list).and_then(Value::as_array);
+            for (index, item) in items.into_iter().flatten().enumerate() {
+                let pending = item.get("status").and_then(Value::as_str) == Some("pending");
+                let wanted =
+                    id_of(item).is_some_and(|id| item_ids.iter().any(|wanted| wanted == id));
+                if pending && wanted {
+                    picks.push(Pick {
+                        review,
+                        list,
+                        index,
+                    });
+                }
+            }
+        }
+    }
+    picks
+}
+
+fn apply(
+    attachments: &mut [Value],
+    picks: &[Pick],
+    sources: &Sources,
+    novel_id: i64,
+) -> AssistantResult<Vec<AssistantChange>> {
+    let mut books: BTreeMap<usize, Book> = BTreeMap::new();
+    for pick in picks {
+        if let Entry::Vacant(slot) = books.entry(pick.review) {
+            slot.insert(Book::open(&attachments[pick.review], sources, novel_id)?);
+        }
+    }
+    let mut works = Vec::new();
+    let mut failed = Vec::new();
+    for pick in picks {
+        let item = &attachments[pick.review][pick.list][pick.index];
+        let accepted = books
+            .get_mut(&pick.review)
+            .and_then(|book| work_of(pick.list, item).filter(|work| book.accept(work)));
+        match accepted {
+            Some(work) => works.push(work),
+            None => failed.push(id_of(item).unwrap_or("?").to_string()),
+        }
+    }
+    if !failed.is_empty() {
+        return Err(AssistantError::conflict(format!(
+            "these items no longer apply: {}",
+            failed.join(", ")
+        )));
+    }
+    let mut changes = Vec::new();
+    for (pick, work) in picks.iter().zip(&works) {
+        let book = &books[&pick.review];
+        write(work, book, sources, novel_id).map_err(AssistantError::storage)?;
+        mark(attachments, pick, Decision::Applied);
+        let change = translation_change(
+            novel_id,
+            book.chapter_id.as_deref().unwrap_or(""),
+            &book.target,
+        );
+        let change = match work {
+            Work::Replace { .. } => change,
+            Work::Define(_) => AssistantChange {
+                chapter_id: None,
+                ..change
+            },
+        };
+        if !changes.contains(&change) {
+            changes.push(change);
+        }
+    }
+    Ok(changes)
+}
+
+fn write(work: &Work, book: &Book, sources: &Sources, novel_id: i64) -> Result<(), String> {
+    match work {
+        Work::Replace { n, from, to } => {
+            let chapter_id = book
+                .chapter_id
+                .as_deref()
+                .ok_or_else(|| "the chapter is no longer in the novel".to_string())?;
+            replace_in_passage(sources, novel_id, &book.target, chapter_id, *n, from, to)
+        }
+        Work::Define(input) => {
+            add_dictionary(sources, novel_id, &book.target, input.clone()).map(|_| ())
+        }
+    }
+}
+
+fn work_of(list: &str, item: &Value) -> Option<Work> {
+    let text = |key: &str| item.get(key).and_then(Value::as_str).map(str::to_string);
+    if list == "findings" {
+        let n = item.get("n").and_then(Value::as_u64)?;
+        return Some(Work::Replace {
+            n: usize::try_from(n).ok()?,
+            from: text("from")?,
+            to: text("to")?,
+        });
+    }
+    Some(Work::Define(DictInput {
+        src: text("src")?,
+        dst: text("dst")?,
+        kind: text("type")?,
+        note: text("note").unwrap_or_default(),
+    }))
+}
+
+fn mark(attachments: &mut [Value], pick: &Pick, status: Decision) {
+    attachments[pick.review][pick.list][pick.index]["status"] = json!(status.as_str());
+}
+
+fn id_of(item: &Value) -> Option<&str> {
+    item.get("id").and_then(Value::as_str)
 }
 
 #[cfg(test)]

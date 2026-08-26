@@ -104,6 +104,22 @@ impl KnowledgeWorkspace {
         })
     }
 
+    pub fn preview(
+        &self,
+        novel_id: i64,
+        lang: &str,
+        edits: Vec<KnowledgeEdit>,
+    ) -> KnowledgeResult<WireKnowledge> {
+        let _gate = lock(&self.gate);
+        let lang = parse_lang(lang)?;
+        if edits.is_empty() {
+            return Err(KnowledgeError::invalid("no edits were given"));
+        }
+        let mut chapters = self.load_chapters(novel_id, lang)?;
+        apply(&mut chapters, &edits)?;
+        Ok(merge(lang, &chapters))
+    }
+
     pub fn stale_accept(
         &self,
         novel_id: i64,

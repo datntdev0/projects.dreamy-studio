@@ -1,3 +1,4 @@
+pub mod check;
 pub mod edit;
 pub mod edit_content;
 pub mod files;

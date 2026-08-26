@@ -454,6 +454,80 @@ fn edit_of_an_unknown_novel_is_not_found() {
 }
 
 #[test]
+fn preview_returns_the_edited_knowledge_without_writing() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+    let original = fixture.knowledge.get(novel_id, "src").unwrap();
+
+    let preview = fixture
+        .knowledge
+        .preview(
+            novel_id,
+            "src",
+            vec![rename(&entity_id("character", "Lin Mo"), "Lin")],
+        )
+        .unwrap();
+
+    let names: Vec<&str> = entities_of(&preview)
+        .iter()
+        .map(|entity| entity.name.as_str())
+        .collect();
+    assert_eq!(names.len(), 2);
+    assert!(names.contains(&"Lin"));
+    assert!(names.contains(&"Sect"));
+    assert_ne!(preview, original);
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+    assert_eq!(fixture.knowledge.get(novel_id, "src").unwrap(), original);
+}
+
+#[test]
+fn preview_matches_what_edit_then_returns() {
+    let fixture = fixture();
+    let (novel_id, _) = seeded(&fixture);
+    let edits = || vec![rename(&entity_id("character", "Lin Mo"), "Lin")];
+
+    let preview = fixture.knowledge.preview(novel_id, "src", edits()).unwrap();
+    let edited = fixture.knowledge.edit(novel_id, "src", edits()).unwrap();
+
+    assert_eq!(preview, edited.knowledge);
+}
+
+#[test]
+fn preview_rejects_invalid_edits_empty_edits_and_unknown_inputs() {
+    let fixture = fixture();
+    let (novel_id, ids) = seeded(&fixture);
+    let before = snapshot(&fixture, novel_id, &ids);
+
+    let invalid = fixture
+        .knowledge
+        .preview(
+            novel_id,
+            "src",
+            vec![rename(&entity_id("character", "Lin Mo"), "sword")],
+        )
+        .unwrap_err();
+    let empty = fixture
+        .knowledge
+        .preview(novel_id, "src", Vec::new())
+        .unwrap_err();
+    let lang = fixture
+        .knowledge
+        .preview(novel_id, "FR", vec![rename("E1", "Lin")])
+        .unwrap_err();
+    let novel = fixture
+        .knowledge
+        .preview(99, "src", vec![rename("E1", "Lin")])
+        .unwrap_err();
+
+    assert_eq!(invalid.code, KnowledgeErrorCode::TextNotFound);
+    assert_eq!(empty.code, KnowledgeErrorCode::InvalidInput);
+    assert_eq!(lang.code, KnowledgeErrorCode::InvalidInput);
+    assert_eq!(novel.code, KnowledgeErrorCode::NotFound);
+    assert_eq!(snapshot(&fixture, novel_id, &ids), before);
+}
+
+#[test]
 fn stale_accept_rehashes_the_chapter_and_clears_the_flag() {
     let fixture = fixture();
     let (novel_id, ids) = seeded(&fixture);

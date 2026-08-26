@@ -10,7 +10,7 @@ export function translationReview(chapter: number, chapterTitle: string): Transl
     checked: 18,
     findings: [
       {
-        id: "f-name",
+        id: "f1",
         n: 4,
         severity: "error",
         category: "name",
@@ -23,7 +23,7 @@ export function translationReview(chapter: number, chapterTitle: string): Transl
         status: "pending",
       },
       {
-        id: "f-dict",
+        id: "f2",
         n: 11,
         severity: "warning",
         category: "dict",
@@ -36,20 +36,20 @@ export function translationReview(chapter: number, chapterTitle: string): Transl
         status: "pending",
       },
       {
-        id: "f-omission",
+        id: "f3",
         n: 7,
         severity: "warning",
         category: "omission",
         source: "他把账簿夹在腋下，像夹着一块冰冷的墓碑。",
         current: "Anh kẹp cuốn sổ cái dưới nách.",
         suggested: "Anh kẹp cuốn sổ cái dưới nách, như kẹp một tấm bia mộ lạnh lẽo.",
-        from: "",
-        to: ", như kẹp một tấm bia mộ lạnh lẽo",
+        from: "nách",
+        to: "nách, như kẹp một tấm bia mộ lạnh lẽo",
         reason: "Bản dịch bỏ mất phép so sánh ở nửa sau câu gốc (像夹着一块冰冷的墓碑).",
         status: "pending",
       },
       {
-        id: "f-style",
+        id: "f4",
         n: 15,
         severity: "info",
         category: "style",
@@ -63,8 +63,8 @@ export function translationReview(chapter: number, chapterTitle: string): Transl
       },
     ],
     dictionary: [
-      { id: "d-harrowmere", src: "哈罗米尔", dst: "Harrowmere", type: "place", note: "giữ nguyên tên gốc", occurrences: 11, status: "pending" },
-      { id: "d-keeper", src: "守灯人", dst: "người giữ đèn", type: "title", note: "danh xưng của Wren", occurrences: 7, status: "pending" },
+      { id: "d1", src: "哈罗米尔", dst: "Harrowmere", type: "place", note: "giữ nguyên tên gốc", occurrences: 11, status: "pending" },
+      { id: "d2", src: "守灯人", dst: "người giữ đèn", type: "title", note: "danh xưng của Wren", occurrences: 7, status: "pending" },
     ],
   };
 }

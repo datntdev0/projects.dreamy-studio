@@ -16,6 +16,7 @@ const REPLY_DELAY_MS = 900;
 export interface AssistantScenario {
   sessions?: boolean;
   failSend?: boolean;
+  resolveConflict?: boolean;
   replyDelayMs?: number;
   novels?: number;
 }
@@ -244,6 +245,9 @@ function decideAttachment(attachment: AssistantAttachment, ids: Set<string>, sta
 
 async function resolveProposal(state: MockState, args: Record<string, unknown>): Promise<AssistantSession> {
   await delay(250);
+  if (state.scenario.resolveConflict) {
+    throw { code: "conflict", detail: "f2" };
+  }
   const target = find(state, String(args["sessionId"]));
   const owner = target.messages.find((item) => item.id === String(args["messageId"]));
   if (!owner) {

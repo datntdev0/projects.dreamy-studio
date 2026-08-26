@@ -18,13 +18,14 @@ export interface AssistantCitation {
   quote: string;
 }
 
-export type AssistantChangeTarget = "novel" | "chapter" | "knowledge";
+export type AssistantChangeTarget = "novel" | "chapter" | "knowledge" | "translation";
 
 export interface AssistantChange {
   target: AssistantChangeTarget;
   novelId: number;
   chapterId: string | null;
   lang: string | null;
+  translationTarget: string | null;
 }
 
 export type AssistantEvent = { kind: "activity"; label: string } | ({ kind: "changed" } & AssistantChange);

@@ -259,6 +259,7 @@
   "assistant.toast.applied": "Đã áp dụng {count} đề xuất.",
   "assistant.toast.rejected": "Đã bỏ qua {count} đề xuất.",
   "assistant.error.resolve": "Không xử lý được đề xuất: {detail}",
+  "assistant.error.conflict": "Một số đề xuất không còn khớp với bản dịch hiện tại: {detail}",
   "novel.knowledge.review.ask": "Nhờ Trợ lý đề xuất sửa",
   "novel.knowledge.review.askSoon": "Sắp ra mắt",
   "assistant.cap": "Assistant",
@@ -1236,7 +1237,6 @@
   ,"novel.translation.warn.filter.dict": "Từ điển"
   ,"novel.translation.trans.cancel": "Hủy"
   ,"novel.translation.result.review": "Nhờ Trợ lý rà soát"
-  ,"novel.translation.result.reviewSoon": "Sắp ra mắt"
   ,"novel.translation.guide.prompt": "Prompt"
   ,"novel.translation.guide.placeholder": "Ví dụ: Dịch để nghiên cứu nội bộ. Giọng trung tính, xưng hô “anh/chị”, giữ nguyên địa danh theo từ điển…"
   ,"novel.translation.summary.guideSet": "Đã viết"

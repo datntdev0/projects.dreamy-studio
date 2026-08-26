@@ -8,7 +8,7 @@
   <button type="button" class="btn btn-icon btn-sm" data-testid="novel-translation-result-next" [disabled]="view().seq >= chapters().length" [attr.aria-label]="'novel.reader.next' | t" (click)="next()"><ds-icon name="chev-r" [size]="17" /></button>
   <label class="check"><input type="checkbox" data-testid="novel-translation-result-only" [checked]="onlyReview()" (change)="onOnly($event)"><span>{{ "novel.translation.result.only" | t }}</span></label>
   <span class="spacer"></span>
-  <button type="button" class="btn btn-sm" data-testid="novel-translation-result-review" disabled [attr.data-tip]="'novel.translation.result.reviewSoon' | t"><ds-icon name="spark" [size]="16" />{{ "novel.translation.result.review" | t }}</button>
+  <button type="button" class="btn btn-sm" data-testid="novel-translation-result-review" [disabled]="!translated() || assistant.sending()" (click)="askReview()"><ds-icon name="spark" [size]="16" />{{ "novel.translation.result.review" | t }}</button>
 </div>
 @if (chapter(); as chapter) {
   @if (translated(); as translated) {

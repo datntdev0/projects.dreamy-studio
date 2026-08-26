@@ -259,6 +259,7 @@
   "assistant.toast.applied": "Proposals applied: {count}.",
   "assistant.toast.rejected": "Proposals dismissed: {count}.",
   "assistant.error.resolve": "Could not handle the proposal: {detail}",
+  "assistant.error.conflict": "Some proposals no longer match the current translation: {detail}",
   "novel.knowledge.review.ask": "Ask Assistant for fixes",
   "novel.knowledge.review.askSoon": "Coming soon",
   "assistant.cap": "Assistant",
@@ -1236,7 +1237,6 @@
   ,"novel.translation.warn.filter.dict": "Dictionary"
   ,"novel.translation.trans.cancel": "Cancel"
   ,"novel.translation.result.review": "Ask the Assistant to review"
-  ,"novel.translation.result.reviewSoon": "Coming soon"
   ,"novel.translation.guide.prompt": "Prompt"
   ,"novel.translation.guide.placeholder": "e.g. Translate for internal research. Keep a neutral tone, address characters as “anh/chị”, keep place names in the dictionary…"
   ,"novel.translation.summary.guideSet": "Written"

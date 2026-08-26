@@ -63,3 +63,9 @@ export const EditEnabled: Story = screen({}, async (root) => {
   await click(root, '[data-testid="dialog-host-accept"] button');
   await waitFor(root, '[data-testid="assistant-chat-edit-notice"]');
 });
+
+export const ReviewConflict: Story = screen({ resolveConflict: true }, async (root) => {
+  await openSession(root, "s-review");
+  await click(root, '[data-testid="assistant-review-finding-apply"]');
+  await waitFor(root, '[data-testid="toast-item"]');
+});

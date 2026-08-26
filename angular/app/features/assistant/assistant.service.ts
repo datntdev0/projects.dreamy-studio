@@ -5,8 +5,10 @@ import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { KnowledgeLang } from "@app/features/novel/novel.knowledge.models";
 import { NovelKnowledgeService } from "@app/features/novel/novel.knowledge.service";
+import { TargetLang } from "@app/features/novel/novel.models";
 import { NovelReaderService } from "@app/features/novel/novel.reader.service";
 import { NovelService } from "@app/features/novel/novel.service";
+import { NovelTranslationService } from "@app/features/novel/novel.translation.service";
 import { displayName, toNovelError } from "@app/features/novel/novel.rules";
 import { WorkspaceService } from "@app/features/workspace/workspace.service";
 import { LayoutService } from "@layout/layout.service";
@@ -36,6 +38,7 @@ export class AssistantService {
   private readonly novels = inject(NovelService);
   private readonly reader = inject(NovelReaderService);
   private readonly knowledge = inject(NovelKnowledgeService);
+  private readonly translation = inject(NovelTranslationService);
   private readonly tabs = inject(TabsService);
   private readonly layout = inject(LayoutService);
   private readonly workspace = inject(WorkspaceService);
@@ -175,11 +178,14 @@ export class AssistantService {
         this.active.set(next);
         this.upsert(summaryOf(next));
       }
+      if (resolution.status === "applied") {
+        await this.reloadReview(next, resolution.messageId);
+      }
       const key = resolution.status === "applied" ? "assistant.toast.applied" : "assistant.toast.rejected";
       this.toasts.show(this.languageService.translate(key, { count: resolution.itemIds.length }), resolution.status === "applied" ? "success" : "info");
     } catch (cause) {
       if (epoch === this.epoch) {
-        this.toasts.show(this.languageService.translate("assistant.error.resolve", { detail: toNovelError(cause).detail }), "danger");
+        this.showResolveError(cause);
       }
     } finally {
       if (epoch === this.epoch) {
@@ -317,8 +323,26 @@ export class AssistantService {
       if (change.chapterId !== null) {
         await this.reader.invalidate(change.novelId, change.chapterId);
       }
+    } else if (change.target === "translation") {
+      if (change.translationTarget !== null) {
+        await this.translation.load(change.novelId, change.translationTarget as TargetLang);
+      }
     } else if (change.lang !== null) {
       await this.knowledge.load(change.novelId, change.lang as KnowledgeLang);
+    }
+  }
+
+  private showResolveError(cause: unknown): void {
+    const error = toNovelError(cause);
+    const key = error.code === "conflict" ? "assistant.error.conflict" : "assistant.error.resolve";
+    this.toasts.show(this.languageService.translate(key, { detail: error.detail }), "danger");
+  }
+
+  private async reloadReview(session: AssistantSession, messageId: string): Promise<void> {
+    const message = session.messages.find((item) => item.id === messageId);
+    const review = message?.attachments?.find((item) => item.kind === "translation_review");
+    if (review?.kind === "translation_review" && session.scope.novelId !== null) {
+      await this.translation.load(session.scope.novelId, review.target as TargetLang);
     }
   }
 

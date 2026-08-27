@@ -11,3 +11,5 @@ export const defaultExecutable = join(repoRoot, "_output", "desktop", "target", 
 export function appExecutable(): string {
   return process.env["DREAMY_EXE"] ?? defaultExecutable;
 }
+
+export const workspaceMigrationsDir = join(repoRoot, "desktop", "src", "infra", "storage", "migrations", "ws");

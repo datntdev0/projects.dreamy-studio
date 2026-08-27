@@ -16,5 +16,5 @@
     "noEmit": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["scripts", "desktop", "playwright.config.ts"]
+  "include": ["scripts", "pages", "desktop", "playwright.config.ts"]
 }

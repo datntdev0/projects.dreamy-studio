@@ -179,7 +179,7 @@ export class AssistantService {
         this.upsert(summaryOf(next));
       }
       if (resolution.status === "applied") {
-        await this.reloadReview(next, resolution.messageId);
+        void this.reloadReview(next, resolution.messageId).catch(this.ignoreReload.bind(this));
       }
       const key = resolution.status === "applied" ? "assistant.toast.applied" : "assistant.toast.rejected";
       this.toasts.show(this.languageService.translate(key, { count: resolution.itemIds.length }), resolution.status === "applied" ? "success" : "info");
@@ -338,11 +338,22 @@ export class AssistantService {
     this.toasts.show(this.languageService.translate(key, { detail: error.detail }), "danger");
   }
 
+  private ignoreReload(): void {
+    return;
+  }
+
   private async reloadReview(session: AssistantSession, messageId: string): Promise<void> {
     const message = session.messages.find((item) => item.id === messageId);
     const review = message?.attachments?.find((item) => item.kind === "translation_review");
     if (review?.kind === "translation_review" && session.scope.novelId !== null) {
       await this.translation.load(session.scope.novelId, review.target as TargetLang);
+    }
+    const changes = message?.attachments?.find((item) => item.kind === "knowledge_changes");
+    if (changes?.kind === "knowledge_changes" && changes.status === "applied") {
+      const novelId = changes.novelId ?? session.scope.novelId;
+      if (novelId !== null && changes.lang !== undefined) {
+        await this.knowledge.load(novelId, changes.lang as KnowledgeLang);
+      }
     }
   }
 

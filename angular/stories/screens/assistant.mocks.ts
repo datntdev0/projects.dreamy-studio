@@ -113,7 +113,7 @@ ${rest} xung đột còn lại (Evidence, Source changed) cần phân tích lạ
 - “Kiểm kê” bị xếp nhầm loại term, đúng ra là event.${tail}
 
 Bộ thay đổi dưới đây đã chạy thử với ontology và không tạo xung đột mới.`,
-    activities: [`kb_issues(rule=all) → ${count} xung đột`, "kb_entity × 3", "read_paragraphs(ch1 ¶2–¶5, ch2 ¶3)", "propose_kb(6 edits) → dry-run OK"],
+    activities: [`kb_issues(rule=all) → ${count} xung đột`, "kb_entity × 3", "read_paragraphs(ch1 ¶2–¶5, ch2 ¶3)", "propose_kb(4 edits) → dry-run OK"],
     citations: [{ novelId: NOVEL_ID, chapter: 1, p: 2, quote: "Wren là người giữ đèn cuối cùng của Harrowmere." }],
     attachments: [knowledgeChanges()],
   };

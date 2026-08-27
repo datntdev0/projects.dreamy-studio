@@ -72,7 +72,7 @@ export interface TranslationReview {
   dictionary: DictProposal[];
 }
 
-export type KnowledgeChangeOp = "merge" | "rename" | "retype" | "add_entity" | "add_fact" | "fact" | "del" | "props";
+export type KnowledgeChangeOp = "merge" | "rename" | "retype" | "add_entity" | "add_fact" | "fact" | "del" | "props" | "evidence" | "character";
 
 export interface KnowledgeChange {
   id: string;
@@ -98,6 +98,8 @@ export interface KnowledgeChangeSet {
   validation: KnowledgeValidation;
   changes: KnowledgeChange[];
   status: ProposalStatus;
+  lang?: string;
+  novelId?: number;
 }
 
 export type AssistantAttachment = TranslationReview | KnowledgeChangeSet;

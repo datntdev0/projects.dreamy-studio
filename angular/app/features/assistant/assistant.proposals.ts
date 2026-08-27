@@ -30,6 +30,8 @@ export const OP_KEYS: Record<KnowledgeChangeOp, LanguageKey> = {
   fact: "assistant.kb.op.fact",
   del: "assistant.kb.op.del",
   props: "assistant.kb.op.props",
+  evidence: "assistant.kb.op.evidence",
+  character: "assistant.kb.op.character",
 };
 
 export const OP_ICONS: Record<KnowledgeChangeOp, string> = {
@@ -41,6 +43,8 @@ export const OP_ICONS: Record<KnowledgeChangeOp, string> = {
   fact: "swap",
   del: "trash",
   props: "tag",
+  evidence: "book",
+  character: "user",
 };
 
 export const STATUS_KEYS: Record<ProposalStatus, LanguageKey> = {

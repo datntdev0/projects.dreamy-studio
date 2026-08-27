@@ -69,17 +69,29 @@ export function translationReview(chapter: number, chapterTitle: string): Transl
   };
 }
 
-export function knowledgeChanges(): KnowledgeChangeSet {
+export type KnowledgeChangeSetRecord = KnowledgeChangeSet & { raw: Record<string, unknown>[] };
+
+const KNOWLEDGE_RAW: Record<string, unknown>[] = [
+  { k: "merge", sources: ["E7"], target: "E2" },
+  { k: "props", id: "E2", aliases: ["Cô Wren", "Wren", "Người giữ đèn"] },
+  { k: "fact", id: "F3", subject: "E2" },
+  { k: "retype", id: "E16", type: "event" },
+];
+
+export function knowledgeChanges(): KnowledgeChangeSetRecord {
   return {
     kind: "knowledge_changes",
-    id: "cs-kb-1",
+    id: "cs1",
+    lang: "VI",
+    novelId: NOVEL_ID,
+    raw: KNOWLEDGE_RAW.map((edit) => ({ ...edit })),
     title: "Sửa 3 xung đột: thực thể trùng lặp và fact gắn sai vào character",
-    edits: 6,
+    edits: KNOWLEDGE_RAW.length,
     validation: { ok: true, resolves: 3, introduces: [] },
     status: "pending",
     changes: [
       {
-        id: "c-merge",
+        id: "c1",
         op: "merge",
         target: "“Người giữ đèn” → “Wren · người giữ đèn”",
         before: "2 persona: “Wren · người giữ đèn”, “Người giữ đèn”",
@@ -88,7 +100,7 @@ export function knowledgeChanges(): KnowledgeChangeSet {
         ev: [{ novelId: NOVEL_ID, chapter: 1, p: 2, quote: "Wren là người giữ đèn cuối cùng của Harrowmere." }],
       },
       {
-        id: "c-props",
+        id: "c2",
         op: "props",
         target: "Wren · người giữ đèn",
         before: "aliases: —",
@@ -97,7 +109,7 @@ export function knowledgeChanges(): KnowledgeChangeSet {
         ev: [],
       },
       {
-        id: "c-fact",
+        id: "c3",
         op: "fact",
         target: "resides_at",
         before: "Wren (character) → Tháp Đèn",
@@ -106,7 +118,7 @@ export function knowledgeChanges(): KnowledgeChangeSet {
         ev: [{ novelId: NOVEL_ID, chapter: 1, p: 5, quote: "Cô sống một mình trên đỉnh Tháp Đèn." }],
       },
       {
-        id: "c-retype",
+        id: "c4",
         op: "retype",
         target: "Kiểm kê",
         before: "term",

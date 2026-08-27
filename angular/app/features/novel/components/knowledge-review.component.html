@@ -9,7 +9,7 @@
   </label>
   <span class="spacer"></span>
   <span class="t-sm t-mute"><ds-icon name="shield" [size]="13" /> {{ "novel.knowledge.review.hint" | t }}</span>
-  <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-ask" disabled [attr.data-tip]="'novel.knowledge.review.askSoon' | t"><ds-icon name="spark" [size]="16" />{{ "novel.knowledge.review.ask" | t }}</button>
+  <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-ask" [disabled]="cards().length === 0 || assistant.sending()" (click)="askAssistant()"><ds-icon name="spark" [size]="16" />{{ "novel.knowledge.review.ask" | t }}</button>
 </div>
 <div class="tl-list rv-list" data-testid="novel-knowledge-review">
   @for (card of cards(); track card.issue.id) {

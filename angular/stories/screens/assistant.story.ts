@@ -69,3 +69,8 @@ export const ReviewConflict: Story = screen({ resolveConflict: true }, async (ro
   await click(root, '[data-testid="assistant-review-finding-apply"]');
   await waitFor(root, '[data-testid="toast-item"]');
 });
+
+export const KnowledgeReview: Story = screen({}, async (root) => {
+  await openSession(root, "s-kb-fix");
+  await waitFor(root, '[data-testid="assistant-changes-card"]');
+});

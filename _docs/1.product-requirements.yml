@@ -1,0 +1,195 @@
+# Product Vision for Dreamy Studio
+# Breakline when the content exceeds the width of the page 100 characters
+
+problem: >-
+  Content creator gặp khó khăn khi biến tác phẩm văn học thành các sản phẩm giải trí sáng tạo vì
+  quy trình sản xuất gồm nhiều công đoạn thủ công, lặp lại và các công cụ rời rạc hoặc đòi hỏi
+  phần cứng mạnh. Trong bối cảnh làm việc trên máy tính cá nhân, cần kết hợp nhiều dịch vụ AI
+  nhưng vẫn kiểm soát chi phí và dữ liệu cục bộ, họ mong muốn một studio tích hợp để quản lý và
+  tự động hóa quy trình từ tiểu thuyết đến bản dịch, audiobook, hình minh họa và video hoàn chỉnh.
+
+vision: >-
+  Dreamy Studio hướng tới trở thành studio sáng tạo trên máy tính cá nhân, giúp content creator
+  biến tác phẩm văn học thành các sản phẩm giải trí đa phương tiện một cách dễ tiếp cận, nhất
+  quán và tiết kiệm chi phí.
+
+success:
+  - Hiện thực hóa ý tưởng từ tác phẩm văn học thành các sản phẩm phái sinh giải trí sáng tạo.
+  - Giảm thao tác thủ công lặp lại trong quá trình sản xuất, tăng chất lượng sản phẩm tạo ra.
+  - Giảm chi phí đầu tư ban đầu cho thiết bị phần cứng nhưng vẫn sản xuất được sản phẩm.
+
+constraints:
+  - Phần mềm chạy trên máy tính cá nhân dưới dạng desktop app.
+  - Nội dung dự án chỉ được lưu trên máy tính của người dùng.
+  - Một số chức năng cụ thể của phần mềm cần kết nối internet.
+
+capabilities:
+  - id: CAP-01
+    name: Workspace Management
+    description: >-
+      Tổ chức và quản lý không gian làm việc cục bộ, bao gồm dữ liệu, cấu hình và các thành phần
+      dùng chung của người dùng.
+
+  - id: CAP-02
+    name: Content Source Management
+    description: >-
+      Quản lý nội dung nguồn và cấu trúc của nội dung đó để làm đầu vào cho các hoạt động sáng tạo,
+      phân tích và sản xuất.
+
+  - id: CAP-03
+    name: Content Translation
+    description: >-
+      Chuyển đổi, biên tập và duy trì các phiên bản dịch thuật của nội dung nguồn.
+
+  - id: CAP-04
+    name: Content Intelligence
+    description: >-
+      Trích xuất, tổ chức, kiểm chứng và khai thác tri thức từ nội dung để hỗ trợ hiểu, tìm kiếm và
+      ra quyết định sáng tạo.
+
+  - id: CAP-05
+    name: Asset Library Management
+    description: >-
+      Lưu trữ, phân loại, tìm kiếm, xem trước và tái sử dụng các tài nguyên sáng tạo như hình ảnh,
+      âm thanh, video, promptprompt,...
+
+  - id: CAP-06
+    name: Project Management
+    description: >-
+      Tạo, tổ chức và theo dõi dự án; liên kết nội dung, tài nguyên, quy trình và đầu ra thuộc từng
+      dự án.
+
+  - id: CAP-07
+    name: Pre-Production
+    description: >-
+      Hỗ trợ chuẩn bị và định hình ý tưởng sản xuất, gồm phát triển nội dung, kịch bản, tham chiếu
+      sáng tạo, phân cảnh và kế hoạch thực hiện.
+
+  - id: CAP-08
+    name: Production Workflow
+    description: >-
+      Cung cấp các mô-đun và workflow linh hoạt để tạo, xử lý, đánh giá và lặp lại các tài nguyên
+      hoặc nội dung đa phương tiện.
+
+  - id: CAP-09
+    name: Post-Production
+    description: >-
+      Tổng hợp, biên tập, hoàn thiện, kiểm tra và xuất các sản phẩm đầu ra từ những tài nguyên đã
+      được tạo trong dự án.
+
+  - id: CAP-10
+    name: Distribution
+    description: >-
+      Chuẩn bị, quản lý và đưa sản phẩm hoàn chỉnh đến các kênh hoặc nền tảng phân phối.
+
+  - id: CAP-11
+    name: Assistant
+    description: >-
+      Cung cấp hỗ trợ ngữ cảnh bằng AI cho việc phân tích, đề xuất, kiểm tra, tự động hóa tác vụ và
+      điều khiển thao tác trong ứng dụng.
+
+  - id: CAP-12
+    name: Configuration
+    description: >-
+      Quản lý cấu hình ứng dụng, khả năng thực thi cục bộ, quyền truy cập và kết nối với model,
+      provider, công cụ hoặc dịch vụ bên ngoài.
+
+features:
+  - id: FEAT-01
+    name: Workspace Creation
+    caps: [CAP-01]
+    status: done
+    description: >-
+      Cho phép người dùng tạo workspace mới tại vị trí tự chọn trên máy tính. Hệ thống kiểm tra tên
+      và đường dẫn, không ghi đè lên thư mục đã có, thiết lập cấu trúc thư mục và tệp cần thiết rồi
+      thêm workspace vào danh sách gần đây; nếu tạo thất bại thì không để lại dữ liệu dở dang.
+
+  - id: FEAT-02
+    name: Workspace Deletion
+    caps: [CAP-01]
+    status: done
+    description: >-
+      Cho phép người dùng xóa workspace khỏi máy tính và danh sách gần đây sau khi xác nhận. Hộp
+      thoại xác nhận nêu rõ workspace sắp xóa và việc xóa không thể hoàn tác; không cho phép xóa
+      workspace đang được mở.
+
+  - id: FEAT-03
+    name: Workspace Opening
+    caps: [CAP-01]
+    status: done
+    description: >-
+      Cho phép người dùng mở workspace đã có bằng cách chọn thư mục trên máy tính hoặc từ danh sách
+      gần đây. Hệ thống kiểm tra đường dẫn, quyền truy cập và cấu trúc workspace, chuẩn bị dữ liệu
+      cần thiết trước khi vào không gian làm việc; nếu thất bại thì giữ nguyên trạng thái trước đó
+      và báo lý do.
+
+  - id: FEAT-04
+    name: Novel Creation
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng tạo novel mới trong workspace bằng cách nhập tiêu đề (bắt buộc, tối đa
+      200 ký tự), tên hiển thị, tác giả, ngôn ngữ nguồn, mô tả và tag. Novel mới chưa có chương và
+      xuất hiện ngay trong danh sách novel.
+
+  - id: FEAT-05
+    name: Novel Package Import
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng nhập novel từ tệp package (.dsnovel hoặc .zip). Hệ thống kiểm tra tuần tự
+      định dạng, manifest, danh sách chương và ảnh bìa, hiển thị tiến trình cùng tóm tắt nội dung
+      package, cho phép chỉnh thông tin trước khi nhập và cảnh báo khi trùng tiêu đề; nếu nhập thất
+      bại thì không để lại dữ liệu dở dang.
+
+  - id: FEAT-06
+    name: Novel Package Export
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng xuất novel thành tệp package .dsnovel để sao lưu hoặc chuyển sang
+      workspace khác. Tên tệp được gợi ý từ tên novel; không cho xuất novel chưa có chương nào.
+
+  - id: FEAT-07
+    name: Novel Browsing
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Hiển thị danh sách novel trong workspace dạng lưới hoặc bảng cùng số liệu thống kê (số novel,
+      chương, từ, tiến độ dịch và phân tích). Người dùng tìm kiếm theo tiêu đề, tên hoặc tác giả,
+      lọc theo tag và ngôn ngữ, và chọn nhiều novel để thao tác cùng lúc.
+
+  - id: FEAT-08
+    name: Novel Information Management
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng xem và chỉnh sửa thông tin novel gồm tiêu đề, tên hiển thị, tác giả,
+      ngôn ngữ, mô tả, tag (tối đa 12 tag, mỗi tag tối đa 24 ký tự) và ảnh bìa (tối đa 8 MB).
+
+  - id: FEAT-09
+    name: Novel Deletion
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng xóa một hoặc nhiều novel khỏi workspace sau khi xác nhận. Hộp thoại xác
+      nhận nêu rõ các novel sắp xóa và cảnh báo hậu quả của việc xóa.
+
+  - id: FEAT-10
+    name: Chapter Management
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng xem danh sách chương của novel kèm số từ, trạng thái dịch và phân tích,
+      tìm kiếm theo số hoặc tiêu đề, thêm chương mới, đổi tên, sắp xếp lại thứ tự và xóa chương sau
+      khi xác nhận. Chương đã có bản dịch hoặc kết quả phân tích bị khóa, không thể xóa hay di
+      chuyển.
+
+  - id: FEAT-11
+    name: Novel Reading and Editing
+    caps: [CAP-02]
+    status: done
+    description: >-
+      Cho phép người dùng đọc nội dung novel theo chương và đoạn, chuyển chương, tùy chỉnh giao
+      diện đọc (phông chữ, cỡ chữ, giãn dòng, độ rộng, màu nền), đồng thời sửa đoạn, thêm đoạn hoặc
+      viết lại cả chương ngay trong trình đọc.

@@ -1,3 +1,5 @@
 # projects.dreamy-studio
 
 Dreamy Studio là một phần mềm desktop cung cấp đa dạng các công cụ, thư viện hỗ trợ sản xuất các nội dung giải trí sáng tạo. Phần mềm xoay quanh điểm mạnh là sản xuất nội dung từ tiểu thuyết văn học. Tập trung hỗ trợ máy tính có phần cứng giới hạn với khả năng tích hợp rộng rãi các công cụ từ bên ngoài.
+
+**Disclaimer:** Dreamy Studio cung cấp công cụ để người dùng tạo và phân phối nội dung từ tài nguyên do họ tự chọn. Người dùng chịu trách nhiệm bảo đảm mình có quyền sử dụng tài nguyên cho mục đích dự kiến và quyết định nội dung được gửi đến dịch vụ bên ngoài hoặc đăng lên tài khoản của mình. Dreamy Studio không xác minh hay cấp quyền sử dụng đối với các tài nguyên đó; đồng thời vẫn chịu trách nhiệm đối với việc bảo mật ứng dụng, xử lý dữ liệu và vận hành các tích hợp do mình cung cấp.

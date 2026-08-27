@@ -1,4 +1,4 @@
-import { LibraryPrompt, PromptSort } from "./library.prompts.models";
+import { LibraryPrompt, PROMPT_MAX_BYTES, PROMPT_NAME_MAX, PromptSort } from "./library.prompts.models";
 
 export interface PromptFilters { query: string; sort: PromptSort; collection: number | "none" | null; tags: string[]; }
 export interface PromptSegment { text: string; variable: boolean; }
@@ -10,6 +10,8 @@ function bySize(a: LibraryPrompt, b: LibraryPrompt): number { return b.size - a.
 export function promptCode(id: number): string { return `PRM-${String(id).padStart(4, "0")}`; }
 export function charCount(text: string): number { return [...text].length; }
 export function promptMeta(prompt: LibraryPrompt): number { return charCount(prompt.text); }
+export function promptNameTooLong(name: string): boolean { return charCount(name.trim()) > PROMPT_NAME_MAX; }
+export function promptTextTooLarge(text: string): boolean { return new TextEncoder().encode(text).length > PROMPT_MAX_BYTES; }
 export function promptVariables(text: string): string[] { return [...new Set(Array.from(text.matchAll(VARIABLE), match => match[1].trim()).filter(Boolean))]; }
 export function promptSegments(text: string): PromptSegment[] { const segments: PromptSegment[] = []; let index = 0; for (const match of text.matchAll(VARIABLE)) { const start = match.index ?? 0; if (start > index) segments.push({ text: text.slice(index, start), variable: false }); segments.push({ text: match[1].trim(), variable: true }); index = start + match[0].length; } if (index < text.length) segments.push({ text: text.slice(index), variable: false }); return segments; }
 export function promptExcerpt(text: string): string { const chars = [...text]; return chars.length > 180 ? `${chars.slice(0, 180).join("").trimEnd()}…` : text.trimEnd(); }

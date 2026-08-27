@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { ConfirmDialog, SwitchDialog } from "./dialogs.ts";
+import { LibraryNav } from "./library.ts";
 import { AddChapterDialog, DisplayPanel, NovelChapters, NovelCreateDialog, NovelExplorer, NovelImportDialog, NovelList, NovelPanel, NovelReader } from "./novels.ts";
 
 export class MainPage {
@@ -14,6 +15,7 @@ export class MainPage {
   readonly chapters: NovelChapters;
   readonly addChapterDialog: AddChapterDialog;
   readonly reader: NovelReader;
+  readonly library: LibraryNav;
 
   constructor(private readonly page: Page) {
     this.switchDialog = new SwitchDialog(page);
@@ -27,6 +29,7 @@ export class MainPage {
     this.chapters = new NovelChapters(page);
     this.addChapterDialog = new AddChapterDialog(page);
     this.reader = new NovelReader(page);
+    this.library = new LibraryNav(page);
   }
 
   get root(): Locator {

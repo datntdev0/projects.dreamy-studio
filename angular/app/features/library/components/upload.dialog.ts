@@ -22,7 +22,7 @@ import { LibraryVideoService } from "../library.videos.service";
 import { VIDEO_MAX_BYTES } from "../library.videos.models";
 import { LibraryPromptService } from "../library.prompts.service";
 import { PROMPT_KINDS, PROMPT_MAX_BYTES, PROMPT_NAME_MAX, PromptCreateInput, PromptKind } from "../library.prompts.models";
-import { promptVariables } from "../library.prompts.rules";
+import { promptNameTooLong, promptTextTooLarge, promptVariables } from "../library.prompts.rules";
 import { normalizeTag } from "../library.rules";
 import { libraryErrorKey } from "../library.rules";
 import { LibraryService } from "../library.service";
@@ -34,15 +34,19 @@ interface UploadConfig {
   icon: "image" | "music" | "film" | "prompt";
   nounKey: LanguageKey;
   hintKey: LanguageKey;
+  dropzoneKey: LanguageKey;
+  dropTitleKey: LanguageKey;
   limit: number;
 }
 
 const UPLOAD_CONFIG: Record<UploadKind, UploadConfig> = {
-  image: { icon: "image", nounKey: "library.noun.image", hintKey: "library.upload.hint.image", limit: 25 * 1024 * 1024 },
-  sound: { icon: "music", nounKey: "library.noun.sound", hintKey: "library.upload.hint.sound", limit: 200 * 1024 * 1024 },
-  video: { icon: "film", nounKey: "library.noun.video", hintKey: "library.upload.hint.video", limit: VIDEO_MAX_BYTES },
-  prompt: { icon: "prompt", nounKey: "library.noun.prompt", hintKey: "library.upload.hint.prompt", limit: PROMPT_MAX_BYTES },
+  image: { icon: "image", nounKey: "library.noun.image", hintKey: "library.upload.hint.image", dropzoneKey: "library.upload.dropzone", dropTitleKey: "library.upload.dropTitle", limit: 25 * 1024 * 1024 },
+  sound: { icon: "music", nounKey: "library.noun.sound", hintKey: "library.upload.hint.sound", dropzoneKey: "library.upload.dropzone.sound", dropTitleKey: "library.upload.dropTitle.sound", limit: 200 * 1024 * 1024 },
+  video: { icon: "film", nounKey: "library.noun.video", hintKey: "library.upload.hint.video", dropzoneKey: "library.upload.dropzone.video", dropTitleKey: "library.upload.dropTitle.video", limit: VIDEO_MAX_BYTES },
+  prompt: { icon: "prompt", nounKey: "library.noun.prompt", hintKey: "library.upload.hint.prompt", dropzoneKey: "library.upload.dropzone.prompt", dropTitleKey: "library.upload.dropTitle.prompt", limit: PROMPT_MAX_BYTES },
 };
+
+const SCOPED_CHECK_CODES = ["unsupported", "too_large", "duplicate_name"];
 
 interface UploadItem {
   path: string;
@@ -174,11 +178,25 @@ export class LibraryUploadDialog {
   }
 
   nameInvalid(): boolean {
-    return this.writeTried() && !this.writeName().trim();
+    return this.writeTried() && this.nameErrorKey() !== null;
   }
 
   textInvalid(): boolean {
-    return this.writeTried() && !this.writeText().trim();
+    return this.writeTried() && this.textErrorKey() !== null;
+  }
+
+  nameErrorKey(): LanguageKey | null {
+    if (!this.writeName().trim()) {
+      return "library.promptWrite.nameRequired";
+    }
+    return promptNameTooLong(this.writeName()) ? "library.promptWrite.nameTooLong" : null;
+  }
+
+  textErrorKey(): LanguageKey | null {
+    if (!this.writeText().trim()) {
+      return "library.promptWrite.textRequired";
+    }
+    return promptTextTooLarge(this.writeText().trim()) ? "library.promptWrite.textTooLarge" : null;
   }
 
   rightKey(right: ImageRights): LanguageKey {
@@ -190,7 +208,15 @@ export class LibraryUploadDialog {
       return item.error;
     }
     const code = item.check?.code;
-    return code ? this.languageService.translate(`library.upload.check.${code}` as LanguageKey, { ext: this.extension(item.name) }) : "";
+    return code ? this.languageService.translate(this.checkKey(code), { ext: this.extension(item.name) }) : "";
+  }
+
+  checkKey(code: string): LanguageKey {
+    const kind = this.kind();
+    if (kind !== "image" && SCOPED_CHECK_CODES.includes(code)) {
+      return `library.upload.check.${kind}.${code}` as LanguageKey;
+    }
+    return `library.upload.check.${code}` as LanguageKey;
   }
 
   close(): void {
@@ -270,11 +296,12 @@ export class LibraryUploadDialog {
     }
     this.uploading.set(false);
     const failed = targets.length - completed;
+    const noun = this.nounText();
     if (!failed) {
       this.dialogs.closeUpload();
-      this.toasts.show(this.languageService.translate("library.upload.toast.success", { count: completed }));
+      this.toasts.show(this.languageService.translate("library.upload.toast.success", { count: completed, noun }));
     } else {
-      this.toasts.show(this.languageService.translate("library.upload.toast.partial", { success: completed, total: targets.length, failed }), "warning");
+      this.toasts.show(this.languageService.translate("library.upload.toast.partial", { success: completed, total: targets.length, failed, noun }), "warning");
     }
   }
 
@@ -282,7 +309,7 @@ export class LibraryUploadDialog {
     const name = this.writeName().trim();
     const text = this.writeText().trim();
     this.writeTried.set(true);
-    if (!name || !text) {
+    if (this.nameErrorKey() || this.textErrorKey()) {
       return;
     }
     this.uploading.set(true);
@@ -300,6 +327,10 @@ export class LibraryUploadDialog {
       this.uploading.set(false);
       this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
     }
+  }
+
+  private nounText(): string {
+    return this.languageService.translate(this.config().nounKey);
   }
 
   private buildIsWrite(): boolean {

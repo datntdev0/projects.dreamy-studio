@@ -84,6 +84,10 @@ export class LibraryImagePreviewDialog {
     return RIGHTS_KEYS[rights];
   }
 
+  originKey(image: LibraryImage): LanguageKey {
+    return image.origin === "app" ? "library.origin.app" : "library.origin.upload";
+  }
+
   collectionName(image: LibraryImage): string {
     return image.collectionId === null ? "" : this.library.collectionById(image.collectionId)?.name ?? "—";
   }

@@ -709,8 +709,8 @@
   "library.image.toast.tagLimit": "At most 12 tags per image.",
   "library.image.toast.tagExists": "Tag “{tag}” already exists.",
   "library.image.toast.renamed": "Image renamed to “{name}”.",
-  "library.upload.title": "Upload images",
-  "library.upload.close": "Close upload images dialog",
+  "library.upload.title": "Upload {noun}",
+  "library.upload.close": "Close upload {noun} dialog",
   "library.upload.dropzone": "Image file selection area",
   "library.upload.dropTitle": "Drag and drop images here",
   "library.upload.or": "or",
@@ -741,12 +741,12 @@
   "library.upload.rightsPlaceholder": "Choose usage rights…",
   "library.upload.rightsHint": "Required before saving.",
   "library.upload.cancel": "Cancel",
-  "library.upload.submit": "Upload {count} images",
+  "library.upload.submit": "Upload {count} {noun}",
   "library.upload.submitting": "Uploading…",
   "library.upload.copying": "Copying files into the workspace library\\ folder…",
   "library.upload.toast.skipped": "Skipped {count} files already in the list.",
-  "library.upload.toast.success": "Uploaded {count} images to the library.",
-  "library.upload.toast.partial": "Uploaded {success}/{total} images; {failed} files failed.",
+  "library.upload.toast.success": "Uploaded {count} {noun} to the library.",
+  "library.upload.toast.partial": "Uploaded {success}/{total} {noun}; {failed} files failed.",
   "library.preview.title": "Image preview",
   "library.preview.position": "{kind} · {current} / {total}",
   "library.preview.previous": "Previous",
@@ -941,7 +941,7 @@
   ,"tabs.prompts.title": "Prompts"
   ,"library.explorer.prompts": "Prompts"
   ,"library.explorer.voices": "Voices"
-  ,"library.noun.prompt": "prompt"
+  ,"library.noun.prompt": "prompts"
   ,"library.origin.app": "Created in app"
   ,"library.upload.hint.prompt": "TXT, MD · up to 256 KB per file, or write directly"
   ,"library.upload.check.unreadable": "Content cannot be read"
@@ -1585,4 +1585,22 @@
   ,"novel.knowledge.review.done.removed": "Deleted."
   ,"novel.knowledge.detail.empty": "Select an entity in the Graph or the List to see its details."
   ,"novel.knowledge.analyze.tab.run": "Analysis"
+  ,"library.upload.check.sound.unsupported": ".{ext} is not a supported sound format."
+  ,"library.upload.check.sound.too_large": "Larger than the 200 MB sound limit."
+  ,"library.upload.check.sound.duplicate_name": "A sound with the same name already exists; its name will be changed automatically."
+  ,"library.upload.check.video.unsupported": ".{ext} is not a supported video format."
+  ,"library.upload.check.video.too_large": "Larger than the 2 GB video limit."
+  ,"library.upload.check.video.duplicate_name": "A video with the same name already exists; its name will be changed automatically."
+  ,"library.upload.check.prompt.unsupported": ".{ext} is not a supported prompt format (TXT or MD only)."
+  ,"library.upload.check.prompt.too_large": "Larger than the 256 KB prompt limit."
+  ,"library.upload.check.prompt.duplicate_name": "A prompt with the same name already exists; its name will be changed automatically."
+  ,"library.upload.dropzone.sound": "Sound file selection area"
+  ,"library.upload.dropTitle.sound": "Drag and drop sounds here"
+  ,"library.upload.dropzone.video": "Video file selection area"
+  ,"library.upload.dropTitle.video": "Drag and drop videos here"
+  ,"library.upload.dropzone.prompt": "Prompt file selection area"
+  ,"library.upload.dropTitle.prompt": "Drag and drop prompt files here"
+  ,"library.promptWrite.nameTooLong": "Prompt name must be at most 120 characters."
+  ,"library.promptWrite.textTooLarge": "Prompt content must be at most 256 KB."
+  ,"library.prompt.toast.renamed": "Renamed to {name}."
 }

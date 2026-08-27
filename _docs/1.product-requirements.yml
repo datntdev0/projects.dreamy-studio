@@ -51,7 +51,7 @@ capabilities:
     name: Asset Library Management
     description: >-
       Lưu trữ, phân loại, tìm kiếm, xem trước và tái sử dụng các tài nguyên sáng tạo như hình ảnh,
-      âm thanh, video, promptprompt,...
+      âm thanh, video, prompt,...
 
   - id: CAP-06
     name: Project Management
@@ -193,3 +193,78 @@ features:
       Cho phép người dùng đọc nội dung novel theo chương và đoạn, chuyển chương, tùy chỉnh giao
       diện đọc (phông chữ, cỡ chữ, giãn dòng, độ rộng, màu nền), đồng thời sửa đoạn, thêm đoạn hoặc
       viết lại cả chương ngay trong trình đọc.
+
+  - id: FEAT-12
+    name: Asset Upload
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng tải ảnh (png, jpg, jpeg, webp, gif; tối đa 25 MB), âm thanh (mp3, wav,
+      aac; tối đa 200 MB) và video (mp4, mov, webm, mkv; tối đa 2 GB) vào thư viện bằng hộp thoại
+      chọn tệp hoặc kéo thả, cùng lúc nhiều tệp. Hệ thống kiểm tra từng tệp trước khi tải, yêu cầu
+      chọn quyền sử dụng, cho gắn tag và bộ sưu tập, tự đổi tên khi trùng; tệp lỗi không làm hỏng
+      các tệp còn lại và không để lại dữ liệu dở dang.
+
+  - id: FEAT-13
+    name: Prompt Authoring
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng thêm prompt vào thư viện bằng cách viết trực tiếp hoặc nhập từ tệp .txt,
+      .md. Prompt có tên (bắt buộc, tối đa 120 ký tự), loại (hình ảnh, video, giọng đọc, chung) và
+      nội dung không rỗng, tối đa 256 KB. Hệ thống nhận diện các biến dạng {{tên}} trong nội dung.
+
+  - id: FEAT-14
+    name: Asset Browsing
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Hiển thị tài nguyên trong thư viện theo từng loại (ảnh, âm thanh, video, prompt) kèm số lượng.
+      Người dùng tìm kiếm theo tên hoặc tag (prompt tìm cả trong nội dung), sắp xếp theo mới nhất,
+      tên hoặc dung lượng, lọc theo tag và bộ sưu tập, và được hướng dẫn khi danh sách trống.
+
+  - id: FEAT-15
+    name: Asset Preview
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng xem trước tài nguyên mà không rời thư viện: ảnh phóng to kèm thông tin
+      và chuyển ảnh liền kề, âm thanh có dạng sóng và điều khiển phát, video có ảnh poster và điều
+      khiển phát, prompt có biến được tô nổi bật và nút sao chép nội dung để tái sử dụng.
+
+  - id: FEAT-16
+    name: Asset Information Management
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng chỉnh tên, quyền sử dụng (của tôi, có giấy phép, miễn phí, khác), bộ
+      sưu tập và tag (tối đa 12 tag, mỗi tag tối đa 24 ký tự) của tài nguyên; với prompt còn sửa
+      được loại và nội dung. Tên trùng được tự đánh số để không có hai tài nguyên cùng loại trùng
+      tên.
+
+  - id: FEAT-17
+    name: Asset Deletion
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng xóa tài nguyên khỏi thư viện sau khi xác nhận. Hộp thoại xác nhận nêu rõ
+      tài nguyên sắp xóa và việc xóa không thể hoàn tác; hủy thì không có gì thay đổi.
+
+  - id: FEAT-18
+    name: Collection Management
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng tạo, sửa và xóa bộ sưu tập để nhóm các tài nguyên thuộc nhiều loại. Tên
+      bộ sưu tập bắt buộc, từ 1 đến 80 ký tự và không trùng (không phân biệt hoa thường); mô tả tối
+      đa 500 ký tự. Mỗi bộ sưu tập hiển thị số tài nguyên theo loại; xóa bộ sưu tập không xóa tài
+      nguyên bên trong mà đưa chúng về trạng thái chưa phân loại.
+
+  - id: FEAT-19
+    name: Tag Management
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng xem toàn bộ tag đang dùng trong thư viện kèm số tài nguyên theo loại, tìm
+      tag, đổi tên, hợp nhất vào tag khác và xóa tag trên mọi tài nguyên cùng lúc. Đổi tên sang tag
+      đã có được xử lý như hợp nhất và cần xác nhận.

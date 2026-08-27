@@ -709,8 +709,8 @@
   "library.image.toast.tagLimit": "Tối đa 12 tag cho mỗi ảnh.",
   "library.image.toast.tagExists": "Tag “{tag}” đã có.",
   "library.image.toast.renamed": "Tên ảnh đã được đổi thành “{name}”.",
-  "library.upload.title": "Upload ảnh",
-  "library.upload.close": "Đóng hộp thoại upload ảnh",
+  "library.upload.title": "Upload {noun}",
+  "library.upload.close": "Đóng hộp thoại upload {noun}",
   "library.upload.dropzone": "Vùng chọn file ảnh",
   "library.upload.dropTitle": "Kéo thả ảnh vào đây",
   "library.upload.or": "hoặc",
@@ -741,12 +741,12 @@
   "library.upload.rightsPlaceholder": "Chọn quyền sử dụng…",
   "library.upload.rightsHint": "Bắt buộc chọn trước khi lưu.",
   "library.upload.cancel": "Hủy",
-  "library.upload.submit": "Upload {count} ảnh",
+  "library.upload.submit": "Upload {count} {noun}",
   "library.upload.submitting": "Đang upload…",
   "library.upload.copying": "Đang sao chép file vào thư mục library\\ của workspace…",
   "library.upload.toast.skipped": "Bỏ qua {count} file đã có trong danh sách.",
-  "library.upload.toast.success": "Đã upload {count} ảnh vào thư viện.",
-  "library.upload.toast.partial": "Đã upload {success}/{total} ảnh, {failed} file lỗi.",
+  "library.upload.toast.success": "Đã upload {count} {noun} vào thư viện.",
+  "library.upload.toast.partial": "Đã upload {success}/{total} {noun}, {failed} file lỗi.",
   "library.preview.title": "Xem ảnh",
   "library.preview.position": "{kind} · {current} / {total}",
   "library.preview.previous": "Trước",
@@ -1585,4 +1585,22 @@
   ,"novel.knowledge.review.done.removed": "Đã xoá."
   ,"novel.knowledge.detail.empty": "Chọn một thực thể ở Graph hoặc List để xem chi tiết."
   ,"novel.knowledge.analyze.tab.run": "Phân tích"
+  ,"library.upload.check.sound.unsupported": "Định dạng .{ext} không được hỗ trợ cho âm thanh."
+  ,"library.upload.check.sound.too_large": "Lớn hơn giới hạn 200 MB của âm thanh."
+  ,"library.upload.check.sound.duplicate_name": "Đã có âm thanh cùng tên, sẽ tự đổi tên khi thêm."
+  ,"library.upload.check.video.unsupported": "Định dạng .{ext} không được hỗ trợ cho video."
+  ,"library.upload.check.video.too_large": "Lớn hơn giới hạn 2 GB của video."
+  ,"library.upload.check.video.duplicate_name": "Đã có video cùng tên, sẽ tự đổi tên khi thêm."
+  ,"library.upload.check.prompt.unsupported": "Định dạng .{ext} không được hỗ trợ cho prompt (chỉ TXT hoặc MD)."
+  ,"library.upload.check.prompt.too_large": "Lớn hơn giới hạn 256 KB của prompt."
+  ,"library.upload.check.prompt.duplicate_name": "Đã có prompt cùng tên, sẽ tự đổi tên khi thêm."
+  ,"library.upload.dropzone.sound": "Vùng chọn file âm thanh"
+  ,"library.upload.dropTitle.sound": "Kéo thả âm thanh vào đây"
+  ,"library.upload.dropzone.video": "Vùng chọn file video"
+  ,"library.upload.dropTitle.video": "Kéo thả video vào đây"
+  ,"library.upload.dropzone.prompt": "Vùng chọn file prompt"
+  ,"library.upload.dropTitle.prompt": "Kéo thả file prompt vào đây"
+  ,"library.promptWrite.nameTooLong": "Tên prompt tối đa 120 ký tự."
+  ,"library.promptWrite.textTooLarge": "Nội dung prompt tối đa 256 KB."
+  ,"library.prompt.toast.renamed": "Đã đổi tên thành {name}."
 }

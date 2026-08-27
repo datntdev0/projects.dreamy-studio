@@ -1,0 +1,378 @@
+# User Stories for CAP-05 Asset Library Management
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-05
+
+stories:
+  # FEAT-12 Asset Upload
+  - id: US-0029
+    feat: FEAT-12
+    story: >-
+      Là một content creator, tôi muốn chọn nhiều tệp ảnh, âm thanh hoặc video và xem kết quả kiểm
+      tra từng tệp trước khi tải lên để biết tệp nào sẽ vào thư viện.
+    acceptance:
+      - given: >-
+          Tôi chọn nhiều tệp bằng hộp thoại chọn tệp hoặc kéo thả vào hộp thoại tải lên.
+        when: Hệ thống kiểm tra các tệp.
+        then: >-
+          Mỗi tệp hiển thị một trạng thái riêng: hợp lệ, sẽ được đổi tên hoặc không hợp lệ.
+      - given: >-
+          Tệp sai định dạng được hỗ trợ, rỗng, không đọc được hoặc vượt dung lượng tối đa của loại
+          đó (ảnh 25 MB, âm thanh 200 MB, video 2 GB).
+        when: Hệ thống kiểm tra tệp.
+        then: Tệp bị đánh dấu không hợp lệ kèm lý do và không được tải lên.
+      - given: Tên tệp trùng với một tài nguyên cùng loại đã có trong thư viện.
+        when: Hệ thống kiểm tra tệp.
+        then: Tệp được đánh dấu sẽ đổi tên thay vì bị từ chối.
+
+  - id: US-0030
+    feat: FEAT-12
+    story: >-
+      Là một content creator, tôi muốn khai báo quyền sử dụng, tag và bộ sưu tập khi tải tài nguyên
+      lên để chúng được phân loại ngay từ đầu.
+    acceptance:
+      - given: Có ít nhất một tệp hợp lệ nhưng tôi chưa chọn quyền sử dụng.
+        when: Tôi xem nút xác nhận tải lên.
+        then: Tôi không thể xác nhận cho đến khi chọn quyền sử dụng.
+      - given: >-
+          Có tệp hợp lệ, tôi đã chọn quyền sử dụng, nhập tag và chọn một bộ sưu tập (có sẵn hoặc
+          tạo mới).
+        when: Tôi xác nhận tải lên.
+        then: >-
+          Mỗi tệp hợp lệ xuất hiện trong thư viện với quyền sử dụng, tag và bộ sưu tập đã chọn, kèm
+          thông tin đo được từ tệp (kích thước ảnh, thời lượng âm thanh hoặc video).
+      - given: Tên tệp trùng với một tài nguyên cùng loại đã có.
+        when: Tôi xác nhận tải lên.
+        then: Tài nguyên mới được đặt tên có đánh số, tài nguyên cũ giữ nguyên.
+
+  - id: US-0031
+    feat: FEAT-12
+    story: >-
+      Là một content creator, tôi muốn việc tải nhiều tệp không bị hỏng toàn bộ khi một vài tệp lỗi
+      để không phải tải lại những tệp đã ổn.
+    acceptance:
+      - given: Tôi tải nhiều tệp và một số tệp gặp lỗi trong lúc tải.
+        when: Quá trình tải kết thúc.
+        then: >-
+          Các tệp thành công nằm trong thư viện, tệp lỗi hiển thị lý do, và tôi thấy tóm tắt số tệp
+          thành công và thất bại.
+      - given: Một tệp tải thất bại.
+        when: Tôi xem thư viện.
+        then: Tệp đó không để lại tài nguyên dở dang.
+
+  # FEAT-13 Prompt Authoring
+  - id: US-0032
+    feat: FEAT-13
+    story: >-
+      Là một content creator, tôi muốn viết trực tiếp một prompt trong ứng dụng để lưu lại các câu
+      lệnh tạo nội dung mà tôi hay dùng.
+    acceptance:
+      - given: >-
+          Tôi đang ở chế độ viết prompt và đã nhập tên, chọn loại, nội dung và quyền sử dụng.
+        when: Tôi xác nhận.
+        then: >-
+          Prompt xuất hiện trong thư viện với tên, loại, nội dung, tag và bộ sưu tập đã chọn.
+      - given: Nội dung có các biến dạng {{tên}}.
+        when: Tôi nhập nội dung.
+        then: Hệ thống liệt kê các biến được nhận diện, mỗi biến một lần.
+
+  - id: US-0033
+    feat: FEAT-13
+    story: >-
+      Là một content creator, tôi muốn được báo rõ khi prompt chưa hợp lệ để sửa lại trước khi lưu.
+    acceptance:
+      - given: Tên prompt để trống hoặc dài hơn 120 ký tự.
+        when: Tôi xác nhận.
+        then: Hệ thống từ chối, báo lỗi ở trường tên và không tạo prompt.
+      - given: Nội dung prompt để trống hoặc lớn hơn 256 KB.
+        when: Tôi xác nhận.
+        then: Hệ thống từ chối, báo lỗi ở trường nội dung và không tạo prompt.
+
+  - id: US-0034
+    feat: FEAT-13
+    story: >-
+      Là một content creator, tôi muốn nhập prompt từ tệp văn bản để tận dụng các prompt đã soạn
+      sẵn bên ngoài ứng dụng.
+    acceptance:
+      - given: Tôi chọn một tệp .txt hoặc .md hợp lệ.
+        when: Tôi xác nhận tải lên.
+        then: Prompt được tạo với nội dung của tệp và tên lấy từ tên tệp.
+      - given: Tệp không phải .txt hoặc .md, rỗng, không đọc được hoặc lớn hơn 256 KB.
+        when: Hệ thống kiểm tra tệp.
+        then: Tệp bị đánh dấu không hợp lệ kèm lý do và không tạo prompt.
+
+  # FEAT-14 Asset Browsing
+  - id: US-0035
+    feat: FEAT-14
+    story: >-
+      Là một content creator, tôi muốn xem tài nguyên theo từng loại để nắm thư viện đang có gì.
+    acceptance:
+      - given: Thư viện có tài nguyên.
+        when: Tôi mở thư viện.
+        then: Tôi thấy số lượng ảnh, âm thanh, video và prompt, và mở được danh sách của từng loại.
+      - given: Thư viện chưa có tài nguyên thuộc loại tôi đang xem.
+        when: Tôi mở danh sách loại đó.
+        then: Hệ thống hiển thị trạng thái trống và lối tải lên tài nguyên.
+
+  - id: US-0036
+    feat: FEAT-14
+    story: >-
+      Là một content creator, tôi muốn tìm kiếm và sắp xếp tài nguyên để nhanh chóng tìm đúng thứ
+      mình cần khi thư viện lớn dần.
+    acceptance:
+      - given: Danh sách có nhiều tài nguyên.
+        when: Tôi nhập từ khóa tìm kiếm.
+        then: >-
+          Chỉ các tài nguyên có tên hoặc tag khớp từ khóa được hiển thị; với prompt, nội dung khớp
+          cũng được tính.
+      - given: Danh sách đang hiển thị.
+        when: Tôi chọn sắp xếp theo mới nhất, tên hoặc dung lượng.
+        then: Danh sách được sắp theo tiêu chí đã chọn.
+
+  - id: US-0037
+    feat: FEAT-14
+    story: >-
+      Là một content creator, tôi muốn lọc tài nguyên theo tag và bộ sưu tập để thu hẹp về đúng
+      nhóm đang làm việc.
+    acceptance:
+      - given: Danh sách có tài nguyên với nhiều tag và bộ sưu tập khác nhau.
+        when: Tôi chọn một hoặc nhiều tag và một bộ sưu tập.
+        then: >-
+          Chỉ các tài nguyên thuộc bộ sưu tập đó và có đủ các tag đã chọn được hiển thị.
+      - given: Không tài nguyên nào khớp bộ lọc.
+        when: Tôi xem danh sách.
+        then: Hệ thống báo không có kết quả và cho tôi xóa bộ lọc.
+      - given: Bộ lọc hoặc từ khóa đang được áp dụng.
+        when: Tôi xóa bộ lọc.
+        then: Danh sách hiển thị lại đầy đủ tài nguyên.
+
+  # FEAT-15 Asset Preview
+  - id: US-0038
+    feat: FEAT-15
+    story: >-
+      Là một content creator, tôi muốn xem ảnh phóng to cùng thông tin của nó để chọn đúng ảnh mà
+      không phải mở công cụ khác.
+    acceptance:
+      - given: Thư viện có nhiều ảnh.
+        when: Tôi mở xem trước một ảnh.
+        then: >-
+          Tôi thấy ảnh phóng to cùng kích thước, dung lượng, quyền sử dụng, nguồn gốc và ngày thêm.
+      - given: Tôi đang xem trước một ảnh.
+        when: Tôi chuyển sang ảnh trước hoặc ảnh sau.
+        then: Hộp thoại hiển thị ảnh liền kề; ở ảnh đầu hoặc cuối thì không chuyển tiếp được.
+
+  - id: US-0039
+    feat: FEAT-15
+    story: >-
+      Là một content creator, tôi muốn nghe thử âm thanh ngay trong thư viện để chọn đúng nhạc nền
+      hoặc hiệu ứng.
+    acceptance:
+      - given: Tôi mở xem trước một tệp âm thanh.
+        when: Hộp thoại hiển thị.
+        then: Tôi thấy dạng sóng và thời lượng của âm thanh.
+      - given: Hộp thoại xem trước âm thanh đang mở.
+        when: Tôi bấm phát rồi tạm dừng.
+        then: Âm thanh phát và dừng theo thao tác của tôi.
+
+  - id: US-0040
+    feat: FEAT-15
+    story: >-
+      Là một content creator, tôi muốn xem thử video ngay trong thư viện để chọn đúng đoạn video
+      cần dùng.
+    acceptance:
+      - given: Thư viện có video.
+        when: Tôi xem danh sách video.
+        then: Mỗi video hiển thị ảnh poster và thời lượng.
+      - given: Tôi mở xem trước một video.
+        when: Tôi bấm phát rồi tạm dừng.
+        then: Video phát và dừng theo thao tác của tôi.
+
+  - id: US-0041
+    feat: FEAT-15
+    story: >-
+      Là một content creator, tôi muốn xem và sao chép prompt để tái sử dụng ở công cụ tạo nội dung
+      khác.
+    acceptance:
+      - given: Prompt có các biến dạng {{tên}}.
+        when: Tôi mở xem trước prompt.
+        then: Nội dung hiển thị đầy đủ, các biến được tô nổi bật và được liệt kê riêng.
+      - given: Tôi đang xem một prompt.
+        when: Tôi chọn sao chép.
+        then: Toàn bộ nội dung prompt được đưa vào clipboard và hệ thống thông báo kết quả.
+
+  # FEAT-16 Asset Information Management
+  - id: US-0042
+    feat: FEAT-16
+    story: >-
+      Là một content creator, tôi muốn đổi tên, quyền sử dụng và bộ sưu tập của tài nguyên để thông
+      tin luôn đúng với thực tế.
+    acceptance:
+      - given: Tôi đang xem thông tin một tài nguyên.
+        when: Tôi đổi tên, quyền sử dụng hoặc bộ sưu tập rồi lưu.
+        then: Thay đổi được lưu và phản ánh trong danh sách.
+      - given: Tên mới trùng với tài nguyên cùng loại khác.
+        when: Tôi lưu thay đổi.
+        then: Tài nguyên được đặt tên có đánh số, không trùng tên.
+      - given: Tài nguyên đang thuộc một bộ sưu tập.
+        when: Tôi bỏ chọn bộ sưu tập.
+        then: Tài nguyên trở thành chưa phân loại.
+
+  - id: US-0043
+    feat: FEAT-16
+    story: >-
+      Là một content creator, tôi muốn gắn tag cho tài nguyên để phân loại và lọc chúng dễ dàng hơn.
+    acceptance:
+      - given: Tôi đang xem thông tin một tài nguyên.
+        when: Tôi thêm một tag hợp lệ.
+        then: >-
+          Tag được chuẩn hóa (chữ thường, khoảng trắng thành dấu gạch ngang) và gắn vào tài nguyên.
+      - given: Tag rỗng, trùng với tag đã có hoặc tài nguyên đã đủ 12 tag.
+        when: Tôi thêm tag.
+        then: Hệ thống từ chối thêm tag.
+      - given: Tài nguyên đang có tag.
+        when: Tôi gỡ một tag.
+        then: Tag đó không còn gắn với tài nguyên.
+
+  - id: US-0044
+    feat: FEAT-16
+    story: >-
+      Là một content creator, tôi muốn chỉnh loại và nội dung của prompt để cải tiến prompt mà không
+      phải tạo lại.
+    acceptance:
+      - given: Tôi đang xem thông tin một prompt.
+        when: Tôi sửa loại hoặc nội dung hợp lệ rồi lưu.
+        then: Prompt được cập nhật và danh sách biến được nhận diện lại theo nội dung mới.
+      - given: Tôi xóa trống nội dung hoặc xóa trống tên prompt.
+        when: Tôi lưu thay đổi.
+        then: Hệ thống từ chối và giữ nguyên nội dung cũ.
+
+  # FEAT-17 Asset Deletion
+  - id: US-0045
+    feat: FEAT-17
+    story: >-
+      Là một content creator, tôi muốn xóa tài nguyên không còn dùng sau khi được cảnh báo rõ, để
+      tránh mất nhầm tài nguyên chỉ lưu cục bộ trên máy tôi.
+    acceptance:
+      - given: Tôi chọn một tài nguyên và yêu cầu xóa.
+        when: Hộp thoại xác nhận hiển thị.
+        then: Hộp thoại nêu rõ tài nguyên sắp xóa và cảnh báo việc xóa không thể hoàn tác.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi xác nhận.
+        then: >-
+          Tài nguyên và tệp của nó bị xóa khỏi thư viện, số lượng được cập nhật và hệ thống thông
+          báo kết quả.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi hủy.
+        then: Không có tài nguyên nào bị thay đổi.
+
+  # FEAT-18 Collection Management
+  - id: US-0046
+    feat: FEAT-18
+    story: >-
+      Là một content creator, tôi muốn tạo bộ sưu tập để gom ảnh, âm thanh, video và prompt cùng
+      một chủ đề vào một chỗ.
+    acceptance:
+      - given: Tôi nhập tên hợp lệ và mô tả không quá 500 ký tự.
+        when: Tôi xác nhận tạo bộ sưu tập.
+        then: Bộ sưu tập mới xuất hiện trong danh sách, chưa có tài nguyên nào.
+      - given: >-
+          Tên để trống, dài hơn 80 ký tự hoặc trùng (không phân biệt hoa thường) với bộ sưu tập đã
+          có.
+        when: Tôi xác nhận tạo bộ sưu tập.
+        then: Hệ thống từ chối, báo lỗi và không tạo bộ sưu tập.
+
+  - id: US-0047
+    feat: FEAT-18
+    story: >-
+      Là một content creator, tôi muốn xem nội dung từng bộ sưu tập để biết mỗi nhóm đang có những
+      gì.
+    acceptance:
+      - given: Thư viện có ít nhất một bộ sưu tập.
+        when: Tôi mở danh sách bộ sưu tập.
+        then: >-
+          Mỗi bộ sưu tập hiển thị tên, mô tả và số ảnh, âm thanh, video, prompt bên trong.
+      - given: Bộ sưu tập có tài nguyên.
+        when: Tôi mở bộ sưu tập.
+        then: Tôi thấy các tài nguyên thuộc bộ sưu tập đó và có thể tìm kiếm, lọc theo tag trong đó.
+      - given: Thư viện chưa có bộ sưu tập nào.
+        when: Tôi mở danh sách bộ sưu tập.
+        then: Hệ thống hiển thị trạng thái trống và lối tạo bộ sưu tập.
+
+  - id: US-0048
+    feat: FEAT-18
+    story: >-
+      Là một content creator, tôi muốn sửa tên và mô tả bộ sưu tập để nhóm luôn đúng với mục đích
+      sử dụng.
+    acceptance:
+      - given: Tôi đang xem một bộ sưu tập.
+        when: Tôi sửa tên hoặc mô tả hợp lệ rồi lưu.
+        then: Thay đổi được lưu và cập nhật trong danh sách bộ sưu tập.
+      - given: Tên mới để trống, dài hơn 80 ký tự hoặc trùng với bộ sưu tập khác.
+        when: Tôi lưu thay đổi.
+        then: Hệ thống từ chối và giữ nguyên tên cũ.
+
+  - id: US-0049
+    feat: FEAT-18
+    story: >-
+      Là một content creator, tôi muốn xóa bộ sưu tập không còn dùng mà không mất các tài nguyên
+      bên trong.
+    acceptance:
+      - given: Tôi yêu cầu xóa một bộ sưu tập.
+        when: Hộp thoại xác nhận hiển thị.
+        then: >-
+          Hộp thoại nêu rõ bộ sưu tập sắp xóa và số tài nguyên bên trong sẽ trở thành chưa phân
+          loại.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi xác nhận.
+        then: >-
+          Bộ sưu tập bị xóa, các tài nguyên bên trong vẫn còn trong thư viện ở trạng thái chưa
+          phân loại.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi hủy.
+        then: Bộ sưu tập và tài nguyên giữ nguyên.
+
+  # FEAT-19 Tag Management
+  - id: US-0050
+    feat: FEAT-19
+    story: >-
+      Là một content creator, tôi muốn xem tất cả tag đang dùng trong thư viện để biết cách mình
+      đang phân loại tài nguyên.
+    acceptance:
+      - given: Thư viện có tài nguyên đã gắn tag.
+        when: Tôi mở danh sách tag.
+        then: >-
+          Tôi thấy mỗi tag kèm số ảnh, âm thanh, video, prompt đang dùng tag đó, xếp theo mức dùng
+          nhiều nhất.
+      - given: Danh sách tag đang hiển thị.
+        when: Tôi nhập từ khóa tìm tag.
+        then: Chỉ các tag chứa từ khóa được hiển thị.
+
+  - id: US-0051
+    feat: FEAT-19
+    story: >-
+      Là một content creator, tôi muốn đổi tên hoặc hợp nhất tag để dọn dẹp cách phân loại mà không
+      phải sửa từng tài nguyên.
+    acceptance:
+      - given: Tôi đang xem một tag.
+        when: Tôi đổi sang tên mới chưa được dùng.
+        then: Mọi tài nguyên mang tag cũ chuyển sang tag mới.
+      - given: Tôi đổi tên sang một tag đã tồn tại.
+        when: Tôi xác nhận hợp nhất.
+        then: >-
+          Tag cũ biến mất, các tài nguyên mang tag cũ nhận tag đích và không bị trùng tag.
+      - given: Hộp thoại xác nhận hợp nhất đang hiển thị.
+        when: Tôi hủy.
+        then: Cả hai tag giữ nguyên.
+
+  - id: US-0052
+    feat: FEAT-19
+    story: >-
+      Là một content creator, tôi muốn xóa tag không còn dùng khỏi toàn bộ thư viện mà không ảnh
+      hưởng đến chính các tài nguyên.
+    acceptance:
+      - given: Tôi yêu cầu xóa một tag.
+        when: Hộp thoại xác nhận hiển thị.
+        then: Hộp thoại nêu rõ tag sắp xóa và việc gỡ khỏi mọi tài nguyên đang dùng.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi xác nhận.
+        then: Tag không còn xuất hiện trong thư viện, các tài nguyên từng mang tag vẫn còn.

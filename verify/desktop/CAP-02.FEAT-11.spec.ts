@@ -29,14 +29,14 @@ test.describe("CAP-02 Content Source Management", () => {
         await expect(ui.main.reader.paragraphs).toHaveCount(3);
         await expect(ui.main.reader.paragraph(1).locator(".rd-no")).toHaveText("1");
         await expect(ui.main.reader.paragraph(3).locator(".rd-no")).toHaveText("3");
-        expect(await ui.main.reader.texts()).toEqual(["The harbor wakes slowly.", "Gulls circle the pier.", "Fog."]);
+        await expect.poll(() => ui.main.reader.texts()).toEqual(["The harbor wakes slowly.", "Gulls circle the pier.", "Fog."]);
       });
 
       await test.step("shows the previous, next or typed chapter", async () => {
         await ui.main.reader.next.click();
         await expect(ui.main.reader.eyebrow).toContainText("2 / 3");
         await expect(ui.main.reader.title).toContainText("Fog");
-        expect(await ui.main.reader.texts()).toEqual(["Morning fog lifts."]);
+        await expect.poll(() => ui.main.reader.texts()).toEqual(["Morning fog lifts."]);
 
         await ui.main.reader.prev.click();
         await expect(ui.main.reader.eyebrow).toContainText("1 / 3");
@@ -45,7 +45,7 @@ test.describe("CAP-02 Content Source Management", () => {
         await ui.main.reader.jump.selectOption("3");
         await expect(ui.main.reader.eyebrow).toContainText("3 / 3");
         await expect(ui.main.reader.title).toContainText("Night Returns");
-        expect(await ui.main.reader.texts()).toEqual(["Night returns to the sea.", "Lanterns burn low."]);
+        await expect.poll(() => ui.main.reader.texts()).toEqual(["Night returns to the sea.", "Lanterns burn low."]);
       });
     });
 
@@ -99,7 +99,7 @@ test.describe("CAP-02 Content Source Management", () => {
 
         await expect(ui.main.toast(PARAGRAPH_SAVED)).toBeVisible();
         await expect(ui.main.reader.editor).toBeHidden();
-        expect(await ui.main.reader.texts()).toEqual(["The harbor wakes slowly.", "Gulls circle the old pier slowly.", "Fog."]);
+        await expect.poll(() => ui.main.reader.texts()).toEqual(["The harbor wakes slowly.", "Gulls circle the old pier slowly.", "Fog."]);
         expect(await chapterState(folder, 1)).toEqual({ words: 11, paragraphs: ["The harbor wakes slowly.", "Gulls circle the old pier slowly.", "Fog."] });
       });
 

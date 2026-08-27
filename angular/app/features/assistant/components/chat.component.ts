@@ -3,8 +3,9 @@ import { Button } from "@components/button";
 import { Icon } from "@components/icon";
 import { CoreModule } from "@app/core/core.module";
 import { formatStamp } from "@app/features/novel/novel.rules";
-import { AssistantAttachment, AssistantBlock, AssistantMessage, AssistantSession, KnowledgeChangeSet, ProposalResolution, TranslationReview } from "../assistant.models";
-import { blocksOf } from "../assistant.rules";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { AssistantAttachment, AssistantMessage, AssistantSession, KnowledgeChangeSet, ProposalResolution, TranslationReview } from "../assistant.models";
+import { renderMarkdown } from "../assistant.rules";
 import { AssistantService } from "../assistant.service";
 import { AssistantChangesCard } from "./changes-card.component";
 import { AssistantComposer } from "./composer.component";
@@ -21,27 +22,38 @@ export class AssistantChat {
 
   readonly assistant = inject(AssistantService);
   private followKey = "";
+  private readonly rendered = new Map<string, { text: string; html: string }>();
 
   constructor() {
     effect(this.followMessages.bind(this));
   }
 
-  blocks(message: AssistantMessage): AssistantBlock[] {
-    return blocksOf(message.text);
+  html(message: AssistantMessage): string {
+    const cached = this.rendered.get(message.id);
+    if (cached && cached.text === message.text) {
+      return cached.html;
+    }
+    const html = renderMarkdown(message.text);
+    this.rendered.set(message.id, { text: message.text, html });
+    return html;
+  }
+
+  onTextClick(event: MouseEvent): void {
+    const anchor = (event.target as HTMLElement | null)?.closest("a");
+    if (!anchor) {
+      return;
+    }
+    event.preventDefault();
+    const href = anchor.getAttribute("href") ?? "";
+    if (/^https?:\/\//i.test(href)) {
+      void openUrl(href);
+    }
   }
 
   timeOf(message: AssistantMessage): string {
     return formatStamp(message.createdAt).slice(11);
   }
 
-
-  editOn(): boolean {
-    return this.assistant.active()?.editGranted === true;
-  }
-
-  toggleEdit(): void {
-    void this.assistant.setEdit(!this.editOn());
-  }
 
   title(session: AssistantSession | null): string {
     return session?.title ?? this.assistant.pendingText() ?? "";

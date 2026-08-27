@@ -1,6 +1,7 @@
 import { NovelSummary } from "@app/features/novel/novel.models";
 import { displayName, formatMonthDay, formatStamp } from "@app/features/novel/novel.rules";
-import { AssistantBlock, AssistantScope, AssistantScopeFilter, AssistantSessionSummary } from "./assistant.models";
+import { marked } from "marked";
+import { AssistantScope, AssistantScopeFilter, AssistantSessionSummary } from "./assistant.models";
 
 export const RECENT_SESSIONS = 3;
 
@@ -57,36 +58,8 @@ export function matchesSessionQuery(session: AssistantSessionSummary, query: str
   return needle === "" || session.title.toLowerCase().includes(needle) || session.preview.toLowerCase().includes(needle);
 }
 
-export function blocksOf(text: string): AssistantBlock[] {
-  const out: AssistantBlock[] = [];
-  for (const block of text.split(/\n{2,}/)) {
-    const lines = block.split("\n").map(trimLine).filter(isFilled);
-    if (lines.length === 0) {
-      continue;
-    }
-    if (lines.every(isBullet)) {
-      out.push({ kind: "ul", lines: lines.map(stripBullet) });
-    } else {
-      out.push({ kind: "p", lines });
-    }
-  }
-  return out;
-}
-
-function trimLine(line: string): string {
-  return line.trim();
-}
-
-function isFilled(line: string): boolean {
-  return line !== "";
-}
-
-function isBullet(line: string): boolean {
-  return line.startsWith("- ");
-}
-
-function stripBullet(line: string): string {
-  return line.slice(2);
+export function renderMarkdown(text: string): string {
+  return marked.parse(text, { async: false, gfm: true, breaks: true });
 }
 
 export function dayKey(iso: string, now: Date): "today" | "yesterday" | "week" | "older" {

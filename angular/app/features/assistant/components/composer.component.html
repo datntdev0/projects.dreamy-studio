@@ -5,6 +5,10 @@
   </label>
   <div class="asst-composer-bar" data-testid="assistant-composer-bar">
     <span class="t-sm t-mute" data-testid="assistant-composer-hint">{{ "assistant.composer.hint" | t }}</span>
+    <span class="spacer"></span>
+    @if (assistant.active()) {
+      <button type="button" class="btn btn-sm btn-ghost asst-edit" [attr.aria-pressed]="editOn()" [disabled]="assistant.permitting()" [attr.title]="(editOn() ? 'assistant.edit.on' : 'assistant.edit.off') | t" data-testid="assistant-composer-edit" (click)="toggleEdit()"><ds-icon [name]="editOn() ? 'pen' : 'lock'" [size]="13" data-testid="assistant-composer-edit-icon" /><span data-testid="assistant-composer-edit-label">{{ (editOn() ? "assistant.edit.on" : "assistant.edit.off") | t }}</span></button>
+    }
     <ds-button variant="primary" size="small" [iconOnly]="true" [disabled]="assistant.sending() || assistant.draft().trim() === ''" [label]="'main.assistant.send' | t" [attr.title]="'main.assistant.send' | t" data-testid="assistant-send" (pressed)="submit()"><ds-icon name="send-up" [size]="16" /></ds-button>
   </div>
 </div>

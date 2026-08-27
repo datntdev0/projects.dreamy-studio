@@ -145,7 +145,3 @@ export interface AssistantSession extends AssistantSessionSummary {
   messages: AssistantMessage[];
 }
 
-export interface AssistantBlock {
-  kind: "p" | "ul";
-  lines: string[];
-}

@@ -4,13 +4,12 @@
     <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.history.open' | t" [attr.title]="'assistant.history.open' | t" data-testid="assistant-chat-history" (pressed)="assistant.showSessions()"><ds-icon name="arrow-left" [size]="16" /></ds-button>
     <span class="asst-bar-title asst-chat-title" [attr.title]="title(session)" data-testid="assistant-chat-title">{{ title(session) }}</span>
     <span class="spacer"></span>
-    <button type="button" class="btn btn-sm btn-ghost asst-edit" [attr.aria-pressed]="editOn()" [disabled]="assistant.permitting() || !session" data-testid="assistant-chat-edit" (click)="toggleEdit()"><ds-icon name="pen" [size]="14" data-testid="assistant-chat-edit-icon" /><span data-testid="assistant-chat-edit-label">{{ (editOn() ? "assistant.edit.on" : "assistant.edit.off") | t }}</span></button>
     <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.new' | t" [attr.title]="'assistant.new' | t" data-testid="assistant-chat-new" (pressed)="assistant.startNew()"><ds-icon name="plus" [size]="16" /></ds-button>
     @if (session) {
       <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.delete.short' | t" [attr.title]="'assistant.delete.short' | t" data-testid="assistant-chat-delete" (pressed)="remove(session)"><ds-icon name="trash" [size]="15" /></ds-button>
     }
   </header>
-  @if (editOn()) {
+  @if (session?.editGranted) {
     <div class="asst-edit-notice t-sm" role="status" data-testid="assistant-chat-edit-notice"><ds-icon name="alert" [size]="13" data-testid="assistant-chat-edit-notice-icon" /><span data-testid="assistant-chat-edit-notice-text">{{ "assistant.edit.notice" | t }}</span></div>
   }
   <div class="asst-chat-scope t-sm" data-testid="assistant-chat-scope">
@@ -35,7 +34,7 @@
             <header class="asst-msg-head" data-testid="assistant-message-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-ink">{{ "main.assistant.title" | t }}</span><span class="asst-msg-time mono">{{ timeOf(message) }}</span></header>
             @if (message.activities.length > 0) {
               <details class="asst-acts" data-testid="assistant-message-activities">
-                <summary class="t-sm t-mute" data-testid="assistant-message-activities-summary"><ds-icon name="check-circle" [size]="13" />{{ "assistant.chat.activities" | t: { count: message.activities.length } }}</summary>
+                <summary class="t-sm t-mute" data-testid="assistant-message-activities-summary"><ds-icon name="check-circle" [size]="13" />{{ "assistant.chat.activities" | t: { count: message.activities.length } }}<ds-icon class="asst-caret" name="chev-r" [size]="12" data-testid="assistant-message-activities-caret" /></summary>
                 <ul data-testid="assistant-message-activities-list">
                   @for (activity of message.activities; track $index) {
                     <li class="t-sm t-mute" data-testid="assistant-message-activity">{{ activity }}</li>
@@ -43,19 +42,7 @@
                 </ul>
               </details>
             }
-            <div class="asst-text" data-testid="assistant-message-text">
-              @for (block of blocks(message); track $index) {
-                @if (block.kind === "ul") {
-                  <ul>
-                    @for (line of block.lines; track $index) { <li>{{ line }}</li> }
-                  </ul>
-                } @else {
-                  <p>
-                    @for (line of block.lines; track $index) { @if ($index > 0) { <br /> }{{ line }} }
-                  </p>
-                }
-              }
-            </div>
+            <div class="asst-text asst-md" data-testid="assistant-message-text" [innerHTML]="html(message)" (click)="onTextClick($event)"></div>
             @for (attachment of attachmentsOf(message); track $index) {
               @if (asReview(attachment); as review) {
                 <app-assistant-review-card [review]="review" [messageId]="message.id" [busy]="isResolving(message)" (resolved)="onResolved($event)" />
@@ -73,14 +60,14 @@
         <div class="asst-msg asst-msg-bot is-typing" data-testid="assistant-typing">
           <header class="asst-msg-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-sm asst-thinking" data-testid="assistant-typing-label">{{ "assistant.chat.thinking" | t }}</span><span class="asst-dots" aria-hidden="true" data-testid="assistant-typing-dots"><i></i><i></i><i></i></span></header>
           @if (assistant.sending()) {
-            <div class="asst-live" data-testid="assistant-live">
-              <span class="t-sm t-mute" data-testid="assistant-live-label">{{ "assistant.chat.working" | t }}</span>
+            <details class="asst-live" data-testid="assistant-live">
+              <summary class="t-sm t-mute" data-testid="assistant-live-label">{{ "assistant.chat.working" | t }}@if (assistant.liveActivities().length > 0) {<span class="mono" data-testid="assistant-live-count">· {{ assistant.liveActivities().length }}</span>}<ds-icon class="asst-caret" name="chev-r" [size]="12" data-testid="assistant-live-caret" /></summary>
               <ul class="asst-live-list" data-testid="assistant-live-list">
                 @for (activity of assistant.liveActivities(); track $index) {
                   <li class="t-sm t-mute" data-testid="assistant-live-activity">{{ activity }}</li>
                 }
               </ul>
-            </div>
+            </details>
           }
         </div>
       }

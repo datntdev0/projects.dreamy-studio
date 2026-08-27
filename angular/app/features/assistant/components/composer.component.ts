@@ -15,6 +15,14 @@ export class AssistantComposer {
 
   readonly assistant = inject(AssistantService);
 
+  editOn(): boolean {
+    return this.assistant.active()?.editGranted === true;
+  }
+
+  toggleEdit(): void {
+    void this.assistant.setEdit(!this.editOn());
+  }
+
   focus(): void {
     this.field()?.nativeElement.focus();
   }

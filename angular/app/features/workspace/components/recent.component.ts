@@ -106,7 +106,7 @@ export class RecentWorkspaceList implements OnChanges {
   delete(row: RecentWorkspace): void {
     void this.dialogs.ask({
       title: this.languageService.translate("splash.recent.deleteTitle"),
-      message: this.languageService.translate("splash.recent.deleteMessage", { name: row.name }),
+      message: this.languageService.translate("splash.recent.deleteMessage", { name: row.name, path: row.path }),
       warning: this.languageService.translate("splash.recent.deleteWarning"),
       confirmLabel: this.languageService.translate("splash.recent.delete"),
       confirmIcon: "trash",

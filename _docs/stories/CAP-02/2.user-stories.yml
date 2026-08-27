@@ -1,0 +1,296 @@
+# User Stories for CAP-02 Content Source Management
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-02
+
+stories:
+  # FEAT-04 Novel Creation
+  - id: US-0009
+    feat: FEAT-04
+    story: >-
+      Là một content creator, tôi muốn tạo một novel mới trong workspace để bắt đầu quản lý tác
+      phẩm của mình ngay cả khi chưa có tệp nguồn nào.
+    acceptance:
+      - given: Tôi đang ở danh sách novel và đã nhập tiêu đề hợp lệ.
+        when: Tôi xác nhận tạo novel.
+        then: >-
+          Hệ thống tạo novel với tác giả, ngôn ngữ, mô tả và tag tôi đã nhập; novel chưa có chương.
+      - given: Novel vừa được tạo thành công.
+        when: Tôi xem danh sách novel.
+        then: Novel mới xuất hiện trong danh sách.
+
+  - id: US-0010
+    feat: FEAT-04
+    story: >-
+      Là một content creator, tôi muốn được báo rõ khi thông tin novel không hợp lệ để tôi sửa lại
+      trước khi tạo.
+    acceptance:
+      - given: Tiêu đề để trống hoặc dài hơn 200 ký tự.
+        when: Tôi xác nhận tạo novel.
+        then: Hệ thống từ chối, báo lỗi ở trường tiêu đề và không tạo novel.
+
+  # FEAT-05 Novel Package Import
+  - id: US-0011
+    feat: FEAT-05
+    story: >-
+      Là một content creator, tôi muốn chọn tệp package và xem kết quả kiểm tra trước khi nhập để
+      biết chắc nội dung sắp được đưa vào workspace.
+    acceptance:
+      - given: Tôi chọn một tệp package (.dsnovel hoặc .zip) hợp lệ.
+        when: Hệ thống kiểm tra tệp.
+        then: >-
+          Tôi thấy tiến trình theo từng bước kiểm tra (định dạng, manifest, danh sách chương, ảnh
+          bìa).
+      - given: Việc kiểm tra hoàn tất thành công.
+        when: Tôi xem kết quả.
+        then: >-
+          Hệ thống hiển thị tóm tắt gồm tiêu đề, tác giả, ngôn ngữ, số chương, số từ và ảnh bìa.
+
+  - id: US-0012
+    feat: FEAT-05
+    story: >-
+      Là một content creator, tôi muốn chỉnh thông tin novel trước khi nhập để novel vào workspace
+      với tên và thông tin đúng ý tôi.
+    acceptance:
+      - given: Package đã qua bước kiểm tra.
+        when: Tôi chỉnh thông tin và xác nhận nhập.
+        then: >-
+          Hệ thống tạo novel với thông tin tôi đã chỉnh cùng toàn bộ chương và ảnh bìa của package.
+      - given: Tiêu đề tôi nhập trùng với một novel đã có trong workspace.
+        when: Tôi xem biểu mẫu nhập.
+        then: Hệ thống cảnh báo trùng tiêu đề.
+
+  - id: US-0013
+    feat: FEAT-05
+    story: >-
+      Là một content creator, tôi muốn biết lý do khi package không nhập được và không bị để lại
+      dữ liệu dở dang trong workspace.
+    acceptance:
+      - given: >-
+          Tệp không phải .dsnovel hoặc .zip, không mở được, thiếu manifest hoặc thiếu tệp chương.
+        when: Hệ thống kiểm tra tệp.
+        then: Hệ thống dừng ở bước lỗi, nêu rõ lý do và không tạo novel.
+      - given: Việc nhập gặp lỗi giữa chừng.
+        when: Hệ thống xử lý lỗi.
+        then: Hệ thống báo lỗi và workspace không có novel dở dang.
+
+  # FEAT-06 Novel Package Export
+  - id: US-0014
+    feat: FEAT-06
+    story: >-
+      Là một content creator, tôi muốn xuất novel thành một tệp package để sao lưu hoặc chuyển sang
+      workspace khác.
+    acceptance:
+      - given: Novel có ít nhất một chương.
+        when: Tôi chọn xuất và chọn nơi lưu.
+        then: >-
+          Hệ thống gợi ý tên tệp .dsnovel từ tên novel, ghi tệp và cho tôi biết số chương đã xuất.
+      - given: Hộp thoại chọn nơi lưu đang hiển thị.
+        when: Tôi hủy.
+        then: Không có tệp nào được tạo.
+
+  - id: US-0015
+    feat: FEAT-06
+    story: >-
+      Là một content creator, tôi muốn được báo rõ khi novel chưa thể xuất để không tạo ra tệp
+      package rỗng.
+    acceptance:
+      - given: Novel chưa có chương nào.
+        when: Tôi chọn xuất novel.
+        then: Hệ thống từ chối và nêu lý do; không có tệp nào được tạo.
+
+  # FEAT-07 Novel Browsing
+  - id: US-0016
+    feat: FEAT-07
+    story: >-
+      Là một content creator, tôi muốn xem toàn bộ novel trong workspace kèm số liệu tổng quan để
+      nắm được tiến độ công việc.
+    acceptance:
+      - given: Workspace có ít nhất một novel.
+        when: Tôi mở danh sách novel.
+        then: >-
+          Tôi thấy các novel dạng lưới hoặc bảng, chuyển đổi được giữa hai dạng, kèm thống kê tổng
+          số novel, chương, từ và tiến độ dịch, phân tích.
+      - given: Workspace chưa có novel nào.
+        when: Tôi mở danh sách novel.
+        then: Hệ thống hiển thị trạng thái trống và lối tạo hoặc nhập novel.
+
+  - id: US-0017
+    feat: FEAT-07
+    story: >-
+      Là một content creator, tôi muốn tìm kiếm và lọc novel để nhanh chóng tìm đúng tác phẩm khi
+      thư viện có nhiều novel.
+    acceptance:
+      - given: Danh sách có nhiều novel.
+        when: Tôi nhập từ khóa tìm kiếm.
+        then: Chỉ các novel có tiêu đề, tên hoặc tác giả khớp từ khóa được hiển thị.
+      - given: Danh sách có nhiều novel với các tag và ngôn ngữ khác nhau.
+        when: Tôi chọn một hoặc nhiều tag và ngôn ngữ để lọc.
+        then: >-
+          Chỉ các novel có đủ các tag đã chọn và thuộc một trong các ngôn ngữ đã chọn được hiển thị.
+      - given: Bộ lọc hoặc từ khóa đang được áp dụng.
+        when: Tôi xóa bộ lọc.
+        then: Danh sách hiển thị lại đầy đủ novel.
+
+  # FEAT-08 Novel Information Management
+  - id: US-0018
+    feat: FEAT-08
+    story: >-
+      Là một content creator, tôi muốn chỉnh sửa thông tin novel để dữ liệu luôn đúng và dễ nhận
+      biết.
+    acceptance:
+      - given: Tôi đang xem thông tin một novel.
+        when: Tôi sửa tiêu đề, tên hiển thị, tác giả, ngôn ngữ hoặc mô tả rồi lưu.
+        then: Thay đổi được lưu và cập nhật trong danh sách novel.
+      - given: Tên hiển thị để trống hoặc trùng với tiêu đề.
+        when: Novel được hiển thị trong ứng dụng.
+        then: Ứng dụng dùng tiêu đề làm tên hiển thị.
+      - given: Tôi xóa trống tiêu đề.
+        when: Tôi lưu thay đổi.
+        then: Hệ thống từ chối và giữ nguyên tiêu đề cũ.
+
+  - id: US-0019
+    feat: FEAT-08
+    story: >-
+      Là một content creator, tôi muốn gắn tag cho novel để phân loại và lọc chúng dễ dàng hơn.
+    acceptance:
+      - given: Tôi đang xem thông tin một novel.
+        when: Tôi thêm một tag hợp lệ.
+        then: Tag được chuẩn hóa (chữ thường, khoảng trắng thành dấu gạch ngang) và gắn vào novel.
+      - given: Tag rỗng, trùng với tag đã có hoặc novel đã đủ 12 tag.
+        when: Tôi thêm tag.
+        then: Hệ thống từ chối thêm tag.
+      - given: Novel đang có tag.
+        when: Tôi gỡ một tag.
+        then: Tag đó không còn gắn với novel.
+
+  - id: US-0020
+    feat: FEAT-08
+    story: >-
+      Là một content creator, tôi muốn đặt ảnh bìa cho novel để nhận ra tác phẩm ngay trong danh
+      sách.
+    acceptance:
+      - given: Tôi chọn một ảnh hợp lệ có dung lượng tối đa 8 MB.
+        when: Tôi đặt ảnh làm bìa.
+        then: Ảnh được lưu và hiển thị làm bìa của novel.
+      - given: Ảnh vượt quá 8 MB hoặc không đúng định dạng được hỗ trợ.
+        when: Tôi đặt ảnh làm bìa.
+        then: Hệ thống từ chối kèm lý do và bìa hiện tại không đổi.
+      - given: Novel đang có ảnh bìa.
+        when: Tôi gỡ ảnh bìa.
+        then: Novel quay về bìa mặc định.
+
+  # FEAT-09 Novel Deletion
+  - id: US-0021
+    feat: FEAT-09
+    story: >-
+      Là một content creator, tôi muốn xóa một hoặc nhiều novel không còn dùng sau khi được cảnh
+      báo rõ, để tránh mất nhầm tác phẩm chỉ lưu cục bộ trên máy tôi.
+    acceptance:
+      - given: Tôi chọn một hoặc nhiều novel và yêu cầu xóa.
+        when: Hộp thoại xác nhận hiển thị.
+        then: Hộp thoại nêu rõ các novel sắp xóa kèm cảnh báo hậu quả của việc xóa.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi xác nhận.
+        then: >-
+          Các novel và nội dung của chúng bị xóa khỏi workspace và hệ thống thông báo kết quả.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi hủy.
+        then: Không có novel nào bị thay đổi.
+
+  # FEAT-10 Chapter Management
+  - id: US-0022
+    feat: FEAT-10
+    story: >-
+      Là một content creator, tôi muốn xem và tìm chương của novel cùng trạng thái xử lý của chúng
+      để biết chương nào đã dịch hoặc phân tích.
+    acceptance:
+      - given: Novel có ít nhất một chương.
+        when: Tôi mở danh sách chương.
+        then: >-
+          Tôi thấy số thứ tự, tiêu đề, số từ, trạng thái dịch và trạng thái phân tích của từng
+          chương.
+      - given: Danh sách chương đang hiển thị.
+        when: Tôi nhập số hoặc một phần tiêu đề vào ô tìm kiếm.
+        then: Chỉ các chương khớp được hiển thị.
+
+  - id: US-0023
+    feat: FEAT-10
+    story: >-
+      Là một content creator, tôi muốn thêm chương mới và đổi tên chương để bổ sung hoặc chỉnh lại
+      cấu trúc tác phẩm.
+    acceptance:
+      - given: Tôi đang xem danh sách chương của một novel.
+        when: Tôi nhập tiêu đề và thêm chương.
+        then: Chương mới được thêm vào novel và tính vào số chương.
+      - given: Tôi đang xem một chương.
+        when: Tôi đổi tên chương và lưu.
+        then: Tiêu đề mới được lưu và hiển thị trong danh sách chương.
+
+  - id: US-0024
+    feat: FEAT-10
+    story: >-
+      Là một content creator, tôi muốn sắp xếp lại thứ tự chương để cấu trúc tác phẩm đúng như ý
+      tôi, mà không làm hỏng dữ liệu dịch và phân tích đã có.
+    acceptance:
+      - given: Chương chưa có bản dịch hay kết quả phân tích và danh sách không bị lọc.
+        when: Tôi di chuyển chương đến một vị trí khác.
+        then: Thứ tự và số thứ tự của các chương được cập nhật liên tục, không trùng hay thiếu số.
+      - given: Chương đã có bản dịch hoặc kết quả phân tích, hoặc danh sách đang bị lọc.
+        when: Tôi thử di chuyển chương.
+        then: Hệ thống không cho phép di chuyển.
+
+  - id: US-0025
+    feat: FEAT-10
+    story: >-
+      Là một content creator, tôi muốn xóa chương không cần thiết sau khi xác nhận, nhưng không
+      làm mất các bản dịch và phân tích đang dựa trên chương đó.
+    acceptance:
+      - given: Chương chưa có bản dịch hay kết quả phân tích.
+        when: Tôi xóa chương và xác nhận.
+        then: Chương bị xóa và các chương còn lại được đánh lại số thứ tự liên tục.
+      - given: Chương đã có bản dịch hoặc kết quả phân tích.
+        when: Tôi thử xóa chương.
+        then: Hệ thống từ chối và chương được giữ nguyên.
+
+  # FEAT-11 Novel Reading and Editing
+  - id: US-0026
+    feat: FEAT-11
+    story: >-
+      Là một content creator, tôi muốn đọc nội dung novel ngay trong ứng dụng để rà soát tác phẩm
+      mà không cần mở công cụ khác.
+    acceptance:
+      - given: Novel có ít nhất một chương.
+        when: Tôi mở một chương trong danh sách chương.
+        then: Nội dung chương hiển thị theo từng đoạn có đánh số.
+      - given: Tôi đang đọc một chương.
+        when: Tôi chuyển sang chương trước, chương sau hoặc nhập số chương cần đến.
+        then: Trình đọc hiển thị chương tương ứng.
+
+  - id: US-0027
+    feat: FEAT-11
+    story: >-
+      Là một content creator, tôi muốn tùy chỉnh giao diện đọc để đọc lâu mà không mỏi mắt.
+    acceptance:
+      - given: Tôi đang ở trình đọc.
+        when: Tôi đổi phông chữ, cỡ chữ, giãn dòng, độ rộng hoặc màu nền.
+        then: Giao diện đọc áp dụng ngay thay đổi đó.
+      - given: Tôi đã tùy chỉnh giao diện đọc.
+        when: Tôi mở lại trình đọc về sau.
+        then: Các tùy chỉnh trước đó vẫn được giữ.
+
+  - id: US-0028
+    feat: FEAT-11
+    story: >-
+      Là một content creator, tôi muốn sửa nội dung ngay trong trình đọc để chỉnh lỗi hoặc bổ sung
+      văn bản gốc mà không phải nhập lại cả tác phẩm.
+    acceptance:
+      - given: Tôi đang đọc một chương.
+        when: Tôi sửa một đoạn và lưu.
+        then: Nội dung đoạn được cập nhật và số từ của chương được tính lại.
+      - given: Tôi đang sửa một đoạn.
+        when: Nội dung rỗng hoặc không thay đổi so với trước.
+        then: Hệ thống không lưu thay đổi.
+      - given: Tôi đang đọc một chương.
+        when: Tôi thêm một đoạn mới hoặc viết lại cả chương và lưu.
+        then: Nội dung chương được cập nhật; chương không được để trống.

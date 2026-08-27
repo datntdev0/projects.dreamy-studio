@@ -8,6 +8,10 @@ export class ConfirmDialog {
     return this.page.getByTestId("dialog-host-panel");
   }
 
+  get warning(): Locator {
+    return this.page.getByTestId("dialog-host-warning");
+  }
+
   get accept(): Locator {
     return this.page.getByTestId("dialog-host-accept");
   }

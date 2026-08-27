@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdir, readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { workspaceMigrationsDir } from "./paths.ts";
 
@@ -112,6 +112,27 @@ export async function seedWorkspace(folder: string, options: SeedOptions = {}): 
       markNewer(database);
     }
     database.exec("COMMIT");
+  } finally {
+    database.close();
+  }
+}
+
+export async function writeCorruptDatabase(folder: string): Promise<void> {
+  await mkdir(folder, { recursive: true });
+  await writeFile(join(folder, WORKSPACE_DB_FILE), "this is not a sqlite database ".repeat(200));
+}
+
+export async function seedBlockedUpgrade(folder: string): Promise<void> {
+  const keys = await migrationKeys();
+  const blocking = (await migrationScripts()).find((script) => script.version !== "0.0.0");
+  if (blocking === undefined) {
+    throw new Error("no migration beyond the base schema to block");
+  }
+  const previous = keys[keys.indexOf(blocking.key) - 1];
+  await seedWorkspace(folder, { upTo: previous, novels: [{ title: "Before Upgrade" }] });
+  const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
+  try {
+    database.exec(blocking.sql);
   } finally {
     database.close();
   }

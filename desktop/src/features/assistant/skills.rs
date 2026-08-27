@@ -1,3 +1,4 @@
+use crate::features::knowledge::check::KnowledgeIssue;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
 
@@ -45,6 +46,62 @@ pub fn review_translation(
     prompt.push_str("6. Do not edit the translation, the dictionary or the novel yourself. The user applies or rejects each item on the review card.\n");
     prompt.push_str("7. Finish with a summary of two or three sentences in the user's language: what you checked and the main problems found.\n");
     prompt
+}
+
+pub fn review_knowledgebase(
+    novel: &NovelSummary,
+    lang: &str,
+    issues: &[KnowledgeIssue],
+    opening: Option<String>,
+) -> String {
+    let mut prompt = opening.unwrap_or_default();
+    if !prompt.is_empty() {
+        prompt.push('\n');
+    }
+    prompt.push_str("## Skill: review_knowledgebase\n");
+    prompt.push_str(&format!(
+        "Review the knowledge base (lang \"{lang}\") of the novel with id {} (\"{}\"). The user selected {} issue(s) found by the knowledge checker and wants you to fix them.\n\n",
+        novel.id,
+        display_name(novel),
+        issues.len()
+    ));
+    prompt.push_str("Selected issues:\n");
+    for issue in issues {
+        prompt.push_str(&format!(
+            "- id `{}` (rule {}, {}): {}\n",
+            issue.id,
+            issue.rule,
+            json_text(&issue.severity),
+            issue.message
+        ));
+    }
+    prompt.push_str("\nFollow these steps with the MCP tools of the `dreamy` server:\n");
+    prompt.push_str(&format!(
+        "1. Call `read_knowledge_issues` with novelId {} and lang \"{lang}\", passing the ids above as `issueIds`, to read the issues with the entities and facts they involve and their evidence. Use `read_novel_knowledge` if you need more context about an item.\n",
+        novel.id
+    ));
+    prompt.push_str(&format!(
+        "2. Call `read_novel_chapter` with novelId {} to read the evidence passages (chapter and paragraph) and decide what the correct knowledge is.\n",
+        novel.id
+    ));
+    prompt.push_str("3. Propose the smallest set of edits that fixes the issues: merge duplicates, retype or rename entities, change or delete facts, fix aliases and evidence. Do not change items the issues do not involve.\n");
+    prompt.push_str(&format!(
+        "4. Call `submit_knowledge_changes` exactly once with novelId {}, lang \"{lang}\", a short `title` and `changes`. Each change has `target`, `before`, `after`, `reason` (in the user's language), `ev` (chapter, p and a quote from the chapter) and the `edit` that performs it.\n",
+        novel.id
+    ));
+    prompt.push_str("   - The app tries the edits on a copy of the knowledge base and returns `validation`: `resolves` is the number of issues fixed and `introduces` lists the new issues the edits would cause.\n");
+    prompt.push_str("   - If `validation.ok` is false, or the tool returns an error, fix the edits and call `submit_knowledge_changes` again; the last call replaces the earlier one.\n");
+    prompt.push_str("5. Leave out issues that cannot be fixed from the existing knowledge and chapters, for example when the chapter must be analysed again, and say which ones in your summary.\n");
+    prompt.push_str("6. Do not edit the knowledge base or the novel yourself. The user applies or rejects the change set on the card.\n");
+    prompt.push_str("7. Finish with a brief summary in the user's language: what you changed and which issues you left out.\n");
+    prompt
+}
+
+fn json_text<T: serde::Serialize>(value: &T) -> String {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|item| item.as_str().map(str::to_string))
+        .unwrap_or_default()
 }
 
 fn display_name(novel: &NovelSummary) -> &str {

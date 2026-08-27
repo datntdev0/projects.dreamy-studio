@@ -5,6 +5,7 @@ use crate::features::assistant::edits::translation_change;
 use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantResult;
+use crate::features::assistant::models::ChangeTarget;
 use crate::features::assistant::models::Decision;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::tools::ToolContext;
@@ -14,7 +15,13 @@ use crate::features::assistant::tools::find_novel;
 use crate::features::assistant::tools::optional_int;
 use crate::features::assistant::tools::output;
 use crate::features::assistant::tools::required_int;
+use crate::features::assistant::tools::required_str;
 use crate::features::assistant::tools::required_target;
+use crate::features::knowledge::check::KnowledgeIssue;
+use crate::features::knowledge::check::check;
+use crate::features::knowledge::models::KnowledgeEdit;
+use crate::features::knowledge::ontology::Ontology;
+use crate::features::knowledge::service::parse_lang;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::translation::models::DictEntry;
 use crate::features::translation::models::DictInput;
@@ -31,6 +38,8 @@ const CATEGORIES: [&str; 5] = ["name", "dict", "meaning", "omission", "style"];
 const DICT_TYPES: [&str; 5] = ["name", "place", "org", "title", "term"];
 
 const REVIEW_KIND: &str = "translation_review";
+const CHANGES_KIND: &str = "knowledge_changes";
+const CHANGE_SET_ID: &str = "cs1";
 const LISTS: [&str; 2] = ["findings", "dictionary"];
 
 struct Dropped {
@@ -240,6 +249,142 @@ fn dropped_json(dropped: &[Dropped]) -> Vec<Value> {
         .collect()
 }
 
+pub fn submit_knowledge_changes(
+    args: &Value,
+    ctx: &ToolContext,
+    sources: &Sources,
+) -> Result<ToolOutput, String> {
+    let novel_id = required_int(args, "novelId")?;
+    let raw_lang = required_str(args, "lang")?;
+    let lang = parse_lang(&raw_lang).map_err(|error| error.to_string())?;
+    let title = required_str(args, "title")?;
+    let items = list_of(args, "changes")?;
+    if items.is_empty() {
+        return Err("argument 'changes' must contain at least one change".to_string());
+    }
+    find_novel(ctx.scope, sources.novels.as_ref(), novel_id)?;
+    let mut changes = Vec::new();
+    let mut edits = Vec::new();
+    let mut raw = Vec::new();
+    for (index, item) in items.iter().enumerate() {
+        let (change, edit, value) = parse_change(item, novel_id, index)
+            .map_err(|reason| format!("change {index}: {reason}"))?;
+        changes.push(change);
+        edits.push(edit);
+        raw.push(value);
+    }
+    let before = sources.knowledge.get(novel_id, lang.as_str())?;
+    let ontology = Ontology::get();
+    let issues_before = check(ontology, &before.items);
+    let count = edits.len();
+    let after = sources
+        .knowledge
+        .preview(novel_id, lang.as_str(), edits)
+        .map_err(|error| format!("the edits cannot be applied: {error}"))?;
+    let issues_after = check(ontology, &after.items);
+    let validation = validate(&issues_before, &issues_after);
+    let attachment = json!({
+        "kind": CHANGES_KIND,
+        "id": CHANGE_SET_ID,
+        "title": title,
+        "edits": count,
+        "validation": validation,
+        "changes": changes,
+        "status": "pending",
+        "lang": lang.as_str(),
+        "novelId": novel_id,
+        "raw": raw,
+    });
+    ctx.sink.attach(attachment);
+    let label = format!(
+        "submit_knowledge_changes(novel {novel_id}, {}, {count} sửa) → giải quyết {}, phát sinh {}",
+        lang.as_str(),
+        validation["resolves"],
+        validation["introduces"].as_array().map_or(0, Vec::len)
+    );
+    Ok(output(json!({ "validation": validation }), label))
+}
+
+fn parse_change(
+    item: &Value,
+    novel_id: i64,
+    index: usize,
+) -> Result<(Value, KnowledgeEdit, Value), String> {
+    let target = text_field(item, "target")?;
+    let before = nullable_text(item, "before")?;
+    let after = nullable_text(item, "after")?;
+    let reason = text_field(item, "reason")?;
+    let ev = parse_citations(item.get("ev"), novel_id)?;
+    let raw = item
+        .get("edit")
+        .filter(|value| value.is_object())
+        .ok_or_else(|| "edit must be an object".to_string())?;
+    let edit: KnowledgeEdit =
+        serde_json::from_value(raw.clone()).map_err(|error| format!("invalid edit: {error}"))?;
+    let change = json!({
+        "id": format!("c{}", index + 1),
+        "op": raw.get("k").and_then(Value::as_str).unwrap_or(""),
+        "target": target,
+        "before": before,
+        "after": after,
+        "reason": reason,
+        "ev": ev,
+    });
+    Ok((change, edit, raw.clone()))
+}
+
+fn nullable_text(item: &Value, key: &str) -> Result<Value, String> {
+    match item.get(key) {
+        None | Some(Value::Null) => Ok(Value::Null),
+        Some(_) => text_field(item, key).map(|text| json!(text)),
+    }
+}
+
+fn parse_citations(value: Option<&Value>, novel_id: i64) -> Result<Vec<Value>, String> {
+    let Some(items) = value.filter(|value| !value.is_null()) else {
+        return Ok(Vec::new());
+    };
+    let items = items
+        .as_array()
+        .ok_or_else(|| "ev must be an array".to_string())?;
+    let mut citations = Vec::new();
+    for item in items {
+        let chapter = item
+            .get("chapter")
+            .and_then(Value::as_i64)
+            .ok_or_else(|| "ev chapter must be an integer".to_string())?;
+        let p = item
+            .get("p")
+            .and_then(Value::as_i64)
+            .filter(|p| *p >= 1)
+            .ok_or_else(|| "ev p must be a 1-based integer".to_string())?;
+        let quote = text_field(item, "quote")?;
+        citations.push(json!({
+            "novelId": novel_id,
+            "chapter": chapter,
+            "p": p,
+            "quote": quote,
+        }));
+    }
+    Ok(citations)
+}
+
+fn validate(before: &[KnowledgeIssue], after: &[KnowledgeIssue]) -> Value {
+    let known: HashSet<&str> = before.iter().map(|issue| issue.id.as_str()).collect();
+    let remaining: HashSet<&str> = after.iter().map(|issue| issue.id.as_str()).collect();
+    let resolves = known.iter().filter(|id| !remaining.contains(*id)).count();
+    let introduces: Vec<&str> = after
+        .iter()
+        .filter(|issue| !known.contains(issue.id.as_str()))
+        .map(|issue| issue.message.as_str())
+        .collect();
+    json!({
+        "ok": introduces.is_empty(),
+        "resolves": resolves,
+        "introduces": introduces,
+    })
+}
+
 enum Work {
     Replace { n: usize, from: String, to: String },
     Define(DictInput),
@@ -334,15 +479,78 @@ pub fn resolve(
     novel_id: i64,
 ) -> AssistantResult<Vec<AssistantChange>> {
     let picks = select(attachments, item_ids);
-    match status {
+    let mut changes = match status {
         Decision::Rejected => {
             for pick in &picks {
                 mark(attachments, pick, Decision::Rejected);
             }
-            Ok(Vec::new())
+            Vec::new()
         }
-        Decision::Applied => apply(attachments, &picks, sources, novel_id),
+        Decision::Applied => apply(attachments, &picks, sources, novel_id)?,
+    };
+    changes.extend(resolve_knowledge(
+        attachments,
+        item_ids,
+        status,
+        sources,
+        novel_id,
+    )?);
+    Ok(changes)
+}
+
+fn resolve_knowledge(
+    attachments: &mut [Value],
+    item_ids: &[String],
+    status: Decision,
+    sources: &Sources,
+    novel_id: i64,
+) -> AssistantResult<Vec<AssistantChange>> {
+    let mut changes = Vec::new();
+    for attachment in attachments.iter_mut() {
+        if !is_pending_set(attachment, item_ids) {
+            continue;
+        }
+        if status == Decision::Applied {
+            changes.push(apply_set(attachment, sources, novel_id)?);
+        }
+        attachment["status"] = json!(status.as_str());
     }
+    Ok(changes)
+}
+
+fn is_pending_set(attachment: &Value, item_ids: &[String]) -> bool {
+    attachment.get("kind").and_then(Value::as_str) == Some(CHANGES_KIND)
+        && attachment.get("status").and_then(Value::as_str) == Some("pending")
+        && id_of(attachment).is_some_and(|id| item_ids.iter().any(|wanted| wanted == id))
+}
+
+fn apply_set(
+    attachment: &Value,
+    sources: &Sources,
+    novel_id: i64,
+) -> AssistantResult<AssistantChange> {
+    let lang = attachment
+        .get("lang")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AssistantError::invalid("the change set has no language"))?;
+    let edits: Vec<KnowledgeEdit> =
+        serde_json::from_value(attachment.get("raw").cloned().unwrap_or(Value::Null))
+            .map_err(|error| AssistantError::invalid(format!("unreadable edits: {error}")))?;
+    sources
+        .knowledge
+        .preview(novel_id, lang, edits.clone())
+        .map_err(|error| AssistantError::conflict(format!("the edits no longer apply: {error}")))?;
+    sources
+        .knowledge
+        .edit(novel_id, lang, edits)
+        .map_err(AssistantError::storage)?;
+    Ok(AssistantChange {
+        target: ChangeTarget::Knowledge,
+        novel_id,
+        chapter_id: None,
+        lang: Some(lang.to_string()),
+        translation_target: None,
+    })
 }
 
 fn select(attachments: &[Value], item_ids: &[String]) -> Vec<Pick> {

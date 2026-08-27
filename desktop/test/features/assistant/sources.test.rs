@@ -231,6 +231,31 @@ fn knowledge_adapter_applies_edits_and_persists_them() {
 }
 
 #[test]
+fn knowledge_adapter_previews_edits_without_persisting_them() {
+    let fixture = fixture();
+    analyze(&fixture);
+    let source: &dyn KnowledgeSource = &fixture.knowledge;
+    let id = match &source.get(fixture.novel_id, "src").unwrap().items[0] {
+        KnowledgeItem::Entity(entity) => entity.id.clone(),
+        KnowledgeItem::Fact(_) => unreachable!(),
+    };
+    let edits = vec![KnowledgeEdit::Rename {
+        id,
+        name: "Lin".to_string(),
+    }];
+
+    let preview = source.preview(fixture.novel_id, "src", edits).unwrap();
+    let reread = source.get(fixture.novel_id, "src").unwrap();
+    let empty = source
+        .preview(fixture.novel_id, "src", Vec::new())
+        .unwrap_err();
+
+    assert_eq!(entity_names(&preview), vec!["Lin".to_string()]);
+    assert_eq!(entity_names(&reread), vec!["Lin Mo".to_string()]);
+    assert!(empty.contains("no edits"));
+}
+
+#[test]
 fn knowledge_adapter_reports_failures_as_text() {
     let fixture = fixture();
     analyze(&fixture);
@@ -320,6 +345,36 @@ fn fake_knowledge_serves_configured_items_and_records_edits() {
             edits,
         }]
     );
+}
+
+#[test]
+fn fake_knowledge_previews_simple_edits_or_the_configured_result() {
+    let fake = FakeKnowledge::new()
+        .with_entity("e1", "persona", "Lan", &[], &[], &[1])
+        .with_entity("e2", "persona", "Mai", &[], &[], &[1]);
+    let source: &dyn KnowledgeSource = &fake;
+    let edits = vec![
+        KnowledgeEdit::Rename {
+            id: "e1".to_string(),
+            name: "Lan Anh".to_string(),
+        },
+        KnowledgeEdit::Del {
+            id: "e2".to_string(),
+        },
+    ];
+
+    let preview = source.preview(1, "src", edits.clone()).unwrap();
+
+    assert_eq!(entity_names(&preview), vec!["Lan Anh".to_string()]);
+    assert_eq!(entity_names(&source.get(1, "src").unwrap()).len(), 2);
+    assert_eq!(fake.previews().len(), 1);
+    assert!(fake.calls().is_empty());
+    let seeded = FakeKnowledge::new().with_entity("e9", "persona", "Zed", &[], &[], &[1]);
+    let configured = FakeKnowledge::new().with_preview(seeded.get(1, "src").unwrap().items);
+    let result = configured.preview(1, "src", edits.clone()).unwrap();
+    assert_eq!(entity_names(&result), vec!["Zed".to_string()]);
+    let failing = FakeKnowledge::new().with_preview_failure("nope");
+    assert_eq!(failing.preview(1, "src", edits).unwrap_err(), "nope");
 }
 
 fn translate(fixture: &Fixture) {

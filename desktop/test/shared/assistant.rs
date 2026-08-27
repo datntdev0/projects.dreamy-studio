@@ -302,6 +302,9 @@ pub struct KnowledgeCall {
 struct KnowledgeState {
     items: Vec<KnowledgeItem>,
     calls: Vec<KnowledgeCall>,
+    previews: Vec<KnowledgeCall>,
+    preview_items: Option<Vec<KnowledgeItem>>,
+    preview_failure: Option<String>,
     failure: Option<String>,
 }
 
@@ -316,6 +319,9 @@ impl FakeKnowledge {
             state: Arc::new(Mutex::new(KnowledgeState {
                 items: Vec::new(),
                 calls: Vec::new(),
+                previews: Vec::new(),
+                preview_items: None,
+                preview_failure: None,
                 failure: None,
             })),
         }
@@ -375,15 +381,33 @@ impl FakeKnowledge {
         self
     }
 
+    pub fn with_preview(self, items: Vec<KnowledgeItem>) -> Self {
+        guard(&self.state).preview_items = Some(items);
+        self
+    }
+
+    pub fn with_preview_failure(self, message: &str) -> Self {
+        guard(&self.state).preview_failure = Some(message.to_string());
+        self
+    }
+
     pub fn calls(&self) -> Vec<KnowledgeCall> {
         guard(&self.state).calls.clone()
     }
 
+    pub fn previews(&self) -> Vec<KnowledgeCall> {
+        guard(&self.state).previews.clone()
+    }
+
     fn snapshot(&self, lang: &str) -> WireKnowledge {
+        self.snapshot_of(lang, guard(&self.state).items.clone())
+    }
+
+    fn snapshot_of(&self, lang: &str, items: Vec<KnowledgeItem>) -> WireKnowledge {
         WireKnowledge {
             lang: lang.to_string(),
             ontology: Ontology::get().view(),
-            items: guard(&self.state).items.clone(),
+            items,
             analyzed: BTreeMap::new(),
         }
     }
@@ -423,6 +447,55 @@ impl KnowledgeSource for FakeKnowledge {
             knowledge: self.snapshot(lang),
             remap: BTreeMap::new(),
         })
+    }
+
+    fn preview(
+        &self,
+        novel_id: i64,
+        lang: &str,
+        edits: Vec<KnowledgeEdit>,
+    ) -> Result<WireKnowledge, String> {
+        let failure = {
+            let state = guard(&self.state);
+            state.preview_failure.clone().or(state.failure.clone())
+        };
+        if let Some(message) = failure {
+            return Err(message);
+        }
+        let configured = guard(&self.state).preview_items.clone();
+        let items = configured.unwrap_or_else(|| simple_edits(self.snapshot(lang).items, &edits));
+        guard(&self.state).previews.push(KnowledgeCall {
+            novel_id,
+            lang: lang.to_string(),
+            edits,
+        });
+        Ok(self.snapshot_of(lang, items))
+    }
+}
+
+fn simple_edits(mut items: Vec<KnowledgeItem>, edits: &[KnowledgeEdit]) -> Vec<KnowledgeItem> {
+    for edit in edits {
+        match edit {
+            KnowledgeEdit::Del { id } => items.retain(|item| item_id(item) != id),
+            KnowledgeEdit::Rename { id, name } => {
+                for item in &mut items {
+                    if let KnowledgeItem::Entity(entity) = item
+                        && entity.id == *id
+                    {
+                        entity.name = name.clone();
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    items
+}
+
+fn item_id(item: &KnowledgeItem) -> &str {
+    match item {
+        KnowledgeItem::Entity(entity) => &entity.id,
+        KnowledgeItem::Fact(fact) => &fact.id,
     }
 }
 

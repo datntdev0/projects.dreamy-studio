@@ -4,6 +4,10 @@ use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ChangeTarget;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::tools::call;
+use crate::features::knowledge::models::KnowledgeEdit;
+use crate::features::knowledge::models::KnowledgeEntity;
+use crate::features::knowledge::models::KnowledgeFact;
+use crate::features::knowledge::models::KnowledgeItem;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
 use crate::testing::assistant::FakeTranslation;
@@ -675,5 +679,419 @@ fn attachments_of_other_kinds_are_left_alone() {
     assert_eq!(
         statuses(&attachments[1], "findings"),
         ["rejected", "pending"]
+    );
+}
+
+fn change_knowledge() -> FakeKnowledge {
+    FakeKnowledge::new()
+        .with_entity("e1", "location", "Harbor", &[], &[], &[1])
+        .with_fact("f1", "located_at", "gone", None, &[1])
+}
+
+fn knowledge_change(edit: Value) -> Value {
+    json!({
+        "target": "located_at",
+        "before": "Harbor",
+        "after": "removed",
+        "reason": "dangling",
+        "ev": [{ "chapter": 3, "p": 2, "quote": "守灯人没有回答。" }],
+        "edit": edit,
+    })
+}
+
+fn knowledge_args(changes: Vec<Value>) -> Value {
+    json!({ "novelId": 1, "lang": "src", "title": "Fix facts", "changes": changes })
+}
+
+fn delete_fact() -> Value {
+    knowledge_change(json!({ "k": "del", "id": "f1" }))
+}
+
+struct Submitted {
+    result: Result<ToolOutput, String>,
+    sink: RecordingSink,
+    knowledge: FakeKnowledge,
+}
+
+fn submit_changes_in(scope: &AssistantScope, knowledge: FakeKnowledge, args: &Value) -> Submitted {
+    let sink = RecordingSink::new();
+    let ctx = ToolContext {
+        scope,
+        can_edit: false,
+        sink: &sink,
+    };
+    let sources = sources_with(&novels(), &knowledge, &translation());
+    let result = call("submit_knowledge_changes", args, &ctx, &sources);
+    Submitted {
+        result,
+        sink,
+        knowledge,
+    }
+}
+
+fn submit_changes(args: &Value) -> Submitted {
+    submit_changes_in(&workspace(), change_knowledge(), args)
+}
+
+#[test]
+fn submitting_changes_builds_the_change_set_and_validates_it() {
+    let run = submit_changes(&knowledge_args(vec![delete_fact()]));
+
+    let value: Value = from_str(&run.result.as_ref().unwrap().text).unwrap();
+    assert_eq!(
+        value,
+        json!({ "validation": { "ok": true, "resolves": 1, "introduces": [] } })
+    );
+    assert_eq!(
+        run.sink.attachments(),
+        vec![json!({
+            "kind": "knowledge_changes",
+            "id": "cs1",
+            "title": "Fix facts",
+            "edits": 1,
+            "validation": { "ok": true, "resolves": 1, "introduces": [] },
+            "changes": [{
+                "id": "c1",
+                "op": "del",
+                "target": "located_at",
+                "before": "Harbor",
+                "after": "removed",
+                "reason": "dangling",
+                "ev": [{ "novelId": 1, "chapter": 3, "p": 2, "quote": "守灯人没有回答。" }],
+            }],
+            "status": "pending",
+            "lang": "src",
+            "novelId": 1,
+            "raw": [{ "k": "del", "id": "f1" }],
+        })]
+    );
+    assert!(run.knowledge.calls().is_empty());
+    assert_eq!(run.knowledge.previews().len(), 1);
+}
+
+#[test]
+fn an_edit_that_leaves_the_issue_resolves_nothing() {
+    let edit = knowledge_change(json!({ "k": "rename", "id": "e1", "name": "Port" }));
+
+    let run = submit_changes(&knowledge_args(vec![edit]));
+
+    let value: Value = from_str(&run.result.as_ref().unwrap().text).unwrap();
+    assert_eq!(value["validation"]["resolves"], 0);
+    assert_eq!(value["validation"]["ok"], true);
+}
+
+#[test]
+fn new_issues_make_the_validation_not_ok_and_list_their_messages() {
+    let broken = vec![
+        KnowledgeItem::Entity(KnowledgeEntity {
+            id: "e1".to_string(),
+            entity_type: "location".to_string(),
+            name: "Harbor".to_string(),
+            titles: Vec::new(),
+            aliases: Vec::new(),
+            ev: Vec::new(),
+            stale: Vec::new(),
+        }),
+        KnowledgeItem::Fact(KnowledgeFact {
+            id: "f1".to_string(),
+            pred: "located_at".to_string(),
+            subject: "gone".to_string(),
+            object: None,
+            ev: Vec::new(),
+            stale: Vec::new(),
+        }),
+        KnowledgeItem::Fact(KnowledgeFact {
+            id: "f9".to_string(),
+            pred: "located_at".to_string(),
+            subject: "lost".to_string(),
+            object: None,
+            ev: Vec::new(),
+            stale: Vec::new(),
+        }),
+    ];
+    let knowledge = change_knowledge().with_preview(broken);
+
+    let run = submit_changes_in(
+        &workspace(),
+        knowledge,
+        &knowledge_args(vec![delete_fact()]),
+    );
+
+    let value: Value = from_str(&run.result.as_ref().unwrap().text).unwrap();
+    let validation = &value["validation"];
+    assert_eq!(validation["ok"], false);
+    assert_eq!(validation["resolves"], 0);
+    let introduces = validation["introduces"].as_array().unwrap();
+    assert!(
+        introduces
+            .iter()
+            .any(|text| text.as_str().unwrap().contains("\"lost\""))
+    );
+    assert_eq!(run.sink.attachments()[0]["validation"], *validation);
+}
+
+#[test]
+fn an_edit_that_cannot_be_applied_is_a_tool_error_and_attaches_nothing() {
+    let knowledge = change_knowledge().with_preview_failure("item f1 not found");
+
+    let run = submit_changes_in(
+        &workspace(),
+        knowledge,
+        &knowledge_args(vec![delete_fact()]),
+    );
+
+    let error = run.result.unwrap_err();
+    assert!(error.contains("cannot be applied"));
+    assert!(error.contains("item f1 not found"));
+    assert!(run.sink.attachments().is_empty());
+}
+
+#[test]
+fn the_op_follows_the_edit_tag() {
+    let edits = vec![
+        json!({ "k": "rename", "id": "e1", "name": "Port" }),
+        json!({ "k": "retype", "id": "e1", "type": "region" }),
+        json!({ "k": "merge", "sources": ["e2"], "target": "e1" }),
+        json!({ "k": "fact", "id": "f1", "pred": "located_at" }),
+        json!({ "k": "props", "id": "e1", "aliases": ["Dock"] }),
+        json!({ "k": "evidence", "id": "e1", "add": [{ "chapter": 1, "p": 1, "q": "x" }] }),
+        json!({ "k": "add_entity", "ref": "n1", "type": "location", "name": "Pier", "ev": [] }),
+        json!({ "k": "add_fact", "ref": "n2", "pred": "located_at", "subject": "e1", "ev": [] }),
+        json!({ "k": "del", "id": "f1" }),
+    ];
+    let changes: Vec<Value> = edits.iter().cloned().map(knowledge_change).collect();
+
+    let run = submit_changes(&knowledge_args(changes));
+
+    let attachment = &run.sink.attachments()[0];
+    let ops: Vec<&str> = attachment["changes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|change| change["op"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        ops,
+        [
+            "rename",
+            "retype",
+            "merge",
+            "fact",
+            "props",
+            "evidence",
+            "add_entity",
+            "add_fact",
+            "del"
+        ]
+    );
+    assert_eq!(attachment["edits"], 9);
+    assert_eq!(attachment["raw"], json!(edits));
+    assert_eq!(attachment["changes"][8]["id"], "c9");
+    assert_eq!(run.knowledge.previews()[0].edits.len(), 9);
+}
+
+#[test]
+fn nullable_text_and_missing_evidence_are_accepted() {
+    let change = json!({
+        "target": "Harbor",
+        "before": null,
+        "reason": "why",
+        "edit": { "k": "del", "id": "f1" },
+    });
+
+    let run = submit_changes(&knowledge_args(vec![change]));
+
+    run.result.as_ref().unwrap();
+    let stored = &run.sink.attachments()[0]["changes"][0];
+    assert_eq!(stored["before"], Value::Null);
+    assert_eq!(stored["after"], Value::Null);
+    assert_eq!(stored["ev"], json!([]));
+}
+
+#[test]
+fn invalid_changes_are_tool_errors() {
+    let bad_edit = knowledge_change(json!({ "k": "explode", "id": "f1" }));
+    let no_edit = json!({ "target": "t", "before": "b", "after": "a", "reason": "r", "ev": [] });
+    let bad_ev = json!({
+        "target": "t", "before": "b", "after": "a", "reason": "r",
+        "ev": [{ "chapter": 1, "p": 0, "quote": "q" }],
+        "edit": { "k": "del", "id": "f1" },
+    });
+    let no_reason = json!({
+        "target": "t", "before": "b", "after": "a", "ev": [],
+        "edit": { "k": "del", "id": "f1" },
+    });
+
+    for change in [bad_edit, no_edit, bad_ev, no_reason] {
+        let run = submit_changes(&knowledge_args(vec![delete_fact(), change]));
+
+        let error = run.result.unwrap_err();
+        assert!(error.starts_with("change 1:"), "{error}");
+        assert!(run.sink.attachments().is_empty());
+        assert!(run.knowledge.previews().is_empty());
+    }
+}
+
+#[test]
+fn submitting_needs_a_valid_envelope_and_the_scope() {
+    let missing_title = json!({ "novelId": 1, "lang": "src", "changes": [delete_fact()] });
+    let no_changes = knowledge_args(Vec::new());
+    let bad_lang = json!({ "novelId": 1, "lang": "FR", "title": "t", "changes": [delete_fact()] });
+
+    assert!(
+        submit_changes(&missing_title)
+            .result
+            .unwrap_err()
+            .contains("title")
+    );
+    assert!(
+        submit_changes(&no_changes)
+            .result
+            .unwrap_err()
+            .contains("at least one")
+    );
+    assert!(submit_changes(&bad_lang).result.unwrap_err().contains("FR"));
+    let outside = submit_changes_in(
+        &novel_scope(2),
+        change_knowledge(),
+        &knowledge_args(vec![delete_fact()]),
+    );
+    assert!(outside.result.unwrap_err().contains("outside"));
+    assert!(outside.sink.attachments().is_empty());
+}
+
+#[test]
+fn submitting_changes_does_not_need_edit_rights_and_labels_the_activity() {
+    let run = submit_changes_in(
+        &novel_scope(1),
+        change_knowledge(),
+        &knowledge_args(vec![delete_fact()]),
+    );
+
+    let label = run.result.unwrap().label;
+    assert!(label.starts_with("submit_knowledge_changes(novel 1, src, 1 sửa)"));
+}
+
+fn change_set() -> Vec<Value> {
+    submit_changes(&knowledge_args(vec![delete_fact()]))
+        .sink
+        .attachments()
+}
+
+fn resolve_changes(
+    knowledge: &FakeKnowledge,
+    attachments: &mut [Value],
+    selected: &[&str],
+    status: Decision,
+) -> AssistantResult<Vec<AssistantChange>> {
+    let sources = sources_with(&novels(), knowledge, &translation());
+    resolve(attachments, &ids(selected), status, &sources, 1)
+}
+
+#[test]
+fn applying_a_change_set_edits_the_knowledge_and_reports_the_change() {
+    let knowledge = change_knowledge();
+    let mut attachments = change_set();
+
+    let changes =
+        resolve_changes(&knowledge, &mut attachments, &["cs1"], Decision::Applied).unwrap();
+
+    assert_eq!(attachments[0]["status"], "applied");
+    assert_eq!(
+        changes,
+        vec![AssistantChange {
+            target: ChangeTarget::Knowledge,
+            novel_id: 1,
+            chapter_id: None,
+            lang: Some("src".to_string()),
+            translation_target: None,
+        }]
+    );
+    let calls = knowledge.calls();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].novel_id, 1);
+    assert_eq!(calls[0].lang, "src");
+    assert_eq!(
+        calls[0].edits,
+        vec![KnowledgeEdit::Del {
+            id: "f1".to_string()
+        }]
+    );
+    assert_eq!(knowledge.previews().len(), 1);
+}
+
+#[test]
+fn a_change_set_whose_preview_fails_is_a_conflict_that_applies_nothing() {
+    let knowledge = change_knowledge().with_preview_failure("item f1 not found");
+    let mut attachments = change_set();
+
+    let error =
+        resolve_changes(&knowledge, &mut attachments, &["cs1"], Decision::Applied).unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("item f1 not found"));
+    assert!(knowledge.calls().is_empty());
+    assert_eq!(attachments[0]["status"], "pending");
+}
+
+#[test]
+fn a_failing_knowledge_source_is_a_conflict_that_stays_pending() {
+    let mut attachments = change_set();
+    let failing = FakeKnowledge::new().failing("disk full");
+
+    let error =
+        resolve_changes(&failing, &mut attachments, &["cs1"], Decision::Applied).unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(error.detail.contains("disk full"));
+    assert_eq!(attachments[0]["status"], "pending");
+    assert!(failing.calls().is_empty());
+}
+
+#[test]
+fn rejecting_a_change_set_only_sets_the_status() {
+    let knowledge = change_knowledge();
+    let mut attachments = change_set();
+
+    let changes =
+        resolve_changes(&knowledge, &mut attachments, &["cs1"], Decision::Rejected).unwrap();
+
+    assert!(changes.is_empty());
+    assert_eq!(attachments[0]["status"], "rejected");
+    assert!(knowledge.calls().is_empty());
+    assert!(knowledge.previews().is_empty());
+}
+
+#[test]
+fn a_change_set_is_left_alone_unless_selected_and_pending() {
+    let knowledge = change_knowledge();
+    let mut attachments = change_set();
+
+    resolve_changes(&knowledge, &mut attachments, &["f1"], Decision::Applied).unwrap();
+    assert_eq!(attachments[0]["status"], "pending");
+
+    resolve_changes(&knowledge, &mut attachments, &["cs1"], Decision::Rejected).unwrap();
+    let changes =
+        resolve_changes(&knowledge, &mut attachments, &["cs1"], Decision::Applied).unwrap();
+
+    assert!(changes.is_empty());
+    assert_eq!(attachments[0]["status"], "rejected");
+    assert!(knowledge.calls().is_empty());
+}
+
+#[test]
+fn a_change_set_resolves_next_to_a_translation_review() {
+    let knowledge = change_knowledge();
+    let mut attachments = full_review();
+    attachments.extend(change_set());
+
+    let changes =
+        resolve_changes(&knowledge, &mut attachments, &["cs1"], Decision::Applied).unwrap();
+
+    assert_eq!(changes.len(), 1);
+    assert_eq!(attachments[1]["status"], "applied");
+    assert_eq!(
+        statuses(&attachments[0], "findings"),
+        ["pending", "pending"]
     );
 }

@@ -23,6 +23,10 @@ use crate::features::assistant::repository::AssistantRepository;
 use crate::features::assistant::skills;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::Sources;
+use crate::features::knowledge::check::KnowledgeIssue;
+use crate::features::knowledge::check::check;
+use crate::features::knowledge::ontology::Ontology;
+use crate::features::knowledge::service::parse_lang;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
 use crate::features::pipeline::llm::ClientError;
@@ -470,10 +474,17 @@ struct Exchange {
     attachments: Vec<Value>,
 }
 
-struct Skill {
-    novel: NovelSummary,
-    chapter: ChapterRow,
-    target: String,
+enum Skill {
+    Translation {
+        novel: NovelSummary,
+        chapter: ChapterRow,
+        target: String,
+    },
+    Knowledge {
+        novel: NovelSummary,
+        lang: String,
+        issues: Vec<KnowledgeIssue>,
+    },
 }
 
 struct BusyGuard {
@@ -531,16 +542,43 @@ fn skill_of(
     scope: &AssistantScope,
     sources: &Sources,
 ) -> AssistantResult<Skill> {
-    let AssistantContext::TranslationReview { chapter_id, target } = context;
-    let novel_id = match (scope.kind, scope.novel_id) {
-        (ScopeKind::Novel, Some(id)) => id,
-        _ => {
-            return Err(AssistantError::invalid(
-                "a translation review needs a novel scope",
-            ));
+    match context {
+        AssistantContext::TranslationReview { chapter_id, target } => {
+            translation_skill(&chapter_id, &target, scope, sources)
         }
-    };
-    let target = TranslationTarget::parse(&target)
+        AssistantContext::KnowledgeReview { lang, issue_ids } => {
+            knowledge_skill(&lang, &issue_ids, scope, sources)
+        }
+    }
+}
+
+fn novel_of(scope: &AssistantScope, what: &str) -> AssistantResult<i64> {
+    match (scope.kind, scope.novel_id) {
+        (ScopeKind::Novel, Some(id)) => Ok(id),
+        _ => Err(AssistantError::invalid(format!(
+            "{what} needs a novel scope"
+        ))),
+    }
+}
+
+fn summary_of(sources: &Sources, novel_id: i64) -> AssistantResult<NovelSummary> {
+    sources
+        .novels
+        .list()
+        .map_err(AssistantError::storage)?
+        .into_iter()
+        .find(|row| row.id == novel_id)
+        .ok_or_else(|| AssistantError::invalid(format!("novel {novel_id} not found")))
+}
+
+fn translation_skill(
+    chapter_id: &str,
+    target: &str,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> AssistantResult<Skill> {
+    let novel_id = novel_of(scope, "a translation review")?;
+    let target = TranslationTarget::parse(target)
         .ok_or_else(|| AssistantError::invalid(format!("unsupported target '{target}'")))?;
     let chapter = sources
         .novels
@@ -562,35 +600,67 @@ fn skill_of(
             target.as_str()
         )));
     }
-    let novel = sources
-        .novels
-        .list()
-        .map_err(AssistantError::storage)?
-        .into_iter()
-        .find(|row| row.id == novel_id)
-        .ok_or_else(|| AssistantError::invalid(format!("novel {novel_id} not found")))?;
-    Ok(Skill {
-        novel,
+    Ok(Skill::Translation {
+        novel: summary_of(sources, novel_id)?,
         chapter,
         target: target.as_str().to_string(),
     })
 }
 
+fn knowledge_skill(
+    lang: &str,
+    issue_ids: &[String],
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> AssistantResult<Skill> {
+    let novel_id = novel_of(scope, "a knowledge review")?;
+    let lang = parse_lang(lang).map_err(|error| AssistantError::invalid(error.to_string()))?;
+    let knowledge = sources
+        .knowledge
+        .get(novel_id, lang.as_str())
+        .map_err(AssistantError::storage)?;
+    let issues: Vec<KnowledgeIssue> = check(Ontology::get(), &knowledge.items)
+        .into_iter()
+        .filter(|issue| issue_ids.contains(&issue.id))
+        .collect();
+    if issues.is_empty() {
+        return Err(AssistantError::invalid(
+            "none of the selected issues exist in the knowledge base",
+        ));
+    }
+    Ok(Skill::Knowledge {
+        novel: summary_of(sources, novel_id)?,
+        lang: lang.as_str().to_string(),
+        issues,
+    })
+}
+
 fn start_prompt(opening: String, skill: Option<&Skill>) -> String {
     match skill {
-        Some(skill) => {
-            skills::review_translation(&skill.novel, &skill.chapter, &skill.target, Some(opening))
-        }
+        Some(skill) => skill_prompt(skill, Some(opening)),
         None => opening,
     }
 }
 
 fn resume_prompt(text: &str, skill: Option<&Skill>) -> String {
     match skill {
-        Some(skill) => {
-            skills::review_translation(&skill.novel, &skill.chapter, &skill.target, None)
-        }
+        Some(skill) => skill_prompt(skill, None),
         None => prompt::follow_up(text),
+    }
+}
+
+fn skill_prompt(skill: &Skill, opening: Option<String>) -> String {
+    match skill {
+        Skill::Translation {
+            novel,
+            chapter,
+            target,
+        } => skills::review_translation(novel, chapter, target, opening),
+        Skill::Knowledge {
+            novel,
+            lang,
+            issues,
+        } => skills::review_knowledgebase(novel, lang, issues, opening),
     }
 }
 

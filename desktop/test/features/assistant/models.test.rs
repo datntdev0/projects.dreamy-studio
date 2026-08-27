@@ -130,6 +130,27 @@ fn a_translation_review_context_reads_camel_case_fields() {
 }
 
 #[test]
+fn a_knowledge_review_context_reads_camel_case_fields() {
+    let context: AssistantContext = serde_json::from_value(json!({
+        "kind": "knowledge_review",
+        "lang": "src",
+        "issueIds": ["dangling_ref|f1|f1", "evidence|e2|e2"],
+    }))
+    .unwrap();
+
+    assert_eq!(
+        context,
+        AssistantContext::KnowledgeReview {
+            lang: "src".to_string(),
+            issue_ids: vec![
+                "dangling_ref|f1|f1".to_string(),
+                "evidence|e2|e2".to_string()
+            ],
+        }
+    );
+}
+
+#[test]
 fn an_unknown_context_kind_is_rejected() {
     let parsed = serde_json::from_value::<AssistantContext>(json!({ "kind": "nope" }));
 

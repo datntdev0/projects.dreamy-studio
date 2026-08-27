@@ -111,6 +111,11 @@ pub struct SessionRecord {
 pub enum AssistantContext {
     #[serde(rename_all = "camelCase")]
     TranslationReview { chapter_id: String, target: String },
+    #[serde(rename_all = "camelCase")]
+    KnowledgeReview {
+        lang: String,
+        issue_ids: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1111,3 +1111,232 @@ fn clip_takes_the_first_non_empty_line() {
     assert_eq!(clip("abcdefghij", 10), "abcdefghij");
     assert_eq!(clip("abcdefghijk", 10), "abcdefghi…");
 }
+
+const DANGLING: &str = "dangling_ref|f1|f1";
+
+fn issue_knowledge() -> FakeKnowledge {
+    FakeKnowledge::new()
+        .with_entity("e1", "location", "Harbor", &[], &[], &[1])
+        .with_fact("f1", "located_at", "gone", None, &[1])
+        .with_fact("f2", "located_at", "lost", None, &[1])
+}
+
+fn knowledge_context(lang: &str, ids: &[&str]) -> Option<AssistantContext> {
+    Some(AssistantContext::KnowledgeReview {
+        lang: lang.to_string(),
+        issue_ids: ids.iter().map(|id| id.to_string()).collect(),
+    })
+}
+
+fn send_knowledge(
+    fixture: &Fixture,
+    id: &str,
+    knowledge: &FakeKnowledge,
+    context: Option<AssistantContext>,
+) -> AssistantResult<AssistantSession> {
+    let sources = sources_with(&review_novels(), knowledge, &review_translation());
+    fixture
+        .workspace
+        .send(id, "Fix them", context, events(), &sources)
+}
+
+#[test]
+fn a_knowledge_review_context_in_workspace_scope_is_invalid() {
+    let fixture = fixture();
+    let id = fixture
+        .workspace
+        .create(workspace_scope(), &novels())
+        .unwrap()
+        .summary
+        .id;
+
+    let result = send_knowledge(
+        &fixture,
+        &id,
+        &issue_knowledge(),
+        knowledge_context("src", &[DANGLING]),
+    );
+
+    assert_eq!(code(result), AssistantErrorCode::Invalid);
+    assert!(fixture.llm.calls().is_empty());
+    assert!(fixture.workspace.get(&id).unwrap().messages.is_empty());
+}
+
+#[test]
+fn a_knowledge_review_context_needs_a_known_issue_and_a_language() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    let knowledge = issue_knowledge();
+
+    let none = send_knowledge(&fixture, &id, &knowledge, knowledge_context("src", &[]));
+    let unknown = send_knowledge(
+        &fixture,
+        &id,
+        &knowledge,
+        knowledge_context("src", &["dangling_ref|zzz|zzz"]),
+    );
+    let language = send_knowledge(
+        &fixture,
+        &id,
+        &knowledge,
+        knowledge_context("FR", &[DANGLING]),
+    );
+    let failing = send_knowledge(
+        &fixture,
+        &id,
+        &FakeKnowledge::new().failing("boom"),
+        knowledge_context("src", &[DANGLING]),
+    );
+
+    assert_eq!(code(none), AssistantErrorCode::Invalid);
+    assert_eq!(code(unknown), AssistantErrorCode::Invalid);
+    assert_eq!(code(language), AssistantErrorCode::Invalid);
+    assert_eq!(code(failing), AssistantErrorCode::Storage);
+    assert!(fixture.llm.calls().is_empty());
+    assert!(fixture.workspace.get(&id).unwrap().messages.is_empty());
+}
+
+#[test]
+fn a_knowledge_review_context_keeps_the_known_issues_and_the_opening() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+
+    send_knowledge(
+        &fixture,
+        &id,
+        &issue_knowledge(),
+        knowledge_context("src", &[DANGLING, "dangling_ref|zzz|zzz"]),
+    )
+    .unwrap();
+
+    let calls = fixture.llm.calls();
+    assert_eq!(calls[0].kind, CallKind::Start);
+    let prompt = &calls[0].prompt;
+    assert!(prompt.contains("You are the Dreamy Studio assistant"));
+    assert!(prompt.contains("Fix them"));
+    assert!(prompt.contains("## Skill: review_knowledgebase"));
+    assert!(prompt.contains("submit_knowledge_changes"));
+    assert!(prompt.contains(DANGLING));
+    assert!(!prompt.contains("zzz"));
+    assert!(!prompt.contains("dangling_ref|f2|f2"));
+    assert!(prompt.contains("selected 1 issue(s)"));
+}
+
+#[test]
+fn a_resumed_cli_session_still_gets_the_knowledge_skill_prompt() {
+    let fixture = fixture();
+    let id = novel_session(&fixture, 1);
+    send(&fixture, &id, "Hello", &review_novels()).unwrap();
+
+    send_knowledge(
+        &fixture,
+        &id,
+        &issue_knowledge(),
+        knowledge_context("src", &[DANGLING]),
+    )
+    .unwrap();
+
+    let calls = fixture.llm.calls();
+    assert_eq!(calls[1].kind, CallKind::Resume);
+    assert!(calls[1].prompt.contains("submit_knowledge_changes"));
+    assert!(
+        !calls[1]
+            .prompt
+            .contains("You are the Dreamy Studio assistant")
+    );
+}
+
+fn pending_changes() -> serde_json::Value {
+    json!({
+        "kind": "knowledge_changes",
+        "id": "cs1",
+        "title": "Fix",
+        "edits": 1,
+        "validation": { "ok": true, "resolves": 1, "introduces": [] },
+        "changes": [{
+            "id": "c1", "op": "del", "target": "located_at", "before": null,
+            "after": null, "reason": "r", "ev": []
+        }],
+        "status": "pending",
+        "lang": "src",
+        "novelId": 1,
+        "raw": [{ "k": "del", "id": "f1" }],
+    })
+}
+
+fn proposed(fixture: &Fixture) -> (String, String) {
+    let grants = fixture.grants.clone();
+    fixture.llm.set_hook(move |token| {
+        grants.get(token).unwrap().sink.attach(pending_changes());
+    });
+    let id = novel_session(fixture, 1);
+    let session = send_knowledge(
+        fixture,
+        &id,
+        &issue_knowledge(),
+        knowledge_context("src", &[DANGLING]),
+    )
+    .unwrap();
+    let message = session.messages[1].id.clone();
+    (id, message)
+}
+
+fn resolve_changes(
+    fixture: &Fixture,
+    knowledge: &FakeKnowledge,
+    ids: (&str, &str),
+    status: Decision,
+) -> AssistantResult<AssistantSession> {
+    let sources = sources_with(&review_novels(), knowledge, &review_translation());
+    fixture
+        .workspace
+        .resolve(ids.0, ids.1, &["cs1".to_string()], status, &sources)
+}
+
+#[test]
+fn resolve_applies_a_change_set_through_the_knowledge_edit_and_persists_the_status() {
+    let fixture = fixture();
+    let (id, message) = proposed(&fixture);
+    let knowledge = issue_knowledge();
+
+    let session =
+        resolve_changes(&fixture, &knowledge, (&id, &message), Decision::Applied).unwrap();
+
+    assert_eq!(session.messages[1].attachments[0]["status"], "applied");
+    let calls = knowledge.calls();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].lang, "src");
+    assert_eq!(
+        fixture.workspace.get(&id).unwrap().messages[1].attachments[0]["status"],
+        "applied"
+    );
+}
+
+#[test]
+fn resolve_conflicts_when_the_change_set_no_longer_previews() {
+    let fixture = fixture();
+    let (id, message) = proposed(&fixture);
+    let knowledge = issue_knowledge().with_preview_failure("item f1 not found");
+
+    let error =
+        resolve_changes(&fixture, &knowledge, (&id, &message), Decision::Applied).unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    assert!(knowledge.calls().is_empty());
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0]["status"], "pending");
+}
+
+#[test]
+fn resolve_rejects_a_change_set_without_touching_the_knowledge() {
+    let fixture = fixture();
+    let (id, message) = proposed(&fixture);
+    let knowledge = issue_knowledge();
+
+    let session =
+        resolve_changes(&fixture, &knowledge, (&id, &message), Decision::Rejected).unwrap();
+
+    assert_eq!(session.messages[1].attachments[0]["status"], "rejected");
+    assert!(knowledge.calls().is_empty());
+    assert!(knowledge.previews().is_empty());
+}

@@ -104,7 +104,9 @@ fn definitions_describe_the_tools() {
             "edit_novel_knowledge",
             "edit_translation_passage",
             "edit_dictionary",
-            "submit_translation_review"
+            "submit_translation_review",
+            "read_knowledge_issues",
+            "submit_knowledge_changes"
         ]
     );
     for tool in list {
@@ -134,6 +136,14 @@ fn definitions_describe_the_tools() {
     assert_eq!(
         list[10]["inputSchema"]["required"],
         json!(["novelId", "target"])
+    );
+    assert_eq!(
+        list[12]["inputSchema"]["required"],
+        json!(["novelId", "lang"])
+    );
+    assert_eq!(
+        list[13]["inputSchema"]["required"],
+        json!(["novelId", "lang", "title", "changes"])
     );
 }
 
@@ -957,4 +967,156 @@ fn read_translation_guide_is_empty_for_a_fresh_target() {
     assert_eq!(value["guidelines"], "");
     assert_eq!(value["dictionary"], json!([]));
     assert_eq!(value["warnings"], json!([]));
+}
+
+fn issue_knowledge() -> FakeKnowledge {
+    FakeKnowledge::new()
+        .with_entity("e1", "location", "Harbor", &[], &[], &[1])
+        .with_entity("e2", "persona", "Wren", &[], &[], &[2])
+        .with_fact("f1", "located_at", "gone", None, &[1])
+        .with_fact("f2", "bogus", "e1", Some("e1"), &[3])
+}
+
+fn issues_of(args: Value, scope: &AssistantScope, knowledge: &FakeKnowledge) -> Vec<Value> {
+    let novels = novels_with(&texts(1));
+    let output = invoke_with("read_knowledge_issues", &args, scope, &novels, knowledge).unwrap();
+    from_str::<Value>(&output.text)
+        .unwrap()
+        .as_array()
+        .unwrap()
+        .clone()
+}
+
+fn issue_ids(issues: &[Value]) -> Vec<&str> {
+    issues
+        .iter()
+        .map(|issue| issue["id"].as_str().unwrap())
+        .collect()
+}
+
+#[test]
+fn read_knowledge_issues_returns_every_issue_with_its_items() {
+    let knowledge = issue_knowledge();
+
+    let issues = issues_of(
+        json!({ "novelId": 1, "lang": "src" }),
+        &workspace(),
+        &knowledge,
+    );
+
+    let ids = issue_ids(&issues);
+    assert!(ids.contains(&"dangling_ref|f1|f1"));
+    assert!(ids.contains(&"persona_link|none|e2|e2"));
+    assert!(ids.contains(&"relation_signature|unknown|bogus|f2|f2"));
+    let dangling = issues
+        .iter()
+        .find(|issue| issue["id"] == "dangling_ref|f1|f1")
+        .unwrap();
+    assert_eq!(dangling["rule"], "dangling_ref");
+    assert_eq!(dangling["severity"], "error");
+    assert!(dangling["message"].as_str().unwrap().contains("\"gone\""));
+    assert_eq!(
+        dangling["items"],
+        json!([{
+            "id": "f1",
+            "kind": "fact",
+            "pred": "located_at",
+            "subject": "gone",
+            "object": null,
+            "ev": [{ "chapter": 1, "p": 1, "q": "quote" }],
+        }])
+    );
+    let persona = issues
+        .iter()
+        .find(|issue| issue["id"] == "persona_link|none|e2|e2")
+        .unwrap();
+    assert_eq!(
+        persona["items"],
+        json!([{
+            "id": "e2",
+            "kind": "entity",
+            "type": "persona",
+            "name": "Wren",
+            "ev": [{ "chapter": 2, "p": 1, "q": "quote" }],
+        }])
+    );
+}
+
+#[test]
+fn read_knowledge_issues_filters_by_ids_and_by_rule() {
+    let knowledge = issue_knowledge();
+
+    let by_id = issues_of(
+        json!({
+            "novelId": 1,
+            "lang": "src",
+            "issueIds": ["persona_link|none|e2|e2", "unknown|id"],
+        }),
+        &workspace(),
+        &knowledge,
+    );
+    let by_rule = issues_of(
+        json!({ "novelId": 1, "lang": "src", "rule": "dangling_ref" }),
+        &workspace(),
+        &knowledge,
+    );
+
+    assert_eq!(issue_ids(&by_id), ["persona_link|none|e2|e2"]);
+    assert_eq!(issue_ids(&by_rule), ["dangling_ref|f1|f1"]);
+}
+
+#[test]
+fn read_knowledge_issues_returns_at_most_fifty_issues() {
+    let mut knowledge = FakeKnowledge::new();
+    for n in 0..60 {
+        knowledge = knowledge.with_fact(&format!("f{n}"), "located_at", "gone", None, &[1]);
+    }
+
+    let issues = issues_of(
+        json!({ "novelId": 1, "lang": "src", "rule": "dangling_ref" }),
+        &workspace(),
+        &knowledge,
+    );
+
+    assert_eq!(issues.len(), MAX_ISSUES);
+}
+
+#[test]
+fn read_knowledge_issues_rejects_bad_arguments_and_foreign_novels() {
+    let novels = novels_with(&texts(1));
+    let knowledge = issue_knowledge();
+    let failing = |args: Value, scope: &AssistantScope| {
+        invoke_with("read_knowledge_issues", &args, scope, &novels, &knowledge).unwrap_err()
+    };
+
+    assert!(failing(json!({ "lang": "src" }), &workspace()).contains("novelId"));
+    assert!(failing(json!({ "novelId": 1, "lang": "FR" }), &workspace()).contains("FR"));
+    assert!(
+        failing(
+            json!({ "novelId": 1, "lang": "src", "issueIds": "x" }),
+            &workspace()
+        )
+        .contains("issueIds")
+    );
+    assert!(failing(json!({ "novelId": 1, "lang": "src" }), &novel_scope(2)).contains("outside"));
+}
+
+#[test]
+fn read_knowledge_issues_labels_the_activity() {
+    let novels = novels_with(&texts(1));
+
+    let output = invoke_with(
+        "read_knowledge_issues",
+        &json!({ "novelId": 1, "lang": "src", "rule": "dangling_ref" }),
+        &workspace(),
+        &novels,
+        &issue_knowledge(),
+    )
+    .unwrap();
+
+    assert!(
+        output
+            .label
+            .starts_with("read_knowledge_issues(novel 1, src)")
+    );
 }

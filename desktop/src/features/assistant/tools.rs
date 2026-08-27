@@ -5,10 +5,13 @@ use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::proposals;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::Sources;
+use crate::features::knowledge::check::KnowledgeIssue;
+use crate::features::knowledge::check::check;
 use crate::features::knowledge::models::KnowledgeEntity;
 use crate::features::knowledge::models::KnowledgeEvidence;
 use crate::features::knowledge::models::KnowledgeFact;
 use crate::features::knowledge::models::KnowledgeItem;
+use crate::features::knowledge::ontology::Ontology;
 use crate::features::knowledge::service::parse_lang;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
@@ -25,6 +28,7 @@ pub const PAGE_PARAGRAPHS: usize = 60;
 pub const PAGE_CHARS: usize = 12_000;
 pub const PAGE_ENTITIES: usize = 80;
 pub const MAX_PAGE_ENTITIES: usize = 400;
+pub const MAX_ISSUES: usize = 50;
 
 pub struct ToolContext<'a> {
     pub scope: &'a AssistantScope,
@@ -39,6 +43,14 @@ pub struct ToolOutput {
 }
 
 pub fn definitions() -> Value {
+    let mut tools = base_definitions();
+    if let Value::Array(list) = &mut tools {
+        list.extend(knowledge_review_definitions());
+    }
+    tools
+}
+
+fn base_definitions() -> Value {
     json!([
         {
             "name": "list_novel",
@@ -308,6 +320,78 @@ pub fn definitions() -> Value {
     ])
 }
 
+fn knowledge_review_definitions() -> Vec<Value> {
+    vec![
+        json!({
+            "name": "read_knowledge_issues",
+            "description": "Read the issues the knowledge checker finds in the knowledge base of one novel, the same ones the user sees in the Knowledge review tab. Each issue has an id, the rule that raised it, a severity, a message and the items it involves (entities with id, type and name; facts with id, pred, subject and object; every item with its evidence [{chapter, p, q}]). Issues can be filtered by `issueIds` and by `rule`. At most 50 issues are returned.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
+                    "issueIds": { "type": "array", "items": { "type": "string" }, "description": "Keep only the issues with these ids." },
+                    "rule": { "type": "string", "description": "Keep only the issues raised by this rule key." }
+                },
+                "required": ["novelId", "lang"],
+                "additionalProperties": false
+            }
+        }),
+        json!({
+            "name": "submit_knowledge_changes",
+            "description": "Submit a set of knowledge edits as one card the user applies or rejects as a whole. The edits are tried on a copy of the knowledge base first and the checker is run on the result; nothing is written. The result is {validation: {ok, resolves, introduces}}: `resolves` counts the issues the edits fix and `introduces` lists the messages of the new issues they would cause; when ok is false, fix the edits and call the tool again, the last call replaces the earlier one. It is an error when an edit cannot be applied. Each change pairs a readable description (`target`, `before`, `after`, `reason`, `ev`) with the `edit` that performs it. The edit has a required \"k\" and these fields: rename {id, name}; retype {id, type}; del {id}; merge {sources: [id], target: id}; fact {id, pred?, subject?, object?}; props {id, titles?, aliases?}; evidence {id, add?: [{chapter, p, q}], remove?: [{chapter, p, q}]}; add_entity {ref, type, name, titles?, aliases?, ev: [{chapter, p, q}]}; add_fact {ref, pred, subject, object?, ev: [{chapter, p, q}]}. Ids, `type` keys and `pred` keys come from read_novel_knowledge and read_knowledge_issues.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language the edits apply to." },
+                    "title": { "type": "string", "description": "Short title of the change set, in the user's language." },
+                    "changes": {
+                        "type": "array",
+                        "minItems": 1,
+                        "description": "The changes, applied in order.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "target": { "type": "string", "description": "What is changed, for example the entity name or the predicate." },
+                                "before": { "type": "string", "description": "The current state, in a few words." },
+                                "after": { "type": "string", "description": "The state after the edit, in a few words." },
+                                "reason": { "type": "string", "description": "Why the change fixes the issue, in the user's language." },
+                                "ev": {
+                                    "type": "array",
+                                    "description": "Evidence from the chapters that supports the change.",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "chapter": { "type": "integer", "description": "Chapter number." },
+                                            "p": { "type": "integer", "minimum": 1, "description": "1-based paragraph position." },
+                                            "quote": { "type": "string", "description": "Quote from that paragraph." }
+                                        },
+                                        "required": ["chapter", "p", "quote"],
+                                        "additionalProperties": false
+                                    }
+                                },
+                                "edit": {
+                                    "type": "object",
+                                    "description": "The knowledge edit that performs the change.",
+                                    "properties": {
+                                        "k": { "type": "string", "enum": ["rename", "retype", "del", "merge", "fact", "props", "evidence", "add_entity", "add_fact"], "description": "Edit kind." }
+                                    },
+                                    "required": ["k"]
+                                }
+                            },
+                            "required": ["target", "before", "after", "reason", "ev", "edit"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["novelId", "lang", "title", "changes"],
+                "additionalProperties": false
+            }
+        }),
+    ]
+}
+
 pub fn call(
     name: &str,
     args: &Value,
@@ -327,7 +411,9 @@ pub fn call(
         "edit_novel_knowledge" => edits::edit_novel_knowledge(args, ctx, sources),
         "edit_translation_passage" => edits::edit_translation_passage(args, ctx, sources),
         "edit_dictionary" => edits::edit_dictionary(args, ctx, sources),
+        "read_knowledge_issues" => read_knowledge_issues(args, ctx.scope, sources),
         "submit_translation_review" => proposals::submit_translation_review(args, ctx, sources),
+        "submit_knowledge_changes" => proposals::submit_knowledge_changes(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
@@ -464,6 +550,88 @@ fn read_novel_knowledge(
         "next": next,
     });
     Ok(output(value, label))
+}
+
+fn read_knowledge_issues(
+    args: &Value,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> Result<ToolOutput, String> {
+    let novel_id = required_int(args, "novelId")?;
+    let raw_lang = required_str(args, "lang")?;
+    let lang = parse_lang(&raw_lang).map_err(|error| error.to_string())?;
+    let wanted = optional_strings(args, "issueIds")?;
+    let rule = optional_str(args, "rule")?;
+    find_novel(scope, sources.novels.as_ref(), novel_id)?;
+    let knowledge = sources.knowledge.get(novel_id, lang.as_str())?;
+    let issues = check(Ontology::get(), &knowledge.items);
+    let matching: Vec<&KnowledgeIssue> = issues
+        .iter()
+        .filter(|issue| wanted.as_ref().is_none_or(|ids| ids.contains(&issue.id)))
+        .filter(|issue| rule.as_deref().is_none_or(|key| issue.rule == key))
+        .collect();
+    let items: Vec<Value> = matching
+        .iter()
+        .take(MAX_ISSUES)
+        .map(|issue| issue_json(issue, &knowledge.items))
+        .collect();
+    let label = format!(
+        "read_knowledge_issues(novel {novel_id}, {}) → {} xung đột",
+        lang.as_str(),
+        items.len()
+    );
+    Ok(output(Value::Array(items), label))
+}
+
+fn issue_json(issue: &KnowledgeIssue, items: &[KnowledgeItem]) -> Value {
+    let involved: Vec<Value> = issue
+        .ids
+        .iter()
+        .filter_map(|id| items.iter().find(|item| item_id(item) == id))
+        .map(item_json)
+        .collect();
+    json!({
+        "id": issue.id,
+        "rule": issue.rule,
+        "severity": issue.severity,
+        "message": issue.message,
+        "values": issue.values,
+        "items": involved,
+    })
+}
+
+fn item_id(item: &KnowledgeItem) -> &str {
+    match item {
+        KnowledgeItem::Entity(entity) => &entity.id,
+        KnowledgeItem::Fact(fact) => &fact.id,
+    }
+}
+
+fn item_json(item: &KnowledgeItem) -> Value {
+    match item {
+        KnowledgeItem::Entity(entity) => json!({
+            "id": entity.id,
+            "kind": "entity",
+            "type": entity.entity_type,
+            "name": entity.name,
+            "ev": evidence_json(&entity.ev),
+        }),
+        KnowledgeItem::Fact(fact) => json!({
+            "id": fact.id,
+            "kind": "fact",
+            "pred": fact.pred,
+            "subject": fact.subject,
+            "object": fact.object,
+            "ev": evidence_json(&fact.ev),
+        }),
+    }
+}
+
+fn evidence_json(evidence: &[KnowledgeEvidence]) -> Vec<Value> {
+    evidence
+        .iter()
+        .map(|item| json!({ "chapter": item.chapter, "p": item.p, "q": item.q }))
+        .collect()
 }
 
 fn read_translation(
@@ -709,6 +877,22 @@ pub(crate) fn optional_str(args: &Value, key: &str) -> Result<Option<String>, St
             .as_str()
             .map(|text| Some(text.to_string()))
             .ok_or_else(|| format!("argument '{key}' must be a string")),
+    }
+}
+
+pub(crate) fn optional_strings(args: &Value, key: &str) -> Result<Option<Vec<String>>, String> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| format!("argument '{key}' must be an array of strings"))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Some),
+        Some(_) => Err(format!("argument '{key}' must be an array of strings")),
     }
 }
 

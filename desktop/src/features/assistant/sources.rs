@@ -42,6 +42,12 @@ pub trait KnowledgeSource {
         lang: &str,
         edits: Vec<KnowledgeEdit>,
     ) -> Result<KnowledgeEditResult, String>;
+    fn preview(
+        &self,
+        novel_id: i64,
+        lang: &str,
+        edits: Vec<KnowledgeEdit>,
+    ) -> Result<WireKnowledge, String>;
 }
 
 pub trait TranslationSource {
@@ -117,6 +123,15 @@ impl KnowledgeSource for KnowledgeWorkspace {
         edits: Vec<KnowledgeEdit>,
     ) -> Result<KnowledgeEditResult, String> {
         KnowledgeWorkspace::edit(self, novel_id, lang, edits).map_err(|error| error.to_string())
+    }
+
+    fn preview(
+        &self,
+        novel_id: i64,
+        lang: &str,
+        edits: Vec<KnowledgeEdit>,
+    ) -> Result<WireKnowledge, String> {
+        KnowledgeWorkspace::preview(self, novel_id, lang, edits).map_err(|error| error.to_string())
     }
 }
 

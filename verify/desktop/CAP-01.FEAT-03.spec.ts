@@ -4,7 +4,7 @@ import { expect, test, type Ui } from "../scripts/fixtures.ts";
 import { openFromSplash, pickFromSplash, rememberWorkspaces, switchFromMain, switchWorkspace } from "../scripts/flows.ts";
 import { CORRUPT_DATA, NOT_READABLE, UPGRADE_FAILED } from "../scripts/messages.ts";
 import { allowWrite, denyRead } from "../scripts/permissions.ts";
-import { WORKSPACE_DB_FILE, migrationKeys, readWorkspace, seedBlockedUpgrade, seedWorkspace, writeCorruptDatabase } from "../scripts/workspace-db.ts";
+import { WORKSPACE_DB_FILE, migrationKeys, readWorkspace, seedBlockedUpgrade, seedWorkspace, writeCorruptDatabase } from "../scripts/workspaces.ts";
 
 async function expectOpened(ui: Ui, name: string, folder: string, novel: string): Promise<void> {
   await expect(ui.main.workspaceName).toHaveText(name);

@@ -5,6 +5,7 @@ export type PickerAnswer = string | string[] | null;
 interface PickerState {
   queues: Record<string, PickerAnswer[]>;
   calls: Record<string, number>;
+  args: Record<string, unknown>;
 }
 
 interface PickerWindow {
@@ -16,7 +17,7 @@ function wrapFetch(): void {
   if (scope.__dreamyPicks) {
     return;
   }
-  const state: PickerState = { queues: {}, calls: {} };
+  const state: PickerState = { queues: {}, calls: {}, args: {} };
   scope.__dreamyPicks = state;
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
@@ -27,6 +28,7 @@ function wrapFetch(): void {
       return original(input, init);
     }
     state.calls[command] = (state.calls[command] ?? 0) + 1;
+    state.args[command] = typeof init?.body === "string" ? JSON.parse(init.body) : null;
     const queue = state.queues[command] ?? [];
     if (queue.length === 0) {
       const message = JSON.stringify(`unexpected native picker call: ${command}`);
@@ -51,6 +53,10 @@ function readCalls(command: string): number {
   return (window as unknown as PickerWindow).__dreamyPicks?.calls[command] ?? 0;
 }
 
+function readArgs(command: string): unknown {
+  return (window as unknown as PickerWindow).__dreamyPicks?.args[command] ?? null;
+}
+
 export async function installPicker(page: Page): Promise<void> {
   await page.evaluate(wrapFetch);
 }
@@ -64,5 +70,9 @@ export class PickerStub {
 
   calls(command: string): Promise<number> {
     return this.pageOf().evaluate(readCalls, command);
+  }
+
+  lastArgs(command: string): Promise<unknown> {
+    return this.pageOf().evaluate(readArgs, command);
   }
 }

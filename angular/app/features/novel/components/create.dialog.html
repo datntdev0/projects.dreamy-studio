@@ -3,7 +3,7 @@
     <div class="field" data-testid="novel-create-title">
       <label for="nn-title">{{ "novel.form.title" | t }}</label>
       <input #titleInput id="nn-title" class="input" [class.is-invalid]="titleInvalid()" [placeholder]="'novel.form.titlePlaceholder' | t" [value]="form().title" autocomplete="off" data-testid="novel-create-title-input" (input)="onInput('title', $event)" />
-      <p class="field-err" id="nn-err" [hidden]="!titleInvalid()" data-testid="novel-create-title-error">{{ "novel.form.titleRequired" | t }}</p>
+      <p class="field-err" id="nn-err" [hidden]="!titleInvalid()" data-testid="novel-create-title-error">{{ titleErrorKey() | t }}</p>
     </div>
     <div class="field" data-testid="novel-create-name">
       <label for="nn-display">{{ "novel.form.name" | t }}</label>

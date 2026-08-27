@@ -5,7 +5,7 @@ import { expect, test } from "../scripts/fixtures.ts";
 import { openFromSplash, pickFromSplash } from "../scripts/flows.ts";
 import { MISSING_FOLDER, NOT_A_FOLDER, NOT_WRITABLE } from "../scripts/messages.ts";
 import { allowWrite, denyWrite } from "../scripts/permissions.ts";
-import { WORKSPACE_DB_FILE, migrationKeys, readWorkspace, seedWorkspace } from "../scripts/workspace-db.ts";
+import { WORKSPACE_DB_FILE, migrationKeys, readWorkspace, seedWorkspace } from "../scripts/workspaces.ts";
 
 test.describe("CAP-01 Workspace Management", () => {
   test.describe("FEAT-01 Workspace Creation", () => {

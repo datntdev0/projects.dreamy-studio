@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "../scripts/fixtures.ts";
 import { openFromSplash, rememberWorkspaces, switchWorkspace } from "../scripts/flows.ts";
 import { DELETE_WARNING } from "../scripts/messages.ts";
-import { WORKSPACE_DB_FILE } from "../scripts/workspace-db.ts";
+import { WORKSPACE_DB_FILE } from "../scripts/workspaces.ts";
 
 test.describe("CAP-01 Workspace Management", () => {
   test.describe("FEAT-02 Workspace Deletion", () => {

@@ -16,6 +16,18 @@ export class ConfirmDialog {
     return this.page.getByTestId("dialog-host-accept");
   }
 
+  get error(): Locator {
+    return this.page.getByTestId("dialog-host-error");
+  }
+
+  get names(): Locator {
+    return this.page.getByTestId("dialog-host-name");
+  }
+
+  get metas(): Locator {
+    return this.page.getByTestId("dialog-host-meta");
+  }
+
   get cancel(): Locator {
     return this.page.getByTestId("dialog-host-cancel");
   }

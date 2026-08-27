@@ -404,6 +404,7 @@
   "novel.form.title": "Original name",
   "novel.form.titlePlaceholder": "e.g. Late Wind on the Pine Hill",
   "novel.form.titleRequired": "Enter the original name of the work.",
+  "novel.form.titleTooLong": "The original name can have at most 200 characters.",
   "novel.form.titleEmpty": "The original name cannot be empty.",
   "novel.form.duplicateTitle": "A novel with this title already exists. You can still import it, but consider renaming it to tell them apart.",
   "novel.form.name": "Display name",

@@ -404,6 +404,7 @@
   "novel.form.title": "Tên gốc",
   "novel.form.titlePlaceholder": "Ví dụ: Gió Muộn Trên Đồi Thông",
   "novel.form.titleRequired": "Nhập tên gốc của tác phẩm.",
+  "novel.form.titleTooLong": "Tên gốc tối đa 200 ký tự.",
   "novel.form.titleEmpty": "Tên gốc không được để trống.",
   "novel.form.duplicateTitle": "Đã có novel trùng tên này. Bạn vẫn có thể nhập, nhưng nên đổi tên để dễ phân biệt.",
   "novel.form.name": "Tên hiển thị",

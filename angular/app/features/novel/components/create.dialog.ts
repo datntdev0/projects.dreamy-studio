@@ -1,6 +1,7 @@
 import { Component, ElementRef, effect, inject, signal, untracked, viewChild } from "@angular/core";
 import { Button } from "@components/button";
 import { CoreModule } from "@app/core/core.module";
+import { LanguageKey } from "@app/core/language/language.models";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
@@ -10,6 +11,7 @@ import { NOVEL_LANGS } from "../novel.rules";
 import { NOVEL_LANG_KEYS } from "../novel.rules";
 import { toNovelError } from "../novel.rules";
 import { toNovelInput } from "../novel.rules";
+import { titleTooLong } from "../novel.rules";
 import { NovelService } from "../novel.service";
 
 type CreateField = keyof NovelFormValue;
@@ -40,6 +42,7 @@ export class NovelCreateDialog {
   readonly open = this.dialogs.createOpen;
   readonly form = signal<NovelFormValue>({ ...EMPTY_FORM });
   readonly titleInvalid = signal(false);
+  readonly titleErrorKey = signal<LanguageKey>("novel.form.titleRequired");
   readonly busy = signal(false);
   readonly langs: NovelLang[] = NOVEL_LANGS;
 
@@ -75,7 +78,11 @@ export class NovelCreateDialog {
     }
     const value = this.form();
     if (!value.title.trim()) {
-      this.titleInvalid.set(true);
+      this.flagTitle("novel.form.titleRequired");
+      return;
+    }
+    if (titleTooLong(value.title)) {
+      this.flagTitle("novel.form.titleTooLong");
       return;
     }
     this.busy.set(true);
@@ -90,6 +97,11 @@ export class NovelCreateDialog {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private flagTitle(key: LanguageKey): void {
+    this.titleErrorKey.set(key);
+    this.titleInvalid.set(true);
   }
 
   private syncOpen(): void {

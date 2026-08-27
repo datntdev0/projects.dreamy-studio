@@ -26,6 +26,8 @@ export const MAX_TAGS = 12;
 
 export const MAX_TAG_LENGTH = 24;
 
+export const MAX_TITLE_LENGTH = 200;
+
 export const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 export const COVER_MAX_HEIGHT = 640;
@@ -279,6 +281,10 @@ export function isDuplicateTitle(novels: NovelSummary[], title: string): boolean
     return false;
   }
   return novels.some((novel) => novel.title.trim().toLowerCase() === needle);
+}
+
+export function titleTooLong(title: string): boolean {
+  return Array.from(title.trim()).length > MAX_TITLE_LENGTH;
 }
 
 export function toNovelInput(form: NovelFormValue): NovelInput {

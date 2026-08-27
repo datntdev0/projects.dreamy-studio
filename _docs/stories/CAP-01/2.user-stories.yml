@@ -1,0 +1,116 @@
+# User Stories for CAP-01 Workspace Management
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-01
+
+stories:
+  # FEAT-01 Workspace Creation
+  - id: US-0001
+    feat: FEAT-01
+    story: >-
+      Là một content creator, tôi muốn tạo một workspace mới ngay trong ứng dụng để có sẵn nơi lưu
+      trữ tập trung cho các tác phẩm và dự án của mình mà không phải tự dựng thư mục thủ công.
+    acceptance:
+      - given: Tôi đã chọn một vị trí hợp lệ trên máy tính và nhập tên workspace chưa tồn tại.
+        when: Tôi xác nhận tạo workspace.
+        then: Hệ thống tạo đầy đủ cấu trúc thư mục và tệp cần thiết tại vị trí đã chọn.
+      - given: Workspace vừa được tạo thành công.
+        when: Tôi xem danh sách workspace gần đây.
+        then: Workspace mới xuất hiện trong danh sách.
+
+  - id: US-0002
+    feat: FEAT-01
+    story: >-
+      Là một content creator, tôi muốn được báo rõ khi không thể tạo workspace để tôi sửa lại mà
+      không bị mất công hoặc để lại thư mục dở dang trên máy.
+    acceptance:
+      - given: Tên hoặc đường dẫn tôi nhập không hợp lệ.
+        when: Tôi xác nhận tạo workspace.
+        then: Hệ thống từ chối và thông báo lý do; không có thư mục nào được tạo.
+      - given: Tại vị trí đã chọn đã có thư mục hoặc workspace trùng tên.
+        when: Tôi xác nhận tạo workspace.
+        then: Hệ thống từ chối và không ghi đè lên dữ liệu đã có.
+      - given: Việc tạo workspace gặp lỗi giữa chừng, ví dụ không có quyền ghi.
+        when: Hệ thống xử lý lỗi.
+        then: Hệ thống thông báo lỗi cho tôi và không để lại cấu trúc thư mục dở dang.
+
+  # FEAT-02 Workspace Deletion
+  - id: US-0003
+    feat: FEAT-02
+    story: >-
+      Là một content creator, tôi muốn xóa một workspace không còn dùng để giải phóng dung lượng
+      ổ đĩa và giữ danh sách gần đây gọn gàng.
+    acceptance:
+      - given: Tôi chọn xóa một workspace không đang mở và đã xác nhận.
+        when: Hệ thống thực hiện việc xóa.
+        then: Workspace bị xóa khỏi máy tính và khỏi danh sách gần đây.
+
+  - id: US-0004
+    feat: FEAT-02
+    story: >-
+      Là một content creator, tôi muốn được cảnh báo rõ trước khi xóa workspace để tránh mất nhầm
+      dữ liệu, vì nội dung chỉ được lưu cục bộ trên máy tôi.
+    acceptance:
+      - given: Tôi chọn xóa một workspace.
+        when: Hộp thoại xác nhận hiển thị.
+        then: >-
+          Hộp thoại nêu tên và đường dẫn workspace sắp xóa, đồng thời nói rõ việc xóa không thể
+          hoàn tác.
+      - given: Hộp thoại xác nhận xóa đang hiển thị.
+        when: Tôi hủy.
+        then: Workspace và danh sách gần đây không bị thay đổi.
+
+  - id: US-0005
+    feat: FEAT-02
+    story: >-
+      Là một content creator, tôi muốn ứng dụng chặn việc xóa workspace đang mở để không vô tình
+      xóa dữ liệu đang làm việc.
+    acceptance:
+      - given: Workspace đang được mở.
+        when: Tôi cố xóa workspace đó.
+        then: Hệ thống từ chối và giải thích lý do; workspace không bị xóa.
+      - given: Tôi đã đóng hoặc chuyển sang workspace khác.
+        when: Tôi xóa workspace trước đó.
+        then: Hệ thống cho phép xóa sau khi tôi xác nhận.
+
+  # FEAT-03 Workspace Opening
+  - id: US-0006
+    feat: FEAT-03
+    story: >-
+      Là một content creator, tôi muốn chọn và mở một workspace đã có trên máy tính để tiếp tục
+      công việc dang dở.
+    acceptance:
+      - given: >-
+          Tôi chọn một thư mục workspace hợp lệ, từ hộp thoại chọn thư mục hoặc từ danh sách gần
+          đây.
+        when: Tôi xác nhận mở.
+        then: Tôi vào đúng không gian làm việc với dữ liệu và cấu hình của workspace đó.
+
+  - id: US-0007
+    feat: FEAT-03
+    story: >-
+      Là một content creator, tôi muốn ứng dụng kiểm tra thư mục trước khi mở để biết ngay khi thư
+      mục không hợp lệ hoặc không truy cập được, thay vì gặp lỗi khó hiểu về sau.
+    acceptance:
+      - given: Đường dẫn không tồn tại hoặc tôi không có quyền truy cập.
+        when: Tôi xác nhận mở.
+        then: Hệ thống từ chối và thông báo lý do.
+      - given: Thư mục được chọn không đúng cấu trúc workspace.
+        when: Tôi xác nhận mở.
+        then: Hệ thống từ chối và thông báo lý do.
+      - given: Việc mở workspace thất bại.
+        when: Hệ thống hiển thị thông báo lỗi.
+        then: Tôi vẫn ở trạng thái trước đó và không có dữ liệu nào bị thay đổi.
+
+  - id: US-0008
+    feat: FEAT-03
+    story: >-
+      Là một content creator, tôi muốn workspace được chuẩn bị dữ liệu tự động khi mở để dùng được
+      ngay mà không phải xử lý thủ công.
+    acceptance:
+      - given: Workspace cần chuẩn bị dữ liệu trước khi sử dụng.
+        when: Tôi mở workspace đó.
+        then: Hệ thống chuẩn bị dữ liệu cần thiết rồi mới đưa tôi vào không gian làm việc.
+      - given: Việc chuẩn bị dữ liệu thất bại.
+        when: Tôi mở workspace đó.
+        then: Hệ thống thông báo lỗi và không đưa tôi vào workspace ở trạng thái hỏng.

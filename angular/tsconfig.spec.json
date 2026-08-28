@@ -1,0 +1,9 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": ["**/*.ts", "app/core/language/*.json"],
+  "exclude": ["stories/**"]
+}

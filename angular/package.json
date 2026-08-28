@@ -7,7 +7,9 @@
     "build": "ng build",
     "ng": "ng",
     "story": "storybook dev -p 6006",
-    "story:build": "storybook build -o ../_output/storybook"
+    "story:build": "storybook build -o ../_output/storybook",
+    "test": "ng test --watch=false",
+    "test:coverage": "ng test --watch=false --coverage"
   },
   "dependencies": {
     "@angular/common": "^22.0.1",
@@ -37,8 +39,11 @@
     "@types/d3-selection": "^3.0.12",
     "@types/d3-transition": "^3.0.9",
     "@types/d3-zoom": "^3.0.9",
+    "@vitest/coverage-v8": "^5.1.1",
+    "happy-dom": "^21.0.4",
     "sass": "^1.108.1",
     "storybook": "^10.6.7",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.1"
   }
 }

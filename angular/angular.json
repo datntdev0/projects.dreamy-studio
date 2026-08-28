@@ -71,6 +71,19 @@
             }
           },
           "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "buildTarget": "dreamy-studio:build:development",
+            "runner": "vitest",
+            "runnerConfig": "vitest.config.mjs",
+            "include": ["app/**/*.spec.ts", "components/**/*.spec.ts", "layout/**/*.spec.ts"],
+            "coverageInclude": ["app/**/*.ts", "components/**/*.ts", "layout/**/*.ts"],
+            "coverageExclude": ["**/*.spec.ts", "**/*.d.ts"],
+            "coverageReporters": ["lcov"]
+          }
         }
       }
     }

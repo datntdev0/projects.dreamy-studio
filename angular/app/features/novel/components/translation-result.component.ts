@@ -7,6 +7,7 @@ import { novelScope } from "@app/features/assistant/assistant.rules";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../novel.models";
+import { NovelDialogsService } from "../novel.dialogs.service";
 import { NovelService } from "../novel.service";
 import { NOVEL_LANG_KEYS, toNovelError } from "../novel.rules";
 import { ChapterTranslation, PassageState, PassageTranslation, TranslationView, TranslationWarning } from "../novel.translation.models";
@@ -28,6 +29,7 @@ const SAVE_NOTICES: Record<ParagraphSaveResult, LanguageKey | null> = {
 })
 export class NovelTranslationResult {
   private readonly novels = inject(NovelService);
+  private readonly dialogs = inject(NovelDialogsService);
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly translation = inject(NovelTranslationService);
@@ -115,7 +117,7 @@ export class NovelTranslationResult {
   translateThis(): void {
     const chapter = this.chapter();
     if (chapter) {
-      this.translation.goTranslate(this.novelId(), chapter);
+      this.dialogs.openTranslate(this.novelId(), { mode: "range", from: chapter.seq, to: chapter.seq, overwrite: true });
     }
   }
 

@@ -163,19 +163,40 @@ export async function openTranslation(
   return { folder, seeded, novel, novelId: place.id, chapters: place.chapters };
 }
 
-export async function pickChapters(ui: Ui, seqs: readonly number[]): Promise<void> {
-  const rows = ui.main.translation.stepRoot("trans").getByTestId("novel-translation-pipeline-row");
-  for (const seq of seqs) {
-    await rows.nth(seq - 1).getByTestId("novel-translation-pipeline-pick").check();
-  }
-}
-
-export async function translateChapters(ui: Ui, seqs: readonly number[]): Promise<void> {
+export async function openRunDialog(ui: Ui): Promise<void> {
   await goToStep(ui, "trans");
-  await pickChapters(ui, seqs);
   const start = ui.main.translation.root.getByTestId("novel-translation-pipeline-start");
   await expect(start).toBeEnabled();
   await start.click();
+  await expect(ui.main.translation.runDialog.panel).toBeVisible();
+}
+
+export async function reopenRunStep(ui: Ui, app: AppSession, picker: PickerStub, folder: string, novel: string): Promise<void> {
+  await app.restart();
+  await expect(ui.splash.root).toBeVisible();
+  await openFromSplash(ui, picker, folder);
+  await showTranslation(ui, novel);
+  await goToStep(ui, "trans");
+}
+
+export async function translateChapters(ui: Ui, seqs: readonly number[]): Promise<void> {
+  const sorted = [...seqs].sort((left, right) => left - right);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  if (first === undefined || last === undefined || last - first + 1 !== sorted.length) {
+    throw new Error("translateChapters needs a contiguous range of chapters");
+  }
+  const dialog = ui.main.translation.runDialog;
+  await openRunDialog(ui);
+  await dialog.mode("range").click();
+  await dialog.from.fill(String(first));
+  await dialog.from.blur();
+  await dialog.to.fill(String(last));
+  await dialog.to.blur();
+  await dialog.overwrite.check();
+  await expect(dialog.start).toBeEnabled();
+  await dialog.start.click();
+  await expect(dialog.panel).toBeHidden();
 }
 
 export function chapterRow(ui: Ui, seq: number): Locator {
@@ -958,7 +979,8 @@ export const RESULT_UNCHANGED = /^(không có thay đổi\.|no changes\.)$/i;
 
 export const STATUS_NONE = /^(chưa dịch|not translated)$/i;
 export const STATUS_DONE = /^(đã dịch|translated)$/i;
-export const STATUS_RUNNING = /^(đang dịch|translating)$/i;
+export const STATUS_QUEUED = /^(hàng đợi|queued)$/i;
+export const STATUS_RUNNING =/^(đang dịch|translating)$/i;
 
 export const SUMMARY_NONE = /^(không có|none)$/i;
 export const SUMMARY_RUNNING = /đang chạy|running/i;

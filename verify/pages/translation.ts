@@ -12,8 +12,100 @@ const STEP_ROOTS: Readonly<Record<TranslationStep, string>> = {
   warn: "novel-translation-warn",
 };
 
-export class TranslationPage {
+export class TranslationRunDialog {
   constructor(private readonly page: Page) {}
+
+  get panel(): Locator {
+    return this.page.getByTestId("novel-translation-run-panel");
+  }
+
+  get pane(): Locator {
+    return this.page.getByTestId("novel-translation-run-pane");
+  }
+
+  get target(): Locator {
+    return this.page.getByTestId("novel-translation-run-target");
+  }
+
+  get provider(): Locator {
+    return this.page.getByTestId("novel-translation-run-provider");
+  }
+
+  get settings(): Locator {
+    return this.page.getByTestId("novel-translation-run-settings");
+  }
+
+  get modes(): Locator {
+    return this.page.getByTestId("novel-translation-run-modes");
+  }
+
+  get from(): Locator {
+    return this.page.getByTestId("novel-translation-run-from");
+  }
+
+  get to(): Locator {
+    return this.page.getByTestId("novel-translation-run-to");
+  }
+
+  get overwrite(): Locator {
+    return this.page.getByTestId("novel-translation-run-overwrite");
+  }
+
+  get overwriteField(): Locator {
+    return this.page.getByTestId("novel-translation-run-overwrite-field");
+  }
+
+  get summary(): Locator {
+    return this.page.getByTestId("novel-translation-run-summary");
+  }
+
+  get run(): Locator {
+    return this.page.getByTestId("novel-translation-run-run");
+  }
+
+  get keep(): Locator {
+    return this.page.getByTestId("novel-translation-run-keep");
+  }
+
+  get words(): Locator {
+    return this.page.getByTestId("novel-translation-run-words");
+  }
+
+  get noSource(): Locator {
+    return this.page.getByTestId("novel-translation-run-nosource");
+  }
+
+  get busy(): Locator {
+    return this.page.getByTestId("novel-translation-run-busy");
+  }
+
+  get overwriteWarning(): Locator {
+    return this.page.getByTestId("novel-translation-run-overwrite-warn");
+  }
+
+  get flow(): Locator {
+    return this.page.getByTestId("novel-translation-run-flow");
+  }
+
+  get start(): Locator {
+    return this.page.getByTestId("novel-translation-run-start").locator("button");
+  }
+
+  get cancel(): Locator {
+    return this.page.getByTestId("novel-translation-run-cancel");
+  }
+
+  mode(mode: "missing" | "range" | "all"): Locator {
+    return this.page.locator(`[data-testid=novel-translation-run-mode][data-mode=${mode}]`);
+  }
+}
+
+export class TranslationPage {
+  readonly runDialog: TranslationRunDialog;
+
+  constructor(private readonly page: Page) {
+    this.runDialog = new TranslationRunDialog(page);
+  }
 
   get host(): Locator {
     return this.page.getByTestId("editor-translation-host");
@@ -94,14 +186,6 @@ export class TranslationPage {
 
 export class TranslationWorkspacePage {
   constructor(private readonly page: Page) {}
-
-  get picks(): Locator {
-    return this.page.getByTestId("novel-translation-pipeline-pick");
-  }
-
-  get checkedPicks(): Locator {
-    return this.page.locator("[data-testid=novel-translation-pipeline-pick]:checked");
-  }
 
   get rows(): Locator {
     return this.page.getByTestId("novel-translation-pipeline-row");
@@ -220,23 +304,19 @@ export class ChapterTableRow {
   constructor(private readonly root: Locator) {}
 
   get number(): Locator {
-    return this.root.locator("td").nth(1);
+    return this.root.locator("td").nth(0);
   }
 
   get title(): Locator {
-    return this.root.locator("td").nth(2);
+    return this.root.locator("td").nth(1);
   }
 
   get words(): Locator {
-    return this.root.locator("td").nth(3);
+    return this.root.locator("td").nth(2);
   }
 
   get status(): Locator {
     return this.root.getByTestId("novel-translation-pipeline-status");
-  }
-
-  get pick(): Locator {
-    return this.root.getByTestId("novel-translation-pipeline-pick");
   }
 }
 

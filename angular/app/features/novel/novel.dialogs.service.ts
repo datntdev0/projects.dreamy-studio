@@ -1,5 +1,6 @@
 import { Injectable, signal } from "@angular/core";
 import { AnalyzeRequest, KnowledgeAnalyzeRequest, KnowledgeEditRequest, KnowledgeListKind } from "./novel.knowledge.models";
+import { TranslateDialogRequest, TranslateRequest } from "./novel.translation.models";
 
 @Injectable({ providedIn: "root" })
 export class NovelDialogsService {
@@ -8,6 +9,7 @@ export class NovelDialogsService {
   readonly addChapterNovelId = signal<number | null>(null);
   readonly analyze = signal<KnowledgeAnalyzeRequest | null>(null);
   readonly edit = signal<KnowledgeEditRequest | null>(null);
+  readonly translate = signal<TranslateDialogRequest | null>(null);
 
   openCreate(): void {
     this.createOpen.set(true);
@@ -39,6 +41,14 @@ export class NovelDialogsService {
 
   closeAnalyze(): void {
     this.analyze.set(null);
+  }
+
+  openTranslate(novelId: number, preset: Partial<TranslateRequest> = {}): void {
+    this.translate.set({ novelId, preset });
+  }
+
+  closeTranslate(): void {
+    this.translate.set(null);
   }
 
   openEdit(novelId: number, ids: string[], issueId: string | null = null): void {

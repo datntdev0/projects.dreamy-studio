@@ -1,5 +1,5 @@
 import { expect, test } from "../scripts/provider.ts";
-import { openTranslation, pickChapters, goToStep, translateChapters, backToTranslation, chapterRecords, hasTranslationFile, openLatestPipelineLog, runPage, RUN_NOVEL, RUN_TARGET, runSeed, savedChapter, readNovelPlace, PIPELINE_STATUS_CANCELLED, PIPELINE_STATUS_FAILED, PROVIDER_NOT_JSON, PROVIDER_NOT_SET, PROVIDER_WRONG_COUNT, STATUS_DONE, STATUS_NONE, STATUS_RUNNING, taggedCopy } from "../scripts/translation.ts";
+import { openTranslation, openRunDialog, reopenRunStep, goToStep, translateChapters, backToTranslation, chapterRecords, hasTranslationFile, openLatestPipelineLog, runPage, RUN_NOVEL, RUN_TARGET, runSeed, savedChapter, readNovelPlace, PIPELINE_STATUS_CANCELLED, PIPELINE_STATUS_FAILED, PROVIDER_NOT_JSON, PROVIDER_WRONG_COUNT, STATUS_DONE, STATUS_NONE, STATUS_RUNNING, taggedCopy } from "../scripts/translation.ts";
 import { waitForPipeline } from "../scripts/pipeline.ts";
 import { readParagraphs } from "../scripts/workspaces.ts";
 
@@ -7,7 +7,7 @@ const NOTES = { 1: "keep the honorific", 3: "check the blade name" };
 
 test.describe("CAP-03 Content Translation", () => {
   test.describe("FEAT-23 Chapter Translation", () => {
-    test("US-0059 picks chapters from a status list", async ({ ui, picker, sandbox }) => {
+    test("US-0059 lists chapters with their status and plans the chapters to translate", async ({ ui, app, picker, sandbox, provider }) => {
       const { folder } = await openTranslation(ui, picker, sandbox, runSeed([{ chapter: 1 }, { chapter: 2 }]), "trans");
       const run = runPage(ui);
       const records = await chapterRecords(folder);
@@ -44,16 +44,33 @@ test.describe("CAP-03 Content Translation", () => {
         await expect(run.rows).toHaveCount(5);
       });
 
-      await test.step("keeps the Translate button locked until a chapter is picked and then shows the picked count", async () => {
-        await expect(run.start).toBeDisabled();
-        await expect(run.start).not.toContainText("(");
-        await pickChapters(ui, [3, 4]);
+      await test.step("opens the translate dialog from the Translate button and plans the untranslated chapters", async () => {
+        const dialog = ui.main.translation.runDialog;
         await expect(run.start).toBeEnabled();
-        await expect(run.start).toContainText("(2)");
-        await run.rowAt(3).pick.uncheck();
-        await expect(run.start).toContainText("(1)");
-        await run.rowAt(2).pick.uncheck();
-        await expect(run.start).toBeDisabled();
+        await openRunDialog(ui);
+        await expect(dialog.run).toContainText(/3 (chapters|chương)/);
+        await expect(dialog.run).toContainText(/Ch\.3[-–]5/);
+        await expect(dialog.start).toContainText("(3)");
+        await dialog.mode("range").click();
+        await dialog.from.fill("3");
+        await dialog.from.blur();
+        await dialog.to.fill("4");
+        await dialog.to.blur();
+        await expect(dialog.run).toContainText(/2 (chapters|chương)/);
+        await expect(dialog.start).toContainText("(2)");
+        await dialog.cancel.click();
+        await expect(dialog.panel).toBeHidden();
+      });
+
+      await test.step("keeps Start locked while no provider is selected", async () => {
+        await provider.clearSelection(["translation"]);
+        await reopenRunStep(ui, app, picker, folder, RUN_NOVEL);
+        const dialog = ui.main.translation.runDialog;
+        await openRunDialog(ui);
+        await expect(dialog.provider).toHaveAttribute("data-state", "unset");
+        await expect(dialog.start).toBeDisabled();
+        await dialog.cancel.click();
+        await expect(dialog.panel).toBeHidden();
       });
     });
 
@@ -135,17 +152,13 @@ test.describe("CAP-03 Content Translation", () => {
 
       await test.step("shows the reason of each failed task and keeps the chapter untranslated", async () => {
         const scenarios = [
-          { behavior: { mode: "wrong-count" as const }, reason: PROVIDER_WRONG_COUNT, selected: true },
-          { behavior: { mode: "invalid-json" as const }, reason: PROVIDER_NOT_JSON, selected: true },
-          { behavior: { mode: "ok" as const }, reason: PROVIDER_NOT_SET, selected: false },
+          { behavior: { mode: "wrong-count" as const }, reason: PROVIDER_WRONG_COUNT },
+          { behavior: { mode: "invalid-json" as const }, reason: PROVIDER_NOT_JSON },
         ];
         for (const [index, scenario] of scenarios.entries()) {
           const seq = index + 1;
           const id = chapters[seq] ?? "";
           await provider.setBehavior(scenario.behavior);
-          if (!scenario.selected) {
-            await provider.clearSelection(["translation"]);
-          }
           await translateChapters(ui, [seq]);
           const failed = await waitForPipeline(folder, { count: index + 2 });
           expect(failed.status).toBe("failed");

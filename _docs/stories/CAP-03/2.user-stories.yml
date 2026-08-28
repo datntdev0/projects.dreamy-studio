@@ -105,8 +105,8 @@ stories:
   - id: US-0059
     feat: FEAT-23
     story: >-
-      Là một content creator, tôi muốn chọn chương cần dịch từ danh sách có trạng thái để chỉ dịch
-      những chương tôi muốn.
+      Là một content creator, tôi muốn xem trạng thái từng chương và chọn phạm vi dịch trong hộp
+      thoại để chỉ dịch những chương tôi muốn.
     acceptance:
       - given: Novel có chương đã dịch và chưa dịch.
         when: Tôi mở bước Dịch.
@@ -114,24 +114,29 @@ stories:
       - given: Danh sách chương đang hiển thị.
         when: Tôi lọc theo trạng thái hoặc tìm theo tên chương.
         then: Chỉ các chương khớp được hiển thị.
-      - given: Tôi chưa chọn chương nào.
-        when: Tôi xem nút Dịch.
-        then: Nút bị khóa; sau khi chọn chương, nút hiển thị số chương đã chọn và dùng được.
+      - given: Novel có chương chưa dịch.
+        when: Tôi bấm nút Dịch.
+        then: >-
+          Hộp thoại dịch mở với phạm vi mặc định là chương chưa dịch; đổi phạm vi thì tóm tắt và số
+          chương trên nút Bắt đầu dịch cập nhật theo.
+      - given: Chưa có provider sẵn sàng hoặc không có chương nào để dịch.
+        when: Tôi xem nút Bắt đầu dịch.
+        then: Nút bị khóa.
 
   - id: US-0060
     feat: FEAT-23
     story: >-
-      Là một content creator, tôi muốn dịch chương đã chọn và dịch lại chương đã dịch để có bản
-      dịch mới mà không mất ghi chú của tôi.
+      Là một content creator, tôi muốn dịch chương trong phạm vi đã chọn và dịch lại chương đã dịch
+      mà không mất ghi chú của tôi.
     acceptance:
-      - given: Đã cấu hình provider và tôi chọn các chương chưa dịch.
-        when: Tôi bấm Dịch.
+      - given: Đã cấu hình provider và tôi chọn các chương chưa dịch trong hộp thoại.
+        when: Tôi bấm Bắt đầu dịch.
         then: Hệ thống chạy dịch và hiển thị tiến độ của từng chương.
       - given: Quá trình dịch kết thúc thành công.
         when: Tôi xem danh sách chương và bước Kết quả.
         then: Các chương chuyển sang trạng thái đã dịch và bản dịch hiển thị đầy đủ các đoạn.
       - given: Chương đã dịch có ghi chú ở một số đoạn.
-        when: Tôi dịch lại chương đó.
+        when: Tôi dịch lại chương đó với tùy chọn ghi đè.
         then: Nội dung dịch được thay bằng bản mới và các ghi chú đoạn được giữ nguyên.
 
   - id: US-0061
@@ -145,7 +150,7 @@ stories:
         then: >-
           Lần dịch dừng, các tác vụ chưa xong chuyển sang đã hủy và chương chưa xong không có bản
           dịch dở dang.
-      - given: Provider trả kết quả sai (không phải JSON hoặc sai số đoạn) hoặc chưa được chọn.
+      - given: Provider trả kết quả sai (không phải JSON hoặc sai số đoạn).
         when: Lần dịch kết thúc.
         then: Tác vụ lỗi hiển thị lý do và chương đó giữ nguyên trạng thái chưa dịch.
 
@@ -197,15 +202,15 @@ stories:
   - id: US-0065
     feat: FEAT-24
     story: >-
-      Là một content creator, tôi muốn được dẫn thẳng sang bước dịch khi chương chưa có bản dịch để
-      không phải tìm lại chương đó.
+      Là một content creator, tôi muốn mở ngay hộp thoại dịch khi chương chưa có bản dịch để không
+      phải tìm lại chương đó.
     acceptance:
       - given: Chương đang xem ở bước Kết quả chưa có bản dịch.
         when: Hệ thống hiển thị chương.
         then: Tôi thấy thông báo chương chưa có bản dịch kèm nút dịch chương này.
       - given: Tôi đang thấy thông báo chương chưa có bản dịch.
         when: Tôi bấm dịch chương này.
-        then: Hệ thống chuyển sang bước Dịch với đúng chương đó được chọn.
+        then: Hệ thống mở hộp thoại dịch với phạm vi là đúng chương đó.
 
   # FEAT-25 Translation Warnings
   - id: US-0066

@@ -1,6 +1,6 @@
 import { LanguageKey, LanguageParams } from "@app/core/language/language.models";
 import { ChapterRow, NovelLang, TargetLang, TranslationStatus } from "./novel.models";
-import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, PipelineStatus, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
+import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, PipelineStatus, TranslateRequest, TranslateSummary, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
 
 export const TARGET_LANGS: TargetLang[] = ["VI", "EN"];
 export const TRANSLATION_STEPS: TranslationStep[] = ["dict", "guide", "trans", "result", "warn"];
@@ -61,17 +61,19 @@ export const WARNING_KIND_BADGES: Record<WarningKind, string> = {
 export const STATUS_KEYS: Record<TranslationStatus, LanguageKey> = {
   none: "novel.translation.status.none",
   done: "novel.translation.status.done",
+  queued: "novel.translation.status.queued",
   running: "novel.translation.status.running",
 };
 
 export const STATUS_BADGES: Record<TranslationStatus, string> = {
   none: "",
   done: "badge-success",
+  queued: "badge-info",
   running: "badge-running",
 };
 
 export const CHAPTER_ROW_LIMIT = 300;
-export const EMPTY_VIEW: TranslationView = { step: "dict", target: null, seq: 1, picks: [], focus: null, newEntry: false };
+export const EMPTY_VIEW: TranslationView = { step: "dict", target: null, seq: 1, focus: null, newEntry: false };
 
 export function targetsOf(source: NovelLang | undefined): TargetLang[] {
   return TARGET_LANGS.filter((lang) => lang !== source);
@@ -153,9 +155,12 @@ export function reviewCount(warnings: TranslationWarning[]): number {
   return passages.size;
 }
 
-export function chapterStatus(translation: NovelTranslation, chapterId: string, running: string[]): TranslationStatus {
+export function chapterStatus(translation: NovelTranslation, chapterId: string, running: string[], queued: string[]): TranslationStatus {
   if (running.includes(chapterId)) {
     return "running";
+  }
+  if (queued.includes(chapterId)) {
+    return "queued";
   }
   if (!translation.chapters[chapterId]) {
     return "none";
@@ -234,6 +239,24 @@ export function rangeText(numbers: number[]): string {
     start = end + 1;
   }
   return parts.join(", ");
+}
+
+export function planTranslation(chapters: ChapterRow[], translated: Record<string, ChapterTranslation>, busy: string[], request: TranslateRequest): TranslateSummary {
+  const inRange = request.mode === "range" ? chapters.filter((row) => row.seq >= request.from && row.seq <= request.to) : chapters;
+  const overwrite = request.mode !== "missing" && request.overwrite;
+  const wanted = overwrite ? inRange : inRange.filter((row) => translated[row.id] === undefined);
+  const noSource = wanted.filter((row) => row.wordCount <= 0);
+  const waiting = wanted.filter((row) => row.wordCount > 0 && busy.includes(row.id));
+  const run = wanted.filter((row) => row.wordCount > 0 && !busy.includes(row.id));
+  return {
+    run: run.map((row) => row.seq),
+    runIds: run.map((row) => row.id),
+    keep: inRange.filter((row) => !wanted.includes(row)).map((row) => row.seq),
+    overwrite: run.filter((row) => translated[row.id] !== undefined).map((row) => row.seq),
+    noSource: noSource.map((row) => row.seq),
+    busy: waiting.map((row) => row.seq),
+    missing: chapters.filter((row) => translated[row.id] === undefined).map((row) => row.seq),
+  };
 }
 
 export function warningReason(warning: TranslationWarning, dict: DictEntry[]): { key: LanguageKey; params: LanguageParams } {

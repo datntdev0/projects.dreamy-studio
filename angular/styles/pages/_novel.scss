@@ -114,6 +114,7 @@ app-novel-list, app-novel-explorer, app-novel-library-panel { display: contents;
 .ch-st.is-success { color: var(--success); opacity: 1; }
 .ch-st.is-info { color: var(--info); opacity: 1; }
 .ch-st.is-warning { color: var(--warning); opacity: 1; }
+.ch-st.is-queued { color: var(--secondary); opacity: 0.6; }
 .ch-st.is-running { color: var(--secondary); opacity: 1; animation: pulse 1.4s ease-in-out infinite; }
 .dict-draft-cell { display: flex; align-items: center; gap: var(--sp-xs); }
 .dict-draft-cell .input { flex: 1; min-width: 0; }

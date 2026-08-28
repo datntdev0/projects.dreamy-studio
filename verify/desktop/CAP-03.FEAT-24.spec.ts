@@ -139,7 +139,7 @@ test.describe("CAP-03 Content Translation", () => {
       });
     });
 
-    test("US-0065 offers to translate a chapter that has no translation and opens the Translate step on it", async ({ ui, picker, sandbox, app }) => {
+    test("US-0065 offers to translate a chapter that has no translation and opens the translate dialog on it", async ({ ui, picker, sandbox, app }) => {
       await openTranslation(ui, picker, sandbox, REVIEW_SEED);
       const result = await openResult(ui, app);
       await result.jump.selectOption("3");
@@ -152,16 +152,16 @@ test.describe("CAP-03 Content Translation", () => {
         await expect(result.pairs).toHaveCount(0);
       });
 
-      await test.step("switches to the Translate step with that chapter selected", async () => {
+      await test.step("opens the translate dialog planned on that chapter", async () => {
+        const dialog = ui.main.translation.runDialog;
         await result.translateThis.click();
 
-        await expect(ui.main.translation.step("trans")).toHaveAttribute("aria-current", "true");
-        await expect(ui.main.translation.stepRoot("trans")).toBeVisible();
-        const rows = ui.main.translation.stepRoot("trans").getByTestId("novel-translation-pipeline-row");
-        await expect(rows.nth(2).getByTestId("novel-translation-pipeline-pick")).toBeChecked();
-        await expect(rows.nth(0).getByTestId("novel-translation-pipeline-pick")).not.toBeChecked();
-        await expect(rows.nth(1).getByTestId("novel-translation-pipeline-pick")).not.toBeChecked();
-        await expect(ui.main.translation.root.getByTestId("novel-translation-pipeline-start")).toContainText("(1)");
+        await expect(dialog.panel).toBeVisible();
+        await expect(dialog.mode("range")).toHaveClass(/is-on/);
+        await expect(dialog.from).toHaveValue("3");
+        await expect(dialog.to).toHaveValue("3");
+        await expect(dialog.run).toContainText(/Ch\.3(?!\d)/);
+        await expect(dialog.start).toContainText("(1)");
       });
     });
   });

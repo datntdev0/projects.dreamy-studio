@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
 import { DesktopIpcService } from "@app/core/desktop/desktop-ipc.service";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { ChapterRow, NovelError, ParagraphSaveResult, TargetLang, TranslationStatus } from "./novel.models";
+import { NovelError, ParagraphSaveResult, TargetLang, TranslationStatus } from "./novel.models";
 import { NovelService } from "./novel.service";
 import { clampSeq, normalizeParagraphText, toNovelError } from "./novel.rules";
 import { DictChange, DictDraft, NovelTranslation, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, TranslationStep, TranslationView, TranslationWarning, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
@@ -46,6 +46,7 @@ export class NovelTranslationService {
   private readonly views = signal<Record<number, TranslationView>>({});
   private readonly activePipelines = signal<PipelineSnapshot[]>([]);
   private workspacePath: string | null | undefined = undefined;
+  private tickets: Record<string, number> = {};
 
   readonly loading = signal(false);
   readonly error = signal<NovelError | null>(null);
@@ -80,6 +81,16 @@ export class NovelTranslationService {
     return progress;
   }
 
+  queuedOf(novelId: number, target: TargetLang = this.targetOf(novelId)): string[] {
+    const queued: string[] = [];
+    for (const pipeline of this.running()) {
+      if (pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND && pipeline.target === target) {
+        this.collectQueued(pipeline, queued);
+      }
+    }
+    return queued;
+  }
+
   isTranslating(novelId: number): boolean {
     return this.running().some((pipeline) => pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND);
   }
@@ -90,7 +101,7 @@ export class NovelTranslationService {
 
 
   statusOf(novelId: number, chapterId: string, target: TargetLang = this.targetOf(novelId)): TranslationStatus {
-    return chapterStatus(this.of(novelId, target), chapterId, Object.keys(this.progressOf(novelId, target)));
+    return chapterStatus(this.of(novelId, target), chapterId, Object.keys(this.progressOf(novelId, target)), this.queuedOf(novelId, target));
   }
 
   reviewCountOf(novelId: number): number {
@@ -116,7 +127,7 @@ export class NovelTranslationService {
   }
 
   setTarget(novelId: number, target: TargetLang): void {
-    this.patchView(novelId, { target, picks: [], seq: 1 });
+    this.patchView(novelId, { target, seq: 1 });
     void this.ensure(novelId, target);
   }
 
@@ -124,13 +135,19 @@ export class NovelTranslationService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const wire = await this.ipc.invoke<WireTranslation>("translation_get", { novelId, target });
-      await this.novels.loadChapters(novelId);
-      this.storeTranslation(novelId, target, fromWireTranslation(wire, this.novels.chaptersOf(novelId)));
+      await this.fetch(novelId, target);
     } catch (cause) {
       this.error.set(toNovelError(cause));
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async refresh(novelId: number, target: TargetLang): Promise<void> {
+    try {
+      await this.fetch(novelId, target);
+    } catch (cause) {
+      this.error.set(toNovelError(cause));
     }
   }
 
@@ -140,20 +157,6 @@ export class NovelTranslationService {
 
   setSeq(novelId: number, seq: number): void {
     this.patchView(novelId, { seq: clampSeq(seq, this.novels.chaptersOf(novelId).length) });
-  }
-
-  setPicks(novelId: number, picks: string[]): void {
-    this.patchView(novelId, { picks });
-  }
-
-  pickChapter(novelId: number, chapterId: string, on: boolean): void {
-    const rest = this.viewOf(novelId).picks.filter((id) => id !== chapterId);
-    this.setPicks(novelId, on ? [...rest, chapterId] : rest);
-  }
-
-  goTranslate(novelId: number, chapter: ChapterRow): void {
-    const picks = this.viewOf(novelId).picks.filter((id) => id !== chapter.id);
-    this.patchView(novelId, { step: "trans", seq: chapter.seq, picks: [...picks, chapter.id] });
   }
 
   focusPassage(novelId: number, seq: number, n: number | null): void {
@@ -247,13 +250,12 @@ export class NovelTranslationService {
     this.storeChapter(novelId, target, chapterId, chapter);
   }
 
-  async translate(novelId: number, chapterIds: string[]): Promise<void> {
+  async translate(novelId: number, chapterIds: string[], target: TargetLang = this.targetOf(novelId)): Promise<void> {
     const tasks: TaskRequest[] = [];
     for (const chapterId of chapterIds) {
       tasks.push({ chapterId, passage: null });
     }
-    this.setPicks(novelId, []);
-    await this.startPipeline(novelId, this.targetOf(novelId), tasks);
+    await this.startPipeline(novelId, target, tasks);
   }
 
   async retranslate(novelId: number, warningId: string): Promise<void> {
@@ -287,17 +289,34 @@ export class NovelTranslationService {
     this.store.set({});
     this.views.set({});
     this.activePipelines.set([]);
+    this.tickets = {};
     this.loading.set(false);
     this.error.set(null);
   }
 
+  private async fetch(novelId: number, target: TargetLang): Promise<void> {
+    const key = storeKey(novelId, target);
+    const ticket = (this.tickets[key] ?? 0) + 1;
+    this.tickets[key] = ticket;
+    const wire = await this.ipc.invoke<WireTranslation>("translation_get", { novelId, target });
+    await this.novels.loadChapters(novelId);
+    if (this.tickets[key] === ticket) {
+      this.storeTranslation(novelId, target, fromWireTranslation(wire, this.novels.chaptersOf(novelId)));
+    }
+  }
+
   private collectProgress(pipeline: PipelineSnapshot, progress: Record<string, number>): void {
     for (const task of pipeline.tasks) {
-      if (task.status === "queued") {
-        progress[task.chapterId] ??= 0;
-      }
       if (task.status === "running") {
         progress[task.chapterId] = task.progress;
+      }
+    }
+  }
+
+  private collectQueued(pipeline: PipelineSnapshot, queued: string[]): void {
+    for (const task of pipeline.tasks) {
+      if (task.status === "queued" && !queued.includes(task.chapterId)) {
+        queued.push(task.chapterId);
       }
     }
   }
@@ -317,15 +336,32 @@ export class NovelTranslationService {
       return;
     }
     if (event.type === "task") {
-      this.activePipelines.set(this.running().map((pipeline) => this.withTask(pipeline, event.pipelineId, event.task)));
+      this.applyTask(event.pipelineId, event.task);
       return;
     }
-    this.activePipelines.set(this.running().filter((pipeline) => pipeline.id !== event.pipeline.id));
-    if (event.pipeline.kind === ANALYSIS_KIND) {
-      this.finished.set(event.pipeline);
+    void this.finishPipeline(event.pipeline);
+  }
+
+  private applyTask(pipelineId: number, task: PipelineTask): void {
+    const owner = this.running().find((pipeline) => pipeline.id === pipelineId);
+    this.activePipelines.set(this.running().map((pipeline) => this.withTask(pipeline, pipelineId, task)));
+    if (owner && owner.kind !== ANALYSIS_KIND && task.status === "completed") {
+      void this.refresh(owner.novelId, owner.target as TargetLang);
+    }
+  }
+
+  private async finishPipeline(pipeline: PipelineSnapshot): Promise<void> {
+    if (pipeline.kind === ANALYSIS_KIND) {
+      this.removePipeline(pipeline.id);
+      this.finished.set(pipeline);
       return;
     }
-    void this.load(event.pipeline.novelId, event.pipeline.target as TargetLang);
+    await this.refresh(pipeline.novelId, pipeline.target as TargetLang);
+    this.removePipeline(pipeline.id);
+  }
+
+  private removePipeline(pipelineId: number): void {
+    this.activePipelines.set(this.running().filter((pipeline) => pipeline.id !== pipelineId));
   }
 
   private withSnapshot(pipeline: PipelineSnapshot, next: PipelineSnapshot): PipelineSnapshot {

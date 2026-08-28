@@ -7,7 +7,7 @@
   </select>
   <span class="t-sm t-mute" data-testid="novel-translation-pipeline-count">{{ "novel.translation.trans.count" | t: { count: count(matching().length) } }}</span>
   <span class="spacer"></span>
-  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}@if (view().picks.length) { ({{ view().picks.length }}) }</button>
+  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}</button>
   @if (translation.isTranslating(novelId())) {
     <button type="button" class="btn btn-sm" data-testid="novel-translation-pipeline-cancel" (click)="cancel()">{{ "novel.translation.trans.cancel" | t }}</button>
   }
@@ -16,7 +16,6 @@
   <table class="table" data-testid="novel-translation-pipeline-table">
     <thead>
       <tr>
-        <th class="chk"><input type="checkbox" data-testid="novel-translation-pipeline-pick-all" [checked]="allPicked()" [attr.aria-label]="'novel.translation.trans.pickAll' | t" (change)="onPickAll($event)"></th>
         <th>#</th>
         <th>{{ "novel.translation.trans.col.chapter" | t }}</th>
         <th class="num">{{ "novel.translation.trans.col.words" | t }}</th>
@@ -26,8 +25,7 @@
     </thead>
     <tbody>
       @for (row of shown(); track row.id) {
-        <tr data-testid="novel-translation-pipeline-row" [class.is-selected]="isPicked(row)">
-          <td class="chk"><input type="checkbox" data-testid="novel-translation-pipeline-pick" [checked]="isPicked(row)" [disabled]="hasProgress(row)" [attr.aria-label]="'novel.translation.trans.pick' | t: { n: row.seq }" (change)="onPick(row, $event)"></td>
+        <tr data-testid="novel-translation-pipeline-row">
           <td class="mono t-mute">{{ numberOf(row) }}</td>
           <td class="t-ink">{{ row.title }}</td>
           <td class="num">{{ count(row.wordCount) }}</td>
@@ -40,7 +38,7 @@
         </tr>
       }
       @if (matching().length > shown().length) {
-        <tr><td colspan="6" class="t-sm t-mute pad">{{ "novel.translation.trans.more" | t: { shown: limit, total: count(matching().length) } }}</td></tr>
+        <tr><td colspan="5" class="t-sm t-mute pad">{{ "novel.translation.trans.more" | t: { shown: limit, total: count(matching().length) } }}</td></tr>
       }
     </tbody>
   </table>

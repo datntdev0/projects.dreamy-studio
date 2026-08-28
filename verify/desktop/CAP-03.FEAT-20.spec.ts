@@ -1,5 +1,5 @@
 import { expect, test } from "../scripts/fixtures.ts";
-import { goToStep, openTranslation, pickChapters, selectTarget, showTranslation, EMPTY_NOVEL, EMPTY_TITLE, EN_NOVEL, STEP_LABELS, SUMMARY_DICT_ONE, SUMMARY_DICT_TWO, SUMMARY_GUIDE_EMPTY, SUMMARY_GUIDE_WRITTEN, SUMMARY_REVIEWED, SUMMARY_TRANS, SUMMARY_WARN_NONE, TARGET_LABELS, VI_NOVEL, ZH_NOVEL, workspacePage, workspaceSeed } from "../scripts/translation.ts";
+import { goToStep, openTranslation, selectTarget, showTranslation, EMPTY_NOVEL, EMPTY_TITLE, EN_NOVEL, STEP_LABELS, SUMMARY_DICT_ONE, SUMMARY_DICT_TWO, SUMMARY_GUIDE_EMPTY, SUMMARY_GUIDE_WRITTEN, SUMMARY_REVIEWED, SUMMARY_TRANS, SUMMARY_WARN_NONE, TARGET_LABELS, VI_NOVEL, ZH_NOVEL, workspacePage, workspaceSeed } from "../scripts/translation.ts";
 import { TRANSLATION_STEPS } from "../pages/translation.ts";
 
 test.describe("CAP-03 Content Translation", () => {
@@ -35,16 +35,13 @@ test.describe("CAP-03 Content Translation", () => {
         await expect(translation.targetOptions).toHaveText([TARGET_LABELS.VI]);
       });
 
-      await test.step("unselects the chosen chapters and shows the summaries of the new target when the target changes", async () => {
+      await test.step("shows the summaries of the new target when the target changes", async () => {
         await showTranslation(ui, ZH_NOVEL);
         await expect(translation.title).toContainText(ZH_NOVEL);
         await goToStep(ui, "trans");
-        await pickChapters(ui, [1, 3]);
-        await expect(extra.checkedPicks).toHaveCount(2);
 
         await selectTarget(ui, "EN");
 
-        await expect(extra.checkedPicks).toHaveCount(0);
         await expect(extra.rows).toHaveCount(3);
         await expect(translation.stepSummary("dict")).toHaveText(SUMMARY_DICT_ONE);
         await expect(translation.stepSummary("guide")).toHaveText(SUMMARY_GUIDE_EMPTY);

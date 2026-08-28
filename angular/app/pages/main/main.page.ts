@@ -7,6 +7,7 @@ import { NovelCreateDialog } from "@app/features/novel/components/create.dialog"
 import { NovelChapterAddDialog } from "@app/features/novel/components/chapter-add.dialog";
 import { NovelImportDialog } from "@app/features/novel/components/import.dialog";
 import { NovelKnowledgeAnalyzeDialog } from "@app/features/novel/components/knowledge-analyze.dialog";
+import { NovelTranslationRunDialog } from "@app/features/novel/components/translation-run.dialog";
 import { NovelKnowledgeEditDialog } from "@app/features/novel/components/knowledge-edit.dialog";
 import { ProjectCreateDialog } from "@app/features/project/components/create.dialog";
 import { LibraryCollectionDialog } from "@app/features/library/components/collection.dialog";
@@ -26,7 +27,7 @@ const APP_TITLE = "Dreamy Studio";
 @Component({
   selector: "app-main-page",
   standalone: true,
-  imports: [CoreModule, LayoutModule, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelChapterAddDialog, NovelImportDialog, NovelKnowledgeAnalyzeDialog, NovelKnowledgeEditDialog, ProjectCreateDialog, LibraryCollectionDialog, LibraryImagePreviewDialog, LibrarySoundPreviewDialog, LibraryVideoPreviewDialog, LibraryPromptPreviewDialog, LibraryUploadDialog],
+  imports: [CoreModule, LayoutModule, SettingsDialog, SwitchWorkspaceDialog, NovelCreateDialog, NovelChapterAddDialog, NovelImportDialog, NovelKnowledgeAnalyzeDialog, NovelTranslationRunDialog, NovelKnowledgeEditDialog, ProjectCreateDialog, LibraryCollectionDialog, LibraryImagePreviewDialog, LibrarySoundPreviewDialog, LibraryVideoPreviewDialog, LibraryPromptPreviewDialog, LibraryUploadDialog],
   templateUrl: "./main.page.html",
 })
 export class MainPage {

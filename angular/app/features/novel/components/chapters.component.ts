@@ -30,6 +30,7 @@ type StatusView = { tone: string; title: LanguageKey };
 const TRANSLATION_VIEWS: Record<TranslationStatus, StatusView> = {
   none: { tone: "none", title: "novel.chapters.translation.none" },
   done: { tone: "success", title: "novel.chapters.translation.done" },
+  queued: { tone: "queued", title: "novel.chapters.translation.queued" },
   running: { tone: "running", title: "novel.chapters.translation.running" },
 };
 

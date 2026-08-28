@@ -301,10 +301,10 @@ features:
     caps: [CAP-03]
     status: done
     description: >-
-      Cho phép người dùng chọn một hoặc nhiều chương (lọc theo trạng thái, tìm theo tên) và dịch
-      sang ngôn ngữ đích bằng provider đã cấu hình. Tiến độ được theo dõi theo từng chương, có thể
-      hủy khi đang chạy; chương đã dịch được dịch lại và giữ ghi chú đoạn; tác vụ lỗi hiển thị lý
-      do và không ghi bản dịch dở dang.
+      Cho phép người dùng xem trạng thái từng chương (chưa dịch, hàng đợi, đang dịch, đã dịch) và
+      dịch sang ngôn ngữ đích qua hộp thoại dịch (chương chưa dịch, khoảng chương hoặc tất cả).
+      Tiến độ cập nhật realtime theo từng chương, có thể hủy khi đang chạy; chương đã dịch được dịch
+      lại và giữ ghi chú đoạn; tác vụ lỗi hiển thị lý do và không ghi bản dịch dở dang.
 
   - id: FEAT-24
     name: Translation Review
@@ -313,7 +313,7 @@ features:
     description: >-
       Cho phép người dùng đối chiếu song song bản gốc và bản dịch theo chương, lọc các đoạn cần rà
       soát, sửa bản dịch từng đoạn (không được để trống), ghi chú cho đoạn, và chuyển từ chương
-      chưa dịch sang bước dịch.
+      chưa dịch sang hộp thoại dịch.
 
   - id: FEAT-25
     name: Translation Warnings

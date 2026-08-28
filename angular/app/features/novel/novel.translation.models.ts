@@ -6,6 +6,7 @@ export type PassageState = "ok" | "review";
 export type WarningKind = "source" | "dict";
 export type WarningFilter = "all" | "source" | "dict";
 export type ChapterFilter = "all" | "none" | "done";
+export type TranslateMode = "missing" | "range" | "all";
 
 export interface DictEntry {
   id: number;
@@ -52,9 +53,30 @@ export interface TranslationView {
   step: TranslationStep;
   target: TargetLang | null;
   seq: number;
-  picks: string[];
   focus: number | null;
   newEntry: boolean;
+}
+
+export interface TranslateRequest {
+  mode: TranslateMode;
+  from: number;
+  to: number;
+  overwrite: boolean;
+}
+
+export interface TranslateSummary {
+  run: number[];
+  runIds: string[];
+  keep: number[];
+  overwrite: number[];
+  noSource: number[];
+  busy: number[];
+  missing: number[];
+}
+
+export interface TranslateDialogRequest {
+  novelId: number;
+  preset: Partial<TranslateRequest>;
 }
 
 export interface DictChange {

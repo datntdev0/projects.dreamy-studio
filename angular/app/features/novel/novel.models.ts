@@ -37,7 +37,7 @@ export interface NovelPatch {
   tags?: string[];
 }
 
-export type TranslationStatus = "none" | "done" | "running";
+export type TranslationStatus = "none" | "queued" | "running" | "done";
 
 export type AnalysisStatus = "none" | "done" | "stale" | "running";
 

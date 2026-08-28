@@ -1,8 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
+import { AssistantPage } from "./assistant.ts";
 import { ConfirmDialog, SwitchDialog } from "./dialogs.ts";
 import { KnowledgePage } from "./knowledge.ts";
 import { LibraryNav } from "./library.ts";
 import { PipelinesNav } from "./pipeline.ts";
+import { ProjectPages } from "./project.ts";
+import { SettingsPage } from "./settings.ts";
 import { TranslationPage } from "./translation.ts";
 import { AddChapterDialog, DisplayPanel, NovelChapters, NovelCreateDialog, NovelExplorer, NovelImportDialog, NovelList, NovelPanel, NovelReader } from "./novels.ts";
 
@@ -22,6 +25,9 @@ export class MainPage {
   readonly translation: TranslationPage;
   readonly knowledge: KnowledgePage;
   readonly pipelines: PipelinesNav;
+  readonly assistant: AssistantPage;
+  readonly settings: SettingsPage;
+  readonly project: ProjectPages;
 
   constructor(private readonly page: Page) {
     this.switchDialog = new SwitchDialog(page);
@@ -39,6 +45,9 @@ export class MainPage {
     this.translation = new TranslationPage(page);
     this.knowledge = new KnowledgePage(page);
     this.pipelines = new PipelinesNav(page);
+    this.assistant = new AssistantPage(page);
+    this.settings = new SettingsPage(page);
+    this.project = new ProjectPages(page);
   }
 
   get root(): Locator {

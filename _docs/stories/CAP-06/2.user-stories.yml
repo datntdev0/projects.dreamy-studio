@@ -1,0 +1,209 @@
+# User Stories for CAP-06 Project Management
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-06
+
+stories:
+  # FEAT-31 Project Creation
+  - id: US-0089
+    feat: FEAT-31
+    story: >-
+      Là một content creator, tôi muốn tạo project từ một template để bắt đầu công việc sản xuất mà
+      không phải dựng thư mục thủ công.
+    acceptance:
+      - given: Tôi mở hộp thoại tạo project.
+        when: Tôi xem danh sách template.
+        then: >-
+          Tôi thấy ba template là audiobook, filmseries và dự án trống, mỗi template có mô tả ngắn.
+      - given: Hộp thoại tạo project đang mở và tên project để trống.
+        when: Tôi bấm tạo.
+        then: Hệ thống báo cần nhập tên project và không tạo project.
+      - given: Tôi đã nhập tên project và chọn template.
+        when: Tôi bấm tạo.
+        then: >-
+          Hệ thống thông báo đã tạo project, project xuất hiện trong danh mục và thư mục project
+          được tạo trong workspace.
+
+  - id: US-0090
+    feat: FEAT-31
+    story: >-
+      Là một content creator, tôi muốn gắn project với một novel và đúng phiên bản văn bản để
+      project luôn làm việc trên nội dung tôi đã chọn.
+    acceptance:
+      - given: Workspace có novel.
+        when: Tôi chọn novel nguồn trong hộp thoại tạo project.
+        then: >-
+          Tôi chọn được phiên bản bản gốc và mặc định dùng tất cả chương của novel.
+      - given: Tôi đã chọn novel nguồn.
+        when: Tôi nhập khoảng chương bắt đầu sau chương kết thúc hoặc ngoài số chương của novel.
+        then: Hệ thống báo phạm vi chương không hợp lệ và không tạo project.
+      - given: Tôi chọn khoảng chương hợp lệ.
+        when: Tôi tạo project.
+        then: Project hiển thị novel nguồn, phiên bản văn bản và khoảng chương đã chọn.
+      - given: Hộp thoại tạo project đang mở và novel nguồn đã bị xóa trước khi tôi bấm tạo.
+        when: Tôi bấm tạo.
+        then: Hệ thống báo không tìm thấy novel nguồn và không tạo project.
+
+  # FEAT-32 Project Browsing
+  - id: US-0091
+    feat: FEAT-32
+    story: >-
+      Là một content creator, tôi muốn xem danh mục project để nắm các project đang có trong
+      workspace.
+    acceptance:
+      - given: Workspace có project.
+        when: Tôi mở danh mục project.
+        then: >-
+          Tôi thấy project dạng lưới kèm template, trạng thái, nguồn nội dung và tổng số project.
+      - given: Danh mục đang ở dạng lưới.
+        when: Tôi chuyển sang dạng danh sách.
+        then: Project hiển thị dạng bảng với các cột project, loại, trạng thái và cập nhật.
+      - given: Workspace chưa có project.
+        when: Tôi mở danh mục project.
+        then: Hệ thống hiển thị trạng thái trống kèm nút tạo project.
+
+  - id: US-0092
+    feat: FEAT-32
+    story: >-
+      Là một content creator, tôi muốn tìm, sắp xếp và lọc project để nhanh chóng thấy project cần
+      làm.
+    acceptance:
+      - given: Workspace có nhiều project.
+        when: Tôi tìm theo một phần tên hoặc mô tả.
+        then: Chỉ project khớp được hiển thị và số lượng cập nhật theo.
+      - given: Workspace có project thuộc nhiều template và cả project đã lưu trữ.
+        when: Tôi lọc theo template hoặc trạng thái.
+        then: Chỉ project thuộc bộ lọc được hiển thị kèm thẻ lọc có thể gỡ từng cái.
+      - given: Workspace có nhiều project.
+        when: Tôi sắp xếp theo gần nhất hoặc theo tên.
+        then: Project xếp theo thứ tự đã chọn và project đã lưu trữ luôn xếp sau.
+      - given: Tìm kiếm hoặc bộ lọc không khớp project nào.
+        when: Tôi xem danh mục.
+        then: Hệ thống báo không tìm thấy project phù hợp và có nút xóa bộ lọc.
+
+  - id: US-0093
+    feat: FEAT-32
+    story: >-
+      Là một content creator, tôi muốn xem nhanh thông tin project và mở project để bắt đầu làm
+      việc.
+    acceptance:
+      - given: Danh mục có project.
+        when: Tôi chọn một project.
+        then: >-
+          Bảng chi tiết hiển thị mã, loại, trạng thái, nguồn, thư mục, ngày tạo và ngày cập nhật.
+      - given: Tôi đã chọn một project.
+        when: Tôi bấm mở hoặc nhấp đúp vào project.
+        then: Project mở trong một tab riêng với các mục Tệp và Cài đặt.
+
+  # FEAT-33 Project Information Management
+  - id: US-0094
+    feat: FEAT-33
+    story: >-
+      Là một content creator, tôi muốn đổi tên và mô tả project để thông tin luôn đúng với công
+      việc.
+    acceptance:
+      - given: Tôi mở mục Cài đặt của project.
+        when: Tôi đổi tên hoặc mô tả và lưu.
+        then: Thông tin mới hiển thị ở tab project, danh mục và bảng chi tiết.
+      - given: Tôi đang sửa tên project.
+        when: Tôi để trống tên và lưu.
+        then: Hệ thống báo cần nhập tên project và giữ nguyên tên cũ.
+      - given: Tôi đã đổi tên project.
+        when: Tôi xem thư mục project.
+        then: Đường dẫn thư mục không đổi.
+
+  - id: US-0095
+    feat: FEAT-33
+    story: >-
+      Là một content creator, tôi muốn đặt ảnh bìa cho project để nhận ra project nhanh hơn.
+    acceptance:
+      - given: Project chưa có ảnh bìa.
+        when: Tôi xem project.
+        then: Hệ thống hiển thị biểu tượng thay thế theo template.
+      - given: Tôi chọn một ảnh hợp lệ.
+        when: Tôi đổi ảnh bìa.
+        then: Ảnh bìa hiển thị ở danh mục và bảng chi tiết, hệ thống thông báo đã đổi ảnh bìa.
+      - given: Tôi chọn tệp không phải ảnh hợp lệ hoặc ảnh quá lớn.
+        when: Tôi đổi ảnh bìa.
+        then: Hệ thống báo lý do và giữ nguyên ảnh bìa hiện tại.
+      - given: Project đã có ảnh bìa.
+        when: Tôi xóa ảnh bìa.
+        then: Ảnh bìa bị gỡ, biểu tượng thay thế hiển thị lại và hệ thống thông báo đã xóa.
+
+  - id: US-0096
+    feat: FEAT-33
+    story: >-
+      Là một content creator, tôi muốn lưu trữ project đã xong để danh mục gọn hơn mà không mất
+      tệp.
+    acceptance:
+      - given: Project đang làm.
+        when: Tôi lưu trữ project.
+        then: >-
+          Project có trạng thái lưu trữ, xếp sau các project đang làm và toàn bộ tệp được giữ
+          nguyên.
+      - given: Project đã lưu trữ.
+        when: Tôi khôi phục project.
+        then: Project trở lại trạng thái đang làm.
+
+  - id: US-0097
+    feat: FEAT-33
+    story: >-
+      Là một content creator, tôi muốn biết nguồn nội dung của project để chắc project gắn đúng
+      phiên bản văn bản.
+    acceptance:
+      - given: Project gắn với novel.
+        when: Tôi xem mục Cài đặt.
+        then: >-
+          Tôi thấy novel, phiên bản văn bản, khoảng chương và ghi chú project gắn với phiên bản đã
+          chọn lúc tạo.
+      - given: Project không gắn novel.
+        when: Tôi xem thông tin project.
+        then: Hệ thống hiển thị không gắn novel.
+      - given: Novel nguồn của project đã bị xóa.
+        when: Tôi xem thông tin project.
+        then: Hệ thống báo novel nguồn đã bị xóa.
+
+  # FEAT-34 Project Deletion
+  - id: US-0098
+    feat: FEAT-34
+    story: >-
+      Là một content creator, tôi muốn xóa project không còn dùng và được cảnh báo rõ hậu quả để
+      không xóa nhầm.
+    acceptance:
+      - given: Tôi chọn xóa một project.
+        when: Hộp thoại xác nhận mở.
+        then: >-
+          Hộp thoại nêu tên project, cảnh báo thư mục và mọi thứ bên trong bị xóa không thể hoàn tác
+          và nêu rõ thư viện cùng novel nguồn không bị ảnh hưởng.
+      - given: Hộp thoại xác nhận đang mở.
+        when: Tôi hủy.
+        then: Project và thư mục của project giữ nguyên.
+      - given: Hộp thoại xác nhận đang mở.
+        when: Tôi xác nhận xóa.
+        then: >-
+          Project biến mất khỏi danh mục, thư mục project bị xóa, hệ thống thông báo đã xóa và tài
+          nguyên trong thư viện cùng novel nguồn vẫn còn.
+
+  # FEAT-35 Project Folder Browsing
+  - id: US-0099
+    feat: FEAT-35
+    story: >-
+      Là một content creator, tôi muốn xem các tệp trong thư mục project ngay trong ứng dụng để
+      biết project đã tạo ra những gì.
+    acceptance:
+      - given: Project có thư mục và tệp bên trong.
+        when: Tôi mở mục Tệp của project.
+        then: Tôi thấy cây thư mục, thư mục xếp trước tệp và mở rộng được từng thư mục.
+      - given: Thư mục project thay đổi từ bên ngoài ứng dụng.
+        when: Tôi bấm làm mới tệp.
+        then: Cây thư mục hiển thị nội dung mới nhất.
+
+  - id: US-0100
+    feat: FEAT-35
+    story: >-
+      Là một content creator, tôi muốn mở thư mục project bằng trình quản lý tệp của hệ điều hành để
+      làm việc với tệp bên ngoài ứng dụng.
+    acceptance:
+      - given: Tôi đang xem một project.
+        when: Tôi bấm mở thư mục.
+        then: Trình quản lý tệp của hệ điều hành mở đúng thư mục của project.

@@ -86,11 +86,44 @@ function probeKind() {
   if ((args[0] === "auth" && args[1] === "status") || (args[0] === "login" && args[1] === "status")) {
     return "status";
   }
+  if ((args[0] === "auth" && args[1] === "login") || (args.length === 1 && args[0] === "login")) {
+    return "login";
+  }
+  if ((args[0] === "auth" && args[1] === "logout") || (args.length === 1 && args[0] === "logout")) {
+    return "logout";
+  }
   return null;
 }
 
+function runAuth(kind) {
+  const profile = process.env.CLAUDE_CONFIG_DIR ?? process.env.CODEX_HOME ?? "";
+  appendFileSync(join(stateDir, "auth.jsonl"), `${JSON.stringify({ action: kind, profile, at: new Date().toISOString() })}\n`);
+  if (kind === "logout") {
+    writeFileSync(join(stateDir, "auth.json"), JSON.stringify({ signedIn: false }));
+    process.exit(0);
+  }
+  const release = join(stateDir, "login.release");
+  const timer = setInterval(() => {
+    if (existsSync(release)) {
+      clearInterval(timer);
+      rmSync(release, { force: true });
+      writeFileSync(join(stateDir, "auth.json"), JSON.stringify({ signedIn: true }));
+      process.exit(0);
+    }
+    if (!parentAlive()) {
+      process.exit(1);
+    }
+  }, PARENT_POLL_MS);
+}
+
 function runProbe(kind, behavior) {
+  if (kind === "login" || kind === "logout") {
+    runAuth(kind);
+    return;
+  }
   const probe = behavior.probe ?? "ok";
+  const auth = readJson(join(stateDir, "auth.json"), null);
+  const signedOut = auth === null ? probe === "signed-out" : auth.signedIn === false;
   const codex = args[0] === "login";
   const index = withLock(() => {
     logLine({ event: "start", kind: "probe", probe: kind, args, at: new Date().toISOString() });
@@ -104,7 +137,7 @@ function runProbe(kind, behavior) {
     process.stdout.write("9.9.9 (Stub CLI)\n", () => finish(index, 0, {}));
     return;
   }
-  if (probe === "signed-out") {
+  if (signedOut) {
     process.stderr.write("not signed in", () => finish(index, 1, {}));
     return;
   }
@@ -130,6 +163,9 @@ function sessionOf() {
 }
 
 function purposeOf(prompt) {
+  if (args.includes("--mcp-config") || args.some((value) => value.startsWith("mcp_servers.dreamy"))) {
+    return "assistant";
+  }
   if (prompt.startsWith("You are a professional literary translator")) {
     return "translation";
   }
@@ -140,6 +176,84 @@ function purposeOf(prompt) {
     return "candidates";
   }
   return "unknown";
+}
+
+function parseAssistant(prompt) {
+  const marker = "\n## Question\n";
+  const at = prompt.lastIndexOf(marker);
+  let question = prompt.split("\n\n(If you cite")[0].trim();
+  if (at >= 0) {
+    const tail = prompt.slice(at + marker.length);
+    const end = tail.indexOf("\n## Skill:");
+    question = (end < 0 ? tail : tail.slice(0, end)).trim();
+  }
+  const skill = /## Skill: (\w+)/.exec(prompt);
+  return { question, skill: skill ? skill[1] : null };
+}
+
+function assistantEndpoint() {
+  const file = option("--mcp-config");
+  const config = file === null ? {} : readJson(file, {});
+  return config.mcpServers?.dreamy?.url ?? null;
+}
+
+function toolValue(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function callTool(call, index, position) {
+  const url = assistantEndpoint();
+  const token = process.env.DREAMY_MCP_TOKEN ?? "";
+  const body = { jsonrpc: "2.0", id: position + 1, method: "tools/call", params: { name: call.name, arguments: call.arguments ?? {} } };
+  let outcome = { isError: true, text: "the assistant endpoint is not configured" };
+  if (url !== null) {
+    try {
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+      const payload = await response.json();
+      outcome = { isError: payload.result?.isError ?? true, text: payload.result?.content?.[0]?.text ?? payload.error?.message ?? "" };
+    } catch (error) {
+      outcome = { isError: true, text: String(error) };
+    }
+  }
+  appendFileSync(join(stateDir, "tools.jsonl"), `${JSON.stringify({ index, name: call.name, arguments: call.arguments ?? {}, isError: outcome.isError, text: outcome.text })}\n`);
+  return toolValue(outcome.text);
+}
+
+function lookup(value, path) {
+  let current = value;
+  for (const key of path.split(".")) {
+    if (current === undefined || current === null) {
+      return "";
+    }
+    current = key === "length" && Array.isArray(current) ? current.length : current[key];
+  }
+  if (current === undefined || current === null) {
+    return "";
+  }
+  return typeof current === "object" ? JSON.stringify(current) : String(current);
+}
+
+function fillText(template, results) {
+  return template.replace(/\{\{(\d+)\.([^}]+)\}\}/g, (_, at, path) => lookup(results[Number(at)], path));
+}
+
+function replyMatches(item, parsed) {
+  const asked = item.ask === undefined || norm(parsed.question).includes(norm(item.ask));
+  return asked && (item.skill === undefined || item.skill === parsed.skill);
+}
+
+async function assistantReply(parsed, behavior, index) {
+  const replies = behavior.assistant?.replies ?? [];
+  const found = replies.find((item) => replyMatches(item, parsed)) ?? {};
+  const results = [];
+  for (const [position, call] of (found.tools ?? []).entries()) {
+    results.push(await callTool(call, index, position));
+  }
+  return { text: fillText(found.text ?? "Stub assistant reply.", results), delayMs: found.delayMs };
 }
 
 function between(text, start, end) {
@@ -348,6 +462,9 @@ function reply(context, mode, behavior) {
   if (context.purpose === "facts") {
     return factsReply(context.parsed, mode, behavior);
   }
+  if (context.purpose === "assistant") {
+    return context.reply.text;
+  }
   return JSON.stringify({ paragraphs: [] });
 }
 
@@ -428,8 +545,10 @@ function contextOf(prompt, session) {
   } else if (purpose === "facts") {
     parsed = parseFacts(source);
     titles = [parsed.title];
+  } else if (purpose === "assistant") {
+    parsed = parseAssistant(prompt);
   }
-  return { purpose, parsed, titles, source };
+  return { purpose, parsed, titles, source, reply: null };
 }
 
 async function runCall(behavior) {
@@ -467,7 +586,10 @@ async function runCall(behavior) {
     finish(index, 1, {});
     return;
   }
-  await wait(action.delayMs, index);
+  if (context.purpose === "assistant" && action.mode !== "fail-exit") {
+    context.reply = await assistantReply(context.parsed, behavior, index);
+  }
+  await wait(context.reply?.delayMs ?? action.delayMs, index);
   if (action.mode === "fail-exit") {
     process.stderr.write(action.stderr, () => finish(index, action.exitCode, {}));
     return;
@@ -495,7 +617,7 @@ mkdirSync(stateDir, { recursive: true });
 const behavior = readJson(join(stateDir, "behavior.json"), {});
 const kind = probeKind();
 if (kind !== null) {
-  runProbe(kind, behavior);
+  setTimeout(() => runProbe(kind, behavior), behavior.probeDelayMs ?? 0);
 } else {
   runCall(behavior);
 }

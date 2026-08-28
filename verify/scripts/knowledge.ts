@@ -164,6 +164,7 @@ export async function showKnowledge(ui: Ui, novel: string, lang?: "src" | "VI" |
     await ui.main.explorer.novel(novel).click();
   }
   await knowledgeEntry(ui, novel).click();
+  await expect(ui.main.knowledge.tab.filter({ hasText: novel })).toHaveAttribute("aria-selected", "true");
   await expect(ui.main.knowledge.host).toBeVisible();
   await expect(ui.main.knowledge.root).toBeVisible();
   if (lang !== undefined) {

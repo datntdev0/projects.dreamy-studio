@@ -11,7 +11,7 @@ const POLL_MS = 100;
 
 export type ProviderId = "claude" | "codex";
 export type ProviderFeature = "translation" | "knowledge" | "assistant";
-export type ProviderPurpose = "translation" | "candidates" | "facts" | "unknown";
+export type ProviderPurpose = "translation" | "candidates" | "facts" | "assistant" | "unknown";
 
 export type ProviderMode =
   | "ok"
@@ -62,6 +62,23 @@ export interface ProviderAnalysis {
   readonly facts?: readonly ProviderFact[];
 }
 
+export interface ProviderToolCall {
+  readonly name: string;
+  readonly arguments?: Readonly<Record<string, unknown>>;
+}
+
+export interface ProviderAssistantReply {
+  readonly ask?: string;
+  readonly skill?: string;
+  readonly tools?: readonly ProviderToolCall[];
+  readonly text?: string;
+  readonly delayMs?: number;
+}
+
+export interface ProviderAssistant {
+  readonly replies?: readonly ProviderAssistantReply[];
+}
+
 export interface ProviderBehavior {
   readonly mode?: ProviderMode;
   readonly delayMs?: number;
@@ -74,6 +91,7 @@ export interface ProviderBehavior {
   readonly probe?: "ok" | "signed-out" | "broken";
   readonly translation?: { readonly tag?: boolean; readonly dictionary?: boolean };
   readonly analysis?: ProviderAnalysis;
+  readonly assistant?: ProviderAssistant;
 }
 
 export interface FeatureOptions {
@@ -112,6 +130,14 @@ export interface ProviderCall {
   readonly finished: boolean;
   readonly exitCode: number | null;
   readonly aborted: boolean;
+}
+
+export interface ProviderToolResult {
+  readonly index: number;
+  readonly name: string;
+  readonly arguments: Readonly<Record<string, unknown>>;
+  readonly isError: boolean;
+  readonly text: string;
 }
 
 interface RawEntry {
@@ -235,6 +261,7 @@ export async function resetProviderCalls(sandbox: Sandbox): Promise<void> {
   const dir = providerDir(sandbox);
   await rm(join(dir, "calls.jsonl"), { force: true });
   await rm(join(dir, "runs.count"), { force: true });
+  await rm(join(dir, "tools.jsonl"), { force: true });
   await rm(join(dir, "sessions"), { recursive: true, force: true });
 }
 
@@ -281,6 +308,18 @@ export async function providerCalls(sandbox: Sandbox): Promise<ProviderCall[]> {
   return entries.filter((entry) => entry.event === "start").map((entry, position) => toCall(entry, ends, position));
 }
 
+export async function providerTools(sandbox: Sandbox): Promise<ProviderToolResult[]> {
+  try {
+    const text = await readFile(join(providerDir(sandbox), "tools.jsonl"), "utf8");
+    return text
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((line) => JSON.parse(line) as ProviderToolResult);
+  } catch {
+    return [];
+  }
+}
+
 export async function runCalls(sandbox: Sandbox, purpose?: ProviderPurpose): Promise<ProviderCall[]> {
   const calls = await providerCalls(sandbox);
   return calls.filter((call) => call.kind === "run" && (purpose === undefined || call.purpose === purpose));
@@ -320,6 +359,10 @@ export class ProviderStub {
 
   calls(): Promise<ProviderCall[]> {
     return providerCalls(this.sandbox);
+  }
+
+  tools(): Promise<ProviderToolResult[]> {
+    return providerTools(this.sandbox);
   }
 
   runs(purpose?: ProviderPurpose): Promise<ProviderCall[]> {

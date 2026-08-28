@@ -371,3 +371,140 @@ features:
       quan hệ, liên kết nhân dạng, tham chiếu treo, trùng thực thể, bằng chứng không khớp văn bản và
       nguồn đã đổi sau khi phân tích. Xung đột lọc được theo quy tắc và có thao tác sửa nhanh (gộp,
       chuyển nhân dạng, tạo nhân vật, xóa, giữ nguyên, phân tích lại).
+
+  - id: FEAT-31
+    name: Project Creation
+    caps: [CAP-06]
+    status: done
+    description: >-
+      Cho phép người dùng tạo project mới trong workspace từ một template (audiobook, filmseries
+      hoặc dự án trống). Tên project bắt buộc; mô tả tùy chọn. Project có thể gắn với một novel,
+      chọn phiên bản văn bản (hiện là bản gốc) và khoảng chương, trong phạm vi số chương của
+      novel. Mỗi project có thư mục riêng đặt theo id; nếu tạo thất bại thì không để lại dữ liệu dở
+      dang.
+
+  - id: FEAT-32
+    name: Project Browsing
+    caps: [CAP-06]
+    status: done
+    description: >-
+      Hiển thị danh mục project dạng lưới hoặc bảng kèm số lượng theo loại và trạng thái. Người
+      dùng tìm theo tên hoặc mô tả, sắp xếp theo gần nhất hoặc tên, lọc theo loại và trạng thái
+      (đang làm, lưu trữ), xem nhanh thông tin project ở bảng chi tiết và mở project; project đã
+      lưu trữ xếp sau, danh sách trống hoặc không khớp bộ lọc có hướng dẫn.
+
+  - id: FEAT-33
+    name: Project Information Management
+    caps: [CAP-06]
+    status: done
+    description: >-
+      Cho phép người dùng đổi tên và mô tả project (tên không được để trống), đổi hoặc xóa ảnh bìa,
+      lưu trữ project để ẩn khỏi các bộ lọc thường dùng và khôi phục lại. Thư mục project không đổi
+      khi đổi tên; project gắn với đúng phiên bản văn bản đã chọn khi tạo và hiển thị rõ khi novel
+      nguồn đã bị xóa.
+
+  - id: FEAT-34
+    name: Project Deletion
+    caps: [CAP-06]
+    status: done
+    description: >-
+      Cho phép người dùng xóa project đang chọn sau khi xác nhận. Hộp thoại nêu rõ project
+      sắp xóa, cảnh báo thư mục project và mọi thứ bên trong bị xóa khỏi máy tính và không thể hoàn
+      tác, đồng thời nêu rõ tài nguyên trong thư viện và novel nguồn không bị ảnh hưởng.
+
+  - id: FEAT-35
+    name: Project Folder Browsing
+    caps: [CAP-06]
+    status: done
+    description: >-
+      Cho phép người dùng xem cây thư mục của project ngay trong ứng dụng (thư mục xếp trước, làm
+      mới được) và mở thư mục project bằng trình quản lý tệp của hệ điều hành.
+
+  - id: FEAT-36
+    name: Assistant Sessions
+    caps: [CAP-11]
+    status: done
+    description: >-
+      Cho phép người dùng mở phiên chat mới với Assistant trong phạm vi toàn workspace hoặc một
+      novel, đổi phạm vi khi bắt đầu, xem lịch sử chat (tìm theo nội dung, lọc theo phạm vi, nhóm
+      theo thời gian), mở lại phiên cũ để tiếp tục và xóa phiên sau khi xác nhận. Phiên được lưu
+      trong workspace; xóa phiên không hoàn tác các chỉnh sửa đã áp dụng vào novel.
+
+  - id: FEAT-37
+    name: Assistant Q&A
+    caps: [CAP-11]
+    status: done
+    description: >-
+      Cho phép người dùng đặt câu hỏi cho Assistant về novel, chương, bản dịch, từ điển và tri thức
+      trong phạm vi của phiên. Assistant chạy qua provider đã cấu hình cho chức năng Trợ lý, chỉ đọc
+      dữ liệu workspace qua các công cụ cục bộ, hiển thị trạng thái đang trả lời cùng số thao tác đã
+      chạy; lỗi gửi tin nhắn được báo rõ kèm lý do.
+
+  - id: FEAT-38
+    name: Assistant Editing Permission
+    caps: [CAP-11]
+    status: done
+    description: >-
+      Mặc định Assistant chỉ đọc. Người dùng bật quyền chỉnh sửa riêng cho từng phiên sau khi xác
+      nhận cảnh báo; khi được bật, Assistant có thể sửa thông tin novel, chương và tri thức theo
+      lệnh, dữ liệu liên quan trong ứng dụng được làm mới, và người dùng tắt lại quyền bất kỳ lúc
+      nào.
+
+  - id: FEAT-39
+    name: Assistant Translation Review
+    caps: [CAP-11]
+    status: done
+    description: >-
+      Cho phép người dùng nhờ Assistant rà soát một chương đã dịch về tên riêng, từ điển, nghĩa, câu
+      bị sót và văn phong. Kết quả là các vấn đề phân theo mức độ kèm đoạn hiện tại và đề xuất sửa,
+      hoặc đề xuất thêm vào từ điển; người dùng áp dụng hoặc bỏ qua từng đề xuất hay tất cả, đề xuất
+      không còn áp dụng được sẽ được báo rõ.
+
+  - id: FEAT-40
+    name: Assistant Knowledge Fixes
+    caps: [CAP-11]
+    status: done
+    description: >-
+      Cho phép người dùng nhờ Assistant đề xuất cách sửa các xung đột trong tri thức của novel.
+      Đề xuất gồm nhiều thao tác (gộp, đổi tên, đổi loại, thêm hoặc xóa thực thể và fact, thuộc
+      tính, bằng chứng) được kiểm tra cùng nhau với ontology và quy tắc nhất quán trước khi áp dụng
+      một lần; người dùng xem trước số xung đột được giải quyết hoặc phát sinh rồi áp dụng hoặc bỏ
+      qua.
+
+  - id: FEAT-41
+    name: General Settings
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Cho phép người dùng mở hộp thoại Cài đặt để đổi ngôn ngữ giao diện và giao diện sáng hoặc
+      tối, áp dụng ngay và đồng bộ với nút đổi giao diện trên thanh tiêu đề. Cài đặt được lưu khi
+      thay đổi, chỉ nằm trên máy này, và người dùng mở nhanh thư mục workspace hoặc thư mục dữ liệu
+      ứng dụng.
+
+  - id: FEAT-42
+    name: LLM CLI Providers
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Cho phép người dùng kết nối các CLI LLM đã cài trên máy. Ứng dụng tự quét CLI khi mở
+      workspace, cho nhập đường dẫn thủ công, chạy mỗi CLI trong profile đăng nhập riêng của ứng
+      dụng, hướng dẫn đăng nhập hoặc đăng xuất, kiểm tra kết nối và hiển thị trạng thái (chưa cài,
+      chưa đăng nhập, sẵn sàng, lỗi). Dịch vụ cloud dùng API key chưa được hỗ trợ.
+
+  - id: FEAT-43
+    name: LLM Feature Configuration
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Cho phép người dùng chọn provider, model, mức effort (thấp, trung bình, cao) và tham số bổ
+      sung riêng cho từng chức năng dùng LLM (dịch thuật, tri thức, trợ lý). Chỉ liệt kê CLI hỗ trợ
+      chức năng đó; để trống thì dùng mặc định của CLI.
+
+  - id: FEAT-44
+    name: Pipeline Concurrency Settings
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Cho phép người dùng cấu hình số pipeline chạy đồng thời (1-5) và số task chạy song song trên
+      toàn ứng dụng (1-10). Pipeline hoặc task vượt giới hạn chờ trong hàng đợi; giá trị áp dụng
+      cho các lần chạy tiếp theo.

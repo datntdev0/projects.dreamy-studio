@@ -1,0 +1,158 @@
+# User Stories for CAP-12 Configuration
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-12
+
+stories:
+  # FEAT-41 General Settings
+  - id: US-0112
+    feat: FEAT-41
+    story: >-
+      Là một content creator, tôi muốn đổi ngôn ngữ và giao diện sáng tối để ứng dụng dễ dùng với
+      tôi.
+    acceptance:
+      - given: Tôi mở hộp thoại Cài đặt.
+        when: Tôi xem các mục.
+        then: >-
+          Tôi thấy các mục General, LLM providers, Python backend, Local TTS models và Speech
+          providers.
+      - given: Tôi đang ở mục General.
+        when: Tôi đổi ngôn ngữ giao diện.
+        then: Toàn bộ ứng dụng đổi ngôn ngữ ngay và lựa chọn được giữ khi mở lại ứng dụng.
+      - given: Tôi đang ở mục General.
+        when: Tôi đổi giao diện sáng hoặc tối.
+        then: >-
+          Giao diện đổi ngay, nút đổi giao diện trên thanh tiêu đề khớp theo và lựa chọn được giữ
+          khi mở lại ứng dụng.
+      - given: Tôi mở mục chưa có thiết lập như Python backend.
+        when: Tôi xem mục đó.
+        then: Hệ thống báo mục này sẽ được bổ sung trong phiên bản sau.
+
+  - id: US-0113
+    feat: FEAT-41
+    story: >-
+      Là một content creator, tôi muốn mở nhanh thư mục workspace và thư mục dữ liệu ứng dụng để tự
+      sao lưu hoặc kiểm tra.
+    acceptance:
+      - given: Tôi đang mở một workspace và ở mục General.
+        when: Tôi bấm mở thư mục workspace.
+        then: Trình quản lý tệp của hệ điều hành mở đúng thư mục workspace.
+      - given: Tôi đang ở mục General.
+        when: Tôi bấm mở thư mục dữ liệu ứng dụng.
+        then: Trình quản lý tệp của hệ điều hành mở thư mục dữ liệu của ứng dụng.
+      - given: Không mở được thư mục.
+        when: Tôi bấm mở.
+        then: Hệ thống báo không mở được thư mục.
+
+  # FEAT-42 LLM CLI Providers
+  - id: US-0114
+    feat: FEAT-42
+    story: >-
+      Là một content creator, tôi muốn ứng dụng nhận ra các CLI LLM đã cài trên máy để dùng mà không
+      phải cấu hình phức tạp.
+    acceptance:
+      - given: Máy đã cài một số CLI LLM.
+        when: Tôi mở mục LLM providers.
+        then: Mỗi CLI hiển thị đã tìm thấy kèm đường dẫn và trạng thái.
+      - given: Một CLI chưa cài hoặc không có trong PATH.
+        when: Tôi xem CLI đó.
+        then: >-
+          Hệ thống báo chưa cài, hướng dẫn cài CLI và cho nhập đường dẫn file chạy bằng tay.
+      - given: Tôi nhập đường dẫn file chạy của CLI.
+        when: Tôi bấm dùng đường dẫn này.
+        then: Ứng dụng dùng đường dẫn đó và cập nhật trạng thái của CLI.
+      - given: Tôi xem mục dịch vụ cloud.
+        when: Tôi mở các provider dùng API key.
+        then: Hệ thống báo tính năng sắp ra mắt và không cho dùng.
+
+  - id: US-0115
+    feat: FEAT-42
+    story: >-
+      Là một content creator, tôi muốn đăng nhập CLI trong profile riêng của ứng dụng để không lẫn
+      với phiên tôi dùng ở terminal.
+    acceptance:
+      - given: CLI đã cài nhưng profile của ứng dụng chưa đăng nhập.
+        when: Tôi xem CLI đó.
+        then: >-
+          Hệ thống báo chưa đăng nhập, hướng dẫn đăng nhập và cho mở thư mục profile của ứng dụng.
+      - given: CLI chưa cài.
+        when: Tôi xem bước đăng nhập.
+        then: Bước đăng nhập bị khóa kèm yêu cầu cài CLI trước và không có nút đăng nhập.
+      - given: CLI đã cài và chưa đăng nhập.
+        when: Tôi bấm đăng nhập.
+        then: >-
+          Terminal mở để hoàn tất đăng nhập, trạng thái hiển thị đang chờ rồi tự cập nhật khi xong.
+      - given: CLI đã đăng nhập.
+        when: Tôi bấm đăng xuất.
+        then: Profile của ứng dụng bị đăng xuất và trạng thái trở lại chưa đăng nhập.
+
+  - id: US-0116
+    feat: FEAT-42
+    story: >-
+      Là một content creator, tôi muốn kiểm tra CLI chạy được để biết sẵn sàng trước khi dịch hoặc
+      phân tích.
+    acceptance:
+      - given: CLI đã cài và đăng nhập.
+        when: Tôi bấm kiểm tra.
+        then: >-
+          Hệ thống hiển thị đang chạy lệnh rồi báo thành công kèm thời gian phản hồi và thời điểm
+          kiểm tra.
+      - given: Lệnh kiểm tra thất bại.
+        when: Tôi xem kết quả.
+        then: Hệ thống báo kiểm tra thất bại kèm lý do và trạng thái lỗi.
+      - given: Tôi vừa lưu đường dẫn mới cho CLI.
+        when: Việc kiểm tra tự động chưa xong.
+        then: Hệ thống báo chưa kiểm tra cho đến khi kiểm tra xong.
+
+  # FEAT-43 LLM Feature Configuration
+  - id: US-0117
+    feat: FEAT-43
+    story: >-
+      Là một content creator, tôi muốn chọn provider cho từng chức năng để dùng đúng công cụ cho
+      dịch thuật, tri thức và trợ lý.
+    acceptance:
+      - given: Tôi mở mục chức năng của LLM providers.
+        when: Tôi xem danh sách.
+        then: Tôi thấy ba chức năng dịch thuật, tri thức và trợ lý, mỗi chức năng có mô tả ngắn.
+      - given: Một chức năng chưa chọn provider.
+        when: Tôi xem chức năng đó.
+        then: Provider hiển thị chưa chọn.
+      - given: Chưa có CLI nào hỗ trợ chức năng được cài đặt.
+        when: Tôi mở danh sách provider của chức năng đó.
+        then: Hệ thống báo chưa có CLI hỗ trợ chức năng này.
+      - given: Có CLI hỗ trợ chức năng.
+        when: Tôi chọn provider.
+        then: Lựa chọn được lưu và dùng cho lần chạy tiếp theo của chức năng đó.
+
+  - id: US-0118
+    feat: FEAT-43
+    story: >-
+      Là một content creator, tôi muốn chỉnh model, effort và tham số của từng chức năng để cân bằng
+      chất lượng, tốc độ và chi phí.
+    acceptance:
+      - given: Chức năng đã chọn provider.
+        when: Tôi nhập model, chọn effort thấp, trung bình hoặc cao và nhập tham số bổ sung.
+        then: Các giá trị được lưu và hiển thị lại khi mở lại hộp thoại.
+      - given: Tôi để trống model, effort hoặc tham số bổ sung.
+        when: Chức năng chạy.
+        then: Ứng dụng dùng mặc định của CLI cho phần để trống.
+      - given: Tôi chọn provider Claude.
+        when: Tôi nhập model.
+        then: Tôi thấy gợi ý model opus, sonnet và haiku.
+
+  # FEAT-44 Pipeline Concurrency Settings
+  - id: US-0119
+    feat: FEAT-44
+    story: >-
+      Là một content creator, tôi muốn giới hạn số pipeline và task chạy cùng lúc để máy không quá
+      tải và chi phí provider dễ kiểm soát.
+    acceptance:
+      - given: Tôi đang ở mục General.
+        when: Tôi đổi số pipeline chạy đồng thời hoặc số task chạy song song.
+        then: Giá trị được lưu ngay và giữ khi mở lại ứng dụng.
+      - given: Cài đặt có số pipeline ngoài khoảng 1 đến 5 hoặc số task ngoài khoảng 1 đến 10.
+        when: Tôi mở Cài đặt hoặc lưu giá trị.
+        then: Hệ thống đưa giá trị về giới hạn gần nhất.
+      - given: Số pipeline đang chạy đã đạt giới hạn.
+        when: Tôi bắt đầu thêm một pipeline.
+        then: Pipeline mới chờ trong hàng đợi và tự chạy khi còn chỗ.

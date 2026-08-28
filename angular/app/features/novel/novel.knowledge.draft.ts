@@ -448,9 +448,12 @@ function factComplete(ontology: Ontology, fact: KnowledgeFact, entities: Set<str
   return kind === "relationship" ? subject && fact.object !== null && entities.has(fact.object) : subject;
 }
 
+export function typeRefused(entity: KnowledgeEntity): boolean {
+  return entity.type !== "persona" && (entity.titles.length > 0 || entity.aliases.length > 0);
+}
+
 function entityComplete(entity: KnowledgeEntity): boolean {
-  const hasProps = entity.titles.length > 0 || entity.aliases.length > 0;
-  return entity.name.trim().length > 0 && (entity.type === "persona" || !hasProps);
+  return entity.name.trim().length > 0 && !typeRefused(entity);
 }
 
 export function isIncomplete(ontology: Ontology, current: KnowledgeItem[], scope: Set<string>, edits: KnowledgeEdit[]): boolean {

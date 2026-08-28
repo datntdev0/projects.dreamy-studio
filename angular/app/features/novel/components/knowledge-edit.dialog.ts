@@ -2,12 +2,12 @@ import { NgTemplateOutlet } from "@angular/common";
 import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguageKey } from "@app/core/language/language.models";
+import { LanguageKey, LanguageParams } from "@app/core/language/language.models";
 import { CoreModule } from "@app/core/core.module";
 import { LanguageService } from "@app/core/language/language.service";
 import { ToastService } from "@app/core/toast/toast.service";
 import { NovelDialogsService } from "../novel.dialogs.service";
-import { ItemDraftPatch, applyEdits, blankEntity, blankFact, cloneItem, createdItems, describeEdit, isPresent, isIncomplete, itemState, previewOf, scopeOf, withCreated, withDelete, withPatch, withoutDelete } from "../novel.knowledge.draft";
+import { ItemDraftPatch, applyEdits, blankEntity, blankFact, cloneItem, createdItems, describeEdit, isPresent, isIncomplete, itemState, previewOf, scopeOf, typeRefused, withCreated, withDelete, withPatch, withoutDelete } from "../novel.knowledge.draft";
 import { DraftPreview, EntityType, EntityTypeDef, EvidenceRef, ItemState, KnowledgeEdit, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeListKind, PredicateDef } from "../novel.knowledge.models";
 import { NovelKnowledgeService } from "../novel.knowledge.service";
 import { chaptersOfItem, entitiesOf, factText, isEntity, isFact, mapOf } from "../novel.knowledge.rules";
@@ -139,6 +139,10 @@ export class NovelKnowledgeEditDialog {
     return PREVIEW_ICONS[this.preview().state];
   }
 
+  typeRefused(entity: KnowledgeEntity): boolean {
+    return typeRefused(entity);
+  }
+
   previewKey(): LanguageKey {
     return `novel.knowledge.edit.preview.${this.preview().state}`;
   }
@@ -201,7 +205,7 @@ export class NovelKnowledgeEditDialog {
     if (!entity || entity.type === type) {
       return;
     }
-    this.patch(key, type === PERSONA_TYPE || entity.type !== PERSONA_TYPE ? { type } : { type, titles: [], aliases: [] });
+    this.patch(key, { type });
   }
 
   onEnd(key: string, field: "subject" | "object", event: Event): void {
@@ -343,8 +347,8 @@ export class NovelKnowledgeEditDialog {
     }
   }
 
-  private text(key: LanguageKey): string {
-    return this.languageService.translate(key);
+  private text(key: LanguageKey, params?: LanguageParams): string {
+    return this.languageService.translate(key, params);
   }
 
   private itemOf(key: string): KnowledgeItem | undefined {

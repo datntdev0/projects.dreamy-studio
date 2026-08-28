@@ -1511,6 +1511,7 @@
   ,"novel.knowledge.edit.related": "Related"
   ,"novel.knowledge.edit.chapters": "Ch.{range}"
   ,"novel.knowledge.edit.name.required": "Enter a name."
+  ,"novel.knowledge.edit.type.refused": "A persona with titles or aliases cannot change type. Remove its titles and aliases first."
   ,"novel.knowledge.edit.field.name": "Name"
   ,"novel.knowledge.edit.field.type": "Type"
   ,"novel.knowledge.edit.field.ev": "evidence"

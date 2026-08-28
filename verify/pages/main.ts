@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { ConfirmDialog, SwitchDialog } from "./dialogs.ts";
+import { KnowledgePage } from "./knowledge.ts";
 import { LibraryNav } from "./library.ts";
 import { PipelinesNav } from "./pipeline.ts";
 import { TranslationPage } from "./translation.ts";
@@ -19,6 +20,7 @@ export class MainPage {
   readonly reader: NovelReader;
   readonly library: LibraryNav;
   readonly translation: TranslationPage;
+  readonly knowledge: KnowledgePage;
   readonly pipelines: PipelinesNav;
 
   constructor(private readonly page: Page) {
@@ -35,6 +37,7 @@ export class MainPage {
     this.reader = new NovelReader(page);
     this.library = new LibraryNav(page);
     this.translation = new TranslationPage(page);
+    this.knowledge = new KnowledgePage(page);
     this.pipelines = new PipelinesNav(page);
   }
 

@@ -1511,6 +1511,7 @@
   ,"novel.knowledge.edit.related": "Liên quan"
   ,"novel.knowledge.edit.chapters": "Ch.{range}"
   ,"novel.knowledge.edit.name.required": "Hãy nhập tên."
+  ,"novel.knowledge.edit.type.refused": "Nhân dạng có danh xưng hoặc biệt danh không thể đổi kiểu. Hãy xóa danh xưng và biệt danh trước."
   ,"novel.knowledge.edit.field.name": "Tên"
   ,"novel.knowledge.edit.field.type": "Kiểu"
   ,"novel.knowledge.edit.field.ev": "bằng chứng"

@@ -1,0 +1,307 @@
+# User Stories for CAP-04 Content Intelligence
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-04
+
+stories:
+  # FEAT-27 Knowledge Extraction
+  - id: US-0071
+    feat: FEAT-27
+    story: >-
+      Là một content creator, tôi muốn chọn phiên bản ngôn ngữ và phạm vi chương trước khi phân tích
+      để chỉ phân tích đúng phần tôi cần.
+    acceptance:
+      - given: Novel có chương và một số chương đã dịch.
+        when: Tôi mở hộp thoại phân tích.
+        then: Tôi chọn được phiên bản gốc hoặc các bản dịch đã có.
+      - given: Hộp thoại phân tích đang mở.
+        when: Tôi chọn phạm vi chưa phân tích, khoảng chương hoặc tất cả.
+        then: >-
+          Tóm tắt hiển thị số chương sẽ chạy, số lô (tối đa 5 chương mỗi lô), số chương giữ lại và
+          tổng số từ.
+      - given: Tôi chọn ghi đè với phạm vi gồm chương đã có kết quả.
+        when: Tôi xem hộp thoại.
+        then: Hệ thống cảnh báo số chương đã có kết quả sẽ bị ghi đè.
+      - given: Có chương không có văn bản ở phiên bản đã chọn.
+        when: Tôi xem hộp thoại.
+        then: Hệ thống cảnh báo các chương đó sẽ bị bỏ qua.
+
+  - id: US-0072
+    feat: FEAT-27
+    story: >-
+      Là một content creator, tôi muốn biết rõ khi chưa thể phân tích để khắc phục trước khi chạy.
+    acceptance:
+      - given: Chưa chọn provider cho tính năng tri thức hoặc provider chưa sẵn sàng.
+        when: Tôi mở hộp thoại phân tích.
+        then: >-
+          Hệ thống báo lý do, không cho bắt đầu và có lối mở Cài đặt để đổi provider.
+      - given: Novel chưa có chương nào.
+        when: Tôi mở mục Tri thức.
+        then: Hệ thống hiển thị trạng thái trống và nút phân tích bị khóa.
+      - given: Novel có chương nhưng chưa có tri thức.
+        when: Tôi mở mục Tri thức.
+        then: Hệ thống hiển thị trạng thái chưa có tri thức kèm lối bắt đầu phân tích.
+
+  - id: US-0073
+    feat: FEAT-27
+    story: >-
+      Là một content creator, tôi muốn chạy phân tích và theo dõi kết quả để có tri thức của novel
+      mà không phải nhập tay.
+    acceptance:
+      - given: Provider đã sẵn sàng và phạm vi có ít nhất một chương.
+        when: Tôi bấm bắt đầu phân tích.
+        then: >-
+          Hộp thoại đóng, hệ thống thông báo số chương đã bắt đầu phân tích và pipeline phân tích
+          xuất hiện trong danh sách đang chạy.
+      - given: Một lần phân tích đang chạy.
+        when: Tôi xem mục Tri thức.
+        then: Nút phân tích bị khóa cho đến khi lần chạy kết thúc.
+      - given: Lần phân tích kết thúc thành công.
+        when: Tôi xem mục Tri thức.
+        then: >-
+          Thực thể và fact kèm trích dẫn xuất hiện, tiến độ hiển thị số chương đã phân tích trên
+          tổng số chương.
+
+  - id: US-0074
+    feat: FEAT-27
+    story: >-
+      Là một content creator, tôi muốn việc phân tích không hỏng toàn bộ khi một chương lỗi để giữ
+      kết quả của các chương đã ổn.
+    acceptance:
+      - given: Phân tích nhiều chương và provider trả kết quả không dùng được cho một chương.
+        when: Pipeline kết thúc.
+        then: Pipeline báo lỗi ở tác vụ của chương đó kèm lý do.
+      - given: Pipeline có chương thất bại.
+        when: Tôi xem tri thức.
+        then: Các chương thành công vẫn có tri thức và chương lỗi không có kết quả dở dang.
+
+  # FEAT-28 Knowledge Browsing
+  - id: US-0075
+    feat: FEAT-28
+    story: >-
+      Là một content creator, tôi muốn xem tri thức theo từng phiên bản ngôn ngữ và chuyển giữa các
+      chế độ xem để nắm nội dung novel.
+    acceptance:
+      - given: Novel có tri thức ở bản gốc và bản dịch.
+        when: Tôi đổi phiên bản ngôn ngữ.
+        then: Tri thức hiển thị theo phiên bản đã chọn.
+      - given: Mục Tri thức đang mở.
+        when: Tôi chuyển giữa các tab Đồ thị, Danh sách và Rà soát.
+        then: Mỗi tab hiển thị đúng nội dung của nó và tab Rà soát hiển thị số xung đột.
+
+  - id: US-0076
+    feat: FEAT-28
+    story: >-
+      Là một content creator, tôi muốn tìm và lọc thực thể để nhanh chóng tìm đúng nhân vật, địa
+      điểm hay vật phẩm.
+    acceptance:
+      - given: Danh sách có nhiều thực thể.
+        when: Tôi nhập từ khóa tìm kiếm.
+        then: Chỉ các thực thể có tên, chức danh hoặc bí danh khớp được hiển thị, kèm số lượng.
+      - given: Danh sách có nhiều loại thực thể và nhiều chương.
+        when: Tôi lọc theo loại, theo chương hoặc chỉ xem thực thể có xung đột.
+        then: Chỉ các thực thể thỏa bộ lọc được hiển thị.
+      - given: Không thực thể nào khớp.
+        when: Tôi xem danh sách.
+        then: Hệ thống báo không có kết quả và cho tôi xóa bộ lọc.
+
+  - id: US-0077
+    feat: FEAT-28
+    story: >-
+      Là một content creator, tôi muốn xem chi tiết một thực thể cùng trích dẫn bằng chứng để kiểm
+      chứng thông tin.
+    acceptance:
+      - given: Chưa chọn thực thể nào.
+        when: Tôi xem bảng chi tiết.
+        then: Hệ thống hiển thị trạng thái trống hướng dẫn chọn một thực thể.
+      - given: Tôi chọn một thực thể.
+        when: Bảng chi tiết hiển thị.
+        then: >-
+          Tôi thấy tên, loại, chức danh hoặc bí danh, thuộc tính, quan hệ và các trích dẫn bằng
+          chứng của thực thể đó.
+
+  - id: US-0078
+    feat: FEAT-28
+    story: >-
+      Là một content creator, tôi muốn xem đồ thị quan hệ để hình dung mạng lưới nhân vật và thế
+      giới của novel.
+    acceptance:
+      - given: Novel có thực thể và quan hệ.
+        when: Tôi mở tab Đồ thị.
+        then: >-
+          Thực thể hiển thị dạng nút và quan hệ dạng cạnh; nhóm thuật ngữ và sự kiện được ẩn mặc
+          định.
+      - given: Đồ thị đang hiển thị.
+        when: Tôi tìm một nút theo tên.
+        then: Nút khớp được làm nổi bật hoặc được chọn.
+      - given: Có thực thể đang xung đột.
+        when: Tôi xem đồ thị.
+        then: Nút đó được đánh dấu có xung đột.
+
+  - id: US-0079
+    feat: FEAT-28
+    story: >-
+      Là một content creator, tôi muốn xem tri thức theo chế độ chống spoiler để chỉ thấy những gì
+      đã xuất hiện đến chương tôi đang làm.
+    acceptance:
+      - given: Chưa mở tab Tri thức nào.
+        when: Tôi mở bảng Omniscient.
+        then: Hệ thống hiển thị trạng thái trống.
+      - given: Tab Tri thức đang mở và tôi chọn chế độ chống spoiler.
+        when: Tôi chọn một chương.
+        then: >-
+          Chỉ các mục có bằng chứng đầu tiên ở chương đó hoặc trước đó được hiển thị.
+      - given: Tôi chuyển sang chế độ Omniscient.
+        when: Bảng hiển thị.
+        then: Toàn bộ tri thức được hiển thị bất kể chương.
+
+  # FEAT-29 Knowledge Editing
+  - id: US-0080
+    feat: FEAT-29
+    story: >-
+      Là một content creator, tôi muốn sửa thực thể để chỉnh lại những chỗ phân tích chưa đúng.
+    acceptance:
+      - given: Tôi đang sửa một thực thể.
+        when: Tôi đổi tên hợp lệ và xác nhận.
+        then: >-
+          Thay đổi được áp dụng, hiển thị trong danh sách và hệ thống thông báo số thay đổi đã áp
+          dụng.
+      - given: Thực thể là nhân dạng có chức danh hoặc bí danh.
+        when: Tôi sửa chức danh và bí danh rồi xác nhận.
+        then: Chức danh và bí danh mới được lưu.
+      - given: Tôi đang sửa một thực thể nhân dạng.
+        when: Tôi đổi loại sang loại khác.
+        then: Hệ thống từ chối và giữ nguyên loại cũ.
+
+  - id: US-0081
+    feat: FEAT-29
+    story: >-
+      Là một content creator, tôi muốn thêm thực thể hoặc fact mới kèm trích dẫn để bổ sung những gì
+      phân tích tự động bỏ sót.
+    acceptance:
+      - given: Tôi đã nhập tên, chọn loại và một trích dẫn có chương, đoạn hợp lệ.
+        when: Tôi xác nhận.
+        then: Thực thể mới xuất hiện trong danh sách kèm trích dẫn đã nhập.
+      - given: Tên để trống hoặc chưa có trích dẫn nào.
+        when: Tôi xác nhận.
+        then: Hệ thống từ chối, báo thiếu tên hoặc thiếu bằng chứng và không thêm.
+      - given: Trích dẫn thiếu chương, đoạn hoặc nội dung.
+        when: Tôi thêm trích dẫn.
+        then: Hệ thống cảnh báo cần nhập đủ chương, đoạn và trích dẫn.
+      - given: Tên hoặc trích dẫn không có trong văn bản chương đã chọn.
+        when: Tôi xác nhận.
+        then: Hệ thống từ chối, báo không tìm thấy trong văn bản và không thêm.
+
+  - id: US-0082
+    feat: FEAT-29
+    story: >-
+      Là một content creator, tôi muốn xóa thực thể sau khi được cảnh báo rõ để tránh mất nhầm tri
+      thức.
+    acceptance:
+      - given: Tôi chọn xóa một thực thể.
+        when: Hộp thoại xác nhận hiển thị.
+        then: >-
+          Hộp thoại nêu tên thực thể, cảnh báo các fact trỏ tới nó cũng bị xóa và việc xóa không
+          thể hoàn tác.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi xác nhận.
+        then: Thực thể và các fact trỏ tới nó biến mất khỏi tri thức.
+      - given: Hộp thoại xác nhận đang hiển thị.
+        when: Tôi hủy.
+        then: Tri thức giữ nguyên.
+
+  - id: US-0083
+    feat: FEAT-29
+    story: >-
+      Là một content creator, tôi muốn gộp các thực thể trùng để tri thức không bị phân mảnh.
+    acceptance:
+      - given: Tôi chọn hai thực thể cùng loại.
+        when: Tôi chọn thực thể giữ lại và xác nhận gộp.
+        then: >-
+          Thực thể còn lại giữ các bằng chứng của cả hai và các fact cũ trỏ về thực thể được giữ.
+      - given: Tôi chọn các thực thể khác loại.
+        when: Tôi xác nhận gộp.
+        then: Hệ thống từ chối vì chỉ gộp được thực thể cùng loại và không thay đổi gì.
+
+  - id: US-0084
+    feat: FEAT-29
+    story: >-
+      Là một content creator, tôi muốn xem trước kết quả chỉnh sửa trước khi áp dụng để biết có gây
+      xung đột mới không.
+    acceptance:
+      - given: Tôi đã nhập các thay đổi trong hộp thoại sửa.
+        when: Hộp thoại hiển thị phần xem trước.
+        then: >-
+          Tôi thấy danh sách thay đổi và trạng thái xem trước: không hợp lệ, chưa có xung đột hoặc
+          còn xung đột.
+      - given: Thay đổi hợp lệ nhưng vẫn còn xung đột.
+        when: Tôi xác nhận.
+        then: Hệ thống áp dụng và cảnh báo số xung đột còn cần xem xét.
+      - given: Hộp thoại sửa đang mở.
+        when: Tôi hủy.
+        then: Tri thức giữ nguyên.
+
+  # FEAT-30 Knowledge Consistency Review
+  - id: US-0085
+    feat: FEAT-30
+    story: >-
+      Là một content creator, tôi muốn xem danh sách xung đột trong tri thức để biết chỗ nào cần sửa.
+    acceptance:
+      - given: Tri thức có xung đột.
+        when: Tôi mở tab Rà soát.
+        then: Mỗi xung đột hiển thị thành một thẻ theo quy tắc vi phạm và tab báo tổng số.
+      - given: Có xung đột thuộc nhiều quy tắc.
+        when: Tôi lọc theo một quy tắc.
+        then: Chỉ các xung đột thuộc quy tắc đó được hiển thị.
+      - given: Tri thức không có xung đột.
+        when: Tôi mở tab Rà soát.
+        then: Hệ thống hiển thị trạng thái không có xung đột.
+
+  - id: US-0086
+    feat: FEAT-30
+    story: >-
+      Là một content creator, tôi muốn hệ thống tự phát hiện các loại mâu thuẫn phổ biến để không
+      phải soát thủ công.
+    acceptance:
+      - given: Hai thực thể cùng loại có tên giống nhau sau khi bỏ dấu hoặc một tên chứa trọn tên kia.
+        when: Tôi mở tab Rà soát.
+        then: Hệ thống báo xung đột trùng thực thể.
+      - given: Đoạn gốc đã bị sửa sau khi phân tích.
+        when: Tôi mở tab Rà soát.
+        then: Hệ thống báo nguồn đã đổi cho tri thức của chương đó.
+      - given: Trích dẫn của một mục không còn tìm thấy trong đoạn gốc.
+        when: Tôi mở tab Rà soát.
+        then: Hệ thống báo bằng chứng không khớp văn bản.
+      - given: Quan hệ nối hai thực thể có loại không phù hợp với quan hệ đó.
+        when: Tôi mở tab Rà soát.
+        then: Hệ thống báo sai ràng buộc loại của quan hệ.
+
+  - id: US-0087
+    feat: FEAT-30
+    story: >-
+      Là một content creator, tôi muốn sửa nhanh xung đột ngay trên thẻ để xử lý mà không phải mở
+      từng mục.
+    acceptance:
+      - given: Có xung đột trùng thực thể.
+        when: Tôi chọn gộp trên thẻ.
+        then: Các thực thể được gộp, hệ thống thông báo đã gộp và xung đột biến mất.
+      - given: Có xung đột cần chuyển thực thể sang nhân dạng hoặc tạo nhân vật liên kết.
+        when: Tôi chọn thao tác sửa nhanh tương ứng.
+        then: Hệ thống thông báo đã chuyển hoặc đã tạo và xung đột biến mất.
+      - given: Có xung đột chọn xóa trên thẻ.
+        when: Tôi xác nhận ở hộp thoại xác nhận.
+        then: Mục bị xóa, hệ thống thông báo đã xóa và xung đột biến mất.
+      - given: Có xung đột nguồn đã đổi.
+        when: Tôi chọn giữ nguyên.
+        then: Hệ thống ghi nhận nguồn hiện tại là mới, thông báo đã xong và xung đột biến mất.
+
+  - id: US-0088
+    feat: FEAT-30
+    story: >-
+      Là một content creator, tôi muốn phân tích lại chương có nguồn đã đổi để tri thức khớp với nội
+      dung mới.
+    acceptance:
+      - given: Có xung đột nguồn đã đổi ở một chương.
+        when: Tôi chọn phân tích lại.
+        then: >-
+          Hộp thoại phân tích mở với phạm vi là chương đó và chế độ ghi đè đã chọn sẵn.

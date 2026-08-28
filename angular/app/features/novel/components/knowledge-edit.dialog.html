@@ -53,6 +53,7 @@
                   <select [id]="'ke-' + card.key + '-type'" class="select" data-testid="novel-knowledge-edit-type" (change)="onType(card.key, $event)">
                     @for (type of types(); track type.key) { <option [value]="type.key" [selected]="entity.type === type.key">{{ type.labelKey | t }}</option> }
                   </select>
+                  @if (typeRefused(entity)) { <span class="field-err" data-testid="novel-knowledge-edit-type-error">{{ "novel.knowledge.edit.type.refused" | t }}</span> }
                   @if (entity.type === "character") { <span class="field-hint">{{ "novel.knowledge.type.character.hint" | t }}</span> }</div>
                 @for (list of card.lists; track list.field) {
                   <div class="field span-full" [attr.data-testid]="'novel-knowledge-edit-' + list.field">

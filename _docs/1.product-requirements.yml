@@ -331,3 +331,43 @@ features:
       Cho phép người dùng theo dõi các pipeline xử lý nội dung (dịch, phân tích): lịch sử có tìm
       theo novel và lọc theo trạng thái, danh sách đang chạy với tiến độ từng tác vụ và nút hủy, nhật
       ký chi tiết, và chỉ báo chạy hoặc rảnh ở thanh trạng thái.
+
+  - id: FEAT-27
+    name: Knowledge Extraction
+    caps: [CAP-04]
+    status: done
+    description: >-
+      Cho phép người dùng phân tích chương của novel bằng provider đã cấu hình để trích xuất thực
+      thể và fact kèm trích dẫn bằng chứng. Chọn phiên bản ngôn ngữ (bản gốc hoặc bản dịch đã có),
+      phạm vi (chưa phân tích, khoảng chương, tất cả), ghi đè kết quả cũ; hệ thống chia lô tối đa 5
+      chương, chạy như một pipeline phân tích và báo tiến độ số chương đã phân tích.
+
+  - id: FEAT-28
+    name: Knowledge Browsing
+    caps: [CAP-04]
+    status: done
+    description: >-
+      Cho phép người dùng khám phá tri thức của novel theo từng phiên bản ngôn ngữ qua đồ thị, danh
+      sách thực thể (tìm theo tên, chức danh, bí danh; lọc theo loại, chương, xung đột) và bảng chi
+      tiết kèm trích dẫn bằng chứng. Chế độ chống spoiler chỉ hiển thị tri thức xuất hiện đến chương
+      đã chọn.
+
+  - id: FEAT-29
+    name: Knowledge Editing
+    caps: [CAP-04]
+    status: done
+    description: >-
+      Cho phép người dùng thêm, sửa, xóa và gộp thực thể, fact trong tri thức. Mỗi mục mới phải có ít
+      nhất một trích dẫn tồn tại trong văn bản chương; tên thực thể bắt buộc; gộp chỉ áp dụng cho
+      các thực thể cùng loại. Có xem trước trạng thái xung đột trước khi áp dụng và xác nhận trước
+      khi xóa.
+
+  - id: FEAT-30
+    name: Knowledge Consistency Review
+    caps: [CAP-04]
+    status: done
+    description: >-
+      Tự kiểm tra tri thức bằng các quy tắc chạy bằng code, không dùng LLM: ràng buộc loại của
+      quan hệ, liên kết nhân dạng, tham chiếu treo, trùng thực thể, bằng chứng không khớp văn bản và
+      nguồn đã đổi sau khi phân tích. Xung đột lọc được theo quy tắc và có thao tác sửa nhanh (gộp,
+      chuyển nhân dạng, tạo nhân vật, xóa, giữ nguyên, phân tích lại).

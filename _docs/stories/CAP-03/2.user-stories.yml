@@ -1,0 +1,280 @@
+# User Stories for CAP-03 Content Translation
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-03
+
+stories:
+  # FEAT-20 Translation Workspace
+  - id: US-0053
+    feat: FEAT-20
+    story: >-
+      Là một content creator, tôi muốn mở không gian dịch của novel và chọn ngôn ngữ đích để bắt
+      đầu dịch theo đúng quy trình.
+    acceptance:
+      - given: Novel có ít nhất một chương.
+        when: Tôi mở mục Dịch của novel.
+        then: >-
+          Tôi thấy luồng năm bước Từ điển, Hướng dẫn dịch, Dịch, Kết quả, Cảnh báo, mỗi bước có tóm
+          tắt tiến độ.
+      - given: Novel có một ngôn ngữ gốc.
+        when: Tôi xem danh sách ngôn ngữ đích.
+        then: Chỉ có tiếng Việt và tiếng Anh, không gồm ngôn ngữ gốc của novel.
+      - given: Tôi đã chọn một số chương ở bước Dịch.
+        when: Tôi đổi ngôn ngữ đích.
+        then: Các chương đã chọn được bỏ chọn và các tóm tắt hiển thị theo ngôn ngữ đích mới.
+
+  - id: US-0054
+    feat: FEAT-20
+    story: >-
+      Là một content creator, tôi muốn được báo rõ khi novel chưa có chương để biết cần thêm nội
+      dung trước khi dịch.
+    acceptance:
+      - given: Novel chưa có chương nào.
+        when: Tôi mở mục Dịch của novel.
+        then: Hệ thống hiển thị trạng thái trống thay vì luồng dịch.
+
+  # FEAT-21 Translation Dictionary
+  - id: US-0055
+    feat: FEAT-21
+    story: >-
+      Là một content creator, tôi muốn thêm thuật ngữ vào từ điển dịch để tên riêng và thuật ngữ
+      được dịch nhất quán.
+    acceptance:
+      - given: >-
+          Tôi đang ở bước Từ điển và đã nhập thuật ngữ gốc, bản dịch, loại và ghi chú.
+        when: Tôi xác nhận thêm.
+        then: Mục mới xuất hiện trong danh sách từ điển và hệ thống thông báo đã thêm.
+      - given: Thuật ngữ gốc hoặc bản dịch để trống.
+        when: Tôi xác nhận thêm.
+        then: Hệ thống từ chối, báo cần nhập cả hai và không thêm mục.
+      - given: Từ điển của ngôn ngữ đích đã có mục với cùng thuật ngữ gốc.
+        when: Tôi xác nhận thêm.
+        then: Hệ thống từ chối, báo thuật ngữ đã có và không thêm mục.
+
+  - id: US-0056
+    feat: FEAT-21
+    story: >-
+      Là một content creator, tôi muốn sửa và xóa mục từ điển để giữ từ điển luôn chính xác.
+    acceptance:
+      - given: Từ điển có mục.
+        when: Tôi sửa thuật ngữ gốc, bản dịch, loại hoặc ghi chú rồi lưu.
+        then: Thay đổi được lưu và hiển thị trong danh sách.
+      - given: Tôi đang sửa một mục.
+        when: Tôi xóa trống thuật ngữ gốc hoặc bản dịch rồi lưu.
+        then: Hệ thống từ chối, báo không được để trống và giữ nguyên giá trị cũ.
+      - given: Từ điển có mục.
+        when: Tôi xóa một mục.
+        then: Mục đó biến mất khỏi danh sách và hệ thống thông báo đã xóa.
+
+  - id: US-0057
+    feat: FEAT-21
+    story: >-
+      Là một content creator, tôi muốn tìm mục trong từ điển và có từ điển riêng cho từng ngôn ngữ
+      đích để dễ quản lý khi từ điển lớn dần.
+    acceptance:
+      - given: Từ điển có nhiều mục.
+        when: Tôi nhập từ khóa tìm kiếm.
+        then: >-
+          Chỉ các mục có thuật ngữ gốc, bản dịch hoặc ghi chú khớp được hiển thị, kèm số mục hiển
+          thị trên tổng số.
+      - given: Không mục nào khớp từ khóa.
+        when: Tôi xem danh sách.
+        then: Hệ thống báo không có kết quả và gợi ý thử từ khóa khác.
+      - given: Từ điển tiếng Việt và tiếng Anh của novel có các mục khác nhau.
+        when: Tôi đổi ngôn ngữ đích.
+        then: Danh sách chỉ hiển thị các mục thuộc ngôn ngữ đích đang chọn.
+
+  # FEAT-22 Translation Guidelines
+  - id: US-0058
+    feat: FEAT-22
+    story: >-
+      Là một content creator, tôi muốn soạn hướng dẫn dịch riêng cho từng ngôn ngữ đích để các lần
+      dịch giữ đúng văn phong và quy ước của tôi.
+    acceptance:
+      - given: Tôi đang ở bước Hướng dẫn dịch và đã sửa nội dung hướng dẫn.
+        when: Tôi lưu.
+        then: Hướng dẫn được lưu, hiển thị lại khi mở lại và hệ thống thông báo đã lưu.
+      - given: Nội dung hướng dẫn chưa thay đổi.
+        when: Tôi lưu.
+        then: Hệ thống báo không có thay đổi.
+      - given: Hai ngôn ngữ đích có hướng dẫn khác nhau.
+        when: Tôi đổi ngôn ngữ đích.
+        then: Ô hướng dẫn hiển thị nội dung của ngôn ngữ đích đang chọn.
+
+  # FEAT-23 Chapter Translation
+  - id: US-0059
+    feat: FEAT-23
+    story: >-
+      Là một content creator, tôi muốn chọn chương cần dịch từ danh sách có trạng thái để chỉ dịch
+      những chương tôi muốn.
+    acceptance:
+      - given: Novel có chương đã dịch và chưa dịch.
+        when: Tôi mở bước Dịch.
+        then: Mỗi chương hiển thị số thứ tự, tiêu đề, số từ và trạng thái dịch.
+      - given: Danh sách chương đang hiển thị.
+        when: Tôi lọc theo trạng thái hoặc tìm theo tên chương.
+        then: Chỉ các chương khớp được hiển thị.
+      - given: Tôi chưa chọn chương nào.
+        when: Tôi xem nút Dịch.
+        then: Nút bị khóa; sau khi chọn chương, nút hiển thị số chương đã chọn và dùng được.
+
+  - id: US-0060
+    feat: FEAT-23
+    story: >-
+      Là một content creator, tôi muốn dịch chương đã chọn và dịch lại chương đã dịch để có bản
+      dịch mới mà không mất ghi chú của tôi.
+    acceptance:
+      - given: Đã cấu hình provider và tôi chọn các chương chưa dịch.
+        when: Tôi bấm Dịch.
+        then: Hệ thống chạy dịch và hiển thị tiến độ của từng chương.
+      - given: Quá trình dịch kết thúc thành công.
+        when: Tôi xem danh sách chương và bước Kết quả.
+        then: Các chương chuyển sang trạng thái đã dịch và bản dịch hiển thị đầy đủ các đoạn.
+      - given: Chương đã dịch có ghi chú ở một số đoạn.
+        when: Tôi dịch lại chương đó.
+        then: Nội dung dịch được thay bằng bản mới và các ghi chú đoạn được giữ nguyên.
+
+  - id: US-0061
+    feat: FEAT-23
+    story: >-
+      Là một content creator, tôi muốn hủy khi đang dịch và biết lý do khi dịch lỗi để xử lý mà
+      không bị hỏng dữ liệu.
+    acceptance:
+      - given: Một lần dịch đang chạy.
+        when: Tôi bấm Hủy.
+        then: >-
+          Lần dịch dừng, các tác vụ chưa xong chuyển sang đã hủy và chương chưa xong không có bản
+          dịch dở dang.
+      - given: Provider trả kết quả sai (không phải JSON hoặc sai số đoạn) hoặc chưa được chọn.
+        when: Lần dịch kết thúc.
+        then: Tác vụ lỗi hiển thị lý do và chương đó giữ nguyên trạng thái chưa dịch.
+
+  # FEAT-24 Translation Review
+  - id: US-0062
+    feat: FEAT-24
+    story: >-
+      Là một content creator, tôi muốn đối chiếu song song bản gốc và bản dịch để rà soát chất
+      lượng bản dịch.
+    acceptance:
+      - given: Chương đã có bản dịch.
+        when: Tôi mở bước Kết quả.
+        then: Tôi thấy từng đoạn gốc và đoạn dịch tương ứng cạnh nhau.
+      - given: Novel có nhiều chương.
+        when: Tôi chuyển sang chương trước, chương sau hoặc nhảy đến một chương.
+        then: Bước Kết quả hiển thị chương đã chọn.
+      - given: Chương có đoạn cần rà soát và đoạn không cần.
+        when: Tôi bật chỉ xem đoạn cần rà soát.
+        then: Chỉ các đoạn cần rà soát được hiển thị.
+
+  - id: US-0063
+    feat: FEAT-24
+    story: >-
+      Là một content creator, tôi muốn sửa trực tiếp bản dịch từng đoạn để chỉnh những chỗ dịch chưa
+      đúng.
+    acceptance:
+      - given: Tôi đang xem bản dịch của một chương.
+        when: Tôi sửa nội dung một đoạn rồi lưu.
+        then: Đoạn được cập nhật, hệ thống thông báo đã lưu và nội dung mới còn nguyên khi mở lại.
+      - given: Tôi đang sửa một đoạn.
+        when: Tôi xóa trống nội dung rồi lưu.
+        then: Hệ thống từ chối, báo đoạn không được để trống và giữ ô sửa mở.
+      - given: Tôi đang sửa một đoạn nhưng chưa đổi nội dung.
+        when: Tôi lưu.
+        then: Hệ thống báo không có thay đổi.
+
+  - id: US-0064
+    feat: FEAT-24
+    story: >-
+      Là một content creator, tôi muốn ghi chú cho từng đoạn dịch để nhớ những điểm cần xử lý sau.
+    acceptance:
+      - given: Tôi đang xem bản dịch của một chương.
+        when: Tôi nhập ghi chú cho một đoạn và lưu.
+        then: Ghi chú hiển thị ở đoạn đó và còn nguyên khi mở lại.
+      - given: Đoạn đã có ghi chú.
+        when: Tôi sửa hoặc xóa trống ghi chú rồi lưu.
+        then: Ghi chú được cập nhật hoặc bị gỡ khỏi đoạn.
+
+  - id: US-0065
+    feat: FEAT-24
+    story: >-
+      Là một content creator, tôi muốn được dẫn thẳng sang bước dịch khi chương chưa có bản dịch để
+      không phải tìm lại chương đó.
+    acceptance:
+      - given: Chương đang xem ở bước Kết quả chưa có bản dịch.
+        when: Hệ thống hiển thị chương.
+        then: Tôi thấy thông báo chương chưa có bản dịch kèm nút dịch chương này.
+      - given: Tôi đang thấy thông báo chương chưa có bản dịch.
+        when: Tôi bấm dịch chương này.
+        then: Hệ thống chuyển sang bước Dịch với đúng chương đó được chọn.
+
+  # FEAT-25 Translation Warnings
+  - id: US-0066
+    feat: FEAT-25
+    story: >-
+      Là một content creator, tôi muốn được cảnh báo khi bản dịch không dùng đúng từ điển để sửa cho
+      nhất quán.
+    acceptance:
+      - given: Đoạn gốc chứa thuật ngữ trong từ điển nhưng đoạn dịch không chứa bản dịch của nó.
+        when: Tôi mở bước Cảnh báo.
+        then: Đoạn đó xuất hiện với cảnh báo loại từ điển.
+      - given: Tôi thêm vào từ điển một mục làm một số đoạn đã dịch không còn khớp.
+        when: Hệ thống thêm mục.
+        then: Hệ thống thông báo số đoạn cần rà soát.
+      - given: Đoạn đang có cảnh báo từ điển.
+        when: Tôi sửa bản dịch để chứa đúng bản dịch của thuật ngữ.
+        then: Cảnh báo của đoạn đó biến mất.
+
+  - id: US-0068
+    feat: FEAT-25
+    story: >-
+      Là một content creator, tôi muốn lọc và xử lý cảnh báo để rà soát nhanh các đoạn có vấn đề.
+    acceptance:
+      - given: Có cảnh báo từ điển.
+        when: Tôi chọn bộ lọc Tất cả hoặc Từ điển.
+        then: Danh sách hiển thị cảnh báo từ điển và mỗi bộ lọc có số lượng tương ứng.
+      - given: Một cảnh báo đang hiển thị.
+        when: Tôi chọn xem đoạn hoặc mở từ điển.
+        then: Hệ thống chuyển tới đoạn dịch hoặc bước Từ điển liên quan.
+      - given: Không còn đoạn nào cần rà soát.
+        when: Tôi mở bước Cảnh báo.
+        then: Hệ thống hiển thị trạng thái không có cảnh báo.
+
+  # FEAT-26 Pipeline Monitoring
+  - id: US-0069
+    feat: FEAT-26
+    story: >-
+      Là một content creator, tôi muốn xem lịch sử các pipeline đã chạy để biết việc nào đã xong, lỗi
+      hay bị hủy.
+    acceptance:
+      - given: Workspace có pipeline đã chạy.
+        when: Tôi mở lịch sử pipeline.
+        then: >-
+          Mỗi pipeline hiển thị novel, loại, thời điểm bắt đầu, trạng thái và tiến độ, mới nhất ở
+          trên.
+      - given: Lịch sử có nhiều pipeline.
+        when: Tôi tìm theo tên novel hoặc lọc theo trạng thái.
+        then: Chỉ các pipeline khớp được hiển thị.
+      - given: Bộ lọc hoặc từ khóa không khớp pipeline nào.
+        when: Tôi xem danh sách.
+        then: Hệ thống báo không có kết quả và cho tôi xóa bộ lọc.
+      - given: Workspace chưa chạy pipeline nào.
+        when: Tôi mở lịch sử pipeline.
+        then: Hệ thống hiển thị trạng thái trống.
+
+  - id: US-0070
+    feat: FEAT-26
+    story: >-
+      Là một content creator, tôi muốn theo dõi, xem nhật ký và hủy pipeline đang chạy để kiểm soát
+      các tác vụ nền.
+    acceptance:
+      - given: Có pipeline đang chạy.
+        when: Tôi mở bảng pipeline ở khu vực dưới.
+        then: >-
+          Tôi thấy tên novel, tiến độ từng tác vụ, số tác vụ đang chờ và thanh trạng thái báo đang
+          chạy.
+      - given: Có pipeline đang chạy.
+        when: Tôi mở nhật ký của pipeline đó.
+        then: Nhật ký hiển thị các tác vụ và lỗi của chúng.
+      - given: Có pipeline đang chạy.
+        when: Tôi bấm hủy.
+        then: Pipeline chuyển sang đã hủy và thanh trạng thái trở về rảnh khi không còn pipeline nào.

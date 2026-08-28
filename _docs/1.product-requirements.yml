@@ -268,3 +268,66 @@ features:
       Cho phép người dùng xem toàn bộ tag đang dùng trong thư viện kèm số tài nguyên theo loại, tìm
       tag, đổi tên, hợp nhất vào tag khác và xóa tag trên mọi tài nguyên cùng lúc. Đổi tên sang tag
       đã có được xử lý như hợp nhất và cần xác nhận.
+
+  - id: FEAT-20
+    name: Translation Workspace
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Cho phép người dùng mở không gian dịch của một novel, chọn ngôn ngữ đích (tiếng Việt hoặc
+      tiếng Anh, khác ngôn ngữ của novel) và đi qua năm bước Từ điển, Hướng dẫn dịch, Dịch, Kết quả,
+      Cảnh báo, mỗi bước có tóm tắt tiến độ. Novel chưa có chương hiển thị trạng thái trống.
+
+  - id: FEAT-21
+    name: Translation Dictionary
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Cho phép người dùng quản lý từ điển dịch riêng cho từng novel và từng ngôn ngữ đích. Mỗi mục
+      gồm thuật ngữ gốc, bản dịch (bắt buộc), loại (tên riêng, địa danh, tổ chức, chức danh, thuật
+      ngữ) và ghi chú; thuật ngữ gốc không trùng trong cùng một ngôn ngữ đích. Hỗ trợ thêm, sửa
+      trực tiếp, xóa và tìm kiếm.
+
+  - id: FEAT-22
+    name: Translation Guidelines
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Cho phép người dùng soạn và lưu hướng dẫn dịch (văn phong, xưng hô, quy ước) riêng cho từng
+      ngôn ngữ đích của novel để dùng cho mọi lần dịch.
+
+  - id: FEAT-23
+    name: Chapter Translation
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Cho phép người dùng chọn một hoặc nhiều chương (lọc theo trạng thái, tìm theo tên) và dịch
+      sang ngôn ngữ đích bằng provider đã cấu hình. Tiến độ được theo dõi theo từng chương, có thể
+      hủy khi đang chạy; chương đã dịch được dịch lại và giữ ghi chú đoạn; tác vụ lỗi hiển thị lý
+      do và không ghi bản dịch dở dang.
+
+  - id: FEAT-24
+    name: Translation Review
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Cho phép người dùng đối chiếu song song bản gốc và bản dịch theo chương, lọc các đoạn cần rà
+      soát, sửa bản dịch từng đoạn (không được để trống), ghi chú cho đoạn, và chuyển từ chương
+      chưa dịch sang bước dịch.
+
+  - id: FEAT-25
+    name: Translation Warnings
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Tự phát hiện các đoạn dịch không dùng đúng bản dịch của thuật ngữ trong từ điển để rà soát.
+      Cảnh báo lọc được, dẫn tới đoạn hoặc từ điển liên quan và tự biến mất khi vấn đề được xử lý.
+
+  - id: FEAT-26
+    name: Pipeline Monitoring
+    caps: [CAP-03]
+    status: done
+    description: >-
+      Cho phép người dùng theo dõi các pipeline xử lý nội dung (dịch, phân tích): lịch sử có tìm
+      theo novel và lọc theo trạng thái, danh sách đang chạy với tiến độ từng tác vụ và nút hủy, nhật
+      ký chi tiết, và chỉ báo chạy hoặc rảnh ở thanh trạng thái.

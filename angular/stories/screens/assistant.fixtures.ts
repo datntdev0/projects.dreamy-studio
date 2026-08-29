@@ -1,4 +1,4 @@
-import { KnowledgeChangeSet, TranslationReview } from "@app/features/assistant/assistant.models";
+import { KnowledgeChangeSet, TranslationReview } from "@features/assistant/assistant.models";
 import { NOVEL_ID } from "./novel-translation.mocks";
 
 export function translationReview(chapter: number, chapterTitle: string): TranslationReview {

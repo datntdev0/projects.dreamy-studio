@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { MainPage } from "@app/pages/main/main.page";
+import { MainPage } from "@pages/main/main.page";
 import { choose, click, waitFor } from "./novel-screen.helpers";
 import { withKnowledge } from "./novel-knowledge.mocks";
 import { TranslationScenario, withTranslation } from "./novel-translation.mocks";

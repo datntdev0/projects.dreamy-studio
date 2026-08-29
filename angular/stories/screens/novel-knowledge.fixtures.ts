@@ -1,4 +1,4 @@
-import { AnalyzedChapter, EntityType, KnowledgeEntity, KnowledgeEvidence, KnowledgeFact, KnowledgeItem } from "@app/features/novel/novel.knowledge.models";
+import { AnalyzedChapter, EntityType, KnowledgeEntity, KnowledgeEvidence, KnowledgeFact, KnowledgeItem } from "@features/novel/novel.knowledge.models";
 
 const STAMP = "2026-11-09T09:15:00Z";
 const STALE_CHAPTER = 2;

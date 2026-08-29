@@ -1,4 +1,4 @@
-import { LanguageKey } from "@app/core/language/language.models";
+import { LanguageKey } from "@core/language/language.models";
 
 export type RailId = "projects" | "novels" | "library" | "distribution";
 

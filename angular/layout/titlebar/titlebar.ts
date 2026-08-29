@@ -1,12 +1,12 @@
 import { Component, HostListener, computed, inject, signal } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { CoreModule } from "@app/core/core.module";
-import { LanguageService } from "@app/core/language/language.service";
-import { Language } from "@app/core/language/language.models";
-import { ThemeService } from "@app/core/theme/theme.service";
-import { SettingsService } from "@app/features/settings/settings.service";
-import { WorkspaceService } from "@app/features/workspace/workspace.service";
+import { CoreModule } from "@core/core.module";
+import { LanguageService } from "@core/language/language.service";
+import { Language } from "@core/language/language.models";
+import { ThemeService } from "@core/theme/theme.service";
+import { SettingsService } from "@features/settings/settings.service";
+import { WorkspaceService } from "@features/workspace/workspace.service";
 import { LayoutService } from "../layout.service";
 
 const LANGUAGE_NAMES: Record<Language, string> = {

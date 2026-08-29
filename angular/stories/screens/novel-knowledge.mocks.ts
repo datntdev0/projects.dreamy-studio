@@ -1,10 +1,10 @@
 import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
-import { ChapterRow, NovelSummary } from "@app/features/novel/novel.models";
-import { applyEdits } from "@app/features/novel/novel.knowledge.draft";
-import { AnalyzedChapter, KnowledgeEdit, KnowledgeEditResult, KnowledgeItem, KnowledgeLang, WireKnowledge } from "@app/features/novel/novel.knowledge.models";
-import { PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest } from "@app/features/novel/novel.translation.models";
-import { batchesOf } from "@app/features/novel/novel.knowledge.rules";
+import { ChapterRow, NovelSummary } from "@features/novel/novel.models";
+import { applyEdits } from "@features/novel/novel.knowledge.draft";
+import { AnalyzedChapter, KnowledgeEdit, KnowledgeEditResult, KnowledgeItem, KnowledgeLang, WireKnowledge } from "@features/novel/novel.knowledge.models";
+import { PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest } from "@features/novel/novel.translation.models";
+import { batchesOf } from "@features/novel/novel.knowledge.rules";
 import { ONTOLOGY_VIEW } from "./novel-knowledge.ontology";
 import { CHARACTER_PREDICATE_FACT, KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS, chapterItems } from "./novel-knowledge.fixtures";
 import { TranslationScenario, handlersFor as translationHandlers } from "./novel-translation.mocks";

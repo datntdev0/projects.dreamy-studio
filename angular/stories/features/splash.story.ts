@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { SplashPage } from "@app/pages/splash/splash.page";
+import { SplashPage } from "@pages/splash/splash.page";
 import { LOADING_STATE, RECENT_WORKSPACES, WorkspaceScenario, settingsProvider, withProviders, workspaceProvider } from "./mocks";
 
 function splash(scenario: WorkspaceScenario): StoryObj<SplashPage> {

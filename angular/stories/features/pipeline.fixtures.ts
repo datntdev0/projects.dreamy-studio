@@ -1,4 +1,4 @@
-import { PipelineSnapshot, PipelineStatus, PipelineTask, TaskStatus } from "@app/features/novel/novel.translation.models";
+import { PipelineSnapshot, PipelineStatus, PipelineTask, TaskStatus } from "@features/novel/novel.translation.models";
 
 export const NOVEL_NAMES: Record<number, string> = {
   1: "Người giữ đèn Harrowmere",

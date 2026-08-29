@@ -1,0 +1,113 @@
+import { Component, computed, inject, input } from "@angular/core";
+import { Icon } from "@components/icon";
+import { LanguageKey } from "@core/language/language.models";
+import { CoreModule } from "@core/core.module";
+import { LanguageService } from "@core/language/language.service";
+import { ToastService } from "@core/toast/toast.service";
+import { TabsService } from "@layout/tabs.service";
+import { checkCoverFile, prepareCover } from "@features/novel/novel.cover";
+import { ProjectConfirmService } from "../project.confirm.service";
+import { ProjectLabels } from "../project.labels";
+import { ProjectSummary } from "../project.models";
+import { projectCode, toProjectError } from "../project.rules";
+import { ProjectService } from "../project.service";
+import { ProjectThumb } from "./thumb.component";
+
+@Component({
+  selector: "app-project-panel",
+  standalone: true,
+  imports: [Icon, CoreModule, ProjectThumb],
+  templateUrl: "./project.panel.html",
+})
+export class ProjectPanel {
+  private readonly tabs = inject(TabsService);
+  readonly projects = inject(ProjectService);
+  readonly labels = inject(ProjectLabels);
+  private readonly confirms = inject(ProjectConfirmService);
+  private readonly languageService = inject(LanguageService);
+  private readonly toasts = inject(ToastService);
+  readonly projectId = input.required<number>();
+  readonly showOpen = input(false);
+  readonly project = computed(this.buildProject.bind(this));
+  readonly hasCover = computed(this.buildHasCover.bind(this));
+
+  code(project: ProjectSummary): string {
+    return projectCode(project.id);
+  }
+
+  async open(project: ProjectSummary): Promise<void> {
+    const opened = await this.projects.open(project.id);
+    this.tabs.openProject(opened.id, opened.name, this.labels.iconOf(opened.template));
+  }
+
+  archive(project: ProjectSummary): void {
+    void this.projects.setArchived([project.id], !project.archived);
+  }
+
+  openFolder(project: ProjectSummary): void {
+    void this.projects.folderOpen(project.id);
+  }
+
+  remove(project: ProjectSummary): void {
+    this.confirms.deleteProjects([project.id]);
+  }
+
+  coverKey(): LanguageKey {
+    return this.hasCover() ? "project.panel.coverChange" : "project.panel.coverChoose";
+  }
+
+  async onCoverFile(project: ProjectSummary, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) {
+      return;
+    }
+    const check = checkCoverFile(file);
+    if (check === "notImage") {
+      this.toasts.show(this.languageService.translate("novel.toast.notImage"), "warning");
+    } else if (check === "tooLarge") {
+      this.toasts.show(this.languageService.translate("novel.toast.imageTooLarge"), "warning");
+    } else {
+      await this.applyCover(project.id, file);
+    }
+  }
+
+  async clearCover(project: ProjectSummary): Promise<void> {
+    try {
+      await this.projects.clearCover(project.id);
+      this.toasts.show(this.languageService.translate("project.toast.coverRemoved"));
+    } catch (cause) {
+      this.fail(cause);
+    }
+  }
+
+  private async applyCover(id: number, file: File): Promise<void> {
+    let dataUrl: string;
+    try {
+      dataUrl = await prepareCover(file);
+    } catch {
+      this.toasts.show(this.languageService.translate("novel.toast.imageUnreadable"), "warning");
+      return;
+    }
+    try {
+      await this.projects.setCover(id, dataUrl);
+      this.toasts.show(this.languageService.translate("project.toast.coverChanged"));
+    } catch (cause) {
+      this.fail(cause);
+    }
+  }
+
+  private fail(cause: unknown): void {
+    const detail = toProjectError(cause).detail;
+    this.toasts.show(this.languageService.translate("project.error.generic", { detail }), "danger");
+  }
+
+  private buildHasCover(): boolean {
+    return this.projects.coverUrl(this.projectId()) !== null;
+  }
+
+  private buildProject(): ProjectSummary | undefined {
+    return this.projects.projectById(this.projectId());
+  }
+}

@@ -1,9 +1,9 @@
 import type { Decorator } from "@storybook/angular-vite";
-import { LibraryImage } from "@app/features/library/library.images.models";
-import { AssetRights, KindCounts, LibraryCollection, LibraryKind, LibrarySummary, LibraryTag } from "@app/features/library/library.models";
-import { LibraryPrompt, PromptKind } from "@app/features/library/library.prompts.models";
-import { LibrarySound } from "@app/features/library/library.sounds.models";
-import { LibraryVideo } from "@app/features/library/library.videos.models";
+import { LibraryImage } from "@features/library/library.images.models";
+import { AssetRights, KindCounts, LibraryCollection, LibraryKind, LibrarySummary, LibraryTag } from "@features/library/library.models";
+import { LibraryPrompt, PromptKind } from "@features/library/library.prompts.models";
+import { LibrarySound } from "@features/library/library.sounds.models";
+import { LibraryVideo } from "@features/library/library.videos.models";
 import { IpcHandlers, baseHandlers, withScreen } from "./screen.mocks";
 
 const PEAK_RATE = 12;

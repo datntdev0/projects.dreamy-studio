@@ -1,11 +1,11 @@
 import { Component, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguageKey } from "@app/core/language/language.models";
-import { CoreModule } from "@app/core/core.module";
-import { NovelOmniscient } from "@app/features/novel/components/knowledge-omniscient.component";
-import { PipelineLog } from "@app/features/pipeline/components/log.component";
-import { PipelineList } from "@app/features/pipeline/components/list.component";
+import { LanguageKey } from "@core/language/language.models";
+import { CoreModule } from "@core/core.module";
+import { NovelOmniscient } from "@features/novel/components/knowledge-omniscient.component";
+import { PipelineLog } from "@features/pipeline/components/log.component";
+import { PipelineList } from "@features/pipeline/components/list.component";
 import { LayoutService } from "../layout.service";
 import { BottomTabId } from "../layout.models";
 

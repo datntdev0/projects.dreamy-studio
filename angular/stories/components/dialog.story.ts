@@ -1,9 +1,9 @@
 import { Component, Input, inject } from "@angular/core";
 import { Button } from "@components/button";
 import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { CoreModule } from "@app/core/core.module";
-import { DialogItem, DialogOptions } from "@app/core/dialog/dialog.models";
-import { DialogService } from "@app/core/dialog/dialog.service";
+import { CoreModule } from "@core/core.module";
+import { DialogItem, DialogOptions } from "@core/dialog/dialog.models";
+import { DialogService } from "@core/dialog/dialog.service";
 
 const SAMPLE_ITEMS: DialogItem[] = [
   { name: "Chapter 01", meta: "Novel · 12 KB", icon: "film" },

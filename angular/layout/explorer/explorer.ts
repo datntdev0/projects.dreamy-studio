@@ -1,11 +1,11 @@
 import { Component, computed, inject } from "@angular/core";
 import { Button } from "@components/button";
 import { Icon } from "@components/icon";
-import { LanguageKey } from "@app/core/language/language.models";
-import { CoreModule } from "@app/core/core.module";
-import { NovelExplorer } from "@app/features/novel/components/explorer.component";
-import { ProjectExplorer } from "@app/features/project/components/explorer.component";
-import { LibraryExplorer } from "@app/features/library/components/explorer.component";
+import { LanguageKey } from "@core/language/language.models";
+import { CoreModule } from "@core/core.module";
+import { NovelExplorer } from "@features/novel/components/explorer.component";
+import { ProjectExplorer } from "@features/project/components/explorer.component";
+import { LibraryExplorer } from "@features/library/components/explorer.component";
 import { LayoutService } from "../layout.service";
 import { RAIL_ITEMS, RailItem } from "../layout.models";
 

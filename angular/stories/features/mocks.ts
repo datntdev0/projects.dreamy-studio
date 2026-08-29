@@ -1,13 +1,13 @@
 import { Provider, signal } from "@angular/core";
 import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
-import { LanguageService } from "@app/core/language/language.service";
-import { ThemeService } from "@app/core/theme/theme.service";
-import { LlmService } from "@app/features/settings/llm.service";
-import { LlmCapability, LlmFeature, LlmFeatureSettings, LlmProvider, SettingsSectionId } from "@app/features/settings/settings.models";
-import { SettingsService } from "@app/features/settings/settings.service";
-import { AppInfo, CurrentWorkspace, LoadState, RecentWorkspace } from "@app/features/workspace/workspace.models";
-import { WorkspaceService } from "@app/features/workspace/workspace.service";
+import { LanguageService } from "@core/language/language.service";
+import { ThemeService } from "@core/theme/theme.service";
+import { LlmService } from "@features/settings/llm.service";
+import { LlmCapability, LlmFeature, LlmFeatureSettings, LlmProvider, SettingsSectionId } from "@features/settings/settings.models";
+import { SettingsService } from "@features/settings/settings.service";
+import { AppInfo, CurrentWorkspace, LoadState, RecentWorkspace } from "@features/workspace/workspace.models";
+import { WorkspaceService } from "@features/workspace/workspace.service";
 
 export function withProviders(providers: Provider[]): { decorators: Decorator[] } {
   return { decorators: [applicationConfig({ providers })] };

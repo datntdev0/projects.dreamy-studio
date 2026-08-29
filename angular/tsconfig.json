@@ -16,7 +16,10 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "@app/*": ["./app/*"],
+      "@core/*": ["./core/*"],
+      "@features/*": ["./features/*"],
+      "@pages/*": ["./pages/*"],
+      "@testing/*": ["./testing/*"],
       "@components/*": ["./components/*"],
       "@layout/*": ["./layout/*"]
     }

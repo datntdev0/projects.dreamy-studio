@@ -1,6 +1,6 @@
 import type { Decorator } from "@storybook/angular-vite";
-import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from "@app/features/assistant/assistant.models";
-import { NovelSummary } from "@app/features/novel/novel.models";
+import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from "@features/assistant/assistant.models";
+import { NovelSummary } from "@features/novel/novel.models";
 import { knowledgeChanges, translationReview } from "./assistant.fixtures";
 import { knowledgeScreenHandlers } from "./novel-knowledge.mocks";
 import { LANTERN_VI_TITLES } from "./novel-translation.fixtures";

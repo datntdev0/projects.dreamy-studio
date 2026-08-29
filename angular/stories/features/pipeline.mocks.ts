@@ -1,8 +1,8 @@
 import { Provider, computed, signal } from "@angular/core";
-import { ChapterRow, NovelError } from "@app/features/novel/novel.models";
-import { PipelineSnapshot } from "@app/features/novel/novel.translation.models";
-import { PipelineService } from "@app/features/pipeline/pipeline.service";
-import { totalsOf } from "@app/features/pipeline/pipeline.rules";
+import { ChapterRow, NovelError } from "@features/novel/novel.models";
+import { PipelineSnapshot } from "@features/novel/novel.translation.models";
+import { PipelineService } from "@features/pipeline/pipeline.service";
+import { totalsOf } from "@features/pipeline/pipeline.rules";
 import { LANTERN_CHAPTERS } from "../screens/novel-translation.fixtures";
 import { NOVEL_NAMES } from "./pipeline.fixtures";
 

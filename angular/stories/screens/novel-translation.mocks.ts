@@ -1,8 +1,8 @@
 import { applicationConfig } from "@storybook/angular-vite";
 import type { Decorator } from "@storybook/angular-vite";
-import { PipelineService } from "@app/features/pipeline/pipeline.service";
-import { ChapterRow, NovelSummary, ParagraphRow, TranslationStatus } from "@app/features/novel/novel.models";
-import { DictEntry, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, WireChapter, WireTranslation, WireWarning } from "@app/features/novel/novel.translation.models";
+import { PipelineService } from "@features/pipeline/pipeline.service";
+import { ChapterRow, NovelSummary, ParagraphRow, TranslationStatus } from "@features/novel/novel.models";
+import { DictEntry, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, WireChapter, WireTranslation, WireWarning } from "@features/novel/novel.translation.models";
 import { mixedHistory, runningAnalysis, runningPipeline } from "../features/pipeline.fixtures";
 import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from "./novel-translation.fixtures";
 import { ConcurrentPipelineService } from "./pipeline.mocks";

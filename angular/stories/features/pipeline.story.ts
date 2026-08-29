@@ -1,7 +1,7 @@
 import { Component, Input } from "@angular/core";
 import { moduleMetadata } from "@storybook/angular-vite";
 import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { PipelineList } from "@app/features/pipeline/components/list.component";
+import { PipelineList } from "@features/pipeline/components/list.component";
 import { CURRENT_WORKSPACE, withProviders, workspaceProvider } from "./mocks";
 import { mixedHistory, runningAnalysis, runningAudio, runningLarge, runningPipeline, runningRender } from "./pipeline.fixtures";
 import { PipelineScenario, pipelineProvider } from "./pipeline.mocks";

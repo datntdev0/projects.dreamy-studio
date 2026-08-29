@@ -1,6 +1,6 @@
 import { parse } from "yaml";
 import source from "../../../desktop/src/features/knowledge/ontology.yml?raw";
-import { OntologyPredicateView, OntologyRuleView, OntologyTypeView, OntologyView, Severity } from "@app/features/novel/novel.knowledge.models";
+import { OntologyPredicateView, OntologyRuleView, OntologyTypeView, OntologyView, Severity } from "@features/novel/novel.knowledge.models";
 
 interface TypeDoc {
   abstract?: boolean;

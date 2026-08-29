@@ -20,6 +20,7 @@ use crate::features::workspace::session::WorkspaceSession;
 use std::path::Path;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 use tauri_plugin_dialog::DialogExt;
@@ -236,7 +237,7 @@ pub fn export_package(
     service.open(session)?.export_package(id, Path::new(path))
 }
 
-fn pick_export_path(app: &AppHandle, file_name: String) -> Option<String> {
+fn pick_export_path<R: Runtime>(app: &AppHandle<R>, file_name: String) -> Option<String> {
     let picked = app
         .dialog()
         .file()
@@ -246,7 +247,7 @@ fn pick_export_path(app: &AppHandle, file_name: String) -> Option<String> {
     picked_path(picked)
 }
 
-fn pick_package(app: &AppHandle) -> Option<String> {
+fn pick_package<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
     let picked = app
         .dialog()
         .file()
@@ -259,7 +260,7 @@ fn task_failure(error: tauri::Error) -> NovelError {
     NovelError::new(NovelErrorCode::Task, error.to_string())
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> NovelResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> NovelResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&NovelService, &WorkspaceSession) -> NovelResult<T> + Send + 'static,
@@ -276,12 +277,15 @@ where
 }
 
 #[tauri::command]
-pub async fn novel_list(app: AppHandle) -> NovelResult<Vec<NovelSummary>> {
+pub async fn novel_list<R: Runtime>(app: AppHandle<R>) -> NovelResult<Vec<NovelSummary>> {
     run_blocking(app, list_novels).await
 }
 
 #[tauri::command]
-pub async fn novel_create(app: AppHandle, input: NovelInput) -> NovelResult<NovelSummary> {
+pub async fn novel_create<R: Runtime>(
+    app: AppHandle<R>,
+    input: NovelInput,
+) -> NovelResult<NovelSummary> {
     run_blocking(app, move |service, session| {
         create_novel(service, session, input)
     })
@@ -289,7 +293,11 @@ pub async fn novel_create(app: AppHandle, input: NovelInput) -> NovelResult<Nove
 }
 
 #[tauri::command]
-pub async fn novel_update(app: AppHandle, id: i64, patch: NovelPatch) -> NovelResult<NovelSummary> {
+pub async fn novel_update<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+    patch: NovelPatch,
+) -> NovelResult<NovelSummary> {
     run_blocking(app, move |service, session| {
         update_novel(service, session, id, patch)
     })
@@ -297,7 +305,7 @@ pub async fn novel_update(app: AppHandle, id: i64, patch: NovelPatch) -> NovelRe
 }
 
 #[tauri::command]
-pub async fn novel_delete(app: AppHandle, ids: Vec<i64>) -> NovelResult<usize> {
+pub async fn novel_delete<R: Runtime>(app: AppHandle<R>, ids: Vec<i64>) -> NovelResult<usize> {
     run_blocking(app, move |service, session| {
         delete_novels(service, session, ids)
     })
@@ -305,13 +313,16 @@ pub async fn novel_delete(app: AppHandle, ids: Vec<i64>) -> NovelResult<usize> {
 }
 
 #[tauri::command]
-pub async fn novel_cover_get(app: AppHandle, id: i64) -> NovelResult<Option<String>> {
+pub async fn novel_cover_get<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> NovelResult<Option<String>> {
     run_blocking(app, move |service, session| get_cover(service, session, id)).await
 }
 
 #[tauri::command]
-pub async fn novel_cover_set(
-    app: AppHandle,
+pub async fn novel_cover_set<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     data_url: String,
 ) -> NovelResult<NovelSummary> {
@@ -322,7 +333,10 @@ pub async fn novel_cover_set(
 }
 
 #[tauri::command]
-pub async fn novel_cover_clear(app: AppHandle, id: i64) -> NovelResult<NovelSummary> {
+pub async fn novel_cover_clear<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> NovelResult<NovelSummary> {
     run_blocking(app, move |service, session| {
         clear_cover(service, session, id)
     })
@@ -330,7 +344,10 @@ pub async fn novel_cover_clear(app: AppHandle, id: i64) -> NovelResult<NovelSumm
 }
 
 #[tauri::command]
-pub async fn novel_chapters(app: AppHandle, novel_id: i64) -> NovelResult<Vec<ChapterRow>> {
+pub async fn novel_chapters<R: Runtime>(
+    app: AppHandle<R>,
+    novel_id: i64,
+) -> NovelResult<Vec<ChapterRow>> {
     run_blocking(app, move |service, session| {
         list_chapters(service, session, novel_id)
     })
@@ -338,8 +355,8 @@ pub async fn novel_chapters(app: AppHandle, novel_id: i64) -> NovelResult<Vec<Ch
 }
 
 #[tauri::command]
-pub async fn novel_chapter_read(
-    app: AppHandle,
+pub async fn novel_chapter_read<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
 ) -> NovelResult<Vec<ParagraphRow>> {
@@ -350,8 +367,8 @@ pub async fn novel_chapter_read(
 }
 
 #[tauri::command]
-pub async fn novel_paragraph_update(
-    app: AppHandle,
+pub async fn novel_paragraph_update<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
     n: usize,
@@ -364,8 +381,8 @@ pub async fn novel_paragraph_update(
 }
 
 #[tauri::command]
-pub async fn novel_chapter_write(
-    app: AppHandle,
+pub async fn novel_chapter_write<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
     text: String,
@@ -377,8 +394,8 @@ pub async fn novel_chapter_write(
 }
 
 #[tauri::command]
-pub async fn novel_chapter_add(
-    app: AppHandle,
+pub async fn novel_chapter_add<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     title: String,
 ) -> NovelResult<ChapterRow> {
@@ -389,8 +406,8 @@ pub async fn novel_chapter_add(
 }
 
 #[tauri::command]
-pub async fn novel_chapter_rename(
-    app: AppHandle,
+pub async fn novel_chapter_rename<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
     title: String,
@@ -402,8 +419,8 @@ pub async fn novel_chapter_rename(
 }
 
 #[tauri::command]
-pub async fn novel_chapter_delete(
-    app: AppHandle,
+pub async fn novel_chapter_delete<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
 ) -> NovelResult<Vec<ChapterRow>> {
@@ -414,8 +431,8 @@ pub async fn novel_chapter_delete(
 }
 
 #[tauri::command]
-pub async fn novel_chapter_move(
-    app: AppHandle,
+pub async fn novel_chapter_move<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
     to_seq: i64,
@@ -427,8 +444,8 @@ pub async fn novel_chapter_move(
 }
 
 #[tauri::command]
-pub async fn novel_paragraph_add(
-    app: AppHandle,
+pub async fn novel_paragraph_add<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     chapter_id: String,
     text: String,
@@ -440,7 +457,7 @@ pub async fn novel_paragraph_add(
 }
 
 #[tauri::command]
-pub async fn novel_package_pick(app: AppHandle) -> Option<String> {
+pub async fn novel_package_pick<R: Runtime>(app: AppHandle<R>) -> Option<String> {
     let task = spawn_blocking(move || pick_package(&app));
     task.await.unwrap_or_default()
 }
@@ -459,8 +476,8 @@ pub async fn novel_package_inspect(
 }
 
 #[tauri::command]
-pub async fn novel_package_import(
-    app: AppHandle,
+pub async fn novel_package_import<R: Runtime>(
+    app: AppHandle<R>,
     path: String,
     meta: NovelInput,
 ) -> NovelResult<NovelSummary> {
@@ -471,14 +488,17 @@ pub async fn novel_package_import(
 }
 
 #[tauri::command]
-pub async fn novel_package_save_pick(app: AppHandle, file_name: String) -> Option<String> {
+pub async fn novel_package_save_pick<R: Runtime>(
+    app: AppHandle<R>,
+    file_name: String,
+) -> Option<String> {
     let task = spawn_blocking(move || pick_export_path(&app, file_name));
     task.await.unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn novel_package_export(
-    app: AppHandle,
+pub async fn novel_package_export<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     path: String,
 ) -> NovelResult<ExportSummary> {

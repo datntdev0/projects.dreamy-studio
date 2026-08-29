@@ -16,6 +16,7 @@ use crate::features::workspace::load::LoadRequest;
 use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
+use crate::testing::app::MockHost;
 use crate::testing::backend::StubBackend;
 use serde_json::json;
 use std::sync::Arc;
@@ -243,4 +244,49 @@ fn stale_accept_clears_the_stale_flag_in_the_serialized_view() {
         serde_json::to_value(empty).unwrap()["code"],
         "invalid_input"
     );
+}
+
+#[test]
+fn every_knowledge_command_reports_no_workspace_through_ipc() {
+    let host = MockHost::new();
+
+    host.expect_code(
+        &[
+            ("knowledge_get", json!({ "novelId": 1, "lang": "src" })),
+            (
+                "knowledge_edit",
+                json!({ "novelId": 1, "lang": "src", "edits": [] }),
+            ),
+            (
+                "knowledge_stale_accept",
+                json!({ "novelId": 1, "lang": "src", "chapters": [1] }),
+            ),
+        ],
+        "no_workspace",
+    );
+}
+
+#[test]
+fn knowledge_of_an_unanalyzed_novel_is_read_edited_and_accepted_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+    let (novel, _) = host.seed_novel(&[("One", "alpha")]);
+
+    let knowledge = host
+        .invoke("knowledge_get", json!({ "novelId": novel, "lang": "src" }))
+        .unwrap();
+    let edited = host.invoke(
+        "knowledge_edit",
+        json!({ "novelId": novel, "lang": "src", "edits": [] }),
+    );
+    let accepted = host.invoke(
+        "knowledge_stale_accept",
+        json!({ "novelId": novel, "lang": "src", "chapters": [1] }),
+    );
+    let unknown_lang = host.invoke("knowledge_get", json!({ "novelId": novel, "lang": "nope" }));
+
+    assert!(knowledge.is_object());
+    assert_eq!(edited.unwrap_err()["code"], "invalid_input");
+    assert!(accepted.is_err());
+    assert!(unknown_lang.is_err());
 }

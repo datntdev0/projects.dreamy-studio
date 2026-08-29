@@ -11,6 +11,7 @@ use crate::features::workspace::load::LoadRequest;
 use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
+use crate::testing::app::MockHost;
 use crate::testing::assistant::FakeLlm;
 use crate::testing::assistant::RecordingEvents;
 use crate::testing::assistant::RecordingSink;
@@ -523,4 +524,115 @@ fn rejecting_a_proposal_updates_the_stored_review() {
         stored.messages[1].attachments,
         resolved.messages[1].attachments
     );
+}
+
+#[test]
+fn every_assistant_command_reports_no_workspace_through_ipc() {
+    let host = MockHost::new();
+
+    host.expect_code(
+        &[
+            ("assistant_session_list", json!({})),
+            ("assistant_session_get", json!({ "id": "s" })),
+            (
+                "assistant_session_create",
+                json!({ "scope": { "kind": "workspace" } }),
+            ),
+            (
+                "assistant_session_permit",
+                json!({ "id": "s", "editGranted": true }),
+            ),
+            ("assistant_session_delete", json!({ "id": "s" })),
+            (
+                "assistant_proposal_resolve",
+                json!({
+                    "sessionId": "s",
+                    "messageId": "m",
+                    "itemIds": [],
+                    "status": "accepted"
+                }),
+            ),
+            (
+                "assistant_message_send",
+                json!({
+                    "sessionId": "s",
+                    "text": "hi",
+                    "context": null,
+                    "onEvent": "__CHANNEL__:1"
+                }),
+            ),
+        ],
+        "no_workspace",
+    );
+}
+
+#[test]
+fn assistant_sessions_are_created_permitted_and_deleted_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+
+    let created = host
+        .invoke(
+            "assistant_session_create",
+            json!({ "scope": { "kind": "workspace" } }),
+        )
+        .unwrap();
+    let id = created["id"].as_str().unwrap().to_string();
+    let listed = host.invoke("assistant_session_list", json!({})).unwrap();
+    let fetched = host
+        .invoke("assistant_session_get", json!({ "id": id }))
+        .unwrap();
+    let permitted = host
+        .invoke(
+            "assistant_session_permit",
+            json!({ "id": id, "editGranted": true }),
+        )
+        .unwrap();
+    let missing = host
+        .invoke("assistant_session_get", json!({ "id": "missing" }))
+        .unwrap_err();
+    let unresolved = host.invoke(
+        "assistant_proposal_resolve",
+        json!({
+            "sessionId": id,
+            "messageId": "missing",
+            "itemIds": [],
+            "status": "accepted"
+        }),
+    );
+    let deleted = host.invoke("assistant_session_delete", json!({ "id": id }));
+
+    assert!(listed.as_array().unwrap().is_empty());
+    assert_eq!(fetched["id"], created["id"]);
+    assert_eq!(permitted["id"], created["id"]);
+    assert_eq!(missing["code"], "not_found");
+    assert!(unresolved.is_err());
+    assert!(deleted.is_ok(), "{deleted:?}");
+    assert!(
+        host.invoke("assistant_session_list", json!({}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn sending_to_an_unknown_assistant_session_fails_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+
+    let error = host
+        .invoke(
+            "assistant_message_send",
+            json!({
+                "sessionId": "missing",
+                "text": "hi",
+                "context": null,
+                "onEvent": "__CHANNEL__:1"
+            }),
+        )
+        .unwrap_err();
+
+    assert_eq!(error["code"], "not_found");
 }

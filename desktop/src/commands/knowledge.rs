@@ -8,6 +8,7 @@ use crate::features::knowledge::service::KnowledgeService;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 
 pub fn get(
@@ -45,7 +46,7 @@ fn task_failure(error: tauri::Error) -> KnowledgeError {
     KnowledgeError::new(KnowledgeErrorCode::Task, error.to_string())
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> KnowledgeResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> KnowledgeResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&KnowledgeService, &WorkspaceSession) -> KnowledgeResult<T> + Send + 'static,
@@ -62,8 +63,8 @@ where
 }
 
 #[tauri::command]
-pub async fn knowledge_get(
-    app: AppHandle,
+pub async fn knowledge_get<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     lang: String,
 ) -> KnowledgeResult<WireKnowledge> {
@@ -74,8 +75,8 @@ pub async fn knowledge_get(
 }
 
 #[tauri::command]
-pub async fn knowledge_edit(
-    app: AppHandle,
+pub async fn knowledge_edit<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     lang: String,
     edits: Vec<KnowledgeEdit>,
@@ -87,8 +88,8 @@ pub async fn knowledge_edit(
 }
 
 #[tauri::command]
-pub async fn knowledge_stale_accept(
-    app: AppHandle,
+pub async fn knowledge_stale_accept<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     lang: String,
     chapters: Vec<i64>,

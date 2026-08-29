@@ -1,7 +1,11 @@
 use tauri::App;
 use tauri::AppHandle;
+use tauri::Builder;
 use tauri::Manager;
 use tauri::RunEvent;
+use tauri::Runtime;
+use tauri::http::Request;
+use tauri::http::Response;
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -15,6 +19,7 @@ use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::service::CliAssistantLlm;
 use crate::features::assistant::service::McpEndpoint;
 use crate::features::knowledge::service::KnowledgeService;
+use crate::features::library::models::StreamKind;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::analyzer::LlmAnalyzer;
 use crate::features::pipeline::executor::PipelineExecutor;
@@ -32,30 +37,20 @@ use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::window_state;
 
 pub fn run() {
-    let app = tauri::Builder::default()
+    let app = configure(tauri::Builder::default())
+        .setup(setup)
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+    app.run(handle_run_event);
+}
+
+pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
+    let builder = builder
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .register_asynchronous_uri_scheme_protocol("dreamy-sound", |context, request, responder| {
-            let app = context.app_handle().clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                responder.respond(commands::library_stream::respond(
-                    &app,
-                    request,
-                    crate::features::library::models::StreamKind::Sound,
-                ));
-            });
-        })
-        .register_asynchronous_uri_scheme_protocol("dreamy-video", |context, request, responder| {
-            let app = context.app_handle().clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                responder.respond(commands::library_stream::respond(
-                    &app,
-                    request,
-                    crate::features::library::models::StreamKind::Video,
-                ));
-            });
-        })
-        .invoke_handler(tauri::generate_handler![
+        .plugin(tauri_plugin_dialog::init());
+    let builder = register_stream(builder, "dreamy-sound", StreamKind::Sound);
+    register_stream(builder, "dreamy-video", StreamKind::Video).invoke_handler(
+        tauri::generate_handler![
             commands::app::app_info,
             commands::settings::settings_get,
             commands::settings::settings_general_save,
@@ -169,14 +164,29 @@ pub fn run() {
             commands::library::library_prompt_list,
             commands::library::library_prompt_update,
             commands::library::library_prompt_delete,
-        ])
-        .setup(setup)
-        .build(tauri::generate_context!())
-        .expect("error while building tauri application");
-    app.run(handle_run_event);
+        ],
+    )
 }
 
-fn handle_run_event(app: &AppHandle, event: RunEvent) {
+fn register_stream<R: Runtime>(builder: Builder<R>, scheme: &str, kind: StreamKind) -> Builder<R> {
+    builder.register_asynchronous_uri_scheme_protocol(scheme, move |context, request, responder| {
+        let app = context.app_handle().clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            serve_stream(&app, request, kind, |response| responder.respond(response));
+        });
+    })
+}
+
+pub fn serve_stream<R: Runtime>(
+    app: &AppHandle<R>,
+    request: Request<Vec<u8>>,
+    kind: StreamKind,
+    send: impl FnOnce(Response<Vec<u8>>),
+) {
+    send(commands::library_stream::respond(app, request, kind));
+}
+
+fn handle_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
     if let RunEvent::Exit = event {
         if let Some(executor) = app.try_state::<PipelineExecutor>() {
             executor.cancel();
@@ -191,17 +201,21 @@ fn handle_run_event(app: &AppHandle, event: RunEvent) {
     }
 }
 
-fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
+fn setup<R: Runtime>(app: &mut App<R>) -> Result<(), Box<dyn std::error::Error>> {
     let container = AppContainer::new(app)?;
+    install(app, container);
+    Ok(())
+}
+
+pub fn install<R: Runtime>(app: &App<R>, container: AppContainer) {
     log_startup(app, &container);
     manage_workspace(app, &container);
     manage_assistant(app, &container);
     app.manage(container);
     prepare_window(app);
-    Ok(())
 }
 
-fn prepare_window(app: &App) {
+fn prepare_window<R: Runtime>(app: &App<R>) {
     let Some(window) = app.get_webview_window(commands::workspace::MAIN_WINDOW_LABEL) else {
         return;
     };
@@ -211,7 +225,7 @@ fn prepare_window(app: &App) {
     window_state::prepare(&window, app.handle(), service.window());
 }
 
-fn manage_workspace(app: &App, container: &AppContainer) {
+fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let repository = WorkspaceRepository::new(container.database_path.clone());
     let service = WorkspaceService::new(repository);
     let loader = WorkspaceLoader::from_container(container, service.clone());
@@ -228,7 +242,7 @@ fn manage_workspace(app: &App, container: &AppContainer) {
     app.manage(crate::features::library::service::LibraryService::new());
 }
 
-fn manage_assistant(app: &App, container: &AppContainer) {
+fn manage_assistant<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let grants = McpGrants::new();
     let endpoint: McpEndpoint = Arc::new(Mutex::new(None));
     let llm = Arc::new(CliAssistantLlm::new(
@@ -251,7 +265,7 @@ fn manage_assistant(app: &App, container: &AppContainer) {
     app.manage(grants);
 }
 
-fn manage_pipeline(app: &App, container: &AppContainer) {
+fn manage_pipeline<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let translation = crate::features::translation::service::TranslationService::new();
     let translator = std::sync::Arc::new(LlmTranslator::new(SettingsRepository::new(
         container.settings_path.clone(),
@@ -277,7 +291,7 @@ fn manage_pipeline(app: &App, container: &AppContainer) {
     );
 }
 
-fn log_startup(app: &App, container: &AppContainer) {
+fn log_startup<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let logger = &container.logger;
     if let Err(error) = logger.prepare() {
         eprintln!("cannot prepare log directory: {error}");
@@ -298,3 +312,7 @@ fn log_startup(app: &App, container: &AppContainer) {
         logger.info("app", line);
     }
 }
+
+#[cfg(test)]
+#[path = "../test/bootstrap.test.rs"]
+mod tests;

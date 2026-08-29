@@ -9,6 +9,7 @@ use crate::features::project::service::ProjectService;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri_plugin_opener::OpenerExt;
 
@@ -99,7 +100,7 @@ fn task_failure(error: tauri::Error) -> ProjectError {
     ProjectError::new(ProjectErrorCode::Task, error.to_string())
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> ProjectResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> ProjectResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&ProjectService, &WorkspaceSession) -> ProjectResult<T> + Send + 'static,
@@ -116,12 +117,15 @@ where
 }
 
 #[tauri::command]
-pub async fn project_list(app: AppHandle) -> ProjectResult<Vec<ProjectSummary>> {
+pub async fn project_list<R: Runtime>(app: AppHandle<R>) -> ProjectResult<Vec<ProjectSummary>> {
     run_blocking(app, list_projects).await
 }
 
 #[tauri::command]
-pub async fn project_create(app: AppHandle, input: ProjectInput) -> ProjectResult<ProjectSummary> {
+pub async fn project_create<R: Runtime>(
+    app: AppHandle<R>,
+    input: ProjectInput,
+) -> ProjectResult<ProjectSummary> {
     run_blocking(app, move |service, session| {
         create_project(service, session, input)
     })
@@ -129,8 +133,8 @@ pub async fn project_create(app: AppHandle, input: ProjectInput) -> ProjectResul
 }
 
 #[tauri::command]
-pub async fn project_update(
-    app: AppHandle,
+pub async fn project_update<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     patch: ProjectPatch,
 ) -> ProjectResult<ProjectSummary> {
@@ -141,7 +145,11 @@ pub async fn project_update(
 }
 
 #[tauri::command]
-pub async fn project_archive(app: AppHandle, ids: Vec<i64>, archived: bool) -> ProjectResult<()> {
+pub async fn project_archive<R: Runtime>(
+    app: AppHandle<R>,
+    ids: Vec<i64>,
+    archived: bool,
+) -> ProjectResult<()> {
     run_blocking(app, move |service, session| {
         archive_projects(service, session, ids, archived)
     })
@@ -149,7 +157,7 @@ pub async fn project_archive(app: AppHandle, ids: Vec<i64>, archived: bool) -> P
 }
 
 #[tauri::command]
-pub async fn project_delete(app: AppHandle, ids: Vec<i64>) -> ProjectResult<usize> {
+pub async fn project_delete<R: Runtime>(app: AppHandle<R>, ids: Vec<i64>) -> ProjectResult<usize> {
     run_blocking(app, move |service, session| {
         delete_projects(service, session, ids)
     })
@@ -157,7 +165,7 @@ pub async fn project_delete(app: AppHandle, ids: Vec<i64>) -> ProjectResult<usiz
 }
 
 #[tauri::command]
-pub async fn project_open(app: AppHandle, id: i64) -> ProjectResult<ProjectSummary> {
+pub async fn project_open<R: Runtime>(app: AppHandle<R>, id: i64) -> ProjectResult<ProjectSummary> {
     run_blocking(app, move |service, session| {
         open_project(service, session, id)
     })
@@ -165,8 +173,8 @@ pub async fn project_open(app: AppHandle, id: i64) -> ProjectResult<ProjectSumma
 }
 
 #[tauri::command]
-pub async fn project_dir_list(
-    app: AppHandle,
+pub async fn project_dir_list<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     path: String,
 ) -> ProjectResult<Vec<DirEntry>> {
@@ -177,7 +185,10 @@ pub async fn project_dir_list(
 }
 
 #[tauri::command]
-pub async fn project_cover_get(app: AppHandle, id: i64) -> ProjectResult<Option<String>> {
+pub async fn project_cover_get<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> ProjectResult<Option<String>> {
     run_blocking(app, move |service, session| {
         get_project_cover(service, session, id)
     })
@@ -185,8 +196,8 @@ pub async fn project_cover_get(app: AppHandle, id: i64) -> ProjectResult<Option<
 }
 
 #[tauri::command]
-pub async fn project_cover_set(
-    app: AppHandle,
+pub async fn project_cover_set<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     data_url: String,
 ) -> ProjectResult<ProjectSummary> {
@@ -197,7 +208,10 @@ pub async fn project_cover_set(
 }
 
 #[tauri::command]
-pub async fn project_cover_clear(app: AppHandle, id: i64) -> ProjectResult<ProjectSummary> {
+pub async fn project_cover_clear<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> ProjectResult<ProjectSummary> {
     run_blocking(app, move |service, session| {
         clear_project_cover(service, session, id)
     })
@@ -205,7 +219,7 @@ pub async fn project_cover_clear(app: AppHandle, id: i64) -> ProjectResult<Proje
 }
 
 #[tauri::command]
-pub async fn project_folder_open(app: AppHandle, id: i64) -> ProjectResult<()> {
+pub async fn project_folder_open<R: Runtime>(app: AppHandle<R>, id: i64) -> ProjectResult<()> {
     let path = run_blocking(app.clone(), move |service, session| {
         service.open(session)?.folder_path(id)
     })

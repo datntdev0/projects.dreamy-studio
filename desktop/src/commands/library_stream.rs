@@ -3,6 +3,7 @@ use crate::features::library::service::LibraryService;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::http::Request;
 use tauri::http::Response;
 use tauri::http::StatusCode;
@@ -34,7 +35,11 @@ pub fn parse_range(header: &str, total: u64) -> Option<(u64, u64)> {
     (end >= start).then_some((start, end))
 }
 
-pub fn respond(app: &AppHandle, request: Request<Vec<u8>>, kind: StreamKind) -> Response<Vec<u8>> {
+pub fn respond<R: Runtime>(
+    app: &AppHandle<R>,
+    request: Request<Vec<u8>>,
+    kind: StreamKind,
+) -> Response<Vec<u8>> {
     if request.method() == tauri::http::Method::OPTIONS {
         return options();
     }

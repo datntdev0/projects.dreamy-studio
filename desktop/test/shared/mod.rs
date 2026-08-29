@@ -1,5 +1,7 @@
 pub mod analyzer;
+pub mod app;
 pub mod assistant;
+pub mod audio;
 pub mod backend;
 pub mod cli;
 pub mod job;

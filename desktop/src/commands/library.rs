@@ -24,6 +24,7 @@ use crate::features::library::videos::VIDEO_EXTENSIONS;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri_plugin_dialog::DialogExt;
 
@@ -104,7 +105,7 @@ pub fn delete_tag(
     service.open(session)?.tag_delete(&tag)
 }
 
-pub fn pick_images(app: &AppHandle) -> Vec<String> {
+pub fn pick_images<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
     app.dialog()
         .file()
         .add_filter(IMAGE_PICKER_LABEL, &IMAGE_EXTENSIONS)
@@ -148,7 +149,7 @@ pub fn update_image(
     service.open(session)?.image_update(id, patch)
 }
 
-pub fn pick_sounds(app: &AppHandle) -> Vec<String> {
+pub fn pick_sounds<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
     app.dialog()
         .file()
         .add_filter(SOUND_PICKER_LABEL, &SOUND_EXTENSIONS)
@@ -208,7 +209,7 @@ pub fn sound_peaks(
     service.open(session)?.sound_peaks(id)
 }
 
-pub fn pick_videos(app: &AppHandle) -> Vec<String> {
+pub fn pick_videos<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
     app.dialog()
         .file()
         .add_filter(VIDEO_PICKER_LABEL, &VIDEO_EXTENSIONS)
@@ -262,7 +263,7 @@ pub fn video_poster(
     service.open(session)?.video_poster(id)
 }
 
-pub fn pick_prompts(app: &AppHandle) -> Vec<String> {
+pub fn pick_prompts<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
     app.dialog()
         .file()
         .add_filter(PROMPT_PICKER_LABEL, &PROMPT_EXTENSIONS)
@@ -346,7 +347,7 @@ pub fn read_image(
     service.open(session)?.image_read(id)
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> LibraryResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> LibraryResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&LibraryService, &WorkspaceSession) -> LibraryResult<T> + Send + 'static,
@@ -363,18 +364,20 @@ where
 }
 
 #[tauri::command]
-pub async fn library_summary(app: AppHandle) -> LibraryResult<LibrarySummary> {
+pub async fn library_summary<R: Runtime>(app: AppHandle<R>) -> LibraryResult<LibrarySummary> {
     run_blocking(app, get_summary).await
 }
 
 #[tauri::command]
-pub async fn library_collection_list(app: AppHandle) -> LibraryResult<Vec<LibraryCollection>> {
+pub async fn library_collection_list<R: Runtime>(
+    app: AppHandle<R>,
+) -> LibraryResult<Vec<LibraryCollection>> {
     run_blocking(app, list_collections).await
 }
 
 #[tauri::command]
-pub async fn library_collection_create(
-    app: AppHandle,
+pub async fn library_collection_create<R: Runtime>(
+    app: AppHandle<R>,
     input: CollectionInput,
 ) -> LibraryResult<LibraryCollection> {
     run_blocking(app, move |service, session| {
@@ -384,8 +387,8 @@ pub async fn library_collection_create(
 }
 
 #[tauri::command]
-pub async fn library_collection_update(
-    app: AppHandle,
+pub async fn library_collection_update<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     patch: CollectionPatch,
 ) -> LibraryResult<LibraryCollection> {
@@ -396,7 +399,10 @@ pub async fn library_collection_update(
 }
 
 #[tauri::command]
-pub async fn library_collection_delete(app: AppHandle, id: i64) -> LibraryResult<i64> {
+pub async fn library_collection_delete<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> LibraryResult<i64> {
     run_blocking(app, move |service, session| {
         delete_collection(service, session, id)
     })
@@ -404,13 +410,13 @@ pub async fn library_collection_delete(app: AppHandle, id: i64) -> LibraryResult
 }
 
 #[tauri::command]
-pub async fn library_tag_list(app: AppHandle) -> LibraryResult<Vec<LibraryTag>> {
+pub async fn library_tag_list<R: Runtime>(app: AppHandle<R>) -> LibraryResult<Vec<LibraryTag>> {
     run_blocking(app, list_tags).await
 }
 
 #[tauri::command]
-pub async fn library_tag_rename(
-    app: AppHandle,
+pub async fn library_tag_rename<R: Runtime>(
+    app: AppHandle<R>,
     from: String,
     to: String,
 ) -> LibraryResult<LibraryTag> {
@@ -421,8 +427,8 @@ pub async fn library_tag_rename(
 }
 
 #[tauri::command]
-pub async fn library_tag_merge(
-    app: AppHandle,
+pub async fn library_tag_merge<R: Runtime>(
+    app: AppHandle<R>,
     from: String,
     into: String,
 ) -> LibraryResult<LibraryTag> {
@@ -433,7 +439,7 @@ pub async fn library_tag_merge(
 }
 
 #[tauri::command]
-pub async fn library_tag_delete(app: AppHandle, tag: String) -> LibraryResult<i64> {
+pub async fn library_tag_delete<R: Runtime>(app: AppHandle<R>, tag: String) -> LibraryResult<i64> {
     run_blocking(app, move |service, session| {
         delete_tag(service, session, tag)
     })
@@ -441,14 +447,14 @@ pub async fn library_tag_delete(app: AppHandle, tag: String) -> LibraryResult<i6
 }
 
 #[tauri::command]
-pub async fn library_image_pick(app: AppHandle) -> Vec<String> {
+pub async fn library_image_pick<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
     let task = spawn_blocking(move || pick_images(&app));
     task.await.unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn library_image_inspect(
-    app: AppHandle,
+pub async fn library_image_inspect<R: Runtime>(
+    app: AppHandle<R>,
     paths: Vec<String>,
 ) -> LibraryResult<Vec<AssetCheck>> {
     run_blocking(app, move |service, session| {
@@ -458,8 +464,8 @@ pub async fn library_image_inspect(
 }
 
 #[tauri::command]
-pub async fn library_image_upload(
-    app: AppHandle,
+pub async fn library_image_upload<R: Runtime>(
+    app: AppHandle<R>,
     path: String,
     input: AssetUploadInput,
 ) -> LibraryResult<LibraryImage> {
@@ -470,13 +476,13 @@ pub async fn library_image_upload(
 }
 
 #[tauri::command]
-pub async fn library_image_list(app: AppHandle) -> LibraryResult<Vec<LibraryImage>> {
+pub async fn library_image_list<R: Runtime>(app: AppHandle<R>) -> LibraryResult<Vec<LibraryImage>> {
     run_blocking(app, list_images).await
 }
 
 #[tauri::command]
-pub async fn library_image_update(
-    app: AppHandle,
+pub async fn library_image_update<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     patch: AssetPatch,
 ) -> LibraryResult<LibraryImage> {
@@ -487,7 +493,10 @@ pub async fn library_image_update(
 }
 
 #[tauri::command]
-pub async fn library_image_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+pub async fn library_image_delete<R: Runtime>(
+    app: AppHandle<R>,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
     run_blocking(app, move |service, session| {
         delete_images(service, session, ids)
     })
@@ -495,7 +504,7 @@ pub async fn library_image_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResul
 }
 
 #[tauri::command]
-pub async fn library_image_thumb(app: AppHandle, id: i64) -> LibraryResult<String> {
+pub async fn library_image_thumb<R: Runtime>(app: AppHandle<R>, id: i64) -> LibraryResult<String> {
     run_blocking(app, move |service, session| {
         image_thumb(service, session, id)
     })
@@ -503,7 +512,7 @@ pub async fn library_image_thumb(app: AppHandle, id: i64) -> LibraryResult<Strin
 }
 
 #[tauri::command]
-pub async fn library_image_read(app: AppHandle, id: i64) -> LibraryResult<String> {
+pub async fn library_image_read<R: Runtime>(app: AppHandle<R>, id: i64) -> LibraryResult<String> {
     run_blocking(app, move |service, session| {
         read_image(service, session, id)
     })
@@ -511,14 +520,14 @@ pub async fn library_image_read(app: AppHandle, id: i64) -> LibraryResult<String
 }
 
 #[tauri::command]
-pub async fn library_sound_pick(app: AppHandle) -> Vec<String> {
+pub async fn library_sound_pick<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
     let task = spawn_blocking(move || pick_sounds(&app));
     task.await.unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn library_sound_inspect(
-    app: AppHandle,
+pub async fn library_sound_inspect<R: Runtime>(
+    app: AppHandle<R>,
     paths: Vec<String>,
 ) -> LibraryResult<Vec<AssetCheck>> {
     run_blocking(app, move |service, session| {
@@ -528,8 +537,8 @@ pub async fn library_sound_inspect(
 }
 
 #[tauri::command]
-pub async fn library_sound_upload(
-    app: AppHandle,
+pub async fn library_sound_upload<R: Runtime>(
+    app: AppHandle<R>,
     path: String,
     input: AssetUploadInput,
 ) -> LibraryResult<LibrarySound> {
@@ -540,13 +549,13 @@ pub async fn library_sound_upload(
 }
 
 #[tauri::command]
-pub async fn library_sound_list(app: AppHandle) -> LibraryResult<Vec<LibrarySound>> {
+pub async fn library_sound_list<R: Runtime>(app: AppHandle<R>) -> LibraryResult<Vec<LibrarySound>> {
     run_blocking(app, list_sounds).await
 }
 
 #[tauri::command]
-pub async fn library_sound_update(
-    app: AppHandle,
+pub async fn library_sound_update<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     patch: AssetPatch,
 ) -> LibraryResult<LibrarySound> {
@@ -557,7 +566,10 @@ pub async fn library_sound_update(
 }
 
 #[tauri::command]
-pub async fn library_sound_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+pub async fn library_sound_delete<R: Runtime>(
+    app: AppHandle<R>,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
     run_blocking(app, move |service, session| {
         delete_sounds(service, session, ids)
     })
@@ -565,7 +577,7 @@ pub async fn library_sound_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResul
 }
 
 #[tauri::command]
-pub async fn library_sound_peaks(app: AppHandle, id: i64) -> LibraryResult<String> {
+pub async fn library_sound_peaks<R: Runtime>(app: AppHandle<R>, id: i64) -> LibraryResult<String> {
     run_blocking(app, move |service, session| {
         sound_peaks(service, session, id)
     })
@@ -573,14 +585,14 @@ pub async fn library_sound_peaks(app: AppHandle, id: i64) -> LibraryResult<Strin
 }
 
 #[tauri::command]
-pub async fn library_video_pick(app: AppHandle) -> Vec<String> {
+pub async fn library_video_pick<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
     spawn_blocking(move || pick_videos(&app))
         .await
         .unwrap_or_default()
 }
 #[tauri::command]
-pub async fn library_video_inspect(
-    app: AppHandle,
+pub async fn library_video_inspect<R: Runtime>(
+    app: AppHandle<R>,
     paths: Vec<String>,
 ) -> LibraryResult<Vec<AssetCheck>> {
     run_blocking(app, move |service, session| {
@@ -589,8 +601,8 @@ pub async fn library_video_inspect(
     .await
 }
 #[tauri::command]
-pub async fn library_video_upload(
-    app: AppHandle,
+pub async fn library_video_upload<R: Runtime>(
+    app: AppHandle<R>,
     path: String,
     input: AssetUploadInput,
 ) -> LibraryResult<LibraryVideo> {
@@ -600,12 +612,12 @@ pub async fn library_video_upload(
     .await
 }
 #[tauri::command]
-pub async fn library_video_list(app: AppHandle) -> LibraryResult<Vec<LibraryVideo>> {
+pub async fn library_video_list<R: Runtime>(app: AppHandle<R>) -> LibraryResult<Vec<LibraryVideo>> {
     run_blocking(app, list_videos).await
 }
 #[tauri::command]
-pub async fn library_video_update(
-    app: AppHandle,
+pub async fn library_video_update<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     patch: AssetPatch,
 ) -> LibraryResult<LibraryVideo> {
@@ -615,29 +627,35 @@ pub async fn library_video_update(
     .await
 }
 #[tauri::command]
-pub async fn library_video_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+pub async fn library_video_delete<R: Runtime>(
+    app: AppHandle<R>,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
     run_blocking(app, move |service, session| {
         delete_videos(service, session, ids)
     })
     .await
 }
 #[tauri::command]
-pub async fn library_video_poster(app: AppHandle, id: i64) -> LibraryResult<Option<String>> {
+pub async fn library_video_poster<R: Runtime>(
+    app: AppHandle<R>,
+    id: i64,
+) -> LibraryResult<Option<String>> {
     run_blocking(app, move |service, session| {
         video_poster(service, session, id)
     })
     .await
 }
 #[tauri::command]
-pub async fn library_prompt_pick(app: AppHandle) -> Vec<String> {
+pub async fn library_prompt_pick<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
     spawn_blocking(move || pick_prompts(&app))
         .await
         .unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn library_prompt_inspect(
-    app: AppHandle,
+pub async fn library_prompt_inspect<R: Runtime>(
+    app: AppHandle<R>,
     paths: Vec<String>,
 ) -> LibraryResult<Vec<AssetCheck>> {
     run_blocking(app, move |service, session| {
@@ -647,8 +665,8 @@ pub async fn library_prompt_inspect(
 }
 
 #[tauri::command]
-pub async fn library_prompt_upload(
-    app: AppHandle,
+pub async fn library_prompt_upload<R: Runtime>(
+    app: AppHandle<R>,
     path: String,
     input: AssetUploadInput,
 ) -> LibraryResult<LibraryPrompt> {
@@ -659,8 +677,8 @@ pub async fn library_prompt_upload(
 }
 
 #[tauri::command]
-pub async fn library_prompt_create(
-    app: AppHandle,
+pub async fn library_prompt_create<R: Runtime>(
+    app: AppHandle<R>,
     input: PromptCreateInput,
 ) -> LibraryResult<LibraryPrompt> {
     run_blocking(app, move |service, session| {
@@ -670,13 +688,15 @@ pub async fn library_prompt_create(
 }
 
 #[tauri::command]
-pub async fn library_prompt_list(app: AppHandle) -> LibraryResult<Vec<LibraryPrompt>> {
+pub async fn library_prompt_list<R: Runtime>(
+    app: AppHandle<R>,
+) -> LibraryResult<Vec<LibraryPrompt>> {
     run_blocking(app, list_prompts).await
 }
 
 #[tauri::command]
-pub async fn library_prompt_update(
-    app: AppHandle,
+pub async fn library_prompt_update<R: Runtime>(
+    app: AppHandle<R>,
     id: i64,
     patch: PromptPatch,
 ) -> LibraryResult<LibraryPrompt> {
@@ -687,7 +707,10 @@ pub async fn library_prompt_update(
 }
 
 #[tauri::command]
-pub async fn library_prompt_delete(app: AppHandle, ids: Vec<i64>) -> LibraryResult<usize> {
+pub async fn library_prompt_delete<R: Runtime>(
+    app: AppHandle<R>,
+    ids: Vec<i64>,
+) -> LibraryResult<usize> {
     run_blocking(app, move |service, session| {
         delete_prompts(service, session, ids)
     })

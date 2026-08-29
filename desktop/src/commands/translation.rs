@@ -11,6 +11,7 @@ use crate::features::translation::warnings::TranslationWarning;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 
 pub fn get(
@@ -104,7 +105,7 @@ fn task_failure(error: tauri::Error) -> TranslationError {
     TranslationError::new(TranslationErrorCode::Task, error.to_string())
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> TranslationResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> TranslationResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&TranslationService, &WorkspaceSession) -> TranslationResult<T> + Send + 'static,
@@ -121,8 +122,8 @@ where
 }
 
 #[tauri::command]
-pub async fn translation_get(
-    app: AppHandle,
+pub async fn translation_get<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     target: String,
 ) -> TranslationResult<NovelTranslation> {
@@ -133,8 +134,8 @@ pub async fn translation_get(
 }
 
 #[tauri::command]
-pub async fn translation_warnings(
-    app: AppHandle,
+pub async fn translation_warnings<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     target: String,
 ) -> TranslationResult<Vec<TranslationWarning>> {
@@ -145,8 +146,8 @@ pub async fn translation_warnings(
 }
 
 #[tauri::command]
-pub async fn translation_guidelines_save(
-    app: AppHandle,
+pub async fn translation_guidelines_save<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     target: String,
     text: String,
@@ -158,8 +159,8 @@ pub async fn translation_guidelines_save(
 }
 
 #[tauri::command]
-pub async fn translation_dict_add(
-    app: AppHandle,
+pub async fn translation_dict_add<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     target: String,
     input: DictInput,
@@ -171,8 +172,8 @@ pub async fn translation_dict_add(
 }
 
 #[tauri::command]
-pub async fn translation_dict_update(
-    app: AppHandle,
+pub async fn translation_dict_update<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     id: i64,
     patch: DictPatch,
@@ -184,8 +185,8 @@ pub async fn translation_dict_update(
 }
 
 #[tauri::command]
-pub async fn translation_dict_delete(
-    app: AppHandle,
+pub async fn translation_dict_delete<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     id: i64,
 ) -> TranslationResult<()> {
@@ -196,8 +197,8 @@ pub async fn translation_dict_delete(
 }
 
 #[tauri::command]
-pub async fn translation_passage_save(
-    app: AppHandle,
+pub async fn translation_passage_save<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     target: String,
     chapter_id: String,
@@ -211,8 +212,8 @@ pub async fn translation_passage_save(
 }
 
 #[tauri::command]
-pub async fn translation_note_save(
-    app: AppHandle,
+pub async fn translation_note_save<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     target: String,
     chapter_id: String,

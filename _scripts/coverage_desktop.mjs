@@ -7,7 +7,7 @@ const MANIFEST = join(DESKTOP, "Cargo.toml");
 const OUTPUT = join(ROOT, "_output", "coverage", "desktop");
 const LCOV = join(OUTPUT, "lcov.info");
 const TARGET = join(ROOT, "_output", "desktop", "target-cov");
-const IGNORE = String.raw`(\.test\.rs$|[\/]test[\/])`;
+const IGNORE = String.raw`(\.test\.rs$|[\\/]test[\\/]|[\\/]main\.rs$)`;
 const env = { ...process.env, CARGO_TARGET_DIR: TARGET };
 
 function cargo(args) {

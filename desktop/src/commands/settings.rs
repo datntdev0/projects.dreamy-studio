@@ -14,6 +14,7 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri_plugin_opener::OpenerExt;
 
@@ -39,14 +40,14 @@ pub fn folder_path(
 }
 
 #[tauri::command]
-pub async fn settings_get(app: AppHandle) -> Result<SettingsView, String> {
+pub async fn settings_get<R: Runtime>(app: AppHandle<R>) -> Result<SettingsView, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().view());
     task.await.map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-pub async fn settings_general_save(
-    app: AppHandle,
+pub async fn settings_general_save<R: Runtime>(
+    app: AppHandle<R>,
     general: GeneralSettings,
 ) -> Result<GeneralSettings, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().save_general(general));
@@ -54,8 +55,8 @@ pub async fn settings_general_save(
 }
 
 #[tauri::command]
-pub async fn settings_layout_save(
-    app: AppHandle,
+pub async fn settings_layout_save<R: Runtime>(
+    app: AppHandle<R>,
     layout: LayoutSettings,
 ) -> Result<LayoutSettings, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().save_layout(layout));
@@ -63,14 +64,14 @@ pub async fn settings_layout_save(
 }
 
 #[tauri::command]
-pub async fn llm_get(app: AppHandle) -> Result<LlmView, String> {
+pub async fn llm_get<R: Runtime>(app: AppHandle<R>) -> Result<LlmView, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().llm_view());
     task.await.map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-pub async fn llm_provider_save(
-    app: AppHandle,
+pub async fn llm_provider_save<R: Runtime>(
+    app: AppHandle<R>,
     id: String,
     provider: CliSettings,
 ) -> Result<LlmView, String> {
@@ -82,8 +83,8 @@ pub async fn llm_provider_save(
 }
 
 #[tauri::command]
-pub async fn llm_feature_save(
-    app: AppHandle,
+pub async fn llm_feature_save<R: Runtime>(
+    app: AppHandle<R>,
     feature: String,
     config: FeatureSettings,
 ) -> Result<LlmView, String> {
@@ -95,25 +96,25 @@ pub async fn llm_feature_save(
 }
 
 #[tauri::command]
-pub async fn llm_probe(app: AppHandle, id: String) -> Result<CliProbe, String> {
+pub async fn llm_probe<R: Runtime>(app: AppHandle<R>, id: String) -> Result<CliProbe, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().probe_llm(&id));
     task.await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub async fn llm_login(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn llm_login<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().login_llm(&id));
     task.await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub async fn llm_logout(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn llm_logout<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().logout_llm(&id));
     task.await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub async fn llm_profile_open(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn llm_profile_open<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     let path = app.state::<SettingsService>().llm_profile_dir(&id)?;
     app.opener()
         .open_path(path.to_string_lossy().into_owned(), None::<&str>)
@@ -121,14 +122,17 @@ pub async fn llm_profile_open(app: AppHandle, id: String) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub async fn window_background_set(app: AppHandle, theme: Theme) {
+pub async fn window_background_set<R: Runtime>(app: AppHandle<R>, theme: Theme) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         window_state::apply_background(&window, theme);
     }
 }
 
 #[tauri::command]
-pub async fn settings_folder_open(app: AppHandle, target: FolderTarget) -> Result<(), String> {
+pub async fn settings_folder_open<R: Runtime>(
+    app: AppHandle<R>,
+    target: FolderTarget,
+) -> Result<(), String> {
     let path = folder_path(
         &app.state::<SettingsService>(),
         &app.state::<WorkspaceSession>(),

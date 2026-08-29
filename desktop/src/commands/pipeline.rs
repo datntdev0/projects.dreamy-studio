@@ -21,6 +21,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 
@@ -112,7 +113,7 @@ fn task_failure(error: tauri::Error) -> PipelineError {
     PipelineError::new(PipelineErrorCode::Task, error.to_string())
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> PipelineResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> PipelineResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&PipelineExecutor, &JobRegistry, &WorkspaceSession) -> PipelineResult<T>
@@ -133,8 +134,8 @@ where
 
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
-pub async fn pipeline_start(
-    app: AppHandle,
+pub async fn pipeline_start<R: Runtime>(
+    app: AppHandle<R>,
     kind: Option<String>,
     novel_id: i64,
     target: Option<String>,
@@ -160,13 +161,13 @@ pub async fn pipeline_start(
 }
 
 #[tauri::command]
-pub fn pipeline_cancel(app: AppHandle, pipeline_id: Option<i64>) -> bool {
+pub fn pipeline_cancel<R: Runtime>(app: AppHandle<R>, pipeline_id: Option<i64>) -> bool {
     cancel_pipeline(&app.state::<PipelineExecutor>(), pipeline_id)
 }
 
 #[tauri::command]
-pub async fn pipeline_history_list(
-    app: AppHandle,
+pub async fn pipeline_history_list<R: Runtime>(
+    app: AppHandle<R>,
     novel_id: i64,
     limit: Option<i64>,
 ) -> PipelineResult<Vec<PipelineSnapshot>> {

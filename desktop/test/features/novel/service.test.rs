@@ -1045,27 +1045,3 @@ fn export_replaces_an_existing_file() {
             .is_ok()
     );
 }
-
-#[test]
-#[ignore = "measures the real samples in _output, run with --ignored --nocapture"]
-fn measures_import_time_of_the_sample_packages() {
-    let samples = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("_output");
-    let fixture = fixture();
-    for name in ["shuse-wushuang", "wanmei-nvpei", "xiayan-shenyi"] {
-        let path = samples.join(format!("{name}.dsnovel"));
-        let started = std::time::Instant::now();
-        let summary = fixture
-            .workspace
-            .import_package(&path, input(name))
-            .unwrap();
-        println!(
-            "import {name}: {:?} chapters={} words={}",
-            started.elapsed(),
-            summary.chapter_count,
-            summary.word_count
-        );
-        assert!(fixture.workspace.cover_get(summary.id).unwrap().is_some());
-    }
-}

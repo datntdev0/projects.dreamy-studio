@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tauri::AppHandle;
+use tauri::Runtime;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,7 +19,7 @@ impl AppInfo {
 }
 
 #[tauri::command]
-pub fn app_info(app: AppHandle) -> AppInfo {
+pub fn app_info<R: Runtime>(app: AppHandle<R>) -> AppInfo {
     let package = app.package_info();
     AppInfo::new(package.name.clone(), package.version.to_string())
 }

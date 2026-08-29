@@ -297,6 +297,51 @@ fn the_persona_of_links_of_the_candidates_are_saved_before_the_facts_of_the_chap
 }
 
 #[test]
+fn the_facts_found_for_a_chapter_are_renumbered_after_its_persona_of_links() {
+    let setup = setup();
+    let quote = vec![AnalysisEvidence {
+        p: 1,
+        q: "source".to_string(),
+    }];
+    let found = |id: &str, pred: &str, subject: &str| AnalysisFact {
+        id: id.to_string(),
+        pred: pred.to_string(),
+        subject: subject.to_string(),
+        object: None,
+        ev: quote.clone(),
+    };
+    let analyzer = Arc::new(
+        FakeAnalyzer::new()
+            .with_draft("Chapter", wren_and_aldous())
+            .with_facts(
+                "Chapter",
+                vec![found("X1", "occupation", "E1"), found("X2", "trait", "E2")],
+            ),
+    );
+
+    run(&job(&setup, &analyzer), &setup.fixture.chapter_id).unwrap();
+
+    let analysis = stored(&setup, KnowledgeLang::Src, &setup.fixture.chapter_id).unwrap();
+    let facts: Vec<(&str, &str, &str)> = analysis
+        .facts
+        .iter()
+        .map(|fact| (fact.id.as_str(), fact.pred.as_str(), fact.subject.as_str()))
+        .collect();
+    assert_eq!(
+        facts,
+        [
+            ("F1", "persona_of", "E1"),
+            ("F2", "occupation", "E1"),
+            ("F3", "trait", "E2"),
+        ]
+    );
+    let job = analyzer.facts_for("Chapter").unwrap();
+    assert_eq!(job.paragraphs, vec!["source".to_string()]);
+    assert_eq!(job.entities.len(), 2);
+    assert!(analyzer.facts_for("Other").is_none());
+}
+
+#[test]
 fn a_later_batch_knows_the_character_of_a_persona_but_not_the_character_entity() {
     let setup = setup();
     let ids = six_chapters(&setup);

@@ -10,20 +10,25 @@ use tauri::Manager;
 use tauri::Monitor;
 use tauri::PhysicalPosition;
 use tauri::PhysicalSize;
+use tauri::Runtime;
 use tauri::WebviewWindow;
 use tauri::WindowEvent;
 use tauri::window::Color;
 
 type Remembered = Arc<Mutex<Option<WindowBounds>>>;
 
-pub fn apply_background(window: &WebviewWindow, theme: Theme) {
+pub fn apply_background<R: Runtime>(window: &WebviewWindow<R>, theme: Theme) {
     let (red, green, blue) = theme.background();
     if let Err(error) = window.set_background_color(Some(Color(red, green, blue, 255))) {
         eprintln!("cannot set window background: {error}");
     }
 }
 
-pub fn prepare(window: &WebviewWindow, app: &AppHandle, saved: Option<WindowSettings>) {
+pub fn prepare<R: Runtime>(
+    window: &WebviewWindow<R>,
+    app: &AppHandle<R>,
+    saved: Option<WindowSettings>,
+) {
     if let Some(saved) = saved {
         restore(window, &saved);
     }
@@ -34,7 +39,7 @@ pub fn prepare(window: &WebviewWindow, app: &AppHandle, saved: Option<WindowSett
     }
 }
 
-fn restore(window: &WebviewWindow, saved: &WindowSettings) {
+fn restore<R: Runtime>(window: &WebviewWindow<R>, saved: &WindowSettings) {
     if saved.is_reachable(&monitor_bounds(window)) {
         let _ = window.set_size(PhysicalSize::new(saved.width, saved.height));
         let _ = window.set_position(PhysicalPosition::new(saved.x, saved.y));
@@ -44,7 +49,7 @@ fn restore(window: &WebviewWindow, saved: &WindowSettings) {
     }
 }
 
-fn monitor_bounds(window: &WebviewWindow) -> Vec<WindowBounds> {
+fn monitor_bounds<R: Runtime>(window: &WebviewWindow<R>) -> Vec<WindowBounds> {
     let monitors = window.available_monitors().unwrap_or_default();
     monitors.iter().map(bounds_of_monitor).collect()
 }
@@ -55,7 +60,7 @@ fn bounds_of_monitor(monitor: &Monitor) -> WindowBounds {
     WindowBounds::new(position.x, position.y, size.width, size.height)
 }
 
-fn current_bounds(window: &WebviewWindow) -> Option<WindowBounds> {
+fn current_bounds<R: Runtime>(window: &WebviewWindow<R>) -> Option<WindowBounds> {
     if window.is_minimized().unwrap_or(false) || window.is_maximized().unwrap_or(false) {
         return None;
     }
@@ -69,14 +74,19 @@ fn current_bounds(window: &WebviewWindow) -> Option<WindowBounds> {
     ))
 }
 
-fn watch(window: &WebviewWindow, app: &AppHandle, initial: Option<WindowBounds>) {
+fn watch<R: Runtime>(window: &WebviewWindow<R>, app: &AppHandle<R>, initial: Option<WindowBounds>) {
     let remembered: Remembered = Arc::new(Mutex::new(initial));
     let target = window.clone();
     let app = app.clone();
     window.on_window_event(move |event| handle(&app, &target, &remembered, event));
 }
 
-fn handle(app: &AppHandle, window: &WebviewWindow, remembered: &Remembered, event: &WindowEvent) {
+fn handle<R: Runtime>(
+    app: &AppHandle<R>,
+    window: &WebviewWindow<R>,
+    remembered: &Remembered,
+    event: &WindowEvent,
+) {
     match event {
         WindowEvent::Moved(_) | WindowEvent::Resized(_) => remember(window, remembered),
         WindowEvent::CloseRequested { .. } => persist(app, window, remembered),
@@ -84,13 +94,13 @@ fn handle(app: &AppHandle, window: &WebviewWindow, remembered: &Remembered, even
     }
 }
 
-fn remember(window: &WebviewWindow, remembered: &Remembered) {
+fn remember<R: Runtime>(window: &WebviewWindow<R>, remembered: &Remembered) {
     if let Some(bounds) = current_bounds(window) {
         *lock(remembered) = Some(bounds);
     }
 }
 
-fn persist(app: &AppHandle, window: &WebviewWindow, remembered: &Remembered) {
+fn persist<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, remembered: &Remembered) {
     remember(window, remembered);
     let service = app.state::<SettingsService>();
     let known = *lock(remembered);
@@ -109,3 +119,7 @@ fn lock(remembered: &Remembered) -> MutexGuard<'_, Option<WindowBounds>> {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
+
+#[cfg(test)]
+#[path = "../../test/infra/window_state.test.rs"]
+mod tests;

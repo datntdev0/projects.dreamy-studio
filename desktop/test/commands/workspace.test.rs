@@ -3,7 +3,9 @@ use crate::container::AppContainer;
 use crate::features::workspace::load::LoadMode;
 use crate::features::workspace::load::StepState;
 use crate::features::workspace::repository::WorkspaceRepository;
+use crate::testing::app::MockHost;
 use crate::testing::backend::StubBackend;
+use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -186,4 +188,73 @@ fn task_failure_maps_to_a_load_error_for_the_given_step() {
     assert_eq!(error.step, LoadStep::Application);
     assert_eq!(error.code, ErrorCode::DbIo);
     assert!(!error.detail.is_empty());
+}
+
+#[test]
+fn a_workspace_is_loaded_entered_and_listed_through_ipc() {
+    let host = MockHost::with_window(MAIN_WINDOW_LABEL);
+    let path = host.dir.path().join("studio");
+    std::fs::create_dir_all(&path).unwrap();
+    let path = path.to_str().unwrap().to_string();
+
+    let before = host.invoke("workspace_current", json!({})).unwrap();
+    let loaded = host.invoke(
+        "workspace_load",
+        json!({ "path": path, "relocateFrom": null, "channel": "__CHANNEL__:1" }),
+    );
+    let entered = host.invoke("workspace_enter", json!({})).unwrap();
+    let current = host.invoke("workspace_current", json!({})).unwrap();
+    let is_current = host
+        .invoke("workspace_is_current", json!({ "path": path }))
+        .unwrap();
+    let recent = host.invoke("recent_list", json!({})).unwrap();
+    let measured = host
+        .invoke("workspace_measure", json!({ "path": path }))
+        .unwrap();
+    let refused = host
+        .invoke("workspace_delete", json!({ "path": path }))
+        .unwrap_err();
+
+    assert!(before.is_null());
+    assert!(loaded.is_ok(), "{loaded:?}");
+    assert_eq!(entered["name"], "studio");
+    assert_eq!(current["name"], "studio");
+    assert_eq!(is_current, true);
+    assert_eq!(recent.as_array().unwrap().len(), 1);
+    assert!(measured.as_u64().is_some());
+    assert_eq!(refused, "The active workspace cannot be deleted.");
+}
+
+#[test]
+fn entering_without_a_loaded_workspace_is_cancelled_through_ipc() {
+    let host = MockHost::new();
+
+    let entered = host.invoke("workspace_enter", json!({})).unwrap();
+    let cancelled = host.invoke("workspace_cancel", json!({})).unwrap();
+
+    assert_eq!(entered["result"], "cancelled");
+    assert_eq!(cancelled["result"], "cancelled");
+}
+
+#[test]
+fn a_recent_workspace_can_be_deleted_when_it_is_not_current() {
+    let host = MockHost::new();
+    let old = host.open_workspace();
+    let other = host.dir.path().join("other");
+    std::fs::create_dir_all(&other).unwrap();
+    host.invoke(
+        "workspace_load",
+        json!({
+            "path": other.to_str().unwrap(),
+            "relocateFrom": null,
+            "channel": "__CHANNEL__:1"
+        }),
+    )
+    .unwrap();
+    host.invoke("workspace_enter", json!({})).unwrap();
+
+    let deleted = host.invoke("workspace_delete", json!({ "path": old.to_str().unwrap() }));
+
+    assert!(deleted.is_ok(), "{deleted:?}");
+    assert!(!old.exists());
 }

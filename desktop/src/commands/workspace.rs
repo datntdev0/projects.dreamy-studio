@@ -15,6 +15,7 @@ use crate::features::workspace::session::CurrentWorkspace;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 use tauri_plugin_dialog::DialogExt;
@@ -80,29 +81,29 @@ pub fn perform_load(
     loader.load(session, request, sink)
 }
 
-fn list_recent(app: &AppHandle) -> Vec<RecentWorkspaceView> {
+fn list_recent<R: Runtime>(app: &AppHandle<R>) -> Vec<RecentWorkspaceView> {
     let current = app.state::<WorkspaceSession>().current();
     app.state::<WorkspaceService>()
         .recent_list_for(current.as_ref())
 }
 
-fn measure_folder(app: &AppHandle, path: &str) -> u64 {
+fn measure_folder<R: Runtime>(app: &AppHandle<R>, path: &str) -> u64 {
     app.state::<WorkspaceService>().measure(path)
 }
 
-fn delete_workspace(app: &AppHandle, path: &str) -> Result<(), String> {
+fn delete_workspace<R: Runtime>(app: &AppHandle<R>, path: &str) -> Result<(), String> {
     if app.state::<WorkspaceSession>().is_current(path) {
         return Err("The active workspace cannot be deleted.".to_string());
     }
     app.state::<WorkspaceService>().delete_workspace(path)
 }
 
-fn pick_folder(app: &AppHandle) -> Option<String> {
+fn pick_folder<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
     picked_path(app.dialog().file().blocking_pick_folder())
 }
 
-fn load_workspace_blocking(
-    app: &AppHandle,
+fn load_workspace_blocking<R: Runtime>(
+    app: &AppHandle<R>,
     request: LoadRequest,
     sink: &dyn LoadEventSink,
 ) -> Result<LoadOutcome, LoadError> {
@@ -111,13 +112,13 @@ fn load_workspace_blocking(
     perform_load(&loader, &session, request, sink)
 }
 
-fn enter_workspace_blocking(app: &AppHandle) -> Result<EnterOutcome, LoadError> {
+fn enter_workspace_blocking<R: Runtime>(app: &AppHandle<R>) -> Result<EnterOutcome, LoadError> {
     let loader = app.state::<WorkspaceLoader>();
     let session = app.state::<WorkspaceSession>();
     loader.enter(&session)
 }
 
-fn apply_window_title(app: &AppHandle, title: &str) {
+fn apply_window_title<R: Runtime>(app: &AppHandle<R>, title: &str) {
     let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
         eprintln!("cannot set window title: window {MAIN_WINDOW_LABEL} not found");
         return;
@@ -128,32 +129,32 @@ fn apply_window_title(app: &AppHandle, title: &str) {
 }
 
 #[tauri::command]
-pub async fn recent_list(app: AppHandle) -> Vec<RecentWorkspaceView> {
+pub async fn recent_list<R: Runtime>(app: AppHandle<R>) -> Vec<RecentWorkspaceView> {
     let task = spawn_blocking(move || list_recent(&app));
     task.await.unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn workspace_measure(app: AppHandle, path: String) -> u64 {
+pub async fn workspace_measure<R: Runtime>(app: AppHandle<R>, path: String) -> u64 {
     let task = spawn_blocking(move || measure_folder(&app, &path));
     task.await.unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn workspace_delete(app: AppHandle, path: String) -> Result<(), String> {
+pub async fn workspace_delete<R: Runtime>(app: AppHandle<R>, path: String) -> Result<(), String> {
     let task = spawn_blocking(move || delete_workspace(&app, &path));
     task.await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub async fn folder_pick(app: AppHandle) -> Option<String> {
+pub async fn folder_pick<R: Runtime>(app: AppHandle<R>) -> Option<String> {
     let task = spawn_blocking(move || pick_folder(&app));
     task.await.unwrap_or_default()
 }
 
 #[tauri::command]
-pub async fn workspace_load(
-    app: AppHandle,
+pub async fn workspace_load<R: Runtime>(
+    app: AppHandle<R>,
     path: String,
     relocate_from: Option<String>,
     channel: Channel<LoadEvent>,
@@ -168,12 +169,12 @@ pub async fn workspace_load(
 }
 
 #[tauri::command]
-pub async fn workspace_cancel(app: AppHandle) -> CancelOutcome {
+pub async fn workspace_cancel<R: Runtime>(app: AppHandle<R>) -> CancelOutcome {
     app.state::<WorkspaceSession>().cancel()
 }
 
 #[tauri::command]
-pub async fn workspace_enter(app: AppHandle) -> Result<EnterOutcome, LoadError> {
+pub async fn workspace_enter<R: Runtime>(app: AppHandle<R>) -> Result<EnterOutcome, LoadError> {
     if let Some(executor) = app.try_state::<PipelineExecutor>() {
         executor.cancel();
     }
@@ -190,12 +191,12 @@ pub async fn workspace_enter(app: AppHandle) -> Result<EnterOutcome, LoadError> 
 }
 
 #[tauri::command]
-pub async fn workspace_is_current(app: AppHandle, path: String) -> bool {
+pub async fn workspace_is_current<R: Runtime>(app: AppHandle<R>, path: String) -> bool {
     app.state::<WorkspaceSession>().is_current(&path)
 }
 
 #[tauri::command]
-pub async fn workspace_current(app: AppHandle) -> Option<CurrentWorkspace> {
+pub async fn workspace_current<R: Runtime>(app: AppHandle<R>) -> Option<CurrentWorkspace> {
     app.state::<WorkspaceSession>().current()
 }
 

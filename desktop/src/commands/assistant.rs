@@ -20,6 +20,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Runtime;
 use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 
@@ -33,9 +34,9 @@ impl AssistantEventSink for ChannelSink {
     }
 }
 
-pub struct AppMcpHost(pub AppHandle);
+pub struct AppMcpHost<R: Runtime>(pub AppHandle<R>);
 
-impl McpHost for AppMcpHost {
+impl<R: Runtime> McpHost for AppMcpHost<R> {
     fn open(&self, grant: &Grant) -> Result<Sources, String> {
         let novels = self.0.state::<NovelService>();
         let knowledge = self.0.state::<KnowledgeService>();
@@ -199,7 +200,7 @@ fn task_failure(error: tauri::Error) -> AssistantError {
     AssistantError::storage(error.to_string())
 }
 
-async fn run_blocking<T, F>(app: AppHandle, job: F) -> AssistantResult<T>
+async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> AssistantResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&AssistantService, &NovelService, &WorkspaceSession) -> AssistantResult<T>
@@ -219,15 +220,15 @@ where
 }
 
 #[tauri::command]
-pub async fn assistant_session_list(
-    app: AppHandle,
+pub async fn assistant_session_list<R: Runtime>(
+    app: AppHandle<R>,
 ) -> AssistantResult<Vec<AssistantSessionSummary>> {
     run_blocking(app, |service, _, session| list_sessions(service, session)).await
 }
 
 #[tauri::command]
-pub async fn assistant_session_get(
-    app: AppHandle,
+pub async fn assistant_session_get<R: Runtime>(
+    app: AppHandle<R>,
     id: String,
 ) -> AssistantResult<AssistantSession> {
     run_blocking(app, move |service, _, session| {
@@ -237,8 +238,8 @@ pub async fn assistant_session_get(
 }
 
 #[tauri::command]
-pub async fn assistant_session_create(
-    app: AppHandle,
+pub async fn assistant_session_create<R: Runtime>(
+    app: AppHandle<R>,
     scope: AssistantScope,
 ) -> AssistantResult<AssistantSession> {
     run_blocking(app, move |service, novels, session| {
@@ -248,8 +249,8 @@ pub async fn assistant_session_create(
 }
 
 #[tauri::command]
-pub async fn assistant_message_send(
-    app: AppHandle,
+pub async fn assistant_message_send<R: Runtime>(
+    app: AppHandle<R>,
     session_id: String,
     text: String,
     context: Option<Value>,
@@ -276,8 +277,8 @@ pub async fn assistant_message_send(
 }
 
 #[tauri::command]
-pub async fn assistant_proposal_resolve(
-    app: AppHandle,
+pub async fn assistant_proposal_resolve<R: Runtime>(
+    app: AppHandle<R>,
     session_id: String,
     message_id: String,
     item_ids: Vec<String>,
@@ -304,8 +305,8 @@ pub async fn assistant_proposal_resolve(
 }
 
 #[tauri::command]
-pub async fn assistant_session_permit(
-    app: AppHandle,
+pub async fn assistant_session_permit<R: Runtime>(
+    app: AppHandle<R>,
     id: String,
     edit_granted: bool,
 ) -> AssistantResult<AssistantSession> {
@@ -316,7 +317,10 @@ pub async fn assistant_session_permit(
 }
 
 #[tauri::command]
-pub async fn assistant_session_delete(app: AppHandle, id: String) -> AssistantResult<()> {
+pub async fn assistant_session_delete<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> AssistantResult<()> {
     run_blocking(app, move |service, _, session| {
         delete_session(service, session, &id)
     })

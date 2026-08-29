@@ -18,6 +18,7 @@ use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
+use crate::testing::app::MockHost;
 use crate::testing::backend::StubBackend;
 use serde_json::json;
 use std::sync::Arc;
@@ -284,4 +285,152 @@ fn task_failure_maps_to_a_task_error() {
     let error = task_failure(tauri::Error::InvalidIcon(std::io::Error::other("boom")));
 
     assert_eq!(error.code, TranslationErrorCode::Task);
+}
+
+#[test]
+fn every_translation_command_reports_no_workspace_through_ipc() {
+    let host = MockHost::new();
+
+    host.expect_code(
+        &[
+            ("translation_get", json!({ "novelId": 1, "target": "VI" })),
+            (
+                "translation_warnings",
+                json!({ "novelId": 1, "target": "VI" }),
+            ),
+            (
+                "translation_guidelines_save",
+                json!({ "novelId": 1, "target": "VI", "text": "t" }),
+            ),
+            (
+                "translation_dict_add",
+                json!({
+                    "novelId": 1,
+                    "target": "VI",
+                    "input": { "src": "a", "dst": "b", "type": "name" }
+                }),
+            ),
+            (
+                "translation_dict_update",
+                json!({ "novelId": 1, "id": 1, "patch": {} }),
+            ),
+            ("translation_dict_delete", json!({ "novelId": 1, "id": 1 })),
+            (
+                "translation_passage_save",
+                json!({
+                    "novelId": 1, "target": "VI", "chapterId": "c", "n": 1, "text": "t"
+                }),
+            ),
+            (
+                "translation_note_save",
+                json!({
+                    "novelId": 1, "target": "VI", "chapterId": "c", "n": 1, "text": "t"
+                }),
+            ),
+        ],
+        "no_workspace",
+    );
+}
+
+fn seed_translation(host: &MockHost, novel_id: i64, chapter_id: &str) {
+    let workspace = host
+        .handle()
+        .state::<WorkspaceSession>()
+        .current()
+        .unwrap()
+        .path;
+    let rows = host
+        .invoke(
+            "novel_chapter_read",
+            json!({ "novelId": novel_id, "chapterId": chapter_id }),
+        )
+        .unwrap();
+    let paragraphs = rows
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| TranslatedParagraph {
+            original_hashcheck: row["hashcheck"].as_str().unwrap().to_string(),
+            text: "translated".to_string(),
+            note: String::new(),
+        })
+        .collect();
+    let file = ChapterFile {
+        title: "Translated title".to_string(),
+        paragraphs,
+    };
+    TranslationFiles::new(workspace.into())
+        .write_chapter(novel_id, TranslationTarget::Vi, chapter_id, &file)
+        .unwrap();
+}
+
+#[test]
+fn translations_are_edited_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+    let (novel, chapters) = host.seed_novel(&[("One", "alpha\nbeta")]);
+    let chapter = chapters[0].clone();
+    seed_translation(&host, novel, &chapter);
+
+    let empty = host
+        .invoke(
+            "translation_get",
+            json!({ "novelId": novel, "target": "VI" }),
+        )
+        .unwrap();
+    let saved = host
+        .invoke(
+            "translation_guidelines_save",
+            json!({ "novelId": novel, "target": "VI", "text": "formal" }),
+        )
+        .unwrap();
+    let added = host
+        .invoke(
+            "translation_dict_add",
+            json!({
+                "novelId": novel,
+                "target": "VI",
+                "input": { "src": "alpha", "dst": "mot", "type": "name" }
+            }),
+        )
+        .unwrap();
+    let id = added["entry"]["id"].as_i64().unwrap();
+    let updated = host.invoke(
+        "translation_dict_update",
+        json!({ "novelId": novel, "id": id, "patch": { "dst": "hai" } }),
+    );
+    let passage = host
+        .invoke(
+            "translation_passage_save",
+            json!({
+                "novelId": novel, "target": "VI", "chapterId": chapter, "n": 1, "text": "mot"
+            }),
+        )
+        .unwrap();
+    let note = host
+        .invoke(
+            "translation_note_save",
+            json!({
+                "novelId": novel, "target": "VI", "chapterId": chapter, "n": 1, "text": "check"
+            }),
+        )
+        .unwrap();
+    let warnings = host
+        .invoke(
+            "translation_warnings",
+            json!({ "novelId": novel, "target": "VI" }),
+        )
+        .unwrap();
+    let removed = host.invoke(
+        "translation_dict_delete",
+        json!({ "novelId": novel, "id": id }),
+    );
+
+    assert!(empty.is_object());
+    assert!(saved.is_boolean());
+    assert!(updated.is_ok(), "{updated:?}");
+    assert!(passage.is_object());
+    assert!(note.is_object());
+    assert!(warnings.is_array());
+    assert!(removed.is_ok(), "{removed:?}");
 }

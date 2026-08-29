@@ -8,6 +8,7 @@ use crate::features::workspace::load::LoadRequest;
 use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
+use crate::testing::app::MockHost;
 use crate::testing::backend::StubBackend;
 use crate::testing::package::sample_package;
 use serde_json::json;
@@ -412,4 +413,205 @@ fn task_failure_maps_to_a_task_error() {
 
     assert_eq!(error.code, NovelErrorCode::Task);
     assert!(!error.detail.is_empty());
+}
+
+fn novel_payload(title: &str) -> serde_json::Value {
+    json!({ "title": title, "lang": "ZH", "tags": ["B", "a"] })
+}
+
+#[test]
+fn every_novel_command_reports_no_workspace_through_ipc() {
+    let host = MockHost::new();
+
+    host.expect_code(
+        &[
+            ("novel_list", json!({})),
+            ("novel_create", json!({ "input": novel_payload("Book") })),
+            ("novel_update", json!({ "id": 1, "patch": {} })),
+            ("novel_delete", json!({ "ids": [1] })),
+            ("novel_cover_get", json!({ "id": 1 })),
+            (
+                "novel_cover_set",
+                json!({ "id": 1, "dataUrl": "data:image/png;base64,AA==" }),
+            ),
+            ("novel_cover_clear", json!({ "id": 1 })),
+            ("novel_chapters", json!({ "novelId": 1 })),
+            (
+                "novel_chapter_read",
+                json!({ "novelId": 1, "chapterId": "c" }),
+            ),
+            (
+                "novel_paragraph_update",
+                json!({ "novelId": 1, "chapterId": "c", "n": 1, "text": "t" }),
+            ),
+            (
+                "novel_chapter_write",
+                json!({ "novelId": 1, "chapterId": "c", "text": "t" }),
+            ),
+            ("novel_chapter_add", json!({ "novelId": 1, "title": "t" })),
+            (
+                "novel_chapter_rename",
+                json!({ "novelId": 1, "chapterId": "c", "title": "t" }),
+            ),
+            (
+                "novel_chapter_delete",
+                json!({ "novelId": 1, "chapterId": "c" }),
+            ),
+            (
+                "novel_chapter_move",
+                json!({ "novelId": 1, "chapterId": "c", "toSeq": 1 }),
+            ),
+            (
+                "novel_paragraph_add",
+                json!({ "novelId": 1, "chapterId": "c", "text": "t" }),
+            ),
+            (
+                "novel_package_import",
+                json!({ "path": "book.dsnovel", "meta": novel_payload("Book") }),
+            ),
+            (
+                "novel_package_export",
+                json!({ "id": 1, "path": "book.dsnovel" }),
+            ),
+        ],
+        "no_workspace",
+    );
+}
+
+#[test]
+fn novels_and_chapters_are_managed_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+
+    let book = host
+        .invoke("novel_create", json!({ "input": novel_payload("Book") }))
+        .unwrap();
+    let id = book["id"].as_i64().unwrap();
+    let renamed = host
+        .invoke(
+            "novel_update",
+            json!({ "id": id, "patch": { "title": "Renamed" } }),
+        )
+        .unwrap();
+    let added = host
+        .invoke(
+            "novel_chapter_add",
+            json!({ "novelId": id, "title": "One" }),
+        )
+        .unwrap();
+    let chapter = added["id"].as_str().unwrap().to_string();
+    let second = host
+        .invoke(
+            "novel_chapter_add",
+            json!({ "novelId": id, "title": "Two" }),
+        )
+        .unwrap();
+    let second_id = second["id"].as_str().unwrap().to_string();
+    host.invoke(
+        "novel_chapter_write",
+        json!({ "novelId": id, "chapterId": chapter, "text": "first\nsecond" }),
+    )
+    .unwrap();
+    host.invoke(
+        "novel_paragraph_add",
+        json!({ "novelId": id, "chapterId": chapter, "text": "third" }),
+    )
+    .unwrap();
+    host.invoke(
+        "novel_paragraph_update",
+        json!({ "novelId": id, "chapterId": chapter, "n": 1, "text": "changed" }),
+    )
+    .unwrap();
+    let paragraphs = host
+        .invoke(
+            "novel_chapter_read",
+            json!({ "novelId": id, "chapterId": chapter }),
+        )
+        .unwrap();
+    let titled = host
+        .invoke(
+            "novel_chapter_rename",
+            json!({ "novelId": id, "chapterId": chapter, "title": "Opening" }),
+        )
+        .unwrap();
+    let moved = host
+        .invoke(
+            "novel_chapter_move",
+            json!({ "novelId": id, "chapterId": second_id, "toSeq": 1 }),
+        )
+        .unwrap();
+    let remaining = host
+        .invoke(
+            "novel_chapter_delete",
+            json!({ "novelId": id, "chapterId": second_id }),
+        )
+        .unwrap();
+    let chapters = host
+        .invoke("novel_chapters", json!({ "novelId": id }))
+        .unwrap();
+    let listed = host.invoke("novel_list", json!({})).unwrap();
+    let deleted = host.invoke("novel_delete", json!({ "ids": [id] })).unwrap();
+
+    assert_eq!(renamed["title"], "Renamed");
+    assert_eq!(paragraphs.as_array().unwrap().len(), 3);
+    assert_eq!(titled["title"], "Opening");
+    assert_eq!(moved.as_array().unwrap().len(), 2);
+    assert_eq!(remaining.as_array().unwrap().len(), 1);
+    assert_eq!(chapters.as_array().unwrap().len(), 1);
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(deleted, 1);
+}
+
+#[test]
+fn novel_covers_are_set_read_and_cleared_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+    let book = host
+        .invoke("novel_create", json!({ "input": novel_payload("Book") }))
+        .unwrap();
+    let id = book["id"].as_i64().unwrap();
+    let png = "data:image/png;base64,iVBORw0KGgo=";
+
+    host.invoke("novel_cover_set", json!({ "id": id, "dataUrl": png }))
+        .unwrap();
+    let stored = host.invoke("novel_cover_get", json!({ "id": id })).unwrap();
+    host.invoke("novel_cover_clear", json!({ "id": id }))
+        .unwrap();
+    let cleared = host.invoke("novel_cover_get", json!({ "id": id })).unwrap();
+
+    assert_eq!(stored, png);
+    assert!(cleared.is_null());
+}
+
+#[test]
+fn packages_are_inspected_imported_and_exported_through_ipc() {
+    let host = MockHost::new();
+    let dir = host.dir.path().to_path_buf();
+    host.open_workspace();
+    let package = dir.join("book.dsnovel");
+    std::fs::write(&package, sample_package(2)).unwrap();
+    let path = package.to_str().unwrap();
+
+    let inspected = host.invoke(
+        "novel_package_inspect",
+        json!({ "path": path, "onEvent": "__CHANNEL__:1" }),
+    );
+    let imported = host
+        .invoke(
+            "novel_package_import",
+            json!({ "path": path, "meta": novel_payload("Imported") }),
+        )
+        .unwrap();
+    let target = dir.join("out.dsnovel");
+    let exported = host
+        .invoke(
+            "novel_package_export",
+            json!({ "id": imported["id"], "path": target.to_str().unwrap() }),
+        )
+        .unwrap();
+
+    assert!(inspected.is_ok(), "{inspected:?}");
+    assert_eq!(imported["chapterCount"], 2);
+    assert_eq!(exported["chapterCount"], 2);
+    assert!(target.is_file());
 }

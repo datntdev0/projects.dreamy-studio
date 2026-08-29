@@ -143,10 +143,13 @@ fn stop_without_a_running_process_is_harmless() {
 }
 
 #[test]
-#[ignore = "needs backend/.venv; run with: cargo test -- --ignored"]
 fn real_backend_starts_reuses_and_stops() {
     let dir = tempdir().unwrap();
     let launch = BackendLaunch::resolve(dir.path().to_path_buf());
+    if !launch.program.is_file() {
+        eprintln!("skipped: no backend interpreter at {:?}", launch.program);
+        return;
+    }
     let process = BackendProcess::new(launch);
     let cancel = AtomicBool::new(false);
 

@@ -2,17 +2,17 @@ use super::*;
 use crate::commands::novel;
 use crate::commands::workspace::perform_load;
 use crate::container::AppContainer;
-use crate::features::novel::models::NovelInput;
-use crate::features::novel::service::NovelService;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::service::KnowledgeService;
-use crate::features::pipeline::models::PipelineEvent;
-use crate::features::pipeline::repository::PipelineRepository;
+use crate::features::novel::models::NovelInput;
+use crate::features::novel::service::NovelService;
 use crate::features::pipeline::job::JobFactory;
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::jobs::analysis::AnalysisJobFactory;
 use crate::features::pipeline::jobs::translation::TranslationJobFactory;
+use crate::features::pipeline::models::PipelineEvent;
 use crate::features::pipeline::models::PipelineStatus;
+use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::load::LoadEvent;
@@ -24,6 +24,7 @@ use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
 use crate::testing::analyzer::FakeAnalyzer;
+use crate::testing::app::MockHost;
 use crate::testing::backend::StubBackend;
 use crate::testing::translator::FakeTranslator;
 use chrono::Utc;
@@ -49,10 +50,15 @@ impl RecordingTarget {
     fn wait_for_finished(&self) -> PipelineSnapshot {
         let until = Instant::now() + Duration::from_secs(5);
         loop {
-            let finished = self.events.lock().unwrap().iter().find_map(|event| match event {
-                PipelineEvent::Finished { pipeline } => Some(pipeline.clone()),
-                _ => None,
-            });
+            let finished = self
+                .events
+                .lock()
+                .unwrap()
+                .iter()
+                .find_map(|event| match event {
+                    PipelineEvent::Finished { pipeline } => Some(pipeline.clone()),
+                    _ => None,
+                });
             if let Some(pipeline) = finished {
                 return pipeline;
             }
@@ -366,7 +372,10 @@ fn an_unknown_kind_is_invalid_input() {
     .unwrap_err();
 
     assert_eq!(error.code, PipelineErrorCode::InvalidInput);
-    assert_eq!(serde_json::to_value(error).unwrap()["code"], "invalid_input");
+    assert_eq!(
+        serde_json::to_value(error).unwrap()["code"],
+        "invalid_input"
+    );
     assert!(!executor.cancel());
 }
 
@@ -412,8 +421,14 @@ fn a_target_equal_to_the_novel_language_is_rejected() {
     let input = serde_json::from_value(json!({ "title": "Sach", "lang": "VI" })).unwrap();
     let novel = novel::create_novel(&fixture.novels, &fixture.session, input).unwrap();
     let chapter = novel::add_chapter(&fixture.novels, &fixture.session, novel.id, "Mot").unwrap();
-    novel::add_paragraph(&fixture.novels, &fixture.session, novel.id, &chapter.id, "Van ban")
-        .unwrap();
+    novel::add_paragraph(
+        &fixture.novels,
+        &fixture.session,
+        novel.id,
+        &chapter.id,
+        "Van ban",
+    )
+    .unwrap();
 
     let error = start_pipeline(
         &PipelineExecutor::new(),
@@ -459,7 +474,10 @@ fn target_and_lang_fold_into_the_params_of_the_job() {
 #[test]
 fn params_fold_only_what_is_given() {
     assert_eq!(job_params(None, None, None).unwrap(), json!({}));
-    assert_eq!(job_params(None, None, Some(Value::Null)).unwrap(), json!({}));
+    assert_eq!(
+        job_params(None, None, Some(Value::Null)).unwrap(),
+        json!({})
+    );
     assert_eq!(
         job_params(Some("VI".to_string()), None, None).unwrap(),
         json!({ "target": "VI" })
@@ -483,7 +501,10 @@ fn explicit_params_win_over_target_and_lang() {
     )
     .unwrap();
 
-    assert_eq!(params, json!({ "target": "EN", "other": true, "lang": "EN" }));
+    assert_eq!(
+        params,
+        json!({ "target": "EN", "other": true, "lang": "EN" })
+    );
 }
 
 #[test]
@@ -639,4 +660,61 @@ fn an_analysis_reads_the_lang_from_params() {
     assert_eq!(snapshot.kind, "analysis");
     assert_eq!(snapshot.target, "src");
     assert_eq!(sink.wait_for_finished().status, PipelineStatus::Completed);
+}
+
+#[test]
+fn pipeline_commands_report_no_workspace_through_ipc() {
+    let host = MockHost::new();
+
+    host.expect_code(
+        &[
+            (
+                "pipeline_history_list",
+                json!({ "novelId": 1, "limit": null }),
+            ),
+            (
+                "pipeline_start",
+                json!({
+                    "kind": "analysis",
+                    "novelId": 1,
+                    "lang": "src",
+                    "tasks": [],
+                    "onEvent": "__CHANNEL__:1"
+                }),
+            ),
+        ],
+        "no_workspace",
+    );
+}
+
+#[test]
+fn pipeline_history_is_listed_and_cancelling_nothing_is_false_through_ipc() {
+    let host = MockHost::new();
+    host.open_workspace();
+    let (novel, _) = host.seed_novel(&[("One", "alpha")]);
+
+    let history = host
+        .invoke(
+            "pipeline_history_list",
+            json!({ "novelId": novel, "limit": 5 }),
+        )
+        .unwrap();
+    let cancelled = host
+        .invoke("pipeline_cancel", json!({ "pipelineId": null }))
+        .unwrap();
+    let invalid = host
+        .invoke(
+            "pipeline_start",
+            json!({
+                "kind": "translation",
+                "novelId": novel,
+                "tasks": [],
+                "onEvent": "__CHANNEL__:2"
+            }),
+        )
+        .unwrap_err();
+
+    assert!(history.as_array().unwrap().is_empty());
+    assert_eq!(cancelled, false);
+    assert_eq!(invalid["code"], "invalid_input");
 }

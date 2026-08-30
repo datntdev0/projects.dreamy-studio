@@ -122,6 +122,7 @@ pub(crate) fn fact_locations(chapters: &[LoadedChapter], id: &str) -> Vec<(usize
         .collect()
 }
 
+#[cfg(test)]
 pub(crate) fn merged_id_of(file: &ChapterAnalysis, local_entity_id: &str) -> Option<String> {
     file.entities
         .iter()

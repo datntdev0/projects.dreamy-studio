@@ -417,6 +417,7 @@ fn failed(message: impl Into<String>) -> ClientError {
     ClientError::Failed(message.into())
 }
 
+#[cfg(test)]
 pub fn invocation_args(cli: &CliSpec, feature: &FeatureSettings) -> Result<Vec<String>, String> {
     build_args(cli, feature, FEATURE, Mode::Once, true, &[])
 }

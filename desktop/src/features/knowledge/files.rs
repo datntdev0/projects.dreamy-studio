@@ -51,6 +51,7 @@ impl KnowledgeFiles {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn list(&self, novel_id: i64, lang: KnowledgeLang) -> KnowledgeResult<Vec<String>> {
         let entries = match fs::read_dir(self.knowledge_dir(novel_id, lang)) {
             Ok(entries) => entries,
@@ -111,6 +112,7 @@ fn chapter_name(chapter_id: &str) -> KnowledgeResult<String> {
     Ok(format!("{CHAPTER_PREFIX}{chapter_id}{CHAPTER_SUFFIX}"))
 }
 
+#[cfg(test)]
 fn chapter_id_of(name: &str) -> Option<&str> {
     let id = name
         .strip_prefix(CHAPTER_PREFIX)?

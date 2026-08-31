@@ -1,5 +1,5 @@
 /*
- * Workspace management shared by the prototype entry pages (mock, no backend).
+ * Workspace management for the prototype (mock, no backend).
  *  - recent workspaces (localStorage) and the workspace currently open (sessionStorage)
  *  - recent list rows, loading card, failure messages
  *  - a simulated load run (application → backend → workspace) with cancel
@@ -9,7 +9,6 @@ window.WS = (function () {
   "use strict";
 
   const D = window.DS;
-  const sharedRoot = document.body.dataset.sharedRoot || "shared";
   const FAILURE_HOLD_MS = 1200;
   const RECENT_WORKSPACE_LIMIT = 5;
   const STEP_ORDER = ["application", "backend", "workspace"];
@@ -166,7 +165,7 @@ window.WS = (function () {
   function loadingHtml(L) {
     const steps = L.steps.map((s) => `<div class="ld-step ${s.state === "pending" ? "" : `is-${s.state}`}" data-state="${s.state}" data-testid="loading-step">${stepIcon(s.state)}<span data-testid="loading-step-label">${esc(STEP_LABELS[s.id])}</span></div>`).join("");
     return `<div class="ld" role="status" aria-live="polite" data-testid="loading-card">
-        <img class="ld-logo" src="${sharedRoot}/assets/dreamy-studio-mark.svg" alt="" data-testid="loading-logo">
+        <img class="ld-logo" src="assets/dreamy-studio-mark.svg" alt="" data-testid="loading-logo">
         <div data-testid="loading-header">
           <span class="eyebrow" data-testid="loading-mode">${MODE_LABELS[L.mode || "prepare"]}</span>
           <h2 class="t-display-xs" data-testid="loading-name">${esc(L.name)}</h2>

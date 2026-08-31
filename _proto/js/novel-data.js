@@ -4,7 +4,7 @@ window.NV = (function () {
   const CORPUS = window.NVC;
   const PACK = { lantern: "the-lantern-keeper-of-harrowmere", glass: "ash-under-the-glass-sea", pine: "gio-muon-tren-doi-thong" };
   const ART = { waves: "nhung-con-song-khong-ten" }; // cover-only folder of a novel created in the app (no package)
-  const NOVEL_ASSETS = `${(typeof document !== "undefined" && document.body?.dataset.sharedRoot) || "../shared"}/assets/novel/`; // relative to the page that hosts the shell
+  const NOVEL_ASSETS = "assets/novel/";
   const corpusOf = (pack) => (CORPUS[pack] ? CORPUS[pack].chapters : []);
   const lantern = corpusOf(PACK.lantern);
   const titles = lantern.map((c) => c.title);

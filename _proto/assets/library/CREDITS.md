@@ -18,7 +18,7 @@ videos are the smallest suitable rendition. Posters are the Pixabay thumbnails.
 | page-turn.mp3 | Page flip by sumaga123 | 1.6 s | 50 KB | https://pixabay.com/music/beats-page-flip-557810/ |
 | intro-sting.mp3 | Minimalist Synthwave Logo Sting by Emand_Edroff | 13.8 s | 431 KB | https://pixabay.com/music/synthwave-minimalist-synthwave-logo-sting-562150/ |
 
-`../../../1.library/js/library-audio.js` holds peaks and a spectrogram computed from these files (used when the page is opened from `file://`).
+`../../js/library-audio.js` holds peaks and a spectrogram computed from these files (used when the page is opened from `file://`).
 
 ## Videos
 

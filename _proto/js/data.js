@@ -117,7 +117,6 @@ window.DS = (function () {
             ],
           }],
         },
-        { id: "filters", title: "Filters", items: [] },
       ],
     },
 
@@ -166,7 +165,6 @@ window.DS = (function () {
             reqs: [["REQ-05-005", "Classification and resource management with collections and tags"]],
           }],
         },
-        { id: "libfilters", title: "Filters", items: [] },
       ],
     },
 

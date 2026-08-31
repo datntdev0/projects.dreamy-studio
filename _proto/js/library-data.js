@@ -1,7 +1,7 @@
 window.LB = (function () {
   const MB = 1048576;
   const GB = 1024 * MB;
-  const IMG_DIR = "../shared/assets/library/";
+  const IMG_DIR = "assets/library/";
   const SND_DIR = IMG_DIR;
   const VID_DIR = IMG_DIR;
 

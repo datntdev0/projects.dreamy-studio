@@ -1,6 +1,5 @@
 /*
  * Dreamy Studio prototype.
- *  - Entry pages declare their initial view through data attributes/configuration.
  *  - Main layout: title bar, activity rail, explorer, editor tabs, inspector / assistant, pipelines panel, status bar.
  *  - Functional screens are "coming soon": each lists the requirements it will cover.
  * Everything is mock; no backend.
@@ -9,8 +8,7 @@
   "use strict";
 
   const D = window.DS;
-  const sharedRoot = document.body.dataset.sharedRoot || "shared";
-  const logoSrc = `${sharedRoot}/assets/dreamy-studio-mark.svg`;
+  const logoSrc = "assets/dreamy-studio-mark.svg";
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -78,8 +76,6 @@
     onOk: null,
   };
 
-  const initialView = window.DS_INITIAL_VIEW || {};
-
   function setPanelSize(panel, size, handle = null) {
     const limits = PANEL_LIMITS[panel];
     const nextSize = Math.max(limits.min, Math.min(limits.max, size));
@@ -96,10 +92,8 @@
   function enterShell(entry) {
     S.workspace = entry;
     S.log = [];
-    const initialRail = D.NAV[initialView.rail] ? initialView.rail : "projects";
-    const initialActive = ITEMS[initialView.active] ? initialView.active : "home";
-    S.tabs = [initialActive];
-    S.active = initialActive;
+    S.tabs = ["home"];
+    S.active = "home";
     S.scroll = {};
     S.renderedFor = null;
     PL.list = [];
@@ -110,7 +104,7 @@
     window.CR?.reseed();
     window.AB?.reseed();
     window.DT?.reseed();
-    S.rail = initialRail;
+    S.rail = "projects";
     S.rightTab = "inspector";
     document.title = `${entry.name} — Dreamy Studio`;
     renderShell();
@@ -721,12 +715,7 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
-    const standalone = document.body.dataset.standalone === "true";
-    const workspace = standalone ? {
-      ...D.seedWorkspaces[0],
-      name: document.body.dataset.workspaceName || "Dreamy Studio",
-      path: document.body.dataset.workspacePath || "Prototype / Library",
-    } : WS.requireCurrent();
+    const workspace = WS.requireCurrent();
     if (workspace) enterShell(workspace);
   });
 })();

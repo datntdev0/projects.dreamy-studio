@@ -100,7 +100,6 @@ window.NVU = (function () {
     }
   }, true);
   const empty = (title, text, cta = "") => `<div class="empty"><div class="empty-inner"><div class="illus"></div><h3 class="t-display-xs">${title}</h3><p class="t-sm t-mute">${text}</p>${cta}</div></div>`;
-  const noSample = () => empty("No sample content yet", "The prototype only has chapter content, translations and knowledge for “The Lantern Keeper of Harrowmere”.", novelById(SAMPLE) ? `<button class="btn btn-primary" data-act="nv-sample">Open the sample novel</button>` : "");
   const insSec = (title, body) => `<section class="ins-sec"><span class="eyebrow">${esc(title)}</span>${body}</section>`;
   const kv = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
   const novelTitle = () => `<span class="nv-ttl">${cover(current(), "cover-xs")}<span class="t-ink">${esc(nameOf(current()))}</span><span class="badge">${esc(current().lang)}</span></span>`;
@@ -233,21 +232,13 @@ window.NVU = (function () {
     A.openTab(`${kind}:${novelId}`, { title: t.title, tab: t.tab(n), icon: t.icon, section: nameOf(n), cap: "", rail: "novels", blurb: "", reqs: [] });
   };
 
-  A.ACT["nv-sample"] = () => openNovelTab(A.S.active.split(":")[0], SAMPLE);
-  A.ACT["jump-src"] = (el) => {
-    const pid = el.dataset.p;
-    if (el.dataset.view === "tl") NVU.openTranslation("result", NV.chOf(pid), pid);
-    else NVU.openReader(N().reader.novel, NV.chOf(pid), pid);
-  };
+  A.ACT["jump-src"] = (el) => openNovelTab(el.dataset.view === "tl" ? "translation" : "novel", N().reader.novel);
 
   const NVU = {
-    SAMPLE, N, ui, fmt, chapter, chapterIn, parasOf, wordCount, syncNovel, novelById, current, bind, hasText, findPara, paraNo, refLabel, ref, seg, options, bar, datatable, empty, noSample, insSec, kv, novelTitle,
+    SAMPLE, N, ui, fmt, chapter, chapterIn, parasOf, wordCount, syncNovel, novelById, current, bind, hasText, findPara, paraNo, refLabel, ref, seg, options, bar, datatable, empty, insSec, kv, novelTitle,
     nameOf, chaptersFor, progress, analyzedCount, cover, coverBg, frac, rangeText, chapterJump, nextNovelId, tagsOf, allTags, normTag, filters, filterActive, passes, tagChips, refreshTabs,
     certBadge, CERT, estimate, money, provider, providerSelect, runningTask, taskRef, trChapter, trParaList, trStatus, openWarnings, staleItems,
     addWarning, applySourceEdit, inspectorNovel, openNovelTab,
-    openReader: null,
-    openTranslation: null,
-    openKnowledge: null,
   };
   return NVU;
 })();

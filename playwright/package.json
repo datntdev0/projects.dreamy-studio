@@ -1,5 +1,5 @@
 {
-  "name": "dreamy-studio-verify",
+  "name": "dreamy-studio-playwright",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
   "scripts": {
     "build:app": "pnpm --dir .. run build --debug --no-bundle",
     "test": "playwright test --project=desktop",
-    "report": "playwright show-report ../_output/verify/report",
+    "report": "playwright show-report ../_output/playwright/report",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

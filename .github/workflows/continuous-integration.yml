@@ -64,8 +64,8 @@ jobs:
       - name: Test backend
         run: python -m pytest backend/tests
 
-  verify:
-    name: Verify project
+  playwright:
+    name: Playwright project
     runs-on: windows-latest
     timeout-minutes: 90
     env:
@@ -98,15 +98,15 @@ jobs:
         run: pnpm run build:prepare
 
       - name: Build app
-        run: pnpm run verify:build
+        run: pnpm run playwright:build
 
-      - name: Verify project
-        run: pnpm run verify:test
+      - name: Playwright project
+        run: pnpm run playwright:test
 
-      - name: Upload verify report
+      - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dreamy-studio-verify-report
-          path: _output/verify/report
+          name: dreamy-studio-playwright-report
+          path: _output/playwright/report
           if-no-files-found: ignore

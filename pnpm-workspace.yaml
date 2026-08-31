@@ -1,6 +1,6 @@
 packages:
   - angular
-  - verify
+  - playwright
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true

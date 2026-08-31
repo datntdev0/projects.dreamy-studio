@@ -3,9 +3,9 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export const verifyRoot = resolve(here, "..");
-export const repoRoot = resolve(verifyRoot, "..");
-export const outputRoot = join(repoRoot, "_output", "verify");
+export const playwrightRoot = resolve(here, "..");
+export const repoRoot = resolve(playwrightRoot, "..");
+export const outputRoot = join(repoRoot, "_output", "playwright");
 export const defaultExecutable = join(repoRoot, "_output", "desktop", "target", "debug", "dreamy-studio.exe");
 
 export function appExecutable(): string {

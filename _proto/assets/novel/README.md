@@ -1,6 +1,6 @@
 # Novel prototype packages
 
-Mock novels for the `_proto/` Novel management screens and for the `verify` fixture. Each folder is the unpacked form of a
+Mock novels for the `_proto/` Novel management screens and for the `playwright` fixture. Each folder is the unpacked form of a
 `.dsnovel` package: `manifest.json`, `chapters/NNN.txt` and an optional `cover.png`.
 
 | Folder | Novel | Lang | Chapters |
@@ -13,4 +13,4 @@ Mock novels for the `_proto/` Novel management screens and for the `verify` fixt
 The text is original fiction written for the prototype. Chapters 1–3 of Harrowmere are the sample the translation and
 knowledgebase prototypes refer to by paragraph id, so keep their paragraphs in step with `novel-data.js` (`VI` and the knowledge items).
 `../../js/novel-corpus.js` (chapter titles, word counts and paragraphs the prototype reads from these packages) is regenerated
-by `pnpm fixture` and `pnpm baseline` (in `verify/`). Do not edit it by hand.
+by `pnpm fixture` and `pnpm baseline` (in `playwright/`). Do not edit it by hand.

@@ -32,7 +32,7 @@ async function removeTree(root: string): Promise<void> {
 }
 
 export async function createSandbox(): Promise<Sandbox> {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "dreamy-verify-")));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "dreamy-playwright-")));
   const workspacesDir = join(root, "workspaces");
   const filesDir = join(root, "files");
   await mkdir(workspacesDir, { recursive: true });

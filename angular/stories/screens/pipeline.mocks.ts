@@ -1,9 +1,9 @@
-import { Injectable, computed } from "@angular/core";
-import { PipelineSnapshot } from "@features/novel/novel.translation.models";
-import { PipelineService } from "@features/pipeline/pipeline.service";
+import { computed, Injectable } from '@angular/core';
+import { PipelineSnapshot } from '@features/novel/novel.translation.models';
+import { PipelineService } from '@features/pipeline/pipeline.service';
 
 function isRunning(pipeline: PipelineSnapshot): boolean {
-  return pipeline.status === "running";
+  return pipeline.status === 'running';
 }
 
 @Injectable()

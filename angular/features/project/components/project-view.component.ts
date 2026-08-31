@@ -1,25 +1,26 @@
-import { Component, computed, effect, inject, input, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { TabsService } from "@layout/tabs.service";
-import { ProjectConfirmService } from "../project.confirm.service";
-import { ProjectLabels } from "../project.labels";
-import { ProjectSummary } from "../project.models";
-import { ProjectService } from "../project.service";
-import { toProjectError } from "../project.rules";
-import { validateProjectName } from "../project.rules";
-import { ProjectTree } from "./tree.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
 
-type ProjectViewTab = "files" | "settings";
+import { ProjectConfirmService } from '../project.confirm.service';
+import { ProjectLabels } from '../project.labels';
+import { ProjectSummary } from '../project.models';
+import { toProjectError, validateProjectName } from '../project.rules';
+import { ProjectService } from '../project.service';
+import { ProjectTree } from './tree.component';
+
+type ProjectViewTab = 'files' | 'settings';
 type EditableElement = HTMLInputElement | HTMLTextAreaElement;
 
 @Component({
-  selector: "app-project-view",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-project-view',
   imports: [Icon, CoreModule, ProjectTree],
-  templateUrl: "./project-view.component.html",
+  templateUrl: './project-view.component.html',
 })
 export class ProjectView {
   private readonly projects = inject(ProjectService);
@@ -32,7 +33,7 @@ export class ProjectView {
   readonly projectId = input.required<number>();
   readonly project = computed(this.findProject.bind(this));
   readonly missing = signal(false);
-  readonly tab = signal<ProjectViewTab>("files");
+  readonly tab = signal<ProjectViewTab>('files');
   private readonly openedIds = new Set<number>();
 
   constructor() {
@@ -69,7 +70,7 @@ export class ProjectView {
     const issue = validateProjectName(name);
     if (issue !== null) {
       element.value = project.name;
-      this.toasts.show(this.languageService.translate("project.error.empty"), "warning");
+      this.toasts.show(this.languageService.translate('project.error.empty'), 'warning');
       return;
     }
     if (name === project.name) {
@@ -86,7 +87,7 @@ export class ProjectView {
   }
 
   onNameKeydown(event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       (event.target as HTMLInputElement).blur();
     }
@@ -148,6 +149,6 @@ export class ProjectView {
 
   private fail(cause: unknown): void {
     const detail = toProjectError(cause).detail;
-    this.toasts.show(this.languageService.translate("project.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate('project.error.generic', { detail }), 'danger');
   }
 }

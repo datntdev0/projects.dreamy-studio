@@ -1,12 +1,173 @@
 @if (sound(); as item) {
-  <section data-testid="library-sound-panel-content">
-    <section class="ins-sec lb-ins-top" data-testid="library-sound-panel-summary"><div class="lb-ins-name" data-testid="library-sound-panel-type"><span class="type-tag" data-testid="library-sound-panel-type-tag"><ds-icon name="music" [size]="13" data-testid="library-sound-panel-type-icon" />{{ "library.kind.sound" | t }}</span></div><div class="field" data-testid="library-sound-panel-name-field"><label for="library-sound-panel-name" data-testid="library-sound-panel-name-label">{{ "library.sound.field.name" | t }}</label><input id="library-sound-panel-name" class="input" maxlength="255" [value]="item.name" autocomplete="off" data-testid="library-sound-panel-name" (blur)="nameBlur(item, $event)" (keydown)="nameKeydown($event)" /></div></section>
-    <section class="ins-sec ins-form" data-testid="library-sound-panel-fields">
-      <div class="field" data-testid="library-sound-panel-tags-field"><label for="library-sound-panel-tags" data-testid="library-sound-panel-tags-label">{{ "library.image.field.tags" | t }} <span class="t-mute mono" data-testid="library-sound-panel-tags-count">{{ item.tags.length }}/12</span></label><div class="tags" data-testid="library-sound-panel-tags">@if (item.tags.length) { @for (tag of item.tags; track tag) { <span class="tag" data-testid="library-sound-panel-tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'library.image.field.tagRemove' | t: { tag }" data-testid="library-sound-panel-tag-remove" (click)="removeTag(item, tag)"><ds-icon name="x" [size]="16" data-testid="library-sound-panel-tag-remove-icon" /></button></span> } } @else { <span class="t-sm t-mute" data-testid="library-sound-panel-tags-empty">{{ "library.image.field.tagsEmpty" | t }}</span> }</div><input id="library-sound-panel-tags" class="input tag-in" list="library-sound-panel-tag-suggestions" [disabled]="item.tags.length >= 12" [attr.placeholder]="'library.image.field.tagsPlaceholder' | t" autocomplete="off" data-testid="library-sound-panel-tags-input" (keydown)="addTag(item, $event)" /><datalist id="library-sound-panel-tag-suggestions" data-testid="library-sound-panel-tag-suggestions">@for (tag of library.tags(); track tag.tag) { <option [value]="tag.tag" data-testid="library-sound-panel-tag-suggestion"></option> }</datalist></div>
-      <div class="field" data-testid="library-sound-panel-collection-field"><label for="library-sound-panel-collection" data-testid="library-sound-panel-collection-label">{{ "library.image.field.collection" | t }}</label><select id="library-sound-panel-collection" class="select" data-testid="library-sound-panel-collection" (change)="setCollection(item, $event)"><option value="" [selected]="item.collectionId === null" data-testid="library-sound-panel-collection-none">{{ "library.image.field.collectionNoneInspector" | t }}</option>@for (collection of library.collections(); track collection.id) { <option [value]="collection.id" [selected]="item.collectionId === collection.id" data-testid="library-sound-panel-collection-option">{{ collection.name }}</option> }<option value="__new" data-testid="library-sound-panel-collection-new">{{ "library.image.field.collectionNew" | t }}</option></select></div>
-      <div class="field" data-testid="library-sound-panel-rights-field"><label for="library-sound-panel-rights" data-testid="library-sound-panel-rights-label">{{ "library.image.field.rights" | t }}</label><select id="library-sound-panel-rights" class="select" data-testid="library-sound-panel-rights" (change)="setRights(item, $event)">@for (right of rightOptions; track right) { <option [value]="right" [selected]="item.rights === right" data-testid="library-sound-panel-rights-option">{{ rightKey(right) | t }}</option> }</select><span class="field-hint" data-testid="library-sound-panel-rights-hint">{{ "library.image.field.rightsHint" | t }}</span></div>
-    </section>
-    <section class="ins-sec" data-testid="library-sound-panel-info"><span class="eyebrow" data-testid="library-sound-panel-info-title">{{ "library.sound.info" | t }}</span><dl class="kv" data-testid="library-sound-panel-info-list"><dt data-testid="library-sound-panel-code-label">{{ "library.image.info.code" | t }}</dt><dd class="mono" data-testid="library-sound-panel-code">{{ code(item) }}</dd><dt data-testid="library-sound-panel-format-label">{{ "library.image.info.format" | t }}</dt><dd data-testid="library-sound-panel-format">{{ item.ext.toUpperCase() }}</dd><dt data-testid="library-sound-panel-duration-label">{{ "library.sound.info.duration" | t }}</dt><dd data-testid="library-sound-panel-duration">{{ duration(item) }}</dd><dt data-testid="library-sound-panel-audio-label">{{ "library.sound.info.audio" | t }}</dt><dd data-testid="library-sound-panel-audio">{{ audio(item) }}</dd><dt data-testid="library-sound-panel-size-label">{{ "library.image.info.size" | t }}</dt><dd data-testid="library-sound-panel-size">{{ size(item) }}</dd><dt data-testid="library-sound-panel-added-label">{{ "library.image.info.added" | t }}</dt><dd class="mono" data-testid="library-sound-panel-added">{{ addedAt(item) }}</dd><dt data-testid="library-sound-panel-origin-label">{{ "library.image.info.origin" | t }}</dt><dd data-testid="library-sound-panel-origin">{{ originKey(item) | t }}</dd></dl></section>
-    <section class="ins-sec ins-actions" data-testid="library-sound-panel-actions"><button type="button" class="btn btn-danger" data-testid="library-sound-panel-delete" (click)="remove(item)"><ds-icon name="trash" [size]="16" data-testid="library-sound-panel-delete-icon" />{{ "library.sound.delete" | t }}</button></section>
+<section data-testid="library-sound-panel-content">
+  <section class="ins-sec lb-ins-top" data-testid="library-sound-panel-summary">
+    <div class="lb-ins-name" data-testid="library-sound-panel-type">
+      <span class="type-tag" data-testid="library-sound-panel-type-tag">
+        <ds-icon name="music" [size]="13" data-testid="library-sound-panel-type-icon" />
+        {{ "library.kind.sound" | t }}
+      </span>
+    </div>
+    <div class="field" data-testid="library-sound-panel-name-field">
+      <label for="library-sound-panel-name" data-testid="library-sound-panel-name-label">
+        {{ "library.sound.field.name" | t }}
+      </label>
+      <input
+        id="library-sound-panel-name"
+        class="input"
+        maxlength="255"
+        [value]="item.name"
+        autocomplete="off"
+        data-testid="library-sound-panel-name"
+        (blur)="nameBlur(item, $event)"
+        (keydown)="nameKeydown($event)"
+      />
+    </div>
   </section>
-} @else { <div class="ins-empty" data-testid="library-sound-panel-empty"><p class="t-sm t-mute" data-testid="library-sound-panel-empty-text">{{ "library.sound.empty.title" | t }}</p></div> }
+  <section class="ins-sec ins-form" data-testid="library-sound-panel-fields">
+    <div class="field" data-testid="library-sound-panel-tags-field">
+      <label for="library-sound-panel-tags" data-testid="library-sound-panel-tags-label">
+        {{ "library.image.field.tags" | t }}
+        <span class="t-mute mono" data-testid="library-sound-panel-tags-count">
+          {{ item.tags.length }}/12
+        </span>
+      </label>
+      <div class="tags" data-testid="library-sound-panel-tags">
+        @if (item.tags.length) { @for (tag of item.tags; track tag) {
+        <span class="tag" data-testid="library-sound-panel-tag">
+          {{ tag }}
+          <button
+            type="button"
+            class="tag-x"
+            [attr.aria-label]="'library.image.field.tagRemove' | t: { tag }"
+            data-testid="library-sound-panel-tag-remove"
+            (click)="removeTag(item, tag)"
+          >
+            <ds-icon name="x" [size]="16" data-testid="library-sound-panel-tag-remove-icon" />
+          </button>
+        </span>
+        } } @else {
+        <span class="t-sm t-mute" data-testid="library-sound-panel-tags-empty">
+          {{ "library.image.field.tagsEmpty" | t }}
+        </span>
+        }
+      </div>
+      <input
+        id="library-sound-panel-tags"
+        class="input tag-in"
+        list="library-sound-panel-tag-suggestions"
+        [disabled]="item.tags.length >= 12"
+        [attr.placeholder]="'library.image.field.tagsPlaceholder' | t"
+        autocomplete="off"
+        data-testid="library-sound-panel-tags-input"
+        (keydown)="addTag(item, $event)"
+      />
+      <datalist
+        id="library-sound-panel-tag-suggestions"
+        data-testid="library-sound-panel-tag-suggestions"
+      >
+        @for (tag of library.tags(); track tag.tag) {
+        <option [value]="tag.tag" data-testid="library-sound-panel-tag-suggestion"></option>
+        }
+      </datalist>
+    </div>
+    <div class="field" data-testid="library-sound-panel-collection-field">
+      <label
+        for="library-sound-panel-collection"
+        data-testid="library-sound-panel-collection-label"
+      >
+        {{ "library.image.field.collection" | t }}
+      </label>
+      <select
+        id="library-sound-panel-collection"
+        class="select"
+        data-testid="library-sound-panel-collection"
+        (change)="setCollection(item, $event)"
+      >
+        <option
+          value=""
+          [selected]="item.collectionId === null"
+          data-testid="library-sound-panel-collection-none"
+        >
+          {{ "library.image.field.collectionNoneInspector" | t }}
+        </option>
+        @for (collection of library.collections(); track collection.id) {
+        <option
+          [value]="collection.id"
+          [selected]="item.collectionId === collection.id"
+          data-testid="library-sound-panel-collection-option"
+        >
+          {{ collection.name }}
+        </option>
+        }
+        <option value="__new" data-testid="library-sound-panel-collection-new">
+          {{ "library.image.field.collectionNew" | t }}
+        </option>
+      </select>
+    </div>
+    <div class="field" data-testid="library-sound-panel-rights-field">
+      <label for="library-sound-panel-rights" data-testid="library-sound-panel-rights-label">
+        {{ "library.image.field.rights" | t }}
+      </label>
+      <select
+        id="library-sound-panel-rights"
+        class="select"
+        data-testid="library-sound-panel-rights"
+        (change)="setRights(item, $event)"
+      >
+        @for (right of rightOptions; track right) {
+        <option
+          [value]="right"
+          [selected]="item.rights === right"
+          data-testid="library-sound-panel-rights-option"
+        >
+          {{ rightKey(right) | t }}
+        </option>
+        }
+      </select>
+      <span class="field-hint" data-testid="library-sound-panel-rights-hint">
+        {{ "library.image.field.rightsHint" | t }}
+      </span>
+    </div>
+  </section>
+  <section class="ins-sec" data-testid="library-sound-panel-info">
+    <span class="eyebrow" data-testid="library-sound-panel-info-title">
+      {{ "library.sound.info" | t }}
+    </span>
+    <dl class="kv" data-testid="library-sound-panel-info-list">
+      <dt data-testid="library-sound-panel-code-label">{{ "library.image.info.code" | t }}</dt>
+      <dd class="mono" data-testid="library-sound-panel-code">{{ code(item) }}</dd>
+      <dt data-testid="library-sound-panel-format-label">{{ "library.image.info.format" | t }}</dt>
+      <dd data-testid="library-sound-panel-format">{{ item.ext.toUpperCase() }}</dd>
+      <dt data-testid="library-sound-panel-duration-label">
+        {{ "library.sound.info.duration" | t }}
+      </dt>
+      <dd data-testid="library-sound-panel-duration">{{ duration(item) }}</dd>
+      <dt data-testid="library-sound-panel-audio-label">{{ "library.sound.info.audio" | t }}</dt>
+      <dd data-testid="library-sound-panel-audio">{{ audio(item) }}</dd>
+      <dt data-testid="library-sound-panel-size-label">{{ "library.image.info.size" | t }}</dt>
+      <dd data-testid="library-sound-panel-size">{{ size(item) }}</dd>
+      <dt data-testid="library-sound-panel-added-label">{{ "library.image.info.added" | t }}</dt>
+      <dd class="mono" data-testid="library-sound-panel-added">{{ addedAt(item) }}</dd>
+      <dt data-testid="library-sound-panel-origin-label">{{ "library.image.info.origin" | t }}</dt>
+      <dd data-testid="library-sound-panel-origin">{{ originKey(item) | t }}</dd>
+    </dl>
+  </section>
+  <section class="ins-sec ins-actions" data-testid="library-sound-panel-actions">
+    <button
+      type="button"
+      class="btn btn-danger"
+      data-testid="library-sound-panel-delete"
+      (click)="remove(item)"
+    >
+      <ds-icon name="trash" [size]="16" data-testid="library-sound-panel-delete-icon" />
+      {{ "library.sound.delete" | t }}
+    </button>
+  </section>
+</section>
+} @else {
+<div class="ins-empty" data-testid="library-sound-panel-empty">
+  <p class="t-sm t-mute" data-testid="library-sound-panel-empty-text">
+    {{ "library.sound.empty.title" | t }}
+  </p>
+</div>
+}

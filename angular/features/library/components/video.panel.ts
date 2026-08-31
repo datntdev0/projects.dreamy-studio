@@ -1,33 +1,29 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { LibraryConfirmService } from "../library.confirm.service";
-import { ASSET_RIGHTS, AssetPatch, AssetRights } from "../library.models";
-import { durationText, formatBytes, formatIsoMinute, libraryErrorKey, normalizeTag } from "../library.rules";
-import { LibraryService } from "../library.service";
-import { LibraryVideo } from "../library.videos.models";
-import { frameText, videoCode } from "../library.videos.rules";
-import { LibraryVideoService } from "../library.videos.service";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { LibraryConfirmService } from '../library.confirm.service';
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { ASSET_RIGHTS, AssetPatch, AssetRights } from '../library.models';
+// prettier-ignore
+import { clearTagField, durationText, enteredTag, formatBytes, formatIsoMinute, libraryErrorKey, rightsKey } from '../library.rules';
+import { LibraryService } from '../library.service';
+import { LibraryVideo } from '../library.videos.models';
+import { frameText, videoCode } from '../library.videos.rules';
+import { LibraryVideoService } from '../library.videos.service';
 
 const MAX_TAGS = 12;
 
-const RIGHTS_KEYS: Record<AssetRights, LanguageKey> = {
-  own: "library.rights.own",
-  licensed: "library.rights.licensed",
-  free: "library.rights.free",
-  other: "library.rights.other",
-};
-
 @Component({
-  selector: "app-library-video-panel",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-video-panel',
   imports: [Icon, CoreModule],
-  templateUrl: "./video.panel.html",
-  host: { "data-testid": "library-video-panel" },
+  templateUrl: './video.panel.html',
+  host: { 'data-testid': 'library-video-panel' },
 })
 export class LibraryVideoPanel {
   readonly videoId = input<number | undefined>();
@@ -41,7 +37,7 @@ export class LibraryVideoPanel {
   readonly video = computed(this.resolveVideo.bind(this));
 
   rightKey(right: AssetRights): LanguageKey {
-    return RIGHTS_KEYS[right];
+    return rightsKey(right);
   }
 
   code(video: LibraryVideo): string {
@@ -65,11 +61,11 @@ export class LibraryVideoPanel {
   }
 
   originKey(video: LibraryVideo): LanguageKey {
-    return video.origin === "app" ? "library.origin.app" : "library.origin.upload";
+    return video.origin === 'app' ? 'library.origin.app' : 'library.origin.upload';
   }
 
   nameKeydown(event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       (event.target as HTMLInputElement).blur();
     }
@@ -90,30 +86,28 @@ export class LibraryVideoPanel {
   }
 
   addTag(video: LibraryVideo, event: KeyboardEvent): void {
-    if (event.key !== "Enter") {
-      return;
-    }
-    event.preventDefault();
-    const field = event.target as HTMLInputElement;
-    const tag = normalizeTag(field.value);
+    const tag = enteredTag(event);
     if (!tag) {
       return;
     }
     if (video.tags.includes(tag)) {
-      this.toasts.show(this.languageService.translate("library.video.toast.tagExists", { tag }), "warning");
+      this.toasts.show(
+        this.languageService.translate('library.video.toast.tagExists', { tag }),
+        'warning',
+      );
       return;
     }
     if (video.tags.length >= MAX_TAGS) {
-      this.toasts.show(this.languageService.translate("library.video.toast.tagLimit"), "warning");
+      this.toasts.show(this.languageService.translate('library.video.toast.tagLimit'), 'warning');
       return;
     }
-    field.value = "";
+    clearTagField(event);
     void this.save(video, { tags: [...video.tags, tag] });
   }
 
   setCollection(video: LibraryVideo, event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    if (value === "__new") {
+    const value = fieldValue(event);
+    if (value === '__new') {
       this.dialogs.openCreateCollection();
       return;
     }
@@ -124,7 +118,7 @@ export class LibraryVideoPanel {
   }
 
   setRights(video: LibraryVideo, event: Event): void {
-    const rights = (event.target as HTMLSelectElement).value as AssetRights;
+    const rights = fieldValue(event) as AssetRights;
     if (rights !== video.rights) {
       void this.save(video, { rights });
     }
@@ -138,9 +132,12 @@ export class LibraryVideoPanel {
     try {
       const updated = await this.videos.update(video.id, { name });
       if (updated.name !== name) {
-        this.toasts.show(this.languageService.translate("library.video.toast.renamed", { name: updated.name }), "warning");
+        this.toasts.show(
+          this.languageService.translate('library.video.toast.renamed', { name: updated.name }),
+          'warning',
+        );
       } else {
-        this.toasts.show(this.languageService.translate("library.video.toast.updated"));
+        this.toasts.show(this.languageService.translate('library.video.toast.updated'));
       }
     } catch (cause) {
       this.notifyFailure(cause);
@@ -150,19 +147,24 @@ export class LibraryVideoPanel {
   private async save(video: LibraryVideo, patch: AssetPatch): Promise<void> {
     try {
       await this.videos.update(video.id, patch);
-      this.toasts.show(this.languageService.translate("library.video.toast.updated"));
+      this.toasts.show(this.languageService.translate('library.video.toast.updated'));
     } catch (cause) {
       this.notifyFailure(cause);
     }
   }
 
   private notifyFailure(cause: unknown): void {
-    this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
+    this.toasts.show(
+      this.languageService.translate(libraryErrorKey(cause) as LanguageKey),
+      'danger',
+    );
   }
 
   private resolveVideo(): LibraryVideo | null {
     const id = this.videoId();
-    return id === undefined ? this.videos.selected() : this.videos.items().find(this.hasId.bind(null, id)) ?? null;
+    return id === undefined
+      ? this.videos.selected()
+      : (this.videos.items().find(this.hasId.bind(null, id)) ?? null);
   }
 
   private hasId(id: number, video: LibraryVideo): boolean {

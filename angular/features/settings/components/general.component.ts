@@ -1,32 +1,33 @@
-import { Component, computed, inject, signal } from "@angular/core";
-import { SegmentOption, Segments } from "@components/segments";
-import { Slider } from "@components/slider";
-import { TabOption, Tabs } from "@components/tabs";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageService, isLanguage } from "@core/language/language.service";
-import { ThemeService, isTheme } from "@core/theme/theme.service";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget } from "../settings.models";
-import { SettingsService } from "../settings.service";
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { SegmentOption, Segments } from '@components/segments';
+import { Slider } from '@components/slider';
+import { TabOption, Tabs } from '@components/tabs';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+import { CoreModule } from '@shared/core.module';
+import { isLanguage, LanguageService } from '@shared/language/language.service';
+import { isTheme, ThemeService } from '@shared/theme/theme.service';
 
-type GeneralTab = "interface" | "pipelines" | "storage";
+import { MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget } from '../settings.models';
+import { SettingsService } from '../settings.service';
 
-const TABS: GeneralTab[] = ["interface", "pipelines", "storage"];
+type GeneralTab = 'interface' | 'pipelines' | 'storage';
+
+const TABS: GeneralTab[] = ['interface', 'pipelines', 'storage'];
 
 const LANGUAGE_OPTIONS: SegmentOption[] = [
-  { value: "vi", label: "Tiếng Việt" },
-  { value: "en", label: "English" },
+  { value: 'vi', label: 'Tiếng Việt' },
+  { value: 'en', label: 'English' },
 ];
 
 @Component({
-  selector: "app-settings-general",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-settings-general',
   imports: [Icon, CoreModule, Segments, Slider, Tabs],
-  templateUrl: "./general.component.html",
-  host: { "data-testid": "settings-general" },
+  templateUrl: './general.component.html',
+  host: { 'data-testid': 'settings-general' },
 })
-export class SettingsGeneralComponent {
+export class SettingsGeneral {
   private readonly settings = inject(SettingsService);
   private readonly languageService = inject(LanguageService);
   private readonly themes = inject(ThemeService);
@@ -43,7 +44,7 @@ export class SettingsGeneralComponent {
   readonly maxTasksLimit = MAX_TASKS_LIMIT;
   readonly languageOptions = LANGUAGE_OPTIONS;
   readonly themeOptions = computed(this.buildThemeOptions.bind(this));
-  readonly tab = signal<GeneralTab>("interface");
+  readonly tab = signal<GeneralTab>('interface');
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
   onLanguage(value: string): void {
@@ -59,7 +60,7 @@ export class SettingsGeneralComponent {
   }
 
   onTab(value: string): void {
-    this.tab.set(TABS.find((tab) => tab === value) ?? "interface");
+    this.tab.set(TABS.find((tab) => tab === value) ?? 'interface');
   }
 
   onMaxPipelines(value: number): void {
@@ -76,16 +77,28 @@ export class SettingsGeneralComponent {
 
   private buildTabOptions(): TabOption[] {
     return [
-      { value: "interface", label: this.languageService.translate("settings.general.interface"), icon: "eye" },
-      { value: "pipelines", label: this.languageService.translate("settings.general.pipelines"), icon: "layers" },
-      { value: "storage", label: this.languageService.translate("settings.general.storage"), icon: "hdd" },
+      {
+        value: 'interface',
+        label: this.languageService.translate('settings.general.interface'),
+        icon: 'eye',
+      },
+      {
+        value: 'pipelines',
+        label: this.languageService.translate('settings.general.pipelines'),
+        icon: 'layers',
+      },
+      {
+        value: 'storage',
+        label: this.languageService.translate('settings.general.storage'),
+        icon: 'hdd',
+      },
     ];
   }
 
   private buildThemeOptions(): SegmentOption[] {
     return [
-      { value: "dark", label: this.languageService.translate("settings.general.theme.dark") },
-      { value: "light", label: this.languageService.translate("settings.general.theme.light") },
+      { value: 'dark', label: this.languageService.translate('settings.general.theme.dark') },
+      { value: 'light', label: this.languageService.translate('settings.general.theme.light') },
     ];
   }
 }

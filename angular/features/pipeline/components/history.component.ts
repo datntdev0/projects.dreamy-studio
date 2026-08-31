@@ -1,42 +1,59 @@
-import { Component, OnInit, computed, inject, signal } from "@angular/core";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { formatStamp } from "@features/novel/novel.rules";
-import { PipelineSnapshot, PipelineStatus } from "@features/novel/novel.translation.models";
-import { PipelineFilter } from "../pipeline.models";
-import { PIPELINE_FILTERS, PIPELINE_FILTER_KEYS, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, formatDuration, kindIcon, kindKey, kindSize, matchesFilter, matchesQuery, percentOf } from "../pipeline.rules";
-import { PipelineService } from "../pipeline.service";
-import { PipelineStrip } from "./strip.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+// prettier-ignore
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { formatStamp } from '@features/novel/novel.rules';
+import { PipelineSnapshot, PipelineStatus } from '@features/novel/novel.translation.models';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { PipelineFilter } from '../pipeline.models';
+// prettier-ignore
+import { durationMs, formatDuration, kindIcon, kindKey, kindSize, matchesFilter, matchesQuery, percentOf, PIPELINE_FILTER_KEYS, PIPELINE_FILTERS, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS } from '../pipeline.rules';
+import { PipelineService } from '../pipeline.service';
+import { PipelineStrip } from './strip.component';
 
 @Component({
-  selector: "app-pipeline-history",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-pipeline-history',
   imports: [Datatable, DatatableCell, Icon, CoreModule, PipelineStrip],
-  templateUrl: "./history.component.html",
+  templateUrl: './history.component.html',
 })
 export class PipelineHistory implements OnInit {
   private readonly languageService = inject(LanguageService);
 
   readonly pipelines = inject(PipelineService);
   readonly filters = PIPELINE_FILTERS;
-  readonly query = signal("");
-  readonly filter = signal<PipelineFilter>("all");
+  readonly query = signal('');
+  readonly filter = signal<PipelineFilter>('all');
   readonly visible = computed(this.buildVisible.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
 
   readonly tableRowClass = (row: object): Record<string, boolean> => ({
-    "is-selected": this.pipelines.selectedId() === this.snapshotOf(row).id,
+    'is-selected': this.pipelines.selectedId() === this.snapshotOf(row).id,
   });
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "novel", label: this.languageService.translate("pipeline.col.novel"), ellipsis: true },
-      { key: "started", label: this.languageService.translate("pipeline.col.started"), width: "148px" },
-      { key: "status", label: this.languageService.translate("pipeline.col.status"), width: "112px" },
-      { key: "progress", label: this.languageService.translate("pipeline.col.progress"), width: "200px" },
+      { key: 'novel', label: this.languageService.translate('pipeline.col.novel'), ellipsis: true },
+      {
+        key: 'started',
+        label: this.languageService.translate('pipeline.col.started'),
+        width: '148px',
+      },
+      {
+        key: 'status',
+        label: this.languageService.translate('pipeline.col.status'),
+        width: '112px',
+      },
+      {
+        key: 'progress',
+        label: this.languageService.translate('pipeline.col.progress'),
+        width: '200px',
+      },
     ];
   }
 
@@ -89,16 +106,16 @@ export class PipelineHistory implements OnInit {
   }
 
   onQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+    this.query.set(fieldValue(event));
   }
 
   onFilter(event: Event): void {
-    this.filter.set((event.target as HTMLSelectElement).value as PipelineFilter);
+    this.filter.set(fieldValue(event) as PipelineFilter);
   }
 
   clearFilters(): void {
-    this.query.set("");
-    this.filter.set("all");
+    this.query.set('');
+    this.filter.set('all');
   }
 
   onRowClick(event: DatatableRowEvent): void {
@@ -110,13 +127,16 @@ export class PipelineHistory implements OnInit {
   }
 
   private buildFilterActive(): boolean {
-    return this.query().trim() !== "" || this.filter() !== "all";
+    return this.query().trim() !== '' || this.filter() !== 'all';
   }
 
   private buildVisible(): PipelineSnapshot[] {
     const out: PipelineSnapshot[] = [];
     for (const pipeline of this.pipelines.history()) {
-      if (matchesFilter(pipeline.status, this.filter()) && matchesQuery(this.novelOf(pipeline), this.query())) {
+      if (
+        matchesFilter(pipeline.status, this.filter()) &&
+        matchesQuery(this.novelOf(pipeline), this.query())
+      ) {
         out.push(pipeline);
       }
     }

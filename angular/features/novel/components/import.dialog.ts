@@ -1,33 +1,26 @@
-import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { DesktopDragDropEvent } from "@core/desktop/desktop-ipc.service";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { DesktopUnlisten } from "@core/desktop/desktop-ipc.service";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { InspectCheck } from "../novel.models";
-import { InspectEvent } from "../novel.models";
-import { InspectStep } from "../novel.models";
-import { NovelFormValue } from "../novel.models";
-import { NovelLang } from "../novel.models";
-import { PackageSummary } from "../novel.models";
-import { NOVEL_LANGS } from "../novel.rules";
-import { applyInspectEvent } from "../novel.rules";
-import { fileNameOf } from "../novel.rules";
-import { formatCount } from "../novel.rules";
-import { inspectPercent } from "../novel.rules";
-import { toNovelError } from "../novel.rules";
-import { toNovelInput } from "../novel.rules";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { NovelService } from "../novel.service";
-import { Cover } from "@components/cover";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
+import { Button } from '@components/button';
+import { Cover } from '@components/cover';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+// prettier-ignore
+import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { noop } from '@shared/utils/noop';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+// prettier-ignore
+import { InspectCheck, InspectEvent, InspectStep, NovelFormValue, NovelLang, PackageSummary } from '../novel.models';
+// prettier-ignore
+import { applyInspectEvent, fileNameOf, formatCount, inspectPercent, NOVEL_LANGS, toNovelError, toNovelInput } from '../novel.rules';
+import { NovelService } from '../novel.service';
 
 type ImportStep = 1 | 2 | 3;
 
-type CheckState = "idle" | "running" | "ok" | "fail";
+type CheckState = 'idle' | 'running' | 'ok' | 'fail';
 
 interface StepItem {
   n: ImportStep;
@@ -39,45 +32,40 @@ interface LangOption {
   key: LanguageKey;
 }
 
-
 const STEP_ITEMS: StepItem[] = [
-  { n: 1, key: "novel.import.steps.file" },
-  { n: 2, key: "novel.import.steps.check" },
-  { n: 3, key: "novel.import.steps.preview" },
+  { n: 1, key: 'novel.import.steps.file' },
+  { n: 2, key: 'novel.import.steps.check' },
+  { n: 3, key: 'novel.import.steps.preview' },
 ];
 
 const CHECK_KEYS: Record<InspectStep, LanguageKey> = {
-  format: "novel.import.check.step.format",
-  open: "novel.import.check.step.open",
-  manifest: "novel.import.check.step.manifest",
-  chapters: "novel.import.check.step.chapters",
-  list: "novel.import.check.step.list",
-  cover: "novel.import.check.step.cover",
+  format: 'novel.import.check.step.format',
+  open: 'novel.import.check.step.open',
+  manifest: 'novel.import.check.step.manifest',
+  chapters: 'novel.import.check.step.chapters',
+  list: 'novel.import.check.step.list',
+  cover: 'novel.import.check.step.cover',
 };
 
 const LANG_KEYS: Record<NovelLang, LanguageKey> = {
-  EN: "novel.lang.EN",
-  VI: "novel.lang.VI",
-  ZH: "novel.lang.ZH",
-  JA: "novel.lang.JA",
-  KO: "novel.lang.KO",
+  EN: 'novel.lang.EN',
+  VI: 'novel.lang.VI',
+  ZH: 'novel.lang.ZH',
+  JA: 'novel.lang.JA',
+  KO: 'novel.lang.KO',
 };
 
 const EMPTY_FORM: NovelFormValue = {
-  title: "",
-  name: "",
-  author: "",
-  lang: "EN",
-  description: "",
-  tags: "",
+  title: '',
+  name: '',
+  author: '',
+  lang: 'EN',
+  description: '',
+  tags: '',
 };
 
-function noop(): void {
-  return;
-}
-
 function isWarn(check: InspectCheck): boolean {
-  return check.status === "warn";
+  return check.status === 'warn';
 }
 
 function langOption(value: NovelLang): LangOption {
@@ -85,11 +73,11 @@ function langOption(value: NovelLang): LangOption {
 }
 
 @Component({
-  selector: "app-novel-import-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-import-dialog',
   imports: [Button, Icon, CoreModule, Cover],
-  templateUrl: "./import.dialog.html",
-  host: { "data-testid": "novel-import-dialog" },
+  templateUrl: './import.dialog.html',
+  host: { 'data-testid': 'novel-import-dialog' },
 })
 export class NovelImportDialog {
   private readonly dialogs = inject(NovelDialogsService);
@@ -98,8 +86,8 @@ export class NovelImportDialog {
   private readonly languageService = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly toasts = inject(ToastService);
-  private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>("titleInput");
-  private readonly displayInput = viewChild<ElementRef<HTMLInputElement>>("displayInput");
+  private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
+  private readonly displayInput = viewChild<ElementRef<HTMLInputElement>>('displayInput');
   private token = 0;
   private listenToken = 0;
   private unlisten: DesktopUnlisten = noop;
@@ -111,14 +99,14 @@ export class NovelImportDialog {
   readonly step = signal<ImportStep>(1);
   readonly path = signal<string | null>(null);
   readonly over = signal(false);
-  readonly state = signal<CheckState>("idle");
+  readonly state = signal<CheckState>('idle');
   readonly checks = signal<InspectCheck[]>([]);
-  readonly error = signal("");
+  readonly error = signal('');
   readonly info = signal<PackageSummary | null>(null);
   readonly form = signal<NovelFormValue>(EMPTY_FORM);
   readonly titleInvalid = signal(false);
   readonly importing = signal(false);
-  readonly importError = signal("");
+  readonly importError = signal('');
 
   readonly fileName = computed(this.buildFileName.bind(this));
   readonly percent = computed(this.buildPercent.bind(this));
@@ -140,9 +128,9 @@ export class NovelImportDialog {
   stepClass(n: ImportStep): string {
     const current = this.step();
     if (n === current) {
-      return "is-active";
+      return 'is-active';
     }
-    return n < current ? "is-done" : "";
+    return n < current ? 'is-done' : '';
   }
 
   cancel(): void {
@@ -178,25 +166,25 @@ export class NovelImportDialog {
 
   backToFile(): void {
     this.token += 1;
-    this.state.set("idle");
+    this.state.set('idle');
     this.step.set(1);
   }
 
   next(): void {
-    if (this.state() === "ok") {
+    if (this.state() === 'ok') {
       this.step.set(3);
     }
   }
 
   backToCheck(): void {
-    this.importError.set("");
+    this.importError.set('');
     this.step.set(2);
   }
 
   setField(field: keyof NovelFormValue, event: Event): void {
     const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
     this.form.set({ ...this.form(), [field]: target.value });
-    if (field === "title" && target.value.trim()) {
+    if (field === 'title' && target.value.trim()) {
       this.titleInvalid.set(false);
     }
   }
@@ -214,15 +202,24 @@ export class NovelImportDialog {
       return;
     }
     this.importing.set(true);
-    this.importError.set("");
+    this.importError.set('');
     try {
       const created = await this.novels.packageImport(path, input);
       this.novels.select(created.id);
       this.invalidate();
       this.dialogs.closeImport();
-      this.toasts.show(this.languageService.translate("novel.toast.imported", { title: created.title, count: info.chapterCount }));
+      this.toasts.show(
+        this.languageService.translate('novel.toast.imported', {
+          title: created.title,
+          count: info.chapterCount,
+        }),
+      );
     } catch (cause) {
-      this.importError.set(this.languageService.translate("novel.import.error.failed", { detail: toNovelError(cause).detail }));
+      this.importError.set(
+        this.languageService.translate('novel.import.error.failed', {
+          detail: toNovelError(cause).detail,
+        }),
+      );
     } finally {
       this.importing.set(false);
     }
@@ -244,7 +241,9 @@ export class NovelImportDialog {
   }
 
   private primaryButton(): HTMLButtonElement | null {
-    const button = this.host.nativeElement.querySelector<HTMLButtonElement>(".modal-foot .btn-primary");
+    const button = this.host.nativeElement.querySelector<HTMLButtonElement>(
+      '.modal-foot .btn-primary',
+    );
     return button && !button.disabled ? button : null;
   }
 
@@ -269,14 +268,14 @@ export class NovelImportDialog {
     this.step.set(1);
     this.path.set(null);
     this.over.set(false);
-    this.state.set("idle");
+    this.state.set('idle');
     this.checks.set([]);
-    this.error.set("");
+    this.error.set('');
     this.info.set(null);
     this.form.set(EMPTY_FORM);
     this.titleInvalid.set(false);
     this.importing.set(false);
-    this.importError.set("");
+    this.importError.set('');
   }
 
   private invalidate(): void {
@@ -311,9 +310,9 @@ export class NovelImportDialog {
       this.over.set(false);
       return;
     }
-    if (event.type === "enter" || event.type === "over") {
+    if (event.type === 'enter' || event.type === 'over') {
       this.over.set(true);
-    } else if (event.type === "leave") {
+    } else if (event.type === 'leave') {
       this.over.set(false);
     } else if (event.paths[0]) {
       this.setFile(event.paths[0]);
@@ -324,9 +323,9 @@ export class NovelImportDialog {
     this.token += 1;
     const mine = this.token;
     this.step.set(2);
-    this.state.set("running");
+    this.state.set('running');
     this.checks.set([]);
-    this.error.set("");
+    this.error.set('');
     this.info.set(null);
     try {
       const summary = await this.novels.packageInspect(path, this.onInspectEvent.bind(this, mine));
@@ -348,7 +347,7 @@ export class NovelImportDialog {
 
   private finishCheck(path: string, summary: PackageSummary): void {
     this.info.set(summary);
-    this.state.set("ok");
+    this.state.set('ok');
     if (this.formSource !== path) {
       this.formSource = path;
       this.form.set({
@@ -356,17 +355,19 @@ export class NovelImportDialog {
         name: summary.name,
         author: summary.author,
         lang: summary.lang,
-        description: "",
-        tags: "",
+        description: '',
+        tags: '',
       });
     }
   }
 
   private failCheck(path: string, cause: unknown): void {
     const error = toNovelError(cause);
-    this.state.set("fail");
-    if (error.code === "package_format") {
-      this.error.set(this.languageService.translate("novel.import.error.badFormat", { name: fileNameOf(path) }));
+    this.state.set('fail');
+    if (error.code === 'package_format') {
+      this.error.set(
+        this.languageService.translate('novel.import.error.badFormat', { name: fileNameOf(path) }),
+      );
     } else {
       this.error.set(error.detail);
     }
@@ -379,7 +380,7 @@ export class NovelImportDialog {
 
   private buildFileName(): string {
     const path = this.path();
-    return path ? fileNameOf(path) : "";
+    return path ? fileNameOf(path) : '';
   }
 
   private buildPercent(): number {
@@ -393,9 +394,9 @@ export class NovelImportDialog {
   private buildOkDetail(): string {
     const info = this.info();
     if (!info) {
-      return "";
+      return '';
     }
-    const base = this.languageService.translate("novel.import.result.okDetail", {
+    const base = this.languageService.translate('novel.import.result.okDetail', {
       chapters: info.chapterCount,
       words: formatCount(info.wordCount),
       lang: this.languageService.translate(LANG_KEYS[info.lang]),
@@ -404,12 +405,14 @@ export class NovelImportDialog {
     if (!warns) {
       return base;
     }
-    return base + this.languageService.translate("novel.import.result.okWarnings", { count: warns });
+    return (
+      base + this.languageService.translate('novel.import.result.okWarnings', { count: warns })
+    );
   }
 
   private buildWordsText(): string {
     const info = this.info();
-    return info ? formatCount(info.wordCount) : "";
+    return info ? formatCount(info.wordCount) : '';
   }
 
   private buildDuplicate(): boolean {

@@ -1,90 +1,104 @@
-import { LanguageKey, LanguageParams } from "@core/language/language.models";
-import { ChapterRow, NovelLang, TargetLang, TranslationStatus } from "./novel.models";
-import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, PipelineStatus, TranslateRequest, TranslateSummary, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
+import { LanguageKey, LanguageParams } from '@shared/language/language.models';
 
-export const TARGET_LANGS: TargetLang[] = ["VI", "EN"];
-export const TRANSLATION_STEPS: TranslationStep[] = ["dict", "guide", "trans", "result", "warn"];
-export const STEP_ICONS: Record<TranslationStep, string> = { dict: "book", guide: "pen", trans: "lang", result: "frames", warn: "alert" };
+import { ChapterRow, NovelLang, TargetLang, TranslationStatus } from './novel.models';
+// prettier-ignore
+import { ChapterFilter, ChapterTranslation, DictDraft, DictEntry, DictEntryType, NovelTranslation, PassageState, TranslateRequest, TranslateSummary, TranslationStep, TranslationView, TranslationWarning, WarningFilter, WarningKind, WireChapter, WireTranslation, WireWarning } from './novel.translation.models';
+
+export const TARGET_LANGS: TargetLang[] = ['VI', 'EN'];
+export const TRANSLATION_STEPS: TranslationStep[] = ['dict', 'guide', 'trans', 'result', 'warn'];
+export const STEP_ICONS: Record<TranslationStep, string> = {
+  dict: 'book',
+  guide: 'pen',
+  trans: 'lang',
+  result: 'frames',
+  warn: 'alert',
+};
 
 export const STEP_LABEL_KEYS: Record<TranslationStep, LanguageKey> = {
-  dict: "novel.translation.step.dict",
-  guide: "novel.translation.step.guide",
-  trans: "novel.translation.step.trans",
-  result: "novel.translation.step.result",
-  warn: "novel.translation.step.warn",
+  dict: 'novel.translation.step.dict',
+  guide: 'novel.translation.step.guide',
+  trans: 'novel.translation.step.trans',
+  result: 'novel.translation.step.result',
+  warn: 'novel.translation.step.warn',
 };
 
 export const STEP_HINT_KEYS: Record<TranslationStep, LanguageKey> = {
-  dict: "novel.translation.hint.dict",
-  guide: "novel.translation.hint.guide",
-  trans: "novel.translation.hint.trans",
-  result: "novel.translation.hint.result",
-  warn: "novel.translation.hint.warn",
+  dict: 'novel.translation.hint.dict',
+  guide: 'novel.translation.hint.guide',
+  trans: 'novel.translation.hint.trans',
+  result: 'novel.translation.hint.result',
+  warn: 'novel.translation.hint.warn',
 };
 
-export const DICT_TYPES: DictEntryType[] = ["name", "place", "org", "title", "term"];
+export const DICT_TYPES: DictEntryType[] = ['name', 'place', 'org', 'title', 'term'];
 
 export const DICT_TYPE_KEYS: Record<DictEntryType, LanguageKey> = {
-  name: "novel.translation.dict.type.name",
-  place: "novel.translation.dict.type.place",
-  org: "novel.translation.dict.type.org",
-  title: "novel.translation.dict.type.title",
-  term: "novel.translation.dict.type.term",
+  name: 'novel.translation.dict.type.name',
+  place: 'novel.translation.dict.type.place',
+  org: 'novel.translation.dict.type.org',
+  title: 'novel.translation.dict.type.title',
+  term: 'novel.translation.dict.type.term',
 };
 
-export const CHAPTER_FILTERS: ChapterFilter[] = ["all", "none", "done"];
+export const CHAPTER_FILTERS: ChapterFilter[] = ['all', 'none', 'done'];
 
 export const CHAPTER_FILTER_KEYS: Record<ChapterFilter, LanguageKey> = {
-  all: "novel.translation.trans.filter.all",
-  none: "novel.translation.status.none",
-  done: "novel.translation.status.done",
+  all: 'novel.translation.trans.filter.all',
+  none: 'novel.translation.status.none',
+  done: 'novel.translation.status.done',
 };
 
-export const WARNING_FILTERS: WarningFilter[] = ["all", "source", "dict"];
+export const WARNING_FILTERS: WarningFilter[] = ['all', 'source', 'dict'];
 
 export const WARNING_FILTER_KEYS: Record<WarningFilter, LanguageKey> = {
-  all: "novel.translation.warn.filter.all",
-  source: "novel.translation.warn.filter.source",
-  dict: "novel.translation.warn.filter.dict",
+  all: 'novel.translation.warn.filter.all',
+  source: 'novel.translation.warn.filter.source',
+  dict: 'novel.translation.warn.filter.dict',
 };
 
 export const WARNING_KIND_KEYS: Record<WarningKind, LanguageKey> = {
-  source: "novel.translation.warn.kind.source",
-  dict: "novel.translation.warn.kind.dict",
+  source: 'novel.translation.warn.kind.source',
+  dict: 'novel.translation.warn.kind.dict',
 };
 
 export const WARNING_KIND_BADGES: Record<WarningKind, string> = {
-  source: "badge-warning",
-  dict: "badge-info",
+  source: 'badge-warning',
+  dict: 'badge-info',
 };
 
 export const STATUS_KEYS: Record<TranslationStatus, LanguageKey> = {
-  none: "novel.translation.status.none",
-  done: "novel.translation.status.done",
-  queued: "novel.translation.status.queued",
-  running: "novel.translation.status.running",
+  none: 'novel.translation.status.none',
+  done: 'novel.translation.status.done',
+  queued: 'novel.translation.status.queued',
+  running: 'novel.translation.status.running',
 };
 
 export const STATUS_BADGES: Record<TranslationStatus, string> = {
-  none: "",
-  done: "badge-success",
-  queued: "badge-info",
-  running: "badge-running",
+  none: '',
+  done: 'badge-success',
+  queued: 'badge-info',
+  running: 'badge-running',
 };
 
 export const CHAPTER_ROW_LIMIT = 300;
-export const EMPTY_VIEW: TranslationView = { step: "dict", target: null, seq: 1, focus: null, newEntry: false };
+export const EMPTY_VIEW: TranslationView = {
+  step: 'dict',
+  target: null,
+  seq: 1,
+  focus: null,
+  newEntry: false,
+};
 
 export function targetsOf(source: NovelLang | undefined): TargetLang[] {
   return TARGET_LANGS.filter((lang) => lang !== source);
 }
 
 export function emptyTranslation(): NovelTranslation {
-  return { guidelines: "", dict: [], chapters: {}, warnings: [] };
+  return { guidelines: '', dict: [], chapters: {}, warnings: [] };
 }
 
 export function emptyDraft(): DictDraft {
-  return { src: "", dst: "", type: "term", note: "" };
+  return { src: '', dst: '', type: 'term', note: '' };
 }
 
 export function stepIndex(step: TranslationStep): number {
@@ -99,7 +113,10 @@ export function fromWireChapter(wire: WireChapter): ChapterTranslation {
   return { title: wire.title, passages };
 }
 
-export function fromWireWarnings(list: WireWarning[], chapters: ChapterRow[]): TranslationWarning[] {
+export function fromWireWarnings(
+  list: WireWarning[],
+  chapters: ChapterRow[],
+): TranslationWarning[] {
   const out: TranslationWarning[] = [];
   for (const warning of list) {
     const chapter = chapters.find((item) => item.id === warning.chapterId);
@@ -115,15 +132,27 @@ export function fromWireWarnings(list: WireWarning[], chapters: ChapterRow[]): T
   return out;
 }
 
-export function fromWireTranslation(wire: WireTranslation, chapters: ChapterRow[]): NovelTranslation {
+export function fromWireTranslation(
+  wire: WireTranslation,
+  chapters: ChapterRow[],
+): NovelTranslation {
   const translated: Record<string, ChapterTranslation> = {};
   for (const [chapterId, chapter] of Object.entries(wire.chapters)) {
     translated[chapterId] = fromWireChapter(chapter);
   }
-  return { guidelines: wire.guidelines, dict: wire.dict, chapters: translated, warnings: fromWireWarnings(wire.warnings, chapters) };
+  return {
+    guidelines: wire.guidelines,
+    dict: wire.dict,
+    chapters: translated,
+    warnings: fromWireWarnings(wire.warnings, chapters),
+  };
 }
 
-export function warningsOfPassage(warnings: TranslationWarning[], chapterId: string, n: number): TranslationWarning[] {
+export function warningsOfPassage(
+  warnings: TranslationWarning[],
+  chapterId: string,
+  n: number,
+): TranslationWarning[] {
   const out: TranslationWarning[] = [];
   for (const warning of warnings) {
     if (warning.chapterId === chapterId && warning.n === n) {
@@ -133,8 +162,12 @@ export function warningsOfPassage(warnings: TranslationWarning[], chapterId: str
   return out;
 }
 
-export function passageState(warnings: TranslationWarning[], chapterId: string, n: number): PassageState {
-  return warningsOfPassage(warnings, chapterId, n).length > 0 ? "review" : "ok";
+export function passageState(
+  warnings: TranslationWarning[],
+  chapterId: string,
+  n: number,
+): PassageState {
+  return warningsOfPassage(warnings, chapterId, n).length > 0 ? 'review' : 'ok';
 }
 
 export function reviewCountOf(warnings: TranslationWarning[], chapterId: string): number {
@@ -155,17 +188,22 @@ export function reviewCount(warnings: TranslationWarning[]): number {
   return passages.size;
 }
 
-export function chapterStatus(translation: NovelTranslation, chapterId: string, running: string[], queued: string[]): TranslationStatus {
+export function chapterStatus(
+  translation: NovelTranslation,
+  chapterId: string,
+  running: string[],
+  queued: string[],
+): TranslationStatus {
   if (running.includes(chapterId)) {
-    return "running";
+    return 'running';
   }
   if (queued.includes(chapterId)) {
-    return "queued";
+    return 'queued';
   }
   if (!translation.chapters[chapterId]) {
-    return "none";
+    return 'none';
   }
-  return "done";
+  return 'done';
 }
 
 export function translatedCount(translation: NovelTranslation): number {
@@ -173,10 +211,13 @@ export function translatedCount(translation: NovelTranslation): number {
 }
 
 export function matchesWarningFilter(kind: WarningKind, filter: WarningFilter): boolean {
-  return filter === "all" || kind === filter;
+  return filter === 'all' || kind === filter;
 }
 
-export function filterWarnings(list: TranslationWarning[], filter: WarningFilter): TranslationWarning[] {
+export function filterWarnings(
+  list: TranslationWarning[],
+  filter: WarningFilter,
+): TranslationWarning[] {
   const out: TranslationWarning[] = [];
   for (const warning of list) {
     if (matchesWarningFilter(warning.kind, filter)) {
@@ -205,7 +246,7 @@ export function filterDict(list: DictEntry[], query: string): DictEntry[] {
 }
 
 export function matchesChapterFilter(status: TranslationStatus, filter: ChapterFilter): boolean {
-  return filter === "all" || status === filter;
+  return filter === 'all' || status === filter;
 }
 
 export function replaceEntry(list: DictEntry[], next: DictEntry): DictEntry[] {
@@ -238,12 +279,20 @@ export function rangeText(numbers: number[]): string {
     parts.push(end === start ? `${sorted[start]}` : `${sorted[start]}–${sorted[end]}`);
     start = end + 1;
   }
-  return parts.join(", ");
+  return parts.join(', ');
 }
 
-export function planTranslation(chapters: ChapterRow[], translated: Record<string, ChapterTranslation>, busy: string[], request: TranslateRequest): TranslateSummary {
-  const inRange = request.mode === "range" ? chapters.filter((row) => row.seq >= request.from && row.seq <= request.to) : chapters;
-  const overwrite = request.mode !== "missing" && request.overwrite;
+export function planTranslation(
+  chapters: ChapterRow[],
+  translated: Record<string, ChapterTranslation>,
+  busy: string[],
+  request: TranslateRequest,
+): TranslateSummary {
+  const inRange =
+    request.mode === 'range'
+      ? chapters.filter((row) => row.seq >= request.from && row.seq <= request.to)
+      : chapters;
+  const overwrite = request.mode !== 'missing' && request.overwrite;
   const wanted = overwrite ? inRange : inRange.filter((row) => translated[row.id] === undefined);
   const noSource = wanted.filter((row) => row.wordCount <= 0);
   const waiting = wanted.filter((row) => row.wordCount > 0 && busy.includes(row.id));
@@ -259,10 +308,16 @@ export function planTranslation(chapters: ChapterRow[], translated: Record<strin
   };
 }
 
-export function warningReason(warning: TranslationWarning, dict: DictEntry[]): { key: LanguageKey; params: LanguageParams } {
-  if (warning.kind === "source") {
-    return { key: "novel.translation.warn.reason.source", params: {} };
+export function warningReason(
+  warning: TranslationWarning,
+  dict: DictEntry[],
+): { key: LanguageKey; params: LanguageParams } {
+  if (warning.kind === 'source') {
+    return { key: 'novel.translation.warn.reason.source', params: {} };
   }
   const entry = dict.find((item) => item.id === warning.entryId);
-  return { key: "novel.translation.warn.reason.dict", params: { src: entry?.src ?? "", dst: entry?.dst ?? "" } };
+  return {
+    key: 'novel.translation.warn.reason.dict',
+    params: { src: entry?.src ?? '', dst: entry?.dst ?? '' },
+  };
 }

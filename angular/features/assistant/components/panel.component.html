@@ -1,7 +1,13 @@
-<div class="asst-panel" [attr.data-view]="assistant.view()" data-testid="assistant">
+<div class="asst-panel" [attr.data-view]="assistant.view()" data-testid="assistant-panel">
   @switch (assistant.view()) {
-    @case ("sessions") { <app-assistant-sessions /> }
-    @case ("chat") { <app-assistant-chat /> }
-    @default { <app-assistant-start /> }
+    @case ('sessions') {
+      <app-assistant-sessions />
+    }
+    @case ('chat') {
+      <app-assistant-chat />
+    }
+    @default {
+      <app-assistant-start />
+    }
   }
 </div>

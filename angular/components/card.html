@@ -1,1 +1,8 @@
-<div class="card" data-testid="card" [class.is-selected]="selected" [class.is-spacious]="spacious"><ng-content /></div>
+<div
+  class="card"
+  data-testid="card"
+  [class.is-selected]="selected()"
+  [class.is-spacious]="spacious()"
+>
+  <ng-content />
+</div>

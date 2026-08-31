@@ -1,40 +1,29 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { ImagePatch } from "../library.images.models";
-import { ImageRights } from "../library.images.models";
-import { IMAGE_RIGHTS } from "../library.images.models";
-import { LibraryImage } from "../library.images.models";
-import { imageInspectorDimensionsText } from "../library.images.rules";
-import { imageInspectorFormatText } from "../library.images.rules";
-import { formatBytes } from "../library.images.rules";
-import { imageCode } from "../library.images.rules";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { LibraryConfirmService } from "../library.confirm.service";
-import { LibraryImageService } from "../library.images.service";
-import { normalizeTag } from "../library.rules";
-import { libraryErrorKey } from "../library.rules";
-import { formatIsoMinute } from "../library.rules";
-import { LibraryService } from "../library.service";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { LibraryConfirmService } from '../library.confirm.service';
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { IMAGE_RIGHTS, ImagePatch, ImageRights, LibraryImage } from '../library.images.models';
+// prettier-ignore
+import { formatBytes, imageCode, imageInspectorDimensionsText, imageInspectorFormatText } from '../library.images.rules';
+import { LibraryImageService } from '../library.images.service';
+// prettier-ignore
+import { clearTagField, enteredTag, formatIsoMinute, libraryErrorKey, rightsKey } from '../library.rules';
+import { LibraryService } from '../library.service';
 
 const MAX_TAGS = 12;
 
-const RIGHTS_KEYS: Record<ImageRights, LanguageKey> = {
-  own: "library.rights.own",
-  licensed: "library.rights.licensed",
-  free: "library.rights.free",
-  other: "library.rights.other",
-};
-
 @Component({
-  selector: "app-library-image-panel",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-image-panel',
   imports: [Icon, CoreModule],
-  templateUrl: "./image.panel.html",
-  host: { "data-testid": "library-image-panel" },
+  templateUrl: './image.panel.html',
+  host: { 'data-testid': 'library-image-panel' },
 })
 export class LibraryImagePanel {
   readonly imageId = input<number | undefined>();
@@ -48,7 +37,7 @@ export class LibraryImagePanel {
   readonly image = computed(this.resolveImage.bind(this));
 
   rightKey(right: ImageRights): LanguageKey {
-    return RIGHTS_KEYS[right];
+    return rightsKey(right);
   }
 
   code(image: LibraryImage): string {
@@ -68,7 +57,7 @@ export class LibraryImagePanel {
   }
 
   originKey(image: LibraryImage): LanguageKey {
-    return image.origin === "app" ? "library.origin.app" : "library.origin.upload";
+    return image.origin === 'app' ? 'library.origin.app' : 'library.origin.upload';
   }
 
   size(image: LibraryImage): string {
@@ -76,7 +65,7 @@ export class LibraryImagePanel {
   }
 
   nameKeydown(event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       (event.target as HTMLInputElement).blur();
     }
@@ -97,30 +86,28 @@ export class LibraryImagePanel {
   }
 
   addTag(image: LibraryImage, event: KeyboardEvent): void {
-    if (event.key !== "Enter") {
-      return;
-    }
-    event.preventDefault();
-    const field = event.target as HTMLInputElement;
-    const tag = normalizeTag(field.value);
+    const tag = enteredTag(event);
     if (!tag) {
       return;
     }
     if (image.tags.includes(tag)) {
-      this.toasts.show(this.languageService.translate("library.image.toast.tagExists", { tag }), "warning");
+      this.toasts.show(
+        this.languageService.translate('library.image.toast.tagExists', { tag }),
+        'warning',
+      );
       return;
     }
     if (image.tags.length >= MAX_TAGS) {
-      this.toasts.show(this.languageService.translate("library.image.toast.tagLimit"), "warning");
+      this.toasts.show(this.languageService.translate('library.image.toast.tagLimit'), 'warning');
       return;
     }
-    field.value = "";
+    clearTagField(event);
     void this.save(image, { tags: [...image.tags, tag] });
   }
 
   setCollection(image: LibraryImage, event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    if (value === "__new") {
+    const value = fieldValue(event);
+    if (value === '__new') {
       this.dialogs.openCreateCollection();
       return;
     }
@@ -131,7 +118,7 @@ export class LibraryImagePanel {
   }
 
   setRights(image: LibraryImage, event: Event): void {
-    const rights = (event.target as HTMLSelectElement).value as ImageRights;
+    const rights = fieldValue(event) as ImageRights;
     if (rights !== image.rights) {
       void this.save(image, { rights });
     }
@@ -145,9 +132,12 @@ export class LibraryImagePanel {
     try {
       const updated = await this.images.update(image.id, { name });
       if (updated.name !== name) {
-        this.toasts.show(this.languageService.translate("library.image.toast.renamed", { name: updated.name }), "warning");
+        this.toasts.show(
+          this.languageService.translate('library.image.toast.renamed', { name: updated.name }),
+          'warning',
+        );
       } else {
-        this.toasts.show(this.languageService.translate("library.image.toast.updated"));
+        this.toasts.show(this.languageService.translate('library.image.toast.updated'));
       }
     } catch (cause) {
       this.notifyFailure(cause);
@@ -157,18 +147,23 @@ export class LibraryImagePanel {
   private async save(image: LibraryImage, patch: ImagePatch): Promise<void> {
     try {
       await this.images.update(image.id, patch);
-      this.toasts.show(this.languageService.translate("library.image.toast.updated"));
+      this.toasts.show(this.languageService.translate('library.image.toast.updated'));
     } catch (cause) {
       this.notifyFailure(cause);
     }
   }
 
   private notifyFailure(cause: unknown): void {
-    this.toasts.show(this.languageService.translate(libraryErrorKey(cause) as LanguageKey), "danger");
+    this.toasts.show(
+      this.languageService.translate(libraryErrorKey(cause) as LanguageKey),
+      'danger',
+    );
   }
 
   private resolveImage(): LibraryImage | null {
     const id = this.imageId();
-    return id === undefined ? this.images.selected() : this.images.items().find((image) => image.id === id) ?? null;
+    return id === undefined
+      ? this.images.selected()
+      : (this.images.items().find((image) => image.id === id) ?? null);
   }
 }

@@ -1,15 +1,16 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LibraryVideo } from "../library.videos.models";
-import { LibraryVideoService } from "../library.videos.service";
-import { LibraryVideoPlay } from "./video-play.component";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+
+import { LibraryVideo } from '../library.videos.models';
+import { LibraryVideoService } from '../library.videos.service';
+import { LibraryVideoPlay } from './video-play.component';
 
 @Component({
-  selector: "app-library-video-thumb",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-video-thumb',
   imports: [Icon, LibraryVideoPlay],
-  templateUrl: "./video-thumb.component.html",
-  host: { "data-testid": "library-video-thumb" },
+  templateUrl: './video-thumb.component.html',
+  host: { 'data-testid': 'library-video-thumb' },
 })
 export class LibraryVideoThumb {
   readonly video = input.required<LibraryVideo>();
@@ -18,6 +19,6 @@ export class LibraryVideoThumb {
   readonly poster = computed(this.resolvePoster.bind(this));
 
   private resolvePoster(): string {
-    return this.videos.poster(this.video().id) ?? "";
+    return this.videos.poster(this.video().id) ?? '';
   }
 }

@@ -1,37 +1,39 @@
-import { Injectable, inject, signal } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { LlmCapability, LlmCliSettings, LlmCliView, LlmFeature, LlmFeatureSettings, LlmProbe, LlmProvider, LlmView } from "./settings.models";
+import { inject, Injectable, signal } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+// prettier-ignore
+import { LlmCapability, LlmCliSettings, LlmCliView, LlmFeature, LlmFeatureSettings, LlmProbe, LlmProvider, LlmView } from './settings.models';
 
 const SIGN_IN_POLL_MS = 3000;
 const SIGN_IN_POLL_LIMIT = 100;
 
 export function isReady(provider: LlmProvider): boolean {
-  return provider.found && provider.status === "ok" && provider.signedIn !== false;
+  return provider.found && provider.status === 'ok' && provider.signedIn !== false;
 }
 
 function pause(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function fresh(view: Omit<LlmCliView, "probe">): LlmProvider {
+function fresh(view: Omit<LlmCliView, 'probe'>): LlmProvider {
   return {
     ...view,
     found: false,
-    resolvedPath: "",
-    version: "",
+    resolvedPath: '',
+    version: '',
     signedIn: null,
-    account: "",
+    account: '',
     signing: false,
-    status: "none",
-    error: "",
+    status: 'none',
+    error: '',
     latencyMs: 0,
-    checkedAt: "",
+    checkedAt: '',
   };
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class LlmService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly languageService = inject(LanguageService);
@@ -42,15 +44,15 @@ export class LlmService {
 
   async load(): Promise<void> {
     try {
-      this.apply(await this.ipc.invoke<LlmView>("llm_get"));
+      this.apply(await this.ipc.invoke<LlmView>('llm_get'));
     } catch {
-      this.toasts.show(this.languageService.translate("settings.llm.loadFailed"), "danger");
+      this.toasts.show(this.languageService.translate('settings.llm.loadFailed'), 'danger');
     }
   }
 
   async check(id: string): Promise<void> {
     const provider = this.find(id);
-    if (!provider || provider.status === "checking") {
+    if (!provider || provider.status === 'checking') {
       return;
     }
     await this.probeProvider(provider);
@@ -62,11 +64,11 @@ export class LlmService {
       return;
     }
     const typed = path.trim();
-    const value = typed === provider.resolvedPath && !provider.path ? "" : typed;
+    const value = typed === provider.resolvedPath && !provider.path ? '' : typed;
     if (value === provider.path) {
       return;
     }
-    this.patch(id, { path: value, status: "none", error: "" });
+    this.patch(id, { path: value, status: 'none', error: '' });
     if (await this.saveProvider(id)) {
       await this.check(id);
     }
@@ -80,12 +82,17 @@ export class LlmService {
     }
     const next: LlmFeature = { ...current, ...change };
     this.features.set(previous.map((feature) => (feature.id === id ? next : feature)));
-    const config: LlmFeatureSettings = { provider: next.provider, model: next.model, effort: next.effort, args: next.args };
+    const config: LlmFeatureSettings = {
+      provider: next.provider,
+      model: next.model,
+      effort: next.effort,
+      args: next.args,
+    };
     try {
-      await this.ipc.invoke<LlmView>("llm_feature_save", { feature: id, config });
+      await this.ipc.invoke<LlmView>('llm_feature_save', { feature: id, config });
     } catch {
       this.features.set(previous);
-      this.toasts.show(this.languageService.translate("settings.general.saveFailed"), "danger");
+      this.toasts.show(this.languageService.translate('settings.general.saveFailed'), 'danger');
     }
   }
 
@@ -95,13 +102,13 @@ export class LlmService {
       return;
     }
     try {
-      await this.ipc.invoke<void>("llm_login", { id });
+      await this.ipc.invoke<void>('llm_login', { id });
     } catch (error) {
       this.fail(error);
       return;
     }
     if (provider.canDetectLogin) {
-      this.patch(id, { signing: true, signedIn: false, status: "none", error: "" });
+      this.patch(id, { signing: true, signedIn: false, status: 'none', error: '' });
       await this.awaitSignIn(id);
     }
   }
@@ -113,7 +120,7 @@ export class LlmService {
     }
     this.patch(id, { signing: false });
     try {
-      await this.ipc.invoke<void>("llm_logout", { id });
+      await this.ipc.invoke<void>('llm_logout', { id });
     } catch (error) {
       this.fail(error);
     }
@@ -122,9 +129,9 @@ export class LlmService {
 
   async openProfile(id: string): Promise<void> {
     try {
-      await this.ipc.invoke<void>("llm_profile_open", { id });
+      await this.ipc.invoke<void>('llm_profile_open', { id });
     } catch {
-      this.toasts.show(this.languageService.translate("settings.general.openFailed"), "danger");
+      this.toasts.show(this.languageService.translate('settings.general.openFailed'), 'danger');
     }
   }
 
@@ -135,9 +142,9 @@ export class LlmService {
     }
     try {
       await navigator.clipboard.writeText(provider.resolvedPath);
-      this.toasts.show(this.languageService.translate("settings.llm.copied"));
+      this.toasts.show(this.languageService.translate('settings.llm.copied'));
     } catch {
-      this.toasts.show(this.languageService.translate("settings.llm.copyFailed"), "warning");
+      this.toasts.show(this.languageService.translate('settings.llm.copyFailed'), 'warning');
     }
   }
 
@@ -162,21 +169,23 @@ export class LlmService {
   }
 
   private patch(id: string, change: Partial<LlmProvider>): void {
-    this.providers.update((list) => list.map((item) => (item.id === id ? { ...item, ...change } : item)));
+    this.providers.update((list) =>
+      list.map((item) => (item.id === id ? { ...item, ...change } : item)),
+    );
   }
 
   private async probeProvider(provider: LlmProvider): Promise<void> {
-    this.patch(provider.id, { status: "checking", error: "" });
+    this.patch(provider.id, { status: 'checking', error: '' });
     try {
-      const probe = await this.ipc.invoke<LlmProbe>("llm_probe", { id: provider.id });
+      const probe = await this.ipc.invoke<LlmProbe>('llm_probe', { id: provider.id });
       this.patch(provider.id, this.fromProbe(probe));
     } catch (error) {
-      this.patch(provider.id, { status: "error", error: this.describe(error) });
+      this.patch(provider.id, { status: 'error', error: this.describe(error) });
     }
   }
 
   private fromProbe(probe: LlmProbe): Partial<LlmProvider> {
-    const status = !probe.found ? "none" : probe.ok ? "ok" : "error";
+    const status = !probe.found ? 'none' : probe.ok ? 'ok' : 'error';
     return {
       found: probe.found,
       resolvedPath: probe.path,
@@ -206,7 +215,7 @@ export class LlmService {
 
   private async pollSignedIn(provider: LlmProvider): Promise<boolean> {
     try {
-      const probe = await this.ipc.invoke<LlmProbe>("llm_probe", { id: provider.id });
+      const probe = await this.ipc.invoke<LlmProbe>('llm_probe', { id: provider.id });
       if (!probe.ok || probe.signedIn !== true) {
         return false;
       }
@@ -224,20 +233,22 @@ export class LlmService {
     }
     const settings: LlmCliSettings = { path: provider.path };
     try {
-      await this.ipc.invoke<LlmView>("llm_provider_save", { id, provider: settings });
+      await this.ipc.invoke<LlmView>('llm_provider_save', { id, provider: settings });
       return true;
     } catch {
-      this.toasts.show(this.languageService.translate("settings.general.saveFailed"), "danger");
+      this.toasts.show(this.languageService.translate('settings.general.saveFailed'), 'danger');
       return false;
     }
   }
 
   private fail(error: unknown): void {
-    this.toasts.show(this.describe(error), "danger");
+    this.toasts.show(this.describe(error), 'danger');
   }
 
   private describe(error: unknown): string {
     const cause = error instanceof Error ? (error as { cause?: unknown }).cause : error;
-    return typeof cause === "string" ? cause : this.languageService.translate("settings.llm.unknownError");
+    return typeof cause === 'string'
+      ? cause
+      : this.languageService.translate('settings.llm.unknownError');
   }
 }

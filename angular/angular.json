@@ -80,8 +80,20 @@
             "runner": "vitest",
             "runnerConfig": "vitest.config.mjs",
             "setupFiles": ["testing/setup.ts"],
-            "include": ["core/**/*.spec.ts", "features/**/*.spec.ts", "pages/**/*.spec.ts", "components/**/*.spec.ts", "layout/**/*.spec.ts"],
-            "coverageInclude": ["core/**/*.ts", "features/**/*.ts", "pages/**/*.ts", "components/**/*.ts", "layout/**/*.ts"],
+            "include": [
+              "shared/**/*.spec.ts",
+              "features/**/*.spec.ts",
+              "pages/**/*.spec.ts",
+              "components/**/*.spec.ts",
+              "layout/**/*.spec.ts"
+            ],
+            "coverageInclude": [
+              "shared/**/*.ts",
+              "features/**/*.ts",
+              "pages/**/*.ts",
+              "components/**/*.ts",
+              "layout/**/*.ts"
+            ],
             "coverageExclude": ["**/*.spec.ts", "**/*.d.ts"],
             "coverageReporters": ["lcov"]
           }

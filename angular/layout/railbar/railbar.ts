@@ -1,16 +1,17 @@
-import { Component, inject } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { SettingsService } from "@features/settings/settings.service";
-import { LayoutService } from "../layout.service";
-import { PIPELINES_TAB_ID, RAIL_ITEMS } from "../layout.models";
-import { TabsService } from "../tabs.service";
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Icon } from '@components/icon';
+import { SettingsService } from '@features/settings/settings.service';
+import { CoreModule } from '@shared/core.module';
+
+import { PIPELINES_TAB_ID, RAIL_ITEMS } from '../layout.models';
+import { LayoutService } from '../layout.service';
+import { TabsService } from '../tabs.service';
 
 @Component({
-  selector: "app-railbar",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-railbar',
   imports: [Icon, CoreModule],
-  templateUrl: "./railbar.html",
+  templateUrl: './railbar.html',
 })
 export class Railbar {
   readonly layout = inject(LayoutService);

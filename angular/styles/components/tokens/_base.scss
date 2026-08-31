@@ -1,0 +1,151 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+body {
+  background: var(--canvas);
+  color: var(--body);
+  font: 400 14px/20px var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 400;
+  color: var(--ink);
+}
+[hidden] {
+  display: none !important;
+}
+.spacer {
+  flex: 1;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.t-display-lg {
+  font-size: 48px;
+  line-height: 52px;
+  letter-spacing: -1.2px;
+}
+.t-display-md {
+  font-size: 32px;
+  line-height: 36px;
+  letter-spacing: -0.6px;
+}
+.t-display-sm {
+  font-size: 24px;
+  line-height: 30px;
+  letter-spacing: -0.4px;
+}
+.t-display-xs {
+  font-size: 18px;
+  line-height: 26px;
+  letter-spacing: -0.2px;
+}
+.t-sm {
+  font-size: 13px;
+  line-height: 18px;
+}
+.t-mute {
+  color: var(--mute);
+}
+.t-ink {
+  color: var(--ink);
+}
+
+.mono,
+.eyebrow,
+.badge,
+.kbd {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.mono {
+  font-size: 12px;
+  letter-spacing: 0.6px;
+}
+.eyebrow {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 1.2px;
+  color: var(--mute);
+}
+.kbd {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 1px;
+  color: var(--mute);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-xs);
+  padding: 0 4px;
+}
+.path {
+  font: 400 12px/16px var(--font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  word-break: break-all;
+}
+
+a {
+  color: var(--primary-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+a:hover {
+  text-decoration: underline;
+}
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--canvas-mid);
+  border-radius: var(--r-sm);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-resizer {
+  background: transparent;
+}
+
+.ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

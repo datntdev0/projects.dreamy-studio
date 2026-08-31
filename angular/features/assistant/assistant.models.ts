@@ -1,10 +1,10 @@
-export type AssistantScopeKind = "workspace" | "novel";
+export type AssistantScopeKind = 'workspace' | 'novel';
 
-export type AssistantRole = "user" | "assistant";
+export type AssistantRole = 'user' | 'assistant';
 
-export type AssistantView = "start" | "sessions" | "chat";
+export type AssistantView = 'start' | 'sessions' | 'chat';
 
-export type AssistantScopeFilter = "all" | "workspace" | number;
+export type AssistantScopeFilter = 'all' | 'workspace' | number;
 
 export interface AssistantScope {
   kind: AssistantScopeKind;
@@ -18,7 +18,7 @@ export interface AssistantCitation {
   quote: string;
 }
 
-export type AssistantChangeTarget = "novel" | "chapter" | "knowledge" | "translation";
+export type AssistantChangeTarget = 'novel' | 'chapter' | 'knowledge' | 'translation';
 
 export interface AssistantChange {
   target: AssistantChangeTarget;
@@ -28,15 +28,16 @@ export interface AssistantChange {
   translationTarget: string | null;
 }
 
-export type AssistantEvent = { kind: "activity"; label: string } | ({ kind: "changed" } & AssistantChange);
+export type AssistantEvent =
+  { kind: 'activity'; label: string } | ({ kind: 'changed' } & AssistantChange);
 
-export type ProposalStatus = "pending" | "applied" | "rejected";
+export type ProposalStatus = 'pending' | 'applied' | 'rejected';
 
-export type ProposalDecision = "applied" | "rejected";
+export type ProposalDecision = 'applied' | 'rejected';
 
-export type FindingSeverity = "error" | "warning" | "info";
+export type FindingSeverity = 'error' | 'warning' | 'info';
 
-export type FindingCategory = "name" | "dict" | "meaning" | "omission" | "style";
+export type FindingCategory = 'name' | 'dict' | 'meaning' | 'omission' | 'style';
 
 export interface TranslationFinding {
   id: string;
@@ -63,7 +64,7 @@ export interface DictProposal {
 }
 
 export interface TranslationReview {
-  kind: "translation_review";
+  kind: 'translation_review';
   chapter: number;
   chapterTitle: string;
   target: string;
@@ -72,7 +73,17 @@ export interface TranslationReview {
   dictionary: DictProposal[];
 }
 
-export type KnowledgeChangeOp = "merge" | "rename" | "retype" | "add_entity" | "add_fact" | "fact" | "del" | "props" | "evidence" | "character";
+export type KnowledgeChangeOp =
+  | 'merge'
+  | 'rename'
+  | 'retype'
+  | 'add_entity'
+  | 'add_fact'
+  | 'fact'
+  | 'del'
+  | 'props'
+  | 'evidence'
+  | 'character';
 
 export interface KnowledgeChange {
   id: string;
@@ -91,7 +102,7 @@ export interface KnowledgeValidation {
 }
 
 export interface KnowledgeChangeSet {
-  kind: "knowledge_changes";
+  kind: 'knowledge_changes';
   id: string;
   title: string;
   edits: number;
@@ -105,8 +116,8 @@ export interface KnowledgeChangeSet {
 export type AssistantAttachment = TranslationReview | KnowledgeChangeSet;
 
 export type AssistantContext =
-  | { kind: "translation_review"; chapterId: string; target: string }
-  | { kind: "knowledge_review"; lang: string; issueIds: string[] };
+  | { kind: 'translation_review'; chapterId: string; target: string }
+  | { kind: 'knowledge_review'; lang: string; issueIds: string[] };
 
 export interface ProposalResolution {
   messageId: string;
@@ -144,4 +155,3 @@ export interface AssistantSessionSummary {
 export interface AssistantSession extends AssistantSessionSummary {
   messages: AssistantMessage[];
 }
-

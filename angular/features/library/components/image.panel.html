@@ -1,17 +1,177 @@
 @if (image(); as image) {
-  <section data-testid="library-image-panel-content">
-    <section class="ins-sec lb-ins-top" data-testid="library-image-panel-summary">
-      <div class="lb-ins-name" data-testid="library-image-panel-type"><span class="type-tag" data-testid="library-image-panel-type-tag"><ds-icon name="image" [size]="13" data-testid="library-image-panel-type-icon" />{{ "library.kind.image" | t }}</span></div>
-      <div class="field" data-testid="library-image-panel-name-field"><label for="library-image-panel-name" data-testid="library-image-panel-name-label">{{ "library.image.field.name" | t }}</label><input id="library-image-panel-name" class="input" maxlength="255" [value]="image.name" autocomplete="off" data-testid="library-image-panel-name" (blur)="nameBlur(image, $event)" (keydown)="nameKeydown($event)" /></div>
-    </section>
-    <section class="ins-sec ins-form" data-testid="library-image-panel-fields">
-      <div class="field" data-testid="library-image-panel-tags-field"><label for="library-image-panel-tags" data-testid="library-image-panel-tags-label">{{ "library.image.field.tags" | t }} <span class="t-mute mono" data-testid="library-image-panel-tags-count">{{ image.tags.length }}/12</span></label><div class="tags" data-testid="library-image-panel-tags">@if (image.tags.length) { @for (tag of image.tags; track tag) { <span class="tag" data-testid="library-image-panel-tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'library.image.field.tagRemove' | t: { tag }" data-testid="library-image-panel-tag-remove" (click)="removeTag(image, tag)"><ds-icon name="x" [size]="16" data-testid="library-image-panel-tag-remove-icon" /></button></span> } } @else { <span class="t-sm t-mute" data-testid="library-image-panel-tags-empty">{{ "library.image.field.tagsEmpty" | t }}</span> }</div><input id="library-image-panel-tags" class="input tag-in" list="library-image-panel-tag-suggestions" [disabled]="image.tags.length >= 12" [attr.placeholder]="'library.image.field.tagsPlaceholder' | t" autocomplete="off" data-testid="library-image-panel-tags-input" (keydown)="addTag(image, $event)" /><datalist id="library-image-panel-tag-suggestions" data-testid="library-image-panel-tag-suggestions">@for (tag of library.tags(); track tag.tag) { <option [value]="tag.tag" data-testid="library-image-panel-tag-suggestion"></option> }</datalist></div>
-      <div class="field" data-testid="library-image-panel-collection-field"><label for="library-image-panel-collection" data-testid="library-image-panel-collection-label">{{ "library.image.field.collection" | t }}</label><select id="library-image-panel-collection" class="select" data-testid="library-image-panel-collection" (change)="setCollection(image, $event)"><option value="" [selected]="image.collectionId === null" data-testid="library-image-panel-collection-none">{{ "library.image.field.collectionNoneInspector" | t }}</option>@for (collection of library.collections(); track collection.id) { <option [value]="collection.id" [selected]="image.collectionId === collection.id" data-testid="library-image-panel-collection-option">{{ collection.name }}</option> }<option value="__new" data-testid="library-image-panel-collection-new">{{ "library.image.field.collectionNew" | t }}</option></select></div>
-      <div class="field" data-testid="library-image-panel-rights-field"><label for="library-image-panel-rights" data-testid="library-image-panel-rights-label">{{ "library.image.field.rights" | t }}</label><select id="library-image-panel-rights" class="select" data-testid="library-image-panel-rights" (change)="setRights(image, $event)">@for (right of rightOptions; track right) { <option [value]="right" [selected]="image.rights === right" data-testid="library-image-panel-rights-option">{{ rightKey(right) | t }}</option> }</select><span class="field-hint" data-testid="library-image-panel-rights-hint">{{ "library.image.field.rightsHint" | t }}</span></div>
-    </section>
-    <section class="ins-sec" data-testid="library-image-panel-info"><span class="eyebrow" data-testid="library-image-panel-info-title">{{ "library.image.info" | t }}</span><dl class="kv" data-testid="library-image-panel-info-list"><dt data-testid="library-image-panel-info-code-label">{{ "library.image.info.code" | t }}</dt><dd class="mono" data-testid="library-image-panel-info-code">{{ code(image) }}</dd><dt data-testid="library-image-panel-info-format-label">{{ "library.image.info.format" | t }}</dt><dd data-testid="library-image-panel-info-format">{{ format(image) }}</dd><dt data-testid="library-image-panel-info-dimensions-label">{{ "library.image.info.inspectorSize" | t }}</dt><dd data-testid="library-image-panel-info-dimensions">{{ dimensions(image) }}</dd><dt data-testid="library-image-panel-info-size-label">{{ "library.image.info.size" | t }}</dt><dd data-testid="library-image-panel-info-size">{{ size(image) }}</dd><dt data-testid="library-image-panel-info-added-label">{{ "library.image.info.added" | t }}</dt><dd class="mono" data-testid="library-image-panel-info-added">{{ addedAt(image) }}</dd><dt data-testid="library-image-panel-info-origin-label">{{ "library.image.info.origin" | t }}</dt><dd data-testid="library-image-panel-info-origin">{{ originKey(image) | t }}</dd></dl></section>
-    <section class="ins-sec ins-actions" data-testid="library-image-panel-actions"><button type="button" class="btn btn-danger" data-testid="library-image-panel-delete" (click)="remove(image)"><ds-icon name="trash" [size]="16" data-testid="library-image-panel-delete-icon" />{{ "library.image.delete" | t }}</button></section>
+<section data-testid="library-image-panel-content">
+  <section class="ins-sec lb-ins-top" data-testid="library-image-panel-summary">
+    <div class="lb-ins-name" data-testid="library-image-panel-type">
+      <span class="type-tag" data-testid="library-image-panel-type-tag">
+        <ds-icon name="image" [size]="13" data-testid="library-image-panel-type-icon" />
+        {{ "library.kind.image" | t }}
+      </span>
+    </div>
+    <div class="field" data-testid="library-image-panel-name-field">
+      <label for="library-image-panel-name" data-testid="library-image-panel-name-label">
+        {{ "library.image.field.name" | t }}
+      </label>
+      <input
+        id="library-image-panel-name"
+        class="input"
+        maxlength="255"
+        [value]="image.name"
+        autocomplete="off"
+        data-testid="library-image-panel-name"
+        (blur)="nameBlur(image, $event)"
+        (keydown)="nameKeydown($event)"
+      />
+    </div>
   </section>
+  <section class="ins-sec ins-form" data-testid="library-image-panel-fields">
+    <div class="field" data-testid="library-image-panel-tags-field">
+      <label for="library-image-panel-tags" data-testid="library-image-panel-tags-label">
+        {{ "library.image.field.tags" | t }}
+        <span class="t-mute mono" data-testid="library-image-panel-tags-count">
+          {{ image.tags.length }}/12
+        </span>
+      </label>
+      <div class="tags" data-testid="library-image-panel-tags">
+        @if (image.tags.length) { @for (tag of image.tags; track tag) {
+        <span class="tag" data-testid="library-image-panel-tag">
+          {{ tag }}
+          <button
+            type="button"
+            class="tag-x"
+            [attr.aria-label]="'library.image.field.tagRemove' | t: { tag }"
+            data-testid="library-image-panel-tag-remove"
+            (click)="removeTag(image, tag)"
+          >
+            <ds-icon name="x" [size]="16" data-testid="library-image-panel-tag-remove-icon" />
+          </button>
+        </span>
+        } } @else {
+        <span class="t-sm t-mute" data-testid="library-image-panel-tags-empty">
+          {{ "library.image.field.tagsEmpty" | t }}
+        </span>
+        }
+      </div>
+      <input
+        id="library-image-panel-tags"
+        class="input tag-in"
+        list="library-image-panel-tag-suggestions"
+        [disabled]="image.tags.length >= 12"
+        [attr.placeholder]="'library.image.field.tagsPlaceholder' | t"
+        autocomplete="off"
+        data-testid="library-image-panel-tags-input"
+        (keydown)="addTag(image, $event)"
+      />
+      <datalist
+        id="library-image-panel-tag-suggestions"
+        data-testid="library-image-panel-tag-suggestions"
+      >
+        @for (tag of library.tags(); track tag.tag) {
+        <option [value]="tag.tag" data-testid="library-image-panel-tag-suggestion"></option>
+        }
+      </datalist>
+    </div>
+    <div class="field" data-testid="library-image-panel-collection-field">
+      <label
+        for="library-image-panel-collection"
+        data-testid="library-image-panel-collection-label"
+      >
+        {{ "library.image.field.collection" | t }}
+      </label>
+      <select
+        id="library-image-panel-collection"
+        class="select"
+        data-testid="library-image-panel-collection"
+        (change)="setCollection(image, $event)"
+      >
+        <option
+          value=""
+          [selected]="image.collectionId === null"
+          data-testid="library-image-panel-collection-none"
+        >
+          {{ "library.image.field.collectionNoneInspector" | t }}
+        </option>
+        @for (collection of library.collections(); track collection.id) {
+        <option
+          [value]="collection.id"
+          [selected]="image.collectionId === collection.id"
+          data-testid="library-image-panel-collection-option"
+        >
+          {{ collection.name }}
+        </option>
+        }
+        <option value="__new" data-testid="library-image-panel-collection-new">
+          {{ "library.image.field.collectionNew" | t }}
+        </option>
+      </select>
+    </div>
+    <div class="field" data-testid="library-image-panel-rights-field">
+      <label for="library-image-panel-rights" data-testid="library-image-panel-rights-label">
+        {{ "library.image.field.rights" | t }}
+      </label>
+      <select
+        id="library-image-panel-rights"
+        class="select"
+        data-testid="library-image-panel-rights"
+        (change)="setRights(image, $event)"
+      >
+        @for (right of rightOptions; track right) {
+        <option
+          [value]="right"
+          [selected]="image.rights === right"
+          data-testid="library-image-panel-rights-option"
+        >
+          {{ rightKey(right) | t }}
+        </option>
+        }
+      </select>
+      <span class="field-hint" data-testid="library-image-panel-rights-hint">
+        {{ "library.image.field.rightsHint" | t }}
+      </span>
+    </div>
+  </section>
+  <section class="ins-sec" data-testid="library-image-panel-info">
+    <span class="eyebrow" data-testid="library-image-panel-info-title">
+      {{ "library.image.info" | t }}
+    </span>
+    <dl class="kv" data-testid="library-image-panel-info-list">
+      <dt data-testid="library-image-panel-info-code-label">{{ "library.image.info.code" | t }}</dt>
+      <dd class="mono" data-testid="library-image-panel-info-code">{{ code(image) }}</dd>
+      <dt data-testid="library-image-panel-info-format-label">
+        {{ "library.image.info.format" | t }}
+      </dt>
+      <dd data-testid="library-image-panel-info-format">{{ format(image) }}</dd>
+      <dt data-testid="library-image-panel-info-dimensions-label">
+        {{ "library.image.info.inspectorSize" | t }}
+      </dt>
+      <dd data-testid="library-image-panel-info-dimensions">{{ dimensions(image) }}</dd>
+      <dt data-testid="library-image-panel-info-size-label">{{ "library.image.info.size" | t }}</dt>
+      <dd data-testid="library-image-panel-info-size">{{ size(image) }}</dd>
+      <dt data-testid="library-image-panel-info-added-label">
+        {{ "library.image.info.added" | t }}
+      </dt>
+      <dd class="mono" data-testid="library-image-panel-info-added">{{ addedAt(image) }}</dd>
+      <dt data-testid="library-image-panel-info-origin-label">
+        {{ "library.image.info.origin" | t }}
+      </dt>
+      <dd data-testid="library-image-panel-info-origin">{{ originKey(image) | t }}</dd>
+    </dl>
+  </section>
+  <section class="ins-sec ins-actions" data-testid="library-image-panel-actions">
+    <button
+      type="button"
+      class="btn btn-danger"
+      data-testid="library-image-panel-delete"
+      (click)="remove(image)"
+    >
+      <ds-icon name="trash" [size]="16" data-testid="library-image-panel-delete-icon" />
+      {{ "library.image.delete" | t }}
+    </button>
+  </section>
+</section>
 } @else {
-  <div class="ins-empty" data-testid="library-image-panel-empty"><p class="t-sm t-mute" data-testid="library-image-panel-empty-text">{{ "library.image.empty.title" | t }}</p></div>
+<div class="ins-empty" data-testid="library-image-panel-empty">
+  <p class="t-sm t-mute" data-testid="library-image-panel-empty-text">
+    {{ "library.image.empty.title" | t }}
+  </p>
+</div>
 }

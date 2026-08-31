@@ -1,9 +1,47 @@
 ds-breadcrumbs {
-  & { display: block; min-width: 0; }
-  .crumbs { min-height: 24px; padding: 0 var(--sp-md); border-bottom: 1px solid var(--hairline); background: var(--canvas-card); color: var(--mute); font: 400 12.5px/24px var(--font); white-space: nowrap; overflow-x: auto; }
-  ol { display: flex; align-items: center; gap: var(--sp-xs); min-height: 24px; margin: 0; padding: 0; list-style: none; }
-  li, .current, button { display: inline-flex; align-items: center; gap: var(--sp-xs); }
-  button { height: 24px; padding: 0; border: 0; background: transparent; color: var(--mute); font: inherit; cursor: pointer; }
-  button:hover { color: var(--ink); }
-  .current { color: var(--body); }
+  & {
+    display: block;
+    min-width: 0;
+  }
+  .crumbs {
+    min-height: 24px;
+    padding: 0 var(--sp-md);
+    border-bottom: 1px solid var(--hairline);
+    background: var(--canvas-card);
+    color: var(--mute);
+    font: 400 12.5px/24px var(--font);
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  ol {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-xs);
+    min-height: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li,
+  .current,
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-xs);
+  }
+  button {
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--mute);
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover {
+    color: var(--ink);
+  }
+  .current {
+    color: var(--body);
+  }
 }

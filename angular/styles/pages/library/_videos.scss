@@ -1,0 +1,38 @@
+app-library-video-media,
+app-library-video-play,
+app-library-video-thumb,
+app-library-video-preview-dialog,
+app-library-video-delete-dialog,
+app-library-video-panel {
+  display: contents;
+}
+app-library-video-thumb {
+  display: inline-flex;
+  flex: none;
+}
+
+.lb-ext .lb-dur {
+  color: inherit;
+  font-size: inherit;
+}
+.lb-thv {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.lb-thv app-library-video-play .lb-pbtn {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  opacity: 0.92;
+}
+app-library-video-media .lb-media,
+app-library-video-thumb .lb-th {
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.lbp-img.is-video {
+  display: grid;
+  place-items: center;
+}

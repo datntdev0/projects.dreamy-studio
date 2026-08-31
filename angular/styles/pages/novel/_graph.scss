@@ -1,0 +1,221 @@
+.kb-graph {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: var(--canvas);
+  overflow: hidden;
+}
+.kbg-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.kbg-svg.is-drag {
+  cursor: grabbing;
+}
+.gt-character {
+  --c: var(--acc-twilight);
+}
+.gt-persona {
+  --c: var(--primary);
+}
+.gt-location {
+  --c: var(--info);
+}
+.gt-organization {
+  --c: var(--secondary);
+}
+.gt-artifact {
+  --c: var(--warning);
+}
+.gt-skill {
+  --c: var(--success);
+}
+.gt-term {
+  --c: var(--acc-sunset);
+}
+.gt-event {
+  --c: var(--acc-breeze);
+}
+.gt-issue {
+  --c: var(--danger);
+}
+.gt {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-full);
+  background: var(--c);
+  flex: none;
+}
+.kbg-n {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.15s;
+}
+.kbg-n circle {
+  fill: var(--c);
+  stroke: var(--canvas);
+  stroke-width: 1.5;
+}
+.kbg-n:hover circle,
+.kbg-n:focus-visible circle {
+  stroke: var(--ink);
+}
+.kbg-n.has-issue circle {
+  stroke: var(--danger);
+  stroke-width: 3;
+}
+.kbg-n.is-sel circle {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+.kbg-n text {
+  fill: var(--body);
+  font: 400 11px var(--font);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--canvas);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.kbg-l line {
+  stroke: var(--hairline-strong);
+  stroke-width: 1.2;
+  transition: opacity 0.15s;
+}
+.kbg-l.is-claim line {
+  stroke-dasharray: 6 4;
+}
+.kbg-l.is-inferred line {
+  stroke-dasharray: 2 4;
+}
+.kbg-l.is-co line {
+  stroke-dasharray: 1 5;
+  opacity: 0.7;
+}
+.kbg-lt {
+  display: none;
+  fill: var(--mute);
+  font: 400 10px var(--font);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--canvas);
+  stroke-width: 3px;
+}
+.kbg-svg.edge-labels .kbg-lt {
+  display: block;
+}
+.kbg-svg.no-labels .kbg-n text,
+.kbg-svg.is-far .kbg-n text,
+.kbg-svg.is-far .kbg-lt {
+  display: none;
+}
+.kbg-svg.has-hl .kbg-n:not(.is-hl) {
+  opacity: 0.14;
+}
+.kbg-svg.has-hl .kbg-l:not(.is-hl) line {
+  opacity: 0.06;
+}
+.kbg-svg.has-hl .kbg-l.is-hl line {
+  stroke: var(--primary-text);
+  stroke-width: 1.8;
+}
+.kbg-panel {
+  position: absolute;
+  top: var(--sp-md);
+  right: var(--sp-md);
+  width: 224px;
+  max-height: calc(100% - 2 * var(--sp-md));
+  overflow: auto;
+  background: var(--canvas-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float);
+}
+.kbg-panel details + details {
+  border-top: 1px solid var(--hairline);
+}
+.kbg-panel summary {
+  list-style: none;
+  cursor: pointer;
+  padding: var(--sp-sm) var(--sp-md);
+  font: 400 11px/14px var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mute);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.kbg-panel summary::-webkit-details-marker {
+  display: none;
+}
+.kbg-panel summary::before {
+  content: '▸';
+  font-size: 10px;
+  transition: transform 0.12s;
+}
+.kbg-panel details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.kbg-panel summary:hover {
+  color: var(--body);
+}
+.kbg-sec {
+  display: grid;
+  gap: var(--sp-sm);
+  padding: 0 var(--sp-md) var(--sp-md);
+}
+.kbg-sec .check {
+  align-items: center;
+}
+.kbg-sec .input {
+  height: var(--ctl-h-sm);
+}
+.kbg-rng {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--mute);
+}
+.kbg-legend {
+  position: absolute;
+  left: var(--sp-md);
+  bottom: var(--sp-md);
+  display: flex;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  max-width: calc(100% - 100px);
+  padding: var(--sp-xs) var(--sp-md);
+  background: var(--canvas-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  color: var(--mute);
+}
+.kbg-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.kbg-zoom {
+  position: absolute;
+  right: var(--sp-md);
+  bottom: var(--sp-md);
+  display: grid;
+  gap: 2px;
+  background: var(--canvas-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  padding: 2px;
+}
+.kbg-zoom .btn {
+  font-size: 15px;
+  line-height: 1;
+}

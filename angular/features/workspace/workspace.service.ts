@@ -1,68 +1,56 @@
-import { Injectable, inject, signal } from "@angular/core";
-import { Router } from "@angular/router";
-import { Channel } from "@tauri-apps/api/core";
-import { DesktopIpcError } from "@core/desktop/desktop-ipc-error";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { LanguageKey } from "@core/language/language.models";
-import { LanguageService } from "@core/language/language.service";
-import { SettingsService } from "@features/settings/settings.service";
-import { AppInfo } from "./workspace.models";
-import { CancelOutcome } from "./workspace.models";
-import { CurrentWorkspace } from "./workspace.models";
-import { EnterOutcome } from "./workspace.models";
-import { LoadError } from "./workspace.models";
-import { LoadErrorCode } from "./workspace.models";
-import { LoadEvent } from "./workspace.models";
-import { LoadOrigin } from "./workspace.models";
-import { LoadOutcome } from "./workspace.models";
-import { LoadRequest } from "./workspace.models";
-import { LoadState } from "./workspace.models";
-import { LoadStepId } from "./workspace.models";
-import { LoadStepItem } from "./workspace.models";
-import { LoadStepView } from "./workspace.models";
-import { RecentWorkspace } from "./workspace.models";
+import { inject, Injectable, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { SettingsService } from '@features/settings/settings.service';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { Channel } from '@tauri-apps/api/core';
+
+// prettier-ignore
+import { AppInfo, CancelOutcome, CurrentWorkspace, EnterOutcome, LoadError, LoadErrorCode, LoadEvent, LoadOrigin, LoadOutcome, LoadRequest, LoadState, LoadStepId, LoadStepItem, LoadStepView, RecentWorkspace } from './workspace.models';
 
 const FAILURE_HOLD_MS = 1200;
 
-const STEP_ORDER: LoadStepId[] = ["application", "backend", "llm", "workspace"];
+const STEP_ORDER: LoadStepId[] = ['application', 'backend', 'llm', 'workspace'];
 
 const STEP_NAME_KEYS: Record<LoadStepId, LanguageKey> = {
-  application: "loading.stepName.application",
-  backend: "loading.stepName.backend",
-  workspace: "loading.stepName.workspace",
-  llm: "loading.stepName.llm",
+  application: 'loading.stepName.application',
+  backend: 'loading.stepName.backend',
+  workspace: 'loading.stepName.workspace',
+  llm: 'loading.stepName.llm',
 };
 
 const ERROR_CAUSE_KEYS: Record<LoadErrorCode, LanguageKey> = {
-  folder_missing: "loading.cause.folder_missing",
-  folder_not_directory: "loading.cause.folder_not_directory",
-  folder_not_readable: "loading.cause.folder_not_readable",
-  folder_not_writable: "loading.cause.folder_not_writable",
-  db_corrupt: "loading.cause.db_corrupt",
-  db_newer_version: "loading.cause.db_newer_version",
-  db_migration_failed: "loading.cause.db_migration_failed",
-  db_io: "loading.cause.db_io",
-  logs_failed: "loading.cause.logs_failed",
-  backend_missing: "loading.cause.backend_missing",
-  backend_start_failed: "loading.cause.backend_start_failed",
-  backend_timeout: "loading.cause.backend_timeout",
+  folder_missing: 'loading.cause.folder_missing',
+  folder_not_directory: 'loading.cause.folder_not_directory',
+  folder_not_readable: 'loading.cause.folder_not_readable',
+  folder_not_writable: 'loading.cause.folder_not_writable',
+  db_corrupt: 'loading.cause.db_corrupt',
+  db_newer_version: 'loading.cause.db_newer_version',
+  db_migration_failed: 'loading.cause.db_migration_failed',
+  db_io: 'loading.cause.db_io',
+  logs_failed: 'loading.cause.logs_failed',
+  backend_missing: 'loading.cause.backend_missing',
+  backend_start_failed: 'loading.cause.backend_start_failed',
+  backend_timeout: 'loading.cause.backend_timeout',
 };
 
 const CODES_WITHOUT_DETAIL: LoadErrorCode[] = [
-  "folder_missing",
-  "folder_not_directory",
-  "db_newer_version",
+  'folder_missing',
+  'folder_not_directory',
+  'db_newer_version',
 ];
 
 function folderName(path: string): string {
-  const trimmed = path.replace(/[\\/]+$/, "");
+  const trimmed = path.replace(/[\\/]+$/, '');
   const segments = trimmed.split(/[\\/]/);
   const last = segments[segments.length - 1];
   return last ? last : path;
 }
 
 function pendingStep(id: LoadStepId): LoadStepItem {
-  return { id, state: "pending" };
+  return { id, state: 'pending' };
 }
 
 function initialLoadState(path: string, origin: LoadOrigin): LoadState {
@@ -73,28 +61,24 @@ function initialLoadState(path: string, origin: LoadOrigin): LoadState {
     mode: null,
     steps: STEP_ORDER.map(pendingStep),
     percent: 0,
-    status: "running",
+    status: 'running',
   };
 }
 
-function replaceStep(
-  steps: LoadStepItem[],
-  id: LoadStepId,
-  state: LoadStepView,
-): LoadStepItem[] {
+function replaceStep(steps: LoadStepItem[], id: LoadStepId, state: LoadStepView): LoadStepItem[] {
   return steps.map((step) => (step.id === id ? { ...step, state } : step));
 }
 
 function applyLoadEvent(state: LoadState, event: LoadEvent): LoadState {
   switch (event.kind) {
-    case "started":
+    case 'started':
       return { ...state, mode: event.mode, name: event.name, path: event.path };
-    case "step":
+    case 'step':
       return {
         ...state,
         steps: replaceStep(state.steps, event.id, event.state),
       };
-    case "progress":
+    case 'progress':
       return { ...state, percent: event.percent };
   }
 }
@@ -102,19 +86,19 @@ function applyLoadEvent(state: LoadState, event: LoadEvent): LoadState {
 function markLoadFailed(state: LoadState, step: LoadStepId): LoadState {
   return {
     ...state,
-    steps: replaceStep(state.steps, step, "error"),
-    status: "failed",
+    steps: replaceStep(state.steps, step, 'error'),
+    status: 'failed',
   };
 }
 
 function isLoadError(value: unknown): value is LoadError {
-  if (typeof value !== "object" || value === null) {
+  if (typeof value !== 'object' || value === null) {
     return false;
   }
   const candidate = value as Record<string, unknown>;
-  const hasStep = typeof candidate["step"] === "string";
-  const hasCode = typeof candidate["code"] === "string";
-  const hasDetail = typeof candidate["detail"] === "string";
+  const hasStep = typeof candidate['step'] === 'string';
+  const hasCode = typeof candidate['code'] === 'string';
+  const hasDetail = typeof candidate['detail'] === 'string';
   return hasStep && hasCode && hasDetail;
 }
 
@@ -123,10 +107,10 @@ function toLoadError(error: unknown, fallbackStep: LoadStepId): LoadError {
   if (isLoadError(payload)) {
     return payload;
   }
-  return { step: fallbackStep, code: "db_io", detail: String(payload) };
+  return { step: fallbackStep, code: 'db_io', detail: String(payload) };
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class WorkspaceService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly router = inject(Router);
@@ -134,7 +118,7 @@ export class WorkspaceService {
   private readonly settings = inject(SettingsService);
   private readonly opened = signal<CurrentWorkspace | null>(null);
   private previous: CurrentWorkspace | null = null;
-  private origin: LoadOrigin = "splash";
+  private origin: LoadOrigin = 'splash';
 
   readonly current = this.opened.asReadonly();
   readonly state = signal<LoadState | null>(null);
@@ -144,34 +128,33 @@ export class WorkspaceService {
   readonly switchNotice = signal<string | null>(null);
 
   appInfo(): Promise<AppInfo> {
-    return this.ipc.invoke<AppInfo>("app_info");
+    return this.ipc.invoke<AppInfo>('app_info');
   }
 
   recentList(): Promise<RecentWorkspace[]> {
-    return this.ipc.invoke<RecentWorkspace[]>("recent_list");
+    return this.ipc.invoke<RecentWorkspace[]>('recent_list');
   }
 
   measure(path: string): Promise<number> {
-    return this.ipc.invoke<number>("workspace_measure", { path });
+    return this.ipc.invoke<number>('workspace_measure', { path });
   }
 
   workspaceDelete(path: string): Promise<void> {
-    return this.ipc.invoke<void>("workspace_delete", { path });
+    return this.ipc.invoke<void>('workspace_delete', { path });
   }
 
   folderPick(): Promise<string | null> {
-    return this.ipc.invoke<string | null>("folder_pick");
+    return this.ipc.invoke<string | null>('folder_pick');
   }
 
   async restoreCurrent(): Promise<CurrentWorkspace | null> {
-    const current =
-      await this.ipc.invoke<CurrentWorkspace | null>("workspace_current");
+    const current = await this.ipc.invoke<CurrentWorkspace | null>('workspace_current');
     this.setOpened(current);
     return current;
   }
 
   isCurrentPath(path: string): Promise<boolean> {
-    return this.ipc.invoke<boolean>("workspace_is_current", { path });
+    return this.ipc.invoke<boolean>('workspace_is_current', { path });
   }
 
   openSwitchDialog(): void {
@@ -186,12 +169,12 @@ export class WorkspaceService {
     this.closeSwitchDialog();
     this.switchNotice.set(null);
     this.previous = this.opened();
-    await this.start({ ...request, origin: "switch" });
+    await this.start({ ...request, origin: 'switch' });
   }
 
   async start(request: LoadRequest): Promise<void> {
     const token = this.nextRun();
-    this.origin = request.origin ?? "splash";
+    this.origin = request.origin ?? 'splash';
     this.notice.set(null);
     this.state.set(initialLoadState(request.path, this.origin));
     if (this.isCurrent(token)) {
@@ -204,7 +187,7 @@ export class WorkspaceService {
     const origin = this.origin;
     try {
       const outcome = await this.requestCancel();
-      if (outcome.result === "already_entered") {
+      if (outcome.result === 'already_entered') {
         await this.enterAfterCancel(origin);
         return;
       }
@@ -216,12 +199,11 @@ export class WorkspaceService {
   }
 
   private describeLoadError(error: LoadError): string {
-    const showDetail =
-      error.detail !== "" && !CODES_WITHOUT_DETAIL.includes(error.code);
-    return this.languageService.translate("loading.error", {
+    const showDetail = error.detail !== '' && !CODES_WITHOUT_DETAIL.includes(error.code);
+    return this.languageService.translate('loading.error', {
       step: this.languageService.translate(STEP_NAME_KEYS[error.step]),
       cause: this.languageService.translate(ERROR_CAUSE_KEYS[error.code]),
-      suffix: showDetail ? ` (${error.detail})` : "",
+      suffix: showDetail ? ` (${error.detail})` : '',
     });
   }
 
@@ -230,7 +212,7 @@ export class WorkspaceService {
     channel: Channel<LoadEvent>,
     relocateFrom?: string,
   ): Promise<LoadOutcome> {
-    return this.ipc.invoke<LoadOutcome>("workspace_load", {
+    return this.ipc.invoke<LoadOutcome>('workspace_load', {
       path,
       relocateFrom,
       channel,
@@ -238,12 +220,12 @@ export class WorkspaceService {
   }
 
   private requestCancel(): Promise<CancelOutcome> {
-    return this.ipc.invoke<CancelOutcome>("workspace_cancel");
+    return this.ipc.invoke<CancelOutcome>('workspace_cancel');
   }
 
   private async requestEnter(): Promise<EnterOutcome> {
-    const outcome = await this.ipc.invoke<EnterOutcome>("workspace_enter");
-    if (outcome.result === "entered") {
+    const outcome = await this.ipc.invoke<EnterOutcome>('workspace_enter');
+    if (outcome.result === 'entered') {
       this.setOpened({ name: outcome.name, path: outcome.path });
     }
     return outcome;
@@ -284,13 +266,9 @@ export class WorkspaceService {
     const channel = this.ipc.channel<LoadEvent>(this.eventHandler(token));
     let outcome: LoadOutcome;
     try {
-      outcome = await this.requestLoad(
-        request.path,
-        channel,
-        request.relocateFrom,
-      );
+      outcome = await this.requestLoad(request.path, channel, request.relocateFrom);
     } catch (cause) {
-      await this.fail(token, cause, "application");
+      await this.fail(token, cause, 'application');
       return;
     }
     await this.afterLoad(token, outcome);
@@ -301,7 +279,7 @@ export class WorkspaceService {
       await this.discardStale(outcome);
       return;
     }
-    if (outcome.result === "ready") {
+    if (outcome.result === 'ready') {
       await this.enter(token);
       return;
     }
@@ -309,7 +287,7 @@ export class WorkspaceService {
   }
 
   private async discardStale(outcome: LoadOutcome): Promise<void> {
-    if (outcome.result !== "ready" || this.state() !== null) {
+    if (outcome.result !== 'ready' || this.state() !== null) {
       return;
     }
     try {
@@ -323,9 +301,9 @@ export class WorkspaceService {
     let entered: boolean;
     try {
       const outcome = await this.requestEnter();
-      entered = outcome.result === "entered";
+      entered = outcome.result === 'entered';
     } catch (cause) {
-      await this.fail(token, cause, "application");
+      await this.fail(token, cause, 'application');
       return;
     }
     if (!this.isCurrent(token)) {
@@ -339,7 +317,7 @@ export class WorkspaceService {
   }
 
   private async enterAfterCancel(origin: LoadOrigin): Promise<void> {
-    if (origin === "switch") {
+    if (origin === 'switch') {
       await this.enterAfterSwitchCancel();
       return;
     }
@@ -370,11 +348,7 @@ export class WorkspaceService {
     this.clearState();
   }
 
-  private async fail(
-    token: number,
-    cause: unknown,
-    fallbackStep: LoadStepId,
-  ): Promise<void> {
+  private async fail(token: number, cause: unknown, fallbackStep: LoadStepId): Promise<void> {
     if (!this.isCurrent(token)) {
       return;
     }
@@ -388,17 +362,14 @@ export class WorkspaceService {
   }
 
   private publishFailure(message: string): void {
-    if (this.origin === "switch") {
+    if (this.origin === 'switch') {
       this.switchNotice.set(message);
       return;
     }
     this.notice.set(message);
   }
 
-  private markFailed(
-    state: LoadState | null,
-    step: LoadStepId,
-  ): LoadState | null {
+  private markFailed(state: LoadState | null, step: LoadStepId): LoadState | null {
     return state ? markLoadFailed(state, step) : state;
   }
 
@@ -407,7 +378,7 @@ export class WorkspaceService {
   }
 
   private async goHome(): Promise<void> {
-    await this.router.navigateByUrl("/home");
+    await this.router.navigateByUrl('/home');
     this.state.set(null);
   }
 

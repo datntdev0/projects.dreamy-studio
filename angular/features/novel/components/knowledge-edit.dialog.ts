@@ -1,23 +1,29 @@
-import { NgTemplateOutlet } from "@angular/common";
-import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { LanguageKey, LanguageParams } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { ItemDraftPatch, applyEdits, blankEntity, blankFact, cloneItem, createdItems, describeEdit, isPresent, isIncomplete, itemState, previewOf, scopeOf, typeRefused, withCreated, withDelete, withPatch, withoutDelete } from "../novel.knowledge.draft";
-import { DraftPreview, EntityType, EntityTypeDef, EvidenceRef, ItemState, KnowledgeEdit, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeListKind, PredicateDef } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { chaptersOfItem, entitiesOf, factText, isEntity, isFact, mapOf } from "../novel.knowledge.rules";
-import { NovelService } from "../novel.service";
-import { toNovelError } from "../novel.rules";
-import { NovelTranslationService } from "../novel.translation.service";
-import { rangeText } from "../novel.translation.rules";
-import { NovelKnowledgeType } from "./knowledge-type.component";
+import { NgTemplateOutlet } from '@angular/common';
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey, LanguageParams } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldChecked, fieldValue, setFieldValue } from '@shared/utils/dom';
 
-export type ListField = "titles" | "aliases";
+import { NovelDialogsService } from '../novel.dialogs.service';
+// prettier-ignore
+import { applyEdits, blankEntity, blankFact, cloneItem, createdItems, describeEdit, isIncomplete, isPresent, ItemDraftPatch, itemState, previewOf, scopeOf, typeRefused, withCreated, withDelete, withoutDelete, withPatch } from '../novel.knowledge.draft';
+// prettier-ignore
+import { DraftPreview, EntityType, EntityTypeDef, EvidenceRef, ItemState, KnowledgeEdit, KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem, KnowledgeLang, KnowledgeListKind, PredicateDef } from '../novel.knowledge.models';
+// prettier-ignore
+import { chaptersOfItem, entitiesOf, factText, isEntity, isFact, mapOf } from '../novel.knowledge.rules';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+import { toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { rangeText } from '../novel.translation.rules';
+import { NovelTranslationService } from '../novel.translation.service';
+import { NovelKnowledgeType } from './knowledge-type.component';
+
+export type ListField = 'titles' | 'aliases';
 
 export interface EditList {
   field: ListField;
@@ -61,27 +67,44 @@ export interface EvidenceDraft {
 }
 
 const STATE_KEYS: Record<ItemState, LanguageKey> = {
-  same: "novel.knowledge.edit.state.same",
-  edited: "novel.knowledge.edit.state.edited",
-  new: "novel.knowledge.edit.state.new",
-  deleted: "novel.knowledge.edit.state.deleted",
-  merged: "novel.knowledge.edit.state.merged",
-  removed: "novel.knowledge.edit.state.removed",
+  same: 'novel.knowledge.edit.state.same',
+  edited: 'novel.knowledge.edit.state.edited',
+  new: 'novel.knowledge.edit.state.new',
+  deleted: 'novel.knowledge.edit.state.deleted',
+  merged: 'novel.knowledge.edit.state.merged',
+  removed: 'novel.knowledge.edit.state.removed',
 };
-const STATE_BADGES: Record<ItemState, string> = { same: "", edited: "badge-warning", new: "badge-info", deleted: "", merged: "", removed: "" };
-const PREVIEW_ICONS: Record<DraftPreview["state"], string> = { idle: "info", invalid: "alert", resolved: "check", open: "alert", clean: "check", warn: "alert" };
-const LIST_LABELS: Record<ListField, LanguageKey> = { titles: "novel.knowledge.edit.field.titles", aliases: "novel.knowledge.edit.field.aliases" };
-const LIST_FIELDS: ListField[] = ["titles", "aliases"];
-const EMPTY_EVIDENCE: EvidenceDraft = { chapter: "", p: "", q: "" };
-const PERSONA_TYPE: EntityType = "persona";
+const STATE_BADGES: Record<ItemState, string> = {
+  same: '',
+  edited: 'badge-warning',
+  new: 'badge-info',
+  deleted: '',
+  merged: '',
+  removed: '',
+};
+const PREVIEW_ICONS: Record<DraftPreview['state'], string> = {
+  idle: 'info',
+  invalid: 'alert',
+  resolved: 'check',
+  open: 'alert',
+  clean: 'check',
+  warn: 'alert',
+};
+const LIST_LABELS: Record<ListField, LanguageKey> = {
+  titles: 'novel.knowledge.edit.field.titles',
+  aliases: 'novel.knowledge.edit.field.aliases',
+};
+const LIST_FIELDS: ListField[] = ['titles', 'aliases'];
+const EMPTY_EVIDENCE: EvidenceDraft = { chapter: '', p: '', q: '' };
+const PERSONA_TYPE: EntityType = 'persona';
 const OPEN_LIMIT = 2;
 
 @Component({
-  selector: "app-novel-knowledge-edit-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-knowledge-edit-dialog',
   imports: [NgTemplateOutlet, Button, Icon, CoreModule, NovelKnowledgeType],
-  templateUrl: "./knowledge-edit.dialog.html",
-  host: { class: "ed-dialog", "data-testid": "novel-knowledge-edit-dialog" },
+  templateUrl: './knowledge-edit.dialog.html',
+  host: { class: 'ed-dialog', 'data-testid': 'novel-knowledge-edit-dialog' },
 })
 export class NovelKnowledgeEditDialog {
   private readonly dialogs = inject(NovelDialogsService);
@@ -169,11 +192,11 @@ export class NovelKnowledgeEditDialog {
   }
 
   addEntity(): void {
-    this.addItem("entity");
+    this.addItem('entity');
   }
 
   addFact(): void {
-    this.addItem("fact");
+    this.addItem('fact');
   }
 
   remove(key: string): void {
@@ -190,17 +213,17 @@ export class NovelKnowledgeEditDialog {
   }
 
   onName(key: string, event: Event): void {
-    this.patch(key, { name: (event.target as HTMLInputElement).value });
+    this.patch(key, { name: fieldValue(event) });
   }
 
   onNameEnd(key: string, event: Event): void {
-    const name = (event.target as HTMLInputElement).value.trim();
-    (event.target as HTMLInputElement).value = name;
+    const name = fieldValue(event).trim();
+    setFieldValue(event, name);
     this.patch(key, { name });
   }
 
   onType(key: string, event: Event): void {
-    const type = (event.target as HTMLSelectElement).value as EntityType;
+    const type = fieldValue(event) as EntityType;
     const entity = this.entityOf(key);
     if (!entity || entity.type === type) {
       return;
@@ -208,21 +231,21 @@ export class NovelKnowledgeEditDialog {
     this.patch(key, { type });
   }
 
-  onEnd(key: string, field: "subject" | "object", event: Event): void {
-    this.patch(key, { [field]: (event.target as HTMLSelectElement).value });
+  onEnd(key: string, field: 'subject' | 'object', event: Event): void {
+    this.patch(key, { [field]: fieldValue(event) });
   }
 
   onPred(key: string, event: Event): void {
-    const pred = (event.target as HTMLSelectElement).value;
+    const pred = fieldValue(event);
     const fact = this.factOf(key);
     const kind = this.knowledge.ontology().predicateDef(pred)?.kind;
     if (!fact || !kind) {
       return;
     }
     const wasScalar = fact.object === null;
-    if (kind === "scalar" && !wasScalar) {
+    if (kind === 'scalar' && !wasScalar) {
       this.patch(key, { pred, object: null });
-    } else if (kind === "relationship" && wasScalar) {
+    } else if (kind === 'relationship' && wasScalar) {
       this.patch(key, { pred, object: this.firstEntity(fact.subject) });
     } else {
       this.patch(key, { pred });
@@ -230,7 +253,7 @@ export class NovelKnowledgeEditDialog {
   }
 
   onSelect(key: string, event: Event): void {
-    const on = (event.target as HTMLInputElement).checked;
+    const on = fieldChecked(event);
     const rest = this.selected().filter((id) => id !== key);
     this.selected.set(on ? [...rest, key] : rest);
     this.mergeTarget.set(null);
@@ -263,7 +286,7 @@ export class NovelKnowledgeEditDialog {
   }
 
   onMergeTarget(event: Event): void {
-    this.mergeTarget.set((event.target as HTMLSelectElement).value);
+    this.mergeTarget.set(fieldValue(event));
   }
 
   applyMerge(): void {
@@ -271,13 +294,19 @@ export class NovelKnowledgeEditDialog {
     if (target === null || !this.mergeable()) {
       return;
     }
-    this.edits.set([...this.edits(), { k: "merge", sources: this.picked().map((card) => card.key), target }]);
+    this.edits.set([
+      ...this.edits(),
+      { k: 'merge', sources: this.picked().map((card) => card.key), target },
+    ]);
     this.expanded.set([...this.expanded(), target]);
     this.clearSelection();
   }
 
   onListDraft(key: string, field: ListField, event: Event): void {
-    this.listDrafts.set({ ...this.listDrafts(), [`${key}|${field}`]: (event.target as HTMLInputElement).value });
+    this.listDrafts.set({
+      ...this.listDrafts(),
+      [`${key}|${field}`]: fieldValue(event),
+    });
   }
 
   onListEnter(key: string, field: ListField, event: Event): void {
@@ -288,7 +317,7 @@ export class NovelKnowledgeEditDialog {
   addValue(key: string, field: ListField): void {
     const entity = this.entityOf(key);
     const slot = `${key}|${field}`;
-    const value = (this.listDrafts()[slot] ?? "").trim();
+    const value = (this.listDrafts()[slot] ?? '').trim();
     if (!entity || value.length === 0) {
       return;
     }
@@ -296,7 +325,7 @@ export class NovelKnowledgeEditDialog {
     if (!values.some((item) => item.trim().toLowerCase() === value.toLowerCase())) {
       this.patch(key, { [field]: [...values, value] });
     }
-    this.listDrafts.set({ ...this.listDrafts(), [slot]: "" });
+    this.listDrafts.set({ ...this.listDrafts(), [slot]: '' });
   }
 
   removeValue(key: string, field: ListField, index: number): void {
@@ -308,7 +337,13 @@ export class NovelKnowledgeEditDialog {
 
   onDraft(key: string, field: keyof EvidenceDraft, event: Event): void {
     const draft = this.drafts()[key] ?? EMPTY_EVIDENCE;
-    this.drafts.set({ ...this.drafts(), [key]: { ...draft, [field]: (event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value } });
+    this.drafts.set({
+      ...this.drafts(),
+      [key]: {
+        ...draft,
+        [field]: fieldValue(event),
+      },
+    });
   }
 
   addEvidence(key: string): void {
@@ -316,8 +351,19 @@ export class NovelKnowledgeEditDialog {
     const chapter = Number(draft.chapter);
     const p = Number(draft.p);
     const q = draft.q.trim();
-    if (!this.itemOf(key) || draft.chapter === "" || !Number.isInteger(chapter) || !Number.isInteger(p) || chapter < 1 || p < 1 || q.length === 0) {
-      this.toasts.show(this.languageService.translate("novel.knowledge.edit.evidence.invalid"), "warning");
+    if (
+      !this.itemOf(key) ||
+      draft.chapter === '' ||
+      !Number.isInteger(chapter) ||
+      !Number.isInteger(p) ||
+      chapter < 1 ||
+      p < 1 ||
+      q.length === 0
+    ) {
+      this.toasts.show(
+        this.languageService.translate('novel.knowledge.edit.evidence.invalid'),
+        'warning',
+      );
       return;
     }
     this.patch(key, { evidenceAdd: [{ chapter, p, q }] });
@@ -339,9 +385,20 @@ export class NovelKnowledgeEditDialog {
       await this.knowledge.apply(request.novelId, this.sendable());
       this.close();
       const left = this.knowledge.issuesOf(request.novelId).length;
-      this.toasts.show(this.languageService.translate(left > 0 ? "novel.knowledge.edit.applied.left" : "novel.knowledge.edit.applied", { count, left }), left > 0 ? "warning" : "success");
+      this.toasts.show(
+        this.languageService.translate(
+          left > 0 ? 'novel.knowledge.edit.applied.left' : 'novel.knowledge.edit.applied',
+          { count, left },
+        ),
+        left > 0 ? 'warning' : 'success',
+      );
     } catch (cause) {
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail: toNovelError(cause).detail }), "danger");
+      this.toasts.show(
+        this.languageService.translate('novel.error.generic', {
+          detail: toNovelError(cause).detail,
+        }),
+        'danger',
+      );
     } finally {
       this.busy.set(false);
     }
@@ -366,7 +423,7 @@ export class NovelKnowledgeEditDialog {
   }
 
   private firstEntity(except: string): string {
-    return entitiesOf(this.current()).find((entity) => entity.id !== except)?.id ?? "";
+    return entitiesOf(this.current()).find((entity) => entity.id !== except)?.id ?? '';
   }
 
   private patch(key: string, patch: ItemDraftPatch): void {
@@ -375,8 +432,8 @@ export class NovelKnowledgeEditDialog {
 
   private trimmed(edit: KnowledgeEdit): KnowledgeEdit {
     switch (edit.k) {
-      case "rename":
-      case "add_entity":
+      case 'rename':
+      case 'add_entity':
         return { ...edit, name: edit.name.trim() };
       default:
         return edit;
@@ -388,19 +445,21 @@ export class NovelKnowledgeEditDialog {
     return item && isEntity(item) ? item.type : undefined;
   }
 
-  private leavesPersona(edit: KnowledgeEdit): edit is Extract<KnowledgeEdit, { k: "retype" }> {
-    return edit.k === "retype" && edit.type !== PERSONA_TYPE && this.baseTypeOf(edit.id) === PERSONA_TYPE;
+  private leavesPersona(edit: KnowledgeEdit): edit is Extract<KnowledgeEdit, { k: 'retype' }> {
+    return (
+      edit.k === 'retype' && edit.type !== PERSONA_TYPE && this.baseTypeOf(edit.id) === PERSONA_TYPE
+    );
   }
 
   private propsOf(edits: KnowledgeEdit[], id: string): KnowledgeEdit[] {
-    return edits.filter((edit) => edit.k === "props" && edit.id === id);
+    return edits.filter((edit) => edit.k === 'props' && edit.id === id);
   }
 
   private propsBeforeRetype(edits: KnowledgeEdit[]): KnowledgeEdit[] {
     const leaving = new Set(edits.filter(this.leavesPersona.bind(this)).map((edit) => edit.id));
     const out: KnowledgeEdit[] = [];
     for (const edit of edits) {
-      if (edit.k === "props" && leaving.has(edit.id)) {
+      if (edit.k === 'props' && leaving.has(edit.id)) {
         continue;
       }
       if (this.leavesPersona(edit)) {
@@ -419,10 +478,13 @@ export class NovelKnowledgeEditDialog {
     const base = this.base();
     const edits = this.edits();
     const entities = entitiesOf(this.current());
-    if (entities.length === 0 && kind === "fact") {
+    if (entities.length === 0 && kind === 'fact') {
       return;
     }
-    const item = kind === "entity" ? blankEntity(base, edits, PERSONA_TYPE) : blankFact(this.knowledge.ontology(), base, edits, this.anchorOf(entities), null);
+    const item =
+      kind === 'entity'
+        ? blankEntity(base, edits, PERSONA_TYPE)
+        : blankFact(this.knowledge.ontology(), base, edits, this.anchorOf(entities), null);
     this.edits.set(withCreated(edits, item));
     this.expanded.set([...this.expanded(), item.id]);
   }
@@ -434,7 +496,9 @@ export class NovelKnowledgeEditDialog {
       return entity.id;
     }
     const fact = this.current().find((item) => ids.includes(item.id) && isFact(item));
-    return fact && isFact(fact) && entities.some((item) => item.id === fact.subject) ? fact.subject : (entities[0]?.id ?? "");
+    return fact && isFact(fact) && entities.some((item) => item.id === fact.subject)
+      ? fact.subject
+      : (entities[0]?.id ?? '');
   }
 
   private buildOpen(): boolean {
@@ -446,7 +510,15 @@ export class NovelKnowledgeEditDialog {
   }
 
   private buildPreview(): DraftPreview {
-    return previewOf(this.knowledge.ontology(), this.current(), this.scope(), this.edits(), this.issue(), this.baseOpen(), this.text.bind(this));
+    return previewOf(
+      this.knowledge.ontology(),
+      this.current(),
+      this.scope(),
+      this.edits(),
+      this.issue(),
+      this.baseOpen(),
+      this.text.bind(this),
+    );
   }
 
   private pickedType(): EntityType | null {
@@ -463,7 +535,12 @@ export class NovelKnowledgeEditDialog {
     if (entity.type !== PERSONA_TYPE) {
       return [];
     }
-    return LIST_FIELDS.map((field) => ({ field, labelKey: LIST_LABELS[field], values: entity[field], draft: this.listDrafts()[`${key}|${field}`] ?? "" }));
+    return LIST_FIELDS.map((field) => ({
+      field,
+      labelKey: LIST_LABELS[field],
+      values: entity[field],
+      draft: this.listDrafts()[`${key}|${field}`] ?? '',
+    }));
   }
 
   private predsOf(fact: KnowledgeFact, scalar: boolean): PredicateDef[] {
@@ -483,8 +560,11 @@ export class NovelKnowledgeEditDialog {
     const chapters = chaptersOfItem(item);
     const entity = isEntity(item) ? item : null;
     const fact = isFact(item) ? item : null;
-    const created = state === "new";
-    const scalar = fact !== null && (this.knowledge.ontology().predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship")) === "scalar";
+    const created = state === 'new';
+    const scalar =
+      fact !== null &&
+      (this.knowledge.ontology().predicateDef(fact.pred)?.kind ??
+        (fact.object === null ? 'scalar' : 'relationship')) === 'scalar';
     return {
       key: item.id,
       item,
@@ -495,21 +575,32 @@ export class NovelKnowledgeEditDialog {
       involved: this.issue()?.ids.includes(item.id) ?? false,
       open: this.expanded().includes(item.id),
       selected: this.selected().includes(item.id),
-      locked: entity !== null && lock !== null && entity.type !== lock && !this.selected().includes(item.id),
-      title: fact ? factText(this.knowledge.ontology(), mapOf([...base, ...current]), fact, this.text.bind(this)) : (entity?.name ?? ""),
-      chapters: chapters.length > 0 ? rangeText(chapters) : "",
+      locked:
+        entity !== null &&
+        lock !== null &&
+        entity.type !== lock &&
+        !this.selected().includes(item.id),
+      title: fact
+        ? factText(
+            this.knowledge.ontology(),
+            mapOf([...base, ...current]),
+            fact,
+            this.text.bind(this),
+          )
+        : (entity?.name ?? ''),
+      chapters: chapters.length > 0 ? rangeText(chapters) : '',
       scalar,
       created,
       needsEvidence: created && item.ev.length === 0,
       lists: entity ? this.listsOf(entity, item.id) : [],
       preds: fact ? this.predsOf(fact, scalar) : [],
-      subjects: fact ? this.endOptions(fact.object ?? "") : [],
+      subjects: fact ? this.endOptions(fact.object ?? '') : [],
       objects: fact ? this.endOptions(fact.subject) : [],
       evidence: this.drafts()[item.id] ?? EMPTY_EVIDENCE,
     };
   }
 
-  private cards(kind: "entity" | "fact", lock: EntityType | null): EditCard[] {
+  private cards(kind: 'entity' | 'fact', lock: EntityType | null): EditCard[] {
     const current = this.current();
     const base = this.base();
     const originals = base.filter((item) => this.scope().has(item.id));
@@ -523,18 +614,21 @@ export class NovelKnowledgeEditDialog {
   }
 
   private buildEntityCards(): EditCard[] {
-    return this.cards("entity", this.pickedType());
+    return this.cards('entity', this.pickedType());
   }
 
   private buildFactCards(): EditCard[] {
-    return this.cards("fact", null);
+    return this.cards('fact', null);
   }
 
   private buildOptions(): EditOption[] {
     const out: EditOption[] = [];
     for (const entity of entitiesOf(this.current())) {
       const def = this.knowledge.ontology().typeDef(entity.type);
-      out.push({ value: entity.id, label: `${entity.name || "—"} · ${def ? this.text(def.labelKey) : entity.type}` });
+      out.push({
+        value: entity.id,
+        label: `${entity.name || '—'} · ${def ? this.text(def.labelKey) : entity.type}`,
+      });
     }
     return out.sort((a, b) => a.label.localeCompare(b.label));
   }
@@ -545,20 +639,27 @@ export class NovelKnowledgeEditDialog {
 
   private buildMergeable(): boolean {
     const picked = this.picked();
-    return picked.length >= 2 && picked.every((card) => card.entity?.type === picked[0].entity?.type);
+    return (
+      picked.length >= 2 && picked.every((card) => card.entity?.type === picked[0].entity?.type)
+    );
   }
 
   private buildChanges(): string[] {
     const current = this.current();
-    return this.edits().map((edit) => describeEdit(this.knowledge.ontology(), edit, current, this.base(), this.text.bind(this)));
+    return this.edits().map((edit) =>
+      describeEdit(this.knowledge.ontology(), edit, current, this.base(), this.text.bind(this)),
+    );
   }
 
   private buildReady(): boolean {
-    if (this.edits().length === 0 || isIncomplete(this.knowledge.ontology(), this.current(), this.scope(), this.edits())) {
+    if (
+      this.edits().length === 0 ||
+      isIncomplete(this.knowledge.ontology(), this.current(), this.scope(), this.edits())
+    ) {
       return false;
     }
     const state = this.preview().state;
-    return this.issue() ? state === "resolved" : state === "clean" || state === "warn";
+    return this.issue() ? state === 'resolved' : state === 'clean' || state === 'warn';
   }
 
   private buildRule(): LanguageKey | null {
@@ -584,7 +685,8 @@ export class NovelKnowledgeEditDialog {
 
   private chapterLabel(novelId: number, seq: number, lang: KnowledgeLang): string {
     const row = this.novels.chaptersOf(novelId).find((entry) => entry.seq === seq);
-    const translated = row && lang !== "src" ? this.translation.titleOf(novelId, row.id, lang) : null;
+    const translated =
+      row && lang !== 'src' ? this.translation.titleOf(novelId, row.id, lang) : null;
     return row ? `${seq} · ${translated || row.title}` : `${seq}`;
   }
 
@@ -593,7 +695,10 @@ export class NovelKnowledgeEditDialog {
     return Object.keys(knowledge.analyzed)
       .map(Number)
       .sort((a, b) => a - b)
-      .map((seq) => ({ value: String(seq), label: this.chapterLabel(novelId, seq, knowledge.lang) }));
+      .map((seq) => ({
+        value: String(seq),
+        label: this.chapterLabel(novelId, seq, knowledge.lang),
+      }));
   }
 
   private resetOnOpen(): void {

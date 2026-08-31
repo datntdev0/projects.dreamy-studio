@@ -1,53 +1,139 @@
 @let session = assistant.active();
 <section class="asst" [attr.aria-label]="'assistant.chat.label' | t" data-testid="assistant-chat">
-  <header class="asst-bar" data-testid="assistant-chat-bar">
-    <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.history.open' | t" [attr.title]="'assistant.history.open' | t" data-testid="assistant-chat-history" (pressed)="assistant.showSessions()"><ds-icon name="arrow-left" [size]="16" /></ds-button>
-    <span class="asst-bar-title asst-chat-title" [attr.title]="title(session)" data-testid="assistant-chat-title">{{ title(session) }}</span>
-    <span class="spacer"></span>
-    <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.new' | t" [attr.title]="'assistant.new' | t" data-testid="assistant-chat-new" (pressed)="assistant.startNew()"><ds-icon name="plus" [size]="16" /></ds-button>
+  <app-assistant-pane-header newTestId="assistant-chat-new">
+    <ds-button
+      variant="ghost"
+      size="small"
+      [iconOnly]="true"
+      [label]="'assistant.history.open' | t"
+      [attr.title]="'assistant.history.open' | t"
+      data-testid="assistant-chat-history"
+      (pressed)="assistant.showSessions()"
+    >
+      <ds-icon name="arrow-left" [size]="16" />
+    </ds-button>
+    <span
+      class="asst-bar-title asst-chat-title"
+      [attr.title]="title(session)"
+      data-testid="assistant-chat-title"
+    >
+      {{ title(session) }}
+    </span>
     @if (session) {
-      <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.delete.short' | t" [attr.title]="'assistant.delete.short' | t" data-testid="assistant-chat-delete" (pressed)="remove(session)"><ds-icon name="trash" [size]="15" /></ds-button>
+      <ds-button
+        paneEnd
+        variant="ghost"
+        size="small"
+        [iconOnly]="true"
+        [label]="'assistant.delete.short' | t"
+        [attr.title]="'assistant.delete.short' | t"
+        data-testid="assistant-chat-delete"
+        (pressed)="remove(session)"
+      >
+        <ds-icon name="trash" [size]="15" />
+      </ds-button>
     }
-  </header>
+  </app-assistant-pane-header>
   @if (session?.editGranted) {
-    <div class="asst-edit-notice t-sm" role="status" data-testid="assistant-chat-edit-notice"><ds-icon name="alert" [size]="13" data-testid="assistant-chat-edit-notice-icon" /><span data-testid="assistant-chat-edit-notice-text">{{ "assistant.edit.notice" | t }}</span></div>
+    <div class="asst-edit-notice t-sm" role="status" data-testid="assistant-chat-edit-notice">
+      <ds-icon name="alert" [size]="13" data-testid="assistant-chat-edit-notice-icon" />
+      <span data-testid="assistant-chat-edit-notice-text">{{ 'assistant.edit.notice' | t }}</span>
+    </div>
   }
   <div class="asst-chat-scope t-sm" data-testid="assistant-chat-scope">
     @let scope = session?.scope ?? assistant.draftScope();
-    <span class="asst-scope-chip" [attr.data-scope]="scope.kind" data-testid="assistant-chat-scope-chip"><ds-icon [name]="assistant.scopeIcon(scope)" [size]="12" />{{ assistant.scopeLabel(scope) }}</span>
+    <span
+      class="asst-scope-chip"
+      [attr.data-scope]="scope.kind"
+      data-testid="assistant-chat-scope-chip"
+    >
+      <ds-icon [name]="assistant.scopeIcon(scope)" [size]="12" />
+      {{ assistant.scopeLabel(scope) }}
+    </span>
     @if (session) {
-      <span class="t-mute" data-testid="assistant-chat-count">{{ "assistant.history.messages" | t: { count: session.messageCount } }}</span>
+      <span class="t-mute" data-testid="assistant-chat-count">
+        {{ 'assistant.history.messages' | t: { count: session.messageCount } }}
+      </span>
     }
   </div>
-  <div #scroller class="asst-body asst-thread" role="log" [attr.aria-label]="'assistant.chat.log' | t" aria-live="polite" data-testid="assistant-chat-thread">
+  <div
+    #scroller
+    class="asst-body asst-thread"
+    role="log"
+    [attr.aria-label]="'assistant.chat.log' | t"
+    aria-live="polite"
+    data-testid="assistant-chat-thread"
+  >
     @if (assistant.opening()) {
-      <div class="ins-empty" data-testid="assistant-chat-loading"><p>{{ "assistant.chat.loading" | t }}</p></div>
+      <div class="ins-empty" data-testid="assistant-chat-loading">
+        <p>{{ 'assistant.chat.loading' | t }}</p>
+      </div>
     } @else {
       @for (message of session?.messages ?? []; track message.id) {
-        @if (message.role === "user") {
-          <div class="asst-msg asst-msg-user" [attr.data-message-id]="message.id" data-testid="assistant-message-user">
+        @if (message.role === 'user') {
+          <div
+            class="asst-msg asst-msg-user"
+            [attr.data-message-id]="message.id"
+            data-testid="assistant-message-user"
+          >
             <div class="asst-bubble" data-testid="assistant-message-bubble">{{ message.text }}</div>
-            <span class="asst-msg-time mono" data-testid="assistant-message-time">{{ timeOf(message) }}</span>
+            <span class="asst-msg-time mono" data-testid="assistant-message-time">
+              {{ timeOf(message) }}
+            </span>
           </div>
         } @else {
-          <article class="asst-msg asst-msg-bot" [attr.data-message-id]="message.id" data-testid="assistant-message-assistant">
-            <header class="asst-msg-head" data-testid="assistant-message-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-ink">{{ "main.assistant.title" | t }}</span><span class="asst-msg-time mono">{{ timeOf(message) }}</span></header>
+          <article
+            class="asst-msg asst-msg-bot"
+            [attr.data-message-id]="message.id"
+            data-testid="assistant-message-assistant"
+          >
+            <header class="asst-msg-head" data-testid="assistant-message-head">
+              <span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span>
+              <span class="t-ink">{{ 'main.assistant.title' | t }}</span>
+              <span class="asst-msg-time mono">{{ timeOf(message) }}</span>
+            </header>
             @if (message.activities.length > 0) {
               <details class="asst-acts" data-testid="assistant-message-activities">
-                <summary class="t-sm t-mute" data-testid="assistant-message-activities-summary"><ds-icon name="check-circle" [size]="13" />{{ "assistant.chat.activities" | t: { count: message.activities.length } }}<ds-icon class="asst-caret" name="chev-r" [size]="12" data-testid="assistant-message-activities-caret" /></summary>
+                <summary class="t-sm t-mute" data-testid="assistant-message-activities-summary">
+                  <ds-icon name="check-circle" [size]="13" />
+                  {{ 'assistant.chat.activities' | t: { count: message.activities.length } }}
+                  <ds-icon
+                    class="asst-caret"
+                    name="chev-r"
+                    [size]="12"
+                    data-testid="assistant-message-activities-caret"
+                  />
+                </summary>
                 <ul data-testid="assistant-message-activities-list">
                   @for (activity of message.activities; track $index) {
-                    <li class="t-sm t-mute" data-testid="assistant-message-activity">{{ activity }}</li>
+                    <li class="t-sm t-mute" data-testid="assistant-message-activity">
+                      {{ activity }}
+                    </li>
                   }
                 </ul>
               </details>
             }
-            <div class="asst-text asst-md" data-testid="assistant-message-text" [innerHTML]="html(message)" (click)="onTextClick($event)"></div>
+            <div
+              class="asst-text asst-md"
+              data-testid="assistant-message-text"
+              [innerHTML]="html(message)"
+              (click)="onTextClick($event)"
+            ></div>
             @for (attachment of attachmentsOf(message); track $index) {
               @if (asReview(attachment); as review) {
-                <app-assistant-review-card [review]="review" [messageId]="message.id" [busy]="isResolving(message)" (resolved)="onResolved($event)" />
+                <app-assistant-review-card
+                  [review]="review"
+                  [messageId]="message.id"
+                  [busy]="isResolving(message)"
+                  (resolved)="onResolved($event)"
+                />
               } @else if (asChanges(attachment); as changes) {
-                <app-assistant-changes-card [changeSet]="changes" [messageId]="message.id" [busy]="isResolving(message)" (resolved)="onResolved($event)" />
+                <app-assistant-changes-card
+                  [changeSet]="changes"
+                  [messageId]="message.id"
+                  [busy]="isResolving(message)"
+                  (resolved)="onResolved($event)"
+                />
               }
             }
           </article>
@@ -55,13 +141,38 @@
       }
       @if (assistant.pendingText(); as pending) {
         <div class="asst-msg asst-msg-user is-pending" data-testid="assistant-message-pending">
-          <div class="asst-bubble" data-testid="assistant-message-pending-bubble">{{ pending }}</div>
+          <div class="asst-bubble" data-testid="assistant-message-pending-bubble">
+            {{ pending }}
+          </div>
         </div>
         <div class="asst-msg asst-msg-bot is-typing" data-testid="assistant-typing">
-          <header class="asst-msg-head"><span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span><span class="t-sm asst-thinking" data-testid="assistant-typing-label">{{ "assistant.chat.thinking" | t }}</span><span class="asst-dots" aria-hidden="true" data-testid="assistant-typing-dots"><i></i><i></i><i></i></span></header>
+          <header class="asst-msg-head">
+            <span class="asst-avatar"><ds-icon name="spark" [size]="13" /></span>
+            <span class="t-sm asst-thinking" data-testid="assistant-typing-label">
+              {{ 'assistant.chat.thinking' | t }}
+            </span>
+            <span class="asst-dots" aria-hidden="true" data-testid="assistant-typing-dots">
+              <i></i>
+              <i></i>
+              <i></i>
+            </span>
+          </header>
           @if (assistant.sending()) {
             <details class="asst-live" data-testid="assistant-live">
-              <summary class="t-sm t-mute" data-testid="assistant-live-label">{{ "assistant.chat.working" | t }}@if (assistant.liveActivities().length > 0) {<span class="mono" data-testid="assistant-live-count">· {{ assistant.liveActivities().length }}</span>}<ds-icon class="asst-caret" name="chev-r" [size]="12" data-testid="assistant-live-caret" /></summary>
+              <summary class="t-sm t-mute" data-testid="assistant-live-label">
+                {{ 'assistant.chat.working' | t }}
+                @if (assistant.liveActivities().length > 0) {
+                  <span class="mono" data-testid="assistant-live-count">
+                    · {{ assistant.liveActivities().length }}
+                  </span>
+                }
+                <ds-icon
+                  class="asst-caret"
+                  name="chev-r"
+                  [size]="12"
+                  data-testid="assistant-live-caret"
+                />
+              </summary>
               <ul class="asst-live-list" data-testid="assistant-live-list">
                 @for (activity of assistant.liveActivities(); track $index) {
                   <li class="t-sm t-mute" data-testid="assistant-live-activity">{{ activity }}</li>
@@ -72,7 +183,19 @@
         </div>
       }
       @if (assistant.sendError(); as failure) {
-        <div class="asst-error" role="alert" data-testid="assistant-chat-error"><ds-icon name="alert" [size]="15" /><span>{{ "assistant.error.send" | t: { detail: failure } }}</span><button type="button" class="btn btn-xs btn-ghost" [attr.aria-label]="'assistant.error.dismiss' | t" data-testid="assistant-chat-error-dismiss" (click)="assistant.dismissError()"><ds-icon name="x" [size]="13" /></button></div>
+        <div class="asst-error" role="alert" data-testid="assistant-chat-error">
+          <ds-icon name="alert" [size]="15" />
+          <span>{{ 'assistant.error.send' | t: { detail: failure } }}</span>
+          <button
+            type="button"
+            class="btn btn-xs btn-ghost"
+            [attr.aria-label]="'assistant.error.dismiss' | t"
+            data-testid="assistant-chat-error-dismiss"
+            (click)="assistant.dismissError()"
+          >
+            <ds-icon name="x" [size]="13" />
+          </button>
+        </div>
       }
     }
   </div>

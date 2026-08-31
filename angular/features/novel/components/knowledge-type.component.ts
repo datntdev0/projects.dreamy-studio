@@ -1,14 +1,15 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { EntityTypeDef } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+
+import { EntityTypeDef } from '../novel.knowledge.models';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
 
 @Component({
-  selector: "app-novel-knowledge-type",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-knowledge-type',
   imports: [Icon, CoreModule],
-  templateUrl: "./knowledge-type.component.html",
+  templateUrl: './knowledge-type.component.html',
 })
 export class NovelKnowledgeType {
   private readonly knowledge = inject(NovelKnowledgeService);

@@ -2,35 +2,112 @@
   <div class="nv" data-testid="novel-knowledge">
     <div class="nv-bar" data-testid="novel-knowledge-bar">
       <div class="nv-bar-l" data-testid="novel-knowledge-bar-left">
-        <div class="seg" role="group" aria-label="Knowledge views" data-testid="novel-knowledge-tabs">
+        <div
+          class="seg"
+          role="group"
+          aria-label="Knowledge views"
+          data-testid="novel-knowledge-tabs"
+        >
           @for (tab of tabs; track tab) {
-            <button type="button" [class.is-active]="view().tab === tab" [attr.aria-pressed]="view().tab === tab" data-testid="novel-knowledge-tab" [attr.data-tab]="tab" (click)="go(tab)"><ds-icon [name]="tabIcon(tab)" [size]="14" />{{ tabKey(tab) | t }}@if (tab === "review" && open() > 0) { <span class="pill-n" [class.is-warn]="errors() > 0" data-testid="novel-knowledge-review-count">{{ open() }}</span> }</button>
+            <button
+              type="button"
+              [class.is-active]="view().tab === tab"
+              [attr.aria-pressed]="view().tab === tab"
+              data-testid="novel-knowledge-tab"
+              [attr.data-tab]="tab"
+              (click)="go(tab)"
+            >
+              <ds-icon [name]="tabIcon(tab)" [size]="14" />
+              {{ tabKey(tab) | t }}
+              @if (tab === 'review' && open() > 0) {
+                <span
+                  class="pill-n"
+                  [class.is-warn]="errors() > 0"
+                  data-testid="novel-knowledge-review-count"
+                >
+                  {{ open() }}
+                </span>
+              }
+            </button>
           }
         </div>
-        <select class="select" [attr.aria-label]="'novel.knowledge.lang' | t" data-testid="novel-knowledge-lang" (change)="onLang($event)">
+        <select
+          class="select"
+          [attr.aria-label]="'novel.knowledge.lang' | t"
+          data-testid="novel-knowledge-lang"
+          (change)="onLang($event)"
+        >
           @for (item of langs(); track item.value) {
-            <option [value]="item.value" [selected]="view().lang === item.value">{{ item.label }}</option>
+            <option [value]="item.value" [selected]="view().lang === item.value">
+              {{ item.label }}
+            </option>
           }
         </select>
       </div>
       <span class="spacer"></span>
       <div class="nv-bar-r" data-testid="novel-knowledge-bar-right">
-        <app-novel-progress-frac icon="graph" [done]="analyzed()" [total]="total()" [label]="'novel.knowledge.analyzed' | t: { done: analyzed(), total: total() }" />
-        <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-analyze" [disabled]="running() || total() === 0" (click)="analyze()"><ds-icon name="graph" [size]="16" />{{ "novel.knowledge.analyze" | t }}</button>
+        <app-novel-progress-frac
+          icon="graph"
+          [done]="analyzed()"
+          [total]="total()"
+          [label]="'novel.knowledge.analyzed' | t: { done: analyzed(), total: total() }"
+        />
+        <button
+          type="button"
+          class="btn btn-sm btn-primary"
+          data-testid="novel-knowledge-analyze"
+          [disabled]="running() || total() === 0"
+          (click)="analyze()"
+        >
+          <ds-icon name="graph" [size]="16" />
+          {{ 'novel.knowledge.analyze' | t }}
+        </button>
       </div>
     </div>
     <div class="nv-body is-col" data-testid="novel-knowledge-body">
       @if (total() === 0) {
-        <div class="empty" data-testid="novel-knowledge-empty-chapters"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.knowledge.empty.chapters.title" | t }}</h4><p class="t-sm t-mute">{{ "novel.knowledge.empty.chapters.description" | t }}</p></div></div>
+        <div class="empty" data-testid="novel-knowledge-empty-chapters">
+          <div class="empty-inner">
+            <div class="illus"></div>
+            <h4 class="t-display-xs">{{ 'novel.knowledge.empty.chapters.title' | t }}</h4>
+            <p class="t-sm t-mute">{{ 'novel.knowledge.empty.chapters.description' | t }}</p>
+          </div>
+        </div>
       } @else if (blank() && !running()) {
-        <div class="empty" data-testid="novel-knowledge-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs"><ds-icon name="graph" [size]="18" /> {{ "novel.knowledge.empty.title" | t }}</h4><p class="t-sm t-mute">{{ "novel.knowledge.empty.description" | t }}</p><div class="empty-act"><button type="button" class="btn btn-primary" data-testid="novel-knowledge-empty-analyze" (click)="analyze()"><ds-icon name="graph" [size]="16" />{{ "novel.knowledge.analyze" | t }}</button></div></div></div>
+        <div class="empty" data-testid="novel-knowledge-empty">
+          <div class="empty-inner">
+            <div class="illus"></div>
+            <h4 class="t-display-xs">
+              <ds-icon name="graph" [size]="18" />
+              {{ 'novel.knowledge.empty.title' | t }}
+            </h4>
+            <p class="t-sm t-mute">{{ 'novel.knowledge.empty.description' | t }}</p>
+            <div class="empty-act">
+              <button
+                type="button"
+                class="btn btn-primary"
+                data-testid="novel-knowledge-empty-analyze"
+                (click)="analyze()"
+              >
+                <ds-icon name="graph" [size]="16" />
+                {{ 'novel.knowledge.analyze' | t }}
+              </button>
+            </div>
+          </div>
+        </div>
       } @else {
         <div class="kb-main">
           <div class="kb-tabbody" data-testid="novel-knowledge-tabbody">
             @switch (view().tab) {
-              @case ("graph") { <app-novel-knowledge-graph [novelId]="novelId()" /> }
-              @case ("list") { <app-novel-knowledge-list [novelId]="novelId()" /> }
-              @case ("review") { <app-novel-knowledge-review [novelId]="novelId()" /> }
+              @case ('graph') {
+                <app-novel-knowledge-graph [novelId]="novelId()" />
+              }
+              @case ('list') {
+                <app-novel-knowledge-list [novelId]="novelId()" />
+              }
+              @case ('review') {
+                <app-novel-knowledge-review [novelId]="novelId()" />
+              }
             }
           </div>
         </div>

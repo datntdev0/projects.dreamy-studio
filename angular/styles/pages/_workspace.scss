@@ -5,36 +5,76 @@
   flex: none;
 }
 
-.ws-row > ds-icon { color: var(--mute); }
-.ws-row.is-error > ds-icon { color: var(--danger); }
-
-.ws-name > ds-badge { flex: none; }
-
-.sp-right > .ld-warn { margin-bottom: var(--sp-md); }
-.ld-warn.is-error { background: var(--danger-soft); }
-.ld-warn.is-error .ic { color: var(--danger); }
-
-.ws-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-
-.ld-step > ds-icon { display: inline-flex; flex: none; }
-.ld-step.is-error .ic { color: var(--danger); }
-
-.tb-ws > ds-icon { display: inline-flex; flex: none; color: var(--mute); }
-.tb-ws:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
-
-.ld-overlay {
-  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--sp-xl); overflow: auto;
-  background:
-    radial-gradient(900px 520px at 12% -5%, var(--primary-soft), transparent 65%),
-    radial-gradient(700px 420px at 100% 105%, var(--secondary-soft), transparent 65%),
-    var(--canvas);
+.ws-row > ds-icon {
+  color: var(--mute);
+}
+.ws-row.is-error > ds-icon {
+  color: var(--danger);
 }
 
-.main-notice { position: fixed; right: var(--sp-lg); bottom: calc(24px + var(--sp-lg)); z-index: 95; }
+.ws-name > ds-badge {
+  flex: none;
+}
 
-.switch-note { margin: 0; }
+.sp-right > .ld-warn {
+  margin-bottom: var(--sp-md);
+}
+.ld-warn.is-error {
+  background: var(--danger-soft);
+}
+.ld-warn.is-error .ic {
+  color: var(--danger);
+}
 
+.ws-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.ld-step > ds-icon {
+  display: inline-flex;
+  flex: none;
+}
+.ld-step.is-error .ic {
+  color: var(--danger);
+}
+
+.tb-ws > ds-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--mute);
+}
+.tb-ws:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.ld-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-xl);
+  overflow: auto;
+  background:
+    radial-gradient(900px 520px at 12% -5%, var(--primary-soft), transparent 65%),
+    radial-gradient(700px 420px at 100% 105%, var(--secondary-soft), transparent 65%), var(--canvas);
+}
+
+.main-notice {
+  position: fixed;
+  right: var(--sp-lg);
+  bottom: calc(24px + var(--sp-lg));
+  z-index: 95;
+}
+
+.switch-note {
+  margin: 0;
+}
 
 app-recent-workspace-list,
 app-workspace-loading,
-app-switch-workspace-dialog { display: contents; }
+app-switch-workspace-dialog {
+  display: contents;
+}

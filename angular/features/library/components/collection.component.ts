@@ -1,11 +1,20 @@
-import { Component, inject, input } from "@angular/core";
-import { CoreModule } from "@core/core.module";
-import { LibraryService } from "../library.service";
-import { LibraryCollectionAssets } from "./collection-assets.component";
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { CoreModule } from '@shared/core.module';
 
-@Component({ selector: "app-library-collection", standalone: true, imports: [CoreModule, LibraryCollectionAssets], templateUrl: "./collection.component.html", host: { "data-testid": "library-collection" } })
+import { LibraryService } from '../library.service';
+import { LibraryCollectionAssets } from './collection-assets.component';
+
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-collection',
+  imports: [CoreModule, LibraryCollectionAssets],
+  templateUrl: './collection.component.html',
+  host: { 'data-testid': 'library-collection' },
+})
 export class LibraryCollectionView {
   readonly collectionId = input.required<number>();
   readonly library = inject(LibraryService);
-  collection() { return this.library.collectionById(this.collectionId()); }
+  collection() {
+    return this.library.collectionById(this.collectionId());
+  }
 }

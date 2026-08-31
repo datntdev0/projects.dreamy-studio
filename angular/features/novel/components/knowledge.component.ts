@@ -1,35 +1,49 @@
-import { Component, computed, effect, inject, input, untracked } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { KnowledgeLang, KnowledgeTab, KnowledgeView } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { errorCount } from "../novel.knowledge.rules";
-import { NovelLang, NovelSummary } from "../novel.models";
-import { NOVEL_LANG_KEYS } from "../novel.rules";
-import { NovelService } from "../novel.service";
-import { targetsOf } from "../novel.translation.rules";
-import { NovelKnowledgeGraph } from "./knowledge-graph.component";
-import { NovelKnowledgeList } from "./knowledge-list.component";
-import { NovelKnowledgeReview } from "./knowledge-review.component";
-import { NovelProgressFrac } from "./progress-frac.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { KnowledgeLang, KnowledgeTab, KnowledgeView } from '../novel.knowledge.models';
+import { errorCount } from '../novel.knowledge.rules';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+import { NovelLang, NovelSummary } from '../novel.models';
+import { NOVEL_LANG_KEYS } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { targetsOf } from '../novel.translation.rules';
+import { NovelKnowledgeGraph } from './knowledge-graph.component';
+import { NovelKnowledgeList } from './knowledge-list.component';
+import { NovelKnowledgeReview } from './knowledge-review.component';
+import { NovelProgressFrac } from './progress-frac.component';
 
 export interface KnowledgeLangOption {
   value: KnowledgeLang;
   label: string;
 }
 
-const TABS: KnowledgeTab[] = ["graph", "list", "review"];
-const TAB_ICONS: Record<KnowledgeTab, string> = { graph: "nodes", list: "list", review: "shield" };
-const TAB_KEYS: Record<KnowledgeTab, LanguageKey> = { graph: "novel.knowledge.tab.graph", list: "novel.knowledge.tab.list", review: "novel.knowledge.tab.review" };
+const TABS: KnowledgeTab[] = ['graph', 'list', 'review'];
+const TAB_ICONS: Record<KnowledgeTab, string> = { graph: 'nodes', list: 'list', review: 'shield' };
+const TAB_KEYS: Record<KnowledgeTab, LanguageKey> = {
+  graph: 'novel.knowledge.tab.graph',
+  list: 'novel.knowledge.tab.list',
+  review: 'novel.knowledge.tab.review',
+};
 
 @Component({
-  selector: "app-novel-knowledge",
-  standalone: true,
-  imports: [Icon, CoreModule, NovelProgressFrac, NovelKnowledgeGraph, NovelKnowledgeList, NovelKnowledgeReview],
-  templateUrl: "./knowledge.component.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-knowledge',
+  imports: [
+    Icon,
+    CoreModule,
+    NovelProgressFrac,
+    NovelKnowledgeGraph,
+    NovelKnowledgeList,
+    NovelKnowledgeReview,
+  ],
+  templateUrl: './knowledge.component.html',
 })
 export class NovelKnowledge {
   private readonly novels = inject(NovelService);
@@ -67,7 +81,7 @@ export class NovelKnowledge {
   }
 
   onLang(event: Event): void {
-    this.knowledge.setLang(this.novelId(), (event.target as HTMLSelectElement).value as KnowledgeLang);
+    this.knowledge.setLang(this.novelId(), fieldValue(event) as KnowledgeLang);
   }
 
   analyze(): void {
@@ -87,15 +101,19 @@ export class NovelKnowledge {
     if (!novel) {
       return [];
     }
-    const out: KnowledgeLangOption[] = [{ value: "src", label: this.langLabel("novel.knowledge.lang.src", novel.lang) }];
+    const out: KnowledgeLangOption[] = [
+      { value: 'src', label: this.langLabel('novel.knowledge.lang.src', novel.lang) },
+    ];
     for (const target of targetsOf(novel.lang)) {
-      out.push({ value: target, label: this.langLabel("novel.knowledge.lang.tr", target) });
+      out.push({ value: target, label: this.langLabel('novel.knowledge.lang.tr', target) });
     }
     return out;
   }
 
   private langLabel(key: LanguageKey, lang: NovelLang): string {
-    return this.languageService.translate(key, { lang: this.languageService.translate(NOVEL_LANG_KEYS[lang]) });
+    return this.languageService.translate(key, {
+      lang: this.languageService.translate(NOVEL_LANG_KEYS[lang]),
+    });
   }
 
   private buildTotal(): number {

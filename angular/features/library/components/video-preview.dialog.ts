@@ -1,41 +1,36 @@
-import { Component, HostListener, QueryList, ViewChildren, computed, inject, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { AssetRef, AssetRights } from "../library.models";
-import { formatBytes, formatIsoMinute } from "../library.rules";
-import { LibraryService } from "../library.service";
-import { LibraryVideo } from "../library.videos.models";
-import { videoCode, videoMeta } from "../library.videos.rules";
-import { LibraryVideoService } from "../library.videos.service";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, HostListener, inject, QueryList, signal, ViewChildren } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
 
-const RIGHTS_KEYS: Record<AssetRights, LanguageKey> = {
-  own: "library.rights.own",
-  licensed: "library.rights.licensed",
-  free: "library.rights.free",
-  other: "library.rights.other",
-};
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { AssetRef, AssetRights } from '../library.models';
+import { formatBytes, formatIsoMinute, rightsKey } from '../library.rules';
+import { LibraryService } from '../library.service';
+import { LibraryVideo } from '../library.videos.models';
+import { videoCode, videoMeta } from '../library.videos.rules';
+import { LibraryVideoService } from '../library.videos.service';
 
 function sameId(id: number, video: LibraryVideo): boolean {
   return video.id === id;
 }
 function isVideoTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest("video") !== null;
+  return target instanceof Element && target.closest('video') !== null;
 }
 
 @Component({
-  selector: "app-library-video-preview-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-video-preview-dialog',
   imports: [Icon, CoreModule],
-  templateUrl: "./video-preview.dialog.html",
-  host: { "data-testid": "library-video-preview-dialog" },
+  templateUrl: './video-preview.dialog.html',
+  host: { 'data-testid': 'library-video-preview-dialog' },
 })
 export class LibraryVideoPreviewDialog {
   private readonly dialogs = inject(LibraryDialogsService);
   readonly videos = inject(LibraryVideoService);
   readonly library = inject(LibraryService);
-  @ViewChildren("player") private readonly players!: QueryList<{
+  @ViewChildren('player') private readonly players!: QueryList<{
     nativeElement: HTMLVideoElement;
   }>;
 
@@ -75,12 +70,12 @@ export class LibraryVideoPreviewDialog {
     return formatIsoMinute(video.createdAt);
   }
   rightsKey(rights: AssetRights): LanguageKey {
-    return RIGHTS_KEYS[rights];
+    return rightsKey(rights);
   }
   collectionName(video: LibraryVideo): string {
     return video.collectionId === null
-      ? ""
-      : (this.library.collectionById(video.collectionId)?.name ?? "\u2014");
+      ? ''
+      : (this.library.collectionById(video.collectionId)?.name ?? '\u2014');
   }
   hasCollection(video: LibraryVideo): boolean {
     return video.collectionId !== null;
@@ -92,20 +87,20 @@ export class LibraryVideoPreviewDialog {
     this.failedId.set(video.id);
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (!this.open()) return;
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       this.close();
       return;
     }
     if (isVideoTarget(event.target)) return;
-    if (event.key === "ArrowLeft") {
+    if (event.key === 'ArrowLeft') {
       event.preventDefault();
       this.previous();
     }
-    if (event.key === "ArrowRight") {
+    if (event.key === 'ArrowRight') {
       event.preventDefault();
       this.next();
     }
@@ -113,9 +108,7 @@ export class LibraryVideoPreviewDialog {
 
   private findVideo(): LibraryVideo | null {
     const id = this.dialogs.previewVideoId();
-    return id === null
-      ? null
-      : (this.videos.items().find(sameId.bind(null, id)) ?? null);
+    return id === null ? null : (this.videos.items().find(sameId.bind(null, id)) ?? null);
   }
 
   private isOpen(): boolean {
@@ -126,10 +119,7 @@ export class LibraryVideoPreviewDialog {
     const video = this.video();
     const sequence = this.sequence();
     return {
-      index:
-        video === null
-          ? -1
-          : sequence.findIndex(this.isVideoRef.bind(null, video.id)),
+      index: video === null ? -1 : sequence.findIndex(this.isVideoRef.bind(null, video.id)),
       total: sequence.length,
     };
   }
@@ -145,20 +135,18 @@ export class LibraryVideoPreviewDialog {
   private stopPlayers(): void {
     for (const player of this.players ?? []) {
       player.nativeElement.pause();
-      player.nativeElement.removeAttribute("src");
+      player.nativeElement.removeAttribute('src');
       player.nativeElement.load();
     }
   }
 
   private sequence(): AssetRef[] {
-    return (
-      this.dialogs.previewSequence() ?? this.videos.visible().map(this.toRef)
-    );
+    return this.dialogs.previewSequence() ?? this.videos.visible().map(this.toRef);
   }
   private toRef(video: LibraryVideo): AssetRef {
-    return { kind: "video", id: video.id };
+    return { kind: 'video', id: video.id };
   }
   private isVideoRef(id: number, ref: AssetRef): boolean {
-    return ref.kind === "video" && ref.id === id;
+    return ref.kind === 'video' && ref.id === id;
   }
 }

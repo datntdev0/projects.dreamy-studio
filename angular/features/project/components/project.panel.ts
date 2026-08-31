@@ -1,23 +1,24 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { TabsService } from "@layout/tabs.service";
-import { checkCoverFile, prepareCover } from "@features/novel/novel.cover";
-import { ProjectConfirmService } from "../project.confirm.service";
-import { ProjectLabels } from "../project.labels";
-import { ProjectSummary } from "../project.models";
-import { projectCode, toProjectError } from "../project.rules";
-import { ProjectService } from "../project.service";
-import { ProjectThumb } from "./thumb.component";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { checkCoverFile, prepareCover } from '@features/novel/novel.cover';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+import { ProjectConfirmService } from '../project.confirm.service';
+import { ProjectLabels } from '../project.labels';
+import { ProjectSummary } from '../project.models';
+import { projectCode, toProjectError } from '../project.rules';
+import { ProjectService } from '../project.service';
+import { ProjectThumb } from './thumb.component';
 
 @Component({
-  selector: "app-project-panel",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-project-panel',
   imports: [Icon, CoreModule, ProjectThumb],
-  templateUrl: "./project.panel.html",
+  templateUrl: './project.panel.html',
 })
 export class ProjectPanel {
   private readonly tabs = inject(TabsService);
@@ -53,21 +54,21 @@ export class ProjectPanel {
   }
 
   coverKey(): LanguageKey {
-    return this.hasCover() ? "project.panel.coverChange" : "project.panel.coverChoose";
+    return this.hasCover() ? 'project.panel.coverChange' : 'project.panel.coverChoose';
   }
 
   async onCoverFile(project: ProjectSummary, event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    input.value = "";
+    input.value = '';
     if (!file) {
       return;
     }
     const check = checkCoverFile(file);
-    if (check === "notImage") {
-      this.toasts.show(this.languageService.translate("novel.toast.notImage"), "warning");
-    } else if (check === "tooLarge") {
-      this.toasts.show(this.languageService.translate("novel.toast.imageTooLarge"), "warning");
+    if (check === 'notImage') {
+      this.toasts.show(this.languageService.translate('novel.toast.notImage'), 'warning');
+    } else if (check === 'tooLarge') {
+      this.toasts.show(this.languageService.translate('novel.toast.imageTooLarge'), 'warning');
     } else {
       await this.applyCover(project.id, file);
     }
@@ -76,7 +77,7 @@ export class ProjectPanel {
   async clearCover(project: ProjectSummary): Promise<void> {
     try {
       await this.projects.clearCover(project.id);
-      this.toasts.show(this.languageService.translate("project.toast.coverRemoved"));
+      this.toasts.show(this.languageService.translate('project.toast.coverRemoved'));
     } catch (cause) {
       this.fail(cause);
     }
@@ -87,12 +88,12 @@ export class ProjectPanel {
     try {
       dataUrl = await prepareCover(file);
     } catch {
-      this.toasts.show(this.languageService.translate("novel.toast.imageUnreadable"), "warning");
+      this.toasts.show(this.languageService.translate('novel.toast.imageUnreadable'), 'warning');
       return;
     }
     try {
       await this.projects.setCover(id, dataUrl);
-      this.toasts.show(this.languageService.translate("project.toast.coverChanged"));
+      this.toasts.show(this.languageService.translate('project.toast.coverChanged'));
     } catch (cause) {
       this.fail(cause);
     }
@@ -100,7 +101,7 @@ export class ProjectPanel {
 
   private fail(cause: unknown): void {
     const detail = toProjectError(cause).detail;
-    this.toasts.show(this.languageService.translate("project.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate('project.error.generic', { detail }), 'danger');
   }
 
   private buildHasCover(): boolean {

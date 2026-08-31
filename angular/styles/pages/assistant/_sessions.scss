@@ -1,0 +1,99 @@
+.asst-filters {
+  flex: none;
+  display: flex;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--hairline);
+}
+.asst-filters .search {
+  flex: 1;
+  min-width: 0;
+}
+.asst-filters .search .input,
+.asst-filters .select {
+  width: 100%;
+  height: var(--ctl-h-sm);
+  font-size: 12.5px;
+}
+.asst-filters .search .input {
+  padding: 0 var(--sp-md);
+}
+.asst-filters .select {
+  flex: 0 1 132px;
+  min-width: 0;
+  padding: 0 var(--sp-xs);
+}
+.asst-list {
+  gap: var(--sp-lg);
+  padding: var(--sp-sm) var(--sp-xs);
+}
+.asst-group {
+  display: grid;
+  gap: 2px;
+}
+.asst-group > .asst-label {
+  padding: 0 var(--sp-sm);
+}
+.asst-sessions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1px;
+}
+.asst-session {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--r-sm);
+}
+.asst-session:hover,
+.asst-session:focus-within {
+  background: var(--canvas-soft);
+}
+.asst-session.is-active {
+  background: var(--primary-soft);
+}
+.asst-session.is-active .asst-session-title {
+  color: var(--primary-text);
+}
+.asst-session-open {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-sm);
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.asst-session-title {
+  padding-right: var(--sp-xl);
+  font-size: 13px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asst-session-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asst-session-del {
+  position: absolute;
+  top: var(--sp-sm);
+  right: var(--sp-xs);
+  opacity: 0;
+}
+.asst-session:hover .asst-session-del,
+.asst-session:focus-within .asst-session-del {
+  opacity: 1;
+}
+.asst-session-del:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}

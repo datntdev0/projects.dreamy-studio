@@ -1,63 +1,64 @@
-import { Component, computed, inject, signal } from "@angular/core";
-import { Badge } from "@components/badge";
-import { Icon } from "@components/icon";
-import { TabOption, Tabs } from "@components/tabs";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from "../llm.providers";
-import { LlmService, isReady } from "../llm.service";
-import { LlmCapability, LlmEffort, LlmFeature, LlmProvider } from "../settings.models";
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Badge } from '@components/badge';
+import { Icon } from '@components/icon';
+import { TabOption, Tabs } from '@components/tabs';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
 
-type LlmTab = "cli" | "cloud" | "features";
+import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from '../llm.providers';
+import { isReady, LlmService } from '../llm.service';
+import { LlmCapability, LlmEffort, LlmFeature, LlmProvider } from '../settings.models';
 
-const LLM_TABS: LlmTab[] = ["cli", "cloud", "features"];
+type LlmTab = 'cli' | 'cloud' | 'features';
+
+const LLM_TABS: LlmTab[] = ['cli', 'cloud', 'features'];
 
 const FEATURE_NAME_KEYS: Record<LlmCapability, LanguageKey> = {
-  translation: "settings.llm.feature.translation",
-  knowledge: "settings.llm.feature.knowledge",
-  assistant: "settings.llm.feature.assistant",
+  translation: 'settings.llm.feature.translation',
+  knowledge: 'settings.llm.feature.knowledge',
+  assistant: 'settings.llm.feature.assistant',
 };
 
 const FEATURE_HINT_KEYS: Record<LlmCapability, LanguageKey> = {
-  translation: "settings.llm.feature.translation.hint",
-  knowledge: "settings.llm.feature.knowledge.hint",
-  assistant: "settings.llm.feature.assistant.hint",
+  translation: 'settings.llm.feature.translation.hint',
+  knowledge: 'settings.llm.feature.knowledge.hint',
+  assistant: 'settings.llm.feature.assistant.hint',
 };
 
 export interface EffortOption {
-  value: LlmEffort | "";
+  value: LlmEffort | '';
   key: LanguageKey;
 }
 
 const EFFORT_OPTIONS: EffortOption[] = [
-  { value: "", key: "settings.llm.feature.effort.default" },
-  { value: "low", key: "settings.llm.feature.effort.low" },
-  { value: "medium", key: "settings.llm.feature.effort.medium" },
-  { value: "high", key: "settings.llm.feature.effort.high" },
+  { value: '', key: 'settings.llm.feature.effort.default' },
+  { value: 'low', key: 'settings.llm.feature.effort.low' },
+  { value: 'medium', key: 'settings.llm.feature.effort.medium' },
+  { value: 'high', key: 'settings.llm.feature.effort.high' },
 ];
 
 function toEffort(value: string): LlmEffort | null {
   const option = EFFORT_OPTIONS.find((item) => item.value === value);
-  return option && option.value !== "" ? option.value : null;
+  return option && option.value !== '' ? option.value : null;
 }
 
-type Tone = "default" | "primary" | "running" | "success" | "warning" | "danger" | "info";
+type Tone = 'default' | 'primary' | 'running' | 'success' | 'warning' | 'danger' | 'info';
 
 export interface LlmMessage {
   key: LanguageKey;
-  tone: "ok" | "warn" | "mute";
+  tone: 'ok' | 'warn' | 'mute';
   params?: Record<string, string | number>;
 }
 
 @Component({
-  selector: "app-settings-llm",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-settings-llm',
   imports: [Badge, Icon, CoreModule, Tabs],
-  templateUrl: "./llm.component.html",
-  host: { "data-testid": "settings-llm" },
+  templateUrl: './llm.component.html',
+  host: { 'data-testid': 'settings-llm' },
 })
-export class SettingsLlmComponent {
+export class SettingsLlm {
   private readonly llm = inject(LlmService);
   private readonly languageService = inject(LanguageService);
 
@@ -65,71 +66,82 @@ export class SettingsLlmComponent {
   readonly features = this.llm.features;
   readonly efforts = EFFORT_OPTIONS;
   readonly cloud = CLOUD_PROVIDERS;
-  readonly tab = signal<LlmTab>("cli");
+  readonly tab = signal<LlmTab>('cli');
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
   onTab(value: string): void {
     const tab = LLM_TABS.find((item) => item === value);
-    this.tab.set(tab ?? "cli");
+    this.tab.set(tab ?? 'cli');
   }
 
   mode(provider: LlmProvider): string {
     if (!provider.found) {
-      return "is-missing";
+      return 'is-missing';
     }
     if (provider.signedIn === false) {
-      return "is-login";
+      return 'is-login';
     }
-    if (provider.status === "error") {
-      return "is-error";
+    if (provider.status === 'error') {
+      return 'is-error';
     }
-    return isReady(provider) ? "is-ready" : "";
+    return isReady(provider) ? 'is-ready' : '';
   }
 
   statusTone(provider: LlmProvider): Tone {
     if (!provider.found || provider.signedIn === false) {
-      return "warning";
+      return 'warning';
     }
-    const tones: Record<string, Tone> = { none: "default", checking: "running", ok: "success", error: "danger" };
+    const tones: Record<string, Tone> = {
+      none: 'default',
+      checking: 'running',
+      ok: 'success',
+      error: 'danger',
+    };
     return tones[provider.status];
   }
 
   statusKey(provider: LlmProvider): LanguageKey {
     if (!provider.found) {
-      return provider.status === "checking" ? "settings.llm.status.checking" : "settings.llm.status.notInstalled";
+      return provider.status === 'checking'
+        ? 'settings.llm.status.checking'
+        : 'settings.llm.status.notInstalled';
     }
     if (provider.signedIn === false) {
-      return "settings.llm.status.notSignedIn";
+      return 'settings.llm.status.notSignedIn';
     }
     const keys: Record<string, LanguageKey> = {
-      none: "settings.llm.status.notChecked",
-      checking: "settings.llm.status.checking",
-      ok: "settings.llm.status.ready",
-      error: "settings.llm.status.error",
+      none: 'settings.llm.status.notChecked',
+      checking: 'settings.llm.status.checking',
+      ok: 'settings.llm.status.ready',
+      error: 'settings.llm.status.error',
     };
     return keys[provider.status];
   }
 
   message(provider: LlmProvider): LlmMessage {
-    if (provider.status === "checking") {
-      return { key: "settings.llm.msg.checking", tone: "mute" };
+    if (provider.status === 'checking') {
+      return { key: 'settings.llm.msg.checking', tone: 'mute' };
     }
     if (!provider.found) {
-      return { key: "settings.llm.msg.notInstalled", tone: "mute" };
+      return { key: 'settings.llm.msg.notInstalled', tone: 'mute' };
     }
     if (provider.signing) {
-      return { key: "settings.llm.msg.waiting", tone: "mute" };
+      return { key: 'settings.llm.msg.waiting', tone: 'mute' };
     }
     if (provider.signedIn === false) {
-      return { key: "settings.llm.msg.needSignIn", tone: "warn" };
+      return { key: 'settings.llm.msg.needSignIn', tone: 'warn' };
     }
-    if (provider.status === "ok") {
-      return { key: "settings.llm.msg.ok", tone: "ok", params: { ms: provider.latencyMs, time: provider.checkedAt } };
+    if (provider.status === 'ok') {
+      return {
+        key: 'settings.llm.msg.ok',
+        tone: 'ok',
+        params: { ms: provider.latencyMs, time: provider.checkedAt },
+      };
     }
-    if (provider.status === "error") {
-      return { key: "settings.llm.msg.failed", tone: "warn" };
+    if (provider.status === 'error') {
+      return { key: 'settings.llm.msg.failed', tone: 'warn' };
     }
-    return { key: "settings.llm.msg.unchecked", tone: "mute" };
+    return { key: 'settings.llm.msg.unchecked', tone: 'mute' };
   }
 
   check(provider: LlmProvider): void {
@@ -165,17 +177,20 @@ export class SettingsLlmComponent {
   }
 
   providersFor(feature: LlmFeature): LlmProvider[] {
-    return this.providers().filter((provider) => provider.caps.includes(feature.id) && (provider.found || provider.id === feature.provider));
+    return this.providers().filter(
+      (provider) =>
+        provider.caps.includes(feature.id) && (provider.found || provider.id === feature.provider),
+    );
   }
 
   modelsFor(feature: LlmFeature): string[] {
-    return MODEL_SUGGESTIONS[feature.provider ?? ""] ?? [];
+    return MODEL_SUGGESTIONS[feature.provider ?? ''] ?? [];
   }
 
   onFeatureProvider(feature: LlmFeature, value: string): void {
     const provider = value || null;
     if (provider !== feature.provider) {
-      void this.llm.setFeature(feature.id, { provider, model: "" });
+      void this.llm.setFeature(feature.id, { provider, model: '' });
     }
   }
 
@@ -199,14 +214,22 @@ export class SettingsLlmComponent {
   }
 
   canCheck(provider: LlmProvider): boolean {
-    return provider.status !== "checking";
+    return provider.status !== 'checking';
   }
 
   private buildTabOptions(): TabOption[] {
     return [
-      { value: "cli", label: this.languageService.translate("settings.llm.cli"), icon: "terminal" },
-      { value: "cloud", label: this.languageService.translate("settings.llm.cloud"), icon: "cloud" },
-      { value: "features", label: this.languageService.translate("settings.llm.features"), icon: "spark" },
+      { value: 'cli', label: this.languageService.translate('settings.llm.cli'), icon: 'terminal' },
+      {
+        value: 'cloud',
+        label: this.languageService.translate('settings.llm.cloud'),
+        icon: 'cloud',
+      },
+      {
+        value: 'features',
+        label: this.languageService.translate('settings.llm.features'),
+        icon: 'spark',
+      },
     ];
   }
 }

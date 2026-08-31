@@ -1,104 +1,234 @@
 @if (open() && novel(); as novel) {
-  <ds-dialog [title]="'novel.knowledge.analyze.title' | t" [eyebrow]="'novel.cap' | t" size="large" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-knowledge-analyze-panel" (closed)="close()">
-    <ds-tabs label="Analysis dialog" idPrefix="knowledge-analyze" [options]="tabs()" [value]="tab()" data-testid="novel-knowledge-analyze-tabs" (valueChange)="onTab($event)" />
-    @if (tab() === "analyze") {
-      <div class="an-pane" data-testid="novel-knowledge-analyze-pane">
-        <div class="form-2 an-fields">
-          <div class="field">
-            <label for="knowledge-analyze-lang">{{ "novel.knowledge.analyze.lang" | t }}</label>
-            <select id="knowledge-analyze-lang" class="select" data-testid="novel-knowledge-analyze-lang" (change)="onLang($event)">
-              @for (item of langs(); track item.value) {
-                <option [value]="item.value" [selected]="item.value === lang()">{{ item.label }}</option>
-              }
-            </select>
-            <span class="field-hint">{{ "novel.knowledge.analyze.lang.hint" | t }}</span>
-          </div>
-          <div class="field">
-            <span class="an-label">{{ "novel.knowledge.analyze.provider" | t }}</span>
-            <div class="an-prov" [attr.data-state]="provider().state" data-testid="novel-knowledge-analyze-provider">
-              @if (provider().state === "unset") {
-                <ds-icon name="alert" [size]="16" /><span>{{ "novel.knowledge.analyze.provider.unset" | t }}</span>
-              } @else {
-                <ds-icon [name]="provider().state === 'ready' ? 'check-circle' : 'alert'" [size]="16" /><span><b class="t-ink">{{ provider().name }}</b> <span class="t-mute mono">{{ provider().detail }}</span></span>
-              }
-              <button type="button" class="btn btn-sm btn-ghost" data-testid="novel-knowledge-analyze-settings" (click)="openSettings()">{{ "novel.knowledge.analyze.provider.change" | t }}</button>
-            </div>
-            <span class="field-hint">{{ (provider().state === "unready" ? "novel.knowledge.analyze.provider.unready" : "novel.knowledge.analyze.provider.hint") | t }}</span>
-          </div>
-        </div>
-        <div class="opts" role="radiogroup" [attr.aria-label]="'novel.knowledge.analyze.scope' | t" data-testid="novel-knowledge-analyze-modes">
-          @for (item of modes; track item) {
-            <label class="opt" [class.is-on]="mode() === item" data-testid="novel-knowledge-analyze-mode" [attr.data-mode]="item">
-              <input type="radio" name="knowledge-analyze-mode" [value]="item" [checked]="mode() === item" (change)="onMode(item)">
-              <span class="opt-b">
-                <b>{{ modeKey(item) | t }}</b>
-                @switch (item) {
-                  @case ("missing") {
-                    <span class="t-sm t-mute">@if (summary().missing.length > 0) { {{ "novel.knowledge.analyze.mode.missing.count" | t: { count: summary().missing.length, range: rangeOf(summary().missing) } }} } @else { {{ "novel.knowledge.analyze.mode.missing.none" | t }} }</span>
-                  }
-                  @case ("range") {
-                    <span class="t-sm t-mute">{{ "novel.knowledge.analyze.mode.range.hint" | t }}</span>
-                    <span class="opt-row">
-                      <input class="input an-num" type="number" inputmode="numeric" step="1" [min]="firstSeq()" [max]="lastSeq()" [value]="from()" [attr.aria-label]="'novel.knowledge.analyze.from' | t" data-testid="novel-knowledge-analyze-from" (change)="onFrom($event)">
-                      <span class="t-mute">{{ "novel.knowledge.analyze.to" | t }}</span>
-                      <input class="input an-num" type="number" inputmode="numeric" step="1" [min]="firstSeq()" [max]="lastSeq()" [value]="to()" [attr.aria-label]="'novel.knowledge.analyze.toLabel' | t" data-testid="novel-knowledge-analyze-to" (change)="onTo($event)">
-                    </span>
-                  }
-                  @case ("all") {
-                    <span class="t-sm t-mute">{{ "novel.knowledge.analyze.mode.all.count" | t: { count: chapters().length } }}</span>
-                  }
-                }
-              </span>
-            </label>
+<ds-dialog
+  [title]="'novel.knowledge.analyze.title' | t"
+  [eyebrow]="'novel.cap' | t"
+  size="large"
+  [closeLabel]="'novel.dialog.close' | t"
+  data-testid="novel-knowledge-analyze-panel"
+  (closed)="close()"
+>
+  <ds-tabs
+    label="Analysis dialog"
+    idPrefix="knowledge-analyze"
+    [options]="tabs()"
+    [value]="tab()"
+    data-testid="novel-knowledge-analyze-tabs"
+    (valueChange)="onTab($event)"
+  />
+  @if (tab() === "analyze") {
+  <div class="an-pane" data-testid="novel-knowledge-analyze-pane">
+    <div class="form-2 an-fields">
+      <div class="field">
+        <label for="knowledge-analyze-lang">{{ "novel.knowledge.analyze.lang" | t }}</label>
+        <select
+          id="knowledge-analyze-lang"
+          class="select"
+          data-testid="novel-knowledge-analyze-lang"
+          (change)="onLang($event)"
+        >
+          @for (item of langs(); track item.value) {
+          <option [value]="item.value" [selected]="item.value === lang()">{{ item.label }}</option>
           }
-        </div>
-        @if (mode() !== "missing") {
-          <label class="check" data-testid="novel-knowledge-analyze-overwrite-field"><input type="checkbox" data-testid="novel-knowledge-analyze-overwrite" [checked]="overwrite()" (change)="onOverwrite($event)"><span><b>{{ "novel.knowledge.analyze.overwrite" | t }}</b><br><span class="t-sm t-mute">{{ "novel.knowledge.analyze.overwrite.hint" | t }}</span></span></label>
-        }
-        <div class="card side-card an-sum" data-testid="novel-knowledge-analyze-summary">
-          <dl class="kv">
-            <dt>{{ "novel.knowledge.analyze.sum.run" | t }}</dt>
-            <dd data-testid="novel-knowledge-analyze-run">@if (summary().run.length > 0) { <b class="t-ink">{{ "novel.knowledge.analyze.sum.chapters" | t: { count: summary().run.length } }}</b> · {{ "novel.knowledge.analyze.sum.range" | t: { range: rangeOf(summary().run) } }} } @else { <span class="t-mute">{{ "novel.knowledge.analyze.sum.none" | t }}</span> }</dd>
-            <dt>{{ "novel.knowledge.analyze.sum.pipeline" | t }}</dt>
-            <dd data-testid="novel-knowledge-analyze-pipeline">{{ "novel.knowledge.analyze.sum.batches" | t: { batches: summary().batches.length, size: batchSize } }}</dd>
-            <dt>{{ "novel.knowledge.analyze.sum.keep" | t }}</dt>
-            <dd>@if (summary().keep.length > 0) { {{ "novel.knowledge.analyze.sum.keep.count" | t: { count: summary().keep.length, range: rangeOf(summary().keep) } }} } @else { — }</dd>
-            <dt>{{ "novel.knowledge.analyze.sum.words" | t }}</dt>
-            <dd>{{ count(words()) }}</dd>
-          </dl>
-          @if (summary().noSource.length > 0) {
-            <div class="ld-warn" data-testid="novel-knowledge-analyze-nosource"><ds-icon name="alert" [size]="15" /><span>{{ "novel.knowledge.analyze.warn.noSource" | t: { count: summary().noSource.length, range: rangeOf(summary().noSource) } }}</span></div>
-          }
-          @if (effectiveOverwrite() && summary().overwrite.length > 0) {
-            <div class="ld-warn" data-testid="novel-knowledge-analyze-overwrite-warn"><ds-icon name="alert" [size]="15" /><span>{{ "novel.knowledge.analyze.warn.overwrite" | t: { count: summary().overwrite.length } }}</span></div>
-          }
-        </div>
-        <ol class="an-flow" [attr.aria-label]="'novel.knowledge.analyze.flow' | t" data-testid="novel-knowledge-analyze-flow">
-          <li><span class="an-n">1</span><span><b>{{ "novel.knowledge.run.step1" | t }}</b><small>{{ "novel.knowledge.run.step1.hint" | t }}</small></span></li>
-          <li><span class="an-n">2</span><span><b>{{ "novel.knowledge.run.step2" | t }}</b><small>{{ "novel.knowledge.analyze.flow.step2" | t }}</small></span></li>
-          <li><span class="an-n">3</span><span><b>{{ "novel.knowledge.run.step3" | t }}</b><small>{{ "novel.knowledge.run.step3.hint" | t }}</small></span></li>
-        </ol>
+        </select>
+        <span class="field-hint">{{ "novel.knowledge.analyze.lang.hint" | t }}</span>
       </div>
-    } @else {
-      <div class="an-pane" data-testid="novel-knowledge-ontology-pane">
-        <div class="onto-sum" data-testid="novel-knowledge-ontology-summary">
-          <div><b>{{ ontology().types }}</b><span>{{ "novel.knowledge.ontology.sum.types" | t }}</span></div>
-          <div><b>{{ ontology().scalars }}</b><span>{{ "novel.knowledge.ontology.sum.scalars" | t }}</span></div>
-          <div><b>{{ ontology().relationships }}</b><span>{{ "novel.knowledge.ontology.sum.relationships" | t }}</span></div>
-          <div><b>{{ ontology().rules }}</b><span>{{ "novel.knowledge.ontology.sum.rules" | t }}</span></div>
-        </div>
-        <p class="t-sm t-mute" data-testid="novel-knowledge-ontology-note">{{ "novel.knowledge.ontology.note" | t }} <span class="path">novels\{{ novel.id }}\ontology.yml</span></p>
-        <pre class="yaml" tabindex="0" data-testid="novel-knowledge-ontology-yaml">@for (line of lines(); track $index) {<span [class.y-c]="line.comment">{{ line.text }}</span>
+      <div class="field">
+        <span class="an-label">{{ "novel.knowledge.analyze.provider" | t }}</span>
+        <app-novel-provider-status
+          [provider]="provider()"
+          testidPrefix="novel-knowledge-analyze"
+          unsetKey="novel.knowledge.analyze.provider.unset"
+          changeKey="novel.knowledge.analyze.provider.change"
+          (changeRequested)="openSettings()"
+        />
+        <span class="field-hint">
+          {{ (provider().state === "unready" ? "novel.knowledge.analyze.provider.unready" :
+          "novel.knowledge.analyze.provider.hint") | t }}
+        </span>
+      </div>
+    </div>
+    <div
+      class="opts"
+      role="radiogroup"
+      [attr.aria-label]="'novel.knowledge.analyze.scope' | t"
+      data-testid="novel-knowledge-analyze-modes"
+    >
+      @for (item of modes; track item) {
+      <app-novel-mode-option
+        [mode]="item"
+        [active]="mode() === item"
+        [titleKey]="modeKey(item)"
+        groupName="knowledge-analyze-mode"
+        testid="novel-knowledge-analyze-mode"
+        (picked)="onMode(item)"
+      >
+        @switch (item) { @case ("missing") {
+        <span class="t-sm t-mute">
+          @if (summary().missing.length > 0) { {{ "novel.knowledge.analyze.mode.missing.count" | t:
+          { count: summary().missing.length, range: rangeOf(summary().missing) } }} } @else { {{
+          "novel.knowledge.analyze.mode.missing.none" | t }} }
+        </span>
+        } @case ("range") {
+        <span class="t-sm t-mute">{{ "novel.knowledge.analyze.mode.range.hint" | t }}</span>
+        <app-novel-range-fields
+          [from]="from()"
+          [to]="to()"
+          [min]="firstSeq()"
+          [max]="lastSeq()"
+          testidPrefix="novel-knowledge-analyze"
+          fromKey="novel.knowledge.analyze.from"
+          joinKey="novel.knowledge.analyze.to"
+          toKey="novel.knowledge.analyze.toLabel"
+          (fromChanged)="onFrom($event)"
+          (toChanged)="onTo($event)"
+        />
+        } @case ("all") {
+        <span class="t-sm t-mute">
+          {{ "novel.knowledge.analyze.mode.all.count" | t: { count: chapters().length } }}
+        </span>
+        } }
+      </app-novel-mode-option>
+      }
+    </div>
+    @if (mode() !== "missing") {
+    <label class="check" data-testid="novel-knowledge-analyze-overwrite-field">
+      <input
+        type="checkbox"
+        data-testid="novel-knowledge-analyze-overwrite"
+        [checked]="overwrite()"
+        (change)="onOverwrite($event)"
+      />
+      <span>
+        <b>{{ "novel.knowledge.analyze.overwrite" | t }}</b>
+        <br />
+        <span class="t-sm t-mute">{{ "novel.knowledge.analyze.overwrite.hint" | t }}</span>
+      </span>
+    </label>
+    }
+    <div class="card side-card an-sum" data-testid="novel-knowledge-analyze-summary">
+      <dl class="kv">
+        <dt>{{ "novel.knowledge.analyze.sum.run" | t }}</dt>
+        <dd data-testid="novel-knowledge-analyze-run">
+          @if (summary().run.length > 0) {
+          <b class="t-ink">
+            {{ "novel.knowledge.analyze.sum.chapters" | t: { count: summary().run.length } }}
+          </b>
+          · {{ "novel.knowledge.analyze.sum.range" | t: { range: rangeOf(summary().run) } }} } @else
+          {
+          <span class="t-mute">{{ "novel.knowledge.analyze.sum.none" | t }}</span>
+          }
+        </dd>
+        <dt>{{ "novel.knowledge.analyze.sum.pipeline" | t }}</dt>
+        <dd data-testid="novel-knowledge-analyze-pipeline">
+          {{ "novel.knowledge.analyze.sum.batches" | t: { batches: summary().batches.length, size:
+          batchSize } }}
+        </dd>
+        <dt>{{ "novel.knowledge.analyze.sum.keep" | t }}</dt>
+        <dd>
+          @if (summary().keep.length > 0) { {{ "novel.knowledge.analyze.sum.keep.count" | t: {
+          count: summary().keep.length, range: rangeOf(summary().keep) } }} } @else { — }
+        </dd>
+        <dt>{{ "novel.knowledge.analyze.sum.words" | t }}</dt>
+        <dd>{{ count(words()) }}</dd>
+      </dl>
+      @if (summary().noSource.length > 0) {
+      <div class="ld-warn" data-testid="novel-knowledge-analyze-nosource">
+        <ds-icon name="alert" [size]="15" />
+        <span>
+          {{ "novel.knowledge.analyze.warn.noSource" | t: { count: summary().noSource.length, range:
+          rangeOf(summary().noSource) } }}
+        </span>
+      </div>
+      } @if (effectiveOverwrite() && summary().overwrite.length > 0) {
+      <div class="ld-warn" data-testid="novel-knowledge-analyze-overwrite-warn">
+        <ds-icon name="alert" [size]="15" />
+        <span>
+          {{ "novel.knowledge.analyze.warn.overwrite" | t: { count: summary().overwrite.length } }}
+        </span>
+      </div>
+      }
+    </div>
+    <ol
+      class="an-flow"
+      [attr.aria-label]="'novel.knowledge.analyze.flow' | t"
+      data-testid="novel-knowledge-analyze-flow"
+    >
+      <li>
+        <span class="an-n">1</span>
+        <span>
+          <b>{{ "novel.knowledge.run.step1" | t }}</b>
+          <small>{{ "novel.knowledge.run.step1.hint" | t }}</small>
+        </span>
+      </li>
+      <li>
+        <span class="an-n">2</span>
+        <span>
+          <b>{{ "novel.knowledge.run.step2" | t }}</b>
+          <small>{{ "novel.knowledge.analyze.flow.step2" | t }}</small>
+        </span>
+      </li>
+      <li>
+        <span class="an-n">3</span>
+        <span>
+          <b>{{ "novel.knowledge.run.step3" | t }}</b>
+          <small>{{ "novel.knowledge.run.step3.hint" | t }}</small>
+        </span>
+      </li>
+    </ol>
+  </div>
+  } @else {
+  <div class="an-pane" data-testid="novel-knowledge-ontology-pane">
+    <div class="onto-sum" data-testid="novel-knowledge-ontology-summary">
+      <div>
+        <b>{{ ontology().types }}</b>
+        <span>{{ "novel.knowledge.ontology.sum.types" | t }}</span>
+      </div>
+      <div>
+        <b>{{ ontology().scalars }}</b>
+        <span>{{ "novel.knowledge.ontology.sum.scalars" | t }}</span>
+      </div>
+      <div>
+        <b>{{ ontology().relationships }}</b>
+        <span>{{ "novel.knowledge.ontology.sum.relationships" | t }}</span>
+      </div>
+      <div>
+        <b>{{ ontology().rules }}</b>
+        <span>{{ "novel.knowledge.ontology.sum.rules" | t }}</span>
+      </div>
+    </div>
+    <p class="t-sm t-mute" data-testid="novel-knowledge-ontology-note">
+      {{ "novel.knowledge.ontology.note" | t }}
+      <span class="path">novels\{{ novel.id }}\ontology.yml</span>
+    </p>
+    <pre
+      class="yaml"
+      tabindex="0"
+      data-testid="novel-knowledge-ontology-yaml"
+    >@for (line of lines(); track $index) {<span [class.y-c]="line.comment">{{ line.text }}</span>
 }</pre>
-      </div>
-    }
-    @if (tab() === "ontology") {
-      <ds-button dialogFoot data-testid="novel-knowledge-ontology-copy" (pressed)="copy()"><ds-icon name="copy" [size]="16" />{{ "novel.knowledge.ontology.copy" | t }}</ds-button>
-    }
-    <span class="spacer" dialogFoot></span>
-    <ds-button dialogFoot data-testid="novel-knowledge-analyze-cancel" (pressed)="close()">{{ (tab() === "analyze" ? "common.cancel" : "novel.knowledge.ontology.close") | t }}</ds-button>
-    @if (tab() === "analyze") {
-      <ds-button dialogFoot variant="primary" [disabled]="!canStart() || busy()" data-testid="novel-knowledge-analyze-start" (pressed)="start()"><ds-icon name="graph" [size]="16" />{{ "novel.knowledge.analyze.start" | t }}@if (summary().run.length > 0) { ({{ summary().run.length }}) }</ds-button>
-    }
-  </ds-dialog>
+  </div>
+  } @if (tab() === "ontology") {
+  <ds-button dialogFoot data-testid="novel-knowledge-ontology-copy" (pressed)="copy()">
+    <ds-icon name="copy" [size]="16" />
+    {{ "novel.knowledge.ontology.copy" | t }}
+  </ds-button>
+  }
+  <span class="spacer" dialogFoot></span>
+  <ds-button dialogFoot data-testid="novel-knowledge-analyze-cancel" (pressed)="close()">
+    {{ (tab() === "analyze" ? "common.cancel" : "novel.knowledge.ontology.close") | t }}
+  </ds-button>
+  @if (tab() === "analyze") {
+  <ds-button
+    dialogFoot
+    variant="primary"
+    [disabled]="!canStart() || busy()"
+    data-testid="novel-knowledge-analyze-start"
+    (pressed)="start()"
+  >
+    <ds-icon name="graph" [size]="16" />
+    {{ "novel.knowledge.analyze.start" | t }}@if (summary().run.length > 0) { ({{
+    summary().run.length }}) }
+  </ds-button>
+  }
+</ds-dialog>
 }

@@ -1,7 +1,23 @@
 ds-button {
-  & { display: inline-flex; vertical-align: middle; }
-  &:has(.btn-block) { display: flex; width: 100%; }
+  & {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  &:has(.btn-block) {
+    display: flex;
+    width: 100%;
+  }
 }
-.btn.is-on { background: var(--primary-soft); color: var(--primary-text); border-color: var(--primary); }
-.btn-xs { width: 20px; height: 20px; }
-.btn-xs .ic { width: 13px; height: 13px; }
+.btn.is-on {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  border-color: var(--primary);
+}
+.btn-xs {
+  width: 20px;
+  height: 20px;
+}
+.btn-xs .ic {
+  width: 13px;
+  height: 13px;
+}

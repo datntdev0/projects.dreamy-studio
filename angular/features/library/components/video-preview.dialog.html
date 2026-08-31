@@ -16,13 +16,10 @@
         [attr.aria-label]="item.name"
         data-testid="library-video-preview-unsupported"
       >
-        <ds-icon
-          name="film"
-          [size]="32"
-          data-testid="library-video-preview-unsupported-icon"
-        /><span data-testid="library-video-preview-unsupported-message"
-          >{{ "library.video.preview.unsupported" | t }}</span
-        >
+        <ds-icon name="film" [size]="32" data-testid="library-video-preview-unsupported-icon" />
+        <span data-testid="library-video-preview-unsupported-message">
+          {{ "library.video.preview.unsupported" | t }}
+        </span>
       </div>
       } @else { @for (current of [item]; track current.id) {
       <video
@@ -45,11 +42,7 @@
         data-testid="library-video-preview-previous"
         (click)="previous()"
       >
-        <ds-icon
-          name="chev-l"
-          [size]="14"
-          data-testid="library-video-preview-previous-icon"
-        />
+        <ds-icon name="chev-l" [size]="14" data-testid="library-video-preview-previous-icon" />
       </button>
       <button
         type="button"
@@ -59,77 +52,57 @@
         data-testid="library-video-preview-next"
         (click)="next()"
       >
-        <ds-icon
-          name="chev-r"
-          [size]="14"
-          data-testid="library-video-preview-next-icon"
-        />
+        <ds-icon name="chev-r" [size]="14" data-testid="library-video-preview-next-icon" />
       </button>
     </div>
     <aside class="lbp-side" data-testid="library-video-preview-side">
       <dl class="kv" data-testid="library-video-preview-info">
-        <dt data-testid="library-video-preview-code-label">
-          {{ "library.image.info.code" | t }}
-        </dt>
-        <dd class="mono" data-testid="library-video-preview-code">
-          {{ code(item) }}
-        </dd>
+        <dt data-testid="library-video-preview-code-label">{{ "library.image.info.code" | t }}</dt>
+        <dd class="mono" data-testid="library-video-preview-code">{{ code(item) }}</dd>
         <dt data-testid="library-video-preview-parameters-label">
           {{ "library.image.info.specs" | t }}
         </dt>
-        <dd data-testid="library-video-preview-parameters">
-          {{ parameters(item) }}
-        </dd>
-        <dt data-testid="library-video-preview-size-label">
-          {{ "library.image.info.size" | t }}
-        </dt>
+        <dd data-testid="library-video-preview-parameters">{{ parameters(item) }}</dd>
+        <dt data-testid="library-video-preview-size-label">{{ "library.image.info.size" | t }}</dt>
         <dd data-testid="library-video-preview-size">{{ size(item) }}</dd>
         <dt data-testid="library-video-preview-added-label">
           {{ "library.image.info.added" | t }}
         </dt>
-        <dd class="mono" data-testid="library-video-preview-added">
-          {{ added(item) }}
-        </dd>
+        <dd class="mono" data-testid="library-video-preview-added">{{ added(item) }}</dd>
         <dt data-testid="library-video-preview-rights-label">
           {{ "library.video.field.rights" | t }}
         </dt>
-        <dd data-testid="library-video-preview-rights">
-          {{ rightsKey(item.rights) | t }}
-        </dd>
+        <dd data-testid="library-video-preview-rights">{{ rightsKey(item.rights) | t }}</dd>
       </dl>
       <div data-testid="library-video-preview-tags-section">
-        <span class="eyebrow" data-testid="library-video-preview-tags-label"
-          >{{ "library.preview.tags" | t }}</span
-        >
+        <span class="eyebrow" data-testid="library-video-preview-tags-label">
+          {{ "library.preview.tags" | t }}
+        </span>
         <div class="tags lb-pt" data-testid="library-video-preview-tags">
           @for (tag of item.tags; track tag) {
-          <span class="tag" data-testid="library-video-preview-tag"
-            >{{ tag }}</span
-          >
+          <span class="tag" data-testid="library-video-preview-tag">{{ tag }}</span>
           }
         </div>
       </div>
       <div data-testid="library-video-preview-collection-section">
-        <span
-          class="eyebrow"
-          data-testid="library-video-preview-collection-label"
-          >{{ "library.preview.collection" | t }}</span
-        >@if (hasCollection(item)) {
+        <span class="eyebrow" data-testid="library-video-preview-collection-label">
+          {{ "library.preview.collection" | t }}
+        </span>
+        @if (hasCollection(item)) {
         <div class="tags lb-pt" data-testid="library-video-preview-collection-tags">
           <span class="tag lb-ctag" data-testid="library-video-preview-collection">
             <ds-icon
               name="folder"
               [size]="16"
               data-testid="library-video-preview-collection-icon"
-            />{{ collectionName(item) }}
+            />
+            {{ collectionName(item) }}
           </span>
         </div>
         } @else {
-        <span
-          class="t-sm t-mute"
-          data-testid="library-video-preview-collection-none"
-          >{{ "library.video.field.collectionNone" | t }}</span
-        >
+        <span class="t-sm t-mute" data-testid="library-video-preview-collection-none">
+          {{ "library.video.field.collectionNone" | t }}
+        </span>
         }
       </div>
     </aside>

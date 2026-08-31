@@ -1,16 +1,16 @@
-import { Injectable, inject } from "@angular/core";
-import { DialogItem } from "@core/dialog/dialog.models";
-import { DialogService } from "@core/dialog/dialog.service";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { TabsService } from "@layout/tabs.service";
-import { NovelConfirmThumb } from "./components/confirm-thumb.component";
-import { NovelSummary } from "./novel.models";
-import { NovelReaderService } from "./novel.reader.service";
-import { displayName, formatCount, toNovelError } from "./novel.rules";
-import { NovelService } from "./novel.service";
+import { inject, Injectable } from '@angular/core';
+import { TabsService } from '@layout/tabs.service';
+import { DialogItem } from '@shared/dialog/dialog.models';
+import { DialogService } from '@shared/dialog/dialog.service';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
 
-@Injectable({ providedIn: "root" })
+import { NovelSummary } from './novel.models';
+import { NovelReaderService } from './novel.reader.service';
+import { displayName, formatCount, toNovelError } from './novel.rules';
+import { NovelService } from './novel.service';
+
+@Injectable({ providedIn: 'root' })
 export class NovelConfirmService {
   private readonly dialogs = inject(DialogService);
   private readonly languageService = inject(LanguageService);
@@ -33,14 +33,21 @@ export class NovelConfirmService {
     }
     const one = rows.length === 1;
     return this.dialogs.ask({
-      title: this.languageService.translate(one ? "novel.delete.title.one" : "novel.delete.title.other", { count: rows.length }),
-      eyebrow: this.languageService.translate("novel.cap"),
-      closeLabel: this.languageService.translate("novel.dialog.close"),
+      title: this.languageService.translate(
+        one ? 'novel.delete.title.one' : 'novel.delete.title.other',
+        { count: rows.length },
+      ),
+      eyebrow: this.languageService.translate('novel.cap'),
+      closeLabel: this.languageService.translate('novel.dialog.close'),
       items: rows.map(this.toItem.bind(this)),
-      thumb: NovelConfirmThumb,
-      warning: this.languageService.translate(one ? "novel.delete.warn.one" : "novel.delete.warn.other"),
-      confirmLabel: this.languageService.translate(one ? "novel.delete.confirm.one" : "novel.delete.confirm.other", { count: rows.length }),
-      confirmIcon: "trash",
+      warning: this.languageService.translate(
+        one ? 'novel.delete.warn.one' : 'novel.delete.warn.other',
+      ),
+      confirmLabel: this.languageService.translate(
+        one ? 'novel.delete.confirm.one' : 'novel.delete.confirm.other',
+        { count: rows.length },
+      ),
+      confirmIcon: 'trash',
       onConfirm: this.removeNovels.bind(this, rows),
     });
   }
@@ -57,26 +64,37 @@ export class NovelConfirmService {
       passages = 0;
     }
     return this.dialogs.ask({
-      title: this.languageService.translate("novel.chapters.delete.title"),
-      eyebrow: this.languageService.translate("novel.cap"),
-      closeLabel: this.languageService.translate("novel.dialog.close"),
+      title: this.languageService.translate('novel.chapters.delete.title'),
+      eyebrow: this.languageService.translate('novel.cap'),
+      closeLabel: this.languageService.translate('novel.dialog.close'),
       items: [
         {
-          name: this.languageService.translate("novel.chapters.delete.heading", { n: row.seq, title: row.title }),
-          meta: this.languageService.translate("novel.chapters.delete.meta", { words: formatCount(row.wordCount), passages }),
+          name: this.languageService.translate('novel.chapters.delete.heading', {
+            n: row.seq,
+            title: row.title,
+          }),
+          meta: this.languageService.translate('novel.chapters.delete.meta', {
+            words: formatCount(row.wordCount),
+            passages,
+          }),
         },
       ],
-      warning: this.languageService.translate("novel.chapters.delete.warn"),
-      confirmLabel: this.languageService.translate("novel.chapters.delete.submit"),
-      confirmIcon: "trash",
+      warning: this.languageService.translate('novel.chapters.delete.warn'),
+      confirmLabel: this.languageService.translate('novel.chapters.delete.submit'),
+      confirmIcon: 'trash',
       onConfirm: this.removeChapter.bind(this, novelId, row.id, row.title),
     });
   }
 
   private toItem(novel: NovelSummary): DialogItem {
-    const author = novel.author.trim() || this.languageService.translate("novel.author.unknown");
+    const author = novel.author.trim() || this.languageService.translate('novel.author.unknown');
     const chapters = formatCount(novel.chapterCount);
-    return { name: displayName(novel), meta: this.languageService.translate("novel.delete.meta", { author, chapters }), data: novel };
+    this.novels.ensureCover(novel);
+    return {
+      name: displayName(novel),
+      meta: this.languageService.translate('novel.delete.meta', { author, chapters }),
+      image: this.novels.coverUrl.bind(this.novels, novel),
+    };
   }
 
   private async removeNovels(rows: NovelSummary[]): Promise<void> {
@@ -97,17 +115,21 @@ export class NovelConfirmService {
     } catch (cause) {
       throw this.failure(cause);
     }
-    this.toasts.show(this.languageService.translate("novel.toast.chapterDeleted", { title }));
+    this.toasts.show(this.languageService.translate('novel.toast.chapterDeleted', { title }));
   }
 
   private deletedMessage(rows: NovelSummary[]): string {
     if (rows.length === 1) {
-      return this.languageService.translate("novel.toast.deleted.one", { title: displayName(rows[0]) });
+      return this.languageService.translate('novel.toast.deleted.one', {
+        title: displayName(rows[0]),
+      });
     }
-    return this.languageService.translate("novel.toast.deleted.other", { count: rows.length });
+    return this.languageService.translate('novel.toast.deleted.other', { count: rows.length });
   }
 
   private failure(cause: unknown): Error {
-    return new Error(this.languageService.translate("novel.error.generic", { detail: toNovelError(cause).detail }));
+    return new Error(
+      this.languageService.translate('novel.error.generic', { detail: toNovelError(cause).detail }),
+    );
   }
 }

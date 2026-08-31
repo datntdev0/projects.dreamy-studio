@@ -1,8 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { FoundationComponent } from "./foundation.component";
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+
+import { FoundationComponent } from './foundation.component';
 
 const meta: Meta<FoundationComponent> = {
-  title: "Design System/Foundation",
+  title: 'Design System/Foundation',
   component: FoundationComponent,
 };
 

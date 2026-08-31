@@ -1,30 +1,32 @@
-import { Component, HostListener, effect, inject } from "@angular/core";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { TabsService } from "@layout/tabs.service";
-import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
-import { NovelLang, NovelSummary, NovelViewMode } from "../novel.models";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { NovelConfirmService } from "../novel.confirm.service";
-import { NovelReaderService } from "../novel.reader.service";
-import { NovelService } from "../novel.service";
-import { displayName, formatCount, hasCustomName } from "../novel.rules";
-import { Cover, coverBackground } from "@components/cover";
-import { Icon } from "@components/icon";
-import { NovelProgressFrac } from "./progress-frac.component";
+import { ChangeDetectionStrategy, Component, effect, HostListener, inject } from '@angular/core';
+import { Cover, coverBackground } from '@components/cover';
+// prettier-ignore
+import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
-const INTERACTIVE_SELECTOR = "button";
-const FIELD_SELECTOR = "input,textarea,select";
+import { NovelConfirmService } from '../novel.confirm.service';
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { NovelLang, NovelSummary, NovelViewMode } from '../novel.models';
+import { NovelReaderService } from '../novel.reader.service';
+import { displayName, formatCount, hasCustomName } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { NovelProgressFrac } from './progress-frac.component';
+
+const INTERACTIVE_SELECTOR = 'button';
 
 function isInside(target: EventTarget | null, selector: string): boolean {
   return target instanceof Element && target.closest(selector) !== null;
 }
 
 @Component({
-  selector: "app-novel-list",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-list',
   imports: [Datatable, DatatableCell, Icon, CoreModule, Cover, NovelProgressFrac],
-  templateUrl: "./list.component.html",
+  templateUrl: './list.component.html',
 })
 export class NovelList {
   private readonly languageService = inject(LanguageService);
@@ -36,20 +38,48 @@ export class NovelList {
   readonly novels = inject(NovelService);
 
   readonly tableRowClass = (row: object): Record<string, boolean> => ({
-    "is-selected": this.novels.selectedId() === this.novelOf(row).id,
+    'is-selected': this.novels.selectedId() === this.novelOf(row).id,
   });
 
   readonly tableActions = (): DatatableAction[] => [
-    { key: "delete", label: this.languageService.translate("novel.list.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
+    {
+      key: 'delete',
+      label: this.languageService.translate('novel.list.delete'),
+      icon: 'trash',
+      danger: true,
+      handler: this.removeRow.bind(this),
+    },
   ];
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "title", label: this.languageService.translate("novel.list.col.novel"), ellipsis: true },
-      { key: "source", label: this.languageService.translate("novel.list.col.source"), width: "64px" },
-      { key: "chapters", label: this.languageService.translate("novel.list.col.chapters"), align: "right", width: "80px" },
-      { key: "words", label: this.languageService.translate("novel.list.col.words"), align: "right", width: "88px" },
-      { key: "progress", label: this.languageService.translate("novel.list.col.progress"), width: "96px" },
+      {
+        key: 'title',
+        label: this.languageService.translate('novel.list.col.novel'),
+        ellipsis: true,
+      },
+      {
+        key: 'source',
+        label: this.languageService.translate('novel.list.col.source'),
+        width: '64px',
+      },
+      {
+        key: 'chapters',
+        label: this.languageService.translate('novel.list.col.chapters'),
+        align: 'right',
+        width: '80px',
+      },
+      {
+        key: 'words',
+        label: this.languageService.translate('novel.list.col.words'),
+        align: 'right',
+        width: '88px',
+      },
+      {
+        key: 'progress',
+        label: this.languageService.translate('novel.list.col.progress'),
+        width: '96px',
+      },
     ];
   }
 
@@ -62,7 +92,7 @@ export class NovelList {
   }
 
   authorOf(novel: NovelSummary): string {
-    return novel.author || this.languageService.translate("novel.author.unknown");
+    return novel.author || this.languageService.translate('novel.author.unknown');
   }
 
   subtitleOf(novel: NovelSummary): string {
@@ -75,11 +105,11 @@ export class NovelList {
   }
 
   imageOf(novel: NovelSummary): string {
-    return this.novels.coverUrl(novel) ?? "";
+    return this.novels.coverUrl(novel) ?? '';
   }
 
   hasImage(novel: NovelSummary): boolean {
-    return this.imageOf(novel) !== "";
+    return this.imageOf(novel) !== '';
   }
 
   backgroundOf(novel: NovelSummary): string {
@@ -99,7 +129,7 @@ export class NovelList {
   }
 
   onQuery(event: Event): void {
-    this.novels.setQuery((event.target as HTMLInputElement).value);
+    this.novels.setQuery(fieldValue(event));
   }
 
   onSelect(id: number, event: Event): void {
@@ -156,9 +186,9 @@ export class NovelList {
     this.dialogs.openImport();
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onDeleteKey(event: KeyboardEvent): void {
-    if (event.key !== "Delete" || isInside(event.target, FIELD_SELECTOR)) {
+    if (!isDeleteShortcut(event)) {
       return;
     }
     const id = this.novels.selectedId();
@@ -171,7 +201,7 @@ export class NovelList {
   private isModalOpen(): boolean {
     const dialogs = this.dialogs;
     const tracked = dialogs.createOpen() || dialogs.importOpen();
-    return tracked || document.querySelector(".modal") !== null;
+    return tracked || isModalOpen();
   }
 
   private loadCovers(): void {

@@ -1,6 +1,6 @@
-import { TestBed } from "@angular/core/testing";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { vi } from "vitest";
+import { TestBed } from '@angular/core/testing';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { vi } from 'vitest';
 
 export type IpcHandler = (args: Record<string, unknown> | undefined) => unknown;
 
@@ -16,7 +16,10 @@ export class FakeIpc {
   on(command: string, handler: IpcHandler): this;
   on(command: string, value: unknown): this;
   on(command: string, handler: unknown): this {
-    this.handlers.set(command, typeof handler === "function" ? (handler as IpcHandler) : () => handler);
+    this.handlers.set(
+      command,
+      typeof handler === 'function' ? (handler as IpcHandler) : () => handler,
+    );
     return this;
   }
 
@@ -42,12 +45,17 @@ export class FakeIpc {
     return handler(args);
   }
 
-  private makeChannel(onMessage: (message: unknown) => void): { onmessage: (message: unknown) => void } {
+  private makeChannel(onMessage: (message: unknown) => void): {
+    onmessage: (message: unknown) => void;
+  } {
     return { onmessage: onMessage };
   }
 }
 
-export function provideFakeIpc(ipc: FakeIpc): { provide: typeof DesktopIpcService; useValue: FakeIpc } {
+export function provideFakeIpc(ipc: FakeIpc): {
+  provide: typeof DesktopIpcService;
+  useValue: FakeIpc;
+} {
   return { provide: DesktopIpcService, useValue: ipc };
 }
 

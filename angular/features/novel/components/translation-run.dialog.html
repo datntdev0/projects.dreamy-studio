@@ -1,85 +1,188 @@
 @if (open() && novel(); as novel) {
-  <ds-dialog [title]="'novel.translation.run.title' | t" [eyebrow]="'novel.cap' | t" size="large" [closeLabel]="'novel.dialog.close' | t" data-testid="novel-translation-run-panel" (closed)="close()">
-    <div class="an-pane" data-testid="novel-translation-run-pane">
-      <div class="form-2 an-fields">
-        <div class="field">
-          <label for="translation-run-target">{{ "novel.translation.run.target" | t }}</label>
-          <select id="translation-run-target" class="select" data-testid="novel-translation-run-target" (change)="onTarget($event)">
-            @for (item of targets(); track item) {
-              <option [value]="item" [selected]="item === target()">{{ langKey(item) | t }}</option>
-            }
-          </select>
-          <span class="field-hint">{{ "novel.translation.run.target.hint" | t }}</span>
-        </div>
-        <div class="field">
-          <span class="an-label">{{ "novel.translation.run.provider" | t }}</span>
-          <div class="an-prov" [attr.data-state]="provider().state" data-testid="novel-translation-run-provider">
-            @if (provider().state === "unset") {
-              <ds-icon name="alert" [size]="16" /><span>{{ "novel.translation.run.provider.unset" | t }}</span>
-            } @else {
-              <ds-icon [name]="provider().state === 'ready' ? 'check-circle' : 'alert'" [size]="16" /><span><b class="t-ink">{{ provider().name }}</b> <span class="t-mute mono">{{ provider().detail }}</span></span>
-            }
-            <button type="button" class="btn btn-sm btn-ghost" data-testid="novel-translation-run-settings" (click)="openSettings()">{{ "novel.translation.run.provider.change" | t }}</button>
-          </div>
-          <span class="field-hint">{{ (provider().state === "unready" ? "novel.translation.run.provider.unready" : "novel.translation.run.provider.hint") | t }}</span>
-        </div>
+<ds-dialog
+  [title]="'novel.translation.run.title' | t"
+  [eyebrow]="'novel.cap' | t"
+  size="large"
+  [closeLabel]="'novel.dialog.close' | t"
+  data-testid="novel-translation-run-panel"
+  (closed)="close()"
+>
+  <div class="an-pane" data-testid="novel-translation-run-pane">
+    <div class="form-2 an-fields">
+      <div class="field">
+        <label for="translation-run-target">{{ "novel.translation.run.target" | t }}</label>
+        <select
+          id="translation-run-target"
+          class="select"
+          data-testid="novel-translation-run-target"
+          (change)="onTarget($event)"
+        >
+          @for (item of targets(); track item) {
+          <option [value]="item" [selected]="item === target()">{{ langKey(item) | t }}</option>
+          }
+        </select>
+        <span class="field-hint">{{ "novel.translation.run.target.hint" | t }}</span>
       </div>
-      <div class="opts" role="radiogroup" [attr.aria-label]="'novel.translation.run.scope' | t" data-testid="novel-translation-run-modes">
-        @for (item of modes; track item) {
-          <label class="opt" [class.is-on]="mode() === item" data-testid="novel-translation-run-mode" [attr.data-mode]="item">
-            <input type="radio" name="translation-run-mode" [value]="item" [checked]="mode() === item" (change)="onMode(item)">
-            <span class="opt-b">
-              <b>{{ modeKey(item) | t }}</b>
-              @switch (item) {
-                @case ("missing") {
-                  <span class="t-sm t-mute">@if (summary().missing.length > 0) { {{ "novel.translation.run.mode.missing.count" | t: { count: summary().missing.length, range: rangeOf(summary().missing) } }} } @else { {{ "novel.translation.run.mode.missing.none" | t }} }</span>
-                }
-                @case ("range") {
-                  <span class="t-sm t-mute">{{ "novel.translation.run.mode.range.hint" | t }}</span>
-                  <span class="opt-row">
-                    <input class="input an-num" type="number" inputmode="numeric" step="1" [min]="firstSeq()" [max]="lastSeq()" [value]="from()" [attr.aria-label]="'novel.translation.run.from' | t" data-testid="novel-translation-run-from" (change)="onFrom($event)">
-                    <span class="t-mute">{{ "novel.translation.run.to" | t }}</span>
-                    <input class="input an-num" type="number" inputmode="numeric" step="1" [min]="firstSeq()" [max]="lastSeq()" [value]="to()" [attr.aria-label]="'novel.translation.run.toLabel' | t" data-testid="novel-translation-run-to" (change)="onTo($event)">
-                  </span>
-                }
-                @case ("all") {
-                  <span class="t-sm t-mute">{{ "novel.translation.run.mode.all.count" | t: { count: chapters().length } }}</span>
-                }
-              }
-            </span>
-          </label>
-        }
+      <div class="field">
+        <span class="an-label">{{ "novel.translation.run.provider" | t }}</span>
+        <app-novel-provider-status
+          [provider]="provider()"
+          testidPrefix="novel-translation-run"
+          unsetKey="novel.translation.run.provider.unset"
+          changeKey="novel.translation.run.provider.change"
+          (changeRequested)="openSettings()"
+        />
+        <span class="field-hint">
+          {{ (provider().state === "unready" ? "novel.translation.run.provider.unready" :
+          "novel.translation.run.provider.hint") | t }}
+        </span>
       </div>
-      @if (mode() !== "missing") {
-        <label class="check" data-testid="novel-translation-run-overwrite-field"><input type="checkbox" data-testid="novel-translation-run-overwrite" [checked]="overwrite()" (change)="onOverwrite($event)"><span><b>{{ "novel.translation.run.overwrite" | t }}</b><br><span class="t-sm t-mute">{{ "novel.translation.run.overwrite.hint" | t }}</span></span></label>
-      }
-      <div class="card side-card an-sum" data-testid="novel-translation-run-summary">
-        <dl class="kv">
-          <dt>{{ "novel.translation.run.sum.run" | t }}</dt>
-          <dd data-testid="novel-translation-run-run">@if (summary().run.length > 0) { <b class="t-ink">{{ "novel.translation.run.sum.chapters" | t: { count: summary().run.length } }}</b> · {{ "novel.translation.run.sum.range" | t: { range: rangeOf(summary().run) } }} } @else { <span class="t-mute">{{ "novel.translation.run.sum.none" | t }}</span> }</dd>
-          <dt>{{ "novel.translation.run.sum.keep" | t }}</dt>
-          <dd data-testid="novel-translation-run-keep">@if (summary().keep.length > 0) { {{ "novel.translation.run.sum.keep.count" | t: { count: summary().keep.length, range: rangeOf(summary().keep) } }} } @else { — }</dd>
-          <dt>{{ "novel.translation.run.sum.words" | t }}</dt>
-          <dd data-testid="novel-translation-run-words">{{ count(words()) }}</dd>
-        </dl>
-        @if (summary().noSource.length > 0) {
-          <div class="ld-warn" data-testid="novel-translation-run-nosource"><ds-icon name="alert" [size]="15" /><span>{{ "novel.translation.run.warn.noSource" | t: { count: summary().noSource.length, range: rangeOf(summary().noSource) } }}</span></div>
-        }
-        @if (summary().busy.length > 0) {
-          <div class="ld-warn" data-testid="novel-translation-run-busy"><ds-icon name="alert" [size]="15" /><span>{{ "novel.translation.run.warn.busy" | t: { count: summary().busy.length, range: rangeOf(summary().busy) } }}</span></div>
-        }
-        @if (effectiveOverwrite() && summary().overwrite.length > 0) {
-          <div class="ld-warn" data-testid="novel-translation-run-overwrite-warn"><ds-icon name="alert" [size]="15" /><span>{{ "novel.translation.run.warn.overwrite" | t: { count: summary().overwrite.length } }}</span></div>
-        }
-      </div>
-      <ol class="an-flow" [attr.aria-label]="'novel.translation.run.flow' | t" data-testid="novel-translation-run-flow">
-        <li><span class="an-n">1</span><span><b>{{ "novel.translation.run.step1" | t }}</b><small>{{ "novel.translation.run.step1.hint" | t }}</small></span></li>
-        <li><span class="an-n">2</span><span><b>{{ "novel.translation.run.step2" | t }}</b><small>{{ "novel.translation.run.step2.hint" | t }}</small></span></li>
-        <li><span class="an-n">3</span><span><b>{{ "novel.translation.run.step3" | t }}</b><small>{{ "novel.translation.run.step3.hint" | t }}</small></span></li>
-      </ol>
     </div>
-    <span class="spacer" dialogFoot></span>
-    <ds-button dialogFoot data-testid="novel-translation-run-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button>
-    <ds-button dialogFoot variant="primary" [disabled]="!canStart() || busy()" data-testid="novel-translation-run-start" (pressed)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.run.start" | t }}@if (summary().run.length > 0) { ({{ summary().run.length }}) }</ds-button>
-  </ds-dialog>
+    <div
+      class="opts"
+      role="radiogroup"
+      [attr.aria-label]="'novel.translation.run.scope' | t"
+      data-testid="novel-translation-run-modes"
+    >
+      @for (item of modes; track item) {
+      <app-novel-mode-option
+        [mode]="item"
+        [active]="mode() === item"
+        [titleKey]="modeKey(item)"
+        groupName="translation-run-mode"
+        testid="novel-translation-run-mode"
+        (picked)="onMode(item)"
+      >
+        @switch (item) { @case ("missing") {
+        <span class="t-sm t-mute">
+          @if (summary().missing.length > 0) { {{ "novel.translation.run.mode.missing.count" | t: {
+          count: summary().missing.length, range: rangeOf(summary().missing) } }} } @else { {{
+          "novel.translation.run.mode.missing.none" | t }} }
+        </span>
+        } @case ("range") {
+        <span class="t-sm t-mute">{{ "novel.translation.run.mode.range.hint" | t }}</span>
+        <app-novel-range-fields
+          [from]="from()"
+          [to]="to()"
+          [min]="firstSeq()"
+          [max]="lastSeq()"
+          testidPrefix="novel-translation-run"
+          fromKey="novel.translation.run.from"
+          joinKey="novel.translation.run.to"
+          toKey="novel.translation.run.toLabel"
+          (fromChanged)="onFrom($event)"
+          (toChanged)="onTo($event)"
+        />
+        } @case ("all") {
+        <span class="t-sm t-mute">
+          {{ "novel.translation.run.mode.all.count" | t: { count: chapters().length } }}
+        </span>
+        } }
+      </app-novel-mode-option>
+      }
+    </div>
+    @if (mode() !== "missing") {
+    <label class="check" data-testid="novel-translation-run-overwrite-field">
+      <input
+        type="checkbox"
+        data-testid="novel-translation-run-overwrite"
+        [checked]="overwrite()"
+        (change)="onOverwrite($event)"
+      />
+      <span>
+        <b>{{ "novel.translation.run.overwrite" | t }}</b>
+        <br />
+        <span class="t-sm t-mute">{{ "novel.translation.run.overwrite.hint" | t }}</span>
+      </span>
+    </label>
+    }
+    <div class="card side-card an-sum" data-testid="novel-translation-run-summary">
+      <dl class="kv">
+        <dt>{{ "novel.translation.run.sum.run" | t }}</dt>
+        <dd data-testid="novel-translation-run-run">
+          @if (summary().run.length > 0) {
+          <b class="t-ink">
+            {{ "novel.translation.run.sum.chapters" | t: { count: summary().run.length } }}
+          </b>
+          · {{ "novel.translation.run.sum.range" | t: { range: rangeOf(summary().run) } }} } @else {
+          <span class="t-mute">{{ "novel.translation.run.sum.none" | t }}</span>
+          }
+        </dd>
+        <dt>{{ "novel.translation.run.sum.keep" | t }}</dt>
+        <dd data-testid="novel-translation-run-keep">
+          @if (summary().keep.length > 0) { {{ "novel.translation.run.sum.keep.count" | t: { count:
+          summary().keep.length, range: rangeOf(summary().keep) } }} } @else { — }
+        </dd>
+        <dt>{{ "novel.translation.run.sum.words" | t }}</dt>
+        <dd data-testid="novel-translation-run-words">{{ count(words()) }}</dd>
+      </dl>
+      @if (summary().noSource.length > 0) {
+      <div class="ld-warn" data-testid="novel-translation-run-nosource">
+        <ds-icon name="alert" [size]="15" />
+        <span>
+          {{ "novel.translation.run.warn.noSource" | t: { count: summary().noSource.length, range:
+          rangeOf(summary().noSource) } }}
+        </span>
+      </div>
+      } @if (summary().busy.length > 0) {
+      <div class="ld-warn" data-testid="novel-translation-run-busy">
+        <ds-icon name="alert" [size]="15" />
+        <span>
+          {{ "novel.translation.run.warn.busy" | t: { count: summary().busy.length, range:
+          rangeOf(summary().busy) } }}
+        </span>
+      </div>
+      } @if (effectiveOverwrite() && summary().overwrite.length > 0) {
+      <div class="ld-warn" data-testid="novel-translation-run-overwrite-warn">
+        <ds-icon name="alert" [size]="15" />
+        <span>
+          {{ "novel.translation.run.warn.overwrite" | t: { count: summary().overwrite.length } }}
+        </span>
+      </div>
+      }
+    </div>
+    <ol
+      class="an-flow"
+      [attr.aria-label]="'novel.translation.run.flow' | t"
+      data-testid="novel-translation-run-flow"
+    >
+      <li>
+        <span class="an-n">1</span>
+        <span>
+          <b>{{ "novel.translation.run.step1" | t }}</b>
+          <small>{{ "novel.translation.run.step1.hint" | t }}</small>
+        </span>
+      </li>
+      <li>
+        <span class="an-n">2</span>
+        <span>
+          <b>{{ "novel.translation.run.step2" | t }}</b>
+          <small>{{ "novel.translation.run.step2.hint" | t }}</small>
+        </span>
+      </li>
+      <li>
+        <span class="an-n">3</span>
+        <span>
+          <b>{{ "novel.translation.run.step3" | t }}</b>
+          <small>{{ "novel.translation.run.step3.hint" | t }}</small>
+        </span>
+      </li>
+    </ol>
+  </div>
+  <span class="spacer" dialogFoot></span>
+  <ds-button dialogFoot data-testid="novel-translation-run-cancel" (pressed)="close()">
+    {{ "common.cancel" | t }}
+  </ds-button>
+  <ds-button
+    dialogFoot
+    variant="primary"
+    [disabled]="!canStart() || busy()"
+    data-testid="novel-translation-run-start"
+    (pressed)="start()"
+  >
+    <ds-icon name="lang" [size]="16" />
+    {{ "novel.translation.run.start" | t }}@if (summary().run.length > 0) { ({{ summary().run.length
+    }}) }
+  </ds-button>
+</ds-dialog>
 }

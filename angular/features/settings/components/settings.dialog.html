@@ -1,20 +1,51 @@
 @if (open()) {
-  <ds-dialog [title]="'settings.title' | t" [eyebrow]="'settings.cap' | t" [closeLabel]="'settings.close' | t" size="xl" data-testid="settings-dialog-panel" (closed)="close()">
-    <div class="settings st-layout" data-testid="settings-content">
-      <nav class="settings-nav" [attr.aria-label]="'settings.nav.label' | t" data-testid="settings-nav">
-        @for (item of sections; track item.id) {
-          <button type="button" class="tree-row" [class.is-selected]="item.id === current().id" [attr.aria-current]="item.id === current().id ? 'page' : null" [attr.data-testid]="'settings-nav-' + item.id" (click)="select(item.id)"><ds-icon [name]="item.icon" [size]="16" /><span class="tree-label">{{ item.labelKey | t }}</span></button>
-        }
-      </nav>
-      <div class="settings-pane" [attr.data-testid]="'settings-pane-' + current().id">
-        @if (current().id === "general") {
-          <app-settings-general />
-        } @else if (current().id === "llm") {
-          <app-settings-llm />
-        } @else {
-          <div class="empty" data-testid="settings-empty"><div class="empty-inner" data-testid="settings-empty-inner"><div class="illus" data-testid="settings-empty-illustration"></div><h4 class="t-display-xs" data-testid="settings-empty-title">{{ current().labelKey | t }}</h4><p class="t-sm t-mute" data-testid="settings-empty-description">{{ "settings.empty.description" | t }}</p></div></div>
-        }
+<ds-dialog
+  [title]="'settings.title' | t"
+  [eyebrow]="'settings.cap' | t"
+  [closeLabel]="'settings.close' | t"
+  size="xl"
+  data-testid="settings-dialog-panel"
+  (closed)="close()"
+>
+  <div class="settings st-layout" data-testid="settings-content">
+    <nav
+      class="settings-nav"
+      [attr.aria-label]="'settings.nav.label' | t"
+      data-testid="settings-nav"
+    >
+      @for (item of sections; track item.id) {
+      <button
+        type="button"
+        class="tree-row"
+        [class.is-selected]="item.id === current().id"
+        [attr.aria-current]="item.id === current().id ? 'page' : null"
+        [attr.data-testid]="'settings-nav-' + item.id"
+        (click)="select(item.id)"
+      >
+        <ds-icon [name]="item.icon" [size]="16" />
+        <span class="tree-label">{{ item.labelKey | t }}</span>
+      </button>
+      }
+    </nav>
+    <div class="settings-pane" [attr.data-testid]="'settings-pane-' + current().id">
+      @if (current().id === "general") {
+      <app-settings-general />
+      } @else if (current().id === "llm") {
+      <app-settings-llm />
+      } @else {
+      <div class="empty" data-testid="settings-empty">
+        <div class="empty-inner" data-testid="settings-empty-inner">
+          <div class="illus" data-testid="settings-empty-illustration"></div>
+          <h4 class="t-display-xs" data-testid="settings-empty-title">
+            {{ current().labelKey | t }}
+          </h4>
+          <p class="t-sm t-mute" data-testid="settings-empty-description">
+            {{ "settings.empty.description" | t }}
+          </p>
+        </div>
       </div>
+      }
     </div>
-  </ds-dialog>
+  </div>
+</ds-dialog>
 }

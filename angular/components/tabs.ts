@@ -1,20 +1,21 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
-import { Icon } from "./icon";
+import { ChangeDetectionStrategy, Component, Input, input, output } from '@angular/core';
+
+import { Icon } from './icon';
 
 export type TabOption = { value: string; label: string; icon?: string; disabled?: boolean };
 
 @Component({
-  selector: "ds-tabs",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-tabs',
   imports: [Icon],
-  templateUrl: "./tabs.html",
+  templateUrl: './tabs.html',
 })
 export class Tabs {
-  @Input() label = "Tabs";
-  @Input() idPrefix = "tabs";
-  @Input() options: TabOption[] = [];
-  @Input() value = "";
-  @Output() valueChange = new EventEmitter<string>();
+  readonly label = input('Tabs');
+  readonly idPrefix = input('tabs');
+  readonly options = input<TabOption[]>([]);
+  @Input() value = '';
+  readonly valueChange = output<string>();
 
   select(value: string): void {
     this.value = value;
@@ -22,15 +23,15 @@ export class Tabs {
   }
 
   tabId(value: string): string {
-    return `${this.idPrefix}-tab-${value}`;
+    return `${this.idPrefix()}-tab-${value}`;
   }
 
   panelId(value: string): string {
-    return `${this.idPrefix}-panel-${value}`;
+    return `${this.idPrefix()}-panel-${value}`;
   }
 
   onKeydown(event: KeyboardEvent): void {
-    const enabled = this.options.filter(this.isEnabled);
+    const enabled = this.options().filter(this.isEnabled);
     const target = this.targetOption(enabled, event.key);
     if (!target) {
       return;

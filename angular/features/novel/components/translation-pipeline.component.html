@@ -1,25 +1,58 @@
 <div class="tl-sub is-wrap" data-testid="novel-translation-pipeline-sub">
-  <label class="search"><span class="sr-only">{{ "novel.translation.trans.search.label" | t }}</span><input class="input" type="search" data-testid="novel-translation-pipeline-search" [value]="query()" [attr.placeholder]="'novel.translation.trans.search.placeholder' | t" (input)="onQuery($event)"></label>
-  <select class="select" data-testid="novel-translation-pipeline-filter" [attr.aria-label]="'novel.translation.trans.filter.label' | t" (change)="onFilter($event)">
+  <label class="search">
+    <span class="sr-only">{{ 'novel.translation.trans.search.label' | t }}</span>
+    <input
+      class="input"
+      type="search"
+      data-testid="novel-translation-pipeline-search"
+      [value]="query()"
+      [attr.placeholder]="'novel.translation.trans.search.placeholder' | t"
+      (input)="onQuery($event)"
+    />
+  </label>
+  <select
+    class="select"
+    data-testid="novel-translation-pipeline-filter"
+    [attr.aria-label]="'novel.translation.trans.filter.label' | t"
+    (change)="onFilter($event)"
+  >
     @for (item of filters; track item) {
       <option [value]="item" [selected]="filter() === item">{{ filterKey(item) | t }}</option>
     }
   </select>
-  <span class="t-sm t-mute" data-testid="novel-translation-pipeline-count">{{ "novel.translation.trans.count" | t: { count: count(matching().length) } }}</span>
+  <span class="t-sm t-mute" data-testid="novel-translation-pipeline-count">
+    {{ 'novel.translation.trans.count' | t: { count: count(matching().length) } }}
+  </span>
   <span class="spacer"></span>
-  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-pipeline-start" [disabled]="!ready()" (click)="start()"><ds-icon name="lang" [size]="16" />{{ "novel.translation.trans.start" | t }}</button>
+  <button
+    type="button"
+    class="btn btn-sm btn-primary"
+    data-testid="novel-translation-pipeline-start"
+    [disabled]="!ready()"
+    (click)="start()"
+  >
+    <ds-icon name="lang" [size]="16" />
+    {{ 'novel.translation.trans.start' | t }}
+  </button>
   @if (translation.isTranslating(novelId())) {
-    <button type="button" class="btn btn-sm" data-testid="novel-translation-pipeline-cancel" (click)="cancel()">{{ "novel.translation.trans.cancel" | t }}</button>
+    <button
+      type="button"
+      class="btn btn-sm"
+      data-testid="novel-translation-pipeline-cancel"
+      (click)="cancel()"
+    >
+      {{ 'novel.translation.trans.cancel' | t }}
+    </button>
   }
 </div>
-<div class="tl-main is-flat" data-testid="novel-translation-pipeline">
+<div class="tl-main is-flat" data-testid="novel-translation-pipeline-main">
   <table class="table" data-testid="novel-translation-pipeline-table">
     <thead>
       <tr>
         <th>#</th>
-        <th>{{ "novel.translation.trans.col.chapter" | t }}</th>
-        <th class="num">{{ "novel.translation.trans.col.words" | t }}</th>
-        <th>{{ "novel.translation.trans.col.status" | t }}</th>
+        <th>{{ 'novel.translation.trans.col.chapter' | t }}</th>
+        <th class="num">{{ 'novel.translation.trans.col.words' | t }}</th>
+        <th>{{ 'novel.translation.trans.col.status' | t }}</th>
         <th></th>
       </tr>
     </thead>
@@ -29,16 +62,37 @@
           <td class="mono t-mute">{{ numberOf(row) }}</td>
           <td class="t-ink">{{ row.title }}</td>
           <td class="num">{{ count(row.wordCount) }}</td>
-          <td><span class="badge" [class]="badgeOf(statusOf(row))" data-testid="novel-translation-pipeline-status">{{ statusKey(statusOf(row)) | t }}</span></td>
+          <td>
+            <span
+              class="badge"
+              [class]="badgeOf(statusOf(row))"
+              data-testid="novel-translation-pipeline-status"
+            >
+              {{ statusKey(statusOf(row)) | t }}
+            </span>
+          </td>
           <td class="row-actions">
             @if (hasTranslation(row)) {
-              <button type="button" class="btn btn-sm" data-testid="novel-translation-pipeline-read" (click)="read(row)">{{ "novel.translation.trans.read" | t }}</button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                data-testid="novel-translation-pipeline-read"
+                (click)="read(row)"
+              >
+                {{ 'novel.translation.trans.read' | t }}
+              </button>
             }
           </td>
         </tr>
       }
       @if (matching().length > shown().length) {
-        <tr><td colspan="5" class="t-sm t-mute pad">{{ "novel.translation.trans.more" | t: { shown: limit, total: count(matching().length) } }}</td></tr>
+        <tr>
+          <td colspan="5" class="t-sm t-mute pad">
+            {{
+              'novel.translation.trans.more' | t: { shown: limit, total: count(matching().length) }
+            }}
+          </td>
+        </tr>
       }
     </tbody>
   </table>

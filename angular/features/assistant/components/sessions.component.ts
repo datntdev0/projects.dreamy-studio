@@ -1,16 +1,19 @@
-import { Component, computed, inject, signal } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageKey } from "@core/language/language.models";
-import { NovelSummary } from "@features/novel/novel.models";
-import { displayName } from "@features/novel/novel.rules";
-import { NovelService } from "@features/novel/novel.service";
-import { AssistantScopeFilter, AssistantSessionSummary } from "../assistant.models";
-import { dayKey, matchesScopeFilter, matchesSessionQuery, shortStamp } from "../assistant.rules";
-import { AssistantService } from "../assistant.service";
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { NovelSummary } from '@features/novel/novel.models';
+import { displayName } from '@features/novel/novel.rules';
+import { NovelService } from '@features/novel/novel.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { fieldValue } from '@shared/utils/dom';
 
-type DayGroup = "today" | "yesterday" | "week" | "older";
+import { AssistantScopeFilter, AssistantSessionSummary } from '../assistant.models';
+import { dayKey, matchesScopeFilter, matchesSessionQuery, shortStamp } from '../assistant.rules';
+import { AssistantService } from '../assistant.service';
+import { AssistantPaneHeader } from './pane-header.component';
+
+type DayGroup = 'today' | 'yesterday' | 'week' | 'older';
 
 interface SessionGroup {
   key: DayGroup;
@@ -18,26 +21,26 @@ interface SessionGroup {
   sessions: AssistantSessionSummary[];
 }
 
-const DAY_GROUPS: DayGroup[] = ["today", "yesterday", "week", "older"];
+const DAY_GROUPS: DayGroup[] = ['today', 'yesterday', 'week', 'older'];
 
 const DAY_KEYS: Record<DayGroup, LanguageKey> = {
-  today: "assistant.history.today",
-  yesterday: "assistant.history.yesterday",
-  week: "assistant.history.week",
-  older: "assistant.history.older",
+  today: 'assistant.history.today',
+  yesterday: 'assistant.history.yesterday',
+  week: 'assistant.history.week',
+  older: 'assistant.history.older',
 };
 
 @Component({
-  selector: "app-assistant-sessions",
-  standalone: true,
-  imports: [Button, Icon, CoreModule],
-  templateUrl: "./sessions.component.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-assistant-sessions',
+  imports: [Button, Icon, CoreModule, AssistantPaneHeader],
+  templateUrl: './sessions.component.html',
 })
 export class AssistantSessions {
   readonly assistant = inject(AssistantService);
   readonly novels = inject(NovelService);
-  readonly query = signal("");
-  readonly filter = signal<AssistantScopeFilter>("all");
+  readonly query = signal('');
+  readonly filter = signal<AssistantScopeFilter>('all');
   readonly visible = computed(this.buildVisible.bind(this));
   readonly groups = computed(this.buildGroups.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
@@ -48,7 +51,7 @@ export class AssistantSessions {
 
   filterValue(): string {
     const filter = this.filter();
-    return typeof filter === "number" ? `novel-${filter}` : filter;
+    return typeof filter === 'number' ? `novel-${filter}` : filter;
   }
 
   stampOf(session: AssistantSessionSummary): string {
@@ -60,17 +63,19 @@ export class AssistantSessions {
   }
 
   onQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+    this.query.set(fieldValue(event));
   }
 
   onFilter(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.filter.set(value.startsWith("novel-") ? Number(value.slice(6)) : (value as AssistantScopeFilter));
+    const value = fieldValue(event);
+    this.filter.set(
+      value.startsWith('novel-') ? Number(value.slice(6)) : (value as AssistantScopeFilter),
+    );
   }
 
   clearFilters(): void {
-    this.query.set("");
-    this.filter.set("all");
+    this.query.set('');
+    this.filter.set('all');
   }
 
   remove(session: AssistantSessionSummary): void {
@@ -78,13 +83,16 @@ export class AssistantSessions {
   }
 
   private buildFilterActive(): boolean {
-    return this.query().trim() !== "" || this.filter() !== "all";
+    return this.query().trim() !== '' || this.filter() !== 'all';
   }
 
   private buildVisible(): AssistantSessionSummary[] {
     const out: AssistantSessionSummary[] = [];
     for (const session of this.assistant.sessions()) {
-      if (matchesScopeFilter(session, this.filter()) && matchesSessionQuery(session, this.query())) {
+      if (
+        matchesScopeFilter(session, this.filter()) &&
+        matchesSessionQuery(session, this.query())
+      ) {
         out.push(session);
       }
     }

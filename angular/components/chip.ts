@@ -1,17 +1,17 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import { ChangeDetectionStrategy, Component, Input, input, output } from '@angular/core';
 
 @Component({
-  selector: "ds-chip",
-  standalone: true,
-  templateUrl: "./chip.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-chip',
+  templateUrl: './chip.html',
 })
 export class Chip {
-  @Input() label = "";
+  readonly label = input('');
   @Input() selected = false;
-  @Input() removable = false;
-  @Input() disabled = false;
-  @Output() selectedChange = new EventEmitter<boolean>();
-  @Output() removed = new EventEmitter<void>();
+  readonly removable = input(false);
+  readonly disabled = input(false);
+  readonly selectedChange = output<boolean>();
+  readonly removed = output<void>();
 
   toggle(): void {
     this.selected = !this.selected;

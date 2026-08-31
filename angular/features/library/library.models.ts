@@ -1,24 +1,94 @@
-import { LanguageKey } from "@core/language/language.models";
+import { LanguageKey } from '@shared/language/language.models';
 
-export type LibraryKind = "image" | "sound" | "video" | "prompt";
+export type LibraryKind = 'image' | 'sound' | 'video' | 'prompt';
 export type KindCounts = Record<LibraryKind, number>;
+export type LibrarySort = 'new' | 'name' | 'size';
+export type CollectionFilter = number | 'none' | null;
 export const LIBRARY_KINDS: { id: LibraryKind; icon: string; labelKey: LanguageKey }[] = [
-  { id: "image", icon: "image", labelKey: "library.kind.image" },
-  { id: "sound", icon: "music", labelKey: "library.kind.sound" },
-  { id: "video", icon: "film", labelKey: "library.kind.video" },
-  { id: "prompt", icon: "prompt", labelKey: "library.kind.prompt" },
+  { id: 'image', icon: 'image', labelKey: 'library.kind.image' },
+  { id: 'sound', icon: 'music', labelKey: 'library.kind.sound' },
+  { id: 'video', icon: 'film', labelKey: 'library.kind.video' },
+  { id: 'prompt', icon: 'prompt', labelKey: 'library.kind.prompt' },
 ];
-export interface LibraryCollection { id: number; name: string; description: string; createdAt: string; updatedAt: string; counts: KindCounts; }
-export interface LibraryTag { tag: string; counts: KindCounts; }
-export interface LibrarySummary { assets: KindCounts; unfiled: KindCounts; }
-export interface TaxonomySelection { kind: "col" | "tag"; id: number | string; }
-export interface LibraryError { code: string; detail: string; }
-export type AssetRights = "own" | "licensed" | "free" | "other";
-export const ASSET_RIGHTS: AssetRights[] = ["own", "licensed", "free", "other"];
-export type AssetCheckStatus = "ok" | "warn" | "error";
-export interface AssetCheck { path: string; name: string; size: number; status: AssetCheckStatus; code?: "empty" | "unsupported" | "too_large" | "not_found" | "duplicate_name" | "unreadable"; }
-export interface AssetUploadInput { collectionId?: number; tags: string[]; rights: AssetRights; }
-export interface AssetPatch { name?: string; rights?: AssetRights; collectionId?: number | null; tags?: string[]; }
-export type AssetRef = { kind: "image" | "sound" | "video" | "prompt"; id: number; };
-export type LibraryErrorCode = "no_workspace" | "invalid_input" | "collection_not_found" | "collection_exists" | "tag_exists" | "tag_not_found" | "invalid_tag" | "image_not_found" | "image_unsupported" | "image_too_large" | "image_unreadable" | "sound_not_found" | "sound_unsupported" | "sound_too_large" | "sound_unreadable" | "video_not_found" | "video_unsupported" | "video_too_large" | "video_unreadable" | "prompt_not_found" | "prompt_unsupported" | "prompt_too_large" | "prompt_unreadable" | "prompt_empty" | "prompt_name_invalid" | "tag_limit" | "io" | "db" | "task" | "unknown";
-export const ASSET_RATIOS = [["1/1", "1:1"], ["16/9", "16:9"], ["9/16", "9:16"]] as const;
+export interface LibraryCollection {
+  id: number;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  counts: KindCounts;
+}
+export interface LibraryTag {
+  tag: string;
+  counts: KindCounts;
+}
+export interface LibrarySummary {
+  assets: KindCounts;
+  unfiled: KindCounts;
+}
+export interface TaxonomySelection {
+  kind: 'col' | 'tag';
+  id: number | string;
+}
+export interface LibraryError {
+  code: string;
+  detail: string;
+}
+export type AssetRights = 'own' | 'licensed' | 'free' | 'other';
+export const ASSET_RIGHTS: AssetRights[] = ['own', 'licensed', 'free', 'other'];
+export type AssetCheckStatus = 'ok' | 'warn' | 'error';
+export interface AssetCheck {
+  path: string;
+  name: string;
+  size: number;
+  status: AssetCheckStatus;
+  code?: 'empty' | 'unsupported' | 'too_large' | 'not_found' | 'duplicate_name' | 'unreadable';
+}
+export interface AssetUploadInput {
+  collectionId?: number;
+  tags: string[];
+  rights: AssetRights;
+}
+export interface AssetPatch {
+  name?: string;
+  rights?: AssetRights;
+  collectionId?: number | null;
+  tags?: string[];
+}
+export type AssetRef = { kind: 'image' | 'sound' | 'video' | 'prompt'; id: number };
+export type LibraryErrorCode =
+  | 'no_workspace'
+  | 'invalid_input'
+  | 'collection_not_found'
+  | 'collection_exists'
+  | 'tag_exists'
+  | 'tag_not_found'
+  | 'invalid_tag'
+  | 'image_not_found'
+  | 'image_unsupported'
+  | 'image_too_large'
+  | 'image_unreadable'
+  | 'sound_not_found'
+  | 'sound_unsupported'
+  | 'sound_too_large'
+  | 'sound_unreadable'
+  | 'video_not_found'
+  | 'video_unsupported'
+  | 'video_too_large'
+  | 'video_unreadable'
+  | 'prompt_not_found'
+  | 'prompt_unsupported'
+  | 'prompt_too_large'
+  | 'prompt_unreadable'
+  | 'prompt_empty'
+  | 'prompt_name_invalid'
+  | 'tag_limit'
+  | 'io'
+  | 'db'
+  | 'task'
+  | 'unknown';
+export const ASSET_RATIOS = [
+  ['1/1', '1:1'],
+  ['16/9', '16:9'],
+  ['9/16', '9:16'],
+] as const;

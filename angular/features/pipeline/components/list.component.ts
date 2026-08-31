@@ -1,17 +1,19 @@
-import { Component, DestroyRef, OnInit, inject, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { PIPELINE_KINDS } from "../pipeline.rules";
-import { PipelineService } from "../pipeline.service";
-import { PipelineItem } from "./item.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+
+import { PIPELINE_KINDS } from '../pipeline.rules';
+import { PipelineService } from '../pipeline.service';
+import { PipelineItem } from './item.component';
 
 const CLOCK_MS = 1000;
 
 @Component({
-  selector: "app-pipeline-list",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-pipeline-list',
   imports: [Icon, CoreModule, PipelineItem],
-  templateUrl: "./list.component.html",
+  templateUrl: './list.component.html',
 })
 export class PipelineList implements OnInit {
   private readonly destroyRef = inject(DestroyRef);

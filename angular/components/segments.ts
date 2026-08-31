@@ -1,17 +1,17 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import { ChangeDetectionStrategy, Component, Input, input, output } from '@angular/core';
 
 export type SegmentOption = { value: string; label: string; disabled?: boolean };
 
 @Component({
-  selector: "ds-segments",
-  standalone: true,
-  templateUrl: "./segments.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-segments',
+  templateUrl: './segments.html',
 })
 export class Segments {
-  @Input() label = "Options";
-  @Input() options: SegmentOption[] = [];
-  @Input() value = "";
-  @Output() valueChange = new EventEmitter<string>();
+  readonly label = input('Options');
+  readonly options = input<SegmentOption[]>([]);
+  @Input() value = '';
+  readonly valueChange = output<string>();
 
   select(value: string): void {
     this.value = value;

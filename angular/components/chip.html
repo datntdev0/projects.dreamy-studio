@@ -1,1 +1,27 @@
-<span class="chip" data-testid="chip" [class.is-selected]="selected" [class.is-disabled]="disabled"><button class="chip-label" type="button" [disabled]="disabled" [attr.aria-pressed]="selected" (click)="toggle()">{{ label }}</button>@if (removable) { <button class="chip-remove" type="button" [disabled]="disabled" [attr.aria-label]="'Remove ' + label" (click)="removed.emit()">×</button> }</span>
+<span
+  class="chip"
+  data-testid="chip"
+  [class.is-selected]="selected"
+  [class.is-disabled]="disabled()"
+>
+  <button
+    class="chip-label"
+    type="button"
+    [disabled]="disabled()"
+    [attr.aria-pressed]="selected"
+    (click)="toggle()"
+  >
+    {{ label() }}
+  </button>
+  @if (removable()) {
+  <button
+    class="chip-remove"
+    type="button"
+    [disabled]="disabled()"
+    [attr.aria-label]="'Remove ' + label()"
+    (click)="removed.emit()"
+  >
+    ×
+  </button>
+  }
+</span>

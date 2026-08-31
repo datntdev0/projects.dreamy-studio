@@ -1,52 +1,175 @@
-<div class="table-wrap" [class.is-fill]="variant === 'fill'" data-testid="datatable">
+<div class="table-wrap" [class.is-fill]="variant() === 'fill'" data-testid="datatable">
   <div #header class="table-head" data-testid="datatable-head">
-    <table class="table" [style.minWidth]="minWidth || null">
-      <colgroup>@for (column of columns; track column.key) { <col [style.width]="column.width || null"> }@if (hasActions) { <col class="row-menu-col"> }</colgroup>
-      <thead><tr>@for (column of columns; track column.key) { <th scope="col" [class.num]="column.align === 'right'" [class.cen]="column.align === 'center'">{{ column.label }}</th> }@if (hasActions) { <th scope="col" class="row-menu-cell"><span class="sr-only">{{ actionsLabel }}</span></th> }</tr></thead>
+    <table class="table" [style.minWidth]="minWidth() || null">
+      <colgroup>
+        @for (column of columns(); track column.key) {
+        <col [style.width]="column.width || null" />
+        }@if (hasActions) {
+        <col class="row-menu-col" />
+        }
+      </colgroup>
+      <thead>
+        <tr>
+          @for (column of columns(); track column.key) {
+          <th
+            scope="col"
+            [class.num]="column.align === 'right'"
+            [class.cen]="column.align === 'center'"
+          >
+            {{ column.label }}
+          </th>
+          }@if (hasActions) {
+          <th scope="col" class="row-menu-cell">
+            <span class="sr-only">{{ actionsLabel() }}</span>
+          </th>
+          }
+        </tr>
+      </thead>
     </table>
   </div>
-  <div class="table-body" (scroll)="syncHeaderScroll($event); closeMenu()" data-testid="datatable-body">
-    <table class="table" [style.minWidth]="minWidth || null">
-      <colgroup>@for (column of columns; track column.key) { <col [style.width]="column.width || null"> }@if (hasActions) { <col class="row-menu-col"> }</colgroup>
+  <div
+    class="table-body"
+    (scroll)="syncHeaderScroll($event); closeMenu()"
+    data-testid="datatable-body"
+  >
+    <table class="table" [style.minWidth]="minWidth() || null">
+      <colgroup>
+        @for (column of columns(); track column.key) {
+        <col [style.width]="column.width || null" />
+        }@if (hasActions) {
+        <col class="row-menu-col" />
+        }
+      </colgroup>
       <tbody>
-        @for (row of rows; track trackRow($index, row); let index = $index) {
-          <tr tabindex="0" [class.is-dblclick]="rowDblClick.observed" [ngClass]="rowClasses(row)" [class.is-selected]="selectedIndex === index || rowClasses(row)['is-selected']" [attr.data-testid]="rowTestId" [attr.aria-selected]="selectedIndex === index || rowClasses(row)['is-selected'] || null" (click)="onRowClick(row, index, $event)" (dblclick)="onRowDblClick(row, $event)" (keydown.enter)="onRowEnter(row, index, $event)" (keydown.space)="onRowSpace(index, $event)" (keydown.f2)="onRowEdit(row, $event)" [attr.data-row-key]="trackRow(index, row)" (pointerdown)="onPointerDown(row, $event)">
-            @for (column of columns; track column.key) {
-              <td [class.num]="column.align === 'right'" [class.cen]="column.align === 'center'" [class.cell-ellipsis]="column.ellipsis" [class.is-editable]="isEditable(row, column)" [class.is-editing]="isEditing(row, column.key)" (dblclick)="onCellDblClick(row, column, $event)">
-                @if (isEditing(row, column.key) && column.editor === 'select') {
-                  <select class="select datatable-cell-input" [attr.aria-label]="column.label" data-testid="datatable-cell-input" (change)="onEditSelect($event)" (keydown)="onEditKeydown($event)" (blur)="onEditBlur()" (click)="stopEditEvent($event)" (dblclick)="stopEditEvent($event)" (pointerdown)="stopEditEvent($event)">
-                    @for (option of column.options; track option.value) { <option [value]="option.value" [selected]="option.value === cellValue(row, column.key)" [disabled]="option.disabled">{{ option.label }}</option> }
-                  </select>
-                } @else if (isEditing(row, column.key)) {
-                  <input class="input datatable-cell-input" type="text" [value]="cellValue(row, column.key) ?? ''" [attr.aria-label]="column.label" data-testid="datatable-cell-input" (input)="onEditInput($event)" (keydown)="onEditKeydown($event)" (blur)="onEditBlur()" (click)="stopEditEvent($event)" (dblclick)="stopEditEvent($event)" (pointerdown)="stopEditEvent($event)">
-                } @else if (cellTemplate(column.key); as cell) {
-                  <ng-container [ngTemplateOutlet]="cell" [ngTemplateOutletContext]="{ $implicit: row }" />
-                } @else {
-                  {{ displayValue(row, column) }}
-                }
-              </td>
+        @for (row of rows(); track trackRow($index, row); let index = $index) {
+        <tr
+          tabindex="0"
+          [class.is-dblclick]="rowDblClick.observed"
+          [ngClass]="rowClasses(row)"
+          [class.is-selected]="selectedIndex() === index || rowClasses(row)['is-selected']"
+          [attr.data-testid]="rowTestId()"
+          [attr.aria-selected]="selectedIndex() === index || rowClasses(row)['is-selected'] || null"
+          (click)="onRowClick(row, index, $event)"
+          (dblclick)="onRowDblClick(row, $event)"
+          (keydown.enter)="onRowEnter(row, index, $event)"
+          (keydown.space)="onRowSpace(index, $event)"
+          (keydown.f2)="onRowEdit(row, $event)"
+          [attr.data-row-key]="trackRow(index, row)"
+          (pointerdown)="onPointerDown(row, $event)"
+        >
+          @for (column of columns(); track column.key) {
+          <td
+            [class.num]="column.align === 'right'"
+            [class.cen]="column.align === 'center'"
+            [class.cell-ellipsis]="column.ellipsis"
+            [class.is-editable]="isEditable(row, column)"
+            [class.is-editing]="isEditing(row, column.key)"
+            (dblclick)="onCellDblClick(row, column, $event)"
+          >
+            @if (isEditing(row, column.key) && column.editor === 'select') {
+            <select
+              class="select datatable-cell-input"
+              [attr.aria-label]="column.label"
+              data-testid="datatable-cell-input"
+              (change)="onEditSelect($event)"
+              (keydown)="onEditKeydown($event)"
+              (blur)="onEditBlur()"
+              (click)="stopEditEvent($event)"
+              (dblclick)="stopEditEvent($event)"
+              (pointerdown)="stopEditEvent($event)"
+            >
+              @for (option of column.options; track option.value) {
+              <option
+                [value]="option.value"
+                [selected]="option.value === cellValue(row, column.key)"
+                [disabled]="option.disabled"
+              >
+                {{ option.label }}
+              </option>
+              }
+            </select>
+            } @else if (isEditing(row, column.key)) {
+            <input
+              class="input datatable-cell-input"
+              type="text"
+              [value]="cellValue(row, column.key) ?? ''"
+              [attr.aria-label]="column.label"
+              data-testid="datatable-cell-input"
+              (input)="onEditInput($event)"
+              (keydown)="onEditKeydown($event)"
+              (blur)="onEditBlur()"
+              (click)="stopEditEvent($event)"
+              (dblclick)="stopEditEvent($event)"
+              (pointerdown)="stopEditEvent($event)"
+            />
+            } @else if (cellTemplate(column.key); as cell) {
+            <ng-container
+              [ngTemplateOutlet]="cell"
+              [ngTemplateOutletContext]="{ $implicit: row }"
+            />
+            } @else { {{ displayValue(row, column) }} }
+          </td>
+          } @if (hasActions) {
+          <td class="row-menu-cell">
+            @let rowActions = actionsFor(row); @if (rowActions.length > 0) {
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm btn-icon"
+              [class.is-active]="menuRow() === row"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="menuRow() === row"
+              [attr.aria-label]="actionsLabel()"
+              data-testid="datatable-row-menu"
+              (click)="toggleMenu(row, $event)"
+              (dblclick)="stopRowEvent($event)"
+              (pointerdown)="stopRowEvent($event)"
+              (keydown.enter)="stopRowEvent($event)"
+              (keydown.space)="stopRowEvent($event)"
+            >
+              <ds-icon name="more" [size]="16" />
+            </button>
             }
-            @if (hasActions) {
-              <td class="row-menu-cell">
-                @let rowActions = actionsFor(row);
-                @if (rowActions.length > 0) {
-                  <button type="button" class="btn btn-ghost btn-sm btn-icon" [class.is-active]="menuRow() === row" aria-haspopup="menu" [attr.aria-expanded]="menuRow() === row" [attr.aria-label]="actionsLabel" data-testid="datatable-row-menu" (click)="toggleMenu(row, $event)" (dblclick)="stopRowEvent($event)" (pointerdown)="stopRowEvent($event)" (keydown.enter)="stopRowEvent($event)" (keydown.space)="stopRowEvent($event)"><ds-icon name="more" [size]="16" /></button>
-                }
-              </td>
-            }
-          </tr>
+          </td>
+          }
+        </tr>
         } @empty {
-          <tr><td class="empty-cell" [attr.colspan]="columns.length + (hasActions ? 1 : 0)">@if (emptyTemplate(); as empty) { <ng-container [ngTemplateOutlet]="empty" /> } @else { {{ emptyMessage }} }</td></tr>
+        <tr>
+          <td class="empty-cell" [attr.colspan]="columns().length + (hasActions ? 1 : 0)">
+            @if (emptyTemplate(); as empty) {
+            <ng-container [ngTemplateOutlet]="empty" />
+            } @else { {{ emptyMessage() }} }
+          </td>
+        </tr>
         }
       </tbody>
     </table>
   </div>
 </div>
-<div #menu class="menu datatable-menu" popover="manual" role="menu" [attr.aria-label]="actionsLabel" data-testid="datatable-menu" (keydown)="onMenuKeydown($event)">
+<div
+  #menu
+  class="menu datatable-menu"
+  popover="manual"
+  role="menu"
+  [attr.aria-label]="actionsLabel()"
+  data-testid="datatable-menu"
+  (keydown)="onMenuKeydown($event)"
+>
   @for (action of menuActions(); track action.key) {
-    <button type="button" class="menu-row" [class.is-danger]="action.danger" [class.is-disabled]="action.disabled" role="menuitem" [disabled]="action.disabled" [attr.data-action]="action.key" data-testid="datatable-menu-item" (click)="runAction(action)">
-      @if (action.icon) { <ds-icon [name]="action.icon" [size]="16" /> }
-      <span>{{ action.label }}</span>
-    </button>
+  <button
+    type="button"
+    class="menu-row"
+    [class.is-danger]="action.danger"
+    [class.is-disabled]="action.disabled"
+    role="menuitem"
+    [disabled]="action.disabled"
+    [attr.data-action]="action.key"
+    data-testid="datatable-menu-item"
+    (click)="runAction(action)"
+  >
+    @if (action.icon) {
+    <ds-icon [name]="action.icon" [size]="16" />
+    }
+    <span>{{ action.label }}</span>
+  </button>
   }
 </div>

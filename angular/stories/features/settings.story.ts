@@ -1,7 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { SettingsDialog } from "@features/settings/components/settings.dialog";
-import { SettingsSectionId } from "@features/settings/settings.models";
-import { CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider, settingsProvider, withProviders, workspaceProvider } from "./mocks";
+import { SettingsDialog } from '@features/settings/components/settings.dialog';
+import { SettingsSectionId } from '@features/settings/settings.models';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+
+// prettier-ignore
+import { CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider, settingsProvider, withProviders, workspaceProvider } from './mocks';
 
 function settings(section: SettingsSectionId): StoryObj<SettingsDialog> {
   return withProviders([
@@ -12,17 +14,17 @@ function settings(section: SettingsSectionId): StoryObj<SettingsDialog> {
 }
 
 const meta: Meta<SettingsDialog> = {
-  title: "Features/Settings",
+  title: 'Features/Settings',
   component: SettingsDialog,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: 'fullscreen' },
 };
 
 export default meta;
 
 type Story = StoryObj<SettingsDialog>;
 
-export const General: Story = settings("general");
+export const General: Story = settings('general');
 
-export const LlmProviders: Story = settings("llm");
+export const LlmProviders: Story = settings('llm');
 
-export const ComingSoon: Story = settings("backend");
+export const ComingSoon: Story = settings('backend');

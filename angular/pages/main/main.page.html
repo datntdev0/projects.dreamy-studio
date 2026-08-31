@@ -1,6 +1,13 @@
 <div class="app" [class.is-resizing-panels]="layout.resizing()" data-testid="main-page">
   <app-titlebar />
-  <div class="shell" [style.--ex-w.px]="layout.explorerSize()" [style.--in-w.px]="layout.inspectorSize()" [class.no-explorer]="!layout.explorerVisible()" [class.no-inspector]="!layout.inspectorOpen()" data-testid="main-shell">
+  <div
+    class="shell"
+    [style.--ex-w.px]="layout.explorerSize()"
+    [style.--in-w.px]="layout.inspectorSize()"
+    [class.no-explorer]="!layout.explorerVisible()"
+    [class.no-inspector]="!layout.inspectorOpen()"
+    data-testid="main-shell"
+  >
     <app-railbar />
     <app-explorer />
     <app-editor />
@@ -8,7 +15,13 @@
   </div>
   <app-statusbar />
   @if (switchNotice(); as message) {
-    <ds-toast class="main-notice" tone="danger" [message]="message" data-testid="main-switch-notice" (dismissed)="dismissSwitchNotice()" />
+  <ds-toast
+    class="main-notice"
+    tone="danger"
+    [message]="message"
+    data-testid="main-switch-notice"
+    (dismissed)="dismissSwitchNotice()"
+  />
   }
   <app-settings-dialog />
   <app-switch-workspace-dialog />

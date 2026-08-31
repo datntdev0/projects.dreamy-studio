@@ -1,13 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { MainPage } from "@pages/main/main.page";
-import { click, waitFor } from "./novel-screen.helpers";
-import { TranslationScenario, withTranslation } from "./novel-translation.mocks";
+import { MainPage } from '@pages/main/main.page';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+
+import { click, waitFor } from './novel-screen.helpers';
+import { TranslationScenario, withTranslation } from './novel-translation.mocks';
 
 async function openHistory(root: HTMLElement): Promise<void> {
   await click(root, '[data-testid="railbar-pipelines"]');
 }
 
-function screen(scenario: TranslationScenario, play: (root: HTMLElement) => Promise<void>): StoryObj<MainPage> {
+function screen(
+  scenario: TranslationScenario,
+  play: (root: HTMLElement) => Promise<void>,
+): StoryObj<MainPage> {
   return {
     ...withTranslation(scenario),
     play: async ({ canvasElement }) => play(canvasElement),
@@ -29,9 +33,9 @@ async function showEmpty(root: HTMLElement): Promise<void> {
 }
 
 const meta: Meta<MainPage> = {
-  title: "Screens/Pipeline Management",
+  title: 'Screens/Pipeline Management',
   component: MainPage,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: 'fullscreen' },
 };
 
 export default meta;

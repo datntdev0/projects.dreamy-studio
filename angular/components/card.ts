@@ -1,11 +1,11 @@
-import { Component, Input } from "@angular/core";
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-  selector: "ds-card",
-  standalone: true,
-  templateUrl: "./card.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-card',
+  templateUrl: './card.html',
 })
 export class Card {
-  @Input() selected = false;
-  @Input() spacious = false;
+  readonly selected = input(false);
+  readonly spacious = input(false);
 }

@@ -1,30 +1,35 @@
-import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { LlmService, isReady } from "../../settings/llm.service";
-import { LlmFeature, LlmProvider } from "../../settings/settings.models";
-import { SettingsService } from "../../settings/settings.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { ChapterRow, NovelSummary, TargetLang } from "../novel.models";
-import { NovelService } from "../novel.service";
-import { NOVEL_LANG_KEYS, displayName, formatCount, toNovelError } from "../novel.rules";
-import { TranslateMode, TranslateSummary } from "../novel.translation.models";
-import { planTranslation, rangeText, targetsOf } from "../novel.translation.rules";
-import { NovelTranslationService } from "../novel.translation.service";
-import { AnalyzeProvider } from "./knowledge-analyze.dialog";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldChecked, fieldValue } from '@shared/utils/dom';
 
-const MODES: TranslateMode[] = ["missing", "range", "all"];
+import { LlmService } from '../../settings/llm.service';
+import { SettingsService } from '../../settings/settings.service';
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { ChapterRow, NovelSummary, TargetLang } from '../novel.models';
+import { buildFeatureProvider } from '../novel.provider';
+import { displayName, formatCount, NOVEL_LANG_KEYS, toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { TranslateMode, TranslateSummary } from '../novel.translation.models';
+import { planTranslation, rangeText, targetsOf } from '../novel.translation.rules';
+import { NovelTranslationService } from '../novel.translation.service';
+import { NovelModeOption } from './mode-option.component';
+import { AnalyzeProvider, NovelProviderStatus } from './provider-status.component';
+import { NovelRangeFields } from './range-fields.component';
+
+const MODES: TranslateMode[] = ['missing', 'range', 'all'];
 
 @Component({
-  selector: "app-novel-translation-run-dialog",
-  standalone: true,
-  imports: [Button, Icon, CoreModule],
-  templateUrl: "./translation-run.dialog.html",
-  host: { "data-testid": "novel-translation-run-dialog" },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-translation-run-dialog',
+  imports: [Button, Icon, CoreModule, NovelModeOption, NovelProviderStatus, NovelRangeFields],
+  templateUrl: './translation-run.dialog.html',
+  host: { 'data-testid': 'novel-translation-run-dialog' },
 })
 export class NovelTranslationRunDialog {
   private readonly novels = inject(NovelService);
@@ -37,7 +42,7 @@ export class NovelTranslationRunDialog {
 
   readonly modes = MODES;
   readonly count = formatCount;
-  readonly mode = signal<TranslateMode>("missing");
+  readonly mode = signal<TranslateMode>('missing');
   readonly from = signal(1);
   readonly to = signal(1);
   readonly overwrite = signal(false);
@@ -91,7 +96,7 @@ export class NovelTranslationRunDialog {
     const input = event.target as HTMLInputElement;
     const value = this.clampSeq(input.value, this.from());
     input.value = String(value);
-    this.mode.set("range");
+    this.mode.set('range');
     this.from.set(value);
     this.to.set(Math.max(this.to(), value));
   }
@@ -100,22 +105,22 @@ export class NovelTranslationRunDialog {
     const input = event.target as HTMLInputElement;
     const value = this.clampSeq(input.value, this.to());
     input.value = String(value);
-    this.mode.set("range");
+    this.mode.set('range');
     this.to.set(value);
     this.from.set(Math.min(this.from(), value));
   }
 
   onOverwrite(event: Event): void {
-    this.overwrite.set((event.target as HTMLInputElement).checked);
+    this.overwrite.set(fieldChecked(event));
   }
 
   onTarget(event: Event): void {
-    this.picked.set((event.target as HTMLSelectElement).value as TargetLang);
+    this.picked.set(fieldValue(event) as TargetLang);
   }
 
   openSettings(): void {
     this.close();
-    this.settings.openDialog("llm");
+    this.settings.openDialog('llm');
   }
 
   async start(): Promise<void> {
@@ -128,9 +133,18 @@ export class NovelTranslationRunDialog {
     try {
       await this.translation.translate(request.novelId, summary.runIds, this.target());
       this.close();
-      this.toasts.show(this.languageService.translate("novel.translation.run.started", { count: summary.run.length }));
+      this.toasts.show(
+        this.languageService.translate('novel.translation.run.started', {
+          count: summary.run.length,
+        }),
+      );
     } catch (cause) {
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail: toNovelError(cause).detail }), "danger");
+      this.toasts.show(
+        this.languageService.translate('novel.error.generic', {
+          detail: toNovelError(cause).detail,
+        }),
+        'danger',
+      );
     } finally {
       this.busy.set(false);
     }
@@ -156,7 +170,9 @@ export class NovelTranslationRunDialog {
 
   private buildTarget(): TargetLang {
     const wanted = this.picked();
-    return wanted !== null && this.targets().includes(wanted) ? wanted : (this.targets()[0] ?? "VI");
+    return wanted !== null && this.targets().includes(wanted)
+      ? wanted
+      : (this.targets()[0] ?? 'VI');
   }
 
   private buildFirstSeq(): number {
@@ -171,44 +187,48 @@ export class NovelTranslationRunDialog {
 
   private clampSeq(raw: string, fallback: number): number {
     const value = Math.round(Number(raw));
-    if (raw.trim() === "" || !Number.isFinite(value)) {
+    if (raw.trim() === '' || !Number.isFinite(value)) {
       return fallback;
     }
     return Math.min(Math.max(value, this.firstSeq()), this.lastSeq());
   }
 
   private buildOverwrite(): boolean {
-    return this.mode() !== "missing" && this.overwrite();
+    return this.mode() !== 'missing' && this.overwrite();
   }
 
   private buildSummary(): TranslateSummary {
     const request = this.request();
     if (!request) {
-      return planTranslation([], {}, [], { mode: "missing", from: 1, to: 1, overwrite: false });
+      return planTranslation([], {}, [], { mode: 'missing', from: 1, to: 1, overwrite: false });
     }
     const target = this.target();
     const translated = this.translation.of(request.novelId, target).chapters;
-    const busy = [...this.translation.queuedOf(request.novelId, target), ...Object.keys(this.translation.progressOf(request.novelId, target))];
-    return planTranslation(this.chapters(), translated, busy, { mode: this.mode(), from: this.from(), to: this.to(), overwrite: this.overwrite() });
+    const busy = [
+      ...this.translation.queuedOf(request.novelId, target),
+      ...Object.keys(this.translation.progressOf(request.novelId, target)),
+    ];
+    return planTranslation(this.chapters(), translated, busy, {
+      mode: this.mode(),
+      from: this.from(),
+      to: this.to(),
+      overwrite: this.overwrite(),
+    });
   }
 
   private buildWords(): number {
     const run = new Set(this.summary().run);
-    return this.chapters().filter((row) => run.has(row.seq)).reduce((sum, row) => sum + row.wordCount, 0);
+    return this.chapters()
+      .filter((row) => run.has(row.seq))
+      .reduce((sum, row) => sum + row.wordCount, 0);
   }
 
   private buildProvider(): AnalyzeProvider {
-    const feature: LlmFeature | undefined = this.llm.features().find((item) => item.id === "translation");
-    const provider: LlmProvider | undefined = this.llm.providers().find((item) => item.id === feature?.provider);
-    if (!feature || !provider) {
-      return { name: "", detail: "", state: "unset" };
-    }
-    const effort = feature.effort ?? "—";
-    return { name: provider.name, detail: `${feature.model || "—"} · ${effort}`, state: isReady(provider) ? "ready" : "unready" };
+    return buildFeatureProvider(this.llm, 'translation');
   }
 
   private buildCanStart(): boolean {
-    return this.summary().run.length > 0 && this.provider().state === "ready";
+    return this.summary().run.length > 0 && this.provider().state === 'ready';
   }
 
   private resetOnOpen(): void {
@@ -229,7 +249,7 @@ export class NovelTranslationRunDialog {
     const translated = this.translation.of(request.novelId, target).chapters;
     const missing = rows.filter((row) => translated[row.id] === undefined).map((row) => row.seq);
     const last = rows.length > 0 ? rows[rows.length - 1].seq : 1;
-    this.mode.set(preset.mode ?? (missing.length > 0 ? "missing" : "range"));
+    this.mode.set(preset.mode ?? (missing.length > 0 ? 'missing' : 'range'));
     this.from.set(preset.from ?? missing[0] ?? 1);
     this.to.set(preset.to ?? last);
     this.overwrite.set(preset.overwrite ?? false);

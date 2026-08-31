@@ -1,35 +1,32 @@
-import { Component, HostListener, OnInit, computed, inject, input, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LibraryCollectionAssetsService } from "../library.collection-assets.service";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { LibraryConfirmService } from "../library.confirm.service";
-import { AssetRow, toAssetRows } from "../library.assets.models";
-import { LibraryVideoService } from "../library.videos.service";
-import { LibraryPromptService } from "../library.prompts.service";
-import { charCount } from "../library.prompts.rules";
-import { LanguageService } from "@core/language/language.service";
-import { videoMeta } from "../library.videos.rules";
-import { dimensionsText } from "../library.images.rules";
-import { LibraryImageService } from "../library.images.service";
-import { AssetRef } from "../library.models";
-import { formatBytes } from "../library.rules";
-import { LibraryService } from "../library.service";
-import { LibrarySoundService } from "../library.sounds.service";
-import { durationText } from "../library.sounds.rules";
-import { LibraryImageThumb } from "./image-thumb.component";
-import { LibrarySoundMedia } from "./sound-media.component";
-import { LibrarySoundPlay } from "./sound-play.component";
-import { LibraryVideoMedia } from "./video-media.component";
-import { LibraryVideoThumb } from "./video-thumb.component";
-import { LibraryPromptMedia } from "./prompt-media.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, HostListener, inject, input, OnInit, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
-const FIELD_SELECTOR = "input,textarea,select";
-
-function isField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(FIELD_SELECTOR) !== null;
-}
+import { AssetRow } from '../library.assets.models';
+import { LibraryCollectionAssetsService } from '../library.collection-assets.service';
+import { LibraryConfirmService } from '../library.confirm.service';
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { dimensionsText } from '../library.images.rules';
+import { LibraryImageService } from '../library.images.service';
+import { AssetRef } from '../library.models';
+import { charCount } from '../library.prompts.rules';
+import { LibraryPromptService } from '../library.prompts.service';
+import { formatBytes } from '../library.rules';
+import { LibraryService } from '../library.service';
+import { durationText } from '../library.sounds.rules';
+import { LibrarySoundService } from '../library.sounds.service';
+import { videoMeta } from '../library.videos.rules';
+import { LibraryVideoService } from '../library.videos.service';
+import { LibraryImageThumb } from './image-thumb.component';
+import { LibraryPromptMedia } from './prompt-media.component';
+import { LibrarySoundMedia } from './sound-media.component';
+import { LibrarySoundPlay } from './sound-play.component';
+import { LibraryVideoMedia } from './video-media.component';
+import { LibraryVideoThumb } from './video-thumb.component';
 
 function rowRef(row: AssetRow): AssetRef {
   return row.ref;
@@ -40,11 +37,20 @@ function inCollection(collectionId: number, row: AssetRow): boolean {
 }
 
 @Component({
-  selector: "app-library-collection-assets",
-  standalone: true,
-  imports: [Icon, CoreModule, LibraryImageThumb, LibrarySoundMedia, LibrarySoundPlay, LibraryVideoMedia, LibraryVideoThumb, LibraryPromptMedia],
-  templateUrl: "./collection-assets.component.html",
-  host: { "data-testid": "library-collection-assets" },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-collection-assets',
+  imports: [
+    Icon,
+    CoreModule,
+    LibraryImageThumb,
+    LibrarySoundMedia,
+    LibrarySoundPlay,
+    LibraryVideoMedia,
+    LibraryVideoThumb,
+    LibraryPromptMedia,
+  ],
+  templateUrl: './collection-assets.component.html',
+  host: { 'data-testid': 'library-collection-assets' },
 })
 export class LibraryCollectionAssets implements OnInit {
   readonly collectionId = input.required<number>();
@@ -69,14 +75,14 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   onQuery(event: Event): void {
-    this.assets.query.set((event.target as HTMLInputElement).value);
+    this.assets.query.set(fieldValue(event));
   }
 
   onSort(event: Event): void {
-    this.assets.sort.set((event.target as HTMLSelectElement).value as "new" | "name" | "size");
+    this.assets.sort.set(fieldValue(event) as 'new' | 'name' | 'size');
   }
 
-  setView(value: "grid" | "list"): void {
+  setView(value: 'grid' | 'list'): void {
     this.library.setViewMode(value);
   }
 
@@ -90,11 +96,11 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   onRowKeydown(row: AssetRow, event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.open(row);
     }
-    if (event.key === " ") {
+    if (event.key === ' ') {
       event.preventDefault();
       this.select(row);
     }
@@ -104,13 +110,16 @@ export class LibraryCollectionAssets implements OnInit {
     this.uploadMenuOpen.update((open) => !open);
   }
 
-  openUpload(kind: "image" | "sound" | "video" | "prompt", mode: "files" | "write" = "files"): void {
+  openUpload(
+    kind: 'image' | 'sound' | 'video' | 'prompt',
+    mode: 'files' | 'write' = 'files',
+  ): void {
     this.uploadMenuOpen.set(false);
     this.dialogs.openUpload([], kind, this.collectionId(), mode);
   }
 
   clearAllFilters(): void {
-    this.assets.query.set("");
+    this.assets.query.set('');
     this.library.clearFilters();
   }
 
@@ -123,9 +132,15 @@ export class LibraryCollectionAssets implements OnInit {
       return videoMeta(row.video);
     }
     if (row.prompt) {
-      return this.languageService.translate("library.prompt.chars", { count: charCount(row.prompt.text) });
+      return this.languageService.translate('library.prompt.chars', {
+        count: charCount(row.prompt.text),
+      });
     }
-    return row.image ? dimensionsText(row.image) : row.sound ? durationText(row.sound.durationMs) : "—";
+    return row.image
+      ? dimensionsText(row.image)
+      : row.sound
+        ? durationText(row.sound.durationMs)
+        : '—';
   }
 
   size(row: AssetRow): string {
@@ -133,17 +148,23 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   typeKey(row: AssetRow): LanguageKey {
-    if (row.ref.kind === "prompt") return "library.kind.prompt";
-    return row.ref.kind === "image" ? "library.kind.image" : row.ref.kind === "sound" ? "library.kind.sound" : "library.kind.video";
+    if (row.ref.kind === 'prompt') return 'library.kind.prompt';
+    return row.ref.kind === 'image'
+      ? 'library.kind.image'
+      : row.ref.kind === 'sound'
+        ? 'library.kind.sound'
+        : 'library.kind.video';
   }
 
   typeIcon(row: AssetRow): string {
-    if (row.ref.kind === "prompt") return "prompt";
-    return row.ref.kind === "image" ? "image" : row.ref.kind === "sound" ? "music" : "film";
+    if (row.ref.kind === 'prompt') return 'prompt';
+    return row.ref.kind === 'image' ? 'image' : row.ref.kind === 'sound' ? 'music' : 'film';
   }
 
   collectionName(row: AssetRow): string {
-    return row.collectionId === null ? "—" : this.library.collectionById(row.collectionId)?.name ?? "—";
+    return row.collectionId === null
+      ? '—'
+      : (this.library.collectionById(row.collectionId)?.name ?? '—');
   }
 
   firstTags(row: AssetRow): string[] {
@@ -163,15 +184,20 @@ export class LibraryCollectionAssets implements OnInit {
     return this.assets.query().trim().length > 0 || this.library.filterTags().length > 0;
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onDeleteKey(event: KeyboardEvent): void {
     const selected = this.assets.selectedRef(this.collectionId());
-    if (event.key !== "Delete" || isField(event.target) || selected === null || this.dialogs.uploadOpen() || this.isDialogOpen()) {
+    if (
+      !isDeleteShortcut(event) ||
+      selected === null ||
+      this.dialogs.uploadOpen() ||
+      this.isDialogOpen()
+    ) {
       return;
     }
-    if (selected.kind === "image") this.confirms.deleteImages([selected.id]);
-    else if (selected.kind === "sound") this.confirms.deleteSounds([selected.id]);
-    else if (selected.kind === "video") this.confirms.deleteVideos([selected.id]);
+    if (selected.kind === 'image') this.confirms.deleteImages([selected.id]);
+    else if (selected.kind === 'sound') this.confirms.deleteSounds([selected.id]);
+    else if (selected.kind === 'video') this.confirms.deleteVideos([selected.id]);
     else this.confirms.deletePrompts([selected.id]);
   }
 
@@ -180,10 +206,16 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   private buildTotal(): number {
-    return toAssetRows(this.images.items(), this.sounds.items(), this.videos.items(), this.prompts.items()).filter(inCollection.bind(null, this.collectionId())).length;
+    return this.assets.allRows().filter(inCollection.bind(null, this.collectionId())).length;
   }
 
   private isDialogOpen(): boolean {
-    return this.dialogs.previewImageId() !== null || this.dialogs.previewSoundId() !== null || this.dialogs.previewVideoId() !== null || this.dialogs.previewPromptId() !== null || document.querySelector(".modal") !== null;
+    return (
+      this.dialogs.previewImageId() !== null ||
+      this.dialogs.previewSoundId() !== null ||
+      this.dialogs.previewVideoId() !== null ||
+      this.dialogs.previewPromptId() !== null ||
+      isModalOpen()
+    );
   }
 }

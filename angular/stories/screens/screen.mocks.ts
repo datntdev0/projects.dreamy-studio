@@ -1,20 +1,20 @@
-import { EnvironmentProviders, Provider, inject, provideAppInitializer } from "@angular/core";
-import { applicationConfig } from "@storybook/angular-vite";
-import type { Decorator } from "@storybook/angular-vite";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { LanguageService } from "@core/language/language.service";
-import { SettingsService } from "@features/settings/settings.service";
-import { SettingsView } from "@features/settings/settings.models";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { APP_INFO, CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider } from "../features/mocks";
+import { EnvironmentProviders, inject, provideAppInitializer, Provider } from '@angular/core';
+import { SettingsView } from '@features/settings/settings.models';
+import { SettingsService } from '@features/settings/settings.service';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { LanguageService } from '@shared/language/language.service';
+import { applicationConfig, type Decorator } from '@storybook/angular-vite';
+
+import { APP_INFO, CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider } from '../features/mocks';
 
 export type IpcHandlers = Record<string, (args: Record<string, unknown>) => unknown>;
 
 const SETTINGS: SettingsView = {
-  dataDir: "C:\Users\dreamy\AppData\Roaming\dreamy-studio",
-  file: "settings.json",
+  dataDir: 'C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio',
+  file: 'settings.json',
   general: {},
-  layout: { explorerOpen: true, inspectorOpen: true, bottomOpen: true, rightTab: "inspector" },
+  layout: { explorerOpen: true, inspectorOpen: true, bottomOpen: true, rightTab: 'inspector' },
 };
 
 export function baseHandlers(): IpcHandlers {
@@ -27,7 +27,10 @@ export function baseHandlers(): IpcHandlers {
 
 function ipcProvider(handlers: IpcHandlers): Provider {
   const mock: Partial<DesktopIpcService> = {
-    invoke: <TResult>(command: string, args: Record<string, unknown> = {}): Promise<TResult> => Promise.resolve((handlers[command]?.(args) ?? (command.endsWith("_list") ? [] : undefined)) as TResult),
+    invoke: <TResult>(command: string, args: Record<string, unknown> = {}): Promise<TResult> =>
+      Promise.resolve(
+        (handlers[command]?.(args) ?? (command.endsWith('_list') ? [] : undefined)) as TResult,
+      ),
     channel: <TMessage>(onMessage: (message: TMessage) => void) => ({ emit: onMessage }) as never,
   };
   return { provide: DesktopIpcService, useValue: mock };

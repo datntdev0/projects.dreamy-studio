@@ -1,6 +1,8 @@
-import { Injectable, computed, effect, inject, signal } from "@angular/core";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { COLLECTIONS_TAB, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, NovelToolKind, PIPELINES_TAB, PROJECTS_TAB, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, collectionTab, collectionTabId, novelTab, novelTabId, novelToolTab, novelToolTabId, projectTab, projectTabId } from "./layout.models";
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+
+// prettier-ignore
+import { COLLECTIONS_TAB, collectionTab, collectionTabId, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, novelTab, novelTabId, NovelToolKind, novelToolTab, novelToolTabId, PIPELINES_TAB, PROJECTS_TAB, projectTab, projectTabId, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB } from './layout.models';
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -11,7 +13,7 @@ function indexOfTab(tabs: EditorTab[], id: string): number {
   return -1;
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class TabsService {
   private readonly workspace = inject(WorkspaceService);
   private readonly workspacePath = computed(this.currentPath.bind(this));
@@ -40,15 +42,25 @@ export class TabsService {
     this.open(PROJECTS_TAB);
   }
 
-  openImages(): void { this.open(IMAGES_TAB); }
+  openImages(): void {
+    this.open(IMAGES_TAB);
+  }
 
-  openSounds(): void { this.open(SOUNDS_TAB); }
+  openSounds(): void {
+    this.open(SOUNDS_TAB);
+  }
 
-  openVideos(): void { this.open(VIDEOS_TAB); }
+  openVideos(): void {
+    this.open(VIDEOS_TAB);
+  }
 
-  openPrompts(): void { this.open(PROMPTS_TAB); }
+  openPrompts(): void {
+    this.open(PROMPTS_TAB);
+  }
 
-  openCollections(): void { this.open(COLLECTIONS_TAB); }
+  openCollections(): void {
+    this.open(COLLECTIONS_TAB);
+  }
 
   openPipelines(): void {
     this.open(PIPELINES_TAB);
@@ -56,7 +68,11 @@ export class TabsService {
 
   openCollection(id: number, name: string): void {
     const tabId = collectionTabId(id);
-    if (indexOfTab(this.tabs(), tabId) >= 0) { this.renameCollection(id, name); this.activate(tabId); return; }
+    if (indexOfTab(this.tabs(), tabId) >= 0) {
+      this.renameCollection(id, name);
+      this.activate(tabId);
+      return;
+    }
     this.open(collectionTab(id, name));
   }
 
@@ -68,9 +84,11 @@ export class TabsService {
     this.tabs.set(tabs);
   }
 
-  closeCollection(id: number): void { this.close(collectionTabId(id)); }
+  closeCollection(id: number): void {
+    this.close(collectionTabId(id));
+  }
 
-  openProject(id: number, title: string, icon = "folder"): void {
+  openProject(id: number, title: string, icon = 'folder'): void {
     const tabId = projectTabId(id);
     if (indexOfTab(this.tabs(), tabId) >= 0) {
       this.renameProject(id, title);
@@ -101,7 +119,11 @@ export class TabsService {
   }
 
   renameNovel(novelId: number, title: string): void {
-    const ids = [novelTabId(novelId), novelToolTabId("translation", novelId), novelToolTabId("knowledge", novelId)];
+    const ids = [
+      novelTabId(novelId),
+      novelToolTabId('translation', novelId),
+      novelToolTabId('knowledge', novelId),
+    ];
     const tabs = [...this.tabs()];
     for (const id of ids) {
       const index = indexOfTab(tabs, id);
@@ -144,8 +166,8 @@ export class TabsService {
 
   closeNovel(novelId: number): void {
     this.close(novelTabId(novelId));
-    this.close(novelToolTabId("translation", novelId));
-    this.close(novelToolTabId("knowledge", novelId));
+    this.close(novelToolTabId('translation', novelId));
+    this.close(novelToolTabId('knowledge', novelId));
   }
 
   closeNovels(novelIds: number[]): void {

@@ -1,17 +1,19 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { NovelLang, NovelSummary, ReaderLang, ReaderView } from "../novel.models";
-import { NovelReaderService } from "../novel.reader.service";
-import { NovelService } from "../novel.service";
-import { NOVEL_LANG_KEYS } from "../novel.rules";
-import { targetsOf } from "../novel.translation.rules";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { fieldValue } from '@shared/utils/dom';
+
+import { NovelLang, NovelSummary, ReaderLang, ReaderView } from '../novel.models';
+import { NovelReaderService } from '../novel.reader.service';
+import { NOVEL_LANG_KEYS } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { targetsOf } from '../novel.translation.rules';
 
 @Component({
-  selector: "app-novel-lang-switch",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-lang-switch',
   imports: [CoreModule],
-  templateUrl: "./lang-switch.component.html",
+  templateUrl: './lang-switch.component.html',
 })
 export class NovelLangSwitch {
   private readonly novels = inject(NovelService);
@@ -28,7 +30,7 @@ export class NovelLangSwitch {
   }
 
   onChange(event: Event): void {
-    this.reader.setLang(this.novelId(), (event.target as HTMLSelectElement).value as ReaderLang);
+    this.reader.setLang(this.novelId(), fieldValue(event) as ReaderLang);
   }
 
   private findNovel(): NovelSummary | null {

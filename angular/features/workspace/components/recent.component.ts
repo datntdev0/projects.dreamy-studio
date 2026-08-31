@@ -1,25 +1,26 @@
-import { Component, EventEmitter, Input, OnChanges, Output, inject, signal } from "@angular/core";
-import { Badge } from "@components/badge";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { DialogService } from "@core/dialog/dialog.service";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { WorkspaceService } from "../workspace.service";
-import { RecentWorkspace } from "../workspace.models";
-import { RecentWorkspaceReason } from "../workspace.models";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, inject, input, OnChanges, output, signal } from '@angular/core';
+import { Badge } from '@components/badge';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { DialogService } from '@shared/dialog/dialog.service';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
 
-const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"];
+import { RecentWorkspace, RecentWorkspaceReason } from '../workspace.models';
+import { WorkspaceService } from '../workspace.service';
+
+const SIZE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 const KILO = 1024;
 
-const SIZE_PENDING = "…";
-const SIZE_UNKNOWN = "—";
+const SIZE_PENDING = '…';
+const SIZE_UNKNOWN = '—';
 
 const REASON_KEYS: Record<RecentWorkspaceReason, LanguageKey> = {
-  missing: "splash.reason.missing",
-  not_a_directory: "splash.reason.not_a_directory",
-  no_access: "splash.reason.no_access",
+  missing: 'splash.reason.missing',
+  not_a_directory: 'splash.reason.not_a_directory',
+  no_access: 'splash.reason.no_access',
 };
 
 function formatSize(bytes: number): string {
@@ -35,28 +36,28 @@ function formatSize(bytes: number): string {
 
 function formatLastOpened(iso: string, locale: string): string {
   const date = new Date(iso);
-  const format = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
+  const format = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' });
   return Number.isNaN(date.getTime()) ? iso : format.format(date);
 }
 
 function reasonKey(reason: RecentWorkspaceReason | undefined): LanguageKey {
-  return REASON_KEYS[reason ?? "missing"];
+  return REASON_KEYS[reason ?? 'missing'];
 }
 
 function projectsKey(count: number): LanguageKey {
-  return count === 1 ? "splash.recent.projects.one" : "splash.recent.projects.other";
+  return count === 1 ? 'splash.recent.projects.one' : 'splash.recent.projects.other';
 }
 
 function isMeasurable(row: RecentWorkspace): boolean {
-  return row.status === "ok";
+  return row.status === 'ok';
 }
 
 @Component({
-  selector: "app-recent-workspace-list",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-recent-workspace-list',
   imports: [Badge, Button, Icon, CoreModule],
-  templateUrl: "./recent.component.html",
-  host: { "data-testid": "recent-workspace-list" },
+  templateUrl: './recent.component.html',
+  host: { 'data-testid': 'recent-workspace-list' },
 })
 export class RecentWorkspaceList implements OnChanges {
   private readonly workspace = inject(WorkspaceService);
@@ -64,18 +65,18 @@ export class RecentWorkspaceList implements OnChanges {
   private readonly dialogs = inject(DialogService);
   private readonly requested = new Set<string>();
 
-  @Input() rows: RecentWorkspace[] = [];
-  @Input() lastUsedPath: string | null = null;
-  @Output() opened = new EventEmitter<RecentWorkspace>();
-  @Output() relocated = new EventEmitter<RecentWorkspace>();
-  @Output() deleted = new EventEmitter<void>();
+  readonly rows = input<RecentWorkspace[]>([]);
+  readonly lastUsedPath = input<string | null>(null);
+  readonly opened = output<RecentWorkspace>();
+  readonly relocated = output<RecentWorkspace>();
+  readonly deleted = output<void>();
 
   readonly sizes = signal<Record<string, string>>({});
   readonly reasonKey = reasonKey;
   readonly projectsKey = projectsKey;
 
   ngOnChanges(): void {
-    for (const row of this.rows.filter(isMeasurable)) {
+    for (const row of this.rows().filter(isMeasurable)) {
       void this.measureRow(row.path);
     }
   }
@@ -105,11 +106,14 @@ export class RecentWorkspaceList implements OnChanges {
 
   delete(row: RecentWorkspace): void {
     void this.dialogs.ask({
-      title: this.languageService.translate("splash.recent.deleteTitle"),
-      message: this.languageService.translate("splash.recent.deleteMessage", { name: row.name, path: row.path }),
-      warning: this.languageService.translate("splash.recent.deleteWarning"),
-      confirmLabel: this.languageService.translate("splash.recent.delete"),
-      confirmIcon: "trash",
+      title: this.languageService.translate('splash.recent.deleteTitle'),
+      message: this.languageService.translate('splash.recent.deleteMessage', {
+        name: row.name,
+        path: row.path,
+      }),
+      warning: this.languageService.translate('splash.recent.deleteWarning'),
+      confirmLabel: this.languageService.translate('splash.recent.delete'),
+      confirmIcon: 'trash',
       onConfirm: this.removeWorkspace.bind(this, row),
     });
   }

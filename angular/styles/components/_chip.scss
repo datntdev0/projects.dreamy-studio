@@ -1,20 +1,118 @@
-.chip { display: inline-flex; align-items: center; height: 20px; padding: 0 var(--sp-sm); margin: 0 var(--sp-xs) 2px 0; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: transparent; color: var(--body); font: 400 12px/1 var(--font); cursor: pointer; white-space: nowrap; }
-.chip:hover { background: var(--canvas-soft); color: var(--ink); }
-.chip.is-static { cursor: default; }
-.chip.is-static:hover { background: transparent; color: var(--body); }
-.tags { display: flex; flex-wrap: wrap; gap: var(--sp-xs); align-items: center; min-width: 0; }
-.tag { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 var(--sp-sm); border-radius: var(--r-full); background: var(--primary-soft); color: var(--primary-text); font: 400 12px/1 var(--font); white-space: nowrap; flex: none; }
-.tag.is-more { background: var(--canvas-soft); color: var(--mute); }
-.tag-x { display: inline-grid; place-items: center; width: 14px; height: 14px; padding: 0; border: 0; background: none; color: inherit; border-radius: var(--r-full); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0.7; }
-.tag-x:hover { opacity: 1; background: var(--canvas-mid); }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--sp-sm);
+  margin: 0 var(--sp-xs) 2px 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--body);
+  font: 400 12px/1 var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover {
+  background: var(--canvas-soft);
+  color: var(--ink);
+}
+.chip.is-static {
+  cursor: default;
+}
+.chip.is-static:hover {
+  background: transparent;
+  color: var(--body);
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+  align-items: center;
+  min-width: 0;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  padding: 0 var(--sp-sm);
+  border-radius: var(--r-full);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font: 400 12px/1 var(--font);
+  white-space: nowrap;
+  flex: none;
+}
+.tag.is-more {
+  background: var(--canvas-soft);
+  color: var(--mute);
+}
+.tag-x {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  border-radius: var(--r-full);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.tag-x:hover {
+  opacity: 1;
+  background: var(--canvas-mid);
+}
 
 ds-chip {
-  & { display: inline-flex; vertical-align: middle; }
-  .chip { display: inline-flex; align-items: center; height: 20px; padding: 0; margin: 0; cursor: default; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: transparent; color: var(--body); font: 400 12px/1 var(--font); white-space: nowrap; }
-  .chip:hover { background: var(--canvas-soft); color: var(--ink); }
-  .chip.is-selected { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-text); }
-  .chip.is-disabled { opacity: 0.45; }
-  .chip button { height: 100%; padding: 0 var(--sp-sm); border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-  .chip button:disabled { cursor: not-allowed; }
-  .chip-remove { font-size: 15px !important; line-height: 1 !important; border-left: 1px solid var(--hairline) !important; }
+  & {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    cursor: default;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--body);
+    font: 400 12px/1 var(--font);
+    white-space: nowrap;
+  }
+  .chip:hover {
+    background: var(--canvas-soft);
+    color: var(--ink);
+  }
+  .chip.is-selected {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary-text);
+  }
+  .chip.is-disabled {
+    opacity: 0.45;
+  }
+  .chip button {
+    height: 100%;
+    padding: 0 var(--sp-sm);
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .chip button:disabled {
+    cursor: not-allowed;
+  }
+  .chip-remove {
+    font-size: 15px !important;
+    line-height: 1 !important;
+    border-left: 1px solid var(--hairline) !important;
+  }
 }

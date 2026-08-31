@@ -1,48 +1,216 @@
-.table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table th { position: sticky; top: 0; z-index: 1; background: var(--canvas-card); text-align: left; font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--mute); padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--hairline); white-space: nowrap; }
-.table td { padding: var(--sp-xs) var(--sp-md); border-bottom: 1px solid var(--hairline); vertical-align: middle; }
-.table tbody tr:hover td { background: var(--canvas-soft); }
-.table tbody tr.is-selected td { background: var(--primary-soft); }
-.table tbody tr.is-muted td { opacity: 0.55; }
-.table tbody tr[data-act], .table tbody tr[data-open], .table tbody tr.is-clickable { cursor: pointer; }
-.table .num { text-align: right; white-space: nowrap; }
-.table .chk { width: 30px; text-align: center; }
-.table .row-actions { text-align: right; white-space: nowrap; }
-.cen { text-align: center; }
-.table tbody tr.is-current td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
-.table th .ic { width: 14px; height: 14px; vertical-align: -3px; }
-.table td .tags { flex-wrap: nowrap; overflow: hidden; }
-.table th.cen, .table td.cen { text-align: center; }
-.table td.cen .frac, .table td.cen .dot, .table td.cen .dot-o { margin-inline: auto; }
-.table td:has(> .is-inline) { padding-inline: var(--sp-xs); }
-.table tr.is-draft td { background: var(--primary-soft); }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--canvas-card);
+  text-align: left;
+  font: 400 11px/14px var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mute);
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--sp-xs) var(--sp-md);
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: middle;
+}
+.table tbody tr:hover td {
+  background: var(--canvas-soft);
+}
+.table tbody tr.is-selected td {
+  background: var(--primary-soft);
+}
+.table tbody tr.is-muted td {
+  opacity: 0.55;
+}
+.table tbody tr[data-act],
+.table tbody tr[data-open],
+.table tbody tr.is-clickable {
+  cursor: pointer;
+}
+.table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.table .chk {
+  width: 30px;
+  text-align: center;
+}
+.table .row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.cen {
+  text-align: center;
+}
+.table tbody tr.is-current td:first-child {
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+.table th .ic {
+  width: 14px;
+  height: 14px;
+  vertical-align: -3px;
+}
+.table td .tags {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.table th.cen,
+.table td.cen {
+  text-align: center;
+}
+.table td.cen .frac,
+.table td.cen .dot,
+.table td.cen .dot-o {
+  margin-inline: auto;
+}
+.table td:has(> .is-inline) {
+  padding-inline: var(--sp-xs);
+}
+.table tr.is-draft td {
+  background: var(--primary-soft);
+}
 
 ds-datatable {
-  & { display: block; min-width: 0; }
-  &.is-fill { display: flex; flex: 1; min-height: 0; min-width: 0; }
-  .table-wrap { display: block; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); }
-  .table-wrap.is-fill { display: flex; flex: 1; min-height: 0; flex-direction: column; border: 0; border-radius: 0; background: transparent; }
-  .table-head { flex: none; overflow: hidden; scrollbar-gutter: stable; background: var(--canvas-card); border-bottom: 1px solid var(--hairline); }
-  .table-body { min-width: 0; overflow: auto; scrollbar-gutter: stable; background: var(--canvas-card); }
-  .is-fill .table-body { flex: 1; min-height: 0; }
-  .table { width: 100%; border-collapse: collapse; table-layout: fixed; font: 400 13px/18px var(--font); }
-  .table th { position: static; z-index: auto; padding: var(--sp-sm) var(--sp-md); border-bottom: 0; background: transparent; color: var(--mute); font: 400 11px/14px var(--font-mono); letter-spacing: 1px; text-align: left; text-transform: uppercase; white-space: nowrap; }
-  .table td { padding: var(--sp-xs) var(--sp-md); border-bottom: 1px solid var(--hairline); color: var(--body); vertical-align: middle; }
-  .table tbody tr:last-child td { border-bottom: 0; }
-  .table tbody tr:not(:has(.empty-cell)) { cursor: pointer; }
-  .table tbody tr:not(:has(.empty-cell)):hover td { background: var(--canvas-soft); }
-  .table tbody tr:has(.empty-cell):hover td { background: transparent; }
-  .table tbody tr.is-selected td { background: var(--primary-soft); }
-  .table .num { text-align: right; white-space: nowrap; }
-  .table .cen { text-align: center; }
-  .table td.cell-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .table .empty-cell { padding: var(--sp-2xl); color: var(--mute); text-align: center; }
-  .table col.row-menu-col { width: 44px; }
-  .table .row-menu-cell { padding-inline: var(--sp-xs); text-align: right; }
-  .table td.is-editing { padding-block: 2px; }
-  .table td.is-editing .datatable-cell-input { width: 100%; height: var(--ctl-h-sm); }
-  .datatable-menu { inset: auto; margin: 0; min-width: 180px; color: var(--body); overflow: visible; }
-  .datatable-menu .menu-row.is-danger { color: var(--danger); }
-  .datatable-menu .menu-row.is-danger .ic { color: inherit; }
-  .datatable-menu .menu-row:focus-visible { background: var(--canvas-soft); outline: 0; }
+  & {
+    display: block;
+    min-width: 0;
+  }
+  &.is-fill {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+  }
+  .table-wrap {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
+    background: var(--canvas-card);
+  }
+  .table-wrap.is-fill {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .table-head {
+    flex: none;
+    overflow: hidden;
+    scrollbar-gutter: stable;
+    background: var(--canvas-card);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .table-body {
+    min-width: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    background: var(--canvas-card);
+  }
+  .is-fill .table-body {
+    flex: 1;
+    min-height: 0;
+  }
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font: 400 13px/18px var(--font);
+  }
+  .table th {
+    position: static;
+    z-index: auto;
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: 0;
+    background: transparent;
+    color: var(--mute);
+    font: 400 11px/14px var(--font-mono);
+    letter-spacing: 1px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .table td {
+    padding: var(--sp-xs) var(--sp-md);
+    border-bottom: 1px solid var(--hairline);
+    color: var(--body);
+    vertical-align: middle;
+  }
+  .table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .table tbody tr:not(:has(.empty-cell)) {
+    cursor: pointer;
+  }
+  .table tbody tr:not(:has(.empty-cell)):hover td {
+    background: var(--canvas-soft);
+  }
+  .table tbody tr:has(.empty-cell):hover td {
+    background: transparent;
+  }
+  .table tbody tr.is-selected td {
+    background: var(--primary-soft);
+  }
+  .table .num {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .table .cen {
+    text-align: center;
+  }
+  .table td.cell-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .table .empty-cell {
+    padding: var(--sp-2xl);
+    color: var(--mute);
+    text-align: center;
+  }
+  .table col.row-menu-col {
+    width: 44px;
+  }
+  .table .row-menu-cell {
+    padding-inline: var(--sp-xs);
+    text-align: right;
+  }
+  .table td.is-editing {
+    padding-block: 2px;
+  }
+  .table td.is-editing .datatable-cell-input {
+    width: 100%;
+    height: var(--ctl-h-sm);
+  }
+  .datatable-menu {
+    inset: auto;
+    margin: 0;
+    min-width: 180px;
+    color: var(--body);
+    overflow: visible;
+  }
+  .datatable-menu .menu-row.is-danger {
+    color: var(--danger);
+  }
+  .datatable-menu .menu-row.is-danger .ic {
+    color: inherit;
+  }
+  .datatable-menu .menu-row:focus-visible {
+    background: var(--canvas-soft);
+    outline: 0;
+  }
 }

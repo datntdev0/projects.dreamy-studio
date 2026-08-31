@@ -1,0 +1,115 @@
+.nm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  gap: var(--sp-lg);
+  padding: var(--sp-lg);
+  align-content: start;
+}
+.nm-card {
+  display: grid;
+  gap: var(--sp-sm);
+  cursor: pointer;
+  border-radius: var(--r-md);
+  padding: var(--sp-sm);
+  border: 1px solid transparent;
+  align-content: start;
+}
+.nm-card:hover {
+  background: var(--canvas-soft);
+  border-color: var(--hairline);
+}
+.nm-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.nm-cover {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline-strong);
+  padding: var(--sp-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--sp-xs);
+  overflow: hidden;
+  color: var(--on-primary);
+  box-shadow: var(--shadow-float);
+}
+.nm-cover.is-empty {
+  background: var(--canvas-soft);
+  color: var(--mute);
+  box-shadow: none;
+}
+.nm-cover-ph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.nm-lang {
+  position: absolute;
+  top: var(--sp-sm);
+  right: var(--sp-sm);
+}
+.nm-card-b {
+  display: grid;
+  gap: var(--sp-xs);
+  padding: 0 var(--sp-xs);
+}
+.nm-card-t {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nm-fr {
+  display: flex;
+  gap: var(--sp-lg);
+  align-items: center;
+}
+.nm-recent {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--sp-sm);
+  overflow: hidden;
+  border: 0;
+  background: none;
+  border-radius: var(--r-sm);
+  font: 400 13px/1 var(--font);
+  color: var(--body);
+  text-align: left;
+  cursor: pointer;
+}
+.nm-recent:hover {
+  background: var(--canvas-soft);
+  color: var(--ink);
+}
+
+.nx-sep {
+  height: 1px;
+  background: var(--hairline);
+  margin: var(--sp-xs) 0;
+}
+.nx-group {
+  display: grid;
+  margin-bottom: 1px;
+}
+.nx-novel {
+  padding-left: var(--sp-xs);
+}
+.nx-novel .ic {
+  width: 14px;
+  height: 14px;
+}
+.nx-child {
+  padding-left: 38px;
+}
+.nx-n {
+  font-size: 11px;
+  color: var(--mute);
+}

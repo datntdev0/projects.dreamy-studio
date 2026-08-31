@@ -1,36 +1,40 @@
-import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { NovelSummary } from "@features/novel/novel.models";
-import { displayName, formatCount } from "@features/novel/novel.rules";
-import { NovelService } from "@features/novel/novel.service";
-import { AssistantScope, AssistantSessionSummary } from "../assistant.models";
-import { NOVEL_SCOPES, WORKSPACE_SCOPE, novelScope, sameScope, scopeNovels, shortStamp } from "../assistant.rules";
-import { AssistantService } from "../assistant.service";
-import { AssistantComposer } from "./composer.component";
+// prettier-ignore
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { NovelSummary } from '@features/novel/novel.models';
+import { displayName, formatCount } from '@features/novel/novel.rules';
+import { NovelService } from '@features/novel/novel.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { AssistantScope, AssistantSessionSummary } from '../assistant.models';
+// prettier-ignore
+import { NOVEL_SCOPES, novelScope, sameScope, scopeNovels, shortStamp, WORKSPACE_SCOPE } from '../assistant.rules';
+import { AssistantService } from '../assistant.service';
+import { AssistantComposer } from './composer.component';
 
 @Component({
-  selector: "app-assistant-start",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-assistant-start',
   imports: [Button, Icon, CoreModule, AssistantComposer],
-  templateUrl: "./start.component.html",
+  templateUrl: './start.component.html',
 })
 export class AssistantStart {
   private readonly languageService = inject(LanguageService);
   private readonly injector = inject(Injector);
   private readonly composer = viewChild(AssistantComposer);
-  private readonly toggleButton = viewChild<ElementRef<HTMLButtonElement>>("toggleButton");
-  private readonly searchField = viewChild<ElementRef<HTMLInputElement>>("searchField");
-  private readonly panel = viewChild<ElementRef<HTMLElement>>("panel");
+  private readonly toggleButton = viewChild<ElementRef<HTMLButtonElement>>('toggleButton');
+  private readonly searchField = viewChild<ElementRef<HTMLInputElement>>('searchField');
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
 
   readonly assistant = inject(AssistantService);
   readonly novels = inject(NovelService);
   readonly workspaceScope = WORKSPACE_SCOPE;
   readonly novelScopes = NOVEL_SCOPES;
   readonly expanded = signal(false);
-  readonly query = signal("");
+  readonly query = signal('');
   readonly options = computed(this.buildOptions.bind(this));
 
   isChosen(scope: AssistantScope): boolean {
@@ -59,22 +63,22 @@ export class AssistantStart {
   }
 
   onQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+    this.query.set(fieldValue(event));
   }
 
   onKeydown(event: KeyboardEvent): void {
     if (!this.expanded()) {
       return;
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       this.collapse(true);
       return;
     }
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      this.moveFocus(event.key === "ArrowDown" ? 1 : -1);
+      this.moveFocus(event.key === 'ArrowDown' ? 1 : -1);
     }
   }
 
@@ -97,15 +101,23 @@ export class AssistantStart {
   }
 
   novelMeta(novel: NovelSummary): string {
-    return this.languageService.translate("assistant.scope.novelMeta", { chapters: formatCount(novel.chapterCount), translated: novel.translatedCount, analyzed: novel.analyzedCount });
+    return this.languageService.translate('assistant.scope.novelMeta', {
+      chapters: formatCount(novel.chapterCount),
+      translated: novel.translatedCount,
+      analyzed: novel.analyzedCount,
+    });
   }
 
   novelShort(novel: NovelSummary): string {
-    return this.languageService.translate("assistant.scope.novelShort", { count: formatCount(novel.chapterCount) });
+    return this.languageService.translate('assistant.scope.novelShort', {
+      count: formatCount(novel.chapterCount),
+    });
   }
 
   workspaceMeta(): string {
-    return this.languageService.translate("assistant.scope.workspaceMeta", { count: this.novels.novels().length });
+    return this.languageService.translate('assistant.scope.workspaceMeta', {
+      count: this.novels.novels().length,
+    });
   }
 
   stampOf(session: AssistantSessionSummary): string {
@@ -120,14 +132,16 @@ export class AssistantStart {
 
   private collapse(refocus: boolean): void {
     this.expanded.set(false);
-    this.query.set("");
+    this.query.set('');
     if (refocus) {
       afterNextRender(this.focusToggle.bind(this), { injector: this.injector });
     }
   }
 
   private focusSearch(): void {
-    const target = this.searchField()?.nativeElement ?? this.panel()?.nativeElement.querySelector<HTMLElement>("[data-nav]");
+    const target =
+      this.searchField()?.nativeElement ??
+      this.panel()?.nativeElement.querySelector<HTMLElement>('[data-nav]');
     target?.focus();
   }
 
@@ -136,7 +150,9 @@ export class AssistantStart {
   }
 
   private moveFocus(step: number): void {
-    const items = Array.from(this.panel()?.nativeElement.querySelectorAll<HTMLElement>("[data-nav]") ?? []);
+    const items = Array.from(
+      this.panel()?.nativeElement.querySelectorAll<HTMLElement>('[data-nav]') ?? [],
+    );
     const next = items.indexOf(document.activeElement as HTMLElement) + step;
     items[Math.min(Math.max(next, 0), items.length - 1)]?.focus();
   }

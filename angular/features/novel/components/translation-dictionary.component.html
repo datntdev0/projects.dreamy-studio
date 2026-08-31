@@ -1,30 +1,88 @@
 <div class="tl-sub" data-testid="novel-translation-dict-sub">
-  <label class="search"><span class="sr-only">{{ "novel.translation.dict.search.label" | t }}</span><input class="input" type="search" data-testid="novel-translation-dict-search" [value]="query()" [attr.placeholder]="'novel.translation.dict.search.placeholder' | t" (input)="onQuery($event)"></label>
-  <span class="t-sm t-mute" data-testid="novel-translation-dict-count">{{ "novel.translation.dict.count" | t: { shown: rows().length, total: all().length } }}</span>
+  <label class="search">
+    <span class="sr-only">{{ 'novel.translation.dict.search.label' | t }}</span>
+    <input
+      class="input"
+      type="search"
+      data-testid="novel-translation-dict-search"
+      [value]="query()"
+      [attr.placeholder]="'novel.translation.dict.search.placeholder' | t"
+      (input)="onQuery($event)"
+    />
+  </label>
+  <span class="t-sm t-mute" data-testid="novel-translation-dict-count">
+    {{ 'novel.translation.dict.count' | t: { shown: rows().length, total: all().length } }}
+  </span>
   <span class="spacer"></span>
-  <button type="button" class="btn btn-sm btn-primary" data-testid="novel-translation-dict-new" (click)="startDraft()"><ds-icon name="plus" [size]="16" />{{ "novel.translation.dict.new" | t }}</button>
+  <button
+    type="button"
+    class="btn btn-sm btn-primary"
+    data-testid="novel-translation-dict-new"
+    (click)="startDraft()"
+  >
+    <ds-icon name="plus" [size]="16" />
+    {{ 'novel.translation.dict.new' | t }}
+  </button>
 </div>
-<div class="tl-main is-flat is-fill" data-testid="novel-translation-dict">
-  <ds-datatable [columns]="tableColumns" [rows]="tableRows()" trackKey="id" variant="fill" rowTestId="novel-translation-dict-row" [actions]="tableActions" [actionsLabel]="'novel.translation.dict.actions' | t" [canEdit]="canEditCell" data-testid="novel-translation-dict-table" (cellEdit)="onCellEdit($event)">
+<div class="tl-main is-flat is-fill" data-testid="novel-translation-dict-main">
+  <ds-datatable
+    [columns]="tableColumns"
+    [rows]="tableRows()"
+    trackKey="id"
+    variant="fill"
+    rowTestId="novel-translation-dict-row"
+    [actions]="tableActions"
+    [actionsLabel]="'novel.translation.dict.actions' | t"
+    [canEdit]="canEditCell"
+    data-testid="novel-translation-dict-table"
+    (cellEdit)="onCellEdit($event)"
+  >
     <ng-template dsCell="src" let-row>
       @if (isDraft(row)) {
-        <input #draftSource class="input is-inline" [value]="entryOf(row).src" [attr.placeholder]="'novel.translation.dict.col.src' | t" [attr.aria-label]="'novel.translation.dict.col.src' | t" autocomplete="off" data-testid="novel-translation-dict-draft-src" (input)="onDraft('src', $event)" (keydown)="onDraftKeydown($event)" />
+        <input
+          #draftSource
+          class="input is-inline"
+          [value]="entryOf(row).src"
+          [attr.placeholder]="'novel.translation.dict.col.src' | t"
+          [attr.aria-label]="'novel.translation.dict.col.src' | t"
+          autocomplete="off"
+          data-testid="novel-translation-dict-draft-src"
+          (input)="onDraft('src', $event)"
+          (keydown)="onDraftKeydown($event)"
+        />
       } @else {
         {{ entryOf(row).src }}
       }
     </ng-template>
     <ng-template dsCell="dst" let-row>
       @if (isDraft(row)) {
-        <input class="input is-inline" [value]="entryOf(row).dst" [attr.placeholder]="'novel.translation.dict.col.dst' | t" [attr.aria-label]="'novel.translation.dict.col.dst' | t" autocomplete="off" data-testid="novel-translation-dict-draft-dst" (input)="onDraft('dst', $event)" (keydown)="onDraftKeydown($event)" />
+        <input
+          class="input is-inline"
+          [value]="entryOf(row).dst"
+          [attr.placeholder]="'novel.translation.dict.col.dst' | t"
+          [attr.aria-label]="'novel.translation.dict.col.dst' | t"
+          autocomplete="off"
+          data-testid="novel-translation-dict-draft-dst"
+          (input)="onDraft('dst', $event)"
+          (keydown)="onDraftKeydown($event)"
+        />
       } @else {
         {{ entryOf(row).dst }}
       }
     </ng-template>
     <ng-template dsCell="type" let-row>
       @if (isDraft(row)) {
-        <select class="select is-inline" [attr.aria-label]="'novel.translation.dict.col.type' | t" data-testid="novel-translation-dict-draft-type" (change)="onDraftType($event)" (keydown)="onDraftKeydown($event)">
+        <select
+          class="select is-inline"
+          [attr.aria-label]="'novel.translation.dict.col.type' | t"
+          data-testid="novel-translation-dict-draft-type"
+          (change)="onDraftType($event)"
+          (keydown)="onDraftKeydown($event)"
+        >
           @for (type of types; track type) {
-            <option [value]="type" [selected]="entryOf(row).type === type">{{ typeKey(type) | t }}</option>
+            <option [value]="type" [selected]="entryOf(row).type === type">
+              {{ typeKey(type) | t }}
+            </option>
           }
         </select>
       } @else {
@@ -34,20 +92,67 @@
     <ng-template dsCell="note" let-row>
       @if (isDraft(row)) {
         <span class="dict-draft-cell">
-          <input class="input is-inline" [value]="entryOf(row).note" [attr.placeholder]="'novel.translation.dict.col.note' | t" [attr.aria-label]="'novel.translation.dict.col.note' | t" autocomplete="off" data-testid="novel-translation-dict-draft-note" (input)="onDraft('note', $event)" (keydown)="onDraftKeydown($event)" />
-          <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.translation.dict.add' | t" [attr.data-tip]="'novel.translation.dict.addTip' | t" data-testid="novel-translation-dict-add" (click)="addDraft()"><ds-icon name="check" [size]="17" /></button>
-          <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'novel.translation.dict.cancel' | t" [attr.data-tip]="'novel.translation.dict.cancel' | t" data-testid="novel-translation-dict-cancel" (click)="cancelDraft()"><ds-icon name="x" [size]="17" /></button>
+          <input
+            class="input is-inline"
+            [value]="entryOf(row).note"
+            [attr.placeholder]="'novel.translation.dict.col.note' | t"
+            [attr.aria-label]="'novel.translation.dict.col.note' | t"
+            autocomplete="off"
+            data-testid="novel-translation-dict-draft-note"
+            (input)="onDraft('note', $event)"
+            (keydown)="onDraftKeydown($event)"
+          />
+          <button
+            type="button"
+            class="btn btn-icon btn-sm"
+            [attr.aria-label]="'novel.translation.dict.add' | t"
+            [attr.data-tip]="'novel.translation.dict.addTip' | t"
+            data-testid="novel-translation-dict-add"
+            (click)="addDraft()"
+          >
+            <ds-icon name="check" [size]="17" />
+          </button>
+          <button
+            type="button"
+            class="btn btn-icon btn-sm"
+            [attr.aria-label]="'novel.translation.dict.cancel' | t"
+            [attr.data-tip]="'novel.translation.dict.cancel' | t"
+            data-testid="novel-translation-dict-cancel"
+            (click)="cancelDraft()"
+          >
+            <ds-icon name="x" [size]="17" />
+          </button>
         </span>
       } @else {
         {{ entryOf(row).note }}
       }
     </ng-template>
     <ng-template dsEmpty>
-      <div class="empty" data-testid="novel-translation-dict-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.translation.dict.empty.title" | t }}</h4><p class="t-sm t-mute">{{ (all().length === 0 ? "novel.translation.dict.empty.none.description" : "novel.translation.dict.empty.description") | t }}</p>
-        @if (all().length === 0) {
-          <button type="button" class="btn btn-primary" data-testid="novel-translation-dict-empty-add" (click)="startDraft()"><ds-icon name="plus" [size]="16" />{{ "novel.translation.dict.new" | t }}</button>
-        }
-      </div></div>
+      <div class="empty" data-testid="novel-translation-dict-empty">
+        <div class="empty-inner">
+          <div class="illus"></div>
+          <h4 class="t-display-xs">{{ 'novel.translation.dict.empty.title' | t }}</h4>
+          <p class="t-sm t-mute">
+            {{
+              (all().length === 0
+                ? 'novel.translation.dict.empty.none.description'
+                : 'novel.translation.dict.empty.description'
+              ) | t
+            }}
+          </p>
+          @if (all().length === 0) {
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-testid="novel-translation-dict-empty-add"
+              (click)="startDraft()"
+            >
+              <ds-icon name="plus" [size]="16" />
+              {{ 'novel.translation.dict.new' | t }}
+            </button>
+          }
+        </div>
+      </div>
     </ng-template>
   </ds-datatable>
 </div>

@@ -1,0 +1,131 @@
+.flow {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--canvas-card);
+  border-bottom: 1px solid var(--hairline);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.fs {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 4px var(--sp-md) 4px var(--sp-sm);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--mute);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  flex: none;
+}
+.fs:hover {
+  background: var(--canvas-soft);
+}
+.fs-n {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-full);
+  border: 1px solid var(--hairline-strong);
+  font: 500 12px/1 var(--font-mono);
+  color: var(--body);
+}
+.fs-n .ic {
+  width: 13px;
+  height: 13px;
+}
+.fs-t {
+  display: grid;
+  gap: 1px;
+}
+.fs-t b {
+  font: 500 13px/16px var(--font);
+  color: var(--body);
+}
+.fs-t small {
+  font: 400 11.5px/14px var(--font);
+  color: var(--mute);
+}
+.fs.is-past .fs-n {
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
+}
+.fs.is-active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+.fs.is-active .fs-n {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.fs.is-active .fs-t b {
+  color: var(--ink);
+}
+.fs.is-warn .fs-t small {
+  color: var(--warning);
+}
+.fs.is-run .fs-t small {
+  color: var(--secondary-text);
+}
+.fs-sep {
+  color: var(--hairline-strong);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.fs-sep .ic {
+  width: 14px;
+  height: 14px;
+}
+.flow-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
+  border-top: 1px solid var(--hairline);
+  background: var(--canvas-card);
+}
+.flow-hint {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-main.is-flat {
+  border-right: 0;
+}
+.tl-main.is-fill {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.tl-sub.is-inner {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.tl-center {
+  flex: 1;
+  overflow: auto;
+  padding: var(--sp-xl) var(--sp-lg);
+}
+.tl-form {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.tl-sub .seg {
+  flex: none;
+}

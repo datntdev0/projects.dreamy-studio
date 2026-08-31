@@ -4,8 +4,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": [],
-    "composite": true,
+    "composite": true
   },
-  "include": ["**/*.ts", "core/language/*.json"],
+  "include": ["**/*.ts", "shared/language/*.json"],
   "exclude": ["**/*.spec.ts", "stories/**", "testing/**"]
 }

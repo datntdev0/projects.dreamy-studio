@@ -1,6 +1,6 @@
-import { AssetRights } from "./library.models";
+import { AssetRights, LibrarySort } from './library.models';
 
-export type SoundSort = "new" | "name" | "size";
+export type SoundSort = LibrarySort;
 
 export interface LibrarySound {
   id: number;
@@ -19,6 +19,6 @@ export interface LibrarySound {
   updatedAt: string;
 }
 
-export const SOUND_EXTENSIONS = ["mp3", "wav", "aac"] as const;
+export const SOUND_EXTENSIONS = ['mp3', 'wav', 'aac'] as const;
 export const SOUND_MAX_BYTES = 200 * 1024 * 1024;
-export const SOUND_STREAM_SCHEME = "dreamy-sound";
+export const SOUND_STREAM_SCHEME = 'dreamy-sound';

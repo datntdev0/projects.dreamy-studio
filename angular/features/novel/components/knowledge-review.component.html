@@ -1,21 +1,66 @@
 <div class="tl-sub is-col" data-testid="novel-knowledge-review-sub">
-  <label class="bar-field"><span>{{ "novel.knowledge.review.rule" | t }}</span>
-    <select class="select" data-testid="novel-knowledge-review-rule" [attr.aria-label]="'novel.knowledge.review.rule' | t" (change)="onRule($event)">
-      <option value="all" [selected]="view().rule === 'all'">{{ "novel.knowledge.review.rule.all" | t: { count: issues().length } }}</option>
+  <label class="bar-field">
+    <span>{{ 'novel.knowledge.review.rule' | t }}</span>
+    <select
+      class="select"
+      data-testid="novel-knowledge-review-rule"
+      [attr.aria-label]="'novel.knowledge.review.rule' | t"
+      (change)="onRule($event)"
+    >
+      <option value="all" [selected]="view().rule === 'all'">
+        {{ 'novel.knowledge.review.rule.all' | t: { count: issues().length } }}
+      </option>
       @for (entry of counts(); track entry.rule.id) {
-        <option [value]="entry.rule.id" [selected]="view().rule === entry.rule.id" [disabled]="entry.count === 0">{{ entry.rule.labelKey | t }} ({{ entry.count }})</option>
+        <option
+          [value]="entry.rule.id"
+          [selected]="view().rule === entry.rule.id"
+          [disabled]="entry.count === 0"
+        >
+          {{ entry.rule.labelKey | t }} ({{ entry.count }})
+        </option>
       }
     </select>
   </label>
   <span class="spacer"></span>
-  <span class="t-sm t-mute"><ds-icon name="shield" [size]="13" /> {{ "novel.knowledge.review.hint" | t }}</span>
-  <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-ask" [disabled]="cards().length === 0 || assistant.sending()" (click)="askAssistant()"><ds-icon name="spark" [size]="16" />{{ "novel.knowledge.review.ask" | t }}</button>
+  <span class="t-sm t-mute">
+    <ds-icon name="shield" [size]="13" />
+    {{ 'novel.knowledge.review.hint' | t }}
+  </span>
+  <button
+    type="button"
+    class="btn btn-sm"
+    data-testid="novel-knowledge-review-ask"
+    [disabled]="cards().length === 0 || assistant.sending()"
+    (click)="askAssistant()"
+  >
+    <ds-icon name="spark" [size]="16" />
+    {{ 'novel.knowledge.review.ask' | t }}
+  </button>
 </div>
-<div class="tl-list rv-list" data-testid="novel-knowledge-review">
+<div class="tl-list rv-list" data-testid="novel-knowledge-review-list">
   @for (card of cards(); track card.issue.id) {
-    <article class="card iss" [class.is-error]="card.issue.sev === 'error'" tabindex="0" data-testid="novel-knowledge-review-issue" [attr.data-rule]="card.rule.id" (click)="select(card.issue.ids[0])" (keydown.enter)="select(card.issue.ids[0])">
+    <article
+      class="card iss"
+      [class.is-error]="card.issue.sev === 'error'"
+      tabindex="0"
+      data-testid="novel-knowledge-review-issue"
+      [attr.data-rule]="card.rule.id"
+      (click)="select(card.issue.ids[0])"
+      (keydown.enter)="select(card.issue.ids[0])"
+    >
       <div class="iss-top">
-        <span class="badge" [class.badge-danger]="card.issue.sev === 'error'" [class.badge-warning]="card.issue.sev === 'warning'">{{ (card.issue.sev === "error" ? "novel.knowledge.review.error" : "novel.knowledge.review.warning") | t }}</span>
+        <span
+          class="badge"
+          [class.badge-danger]="card.issue.sev === 'error'"
+          [class.badge-warning]="card.issue.sev === 'warning'"
+        >
+          {{
+            (card.issue.sev === 'error'
+              ? 'novel.knowledge.review.error'
+              : 'novel.knowledge.review.warning'
+            ) | t
+          }}
+        </span>
         <b>{{ card.rule.labelKey | t }}</b>
         <span class="spacer"></span>
         <span class="mono t-mute">{{ card.rule.id }}</span>
@@ -23,51 +68,148 @@
       <p data-testid="novel-knowledge-review-message">{{ card.issue.message }}</p>
       <div class="iss-items">
         @for (chip of card.chips; track chip.id) {
-          <button type="button" class="chip" data-testid="novel-knowledge-review-chip" (click)="select(chip.id); $event.stopPropagation()">{{ chip.label }}</button>
+          <button
+            type="button"
+            class="chip"
+            data-testid="novel-knowledge-review-chip"
+            (click)="select(chip.id); $event.stopPropagation()"
+          >
+            {{ chip.label }}
+          </button>
         }
       </div>
       @if (card.evidence.length > 0) {
         <div class="iss-ev">
           @for (evidence of card.evidence; track $index) {
-            <blockquote class="quote" [class.is-bad]="!evidence.verified">{{ evidence.q }} <span class="kn-ref mono">{{ "novel.knowledge.ref" | t: { chapter: evidence.chapter, p: evidence.p } }}</span></blockquote>
+            <blockquote class="quote" [class.is-bad]="!evidence.verified">
+              {{ evidence.q }}
+              <span class="kn-ref mono">
+                {{ 'novel.knowledge.ref' | t: { chapter: evidence.chapter, p: evidence.p } }}
+              </span>
+            </blockquote>
           }
         </div>
       }
       <div class="w-act" (click)="$event.stopPropagation()">
         @switch (card.rule.id) {
-          @case ("character_predicate") {
+          @case ('character_predicate') {
             @for (persona of card.personas; track persona.id) {
-              <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-review-move" (click)="moveToPersona(card.issue, persona.id)"><ds-icon name="shirt" [size]="14" />{{ "novel.knowledge.review.moveTo" | t: { name: persona.label } }}</button>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-testid="novel-knowledge-review-move"
+                (click)="moveToPersona(card.issue, persona.id)"
+              >
+                <ds-icon name="shirt" [size]="14" />
+                {{ 'novel.knowledge.review.moveTo' | t: { name: persona.label } }}
+              </button>
             }
-            <button type="button" class="btn btn-sm" (click)="edit(card.issue)"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
-            <button type="button" class="btn btn-sm" (click)="remove(card.issue)">{{ "novel.knowledge.action.delete" | t }}</button>
+            <button type="button" class="btn btn-sm" (click)="edit(card.issue)">
+              <ds-icon name="pen" [size]="14" />
+              {{ 'novel.knowledge.action.edit' | t }}
+            </button>
+            <button type="button" class="btn btn-sm" (click)="remove(card.issue)">
+              {{ 'novel.knowledge.action.delete' | t }}
+            </button>
           }
-          @case ("persona_link") {
+          @case ('persona_link') {
             @if (card.issue.ids.length === 1) {
-              <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-review-create" (click)="createCharacter(card.issue)"><ds-icon name="user" [size]="14" />{{ "novel.knowledge.review.createCharacter" | t }}</button>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-testid="novel-knowledge-review-create"
+                (click)="createCharacter(card.issue)"
+              >
+                <ds-icon name="user" [size]="14" />
+                {{ 'novel.knowledge.review.createCharacter' | t }}
+              </button>
             }
-            <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-edit" (click)="edit(card.issue)"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
-            <button type="button" class="btn btn-sm" (click)="remove(card.issue)">{{ "novel.knowledge.action.delete" | t }}</button>
+            <button
+              type="button"
+              class="btn btn-sm"
+              data-testid="novel-knowledge-review-edit"
+              (click)="edit(card.issue)"
+            >
+              <ds-icon name="pen" [size]="14" />
+              {{ 'novel.knowledge.action.edit' | t }}
+            </button>
+            <button type="button" class="btn btn-sm" (click)="remove(card.issue)">
+              {{ 'novel.knowledge.action.delete' | t }}
+            </button>
           }
-          @case ("entity_duplicate") {
+          @case ('entity_duplicate') {
             @if (card.pair.length === 2) {
-              <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-review-merge" (click)="merge(card.pair[0].id, card.pair[1].id)"><ds-icon name="merge" [size]="14" />{{ "novel.knowledge.review.mergeInto" | t: { from: card.pair[1].label, to: card.pair[0].label } }}</button>
-              <button type="button" class="btn btn-sm" (click)="merge(card.pair[1].id, card.pair[0].id)">{{ "novel.knowledge.review.mergeInto" | t: { from: card.pair[0].label, to: card.pair[1].label } }}</button>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-testid="novel-knowledge-review-merge"
+                (click)="merge(card.pair[0].id, card.pair[1].id)"
+              >
+                <ds-icon name="merge" [size]="14" />
+                {{
+                  'novel.knowledge.review.mergeInto'
+                    | t: { from: card.pair[1].label, to: card.pair[0].label }
+                }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                (click)="merge(card.pair[1].id, card.pair[0].id)"
+              >
+                {{
+                  'novel.knowledge.review.mergeInto'
+                    | t: { from: card.pair[0].label, to: card.pair[1].label }
+                }}
+              </button>
             }
-            <button type="button" class="btn btn-sm" (click)="edit(card.issue)"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
+            <button type="button" class="btn btn-sm" (click)="edit(card.issue)">
+              <ds-icon name="pen" [size]="14" />
+              {{ 'novel.knowledge.action.edit' | t }}
+            </button>
           }
-          @case ("source_stale") {
-            <button type="button" class="btn btn-sm" data-testid="novel-knowledge-review-stale-keep" (click)="keepStale(card.issue)">{{ "novel.knowledge.review.keepAsIs" | t }}</button>
-            <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-review-reanalyze" (click)="reanalyze(card.issue)"><ds-icon name="refresh" [size]="14" />{{ "novel.knowledge.review.reanalyze" | t }}</button>
+          @case ('source_stale') {
+            <button
+              type="button"
+              class="btn btn-sm"
+              data-testid="novel-knowledge-review-stale-keep"
+              (click)="keepStale(card.issue)"
+            >
+              {{ 'novel.knowledge.review.keepAsIs' | t }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              data-testid="novel-knowledge-review-reanalyze"
+              (click)="reanalyze(card.issue)"
+            >
+              <ds-icon name="refresh" [size]="14" />
+              {{ 'novel.knowledge.review.reanalyze' | t }}
+            </button>
           }
           @default {
-            <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-review-edit" (click)="edit(card.issue)"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
-            <button type="button" class="btn btn-sm" (click)="remove(card.issue)">{{ "novel.knowledge.action.delete" | t }}</button>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              data-testid="novel-knowledge-review-edit"
+              (click)="edit(card.issue)"
+            >
+              <ds-icon name="pen" [size]="14" />
+              {{ 'novel.knowledge.action.edit' | t }}
+            </button>
+            <button type="button" class="btn btn-sm" (click)="remove(card.issue)">
+              {{ 'novel.knowledge.action.delete' | t }}
+            </button>
           }
         }
       </div>
     </article>
   } @empty {
-    <div class="empty" data-testid="novel-knowledge-review-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.knowledge.review.empty" | t }}</h4><p class="t-sm t-mute">{{ "novel.knowledge.review.empty.hint" | t }}</p></div></div>
+    <div class="empty" data-testid="novel-knowledge-review-empty">
+      <div class="empty-inner">
+        <div class="illus"></div>
+        <h4 class="t-display-xs">{{ 'novel.knowledge.review.empty' | t }}</h4>
+        <p class="t-sm t-mute">{{ 'novel.knowledge.review.empty.hint' | t }}</p>
+      </div>
+    </div>
   }
 </div>

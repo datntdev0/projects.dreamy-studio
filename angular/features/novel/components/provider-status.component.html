@@ -1,0 +1,24 @@
+<div
+  class="an-prov"
+  [attr.data-state]="provider().state"
+  [attr.data-testid]="testidPrefix() + '-provider'"
+>
+  @if (provider().state === 'unset') {
+    <ds-icon name="alert" [size]="16" />
+    <span>{{ unsetKey() | t }}</span>
+  } @else {
+    <ds-icon [name]="provider().state === 'ready' ? 'check-circle' : 'alert'" [size]="16" />
+    <span>
+      <b class="t-ink">{{ provider().name }}</b>
+      <span class="t-mute mono">{{ provider().detail }}</span>
+    </span>
+  }
+  <button
+    type="button"
+    class="btn btn-sm btn-ghost"
+    [attr.data-testid]="testidPrefix() + '-settings'"
+    (click)="requestChange()"
+  >
+    {{ changeKey() | t }}
+  </button>
+</div>

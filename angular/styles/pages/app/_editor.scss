@@ -1,0 +1,130 @@
+.edcol {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--canvas);
+}
+.tabbar {
+  height: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  background: var(--canvas-card);
+  border-bottom: 1px solid var(--hairline);
+}
+.etabs {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.etabs::-webkit-scrollbar {
+  display: none;
+}
+.etab {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  height: 100%;
+  padding: 0 var(--sp-xs) 0 var(--sp-md);
+  max-width: 220px;
+  flex: none;
+  border-right: 1px solid var(--hairline);
+  color: var(--mute);
+  font: 400 13px/1 var(--font);
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+.etab .ic {
+  width: 15px;
+  height: 15px;
+}
+.etab img {
+  width: 15px;
+  height: 15px;
+}
+.etab:hover {
+  color: var(--body);
+  background: var(--canvas-soft);
+}
+.etab.is-active {
+  background: var(--canvas);
+  color: var(--ink);
+}
+.etab.is-fixed {
+  padding-right: var(--sp-md);
+}
+.etab.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--primary);
+}
+.etab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--canvas);
+}
+.etab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.etab-close {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  opacity: 0;
+  padding: 0;
+}
+.etab-close .ic {
+  width: 13px;
+  height: 13px;
+}
+.etab:hover .etab-close,
+.etab.is-active .etab-close,
+.etab-close:focus-visible {
+  opacity: 1;
+}
+.etab-close:hover {
+  background: var(--canvas-mid);
+  color: var(--ink);
+}
+.crumbs {
+  height: 24px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: 0 var(--sp-md);
+  font-size: 12.5px;
+  color: var(--mute);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.crumbs .ic {
+  width: 13px;
+  height: 13px;
+}
+.editor {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

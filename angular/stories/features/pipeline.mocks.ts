@@ -1,10 +1,11 @@
-import { Provider, computed, signal } from "@angular/core";
-import { ChapterRow, NovelError } from "@features/novel/novel.models";
-import { PipelineSnapshot } from "@features/novel/novel.translation.models";
-import { PipelineService } from "@features/pipeline/pipeline.service";
-import { totalsOf } from "@features/pipeline/pipeline.rules";
-import { LANTERN_CHAPTERS } from "../screens/novel-translation.fixtures";
-import { NOVEL_NAMES } from "./pipeline.fixtures";
+import { computed, Provider, signal } from '@angular/core';
+import { ChapterRow, NovelError } from '@features/novel/novel.models';
+import { PipelineSnapshot } from '@features/novel/novel.translation.models';
+import { totalsOf } from '@features/pipeline/pipeline.rules';
+import { PipelineService } from '@features/pipeline/pipeline.service';
+
+import { LANTERN_CHAPTERS } from '../screens/novel-translation.fixtures';
+import { NOVEL_NAMES } from './pipeline.fixtures';
 
 export interface PipelineScenario {
   pipelines?: PipelineSnapshot[];
@@ -16,8 +17,18 @@ export interface PipelineScenario {
 
 function chapterRow(novelId: number, chapterId: string): ChapterRow {
   const seq = Number(chapterId.slice(3));
-  const stamp = "2026-11-09T09:15:00Z";
-  return { id: chapterId, novelId, seq, title: LANTERN_CHAPTERS[seq - 1]?.title ?? "", wordCount: 0, translationStatus: "none", analysisStatus: "none", createdAt: stamp, updatedAt: stamp };
+  const stamp = '2026-11-09T09:15:00Z';
+  return {
+    id: chapterId,
+    novelId,
+    seq,
+    title: LANTERN_CHAPTERS[seq - 1]?.title ?? '',
+    wordCount: 0,
+    translationStatus: 'none',
+    analysisStatus: 'none',
+    createdAt: stamp,
+    updatedAt: stamp,
+  };
 }
 
 function serviceMock(scenario: PipelineScenario): Partial<PipelineService> {

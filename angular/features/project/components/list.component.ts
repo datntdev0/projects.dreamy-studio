@@ -1,29 +1,23 @@
-import { Component, HostListener, inject } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { TabsService } from "@layout/tabs.service";
-import { ProjectDialogsService } from "../project.dialogs.service";
-import { ProjectConfirmService } from "../project.confirm.service";
-import { ProjectStatus } from "../project.models";
-import { ProjectSummary } from "../project.models";
-import { ProjectTemplateId } from "../project.models";
-import { ProjectViewMode } from "../project.models";
-import { ProjectLabels } from "../project.labels";
-import { ProjectService } from "../project.service";
-import { ProjectThumb } from "./thumb.component";
+import { ChangeDetectionStrategy, Component, HostListener, inject } from '@angular/core';
+import { Icon } from '@components/icon';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
-const FIELD_SELECTOR = "input,textarea,select";
-
-function isField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(FIELD_SELECTOR) !== null;
-}
+import { ProjectConfirmService } from '../project.confirm.service';
+import { ProjectDialogsService } from '../project.dialogs.service';
+import { ProjectLabels } from '../project.labels';
+// prettier-ignore
+import { ProjectStatus, ProjectSummary, ProjectTemplateId, ProjectViewMode } from '../project.models';
+import { ProjectService } from '../project.service';
+import { ProjectThumb } from './thumb.component';
 
 @Component({
-  selector: "app-project-list",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-project-list',
   imports: [Icon, CoreModule, ProjectThumb],
-  templateUrl: "./list.component.html",
+  templateUrl: './list.component.html',
 })
 export class ProjectList {
   private readonly tabs = inject(TabsService);
@@ -37,11 +31,11 @@ export class ProjectList {
   }
 
   onQuery(event: Event): void {
-    this.projects.setQuery((event.target as HTMLInputElement).value);
+    this.projects.setQuery(fieldValue(event));
   }
 
   onSort(event: Event): void {
-    this.projects.setSort((event.target as HTMLSelectElement).value as "updated" | "name");
+    this.projects.setSort(fieldValue(event) as 'updated' | 'name');
   }
 
   isViewActive(view: ProjectViewMode): boolean {
@@ -73,11 +67,11 @@ export class ProjectList {
   }
 
   onKeydown(project: ProjectSummary, event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.open(project);
     }
-    if (event.key === " ") {
+    if (event.key === ' ') {
       event.preventDefault();
       this.select(project);
     }
@@ -99,17 +93,17 @@ export class ProjectList {
     this.projects.clearQueryAndFilters();
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onDeleteKey(event: KeyboardEvent): void {
     const id = this.projects.selectedId();
-    if (event.key !== "Delete" || isField(event.target) || id === null || this.isModalOpen()) {
+    if (!isDeleteShortcut(event) || id === null || this.isModalOpen()) {
       return;
     }
     this.confirms.deleteProjects([id]);
   }
 
   private isModalOpen(): boolean {
-    return this.dialogs.createOpen() || document.querySelector(".modal") !== null;
+    return this.dialogs.createOpen() || isModalOpen();
   }
 
   private async openProject(project: ProjectSummary): Promise<void> {

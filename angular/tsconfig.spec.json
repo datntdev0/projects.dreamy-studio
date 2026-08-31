@@ -4,6 +4,6 @@
   "compilerOptions": {
     "types": ["vitest/globals"]
   },
-  "include": ["**/*.ts", "core/language/*.json"],
+  "include": ["**/*.ts", "shared/language/*.json"],
   "exclude": ["stories/**"]
 }

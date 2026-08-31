@@ -1,19 +1,20 @@
-import { Component, effect, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { DirEntry } from "../project.models";
-import { ProjectService } from "../project.service";
-import { treeKey } from "../project.rules";
+import { ChangeDetectionStrategy, Component, effect, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+
+import { DirEntry } from '../project.models';
+import { treeKey } from '../project.rules';
+import { ProjectService } from '../project.service';
 
 @Component({
-  selector: "app-project-tree",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-project-tree',
   imports: [Icon, CoreModule],
-  templateUrl: "./tree.component.html",
+  templateUrl: './tree.component.html',
 })
 export class ProjectTree {
   readonly projectId = input.required<number>();
-  readonly path = input("");
+  readonly path = input('');
   readonly depth = input(0);
   readonly indent = input(8);
   readonly projects = inject(ProjectService);
@@ -35,7 +36,7 @@ export class ProjectTree {
   }
 
   toggle(entry: DirEntry): void {
-    if (entry.kind !== "dir") {
+    if (entry.kind !== 'dir') {
       return;
     }
     const key = this.keyFor(entry);
@@ -46,23 +47,31 @@ export class ProjectTree {
   }
 
   onKeydown(entry: DirEntry, event: KeyboardEvent): void {
-    if (event.key === "ArrowRight" && entry.kind === "dir" && !this.projects.isExpanded(this.keyFor(entry))) {
+    if (
+      event.key === 'ArrowRight' &&
+      entry.kind === 'dir' &&
+      !this.projects.isExpanded(this.keyFor(entry))
+    ) {
       event.preventDefault();
       this.toggle(entry);
     }
-    if (event.key === "ArrowLeft" && entry.kind === "dir" && this.projects.isExpanded(this.keyFor(entry))) {
+    if (
+      event.key === 'ArrowLeft' &&
+      entry.kind === 'dir' &&
+      this.projects.isExpanded(this.keyFor(entry))
+    ) {
       event.preventDefault();
       this.toggle(entry);
     }
-    if (event.key === "Enter" && entry.kind === "dir") {
+    if (event.key === 'Enter' && entry.kind === 'dir') {
       event.preventDefault();
       this.toggle(entry);
     }
   }
 
   sizeLabel(entry: DirEntry): string {
-    if (entry.kind === "dir") {
-      return "";
+    if (entry.kind === 'dir') {
+      return '';
     }
     if (entry.size < 1024) {
       return `${entry.size} B`;

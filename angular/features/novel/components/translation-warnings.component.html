@@ -1,32 +1,78 @@
 <div class="tl-sub" data-testid="novel-translation-warn-sub">
   <div class="seg" role="group" data-testid="novel-translation-warn-filter">
     @for (item of filters; track item) {
-      <button type="button" [class.is-active]="filter() === item" [attr.aria-pressed]="filter() === item" [attr.data-testid]="'novel-translation-warn-filter-' + item" (click)="setFilter(item)">{{ filterKey(item) | t }} {{ filterCount(item) }}</button>
+      <button
+        type="button"
+        [class.is-active]="filter() === item"
+        [attr.aria-pressed]="filter() === item"
+        [attr.data-testid]="'novel-translation-warn-filter-' + item"
+        (click)="setFilter(item)"
+      >
+        {{ filterKey(item) | t }} {{ filterCount(item) }}
+      </button>
     }
   </div>
 </div>
-<div class="tl-list" data-testid="novel-translation-warn">
+<div class="tl-list" data-testid="novel-translation-warn-list">
   @for (warning of rows(); track warning.id) {
     <div class="card w-card" data-testid="novel-translation-warn-card">
       <div class="w-top">
         <span class="badge" [class]="kindBadge(warning.kind)">{{ kindKey(warning.kind) | t }}</span>
-        @if (warning.kind === "source") {
-          <button type="button" class="chip" data-testid="novel-translation-warn-source" (click)="openSource(warning)">{{ "novel.translation.warn.passage" | t: { seq: warning.seq, n: warning.n } }}</button>
+        @if (warning.kind === 'source') {
+          <button
+            type="button"
+            class="chip"
+            data-testid="novel-translation-warn-source"
+            (click)="openSource(warning)"
+          >
+            {{ 'novel.translation.warn.passage' | t: { seq: warning.seq, n: warning.n } }}
+          </button>
         } @else {
-          <span class="chip is-static" data-testid="novel-translation-warn-passage">{{ "novel.translation.warn.passage" | t: { seq: warning.seq, n: warning.n } }}</span>
+          <span class="chip is-static" data-testid="novel-translation-warn-passage">
+            {{ 'novel.translation.warn.passage' | t: { seq: warning.seq, n: warning.n } }}
+          </span>
         }
         <span class="spacer"></span>
       </div>
       <p>{{ reasonOf(warning) }}</p>
       <div class="w-act">
-        @if (warning.kind === "dict") {
-          <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-dict" (click)="openDictionary()"><ds-icon name="book" [size]="16" />{{ "novel.translation.warn.openDict" | t }}</button>
+        @if (warning.kind === 'dict') {
+          <button
+            type="button"
+            class="btn btn-sm"
+            data-testid="novel-translation-warn-dict"
+            (click)="openDictionary()"
+          >
+            <ds-icon name="book" [size]="16" />
+            {{ 'novel.translation.warn.openDict' | t }}
+          </button>
         }
-        <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-view" (click)="view(warning)">{{ "novel.translation.warn.viewPassage" | t }}</button>
-        <button type="button" class="btn btn-sm" data-testid="novel-translation-warn-retranslate" (click)="retranslate(warning)"><ds-icon name="refresh" [size]="16" />{{ "novel.translation.warn.retranslatePassage" | t }}</button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="novel-translation-warn-view"
+          (click)="view(warning)"
+        >
+          {{ 'novel.translation.warn.viewPassage' | t }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="novel-translation-warn-retranslate"
+          (click)="retranslate(warning)"
+        >
+          <ds-icon name="refresh" [size]="16" />
+          {{ 'novel.translation.warn.retranslatePassage' | t }}
+        </button>
       </div>
     </div>
   } @empty {
-    <div class="empty" data-testid="novel-translation-warn-empty"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs">{{ "novel.translation.warn.empty.title" | t }}</h4><p class="t-sm t-mute">{{ "novel.translation.warn.empty.description" | t }}</p></div></div>
+    <div class="empty" data-testid="novel-translation-warn-empty">
+      <div class="empty-inner">
+        <div class="illus"></div>
+        <h4 class="t-display-xs">{{ 'novel.translation.warn.empty.title' | t }}</h4>
+        <p class="t-sm t-mute">{{ 'novel.translation.warn.empty.description' | t }}</p>
+      </div>
+    </div>
   }
 </div>

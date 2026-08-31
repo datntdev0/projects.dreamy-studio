@@ -1,126 +1,183 @@
-<div class="divider resizer-v divider-inspector" role="separator" aria-orientation="vertical" [attr.aria-label]="'main.panel.resize.inspector' | t" tabindex="0" [attr.aria-valuenow]="layout.inspectorSize()" [attr.aria-valuemin]="layout.panelLimits.inspector.min" [attr.aria-valuemax]="layout.panelLimits.inspector.max" data-testid="inspector-divider" (pointerdown)="layout.beginResize('inspector', $event)" (keydown)="layout.handleResizeKey('inspector', $event)" (dblclick)="layout.resetSize('inspector')"></div>
-<aside class="inspector" [attr.aria-label]="'main.inspector.landmark' | t" data-testid="inspector">
+<div
+  class="divider resizer-v divider-inspector"
+  role="separator"
+  aria-orientation="vertical"
+  [attr.aria-label]="'main.panel.resize.inspector' | t"
+  tabindex="0"
+  [attr.aria-valuenow]="layout.inspectorSize()"
+  [attr.aria-valuemin]="layout.panelLimits.inspector.min"
+  [attr.aria-valuemax]="layout.panelLimits.inspector.max"
+  data-testid="inspector-divider"
+  (pointerdown)="layout.beginResize('inspector', $event)"
+  (keydown)="layout.handleResizeKey('inspector', $event)"
+  (dblclick)="layout.resetSize('inspector')"
+></div>
+<aside
+  class="inspector"
+  [attr.aria-label]="'main.inspector.landmark' | t"
+  data-testid="inspector-panel"
+>
   <header class="ins-head" data-testid="inspector-head">
     @for (tab of tabs; track tab.id) {
-      <button type="button" class="ins-tab" [class.is-active]="layout.rightTab() === tab.id" [attr.aria-pressed]="layout.rightTab() === tab.id" [attr.data-tab]="tab.id" data-testid="inspector-tab" (click)="layout.selectRightTab(tab.id)">{{ tab.labelKey | t }}</button>
+    <button
+      type="button"
+      class="ins-tab"
+      [class.is-active]="layout.rightTab() === tab.id"
+      [attr.aria-pressed]="layout.rightTab() === tab.id"
+      [attr.data-tab]="tab.id"
+      data-testid="inspector-tab"
+      (click)="layout.selectRightTab(tab.id)"
+    >
+      {{ tab.labelKey | t }}
+    </button>
     }
     <span class="spacer"></span>
-    <ds-button size="small" [iconOnly]="true" [label]="'main.inspector.collapse' | t" [attr.title]="'main.inspector.collapse' | t" data-testid="inspector-collapse" (pressed)="layout.toggleInspector()"><ds-icon name="chev-r" [size]="17" /></ds-button>
+    <ds-button
+      size="small"
+      [iconOnly]="true"
+      [label]="'main.inspector.collapse' | t"
+      [attr.title]="'main.inspector.collapse' | t"
+      data-testid="inspector-collapse"
+      (pressed)="layout.toggleInspector()"
+    >
+      <ds-icon name="chev-r" [size]="17" />
+    </ds-button>
   </header>
   <div class="pane-body" data-testid="inspector-body">
     @if (layout.rightTab() === "assistant") {
-      <app-assistant-panel />
-    } @else {
-      @switch (editorTabs.active().kind) {
-        @case ("projects") {
-          <div data-testid="inspector-projects-host">
-            @if (projects.selectedId() === null) {
-              <app-project-library-panel />
-            } @else {
-              <app-project-panel [projectId]="projects.selectedId()!" [showOpen]="true" />
-            }
-          </div>
-        }
-        @case ("project") {
-          <div [attr.data-project-id]="editorTabs.active().projectId" data-testid="inspector-project-host">
-            @if (editorTabs.active().projectId; as projectId) {
-              <app-project-panel [projectId]="projectId" />
-            }
-          </div>
-        }
-        @case ("novels") {
-          <div data-testid="inspector-novels-host">
-            @if (novels.selectedId() === null) {
-              <div class="ins-empty" data-testid="inspector-novels-empty"><p class="t-sm t-mute" data-testid="inspector-novels-empty-text">{{ "novel.panel.empty" | t }}</p></div>
-            } @else {
-              <app-novel-panel [novelId]="novels.selectedId()!" [showOpen]="true" />
-            }
-          </div>
-        }
-        @case ("novel") {
-          <div [attr.data-novel-id]="editorTabs.active().novelId" data-testid="inspector-novel-host">
-            @if (editorTabs.active().novelId; as novelId) {
-              @if (reader.screenOf(novelId) === "reading") {
-                <app-novel-display-panel />
-              } @else {
-                <app-novel-panel [novelId]="novelId" />
-              }
-            }
-          </div>
-        }
-        @case ("knowledge") {
-          <div [attr.data-novel-id]="editorTabs.active().novelId" data-testid="inspector-knowledge-host">
-            @if (editorTabs.active().novelId; as novelId) {
-              <app-novel-knowledge-inspector [novelId]="novelId" />
-            }
-          </div>
-        }
-        @case ("collections") {
-          <div data-testid="inspector-collections-host">
-            @if (library.taxonomySelection(); as selection) {
-              @if (selection.kind === "col") { <app-library-collection-panel [collectionId]="+selection.id" [showOpen]="true" /> } @else { <app-library-tag-panel [tag]="'' + selection.id" /> }
-            } @else { <app-library-taxonomy-panel /> }
-          </div>
-        }
-        @case ("collection") {
-          <div data-testid="inspector-collection-host">
-            @if (editorTabs.active().collectionId; as collectionId) {
-              @if (collectionAssets.selectedRef(collectionId); as selected) {
-                @if (selected.kind === "image") {
-                  <app-library-image-panel [imageId]="selected.id" data-testid="inspector-collection-image-panel" />
-                } @else if (selected.kind === "sound") {
-                  <app-library-sound-panel [soundId]="selected.id" data-testid="inspector-collection-sound-panel" />
-                } @else if (selected.kind === "video") {
-                  <app-library-video-panel [videoId]="selected.id" data-testid="inspector-collection-video-panel" />
-                } @else {
-                  <app-library-prompt-panel [promptId]="selected.id" data-testid="inspector-collection-prompt-panel" />
-                }
-              } @else {
-                <div class="ins-empty" data-testid="inspector-collection-empty"><p class="t-sm t-mute" data-testid="inspector-collection-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
-              }
-            }
-          </div>
-        }
-        @case ("images") {
-          <div data-testid="inspector-images-host">
-            @if (images.selected()) {
-              <app-library-image-panel data-testid="inspector-image-panel" />
-            } @else {
-              <div class="ins-empty" data-testid="inspector-images-empty"><p class="t-sm t-mute" data-testid="inspector-images-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
-            }
-          </div>
-        }
-        @case ("sounds") {
-          <div data-testid="inspector-sounds-host">
-            @if (sounds.selected()) {
-              <app-library-sound-panel data-testid="inspector-sound-panel" />
-            } @else {
-              <div class="ins-empty" data-testid="inspector-sounds-empty"><p class="t-sm t-mute" data-testid="inspector-sounds-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
-            }
-          </div>
-        }
-        @case ("videos") {
-          <div data-testid="inspector-videos-host">
-            @if (videos.selected()) {
-              <app-library-video-panel data-testid="inspector-video-panel" />
-            } @else {
-              <div class="ins-empty" data-testid="inspector-videos-empty"><p class="t-sm t-mute" data-testid="inspector-videos-empty-text">{{ "library.prompt.panel.empty" | t }}</p></div>
-            }
-          </div>
-        }
-        @case ("prompts") {
-          <div data-testid="inspector-prompts-host">
-            @if (prompts.selected()) {
-              <app-library-prompt-panel data-testid="inspector-prompt-panel" />
-            } @else {
-              <app-library-prompts-panel data-testid="inspector-prompts-panel" />
-            }
-          </div>
-        }
-        @default {
-          <div class="ins-empty" data-testid="inspector-empty"><p>{{ "main.inspector.empty" | t }}</p></div>
-        }
+    <app-assistant-panel />
+    } @else { @switch (editorTabs.active().kind) { @case ("projects") {
+    <div data-testid="inspector-projects-host">
+      @if (projects.selectedId() === null) {
+      <app-project-library-panel />
+      } @else {
+      <app-project-panel [projectId]="projects.selectedId()!" [showOpen]="true" />
       }
-    }
+    </div>
+    } @case ("project") {
+    <div
+      [attr.data-project-id]="editorTabs.active().projectId"
+      data-testid="inspector-project-host"
+    >
+      @if (editorTabs.active().projectId; as projectId) {
+      <app-project-panel [projectId]="projectId" />
+      }
+    </div>
+    } @case ("novels") {
+    <div data-testid="inspector-novels-host">
+      @if (novels.selectedId() === null) {
+      <div class="ins-empty" data-testid="inspector-novels-empty">
+        <p class="t-sm t-mute" data-testid="inspector-novels-empty-text">
+          {{ "novel.panel.empty" | t }}
+        </p>
+      </div>
+      } @else {
+      <app-novel-panel [novelId]="novels.selectedId()!" [showOpen]="true" />
+      }
+    </div>
+    } @case ("novel") {
+    <div [attr.data-novel-id]="editorTabs.active().novelId" data-testid="inspector-novel-host">
+      @if (editorTabs.active().novelId; as novelId) { @if (reader.screenOf(novelId) === "reading") {
+      <app-novel-display-panel />
+      } @else {
+      <app-novel-panel [novelId]="novelId" />
+      } }
+    </div>
+    } @case ("knowledge") {
+    <div [attr.data-novel-id]="editorTabs.active().novelId" data-testid="inspector-knowledge-host">
+      @if (editorTabs.active().novelId; as novelId) {
+      <app-novel-knowledge-inspector [novelId]="novelId" />
+      }
+    </div>
+    } @case ("collections") {
+    <div data-testid="inspector-collections-host">
+      @if (library.taxonomySelection(); as selection) { @if (selection.kind === "col") {
+      <app-library-collection-panel [collectionId]="+selection.id" [showOpen]="true" />
+      } @else {
+      <app-library-tag-panel [tag]="'' + selection.id" />
+      } } @else {
+      <app-library-taxonomy-panel />
+      }
+    </div>
+    } @case ("collection") {
+    <div data-testid="inspector-collection-host">
+      @if (editorTabs.active().collectionId; as collectionId) { @if
+      (collectionAssets.selectedRef(collectionId); as selected) { @if (selected.kind === "image") {
+      <app-library-image-panel
+        [imageId]="selected.id"
+        data-testid="inspector-collection-image-panel"
+      />
+      } @else if (selected.kind === "sound") {
+      <app-library-sound-panel
+        [soundId]="selected.id"
+        data-testid="inspector-collection-sound-panel"
+      />
+      } @else if (selected.kind === "video") {
+      <app-library-video-panel
+        [videoId]="selected.id"
+        data-testid="inspector-collection-video-panel"
+      />
+      } @else {
+      <app-library-prompt-panel
+        [promptId]="selected.id"
+        data-testid="inspector-collection-prompt-panel"
+      />
+      } } @else {
+      <div class="ins-empty" data-testid="inspector-collection-empty">
+        <p class="t-sm t-mute" data-testid="inspector-collection-empty-text">
+          {{ "library.prompt.panel.empty" | t }}
+        </p>
+      </div>
+      } }
+    </div>
+    } @case ("images") {
+    <div data-testid="inspector-images-host">
+      @if (images.selected()) {
+      <app-library-image-panel data-testid="inspector-image-panel" />
+      } @else {
+      <div class="ins-empty" data-testid="inspector-images-empty">
+        <p class="t-sm t-mute" data-testid="inspector-images-empty-text">
+          {{ "library.prompt.panel.empty" | t }}
+        </p>
+      </div>
+      }
+    </div>
+    } @case ("sounds") {
+    <div data-testid="inspector-sounds-host">
+      @if (sounds.selected()) {
+      <app-library-sound-panel data-testid="inspector-sound-panel" />
+      } @else {
+      <div class="ins-empty" data-testid="inspector-sounds-empty">
+        <p class="t-sm t-mute" data-testid="inspector-sounds-empty-text">
+          {{ "library.prompt.panel.empty" | t }}
+        </p>
+      </div>
+      }
+    </div>
+    } @case ("videos") {
+    <div data-testid="inspector-videos-host">
+      @if (videos.selected()) {
+      <app-library-video-panel data-testid="inspector-video-panel" />
+      } @else {
+      <div class="ins-empty" data-testid="inspector-videos-empty">
+        <p class="t-sm t-mute" data-testid="inspector-videos-empty-text">
+          {{ "library.prompt.panel.empty" | t }}
+        </p>
+      </div>
+      }
+    </div>
+    } @case ("prompts") {
+    <div data-testid="inspector-prompts-host">
+      @if (prompts.selected()) {
+      <app-library-prompt-panel data-testid="inspector-prompt-panel" />
+      } @else {
+      <app-library-prompts-panel data-testid="inspector-prompts-panel" />
+      }
+    </div>
+    } @default {
+    <div class="ins-empty" data-testid="inspector-empty">
+      <p>{{ "main.inspector.empty" | t }}</p>
+    </div>
+    } } }
   </div>
 </aside>

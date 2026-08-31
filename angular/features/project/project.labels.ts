@@ -1,43 +1,53 @@
-import { Injectable, inject } from "@angular/core";
-import { LanguageKey } from "@core/language/language.models";
-import { LanguageService } from "@core/language/language.service";
-import { NovelService } from "../novel/novel.service";
-import { displayName, formatMonthDay, formatStamp } from "../novel/novel.rules";
-import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "./project.models";
-import { templateIcon } from "./project.rules";
+import { inject, Injectable } from '@angular/core';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
 
-@Injectable({ providedIn: "root" })
+import { displayName, formatMonthDay, formatStamp } from '../novel/novel.rules';
+import { NovelService } from '../novel/novel.service';
+import { ProjectStatus, ProjectSummary, ProjectTemplateId } from './project.models';
+import { templateIcon } from './project.rules';
+
+@Injectable({ providedIn: 'root' })
 export class ProjectLabels {
   private readonly languageService = inject(LanguageService);
   private readonly novels = inject(NovelService);
 
   novelNameOf(project: ProjectSummary): string {
     if (project.novelId === null) {
-      return this.languageService.translate("project.source.none");
+      return this.languageService.translate('project.source.none');
     }
     const novel = this.novels.novelById(project.novelId);
-    return project.novelMissing || !novel ? this.languageService.translate("project.source.missing") : displayName(novel);
+    return project.novelMissing || !novel
+      ? this.languageService.translate('project.source.missing')
+      : displayName(novel);
   }
 
   versionOf(project: ProjectSummary): string {
     const novel = project.novelId === null ? undefined : this.novels.novelById(project.novelId);
     if (project.novelMissing || !novel) {
-      return "—";
+      return '—';
     }
-    const kind = this.languageService.translate(project.srcKind === "translation" ? "project.source.translation" : "project.source.original");
+    const kind = this.languageService.translate(
+      project.srcKind === 'translation' ? 'project.source.translation' : 'project.source.original',
+    );
     return `${kind} ${project.srcLang ?? novel.lang}`;
   }
 
   sourceOf(project: ProjectSummary): string {
     const version = this.versionOf(project);
-    return version === "—" ? this.novelNameOf(project) : `${this.novelNameOf(project)} · ${version}`;
+    return version === '—'
+      ? this.novelNameOf(project)
+      : `${this.novelNameOf(project)} · ${version}`;
   }
 
   rangeOf(project: ProjectSummary): string {
     if (project.novelId === null || project.rangeFrom === null || project.rangeTo === null) {
-      return "";
+      return '';
     }
-    return this.languageService.translate("project.range", { from: project.rangeFrom, to: project.rangeTo });
+    return this.languageService.translate('project.range', {
+      from: project.rangeFrom,
+      to: project.rangeTo,
+    });
   }
 
   sourceLine(project: ProjectSummary): string {
@@ -46,7 +56,7 @@ export class ProjectLabels {
   }
 
   pathOf(project: ProjectSummary): string {
-    return `${project.folder.replace(/\//g, "\\")}\\`;
+    return `${project.folder.replace(/\//g, '\\')}\\`;
   }
 
   stampOf(value: string): string {
@@ -70,7 +80,7 @@ export class ProjectLabels {
   }
 
   statusOf(project: ProjectSummary): ProjectStatus {
-    return project.archived ? "archived" : "active";
+    return project.archived ? 'archived' : 'active';
   }
 
   statusKey(project: ProjectSummary): LanguageKey {

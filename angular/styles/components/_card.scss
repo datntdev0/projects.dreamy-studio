@@ -1,6 +1,21 @@
 ds-card {
-  & { display: block; min-width: 0; }
-  .card { height: 100%; padding: var(--sp-lg); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--canvas-card); color: var(--body); }
-  .card.is-selected { border-color: var(--primary); background: var(--primary-soft); }
-  .card.is-spacious { padding: var(--sp-xl); }
+  & {
+    display: block;
+    min-width: 0;
+  }
+  .card {
+    height: 100%;
+    padding: var(--sp-lg);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
+    background: var(--canvas-card);
+    color: var(--body);
+  }
+  .card.is-selected {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+  .card.is-spacious {
+    padding: var(--sp-xl);
+  }
 }

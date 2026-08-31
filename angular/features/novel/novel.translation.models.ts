@@ -1,12 +1,12 @@
-import { TargetLang } from "./novel.models";
+import { TargetLang } from './novel.models';
 
-export type TranslationStep = "dict" | "guide" | "trans" | "result" | "warn";
-export type DictEntryType = "name" | "place" | "org" | "title" | "term";
-export type PassageState = "ok" | "review";
-export type WarningKind = "source" | "dict";
-export type WarningFilter = "all" | "source" | "dict";
-export type ChapterFilter = "all" | "none" | "done";
-export type TranslateMode = "missing" | "range" | "all";
+export type TranslationStep = 'dict' | 'guide' | 'trans' | 'result' | 'warn';
+export type DictEntryType = 'name' | 'place' | 'org' | 'title' | 'term';
+export type PassageState = 'ok' | 'review';
+export type WarningKind = 'source' | 'dict';
+export type WarningFilter = 'all' | 'source' | 'dict';
+export type ChapterFilter = 'all' | 'none' | 'done';
+export type TranslateMode = 'missing' | 'range' | 'all';
 
 export interface DictEntry {
   id: number;
@@ -110,8 +110,8 @@ export interface WireTranslation {
   warnings: WireWarning[];
 }
 
-export type PipelineStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
-export type TaskStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+export type PipelineStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type TaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface TaskRequest {
   chapterId: string;
@@ -145,7 +145,7 @@ export interface PipelineSnapshot {
 }
 
 export type PipelineEvent =
-  | { type: "started"; pipeline: PipelineSnapshot }
-  | { type: "updated"; pipeline: PipelineSnapshot }
-  | { type: "task"; pipelineId: number; task: PipelineTask }
-  | { type: "finished"; pipeline: PipelineSnapshot };
+  | { type: 'started'; pipeline: PipelineSnapshot }
+  | { type: 'updated'; pipeline: PipelineSnapshot }
+  | { type: 'task'; pipelineId: number; task: PipelineTask }
+  | { type: 'finished'; pipeline: PipelineSnapshot };

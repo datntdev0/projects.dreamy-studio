@@ -1,17 +1,21 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRow, DatatableRowEvent } from "@components/datatable";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { EntityTypeDef, KnowledgeEntity, KnowledgeIssue, KnowledgeView } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { chaptersOfItem, entitiesOf, issuesOfItem, matchesList } from "../novel.knowledge.rules";
-import { toNovelError } from "../novel.rules";
-import { rangeText } from "../novel.translation.rules";
-import { NovelKnowledgeType } from "./knowledge-type.component";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+// prettier-ignore
+import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRow, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldChecked, fieldValue } from '@shared/utils/dom';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+// prettier-ignore
+import { EntityTypeDef, KnowledgeEntity, KnowledgeIssue, KnowledgeView } from '../novel.knowledge.models';
+import { chaptersOfItem, entitiesOf, issuesOfItem, matchesList } from '../novel.knowledge.rules';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+import { toNovelError } from '../novel.rules';
+import { rangeText } from '../novel.translation.rules';
+import { NovelKnowledgeType } from './knowledge-type.component';
 
 export interface KnowledgeRow {
   id: string;
@@ -25,10 +29,11 @@ export interface KnowledgeRow {
 }
 
 @Component({
-  selector: "app-novel-knowledge-list",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-knowledge-list',
   imports: [Datatable, DatatableCell, DatatableEmpty, Icon, CoreModule, NovelKnowledgeType],
-  templateUrl: "./knowledge-list.component.html",
+  templateUrl: './knowledge-list.component.html',
+  host: { 'data-testid': 'novel-knowledge-list' },
 })
 export class NovelKnowledgeList {
   private readonly knowledge = inject(NovelKnowledgeService);
@@ -48,16 +53,22 @@ export class NovelKnowledgeList {
   readonly selectedIndex = computed(this.buildSelectedIndex.bind(this));
   readonly filtered = computed(this.buildFiltered.bind(this));
 
-  onField(field: "q" | "type", event: Event): void {
-    this.knowledge.patchView(this.novelId(), { [field]: (event.target as HTMLInputElement | HTMLSelectElement).value });
+  onField(field: 'q' | 'type', event: Event): void {
+    this.knowledge.patchView(this.novelId(), {
+      [field]: fieldValue(event),
+    });
   }
 
   onChapter(event: Event): void {
-    this.knowledge.patchView(this.novelId(), { chapter: Number((event.target as HTMLSelectElement).value) });
+    this.knowledge.patchView(this.novelId(), {
+      chapter: Number(fieldValue(event)),
+    });
   }
 
   onOnlyIssues(event: Event): void {
-    this.knowledge.patchView(this.novelId(), { onlyIssues: (event.target as HTMLInputElement).checked });
+    this.knowledge.patchView(this.novelId(), {
+      onlyIssues: fieldChecked(event),
+    });
   }
 
   clear(): void {
@@ -65,7 +76,7 @@ export class NovelKnowledgeList {
   }
 
   add(): void {
-    this.dialogs.openAdd(this.novelId(), "entity");
+    this.dialogs.openAdd(this.novelId(), 'entity');
   }
 
   onSelect(event: DatatableRowEvent): void {
@@ -85,7 +96,12 @@ export class NovelKnowledgeList {
     try {
       await this.knowledge.confirmRemove(this.novelId(), [target.id], target.name);
     } catch (cause) {
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail: toNovelError(cause).detail }), "danger");
+      this.toasts.show(
+        this.languageService.translate('novel.error.generic', {
+          detail: toNovelError(cause).detail,
+        }),
+        'danger',
+      );
     }
   }
 
@@ -121,10 +137,10 @@ export class NovelKnowledgeList {
         entity,
         type: entity.type,
         name: entity.name,
-        aliases: entity.aliases.join(", "),
-        chapters: chapters.length > 0 ? rangeText(chapters) : "—",
+        aliases: entity.aliases.join(', '),
+        chapters: chapters.length > 0 ? rangeText(chapters) : '—',
         issues: issues.length,
-        errors: issues.some((issue) => issue.sev === "error"),
+        errors: issues.some((issue) => issue.sev === 'error'),
       });
     }
     return out;
@@ -132,16 +148,27 @@ export class NovelKnowledgeList {
 
   private buildColumns(): DatatableColumn[] {
     return [
-      { key: "type", label: this.text("novel.knowledge.list.col.type"), width: "128px" },
-      { key: "name", label: this.text("novel.knowledge.list.col.entity") },
-      { key: "chapters", label: this.text("novel.knowledge.list.col.chapters"), width: "84px" },
+      { key: 'type', label: this.text('novel.knowledge.list.col.type'), width: '128px' },
+      { key: 'name', label: this.text('novel.knowledge.list.col.entity') },
+      { key: 'chapters', label: this.text('novel.knowledge.list.col.chapters'), width: '84px' },
     ];
   }
 
   private buildActions(): DatatableAction[] {
     return [
-      { key: "edit", label: this.text("novel.knowledge.action.edit"), icon: "pen", handler: this.edit.bind(this) },
-      { key: "delete", label: this.text("novel.knowledge.action.delete"), icon: "trash", danger: true, handler: this.remove.bind(this) },
+      {
+        key: 'edit',
+        label: this.text('novel.knowledge.action.edit'),
+        icon: 'pen',
+        handler: this.edit.bind(this),
+      },
+      {
+        key: 'delete',
+        label: this.text('novel.knowledge.action.delete'),
+        icon: 'trash',
+        danger: true,
+        handler: this.remove.bind(this),
+      },
     ];
   }
 
@@ -162,6 +189,6 @@ export class NovelKnowledgeList {
 
   private buildFiltered(): boolean {
     const view = this.view();
-    return view.q !== "" || view.type !== "all" || view.chapter !== 0 || view.onlyIssues;
+    return view.q !== '' || view.type !== 'all' || view.chapter !== 0 || view.onlyIssues;
   }
 }

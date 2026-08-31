@@ -1,18 +1,19 @@
-import { Component, computed, inject } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { SettingsSection, SettingsSectionId } from "../settings.models";
-import { SETTINGS_SECTIONS } from "../settings.sections";
-import { SettingsService } from "../settings.service";
-import { SettingsGeneralComponent } from "./general.component";
-import { SettingsLlmComponent } from "./llm.component";
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+
+import { SettingsSection, SettingsSectionId } from '../settings.models';
+import { SETTINGS_SECTIONS } from '../settings.sections';
+import { SettingsService } from '../settings.service';
+import { SettingsGeneral } from './general.component';
+import { SettingsLlm } from './llm.component';
 
 @Component({
-  selector: "app-settings-dialog",
-  standalone: true,
-  imports: [Icon, CoreModule, SettingsGeneralComponent, SettingsLlmComponent],
-  templateUrl: "./settings.dialog.html",
-  host: { "data-testid": "settings-dialog" },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-settings-dialog',
+  imports: [Icon, CoreModule, SettingsGeneral, SettingsLlm],
+  templateUrl: './settings.dialog.html',
+  host: { 'data-testid': 'settings-dialog' },
 })
 export class SettingsDialog {
   private readonly settings = inject(SettingsService);

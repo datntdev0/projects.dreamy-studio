@@ -1,29 +1,121 @@
 <div class="tl-sub is-wrap is-col" data-testid="novel-knowledge-list-sub">
-  <label class="search"><span class="sr-only">{{ "novel.knowledge.list.search" | t }}</span><input class="input" type="search" data-testid="novel-knowledge-list-search" [value]="view().q" [attr.placeholder]="'novel.knowledge.list.search.entity' | t" (input)="onField('q', $event)"></label>
-  <select class="select" data-testid="novel-knowledge-list-type" [attr.aria-label]="'novel.knowledge.list.type' | t" (change)="onField('type', $event)">
-    <option value="all" [selected]="view().type === 'all'">{{ "novel.knowledge.list.type.all" | t }}</option>
+  <label class="search">
+    <span class="sr-only">{{ 'novel.knowledge.list.search' | t }}</span>
+    <input
+      class="input"
+      type="search"
+      data-testid="novel-knowledge-list-search"
+      [value]="view().q"
+      [attr.placeholder]="'novel.knowledge.list.search.entity' | t"
+      (input)="onField('q', $event)"
+    />
+  </label>
+  <select
+    class="select"
+    data-testid="novel-knowledge-list-type"
+    [attr.aria-label]="'novel.knowledge.list.type' | t"
+    (change)="onField('type', $event)"
+  >
+    <option value="all" [selected]="view().type === 'all'">
+      {{ 'novel.knowledge.list.type.all' | t }}
+    </option>
     @for (type of entityTypes(); track type.key) {
-      <option [value]="type.key" [selected]="view().type === type.key">{{ type.labelKey | t }}</option>
+      <option [value]="type.key" [selected]="view().type === type.key">
+        {{ type.labelKey | t }}
+      </option>
     }
   </select>
-  <select class="select" data-testid="novel-knowledge-list-chapter" [attr.aria-label]="'novel.knowledge.list.chapter' | t" (change)="onChapter($event)">
-    <option value="0" [selected]="view().chapter === 0">{{ "novel.knowledge.list.chapter.all" | t }}</option>
+  <select
+    class="select"
+    data-testid="novel-knowledge-list-chapter"
+    [attr.aria-label]="'novel.knowledge.list.chapter' | t"
+    (change)="onChapter($event)"
+  >
+    <option value="0" [selected]="view().chapter === 0">
+      {{ 'novel.knowledge.list.chapter.all' | t }}
+    </option>
     @for (seq of chapterOptions(); track seq) {
-      <option [value]="seq" [selected]="view().chapter === seq">{{ "novel.knowledge.list.chapter.n" | t: { n: seq } }}</option>
+      <option [value]="seq" [selected]="view().chapter === seq">
+        {{ 'novel.knowledge.list.chapter.n' | t: { n: seq } }}
+      </option>
     }
   </select>
-  <label class="check"><input type="checkbox" data-testid="novel-knowledge-list-issues" [checked]="view().onlyIssues" (change)="onOnlyIssues($event)"><span>{{ "novel.knowledge.list.onlyIssues" | t }}</span></label>
+  <label class="check">
+    <input
+      type="checkbox"
+      data-testid="novel-knowledge-list-issues"
+      [checked]="view().onlyIssues"
+      (change)="onOnlyIssues($event)"
+    />
+    <span>{{ 'novel.knowledge.list.onlyIssues' | t }}</span>
+  </label>
   <span class="spacer"></span>
-  <span class="t-sm t-mute mono" data-testid="novel-knowledge-list-count">{{ "novel.knowledge.list.entities" | t: { count: rows().length } }}</span>
-  <button type="button" class="btn btn-sm" data-testid="novel-knowledge-list-add" (click)="add()"><ds-icon name="plus" [size]="16" />{{ "novel.knowledge.list.add.entity" | t }}</button>
+  <span class="t-sm t-mute mono" data-testid="novel-knowledge-list-count">
+    {{ 'novel.knowledge.list.entities' | t: { count: rows().length } }}
+  </span>
+  <button type="button" class="btn btn-sm" data-testid="novel-knowledge-list-add" (click)="add()">
+    <ds-icon name="plus" [size]="16" />
+    {{ 'novel.knowledge.list.add.entity' | t }}
+  </button>
 </div>
-<div class="kb-table" data-testid="novel-knowledge-list">
-  <ds-datatable variant="fill" minWidth="420px" trackKey="id" [columns]="columns()" [rows]="rows()" [selectedIndex]="selectedIndex()" [actions]="actions()" [actionsLabel]="'novel.knowledge.list.actions' | t" rowTestId="novel-knowledge-list-row" data-testid="novel-knowledge-list-table" (rowClick)="onSelect($event)" (rowDblClick)="onOpen($event)" (rowEnter)="onOpen($event)">
+<div class="kb-table" data-testid="novel-knowledge-list-table">
+  <ds-datatable
+    variant="fill"
+    minWidth="420px"
+    trackKey="id"
+    [columns]="columns()"
+    [rows]="rows()"
+    [selectedIndex]="selectedIndex()"
+    [actions]="actions()"
+    [actionsLabel]="'novel.knowledge.list.actions' | t"
+    rowTestId="novel-knowledge-list-row"
+    data-testid="novel-knowledge-list-table"
+    (rowClick)="onSelect($event)"
+    (rowDblClick)="onOpen($event)"
+    (rowEnter)="onOpen($event)"
+  >
     <ng-template dsCell="type" let-row><app-novel-knowledge-type [type]="row.type" /></ng-template>
-    <ng-template dsCell="name" let-row><div class="t-ink">@if (row.issues > 0) { <span class="iss-ico" [attr.title]="'novel.knowledge.list.issues.tip' | t: { count: row.issues }" data-testid="novel-knowledge-list-conflict"><ds-icon name="alert" [size]="14" /></span> }{{ row.name }}</div>@if (row.aliases) { <div class="t-sm t-mute ellip" data-testid="novel-knowledge-list-aliases">{{ row.aliases }}</div> }</ng-template>
-    <ng-template dsCell="chapters" let-row><span class="mono t-mute">{{ row.chapters }}</span></ng-template>
+    <ng-template dsCell="name" let-row>
+      <div class="t-ink">
+        @if (row.issues > 0) {
+          <span
+            class="iss-ico"
+            [attr.title]="'novel.knowledge.list.issues.tip' | t: { count: row.issues }"
+            data-testid="novel-knowledge-list-conflict"
+          >
+            <ds-icon name="alert" [size]="14" />
+          </span>
+        }
+        {{ row.name }}
+      </div>
+      @if (row.aliases) {
+        <div class="t-sm t-mute ellip" data-testid="novel-knowledge-list-aliases">
+          {{ row.aliases }}
+        </div>
+      }
+    </ng-template>
+    <ng-template dsCell="chapters" let-row>
+      <span class="mono t-mute">{{ row.chapters }}</span>
+    </ng-template>
     <ng-template dsEmpty>
-      <div class="empty" data-testid="novel-knowledge-list-empty"><div class="empty-inner"><h4 class="t-display-xs">{{ "novel.knowledge.list.empty.title" | t }}</h4><p class="t-sm t-mute">{{ "novel.knowledge.list.empty.description" | t }}</p>@if (filtered()) { <div class="empty-act"><button type="button" class="btn" data-testid="novel-knowledge-list-clear" (click)="clear()">{{ "novel.knowledge.list.clear" | t }}</button></div> }</div></div>
+      <div class="empty" data-testid="novel-knowledge-list-empty">
+        <div class="empty-inner">
+          <h4 class="t-display-xs">{{ 'novel.knowledge.list.empty.title' | t }}</h4>
+          <p class="t-sm t-mute">{{ 'novel.knowledge.list.empty.description' | t }}</p>
+          @if (filtered()) {
+            <div class="empty-act">
+              <button
+                type="button"
+                class="btn"
+                data-testid="novel-knowledge-list-clear"
+                (click)="clear()"
+              >
+                {{ 'novel.knowledge.list.clear' | t }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
     </ng-template>
   </ds-datatable>
 </div>

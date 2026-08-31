@@ -1,1 +1,12 @@
-<span class="badge" data-testid="badge" [class.badge-primary]="tone === 'primary'" [class.badge-running]="tone === 'running'" [class.badge-success]="tone === 'success'" [class.badge-warning]="tone === 'warning'" [class.badge-danger]="tone === 'danger'" [class.badge-info]="tone === 'info'"><ng-content /></span>
+<span
+  class="badge"
+  data-testid="badge"
+  [class.badge-primary]="tone() === 'primary'"
+  [class.badge-running]="tone() === 'running'"
+  [class.badge-success]="tone() === 'success'"
+  [class.badge-warning]="tone() === 'warning'"
+  [class.badge-danger]="tone() === 'danger'"
+  [class.badge-info]="tone() === 'info'"
+>
+  <ng-content />
+</span>

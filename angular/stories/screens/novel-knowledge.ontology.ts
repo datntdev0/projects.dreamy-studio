@@ -1,6 +1,8 @@
-import { parse } from "yaml";
-import source from "../../../desktop/src/features/knowledge/ontology.yml?raw";
-import { OntologyPredicateView, OntologyRuleView, OntologyTypeView, OntologyView, Severity } from "@features/novel/novel.knowledge.models";
+// prettier-ignore
+import { OntologyPredicateView, OntologyRuleView, OntologyTypeView, OntologyView, Severity } from '@features/novel/novel.knowledge.models';
+import { parse } from 'yaml';
+
+import source from '../../../desktop/src/features/knowledge/ontology.yml?raw';
 
 interface TypeDoc {
   abstract?: boolean;
@@ -31,11 +33,17 @@ function typeOf([key, def]: [string, TypeDoc | null]): OntologyTypeView {
 }
 
 function scalarOf([key, def]: [string, PredicateDoc | null]): OntologyPredicateView {
-  return { key, kind: "scalar", domain: def?.domain ?? [], range: [], limit: def?.single === true };
+  return { key, kind: 'scalar', domain: def?.domain ?? [], range: [], limit: def?.single === true };
 }
 
 function relationshipOf([key, def]: [string, PredicateDoc | null]): OntologyPredicateView {
-  return { key, kind: "relationship", domain: def?.domain ?? [], range: def?.range ?? [], limit: def?.unique_range === true };
+  return {
+    key,
+    kind: 'relationship',
+    domain: def?.domain ?? [],
+    range: def?.range ?? [],
+    limit: def?.unique_range === true,
+  };
 }
 
 function ruleOf([id, def]: [string, RuleDoc]): OntologyRuleView {
@@ -43,13 +51,16 @@ function ruleOf([id, def]: [string, RuleDoc]): OntologyRuleView {
 }
 
 function ontologyFrom(text: string): OntologyView {
-  const yaml = text.replace(/\r\n/g, "\n");
+  const yaml = text.replace(/\r\n/g, '\n');
   const doc = parse(yaml) as OntologyDoc;
   return {
     version: doc.version,
     yaml,
     types: Object.entries(doc.entity_types).map(typeOf),
-    predicates: [...Object.entries(doc.scalars).map(scalarOf), ...Object.entries(doc.relationships).map(relationshipOf)],
+    predicates: [
+      ...Object.entries(doc.scalars).map(scalarOf),
+      ...Object.entries(doc.relationships).map(relationshipOf),
+    ],
     rules: Object.entries(doc.rules).map(ruleOf),
   };
 }

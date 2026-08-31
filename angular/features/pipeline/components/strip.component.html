@@ -1,6 +1,14 @@
 @let fill = bar();
 <div class="pstrip" role="img" [attr.aria-label]="label()" data-testid="pipeline-strip">
-  <i class="pbar-fill is-completed" [style.width.%]="fill.completed" data-testid="pipeline-strip-bar"></i>
+  <i
+    class="pbar-fill is-completed"
+    [style.width.%]="fill.completed"
+    data-testid="pipeline-strip-bar"
+  ></i>
   <i class="pbar-fill is-failed" [style.width.%]="fill.failed" data-testid="pipeline-strip-bar"></i>
-  <i class="pbar-fill is-running" [style.width.%]="fill.running" data-testid="pipeline-strip-bar"></i>
+  <i
+    class="pbar-fill is-running"
+    [style.width.%]="fill.running"
+    data-testid="pipeline-strip-bar"
+  ></i>
 </div>

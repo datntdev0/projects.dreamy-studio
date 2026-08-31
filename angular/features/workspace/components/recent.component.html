@@ -1,36 +1,99 @@
 <div class="ws-list" data-testid="recent-list">
-  @for (row of rows; track row.path) {
+  @for (row of rows(); track row.path) {
     @if (row.isCurrent) {
       <div class="ws-row is-current" data-testid="recent-row">
         <ds-icon name="hdd" />
         <div class="ws-main">
-          <div class="ws-name" data-testid="recent-row-name">{{ row.name }}<ds-badge tone="primary" data-testid="recent-current">{{ "splash.recent.current" | t }}</ds-badge></div>
+          <div class="ws-name" data-testid="recent-row-name">
+            {{ row.name }}
+            <ds-badge tone="primary" data-testid="recent-current">
+              {{ 'splash.recent.current' | t }}
+            </ds-badge>
+          </div>
           <div class="path t-mute" data-testid="recent-row-path">{{ row.path }}</div>
-          <div class="t-sm t-mute" data-testid="recent-row-meta"><span data-testid="recent-row-projects">{{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}</span> · <span data-testid="recent-row-size">{{ sizeOf(row.path) }}</span> · {{ "splash.recent.lastOpened" | t }} <span class="mono" data-testid="recent-row-opened">{{ formatLastOpened(row.lastOpenedAt) }}</span></div>
+          <div class="t-sm t-mute" data-testid="recent-row-meta">
+            <span data-testid="recent-row-projects">
+              {{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}
+            </span>
+            ·
+            <span data-testid="recent-row-size">{{ sizeOf(row.path) }}</span>
+            · {{ 'splash.recent.lastOpened' | t }}
+            <span class="mono" data-testid="recent-row-opened">
+              {{ formatLastOpened(row.lastOpenedAt) }}
+            </span>
+          </div>
         </div>
       </div>
-    } @else if (row.status === "ok") {
-      <div class="ws-row" role="button" tabindex="0" data-testid="recent-row" (click)="open(row)" (keydown.enter)="openByKey($event, row)" (keydown.space)="openByKey($event, row)">
+    } @else if (row.status === 'ok') {
+      <div
+        class="ws-row"
+        role="button"
+        tabindex="0"
+        data-testid="recent-row"
+        (click)="open(row)"
+        (keydown.enter)="openByKey($event, row)"
+        (keydown.space)="openByKey($event, row)"
+      >
         <ds-icon name="hdd" />
         <div class="ws-main">
-          <div class="ws-name" data-testid="recent-row-name">{{ row.name }}@if (row.path === lastUsedPath) {<ds-badge tone="primary" data-testid="recent-last-used">{{ "splash.recent.lastUsed" | t }}</ds-badge>}</div>
+          <div class="ws-name" data-testid="recent-row-name">
+            {{ row.name }}
+            @if (row.path === lastUsedPath()) {
+              <ds-badge tone="primary" data-testid="recent-last-used">
+                {{ 'splash.recent.lastUsed' | t }}
+              </ds-badge>
+            }
+          </div>
           <div class="path t-mute" data-testid="recent-row-path">{{ row.path }}</div>
-          <div class="t-sm t-mute" data-testid="recent-row-meta"><span data-testid="recent-row-projects">{{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}</span> · <span data-testid="recent-row-size">{{ sizeOf(row.path) }}</span> · {{ "splash.recent.lastOpened" | t }} <span class="mono" data-testid="recent-row-opened">{{ formatLastOpened(row.lastOpenedAt) }}</span></div>
+          <div class="t-sm t-mute" data-testid="recent-row-meta">
+            <span data-testid="recent-row-projects">
+              {{ projectsKey(row.projectCount ?? 0) | t: { count: row.projectCount ?? 0 } }}
+            </span>
+            ·
+            <span data-testid="recent-row-size">{{ sizeOf(row.path) }}</span>
+            · {{ 'splash.recent.lastOpened' | t }}
+            <span class="mono" data-testid="recent-row-opened">
+              {{ formatLastOpened(row.lastOpenedAt) }}
+            </span>
+          </div>
         </div>
-        <ds-button size="small" data-testid="recent-open">{{ "splash.recent.open" | t }}</ds-button>
+        <ds-button size="small" data-testid="recent-open">{{ 'splash.recent.open' | t }}</ds-button>
         <span (click)="$event.stopPropagation()">
-          <ds-button size="small" variant="danger" data-testid="recent-delete" (pressed)="delete(row)">{{ "splash.recent.delete" | t }}</ds-button>
+          <ds-button
+            size="small"
+            variant="danger"
+            data-testid="recent-delete"
+            (pressed)="delete(row)"
+          >
+            {{ 'splash.recent.delete' | t }}
+          </ds-button>
         </span>
       </div>
     } @else {
       <div class="ws-row is-error" data-testid="recent-row">
         <ds-icon name="alert" />
         <div class="ws-main">
-          <div class="ws-name"><span class="path" data-testid="recent-row-path">{{ row.path }}</span><ds-badge tone="danger" data-testid="recent-not-found">{{ "splash.recent.notFound" | t }}</ds-badge></div>
-          <div class="t-sm ws-err" data-testid="recent-not-found-reason">{{ reasonKey(row.reason) | t }}</div>
+          <div class="ws-name">
+            <span class="path" data-testid="recent-row-path">{{ row.path }}</span>
+            <ds-badge tone="danger" data-testid="recent-not-found">
+              {{ 'splash.recent.notFound' | t }}
+            </ds-badge>
+          </div>
+          <div class="t-sm ws-err" data-testid="recent-not-found-reason">
+            {{ reasonKey(row.reason) | t }}
+          </div>
         </div>
-        <ds-button size="small" data-testid="recent-relocate" (pressed)="relocate(row)">{{ "splash.recent.relocate" | t }}</ds-button>
-        <ds-button size="small" variant="danger" data-testid="recent-delete" (pressed)="delete(row)">{{ "splash.recent.delete" | t }}</ds-button>
+        <ds-button size="small" data-testid="recent-relocate" (pressed)="relocate(row)">
+          {{ 'splash.recent.relocate' | t }}
+        </ds-button>
+        <ds-button
+          size="small"
+          variant="danger"
+          data-testid="recent-delete"
+          (pressed)="delete(row)"
+        >
+          {{ 'splash.recent.delete' | t }}
+        </ds-button>
       </div>
     }
   }

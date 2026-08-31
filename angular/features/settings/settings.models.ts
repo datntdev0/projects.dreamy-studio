@@ -1,10 +1,9 @@
-import { Language } from "@core/language/language.models";
-import { LanguageKey } from "@core/language/language.models";
-import { Theme } from "@core/theme/theme.models";
+import { Language, LanguageKey } from '@shared/language/language.models';
+import { Theme } from '@shared/theme/theme.models';
 
-export type SettingsSectionId = "general" | "llm" | "backend" | "tts" | "speech";
+export type SettingsSectionId = 'general' | 'llm' | 'backend' | 'tts' | 'speech';
 
-export type SettingsFolderTarget = "workspace" | "appData";
+export type SettingsFolderTarget = 'workspace' | 'appData';
 
 export interface SettingsSection {
   id: SettingsSectionId;
@@ -30,7 +29,7 @@ export interface LayoutSettings {
   explorerOpen?: boolean;
   inspectorOpen?: boolean;
   bottomOpen?: boolean;
-  rightTab?: "inspector" | "assistant";
+  rightTab?: 'inspector' | 'assistant';
   explorerSize?: number;
   inspectorSize?: number;
   bottomSize?: number;
@@ -43,9 +42,9 @@ export interface SettingsView {
   file: string;
 }
 
-export type LlmCapability = "translation" | "knowledge" | "assistant";
+export type LlmCapability = 'translation' | 'knowledge' | 'assistant';
 
-export type LlmCheckStatus = "none" | "checking" | "ok" | "error";
+export type LlmCheckStatus = 'none' | 'checking' | 'ok' | 'error';
 
 export interface LlmCliView {
   id: string;
@@ -61,7 +60,7 @@ export interface LlmCliView {
   probe: LlmProbe | null;
 }
 
-export type LlmEffort = "low" | "medium" | "high";
+export type LlmEffort = 'low' | 'medium' | 'high';
 
 export interface LlmFeatureSettings {
   provider: string | null;
@@ -96,7 +95,7 @@ export interface LlmProbe {
   checkedAtMs: number;
 }
 
-export interface LlmProvider extends Omit<LlmCliView, "probe"> {
+export interface LlmProvider extends Omit<LlmCliView, 'probe'> {
   found: boolean;
   resolvedPath: string;
   version: string;

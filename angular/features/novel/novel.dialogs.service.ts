@@ -1,8 +1,10 @@
-import { Injectable, signal } from "@angular/core";
-import { AnalyzeRequest, KnowledgeAnalyzeRequest, KnowledgeEditRequest, KnowledgeListKind } from "./novel.knowledge.models";
-import { TranslateDialogRequest, TranslateRequest } from "./novel.translation.models";
+import { Injectable, signal } from '@angular/core';
 
-@Injectable({ providedIn: "root" })
+// prettier-ignore
+import { AnalyzeRequest, KnowledgeAnalyzeRequest, KnowledgeEditRequest, KnowledgeListKind } from './novel.knowledge.models';
+import { TranslateDialogRequest, TranslateRequest } from './novel.translation.models';
+
+@Injectable({ providedIn: 'root' })
 export class NovelDialogsService {
   readonly createOpen = signal(false);
   readonly importOpen = signal(false);

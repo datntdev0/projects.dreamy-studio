@@ -1,134 +1,504 @@
 <div class="st llm" data-testid="settings-llm-content">
-  <p class="t-sm t-mute" data-testid="settings-llm-intro">{{ "settings.llm.intro" | t }}</p>
-  <div class="st-note" data-testid="settings-llm-note"><ds-icon name="shield" [size]="15" /><span>{{ "settings.llm.note" | t }}</span></div>
-  <ds-tabs data-testid="settings-llm-tabs" idPrefix="settings-llm" [label]="'settings.llm.tabs' | t" [options]="tabOptions()" [value]="tab()" (valueChange)="onTab($event)" />
+  <p class="t-sm t-mute" data-testid="settings-llm-intro">{{ 'settings.llm.intro' | t }}</p>
+  <div class="st-note" data-testid="settings-llm-note">
+    <ds-icon name="shield" [size]="15" />
+    <span>{{ 'settings.llm.note' | t }}</span>
+  </div>
+  <ds-tabs
+    data-testid="settings-llm-tabs"
+    idPrefix="settings-llm"
+    [label]="'settings.llm.tabs' | t"
+    [options]="tabOptions()"
+    [value]="tab()"
+    (valueChange)="onTab($event)"
+  />
   @switch (tab()) {
-  @case ("cli") {
-  <section class="llm-list" role="tabpanel" id="settings-llm-panel-cli" aria-labelledby="settings-llm-tab-cli" [attr.aria-label]="'settings.llm.cli.label' | t" data-testid="settings-llm-cli">
-    @for (p of providers(); track p.id) {
-      <article class="llm-card" [class]="mode(p)" [attr.data-testid]="'settings-llm-' + p.id">
-        <header class="llm-card-h">
-          <div class="llm-card-t"><span class="t-ink llm-name" [attr.data-testid]="'settings-llm-' + p.id + '-name'">{{ p.name }}</span><ds-badge [tone]="statusTone(p)" [attr.data-testid]="'settings-llm-' + p.id + '-badge'">{{ statusKey(p) | t }}</ds-badge></div>
-        </header>
-        <div class="llm-meta"><span class="path t-mute">{{ p.command }}</span></div>
-        <div class="llm-steps">
-          <div class="llm-step" [class.is-done]="p.found" [class.is-todo]="!p.found" [attr.data-testid]="'settings-llm-' + p.id + '-install'">
-            <span class="llm-n">@if (p.found) {<ds-icon name="check" [size]="13" />} @else {1}</span>
-            <div class="llm-step-b">
-              <div class="llm-step-t"><b>{{ "settings.llm.install" | t }}</b>@if (p.found) {<ds-badge tone="success">{{ "settings.llm.install.found" | t }}</ds-badge>} @else {<ds-badge tone="warning">{{ "settings.llm.install.notFound" | t }}</ds-badge><span class="t-sm t-mute">{{ "settings.llm.install.notInPath" | t: { command: p.command } }}</span>}</div>
-              @if (p.found) {
-                <div class="field"><label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-path'">{{ "settings.llm.path" | t }}</label>
-                  <div class="llm-row"><input #pathInput [id]="'settings-llm-' + p.id + '-path'" class="input mono-in" [attr.data-testid]="'settings-llm-' + p.id + '-path'" [value]="p.path || p.resolvedPath" autocomplete="off" spellcheck="false" (change)="onPath(p, pathInput.value)"><button type="button" class="btn btn-sm btn-icon" [attr.aria-label]="'settings.llm.copyPath' | t" [attr.data-testid]="'settings-llm-' + p.id + '-copy'" (click)="copyPath(p)"><ds-icon name="copy" [size]="16" /></button></div></div>
+    @case ('cli') {
+      <section
+        class="llm-list"
+        role="tabpanel"
+        id="settings-llm-panel-cli"
+        aria-labelledby="settings-llm-tab-cli"
+        [attr.aria-label]="'settings.llm.cli.label' | t"
+        data-testid="settings-llm-cli"
+      >
+        @for (p of providers(); track p.id) {
+          <article class="llm-card" [class]="mode(p)" [attr.data-testid]="'settings-llm-' + p.id">
+            <header class="llm-card-h">
+              <div class="llm-card-t">
+                <span class="t-ink llm-name" [attr.data-testid]="'settings-llm-' + p.id + '-name'">
+                  {{ p.name }}
+                </span>
+                <ds-badge
+                  [tone]="statusTone(p)"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-badge'"
+                >
+                  {{ statusKey(p) | t }}
+                </ds-badge>
+              </div>
+            </header>
+            <div class="llm-meta">
+              <span class="path t-mute">{{ p.command }}</span>
+            </div>
+            <div class="llm-steps">
+              <div
+                class="llm-step"
+                [class.is-done]="p.found"
+                [class.is-todo]="!p.found"
+                [attr.data-testid]="'settings-llm-' + p.id + '-install'"
+              >
+                <span class="llm-n">
+                  @if (p.found) {
+                    <ds-icon name="check" [size]="13" />
+                  } @else {
+                    1
+                  }
+                </span>
+                <div class="llm-step-b">
+                  <div class="llm-step-t">
+                    <b>{{ 'settings.llm.install' | t }}</b>
+                    @if (p.found) {
+                      <ds-badge tone="success">{{ 'settings.llm.install.found' | t }}</ds-badge>
+                    } @else {
+                      <ds-badge tone="warning">{{ 'settings.llm.install.notFound' | t }}</ds-badge>
+                      <span class="t-sm t-mute">
+                        {{ 'settings.llm.install.notInPath' | t: { command: p.command } }}
+                      </span>
+                    }
+                  </div>
+                  @if (p.found) {
+                    <div class="field">
+                      <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-path'">
+                        {{ 'settings.llm.path' | t }}
+                      </label>
+                      <div class="llm-row">
+                        <input
+                          #pathInput
+                          [id]="'settings-llm-' + p.id + '-path'"
+                          class="input mono-in"
+                          [attr.data-testid]="'settings-llm-' + p.id + '-path'"
+                          [value]="p.path || p.resolvedPath"
+                          autocomplete="off"
+                          spellcheck="false"
+                          (change)="onPath(p, pathInput.value)"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-icon"
+                          [attr.aria-label]="'settings.llm.copyPath' | t"
+                          [attr.data-testid]="'settings-llm-' + p.id + '-copy'"
+                          (click)="copyPath(p)"
+                        >
+                          <ds-icon name="copy" [size]="16" />
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="llm-guide">
+                      <span>{{ 'settings.llm.install.guide' | t }}</span>
+                      <div class="field">
+                        <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-manual'">
+                          {{ 'settings.llm.path' | t }}
+                        </label>
+                        <div class="llm-row">
+                          <input
+                            #manual
+                            [id]="'settings-llm-' + p.id + '-manual'"
+                            class="input mono-in"
+                            [attr.data-testid]="'settings-llm-' + p.id + '-manual'"
+                            [value]="p.path"
+                            [placeholder]="'C:\\...\\' + p.command + '.cmd'"
+                            autocomplete="off"
+                            spellcheck="false"
+                            (keydown.enter)="onPath(p, manual.value)"
+                          />
+                          <button
+                            type="button"
+                            class="btn btn-sm"
+                            [attr.data-testid]="'settings-llm-' + p.id + '-usepath'"
+                            (click)="onPath(p, manual.value)"
+                          >
+                            {{ 'settings.llm.usePath' | t }}
+                          </button>
+                        </div>
+                      </div>
+                      @if (p.error) {
+                        <span
+                          class="field-err"
+                          [attr.data-testid]="'settings-llm-' + p.id + '-path-error'"
+                        >
+                          {{ p.error }}
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+              @if (!p.found) {
+                <div
+                  class="llm-step is-locked"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'"
+                >
+                  <span class="llm-n"><ds-icon name="lock" [size]="13" /></span>
+                  <div class="llm-step-b">
+                    <div class="llm-step-t">
+                      <b>{{ 'settings.llm.signin' | t }}</b>
+                      <span class="t-sm t-mute">{{ 'settings.llm.signin.locked' | t }}</span>
+                    </div>
+                  </div>
+                </div>
               } @else {
-                <div class="llm-guide"><span>{{ "settings.llm.install.guide" | t }}</span>
-                  <div class="field"><label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-manual'">{{ "settings.llm.path" | t }}</label>
-                    <div class="llm-row"><input #manual [id]="'settings-llm-' + p.id + '-manual'" class="input mono-in" [attr.data-testid]="'settings-llm-' + p.id + '-manual'" [value]="p.path" [placeholder]="'C:\\...\\' + p.command + '.cmd'" autocomplete="off" spellcheck="false" (keydown.enter)="onPath(p, manual.value)"><button type="button" class="btn btn-sm" [attr.data-testid]="'settings-llm-' + p.id + '-usepath'" (click)="onPath(p, manual.value)">{{ "settings.llm.usePath" | t }}</button></div></div>
-                  @if (p.error) {<span class="field-err" [attr.data-testid]="'settings-llm-' + p.id + '-path-error'">{{ p.error }}</span>}
+                <div
+                  class="llm-step"
+                  [class.is-done]="p.signedIn === true"
+                  [class.is-todo]="p.signedIn === false"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'"
+                >
+                  <span class="llm-n">
+                    @if (p.signedIn === true) {
+                      <ds-icon name="check" [size]="13" />
+                    } @else {
+                      2
+                    }
+                  </span>
+                  <div class="llm-step-b">
+                    <div class="llm-step-t">
+                      <b>{{ 'settings.llm.signin' | t }}</b>
+                      @if (p.signedIn === true) {
+                        <ds-badge tone="success">{{ 'settings.llm.signin.done' | t }}</ds-badge>
+                        @if (p.account) {
+                          <span
+                            class="t-sm t-mute"
+                            [attr.data-testid]="'settings-llm-' + p.id + '-account'"
+                          >
+                            {{ p.account }}
+                          </span>
+                        }
+                      } @else if (p.signedIn === false) {
+                        <ds-badge tone="warning">
+                          {{
+                            p.signing
+                              ? ('settings.llm.signin.waiting' | t)
+                              : ('settings.llm.status.notSignedIn' | t)
+                          }}
+                        </ds-badge>
+                      } @else {
+                        <span class="t-sm t-mute">{{ 'settings.llm.signin.unknown' | t }}</span>
+                      }
+                    </div>
+                    @if (p.signedIn === false) {
+                      <div class="llm-guide">
+                        <span>
+                          {{
+                            (p.profileDir
+                              ? 'settings.llm.signin.guide'
+                              : 'settings.llm.signin.guidePlain'
+                            ) | t: { command: p.loginCommand }
+                          }}
+                        </span>
+                      </div>
+                    } @else if (p.signedIn === null && p.status !== 'checking') {
+                      <div class="llm-guide">
+                        <span>
+                          {{ 'settings.llm.signin.guideUnknown' | t: { command: p.loginCommand } }}
+                        </span>
+                      </div>
+                    }
+                    @if (p.profileDir) {
+                      <div class="field">
+                        <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-profile'">
+                          {{ 'settings.llm.profile' | t }}
+                        </label>
+                        <div class="llm-row">
+                          <input
+                            [id]="'settings-llm-' + p.id + '-profile'"
+                            class="input mono-in"
+                            readonly
+                            [value]="p.profileDir"
+                            [attr.data-testid]="'settings-llm-' + p.id + '-profile'"
+                          />
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-icon"
+                            [attr.aria-label]="'settings.llm.profile.open' | t"
+                            [attr.data-testid]="'settings-llm-' + p.id + '-profile-open'"
+                            (click)="openProfile(p)"
+                          >
+                            <ds-icon name="folder-open" [size]="16" />
+                          </button>
+                        </div>
+                        <span class="field-hint">
+                          {{ 'settings.llm.profile.hint' | t: { env: p.profileEnv ?? '' } }}
+                        </span>
+                      </div>
+                    } @else {
+                      <span class="field-hint">{{ 'settings.llm.profile.shared' | t }}</span>
+                    }
+                  </div>
                 </div>
               }
             </div>
-          </div>
-          @if (!p.found) {
-            <div class="llm-step is-locked" [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'"><span class="llm-n"><ds-icon name="lock" [size]="13" /></span><div class="llm-step-b"><div class="llm-step-t"><b>{{ "settings.llm.signin" | t }}</b><span class="t-sm t-mute">{{ "settings.llm.signin.locked" | t }}</span></div></div></div>
-          } @else {
-            <div class="llm-step" [class.is-done]="p.signedIn === true" [class.is-todo]="p.signedIn === false" [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'">
-              <span class="llm-n">@if (p.signedIn === true) {<ds-icon name="check" [size]="13" />} @else {2}</span>
-              <div class="llm-step-b">
-                <div class="llm-step-t"><b>{{ "settings.llm.signin" | t }}</b>
-                  @if (p.signedIn === true) {<ds-badge tone="success">{{ "settings.llm.signin.done" | t }}</ds-badge>@if (p.account) {<span class="t-sm t-mute" [attr.data-testid]="'settings-llm-' + p.id + '-account'">{{ p.account }}</span>}}
-                  @else if (p.signedIn === false) {<ds-badge tone="warning">{{ p.signing ? ("settings.llm.signin.waiting" | t) : ("settings.llm.status.notSignedIn" | t) }}</ds-badge>}
-                  @else {<span class="t-sm t-mute">{{ "settings.llm.signin.unknown" | t }}</span>}
-                </div>
-                @if (p.signedIn === false) {
-                  <div class="llm-guide"><span>{{ (p.profileDir ? "settings.llm.signin.guide" : "settings.llm.signin.guidePlain") | t: { command: p.loginCommand } }}</span></div>
-                } @else if (p.signedIn === null && p.status !== "checking") {
-                  <div class="llm-guide"><span>{{ "settings.llm.signin.guideUnknown" | t: { command: p.loginCommand } }}</span></div>
+            @if (p.status === 'error' && p.error) {
+              <div
+                class="llm-err"
+                role="alert"
+                [attr.data-testid]="'settings-llm-' + p.id + '-error'"
+              >
+                <ds-icon name="alert" [size]="14" />
+                <span>{{ p.error }}</span>
+              </div>
+            }
+            <footer class="llm-foot">
+              @let msg = message(p);
+              <div
+                class="llm-msg t-sm"
+                [class.is-ok]="msg.tone === 'ok'"
+                [class.is-warn]="msg.tone === 'warn'"
+                role="status"
+                [attr.data-testid]="'settings-llm-' + p.id + '-status'"
+              >
+                @switch (msg.tone) {
+                  @case ('ok') {
+                    <ds-icon name="check" [size]="14" />
+                  }
+                  @case ('warn') {
+                    <ds-icon name="alert" [size]="14" />
+                  }
+                  @default {
+                    @if (p.status === 'checking' || p.signing) {
+                      <span class="dot dot-running"></span>
+                    }
+                  }
                 }
-                @if (p.profileDir) {
-                  <div class="field"><label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-profile'">{{ "settings.llm.profile" | t }}</label>
-                    <div class="llm-row"><input [id]="'settings-llm-' + p.id + '-profile'" class="input mono-in" readonly [value]="p.profileDir" [attr.data-testid]="'settings-llm-' + p.id + '-profile'"><button type="button" class="btn btn-sm btn-icon" [attr.aria-label]="'settings.llm.profile.open' | t" [attr.data-testid]="'settings-llm-' + p.id + '-profile-open'" (click)="openProfile(p)"><ds-icon name="folder-open" [size]="16" /></button></div>
-                    <span class="field-hint">{{ "settings.llm.profile.hint" | t: { env: p.profileEnv ?? "" } }}</span></div>
-                } @else {
-                  <span class="field-hint">{{ "settings.llm.profile.shared" | t }}</span>
+                <span>{{ msg.key | t: msg.params }}</span>
+              </div>
+              @if (p.found) {
+                @if (p.signedIn === true && p.canLogout) {
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [attr.data-testid]="'settings-llm-' + p.id + '-signout'"
+                    (click)="logout(p)"
+                  >
+                    {{ 'settings.llm.signout' | t }}
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  [class.btn-primary]="p.signedIn !== true && p.signedIn !== null"
+                  [disabled]="p.signing"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-signin'"
+                  (click)="login(p)"
+                >
+                  <ds-icon name="terminal" [size]="16" />
+                  {{
+                    (p.signedIn === true ? 'settings.llm.signinAgain' : 'settings.llm.signin') | t
+                  }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  [class.btn-primary]="p.signedIn !== false"
+                  [disabled]="!canCheck(p)"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-check'"
+                  (click)="check(p)"
+                >
+                  <ds-icon name="refresh" [size]="16" />
+                  {{ 'settings.llm.check' | t }}
+                </button>
+              }
+            </footer>
+          </article>
+        }
+      </section>
+    }
+    @case ('features') {
+      <p class="t-sm t-mute" data-testid="settings-llm-features-intro">
+        {{ 'settings.llm.features.intro' | t }}
+      </p>
+      <section
+        class="llm-list"
+        role="tabpanel"
+        id="settings-llm-panel-features"
+        aria-labelledby="settings-llm-tab-features"
+        [attr.aria-label]="'settings.llm.features.label' | t"
+        data-testid="settings-llm-features"
+      >
+        @for (f of features(); track f.id) {
+          <article class="st-card llm-feature" [attr.data-testid]="'settings-llm-feature-' + f.id">
+            <header class="llm-feature-h">
+              <span
+                class="t-ink llm-name"
+                [attr.data-testid]="'settings-llm-feature-' + f.id + '-name'"
+              >
+                {{ featureNameKey(f) | t }}
+              </span>
+              <span
+                class="t-sm t-mute"
+                [attr.data-testid]="'settings-llm-feature-' + f.id + '-hint'"
+              >
+                {{ featureHintKey(f) | t }}
+              </span>
+            </header>
+            <div class="llm-fields">
+              <div class="field">
+                <label [attr.for]="'settings-llm-feature-' + f.id + '-provider'">
+                  {{ 'settings.llm.feature.provider' | t }}
+                </label>
+                <select
+                  #provider
+                  [id]="'settings-llm-feature-' + f.id + '-provider'"
+                  class="select"
+                  [attr.data-testid]="'settings-llm-feature-' + f.id + '-provider'"
+                  (change)="onFeatureProvider(f, provider.value)"
+                >
+                  <option value="" [selected]="!f.provider">
+                    {{ 'settings.llm.feature.provider.none' | t }}
+                  </option>
+                  @for (p of providersFor(f); track p.id) {
+                    <option [value]="p.id" [selected]="p.id === f.provider">{{ p.name }}</option>
+                  }
+                </select>
+                @if (!providersFor(f).length) {
+                  <span
+                    class="field-hint"
+                    [attr.data-testid]="'settings-llm-feature-' + f.id + '-provider-empty'"
+                  >
+                    {{ 'settings.llm.feature.provider.empty' | t }}
+                  </span>
                 }
               </div>
+              <div class="field">
+                <label [attr.for]="'settings-llm-feature-' + f.id + '-model'">
+                  {{ 'settings.llm.feature.model' | t }}
+                </label>
+                <input
+                  #model
+                  [id]="'settings-llm-feature-' + f.id + '-model'"
+                  class="input mono-in"
+                  [attr.list]="'settings-llm-feature-' + f.id + '-models'"
+                  [attr.data-testid]="'settings-llm-feature-' + f.id + '-model'"
+                  [value]="f.model"
+                  [placeholder]="'settings.llm.feature.model.placeholder' | t"
+                  autocomplete="off"
+                  spellcheck="false"
+                  (change)="onFeatureModel(f, model.value)"
+                />
+                <datalist [id]="'settings-llm-feature-' + f.id + '-models'">
+                  @for (m of modelsFor(f); track m) {
+                    <option [value]="m"></option>
+                  }
+                </datalist>
+              </div>
+              <div class="field">
+                <label [attr.for]="'settings-llm-feature-' + f.id + '-effort'">
+                  {{ 'settings.llm.feature.effort' | t }}
+                </label>
+                <select
+                  #effort
+                  [id]="'settings-llm-feature-' + f.id + '-effort'"
+                  class="select"
+                  [attr.data-testid]="'settings-llm-feature-' + f.id + '-effort'"
+                  (change)="onFeatureEffort(f, effort.value)"
+                >
+                  @for (option of efforts; track option.value) {
+                    <option [value]="option.value" [selected]="option.value === (f.effort ?? '')">
+                      {{ option.key | t }}
+                    </option>
+                  }
+                </select>
+              </div>
+              <div class="field llm-field-wide">
+                <label [attr.for]="'settings-llm-feature-' + f.id + '-args'">
+                  {{ 'settings.llm.feature.args' | t }}
+                </label>
+                <input
+                  #args
+                  [id]="'settings-llm-feature-' + f.id + '-args'"
+                  class="input mono-in"
+                  [attr.data-testid]="'settings-llm-feature-' + f.id + '-args'"
+                  [value]="f.args"
+                  [placeholder]="'settings.llm.feature.args.placeholder' | t"
+                  autocomplete="off"
+                  spellcheck="false"
+                  (change)="onFeatureArgs(f, args.value)"
+                />
+                <span class="field-hint">{{ 'settings.llm.feature.args.hint' | t }}</span>
+              </div>
             </div>
-          }
-        </div>
-        @if (p.status === "error" && p.error) {
-          <div class="llm-err" role="alert" [attr.data-testid]="'settings-llm-' + p.id + '-error'"><ds-icon name="alert" [size]="14" /><span>{{ p.error }}</span></div>
+          </article>
         }
-        <footer class="llm-foot">
-          @let msg = message(p);
-          <div class="llm-msg t-sm" [class.is-ok]="msg.tone === 'ok'" [class.is-warn]="msg.tone === 'warn'" role="status" [attr.data-testid]="'settings-llm-' + p.id + '-status'">
-            @switch (msg.tone) { @case ("ok") {<ds-icon name="check" [size]="14" />} @case ("warn") {<ds-icon name="alert" [size]="14" />} @default { @if (p.status === "checking" || p.signing) {<span class="dot dot-running"></span>} } }
-            <span>{{ msg.key | t: msg.params }}</span>
-          </div>
-          @if (p.found) {
-            @if (p.signedIn === true && p.canLogout) {<button type="button" class="btn btn-sm" [attr.data-testid]="'settings-llm-' + p.id + '-signout'" (click)="logout(p)">{{ "settings.llm.signout" | t }}</button>}
-            <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== true && p.signedIn !== null" [disabled]="p.signing" [attr.data-testid]="'settings-llm-' + p.id + '-signin'" (click)="login(p)"><ds-icon name="terminal" [size]="16" />{{ (p.signedIn === true ? "settings.llm.signinAgain" : "settings.llm.signin") | t }}</button>
-            <button type="button" class="btn btn-sm" [class.btn-primary]="p.signedIn !== false" [disabled]="!canCheck(p)" [attr.data-testid]="'settings-llm-' + p.id + '-check'" (click)="check(p)"><ds-icon name="refresh" [size]="16" />{{ "settings.llm.check" | t }}</button>
-          }
-        </footer>
-      </article>
+      </section>
     }
-  </section>
-  }
-  @case ("features") {
-  <p class="t-sm t-mute" data-testid="settings-llm-features-intro">{{ "settings.llm.features.intro" | t }}</p>
-  <section class="llm-list" role="tabpanel" id="settings-llm-panel-features" aria-labelledby="settings-llm-tab-features" [attr.aria-label]="'settings.llm.features.label' | t" data-testid="settings-llm-features">
-    @for (f of features(); track f.id) {
-      <article class="st-card llm-feature" [attr.data-testid]="'settings-llm-feature-' + f.id">
-        <header class="llm-feature-h"><span class="t-ink llm-name" [attr.data-testid]="'settings-llm-feature-' + f.id + '-name'">{{ featureNameKey(f) | t }}</span><span class="t-sm t-mute" [attr.data-testid]="'settings-llm-feature-' + f.id + '-hint'">{{ featureHintKey(f) | t }}</span></header>
-        <div class="llm-fields">
-          <div class="field"><label [attr.for]="'settings-llm-feature-' + f.id + '-provider'">{{ "settings.llm.feature.provider" | t }}</label>
-            <select #provider [id]="'settings-llm-feature-' + f.id + '-provider'" class="select" [attr.data-testid]="'settings-llm-feature-' + f.id + '-provider'" (change)="onFeatureProvider(f, provider.value)">
-              <option value="" [selected]="!f.provider">{{ "settings.llm.feature.provider.none" | t }}</option>
-              @for (p of providersFor(f); track p.id) {
-                <option [value]="p.id" [selected]="p.id === f.provider">{{ p.name }}</option>
+    @case ('cloud') {
+      <header class="llm-sec-h" data-testid="settings-llm-cloud-head">
+        <ds-badge tone="info" data-testid="settings-llm-cloud-soon">
+          {{ 'settings.llm.soon' | t }}
+        </ds-badge>
+      </header>
+      <p class="t-sm t-mute" data-testid="settings-llm-cloud-intro">
+        {{ 'settings.llm.cloud.intro' | t }}
+      </p>
+      <section
+        class="llm-list"
+        role="tabpanel"
+        id="settings-llm-panel-cloud"
+        aria-labelledby="settings-llm-tab-cloud"
+        [attr.aria-label]="'settings.llm.cloud.label' | t"
+        data-testid="settings-llm-cloud"
+      >
+        @for (c of cloud; track c.id) {
+          <article
+            class="llm-card llm-cloud"
+            aria-disabled="true"
+            [attr.data-testid]="'settings-llm-cloud-' + c.id"
+          >
+            <header class="llm-card-h">
+              <div class="llm-card-t">
+                <span class="t-ink llm-name">{{ c.name }}</span>
+                <ds-badge tone="info">{{ 'settings.llm.soon' | t }}</ds-badge>
+              </div>
+            </header>
+            <div class="llm-meta">
+              @if (c.site) {
+                <span class="path t-mute">{{ c.site }}</span>
               }
-            </select>
-            @if (!providersFor(f).length) {<span class="field-hint" [attr.data-testid]="'settings-llm-feature-' + f.id + '-provider-empty'">{{ "settings.llm.feature.provider.empty" | t }}</span>}
-          </div>
-          <div class="field"><label [attr.for]="'settings-llm-feature-' + f.id + '-model'">{{ "settings.llm.feature.model" | t }}</label>
-            <input #model [id]="'settings-llm-feature-' + f.id + '-model'" class="input mono-in" [attr.list]="'settings-llm-feature-' + f.id + '-models'" [attr.data-testid]="'settings-llm-feature-' + f.id + '-model'" [value]="f.model" [placeholder]="'settings.llm.feature.model.placeholder' | t" autocomplete="off" spellcheck="false" (change)="onFeatureModel(f, model.value)">
-            <datalist [id]="'settings-llm-feature-' + f.id + '-models'">
-              @for (m of modelsFor(f); track m) {
-                <option [value]="m"></option>
+            </div>
+            <p class="t-sm t-mute">{{ c.note | t }}</p>
+            <div class="llm-fields">
+              <div class="field">
+                <label [attr.for]="'settings-llm-cloud-' + c.id + '-key'">
+                  {{ 'settings.llm.cloud.key' | t }}
+                </label>
+                <input
+                  [id]="'settings-llm-cloud-' + c.id + '-key'"
+                  class="input mono-in"
+                  type="password"
+                  disabled
+                  [placeholder]="'settings.llm.cloud.key.placeholder' | t"
+                  [attr.data-testid]="'settings-llm-cloud-' + c.id + '-key'"
+                />
+              </div>
+              @if (c.baseUrl !== null) {
+                <div class="field">
+                  <label [attr.for]="'settings-llm-cloud-' + c.id + '-url'">
+                    {{ 'settings.llm.cloud.url' | t }}
+                  </label>
+                  <input
+                    [id]="'settings-llm-cloud-' + c.id + '-url'"
+                    class="input mono-in"
+                    disabled
+                    [value]="c.baseUrl"
+                    placeholder="http://localhost:11434/v1"
+                    [attr.data-testid]="'settings-llm-cloud-' + c.id + '-url'"
+                  />
+                </div>
               }
-            </datalist>
-          </div>
-          <div class="field"><label [attr.for]="'settings-llm-feature-' + f.id + '-effort'">{{ "settings.llm.feature.effort" | t }}</label>
-            <select #effort [id]="'settings-llm-feature-' + f.id + '-effort'" class="select" [attr.data-testid]="'settings-llm-feature-' + f.id + '-effort'" (change)="onFeatureEffort(f, effort.value)">
-              @for (option of efforts; track option.value) {
-                <option [value]="option.value" [selected]="option.value === (f.effort ?? '')">{{ option.key | t }}</option>
-              }
-            </select>
-          </div>
-          <div class="field llm-field-wide"><label [attr.for]="'settings-llm-feature-' + f.id + '-args'">{{ "settings.llm.feature.args" | t }}</label>
-            <input #args [id]="'settings-llm-feature-' + f.id + '-args'" class="input mono-in" [attr.data-testid]="'settings-llm-feature-' + f.id + '-args'" [value]="f.args" [placeholder]="'settings.llm.feature.args.placeholder' | t" autocomplete="off" spellcheck="false" (change)="onFeatureArgs(f, args.value)">
-            <span class="field-hint">{{ "settings.llm.feature.args.hint" | t }}</span></div>
-        </div>
-      </article>
+            </div>
+          </article>
+        }
+      </section>
     }
-  </section>
-  }
-  @case ("cloud") {
-  <header class="llm-sec-h" data-testid="settings-llm-cloud-head"><ds-badge tone="info" data-testid="settings-llm-cloud-soon">{{ "settings.llm.soon" | t }}</ds-badge></header>
-  <p class="t-sm t-mute" data-testid="settings-llm-cloud-intro">{{ "settings.llm.cloud.intro" | t }}</p>
-  <section class="llm-list" role="tabpanel" id="settings-llm-panel-cloud" aria-labelledby="settings-llm-tab-cloud" [attr.aria-label]="'settings.llm.cloud.label' | t" data-testid="settings-llm-cloud">
-    @for (c of cloud; track c.id) {
-      <article class="llm-card llm-cloud" aria-disabled="true" [attr.data-testid]="'settings-llm-cloud-' + c.id">
-        <header class="llm-card-h"><div class="llm-card-t"><span class="t-ink llm-name">{{ c.name }}</span><ds-badge tone="info">{{ "settings.llm.soon" | t }}</ds-badge></div></header>
-        <div class="llm-meta">@if (c.site) {<span class="path t-mute">{{ c.site }}</span>}</div>
-        <p class="t-sm t-mute">{{ c.note | t }}</p>
-        <div class="llm-fields">
-          <div class="field"><label [attr.for]="'settings-llm-cloud-' + c.id + '-key'">{{ "settings.llm.cloud.key" | t }}</label><input [id]="'settings-llm-cloud-' + c.id + '-key'" class="input mono-in" type="password" disabled [placeholder]="'settings.llm.cloud.key.placeholder' | t" [attr.data-testid]="'settings-llm-cloud-' + c.id + '-key'"></div>
-          @if (c.baseUrl !== null) {<div class="field"><label [attr.for]="'settings-llm-cloud-' + c.id + '-url'">{{ "settings.llm.cloud.url" | t }}</label><input [id]="'settings-llm-cloud-' + c.id + '-url'" class="input mono-in" disabled [value]="c.baseUrl" placeholder="http://localhost:11434/v1" [attr.data-testid]="'settings-llm-cloud-' + c.id + '-url'"></div>}
-        </div>
-      </article>
-    }
-  </section>
-  }
   }
 </div>

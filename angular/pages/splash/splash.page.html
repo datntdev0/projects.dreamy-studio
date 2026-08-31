@@ -1,47 +1,90 @@
 @if (state(); as s) {
-  <div class="splash" data-testid="loading-page">
-    <app-workspace-loading [state]="s" />
-  </div>
+<div class="splash" data-testid="loading-page">
+  <app-workspace-loading [state]="s" />
+</div>
 } @else {
-  <div class="splash" data-testid="splash-page">
-    <div class="sp-tools" data-testid="splash-tools">
-      <ds-segments data-testid="splash-language" [label]="'language.label' | t" [options]="languageOptions" [value]="language()" (valueChange)="changeLanguage($event)" />
-      <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="themeToggleKey() | t" data-testid="splash-theme-toggle" (pressed)="toggleTheme()"><ds-icon [name]="themeIcon()" [size]="16" /></ds-button>
-    </div>
-    <div class="sp-card" data-testid="splash-card">
-      <div class="sp-left" data-testid="splash-intro">
-        <img class="logo" src="/assets/dreamy-studio-mark.svg" alt="Dreamy Studio" data-testid="splash-logo" />
-        <h1 class="t-display-sm" data-testid="splash-name">{{ info()?.name ?? "Dreamy Studio" }}</h1>
-        @if (info(); as app) {
-          <p class="mono t-mute" data-testid="splash-version">V{{ app.version }}</p>
-        }
-        <p class="t-sm" data-testid="splash-tagline">{{ "splash.tagline" | t }}</p>
-        <div class="sp-actions" data-testid="splash-actions">
-          <ds-button variant="primary" [block]="true" data-testid="splash-open-workspace" (pressed)="openWorkspace()"><ds-icon name="folder-open" />{{ "splash.openWorkspace" | t }}</ds-button>
-        </div>
-        <span class="spacer"></span>
-        <div class="sp-note" data-testid="splash-local-note"><ds-icon name="lock" [size]="15" /><span>{{ "splash.localNote" | t }}</span></div>
-      </div>
-      <div class="sp-right" data-testid="splash-recent">
-        @if (notice(); as message) {
-          <div class="ld-warn is-error" role="alert" data-testid="splash-notice"><ds-icon name="alert" /><span>{{ message }}</span></div>
-        }
-        @if (recent().length) {
-          <div class="sp-head" data-testid="splash-recent-head">
-            <span class="eyebrow">{{ "splash.recent.title" | t }}</span>
-            <ds-badge data-testid="splash-recent-count">{{ recent().length }}</ds-badge>
-          </div>
-          <app-recent-workspace-list [rows]="recent()" [lastUsedPath]="lastUsedPath()" (opened)="openRecent($event)" (relocated)="relocate($event)" (deleted)="refresh()" />
-        } @else {
-          <div class="ws-first" data-testid="splash-first-run">
-            <div class="illus"></div>
-            <h2 class="t-display-xs">{{ "splash.first.title" | t }}</h2>
-            <p class="t-sm t-mute">{{ "splash.first.description" | t }}</p>
-            <p class="t-sm t-mute">{{ "splash.first.initPrefix" | t }} <span class="mono">workspace.dreamydb</span> {{ "splash.first.initSuffix" | t }}</p>
-          </div>
-        }
-      </div>
-    </div>
-    <app-dialog-host />
+<div class="splash" data-testid="splash-page">
+  <div class="sp-tools" data-testid="splash-tools">
+    <ds-segments
+      data-testid="splash-language"
+      [label]="'language.label' | t"
+      [options]="languageOptions"
+      [value]="language()"
+      (valueChange)="changeLanguage($event)"
+    />
+    <ds-button
+      variant="ghost"
+      size="small"
+      [iconOnly]="true"
+      [label]="themeToggleKey() | t"
+      data-testid="splash-theme-toggle"
+      (pressed)="toggleTheme()"
+    >
+      <ds-icon [name]="themeIcon()" [size]="16" />
+    </ds-button>
   </div>
+  <div class="sp-card" data-testid="splash-card">
+    <div class="sp-left" data-testid="splash-intro">
+      <img
+        class="logo"
+        src="/assets/dreamy-studio-mark.svg"
+        alt="Dreamy Studio"
+        data-testid="splash-logo"
+      />
+      <h1 class="t-display-sm" data-testid="splash-name">{{ info()?.name ?? "Dreamy Studio" }}</h1>
+      @if (info(); as app) {
+      <p class="mono t-mute" data-testid="splash-version">V{{ app.version }}</p>
+      }
+      <p class="t-sm" data-testid="splash-tagline">{{ "splash.tagline" | t }}</p>
+      <div class="sp-actions" data-testid="splash-actions">
+        <ds-button
+          variant="primary"
+          [block]="true"
+          data-testid="splash-open-workspace"
+          (pressed)="openWorkspace()"
+        >
+          <ds-icon name="folder-open" />
+          {{ "splash.openWorkspace" | t }}
+        </ds-button>
+      </div>
+      <span class="spacer"></span>
+      <div class="sp-note" data-testid="splash-local-note">
+        <ds-icon name="lock" [size]="15" />
+        <span>{{ "splash.localNote" | t }}</span>
+      </div>
+    </div>
+    <div class="sp-right" data-testid="splash-recent">
+      @if (notice(); as message) {
+      <div class="ld-warn is-error" role="alert" data-testid="splash-notice">
+        <ds-icon name="alert" />
+        <span>{{ message }}</span>
+      </div>
+      } @if (recent().length) {
+      <div class="sp-head" data-testid="splash-recent-head">
+        <span class="eyebrow">{{ "splash.recent.title" | t }}</span>
+        <ds-badge data-testid="splash-recent-count">{{ recent().length }}</ds-badge>
+      </div>
+      <app-recent-workspace-list
+        [rows]="recent()"
+        [lastUsedPath]="lastUsedPath()"
+        (opened)="openRecent($event)"
+        (relocated)="relocate($event)"
+        (deleted)="refresh()"
+      />
+      } @else {
+      <div class="ws-first" data-testid="splash-first-run">
+        <div class="illus"></div>
+        <h2 class="t-display-xs">{{ "splash.first.title" | t }}</h2>
+        <p class="t-sm t-mute">{{ "splash.first.description" | t }}</p>
+        <p class="t-sm t-mute">
+          {{ "splash.first.initPrefix" | t }}
+          <span class="mono">workspace.dreamydb</span>
+          {{ "splash.first.initSuffix" | t }}
+        </p>
+      </div>
+      }
+    </div>
+  </div>
+  <app-dialog-host />
+</div>
 }

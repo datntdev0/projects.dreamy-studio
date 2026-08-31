@@ -1,15 +1,16 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LibraryVideo } from "../library.videos.models";
-import { LibraryVideoService } from "../library.videos.service";
-import { durationText } from "../library.rules";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+
+import { durationText } from '../library.rules';
+import { LibraryVideo } from '../library.videos.models';
+import { LibraryVideoService } from '../library.videos.service';
 
 @Component({
-  selector: "app-library-video-media",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-video-media',
   imports: [Icon],
-  templateUrl: "./video-media.component.html",
-  host: { "data-testid": "library-video-media" },
+  templateUrl: './video-media.component.html',
+  host: { 'data-testid': 'library-video-media' },
 })
 export class LibraryVideoMedia {
   readonly video = input.required<LibraryVideo>();
@@ -21,6 +22,6 @@ export class LibraryVideoMedia {
   }
 
   private resolvePoster(): string {
-    return this.videos.poster(this.video().id) ?? "";
+    return this.videos.poster(this.video().id) ?? '';
   }
 }

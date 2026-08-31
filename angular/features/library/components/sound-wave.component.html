@@ -1,1 +1,11 @@
-<canvas #canvas class="lb-scroll" [class.is-big]="big()" [class.is-paged]="paged()" [class.is-overview]="overview()" [attr.aria-hidden]="overview() ? 'true' : null" [attr.aria-label]="overview() ? null : ('library.sound.seek' | t)" data-testid="library-sound-wave-canvas" (click)="seek($event)"></canvas>
+<canvas
+  #canvas
+  class="lb-scroll"
+  [class.is-big]="big()"
+  [class.is-paged]="paged()"
+  [class.is-overview]="overview()"
+  [attr.aria-hidden]="overview() ? 'true' : null"
+  [attr.aria-label]="overview() ? null : ('library.sound.seek' | t)"
+  data-testid="library-sound-wave-canvas"
+  (click)="seek($event)"
+></canvas>

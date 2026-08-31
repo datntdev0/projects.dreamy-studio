@@ -9,16 +9,35 @@
   <section class="ins-sec">
     <h3 class="t-display-xs" data-testid="novel-knowledge-detail-title">{{ title() }}</h3>
     <div class="row-badges">
-      <button type="button" class="btn btn-sm btn-primary" data-testid="novel-knowledge-detail-edit" (click)="edit()"><ds-icon name="pen" [size]="14" />{{ "novel.knowledge.action.edit" | t }}</button>
-      <button type="button" class="btn btn-sm btn-danger" data-testid="novel-knowledge-detail-delete" (click)="remove()"><ds-icon name="trash" [size]="14" />{{ "novel.knowledge.action.delete" | t }}</button>
+      <button
+        type="button"
+        class="btn btn-sm btn-primary"
+        data-testid="novel-knowledge-detail-edit"
+        (click)="edit()"
+      >
+        <ds-icon name="pen" [size]="14" />
+        {{ 'novel.knowledge.action.edit' | t }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-danger"
+        data-testid="novel-knowledge-detail-delete"
+        (click)="remove()"
+      >
+        <ds-icon name="trash" [size]="14" />
+        {{ 'novel.knowledge.action.delete' | t }}
+      </button>
     </div>
     @if (stale()) {
-      <div class="ld-warn" data-testid="novel-knowledge-detail-stale"><ds-icon name="alert" [size]="15" /><span>{{ stale() }}</span></div>
+      <div class="ld-warn" data-testid="novel-knowledge-detail-stale">
+        <ds-icon name="alert" [size]="15" />
+        <span>{{ stale() }}</span>
+      </div>
     }
     @if (entity(); as entity) {
       @if (entity.titles.length > 0) {
         <div data-testid="novel-knowledge-detail-titles">
-          <span class="eyebrow">{{ "novel.knowledge.detail.titles" | t }}</span>
+          <span class="eyebrow">{{ 'novel.knowledge.detail.titles' | t }}</span>
           <div class="kb-rel">
             @for (title of entity.titles; track title) {
               <span class="chip">{{ title }}</span>
@@ -28,7 +47,7 @@
       }
       @if (entity.aliases.length > 0) {
         <div data-testid="novel-knowledge-detail-aliases">
-          <span class="eyebrow">{{ "novel.knowledge.detail.aliases" | t }}</span>
+          <span class="eyebrow">{{ 'novel.knowledge.detail.aliases' | t }}</span>
           <div class="kb-rel">
             @for (alias of entity.aliases; track alias) {
               <span class="chip">{{ alias }}</span>
@@ -39,10 +58,16 @@
     }
     @if (fact(); as fact) {
       <div class="kb-rel" data-testid="novel-knowledge-detail-fact">
-        <button type="button" class="chip" (click)="go(fact.subject)">{{ endName(fact.subject) }}</button>
-        <span class="ed-pred">{{ "novel.knowledge.detail.arrow" | t: { pred: predText(fact.pred) } }}</span>
+        <button type="button" class="chip" (click)="go(fact.subject)">
+          {{ endName(fact.subject) }}
+        </button>
+        <span class="ed-pred">
+          {{ 'novel.knowledge.detail.arrow' | t: { pred: predText(fact.pred) } }}
+        </span>
         @if (fact.object !== null) {
-          <button type="button" class="chip" (click)="go(fact.object)">{{ endName(fact.object) }}</button>
+          <button type="button" class="chip" (click)="go(fact.object)">
+            {{ endName(fact.object) }}
+          </button>
         } @else {
           @for (quote of quotes(); track $index) {
             <b class="t-ink" data-testid="novel-knowledge-detail-quote">“{{ quote }}”</b>
@@ -55,62 +80,102 @@
   </section>
   @if (character(); as character) {
     <section class="ins-sec" data-testid="novel-knowledge-detail-character">
-      <span class="eyebrow">{{ "novel.knowledge.detail.character" | t }}</span>
-      <div class="kb-rel"><button type="button" class="chip" (click)="go(character.id)">{{ character.name }}</button></div>
+      <span class="eyebrow">{{ 'novel.knowledge.detail.character' | t }}</span>
+      <div class="kb-rel">
+        <button type="button" class="chip" (click)="go(character.id)">{{ character.name }}</button>
+      </div>
     </section>
   }
   @if (personas().length > 0) {
     <section class="ins-sec" data-testid="novel-knowledge-detail-personas">
-      <span class="eyebrow">{{ "novel.knowledge.detail.personas" | t: { count: personas().length } }}</span>
+      <span class="eyebrow">
+        {{ 'novel.knowledge.detail.personas' | t: { count: personas().length } }}
+      </span>
       <div class="kb-rel">
         @for (persona of personas(); track persona.id) {
           <button type="button" class="chip" (click)="go(persona.id)">{{ persona.name }}</button>
         }
       </div>
-      <p class="t-sm t-mute">{{ "novel.knowledge.detail.character.hint" | t }}</p>
+      <p class="t-sm t-mute">{{ 'novel.knowledge.detail.character.hint' | t }}</p>
     </section>
   }
   @if (entity()) {
     <section class="ins-sec" data-testid="novel-knowledge-detail-facts">
-      <div class="kd-title"><span class="eyebrow">{{ "novel.knowledge.detail.facts" | t: { count: scalars().length + relations().length } }}</span><span class="spacer"></span><button type="button" class="btn btn-sm btn-ghost" data-testid="novel-knowledge-detail-add-fact" (click)="addFact()"><ds-icon name="plus" [size]="14" />{{ "novel.knowledge.list.add.fact" | t }}</button></div>
+      <div class="kd-title">
+        <span class="eyebrow">
+          {{ 'novel.knowledge.detail.facts' | t: { count: scalars().length + relations().length } }}
+        </span>
+        <span class="spacer"></span>
+        <button
+          type="button"
+          class="btn btn-sm btn-ghost"
+          data-testid="novel-knowledge-detail-add-fact"
+          (click)="addFact()"
+        >
+          <ds-icon name="plus" [size]="14" />
+          {{ 'novel.knowledge.list.add.fact' | t }}
+        </button>
+      </div>
       @if (scalars().length === 0 && relations().length === 0) {
-        <p class="t-sm t-mute">{{ "novel.knowledge.detail.noFacts" | t }}</p>
+        <p class="t-sm t-mute">{{ 'novel.knowledge.detail.noFacts' | t }}</p>
       }
     </section>
   }
   @if (scalars().length > 0) {
     <section class="ins-sec" data-testid="novel-knowledge-detail-scalars">
-      <span class="eyebrow">{{ "novel.knowledge.detail.scalars" | t }}</span>
+      <span class="eyebrow">{{ 'novel.knowledge.detail.scalars' | t }}</span>
       <dl class="kv">
         @for (line of scalars(); track line.id) {
-          <dt>{{ line.pred }}</dt><dd>{{ line.value }}</dd>
+          <dt>{{ line.pred }}</dt>
+          <dd>{{ line.value }}</dd>
         }
       </dl>
     </section>
   }
   @if (relations().length > 0) {
     <section class="ins-sec" data-testid="novel-knowledge-detail-relations">
-      <span class="eyebrow">{{ "novel.knowledge.detail.relations" | t }}</span>
+      <span class="eyebrow">{{ 'novel.knowledge.detail.relations' | t }}</span>
       @for (line of relations(); track line.id) {
-        <div class="kb-relrow"><span class="t-mute">{{ line.outgoing ? "→" : "←" }}</span><span>{{ line.pred }}</span><button type="button" class="chip" (click)="go(line.other)">{{ line.value }}</button></div>
+        <div class="kb-relrow">
+          <span class="t-mute">{{ line.outgoing ? '→' : '←' }}</span>
+          <span>{{ line.pred }}</span>
+          <button type="button" class="chip" (click)="go(line.other)">{{ line.value }}</button>
+        </div>
       }
     </section>
   }
   @if (issues().length > 0) {
     <section class="ins-sec" data-testid="novel-knowledge-detail-issues">
-      <span class="eyebrow">{{ "novel.knowledge.detail.issues" | t: { count: issues().length } }}</span>
+      <span class="eyebrow">
+        {{ 'novel.knowledge.detail.issues' | t: { count: issues().length } }}
+      </span>
       @for (issue of issues(); track issue.id) {
-        <div class="iss-mini" [class.is-error]="issue.sev === 'error'"><ds-icon name="alert" [size]="14" /><span>{{ issue.message }}</span></div>
+        <div class="iss-mini" [class.is-error]="issue.sev === 'error'">
+          <ds-icon name="alert" [size]="14" />
+          <span>{{ issue.message }}</span>
+        </div>
       }
-      <button type="button" class="btn btn-sm" data-testid="novel-knowledge-detail-review" (click)="openReview()">{{ "novel.knowledge.detail.openReview" | t }}</button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        data-testid="novel-knowledge-detail-review"
+        (click)="openReview()"
+      >
+        {{ 'novel.knowledge.detail.openReview' | t }}
+      </button>
     </section>
   }
   <section class="ins-sec" data-testid="novel-knowledge-detail-evidence">
-    <span class="eyebrow">{{ "novel.knowledge.detail.evidence" | t }}</span>
+    <span class="eyebrow">{{ 'novel.knowledge.detail.evidence' | t }}</span>
     @for (evidence of item().ev; track $index) {
-      <div class="kb-ev"><blockquote class="quote" [class.is-bad]="!evidence.verified">{{ evidence.q }}</blockquote><span class="kn-ref mono">{{ "novel.knowledge.ref" | t: { chapter: evidence.chapter, p: evidence.p } }}</span></div>
+      <div class="kb-ev">
+        <blockquote class="quote" [class.is-bad]="!evidence.verified">{{ evidence.q }}</blockquote>
+        <span class="kn-ref mono">
+          {{ 'novel.knowledge.ref' | t: { chapter: evidence.chapter, p: evidence.p } }}
+        </span>
+      </div>
     } @empty {
-      <p class="t-sm t-mute">{{ "novel.knowledge.detail.noEvidence" | t }}</p>
+      <p class="t-sm t-mute">{{ 'novel.knowledge.detail.noEvidence' | t }}</p>
     }
   </section>
 </aside>

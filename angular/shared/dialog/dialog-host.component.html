@@ -1,0 +1,83 @@
+@if (request(); as current) {
+  <ds-dialog
+    [title]="current.options.title"
+    [eyebrow]="current.options.eyebrow ?? ''"
+    [closeLabel]="current.options.closeLabel ?? ('common.cancel' | t)"
+    data-testid="dialog-host-panel"
+    (closed)="cancel()"
+  >
+    @if (current.options.message) {
+      <p data-testid="dialog-host-message">{{ current.options.message }}</p>
+    }
+    @if (shown().length) {
+      <div class="del-list" data-testid="dialog-host-list">
+        @for (row of shown(); track $index) {
+          <div class="del-row" data-testid="dialog-host-row">
+            @if (thumb(); as component) {
+              <ng-container *ngComponentOutlet="component; inputs: row.inputs" />
+            } @else if (row.item.image; as cover) {
+              <ds-cover size="md" [image]="cover() ?? ''" data-testid="dialog-host-cover" />
+            } @else if (row.item.icon) {
+              <span class="lb-th is-ic is-md" data-testid="dialog-host-thumb">
+                <ds-icon [name]="row.item.icon" [size]="18" />
+              </span>
+            }
+            <div data-testid="dialog-host-item">
+              <div class="t-ink" data-testid="dialog-host-name">{{ row.item.name }}</div>
+              @if (row.item.meta) {
+                <div class="t-sm t-mute" data-testid="dialog-host-meta">{{ row.item.meta }}</div>
+              }
+            </div>
+          </div>
+        }
+        @if (hidden() > 0 && current.options.moreLabel) {
+          <span class="t-sm t-mute" data-testid="dialog-host-more">
+            {{ current.options.moreLabel }}
+          </span>
+        }
+      </div>
+    }
+    @if (current.options.warning) {
+      <div class="ld-warn" role="alert" data-testid="dialog-host-warning">
+        <ds-icon name="alert" [size]="15" />
+        <span>{{ current.options.warning }}</span>
+      </div>
+    }
+    @if (current.options.note) {
+      <p class="t-sm t-mute" data-testid="dialog-host-note">{{ current.options.note }}</p>
+    }
+    @if (current.options.acknowledge) {
+      <label class="check" data-testid="dialog-host-acknowledge-label">
+        <input
+          type="checkbox"
+          [checked]="acknowledged()"
+          [disabled]="busy()"
+          data-testid="dialog-host-acknowledge"
+          (change)="onAcknowledge($event)"
+        />
+        <span>{{ current.options.acknowledge }}</span>
+      </label>
+    }
+    @if (error(); as message) {
+      <div class="ld-warn is-error" role="alert" data-testid="dialog-host-error">
+        <ds-icon name="alert" [size]="15" />
+        <span>{{ message }}</span>
+      </div>
+    }
+    <ds-button dialogFoot [disabled]="busy()" data-testid="dialog-host-cancel" (pressed)="cancel()">
+      {{ current.options.cancelLabel ?? ('common.cancel' | t) }}
+    </ds-button>
+    <ds-button
+      dialogFoot
+      [variant]="current.options.tone ?? 'danger'"
+      [disabled]="blocked()"
+      data-testid="dialog-host-accept"
+      (pressed)="accept()"
+    >
+      @if (current.options.confirmIcon) {
+        <ds-icon [name]="current.options.confirmIcon" [size]="16" />
+      }
+      {{ current.options.confirmLabel }}
+    </ds-button>
+  </ds-dialog>
+}

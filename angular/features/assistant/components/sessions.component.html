@@ -1,47 +1,172 @@
-<section class="asst" [attr.aria-label]="'assistant.history.label' | t" data-testid="assistant-sessions">
-  <header class="asst-bar" data-testid="assistant-sessions-bar">
-    <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.back' | t" [attr.title]="'assistant.back' | t" data-testid="assistant-sessions-back" (pressed)="assistant.back()"><ds-icon name="arrow-left" [size]="16" /></ds-button>
-    <span class="asst-bar-title" data-testid="assistant-sessions-title">{{ "assistant.history.title" | t }}<span class="asst-count mono" data-testid="assistant-sessions-count">{{ assistant.sessions().length }}</span></span>
-    <span class="spacer"></span>
-    <ds-button variant="ghost" size="small" [iconOnly]="true" [label]="'assistant.new' | t" [attr.title]="'assistant.new' | t" data-testid="assistant-sessions-new" (pressed)="assistant.startNew()"><ds-icon name="plus" [size]="16" /></ds-button>
-  </header>
+<section
+  class="asst"
+  [attr.aria-label]="'assistant.history.label' | t"
+  data-testid="assistant-sessions"
+>
+  <app-assistant-pane-header newTestId="assistant-sessions-new">
+    <ds-button
+      variant="ghost"
+      size="small"
+      [iconOnly]="true"
+      [label]="'assistant.back' | t"
+      [attr.title]="'assistant.back' | t"
+      data-testid="assistant-sessions-back"
+      (pressed)="assistant.back()"
+    >
+      <ds-icon name="arrow-left" [size]="16" />
+    </ds-button>
+    <span class="asst-bar-title" data-testid="assistant-sessions-title">
+      {{ 'assistant.history.title' | t }}
+      <span class="asst-count mono" data-testid="assistant-sessions-count">
+        {{ assistant.sessions().length }}
+      </span>
+    </span>
+  </app-assistant-pane-header>
   <div class="asst-filters" data-testid="assistant-sessions-filters">
-    <label class="search"><span class="sr-only">{{ "assistant.history.search" | t }}</span><input class="input" type="search" [value]="query()" [attr.placeholder]="'assistant.history.search' | t" data-testid="assistant-sessions-search" (input)="onQuery($event)" /></label>
-    <select class="select" [attr.aria-label]="'assistant.history.filter' | t" data-testid="assistant-sessions-filter" (change)="onFilter($event)">
-      <option value="all" [selected]="filterValue() === 'all'">{{ "assistant.history.filter.all" | t }}</option>
-      <option value="workspace" [selected]="filterValue() === 'workspace'">{{ "assistant.scope.workspace" | t }}</option>
+    <label class="search">
+      <span class="sr-only">{{ 'assistant.history.search' | t }}</span>
+      <input
+        class="input"
+        type="search"
+        [value]="query()"
+        [attr.placeholder]="'assistant.history.search' | t"
+        data-testid="assistant-sessions-search"
+        (input)="onQuery($event)"
+      />
+    </label>
+    <select
+      class="select"
+      [attr.aria-label]="'assistant.history.filter' | t"
+      data-testid="assistant-sessions-filter"
+      (change)="onFilter($event)"
+    >
+      <option value="all" [selected]="filterValue() === 'all'">
+        {{ 'assistant.history.filter.all' | t }}
+      </option>
+      <option value="workspace" [selected]="filterValue() === 'workspace'">
+        {{ 'assistant.scope.workspace' | t }}
+      </option>
       @for (novel of novels.novels(); track novel.id) {
-        <option [value]="'novel-' + novel.id" [selected]="filterValue() === 'novel-' + novel.id">{{ nameOf(novel) }}</option>
+        <option [value]="'novel-' + novel.id" [selected]="filterValue() === 'novel-' + novel.id">
+          {{ nameOf(novel) }}
+        </option>
       }
     </select>
   </div>
   <div class="asst-body asst-list" data-testid="assistant-sessions-body">
     @if (assistant.error(); as failure) {
-      <div class="ins-empty" data-testid="assistant-sessions-error"><p>{{ "assistant.error.load" | t: { detail: failure } }}</p><button type="button" class="btn btn-sm" data-testid="assistant-sessions-retry" (click)="assistant.load()">{{ "assistant.error.retry" | t }}</button></div>
+      <div class="ins-empty" data-testid="assistant-sessions-error">
+        <p>{{ 'assistant.error.load' | t: { detail: failure } }}</p>
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="assistant-sessions-retry"
+          (click)="assistant.load()"
+        >
+          {{ 'assistant.error.retry' | t }}
+        </button>
+      </div>
     } @else if (!assistant.loaded()) {
-      <div class="ins-empty" data-testid="assistant-sessions-loading"><p>{{ "assistant.history.loading" | t }}</p></div>
+      <div class="ins-empty" data-testid="assistant-sessions-loading">
+        <p>{{ 'assistant.history.loading' | t }}</p>
+      </div>
     } @else if (assistant.sessions().length === 0) {
       <div class="ins-empty" data-testid="assistant-sessions-empty">
         <div class="cs-ico"><ds-icon name="clock" [size]="26" /></div>
-        <h4 class="t-display-xs" data-testid="assistant-sessions-empty-title">{{ "assistant.history.empty.title" | t }}</h4>
-        <p data-testid="assistant-sessions-empty-description">{{ "assistant.history.empty.description" | t }}</p>
-        <button type="button" class="btn btn-sm btn-primary" data-testid="assistant-sessions-empty-new" (click)="assistant.startNew()"><ds-icon name="plus" [size]="15" />{{ "assistant.new" | t }}</button>
+        <h4 class="t-display-xs" data-testid="assistant-sessions-empty-title">
+          {{ 'assistant.history.empty.title' | t }}
+        </h4>
+        <p data-testid="assistant-sessions-empty-description">
+          {{ 'assistant.history.empty.description' | t }}
+        </p>
+        <button
+          type="button"
+          class="btn btn-sm btn-primary"
+          data-testid="assistant-sessions-empty-new"
+          (click)="assistant.startNew()"
+        >
+          <ds-icon name="plus" [size]="15" />
+          {{ 'assistant.new' | t }}
+        </button>
       </div>
     } @else if (visible().length === 0) {
-      <div class="ins-empty" data-testid="assistant-sessions-nomatch"><p>{{ "assistant.history.noMatch" | t }}</p><button type="button" class="btn btn-sm" data-testid="assistant-sessions-clear" (click)="clearFilters()">{{ "assistant.history.clear" | t }}</button></div>
+      <div class="ins-empty" data-testid="assistant-sessions-nomatch">
+        <p>{{ 'assistant.history.noMatch' | t }}</p>
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="assistant-sessions-clear"
+          (click)="clearFilters()"
+        >
+          {{ 'assistant.history.clear' | t }}
+        </button>
+      </div>
     } @else {
       @for (group of groups(); track group.key) {
-        <div class="asst-group" [attr.data-group]="group.key" data-testid="assistant-sessions-group">
-          <span class="asst-label" data-testid="assistant-sessions-group-label">{{ group.labelKey | t }}</span>
+        <div
+          class="asst-group"
+          [attr.data-group]="group.key"
+          data-testid="assistant-sessions-group"
+        >
+          <span class="asst-label" data-testid="assistant-sessions-group-label">
+            {{ group.labelKey | t }}
+          </span>
           <ul class="asst-sessions" data-testid="assistant-sessions-list">
             @for (session of group.sessions; track session.id) {
-              <li class="asst-session" [class.is-active]="isActive(session)" [attr.data-session-id]="session.id" data-testid="assistant-session">
-                <button type="button" class="asst-session-open" [attr.aria-current]="isActive(session) ? 'true' : null" data-testid="assistant-session-open" (click)="assistant.open(session.id)">
-                  <span class="asst-session-title t-ink" data-testid="assistant-session-title">{{ session.title }}</span>
-                  <span class="asst-session-preview t-sm t-mute" data-testid="assistant-session-preview">{{ session.preview }}</span>
-                  <span class="asst-meta t-sm t-mute" data-testid="assistant-session-meta"><ds-icon [name]="assistant.scopeIcon(session.scope)" [size]="12" /><span class="asst-meta-scope" data-testid="assistant-session-scope">{{ assistant.scopeLabel(session.scope) }}</span><span class="asst-meta-end"><span class="asst-meta-count" [attr.title]="'assistant.history.messages' | t: { count: session.messageCount }" data-testid="assistant-session-count"><ds-icon name="list" [size]="11" />{{ session.messageCount }}</span><span class="mono" data-testid="assistant-session-time">{{ stampOf(session) }}</span></span></span>
+              <li
+                class="asst-session"
+                [class.is-active]="isActive(session)"
+                [attr.data-session-id]="session.id"
+                data-testid="assistant-session"
+              >
+                <button
+                  type="button"
+                  class="asst-session-open"
+                  [attr.aria-current]="isActive(session) ? 'true' : null"
+                  data-testid="assistant-session-open"
+                  (click)="assistant.open(session.id)"
+                >
+                  <span class="asst-session-title t-ink" data-testid="assistant-session-title">
+                    {{ session.title }}
+                  </span>
+                  <span
+                    class="asst-session-preview t-sm t-mute"
+                    data-testid="assistant-session-preview"
+                  >
+                    {{ session.preview }}
+                  </span>
+                  <span class="asst-meta t-sm t-mute" data-testid="assistant-session-meta">
+                    <ds-icon [name]="assistant.scopeIcon(session.scope)" [size]="12" />
+                    <span class="asst-meta-scope" data-testid="assistant-session-scope">
+                      {{ assistant.scopeLabel(session.scope) }}
+                    </span>
+                    <span class="asst-meta-end">
+                      <span
+                        class="asst-meta-count"
+                        [attr.title]="
+                          'assistant.history.messages' | t: { count: session.messageCount }
+                        "
+                        data-testid="assistant-session-count"
+                      >
+                        <ds-icon name="list" [size]="11" />
+                        {{ session.messageCount }}
+                      </span>
+                      <span class="mono" data-testid="assistant-session-time">
+                        {{ stampOf(session) }}
+                      </span>
+                    </span>
+                  </span>
                 </button>
-                <button type="button" class="btn btn-xs btn-ghost asst-session-del" [attr.aria-label]="'assistant.delete.action' | t: { title: session.title }" [attr.title]="'assistant.delete.short' | t" data-testid="assistant-session-delete" (click)="remove(session)"><ds-icon name="trash" [size]="13" /></button>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-ghost asst-session-del"
+                  [attr.aria-label]="'assistant.delete.action' | t: { title: session.title }"
+                  [attr.title]="'assistant.delete.short' | t"
+                  data-testid="assistant-session-delete"
+                  (click)="remove(session)"
+                >
+                  <ds-icon name="trash" [size]="13" />
+                </button>
               </li>
             }
           </ul>

@@ -1,15 +1,18 @@
-import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { WorkspaceService } from "../workspace/workspace.service";
-import { NovelError, ParagraphSaveResult, TargetLang, TranslationStatus } from "./novel.models";
-import { NovelService } from "./novel.service";
-import { clampSeq, normalizeParagraphText, toNovelError } from "./novel.rules";
-import { DictChange, DictDraft, NovelTranslation, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, TranslationStep, TranslationView, TranslationWarning, WireChapter, WireTranslation, WireWarning } from "./novel.translation.models";
-import { EMPTY_VIEW, chapterStatus, emptyTranslation, fromWireChapter, fromWireTranslation, fromWireWarnings, replaceEntry, reviewCount, targetsOf, translatedCount, withoutEntry } from "./novel.translation.rules";
+import { effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+
+import { WorkspaceService } from '../workspace/workspace.service';
+import { NovelError, ParagraphSaveResult, TargetLang, TranslationStatus } from './novel.models';
+import { clampSeq, normalizeParagraphText, toNovelError } from './novel.rules';
+import { NovelService } from './novel.service';
+// prettier-ignore
+import { DictChange, DictDraft, NovelTranslation, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, TranslationStep, TranslationView, TranslationWarning, WireChapter, WireTranslation, WireWarning } from './novel.translation.models';
+// prettier-ignore
+import { chapterStatus, EMPTY_VIEW, emptyTranslation, fromWireChapter, fromWireTranslation, fromWireWarnings, replaceEntry, reviewCount, targetsOf, translatedCount, withoutEntry } from './novel.translation.rules';
 
 const EMPTY = emptyTranslation();
 
-export const ANALYSIS_KIND = "analysis";
+export const ANALYSIS_KIND = 'analysis';
 
 function storeKey(novelId: number, target: TargetLang): string {
   return `${novelId}:${target}`;
@@ -27,17 +30,17 @@ function taskTotals(tasks: PipelineTask[]): { done: number; failed: number } {
   let done = 0;
   let failed = 0;
   for (const task of tasks) {
-    if (task.status === "completed") {
+    if (task.status === 'completed') {
       done += 1;
     }
-    if (task.status === "failed") {
+    if (task.status === 'failed') {
       failed += 1;
     }
   }
   return { done, failed };
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class NovelTranslationService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly novels = inject(NovelService);
@@ -60,7 +63,7 @@ export class NovelTranslationService {
   targetOf(novelId: number): TargetLang {
     const targets = targetsOf(this.novels.novelById(novelId)?.lang);
     const wanted = this.viewOf(novelId).target;
-    return wanted !== null && targets.includes(wanted) ? wanted : (targets[0] ?? "VI");
+    return wanted !== null && targets.includes(wanted) ? wanted : (targets[0] ?? 'VI');
   }
 
   of(novelId: number, target: TargetLang = this.targetOf(novelId)): NovelTranslation {
@@ -74,7 +77,11 @@ export class NovelTranslationService {
   progressOf(novelId: number, target: TargetLang = this.targetOf(novelId)): Record<string, number> {
     const progress: Record<string, number> = {};
     for (const pipeline of this.running()) {
-      if (pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND && pipeline.target === target) {
+      if (
+        pipeline.novelId === novelId &&
+        pipeline.kind !== ANALYSIS_KIND &&
+        pipeline.target === target
+      ) {
         this.collectProgress(pipeline, progress);
       }
     }
@@ -84,7 +91,11 @@ export class NovelTranslationService {
   queuedOf(novelId: number, target: TargetLang = this.targetOf(novelId)): string[] {
     const queued: string[] = [];
     for (const pipeline of this.running()) {
-      if (pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND && pipeline.target === target) {
+      if (
+        pipeline.novelId === novelId &&
+        pipeline.kind !== ANALYSIS_KIND &&
+        pipeline.target === target
+      ) {
         this.collectQueued(pipeline, queued);
       }
     }
@@ -92,16 +103,28 @@ export class NovelTranslationService {
   }
 
   isTranslating(novelId: number): boolean {
-    return this.running().some((pipeline) => pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND);
+    return this.running().some(
+      (pipeline) => pipeline.novelId === novelId && pipeline.kind !== ANALYSIS_KIND,
+    );
   }
 
   isAnalyzing(novelId: number): boolean {
-    return this.running().some((pipeline) => pipeline.novelId === novelId && pipeline.kind === ANALYSIS_KIND);
+    return this.running().some(
+      (pipeline) => pipeline.novelId === novelId && pipeline.kind === ANALYSIS_KIND,
+    );
   }
 
-
-  statusOf(novelId: number, chapterId: string, target: TargetLang = this.targetOf(novelId)): TranslationStatus {
-    return chapterStatus(this.of(novelId, target), chapterId, Object.keys(this.progressOf(novelId, target)), this.queuedOf(novelId, target));
+  statusOf(
+    novelId: number,
+    chapterId: string,
+    target: TargetLang = this.targetOf(novelId),
+  ): TranslationStatus {
+    return chapterStatus(
+      this.of(novelId, target),
+      chapterId,
+      Object.keys(this.progressOf(novelId, target)),
+      this.queuedOf(novelId, target),
+    );
   }
 
   reviewCountOf(novelId: number): number {
@@ -122,7 +145,11 @@ export class NovelTranslationService {
     }
   }
 
-  titleOf(novelId: number, chapterId: string, target: TargetLang = this.targetOf(novelId)): string | null {
+  titleOf(
+    novelId: number,
+    chapterId: string,
+    target: TargetLang = this.targetOf(novelId),
+  ): string | null {
     return this.of(novelId, target).chapters[chapterId]?.title || null;
   }
 
@@ -160,7 +187,7 @@ export class NovelTranslationService {
   }
 
   focusPassage(novelId: number, seq: number, n: number | null): void {
-    this.patchView(novelId, { step: "result", seq, focus: n });
+    this.patchView(novelId, { step: 'result', seq, focus: n });
   }
 
   consumeFocus(novelId: number): number | null {
@@ -170,7 +197,7 @@ export class NovelTranslationService {
   }
 
   startEntry(novelId: number): void {
-    this.patchView(novelId, { step: "dict", newEntry: true });
+    this.patchView(novelId, { step: 'dict', newEntry: true });
   }
 
   consumeEntry(novelId: number): boolean {
@@ -181,7 +208,11 @@ export class NovelTranslationService {
 
   async saveGuidelines(novelId: number, text: string): Promise<boolean> {
     const target = this.targetOf(novelId);
-    const changed = await this.ipc.invoke<boolean>("translation_guidelines_save", { novelId, target, text });
+    const changed = await this.ipc.invoke<boolean>('translation_guidelines_save', {
+      novelId,
+      target,
+      text,
+    });
     if (changed) {
       const current = this.of(novelId, target);
       this.storeTranslation(novelId, target, { ...current, guidelines: text.trim() });
@@ -191,51 +222,77 @@ export class NovelTranslationService {
 
   async addEntry(novelId: number, draft: DictDraft): Promise<DictChange> {
     const target = this.targetOf(novelId);
-    const change = await this.ipc.invoke<DictChange>("translation_dict_add", { novelId, target, input: draft });
+    const change = await this.ipc.invoke<DictChange>('translation_dict_add', {
+      novelId,
+      target,
+      input: draft,
+    });
     const current = this.of(novelId, target);
     this.storeTranslation(novelId, target, { ...current, dict: [...current.dict, change.entry] });
     await this.refreshWarnings(novelId, target);
     return change;
   }
 
-  async updateEntry(novelId: number, id: number, patch: Partial<DictDraft>): Promise<DictChange | null> {
+  async updateEntry(
+    novelId: number,
+    id: number,
+    patch: Partial<DictDraft>,
+  ): Promise<DictChange | null> {
     const target = this.targetOf(novelId);
     if (!this.of(novelId, target).dict.some((entry) => entry.id === id)) {
       return null;
     }
-    const change = await this.ipc.invoke<DictChange>("translation_dict_update", { novelId, id, patch });
+    const change = await this.ipc.invoke<DictChange>('translation_dict_update', {
+      novelId,
+      id,
+      patch,
+    });
     const current = this.of(novelId, target);
-    this.storeTranslation(novelId, target, { ...current, dict: replaceEntry(current.dict, change.entry) });
+    this.storeTranslation(novelId, target, {
+      ...current,
+      dict: replaceEntry(current.dict, change.entry),
+    });
     await this.refreshWarnings(novelId, target);
     return change;
   }
 
   async removeEntry(novelId: number, id: number): Promise<void> {
     const target = this.targetOf(novelId);
-    await this.ipc.invoke<void>("translation_dict_delete", { novelId, id });
+    await this.ipc.invoke<void>('translation_dict_delete', { novelId, id });
     const current = this.of(novelId, target);
     this.storeTranslation(novelId, target, { ...current, dict: withoutEntry(current.dict, id) });
     await this.refreshWarnings(novelId, target);
   }
 
-  async saveParagraph(novelId: number, chapterId: string, n: number, text: string): Promise<ParagraphSaveResult> {
+  async saveParagraph(
+    novelId: number,
+    chapterId: string,
+    n: number,
+    text: string,
+  ): Promise<ParagraphSaveResult> {
     const target = this.targetOf(novelId);
     const current = this.of(novelId, target);
     const passage = current.chapters[chapterId]?.passages[n];
     const value = normalizeParagraphText(text);
     if (!passage) {
-      return "idle";
+      return 'idle';
     }
     if (!value) {
-      return "empty";
+      return 'empty';
     }
     if (value === passage.text) {
-      return "unchanged";
+      return 'unchanged';
     }
-    const chapter = await this.ipc.invoke<WireChapter>("translation_passage_save", { novelId, target, chapterId, n, text: value });
+    const chapter = await this.ipc.invoke<WireChapter>('translation_passage_save', {
+      novelId,
+      target,
+      chapterId,
+      n,
+      text: value,
+    });
     this.storeChapter(novelId, target, chapterId, chapter);
     await this.refreshWarnings(novelId, target);
-    return "saved";
+    return 'saved';
   }
 
   async setNote(novelId: number, chapterId: string, n: number, text: string): Promise<void> {
@@ -246,11 +303,21 @@ export class NovelTranslationService {
     if (!passage || value === passage.note) {
       return;
     }
-    const chapter = await this.ipc.invoke<WireChapter>("translation_note_save", { novelId, target, chapterId, n, text: value });
+    const chapter = await this.ipc.invoke<WireChapter>('translation_note_save', {
+      novelId,
+      target,
+      chapterId,
+      n,
+      text: value,
+    });
     this.storeChapter(novelId, target, chapterId, chapter);
   }
 
-  async translate(novelId: number, chapterIds: string[], target: TargetLang = this.targetOf(novelId)): Promise<void> {
+  async translate(
+    novelId: number,
+    chapterIds: string[],
+    target: TargetLang = this.targetOf(novelId),
+  ): Promise<void> {
     const tasks: TaskRequest[] = [];
     for (const chapterId of chapterIds) {
       tasks.push({ chapterId, passage: null });
@@ -264,11 +331,13 @@ export class NovelTranslationService {
     if (!warning) {
       return;
     }
-    await this.startPipeline(novelId, target, [{ chapterId: warning.chapterId, passage: warning.n }]);
+    await this.startPipeline(novelId, target, [
+      { chapterId: warning.chapterId, passage: warning.n },
+    ]);
   }
 
   async cancelPipeline(pipelineId: number): Promise<void> {
-    await this.ipc.invoke<boolean>("pipeline_cancel", { pipelineId });
+    await this.ipc.invoke<boolean>('pipeline_cancel', { pipelineId });
   }
 
   async cancelNovel(novelId: number): Promise<void> {
@@ -282,7 +351,13 @@ export class NovelTranslationService {
   async startAnalysis(novelId: number, lang: string, chapterIds: string[]): Promise<void> {
     const tasks: TaskRequest[] = chapterIds.map((chapterId) => ({ chapterId, passage: null }));
     const channel = this.ipc.channel<PipelineEvent>(this.handlePipelineEvent.bind(this));
-    await this.ipc.invoke<PipelineSnapshot>("pipeline_start", { kind: ANALYSIS_KIND, novelId, lang, tasks, onEvent: channel });
+    await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
+      kind: ANALYSIS_KIND,
+      novelId,
+      lang,
+      tasks,
+      onEvent: channel,
+    });
   }
 
   reset(): void {
@@ -298,16 +373,20 @@ export class NovelTranslationService {
     const key = storeKey(novelId, target);
     const ticket = (this.tickets[key] ?? 0) + 1;
     this.tickets[key] = ticket;
-    const wire = await this.ipc.invoke<WireTranslation>("translation_get", { novelId, target });
+    const wire = await this.ipc.invoke<WireTranslation>('translation_get', { novelId, target });
     await this.novels.loadChapters(novelId);
     if (this.tickets[key] === ticket) {
-      this.storeTranslation(novelId, target, fromWireTranslation(wire, this.novels.chaptersOf(novelId)));
+      this.storeTranslation(
+        novelId,
+        target,
+        fromWireTranslation(wire, this.novels.chaptersOf(novelId)),
+      );
     }
   }
 
   private collectProgress(pipeline: PipelineSnapshot, progress: Record<string, number>): void {
     for (const task of pipeline.tasks) {
-      if (task.status === "running") {
+      if (task.status === 'running') {
         progress[task.chapterId] = task.progress;
       }
     }
@@ -315,27 +394,41 @@ export class NovelTranslationService {
 
   private collectQueued(pipeline: PipelineSnapshot, queued: string[]): void {
     for (const task of pipeline.tasks) {
-      if (task.status === "queued" && !queued.includes(task.chapterId)) {
+      if (task.status === 'queued' && !queued.includes(task.chapterId)) {
         queued.push(task.chapterId);
       }
     }
   }
 
-  private async startPipeline(novelId: number, target: TargetLang, tasks: TaskRequest[]): Promise<void> {
+  private async startPipeline(
+    novelId: number,
+    target: TargetLang,
+    tasks: TaskRequest[],
+  ): Promise<void> {
     const channel = this.ipc.channel<PipelineEvent>(this.handlePipelineEvent.bind(this));
-    await this.ipc.invoke<PipelineSnapshot>("pipeline_start", { novelId, target, tasks, onEvent: channel });
+    await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
+      novelId,
+      target,
+      tasks,
+      onEvent: channel,
+    });
   }
 
   private handlePipelineEvent(event: PipelineEvent): void {
-    if (event.type === "started") {
-      this.activePipelines.set([...this.running().filter((pipeline) => pipeline.id !== event.pipeline.id), event.pipeline]);
+    if (event.type === 'started') {
+      this.activePipelines.set([
+        ...this.running().filter((pipeline) => pipeline.id !== event.pipeline.id),
+        event.pipeline,
+      ]);
       return;
     }
-    if (event.type === "updated") {
-      this.activePipelines.set(this.running().map((pipeline) => this.withSnapshot(pipeline, event.pipeline)));
+    if (event.type === 'updated') {
+      this.activePipelines.set(
+        this.running().map((pipeline) => this.withSnapshot(pipeline, event.pipeline)),
+      );
       return;
     }
-    if (event.type === "task") {
+    if (event.type === 'task') {
       this.applyTask(event.pipelineId, event.task);
       return;
     }
@@ -344,8 +437,10 @@ export class NovelTranslationService {
 
   private applyTask(pipelineId: number, task: PipelineTask): void {
     const owner = this.running().find((pipeline) => pipeline.id === pipelineId);
-    this.activePipelines.set(this.running().map((pipeline) => this.withTask(pipeline, pipelineId, task)));
-    if (owner && owner.kind !== ANALYSIS_KIND && task.status === "completed") {
+    this.activePipelines.set(
+      this.running().map((pipeline) => this.withTask(pipeline, pipelineId, task)),
+    );
+    if (owner && owner.kind !== ANALYSIS_KIND && task.status === 'completed') {
       void this.refresh(owner.novelId, owner.target as TargetLang);
     }
   }
@@ -365,10 +460,16 @@ export class NovelTranslationService {
   }
 
   private withSnapshot(pipeline: PipelineSnapshot, next: PipelineSnapshot): PipelineSnapshot {
-    return pipeline.id === next.id ? { ...pipeline, status: next.status, startedAt: next.startedAt } : pipeline;
+    return pipeline.id === next.id
+      ? { ...pipeline, status: next.status, startedAt: next.startedAt }
+      : pipeline;
   }
 
-  private withTask(pipeline: PipelineSnapshot, pipelineId: number, task: PipelineTask): PipelineSnapshot {
+  private withTask(
+    pipeline: PipelineSnapshot,
+    pipelineId: number,
+    task: PipelineTask,
+  ): PipelineSnapshot {
     if (pipeline.id !== pipelineId) {
       return pipeline;
     }
@@ -377,18 +478,30 @@ export class NovelTranslationService {
   }
 
   private async refreshWarnings(novelId: number, target: TargetLang): Promise<void> {
-    const list = await this.ipc.invoke<WireWarning[]>("translation_warnings", { novelId, target });
+    const list = await this.ipc.invoke<WireWarning[]>('translation_warnings', { novelId, target });
     const current = this.of(novelId, target);
     const warnings = fromWireWarnings(list, this.novels.chaptersOf(novelId));
     this.storeTranslation(novelId, target, { ...current, warnings });
   }
 
-  private storeChapter(novelId: number, target: TargetLang, chapterId: string, wire: WireChapter): void {
+  private storeChapter(
+    novelId: number,
+    target: TargetLang,
+    chapterId: string,
+    wire: WireChapter,
+  ): void {
     const current = this.of(novelId, target);
-    this.storeTranslation(novelId, target, { ...current, chapters: { ...current.chapters, [chapterId]: fromWireChapter(wire) } });
+    this.storeTranslation(novelId, target, {
+      ...current,
+      chapters: { ...current.chapters, [chapterId]: fromWireChapter(wire) },
+    });
   }
 
-  private storeTranslation(novelId: number, target: TargetLang, translation: NovelTranslation): void {
+  private storeTranslation(
+    novelId: number,
+    target: TargetLang,
+    translation: NovelTranslation,
+  ): void {
     this.store.set({ ...this.store(), [storeKey(novelId, target)]: translation });
   }
 

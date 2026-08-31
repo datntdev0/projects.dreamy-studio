@@ -1,28 +1,28 @@
-import { Component, OnInit, computed, inject, signal } from "@angular/core";
-import { Badge } from "@components/badge";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { Segments, SegmentOption } from "@components/segments";
-import { CoreModule } from "@core/core.module";
-import { LanguageService, isLanguage } from "@core/language/language.service";
-import { ThemeService } from "@core/theme/theme.service";
-import { SettingsService } from "@features/settings/settings.service";
-import { WorkspaceLoading } from "@features/workspace/components/loading.component";
-import { RecentWorkspaceList } from "@features/workspace/components/recent.component";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { AppInfo } from "@features/workspace/workspace.models";
-import { RecentWorkspace } from "@features/workspace/workspace.models";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Badge } from '@components/badge';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { SegmentOption, Segments } from '@components/segments';
+import { SettingsService } from '@features/settings/settings.service';
+import { WorkspaceLoading } from '@features/workspace/components/loading.component';
+import { RecentWorkspaceList } from '@features/workspace/components/recent.component';
+import { AppInfo, RecentWorkspace } from '@features/workspace/workspace.models';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+import { CoreModule } from '@shared/core.module';
+import { isLanguage, LanguageService } from '@shared/language/language.service';
+import { ThemeService } from '@shared/theme/theme.service';
 
 const LANGUAGE_OPTIONS: SegmentOption[] = [
-  { value: "vi", label: "VI" },
-  { value: "en", label: "EN" },
+  { value: 'vi', label: 'VI' },
+  { value: 'en', label: 'EN' },
 ];
 
 @Component({
-  selector: "app-splash-page",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-splash-page',
   imports: [Badge, Button, Icon, Segments, CoreModule, RecentWorkspaceList, WorkspaceLoading],
-  templateUrl: "./splash.page.html",
+  templateUrl: './splash.page.html',
 })
 export class SplashPage implements OnInit {
   private readonly workspace = inject(WorkspaceService);
@@ -34,8 +34,10 @@ export class SplashPage implements OnInit {
   readonly recent = signal<RecentWorkspace[]>([]);
   readonly language = this.languageService.language;
   readonly languageOptions = LANGUAGE_OPTIONS;
-  readonly themeIcon = computed(() => this.themes.theme() === "dark" ? "sun" : "moon");
-  readonly themeToggleKey = computed(() => this.themes.theme() === "dark" ? "theme.toLight" : "theme.toDark");
+  readonly themeIcon = computed(() => (this.themes.theme() === 'dark' ? 'sun' : 'moon'));
+  readonly themeToggleKey = computed(() =>
+    this.themes.theme() === 'dark' ? 'theme.toLight' : 'theme.toDark',
+  );
   readonly notice = this.workspace.notice;
   readonly state = this.workspace.state;
   readonly lastUsedPath = computed(() => this.firstAccessiblePath(this.recent()));
@@ -52,7 +54,7 @@ export class SplashPage implements OnInit {
   }
 
   toggleTheme(): void {
-    this.settings.setTheme(this.themes.theme() === "dark" ? "light" : "dark");
+    this.settings.setTheme(this.themes.theme() === 'dark' ? 'light' : 'dark');
   }
 
   async openWorkspace(): Promise<void> {
@@ -78,7 +80,7 @@ export class SplashPage implements OnInit {
   }
 
   private isAccessible(row: RecentWorkspace): boolean {
-    return row.status === "ok";
+    return row.status === 'ok';
   }
 
   private async loadInfo(): Promise<void> {

@@ -2,28 +2,54 @@
   <header class="pane-head" data-testid="explorer-head">
     <span class="eyebrow" data-testid="explorer-title">{{ titleKey() | t }}</span>
     <span class="spacer"></span>
-    <ds-button size="small" [iconOnly]="true" [label]="'main.explorer.collapse' | t" [attr.title]="'main.explorer.collapse' | t" data-testid="explorer-collapse" (pressed)="layout.toggleExplorer()"><ds-icon name="chev-l" [size]="17" /></ds-button>
+    <ds-button
+      size="small"
+      [iconOnly]="true"
+      [label]="'main.explorer.collapse' | t"
+      [attr.title]="'main.explorer.collapse' | t"
+      data-testid="explorer-collapse"
+      (pressed)="layout.toggleExplorer()"
+    >
+      <ds-icon name="chev-l" [size]="17" />
+    </ds-button>
   </header>
   <div class="pane-body" data-testid="explorer-body">
     @if (layout.rail() === "projects") {
-      <div data-testid="explorer-projects-host">
-        <app-project-explorer />
-      </div>
+    <div data-testid="explorer-projects-host">
+      <app-project-explorer />
+    </div>
     } @else if (layout.rail() === "novels") {
-      <div data-testid="explorer-novels-host">
-        <app-novel-explorer />
-      </div>
+    <div data-testid="explorer-novels-host">
+      <app-novel-explorer />
+    </div>
     } @else if (layout.rail() === "library") {
-      <div data-testid="explorer-library-host"><app-library-explorer /></div>
+    <div data-testid="explorer-library-host"><app-library-explorer /></div>
     } @else {
-      <div class="empty" data-testid="explorer-empty">
-        <div class="empty-inner">
-          <div class="illus"></div>
-          <h3 class="t-display-xs" data-testid="explorer-empty-title">{{ "main.explorer.empty.title" | t }}</h3>
-          <p class="t-sm t-mute" data-testid="explorer-empty-description">{{ "main.explorer.empty.description" | t }}</p>
-        </div>
+    <div class="empty" data-testid="explorer-empty">
+      <div class="empty-inner">
+        <div class="illus"></div>
+        <h3 class="t-display-xs" data-testid="explorer-empty-title">
+          {{ "main.explorer.empty.title" | t }}
+        </h3>
+        <p class="t-sm t-mute" data-testid="explorer-empty-description">
+          {{ "main.explorer.empty.description" | t }}
+        </p>
       </div>
+    </div>
     }
   </div>
 </aside>
-<div class="divider resizer-v divider-explorer" role="separator" aria-orientation="vertical" [attr.aria-label]="'main.panel.resize.explorer' | t" tabindex="0" [attr.aria-valuenow]="layout.explorerSize()" [attr.aria-valuemin]="layout.panelLimits.explorer.min" [attr.aria-valuemax]="layout.panelLimits.explorer.max" data-testid="explorer-divider" (pointerdown)="layout.beginResize('explorer', $event)" (keydown)="layout.handleResizeKey('explorer', $event)" (dblclick)="layout.resetSize('explorer')"></div>
+<div
+  class="divider resizer-v divider-explorer"
+  role="separator"
+  aria-orientation="vertical"
+  [attr.aria-label]="'main.panel.resize.explorer' | t"
+  tabindex="0"
+  [attr.aria-valuenow]="layout.explorerSize()"
+  [attr.aria-valuemin]="layout.panelLimits.explorer.min"
+  [attr.aria-valuemax]="layout.panelLimits.explorer.max"
+  data-testid="explorer-divider"
+  (pointerdown)="layout.beginResize('explorer', $event)"
+  (keydown)="layout.handleResizeKey('explorer', $event)"
+  (dblclick)="layout.resetSize('explorer')"
+></div>

@@ -1,14 +1,16 @@
-import { Component, effect, inject, input, untracked } from "@angular/core";
-import { NovelReaderService } from "../novel.reader.service";
-import { NovelChapters } from "./chapters.component";
-import { NovelReader } from "./reader.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, effect, inject, input, untracked } from '@angular/core';
+
+import { NovelReaderService } from '../novel.reader.service';
+import { NovelChapters } from './chapters.component';
+import { NovelReader } from './reader.component';
 
 @Component({
-  selector: "app-novel-view",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-view',
   imports: [NovelChapters, NovelReader],
-  templateUrl: "./novel-view.component.html",
-  host: { "data-testid": "novel-view" },
+  templateUrl: './novel-view.component.html',
+  host: { 'data-testid': 'novel-view' },
 })
 export class NovelView {
   readonly reader = inject(NovelReaderService);
@@ -27,7 +29,7 @@ export class NovelView {
     if (this.reader.novelId() === id) {
       return;
     }
-    if (this.reader.screenOf(id) === "reading") {
+    if (this.reader.screenOf(id) === 'reading') {
       void this.reader.openReader(id);
       return;
     }

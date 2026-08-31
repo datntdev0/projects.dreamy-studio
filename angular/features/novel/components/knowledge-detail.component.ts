@@ -1,15 +1,18 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { characterOf, factText, factsAbout, isEntity, isFact, issuesOfItem, mapOf, nameOf, personasOf, predicateLabel } from "../novel.knowledge.rules";
-import { toNovelError } from "../novel.rules";
-import { NovelKnowledgeType } from "./knowledge-type.component";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+// prettier-ignore
+import { KnowledgeEntity, KnowledgeFact, KnowledgeIssue, KnowledgeItem } from '../novel.knowledge.models';
+// prettier-ignore
+import { characterOf, factsAbout, factText, isEntity, isFact, issuesOfItem, mapOf, nameOf, personasOf, predicateLabel } from '../novel.knowledge.rules';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+import { toNovelError } from '../novel.rules';
+import { NovelKnowledgeType } from './knowledge-type.component';
 
 export interface DetailLine {
   id: string;
@@ -20,10 +23,10 @@ export interface DetailLine {
 }
 
 @Component({
-  selector: "app-novel-knowledge-detail",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-knowledge-detail',
   imports: [Icon, CoreModule, NovelKnowledgeType],
-  templateUrl: "./knowledge-detail.component.html",
+  templateUrl: './knowledge-detail.component.html',
 })
 export class NovelKnowledgeDetail {
   private readonly knowledge = inject(NovelKnowledgeService);
@@ -57,18 +60,23 @@ export class NovelKnowledgeDetail {
   }
 
   addFact(): void {
-    this.dialogs.openAdd(this.novelId(), "fact", [this.item().id]);
+    this.dialogs.openAdd(this.novelId(), 'fact', [this.item().id]);
   }
 
   openReview(): void {
-    this.knowledge.setTab(this.novelId(), "review");
+    this.knowledge.setTab(this.novelId(), 'review');
   }
 
   async remove(): Promise<void> {
     try {
       await this.knowledge.confirmRemove(this.novelId(), [this.item().id], this.title());
     } catch (cause) {
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail: toNovelError(cause).detail }), "danger");
+      this.toasts.show(
+        this.languageService.translate('novel.error.generic', {
+          detail: toNovelError(cause).detail,
+        }),
+        'danger',
+      );
     }
   }
 
@@ -82,7 +90,7 @@ export class NovelKnowledgeDetail {
 
   private quoteOf(fact: KnowledgeFact): string {
     const quote = fact.ev[0]?.q;
-    return quote ? `“${quote}”` : "—";
+    return quote ? `“${quote}”` : '—';
   }
 
   private lines(entity: KnowledgeEntity): DetailLine[] {
@@ -92,7 +100,13 @@ export class NovelKnowledgeDetail {
       const outgoing = fact.subject === entity.id;
       const otherId = outgoing ? fact.object : fact.subject;
       const value = otherId === null ? this.quoteOf(fact) : nameOf(map, otherId);
-      out.push({ id: fact.id, pred: predicateLabel(this.knowledge.ontology(), fact.pred, this.text.bind(this)), value, other: otherId, outgoing });
+      out.push({
+        id: fact.id,
+        pred: predicateLabel(this.knowledge.ontology(), fact.pred, this.text.bind(this)),
+        value,
+        other: otherId,
+        outgoing,
+      });
     }
     return out;
   }
@@ -114,40 +128,52 @@ export class NovelKnowledgeDetail {
 
   private buildRelations(): DetailLine[] {
     const entity = this.entity();
-    return entity ? this.lines(entity).filter((line) => line.other !== null && !this.isPersonaLink(line.id)) : [];
+    return entity
+      ? this.lines(entity).filter((line) => line.other !== null && !this.isPersonaLink(line.id))
+      : [];
   }
 
   private isPersonaLink(factId: string): boolean {
     const fact = this.items().find((item) => item.id === factId);
-    return fact !== undefined && isFact(fact) && fact.pred === "persona_of";
+    return fact !== undefined && isFact(fact) && fact.pred === 'persona_of';
   }
 
   private buildPersonas(): KnowledgeEntity[] {
     const entity = this.entity();
-    return entity && entity.type === "character" ? personasOf(this.items(), entity.id) : [];
+    return entity && entity.type === 'character' ? personasOf(this.items(), entity.id) : [];
   }
 
   private buildCharacter(): KnowledgeEntity | null {
     const entity = this.entity();
-    return entity && entity.type === "persona" ? (characterOf(this.items(), entity.id) ?? null) : null;
+    return entity && entity.type === 'persona'
+      ? (characterOf(this.items(), entity.id) ?? null)
+      : null;
   }
 
   private buildIssues(): KnowledgeIssue[] {
     const open = this.knowledge.issuesOf(this.novelId());
     const item = this.item();
     const own = issuesOfItem(open, item.id);
-    const related = isEntity(item) ? factsAbout(this.items(), item.id).flatMap((fact) => issuesOfItem(open, fact.id)) : [];
+    const related = isEntity(item)
+      ? factsAbout(this.items(), item.id).flatMap((fact) => issuesOfItem(open, fact.id))
+      : [];
     return [...own, ...related.filter((issue) => !own.some((entry) => entry.id === issue.id))];
   }
 
   private buildTitle(): string {
     const item = this.item();
-    return isEntity(item) ? item.name : factText(this.knowledge.ontology(), mapOf(this.items()), item, this.text.bind(this));
+    return isEntity(item)
+      ? item.name
+      : factText(this.knowledge.ontology(), mapOf(this.items()), item, this.text.bind(this));
   }
 
   private buildStale(): string {
     const chapters = this.item().stale;
-    return chapters.length > 0 ? this.languageService.translate("novel.knowledge.check.stale", { chapters: chapters.join(", ") }) : "";
+    return chapters.length > 0
+      ? this.languageService.translate('novel.knowledge.check.stale', {
+          chapters: chapters.join(', '),
+        })
+      : '';
   }
 
   private buildQuotes(): string[] {
@@ -157,8 +183,11 @@ export class NovelKnowledgeDetail {
 
   private buildFactKind(): LanguageKey {
     const fact = this.fact();
-    const kind = fact ? (this.knowledge.ontology().predicateDef(fact.pred)?.kind ?? (fact.object === null ? "scalar" : "relationship")) : "scalar";
-    return kind === "scalar" ? "novel.knowledge.fact.scalar" : "novel.knowledge.fact.relationship";
+    const kind = fact
+      ? (this.knowledge.ontology().predicateDef(fact.pred)?.kind ??
+        (fact.object === null ? 'scalar' : 'relationship'))
+      : 'scalar';
+    return kind === 'scalar' ? 'novel.knowledge.fact.scalar' : 'novel.knowledge.fact.relationship';
   }
 
   endName(id: string | null): string {

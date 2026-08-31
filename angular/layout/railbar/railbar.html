@@ -1,9 +1,52 @@
 <nav class="rail" [attr.aria-label]="'main.rail.label' | t" data-testid="railbar">
   @for (item of items; track item.id) {
-    <button type="button" class="rail-btn" [class.is-active]="layout.isRailActive(item.id)" [attr.aria-pressed]="layout.isRailActive(item.id)" [attr.aria-label]="item.labelKey | t" [attr.title]="item.labelKey | t" [attr.data-rail]="item.id" data-testid="railbar-item" (click)="layout.selectRail(item.id)"><ds-icon [name]="item.icon" [size]="20" /></button>
+  <button
+    type="button"
+    class="rail-btn"
+    [class.is-active]="layout.isRailActive(item.id)"
+    [attr.aria-pressed]="layout.isRailActive(item.id)"
+    [attr.aria-label]="item.labelKey | t"
+    [attr.title]="item.labelKey | t"
+    [attr.data-rail]="item.id"
+    data-testid="railbar-item"
+    (click)="layout.selectRail(item.id)"
+  >
+    <ds-icon [name]="item.icon" [size]="20" />
+  </button>
   }
   <span class="spacer"></span>
-  <button type="button" class="rail-btn" [class.is-active]="layout.assistantActive()" [attr.aria-pressed]="layout.assistantActive()" [attr.aria-label]="'main.rail.assistant' | t" [attr.title]="'main.rail.assistant' | t" data-testid="railbar-assistant" (click)="layout.toggleAssistant()"><ds-icon name="spark" [size]="20" /></button>
-  <button type="button" class="rail-btn" [class.is-active]="tabs.isActive(pipelinesTabId)" [attr.aria-pressed]="tabs.isActive(pipelinesTabId)" [attr.aria-label]="'main.rail.pipelines' | t" [attr.title]="'main.rail.pipelines' | t" data-testid="railbar-pipelines" (click)="tabs.openPipelines()"><ds-icon name="activity" [size]="20" /></button>
-  <button type="button" class="rail-btn" [attr.aria-label]="'main.rail.settings' | t" [attr.title]="'main.rail.settings' | t" data-testid="railbar-settings" (click)="settings.openDialog()"><ds-icon name="settings" [size]="20" /></button>
+  <button
+    type="button"
+    class="rail-btn"
+    [class.is-active]="layout.assistantActive()"
+    [attr.aria-pressed]="layout.assistantActive()"
+    [attr.aria-label]="'main.rail.assistant' | t"
+    [attr.title]="'main.rail.assistant' | t"
+    data-testid="railbar-assistant"
+    (click)="layout.toggleAssistant()"
+  >
+    <ds-icon name="spark" [size]="20" />
+  </button>
+  <button
+    type="button"
+    class="rail-btn"
+    [class.is-active]="tabs.isActive(pipelinesTabId)"
+    [attr.aria-pressed]="tabs.isActive(pipelinesTabId)"
+    [attr.aria-label]="'main.rail.pipelines' | t"
+    [attr.title]="'main.rail.pipelines' | t"
+    data-testid="railbar-pipelines"
+    (click)="tabs.openPipelines()"
+  >
+    <ds-icon name="activity" [size]="20" />
+  </button>
+  <button
+    type="button"
+    class="rail-btn"
+    [attr.aria-label]="'main.rail.settings' | t"
+    [attr.title]="'main.rail.settings' | t"
+    data-testid="railbar-settings"
+    (click)="settings.openDialog()"
+  >
+    <ds-icon name="settings" [size]="20" />
+  </button>
 </nav>

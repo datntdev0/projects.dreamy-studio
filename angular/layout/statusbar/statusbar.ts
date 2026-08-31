@@ -1,16 +1,17 @@
-import { Component, OnInit, inject, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { PipelineService } from "@features/pipeline/pipeline.service";
-import { AppInfo } from "@features/workspace/workspace.models";
-import { LayoutService } from "../layout.service";
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { PipelineService } from '@features/pipeline/pipeline.service';
+import { AppInfo } from '@features/workspace/workspace.models';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+import { CoreModule } from '@shared/core.module';
+
+import { LayoutService } from '../layout.service';
 
 @Component({
-  selector: "app-statusbar",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-statusbar',
   imports: [Icon, CoreModule],
-  templateUrl: "./statusbar.html",
+  templateUrl: './statusbar.html',
 })
 export class Statusbar implements OnInit {
   private readonly service = inject(WorkspaceService);

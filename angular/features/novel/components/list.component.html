@@ -1,66 +1,270 @@
 <div class="nv" data-testid="novel-list">
   <div class="nv-bar" data-testid="novel-list-bar">
     <div class="nv-bar-l" data-testid="novel-list-bar-left">
-      <label class="search"><span class="sr-only">{{ "novel.list.search.label" | t }}</span><input id="nm-q" class="input" type="search" [value]="novels.query()" [attr.placeholder]="'novel.list.search.placeholder' | t" data-testid="novel-list-search" (input)="onQuery($event)"></label>
-      <span class="t-sm t-mute" data-testid="novel-list-count">{{ "novel.count" | t: { count: novels.visible().length } }}</span>
+      <label class="search">
+        <span class="sr-only">{{ 'novel.list.search.label' | t }}</span>
+        <input
+          id="nm-q"
+          class="input"
+          type="search"
+          [value]="novels.query()"
+          [attr.placeholder]="'novel.list.search.placeholder' | t"
+          data-testid="novel-list-search"
+          (input)="onQuery($event)"
+        />
+      </label>
+      <span class="t-sm t-mute" data-testid="novel-list-count">
+        {{ 'novel.count' | t: { count: novels.visible().length } }}
+      </span>
       @if (novels.filterActive()) {
         <span class="nm-chips" data-testid="novel-list-chips">
           @for (tag of novels.filters().tags; track tag) {
-            <span class="tag" data-testid="novel-list-chip-tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'novel.list.filter.remove' | t: { label: tag }" data-testid="novel-list-chip-remove" (click)="toggleTag(tag)"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></span>
+            <span class="tag" data-testid="novel-list-chip-tag">
+              {{ tag }}
+              <button
+                type="button"
+                class="tag-x"
+                [attr.aria-label]="'novel.list.filter.remove' | t: { label: tag }"
+                data-testid="novel-list-chip-remove"
+                (click)="toggleTag(tag)"
+              >
+                <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-x" /></svg>
+              </button>
+            </span>
           }
           @for (lang of novels.filters().langs; track lang) {
-            <span class="tag" data-testid="novel-list-chip-lang">{{ lang }}<button type="button" class="tag-x" [attr.aria-label]="'novel.list.filter.remove' | t: { label: lang }" data-testid="novel-list-chip-remove" (click)="toggleLang(lang)"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></span>
+            <span class="tag" data-testid="novel-list-chip-lang">
+              {{ lang }}
+              <button
+                type="button"
+                class="tag-x"
+                [attr.aria-label]="'novel.list.filter.remove' | t: { label: lang }"
+                data-testid="novel-list-chip-remove"
+                (click)="toggleLang(lang)"
+              >
+                <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-x" /></svg>
+              </button>
+            </span>
           }
-          <button type="button" class="btn btn-sm btn-ghost" data-testid="novel-list-clear-filters" (click)="novels.clearFilters()">{{ "novel.list.filter.clear" | t }}</button>
+          <button
+            type="button"
+            class="btn btn-sm btn-ghost"
+            data-testid="novel-list-clear-filters"
+            (click)="novels.clearFilters()"
+          >
+            {{ 'novel.list.filter.clear' | t }}
+          </button>
         </span>
       }
     </div>
     <span class="spacer"></span>
     <div class="nv-bar-r" data-testid="novel-list-bar-right">
       <div class="seg" role="group" data-testid="novel-list-view">
-        <button type="button" [class.is-active]="isViewActive('grid')" [attr.data-tip]="'novel.list.view.grid' | t" [attr.aria-label]="'novel.list.view.grid' | t" [attr.aria-pressed]="isViewActive('grid')" data-testid="novel-list-view-grid" (click)="setView('grid')"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-frames"/></svg></button>
-        <button type="button" [class.is-active]="isViewActive('list')" [attr.data-tip]="'novel.list.view.list' | t" [attr.aria-label]="'novel.list.view.list' | t" [attr.aria-pressed]="isViewActive('list')" data-testid="novel-list-view-list" (click)="setView('list')"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-list"/></svg></button>
+        <button
+          type="button"
+          [class.is-active]="isViewActive('grid')"
+          [attr.data-tip]="'novel.list.view.grid' | t"
+          [attr.aria-label]="'novel.list.view.grid' | t"
+          [attr.aria-pressed]="isViewActive('grid')"
+          data-testid="novel-list-view-grid"
+          (click)="setView('grid')"
+        >
+          <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-frames" /></svg>
+        </button>
+        <button
+          type="button"
+          [class.is-active]="isViewActive('list')"
+          [attr.data-tip]="'novel.list.view.list' | t"
+          [attr.aria-label]="'novel.list.view.list' | t"
+          [attr.aria-pressed]="isViewActive('list')"
+          data-testid="novel-list-view-list"
+          (click)="setView('list')"
+        >
+          <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-list" /></svg>
+        </button>
       </div>
-      <button class="btn btn-sm" type="button" [attr.data-tip]="'novel.list.importTip' | t" data-testid="novel-list-import" (click)="openImport()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload"/></svg>{{ "novel.list.import" | t }}</button>
-      <button class="btn btn-sm btn-primary" type="button" data-testid="novel-list-create" (click)="openCreate()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus"/></svg>{{ "novel.list.create" | t }}</button>
+      <button
+        class="btn btn-sm"
+        type="button"
+        [attr.data-tip]="'novel.list.importTip' | t"
+        data-testid="novel-list-import"
+        (click)="openImport()"
+      >
+        <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload" /></svg>
+        {{ 'novel.list.import' | t }}
+      </button>
+      <button
+        class="btn btn-sm btn-primary"
+        type="button"
+        data-testid="novel-list-create"
+        (click)="openCreate()"
+      >
+        <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus" /></svg>
+        {{ 'novel.list.create' | t }}
+      </button>
     </div>
   </div>
   <div class="nv-body" data-testid="novel-list-body">
-    <div class="nv-scroll" [class.table-view]="novels.view() === 'list' && novels.visible().length > 0" data-testid="novel-list-scroll">
+    <div
+      class="nv-scroll"
+      [class.table-view]="novels.view() === 'list' && novels.visible().length > 0"
+      data-testid="novel-list-scroll"
+    >
       @if (novels.error(); as failure) {
-        <div class="empty" data-testid="novel-list-error"><div class="empty-inner"><div class="illus"></div><p class="t-sm t-mute">{{ "novel.error.loadFailed" | t: { detail: failure.detail } }}</p></div></div>
+        <div class="empty" data-testid="novel-list-error">
+          <div class="empty-inner">
+            <div class="illus"></div>
+            <p class="t-sm t-mute">
+              {{ 'novel.error.loadFailed' | t: { detail: failure.detail } }}
+            </p>
+          </div>
+        </div>
       } @else if (novels.visible().length === 0) {
         @if (novels.isEmpty()) {
-          <div class="empty" data-testid="novel-list-empty-none"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-list-empty-none-title">{{ "novel.list.empty.none.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-list-empty-none-description">{{ "novel.list.empty.none.description" | t }}</p><div class="empty-act"><button class="btn btn-primary" type="button" data-testid="novel-list-empty-create" (click)="openCreate()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus"/></svg>{{ "novel.list.empty.none.create" | t }}</button><button class="btn" type="button" data-testid="novel-list-empty-import" (click)="openImport()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload"/></svg>{{ "novel.list.empty.none.import" | t }}</button></div></div></div>
+          <div class="empty" data-testid="novel-list-empty-none">
+            <div class="empty-inner">
+              <div class="illus"></div>
+              <h4 class="t-display-xs" data-testid="novel-list-empty-none-title">
+                {{ 'novel.list.empty.none.title' | t }}
+              </h4>
+              <p class="t-sm t-mute" data-testid="novel-list-empty-none-description">
+                {{ 'novel.list.empty.none.description' | t }}
+              </p>
+              <div class="empty-act">
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  data-testid="novel-list-empty-create"
+                  (click)="openCreate()"
+                >
+                  <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-plus" /></svg>
+                  {{ 'novel.list.empty.none.create' | t }}
+                </button>
+                <button
+                  class="btn"
+                  type="button"
+                  data-testid="novel-list-empty-import"
+                  (click)="openImport()"
+                >
+                  <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-upload" /></svg>
+                  {{ 'novel.list.empty.none.import' | t }}
+                </button>
+              </div>
+            </div>
+          </div>
         } @else if (novels.loaded()) {
-          <div class="empty" data-testid="novel-list-empty-nomatch"><div class="empty-inner"><div class="illus"></div><h4 class="t-display-xs" data-testid="novel-list-empty-nomatch-title">{{ "novel.list.empty.noMatch.title" | t }}</h4><p class="t-sm t-mute" data-testid="novel-list-empty-nomatch-description">{{ "novel.list.empty.noMatch.description" | t }}</p><button class="btn" type="button" data-testid="novel-list-empty-clear" (click)="novels.clearQueryAndFilters()">{{ "novel.list.empty.noMatch.clear" | t }}</button></div></div>
+          <div class="empty" data-testid="novel-list-empty-nomatch">
+            <div class="empty-inner">
+              <div class="illus"></div>
+              <h4 class="t-display-xs" data-testid="novel-list-empty-nomatch-title">
+                {{ 'novel.list.empty.noMatch.title' | t }}
+              </h4>
+              <p class="t-sm t-mute" data-testid="novel-list-empty-nomatch-description">
+                {{ 'novel.list.empty.noMatch.description' | t }}
+              </p>
+              <button
+                class="btn"
+                type="button"
+                data-testid="novel-list-empty-clear"
+                (click)="novels.clearQueryAndFilters()"
+              >
+                {{ 'novel.list.empty.noMatch.clear' | t }}
+              </button>
+            </div>
+          </div>
         }
-      } @else if (novels.view() === "grid") {
+      } @else if (novels.view() === 'grid') {
         <div class="nm-grid" data-testid="novel-list-grid">
           @for (novel of novels.visible(); track novel.id) {
-            <div class="nm-card is-clickable is-dblclick" [class.is-selected]="isSelected(novel.id)" tabindex="0" [attr.title]="nameOf(novel)" [attr.data-id]="novel.id" data-testid="novel-list-card" (click)="onSelect(novel.id, $event)" (dblclick)="onDoubleClick($event, novel)" (keydown.enter)="onEnter($event, novel)">
-              <div class="nm-cover" [class.has-img]="hasImage(novel)" [class.is-empty]="!hasImage(novel)" [style.background]="backgroundOf(novel)">
+            <div
+              class="nm-card is-clickable is-dblclick"
+              [class.is-selected]="isSelected(novel.id)"
+              tabindex="0"
+              [attr.title]="nameOf(novel)"
+              [attr.data-id]="novel.id"
+              data-testid="novel-list-card"
+              (click)="onSelect(novel.id, $event)"
+              (dblclick)="onDoubleClick($event, novel)"
+              (keydown.enter)="onEnter($event, novel)"
+            >
+              <div
+                class="nm-cover"
+                [class.has-img]="hasImage(novel)"
+                [class.is-empty]="!hasImage(novel)"
+                [style.background]="backgroundOf(novel)"
+              >
                 <span class="badge nm-lang">{{ novel.lang }}</span>
                 @if (!hasImage(novel)) {
                   <ds-icon class="nm-cover-ph" name="image" [size]="40" />
                 }
               </div>
-              <div class="nm-card-b"><div class="nm-card-t t-ink">{{ nameOf(novel) }}</div><div class="nm-fr"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></div></div>
+              <div class="nm-card-b">
+                <div class="nm-card-t t-ink">{{ nameOf(novel) }}</div>
+                <div class="nm-fr">
+                  <app-novel-progress-frac
+                    icon="lang"
+                    [done]="novel.translatedCount"
+                    [total]="novel.chapterCount"
+                    [label]="'novel.frac.translated' | t"
+                  />
+                  <app-novel-progress-frac
+                    icon="graph"
+                    [done]="novel.analyzedCount"
+                    [total]="novel.chapterCount"
+                    [label]="'novel.frac.analyzed' | t"
+                  />
+                </div>
+              </div>
             </div>
           }
         </div>
       } @else {
-        <ds-datatable [columns]="tableColumns" [rows]="novels.visible()" trackKey="id" minWidth="496px" variant="fill" [actions]="tableActions" [actionsLabel]="'novel.list.actions' | t" rowTestId="novel-list-row" [rowClass]="tableRowClass" data-testid="novel-list-table" (rowClick)="onSelect(novelOf($event.row).id, $event.event)" (rowDblClick)="onTableDoubleClick($event)" (rowEnter)="onTableEnter($event)">
+        <ds-datatable
+          [columns]="tableColumns"
+          [rows]="novels.visible()"
+          trackKey="id"
+          minWidth="496px"
+          variant="fill"
+          [actions]="tableActions"
+          [actionsLabel]="'novel.list.actions' | t"
+          rowTestId="novel-list-row"
+          [rowClass]="tableRowClass"
+          data-testid="novel-list-table"
+          (rowClick)="onSelect(novelOf($event.row).id, $event.event)"
+          (rowDblClick)="onTableDoubleClick($event)"
+          (rowEnter)="onTableEnter($event)"
+        >
           <ng-template dsCell="title" let-row>
             @let novel = novelOf(row);
-            <div class="nm-title"><ds-cover [image]="imageOf(novel)" /><div><div class="t-ink">{{ nameOf(novel) }}</div><div class="t-sm t-mute">{{ subtitleOf(novel) }}</div></div></div>
+            <div class="nm-title">
+              <ds-cover [image]="imageOf(novel)" />
+              <div>
+                <div class="t-ink">{{ nameOf(novel) }}</div>
+                <div class="t-sm t-mute">{{ subtitleOf(novel) }}</div>
+              </div>
+            </div>
           </ng-template>
-          <ng-template dsCell="source" let-row><span class="badge">{{ novelOf(row).lang }}</span></ng-template>
+          <ng-template dsCell="source" let-row>
+            <span class="badge">{{ novelOf(row).lang }}</span>
+          </ng-template>
           <ng-template dsCell="chapters" let-row>{{ fmt(novelOf(row).chapterCount) }}</ng-template>
           <ng-template dsCell="words" let-row>{{ fmt(novelOf(row).wordCount) }}</ng-template>
           <ng-template dsCell="progress" let-row>
             @let novel = novelOf(row);
-            <div class="nm-progress" data-testid="novel-list-progress"><app-novel-progress-frac icon="lang" [done]="novel.translatedCount" [total]="novel.chapterCount" [label]="'novel.frac.translated' | t" /><app-novel-progress-frac icon="graph" [done]="novel.analyzedCount" [total]="novel.chapterCount" [label]="'novel.frac.analyzed' | t" /></div>
+            <div class="nm-progress" data-testid="novel-list-progress">
+              <app-novel-progress-frac
+                icon="lang"
+                [done]="novel.translatedCount"
+                [total]="novel.chapterCount"
+                [label]="'novel.frac.translated' | t"
+              />
+              <app-novel-progress-frac
+                icon="graph"
+                [done]="novel.analyzedCount"
+                [total]="novel.chapterCount"
+                [label]="'novel.frac.analyzed' | t"
+              />
+            </div>
           </ng-template>
         </ds-datatable>
       }

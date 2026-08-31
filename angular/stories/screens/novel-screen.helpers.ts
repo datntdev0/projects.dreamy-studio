@@ -19,5 +19,5 @@ export async function click(root: HTMLElement, selector: string): Promise<void> 
 export async function choose(root: HTMLElement, selector: string, value: string): Promise<void> {
   const select = await waitFor<HTMLSelectElement>(root, selector);
   select.value = value;
-  select.dispatchEvent(new Event("change", { bubbles: true }));
+  select.dispatchEvent(new Event('change', { bubbles: true }));
 }

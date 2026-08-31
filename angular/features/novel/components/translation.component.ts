@@ -1,26 +1,39 @@
-import { Component, computed, effect, inject, input, untracked } from "@angular/core";
-import { Cover } from "@components/cover";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { NovelLang, NovelSummary, TargetLang } from "../novel.models";
-import { NovelService } from "../novel.service";
-import { NOVEL_LANG_KEYS, displayName } from "../novel.rules";
-import { NovelTranslationService } from "../novel.translation.service";
-import { TranslationStep, TranslationView } from "../novel.translation.models";
-import { STEP_ICONS, STEP_HINT_KEYS, STEP_LABEL_KEYS, TRANSLATION_STEPS, stepIndex, targetsOf } from "../novel.translation.rules";
-import { NovelTranslationDictionary } from "./translation-dictionary.component";
-import { NovelTranslationGuidelines } from "./translation-guidelines.component";
-import { NovelTranslationPipeline } from "./translation-pipeline.component";
-import { NovelTranslationResult } from "./translation-result.component";
-import { NovelTranslationWarnings } from "./translation-warnings.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { Cover } from '@components/cover';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { NovelLang, NovelSummary, TargetLang } from '../novel.models';
+import { displayName, NOVEL_LANG_KEYS } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { TranslationStep, TranslationView } from '../novel.translation.models';
+// prettier-ignore
+import { STEP_HINT_KEYS, STEP_ICONS, STEP_LABEL_KEYS, stepIndex, targetsOf, TRANSLATION_STEPS } from '../novel.translation.rules';
+import { NovelTranslationService } from '../novel.translation.service';
+import { NovelTranslationDictionary } from './translation-dictionary.component';
+import { NovelTranslationGuidelines } from './translation-guidelines.component';
+import { NovelTranslationPipeline } from './translation-pipeline.component';
+import { NovelTranslationResult } from './translation-result.component';
+import { NovelTranslationWarnings } from './translation-warnings.component';
 
 @Component({
-  selector: "app-novel-translation",
-  standalone: true,
-  imports: [Cover, Icon, CoreModule, NovelTranslationDictionary, NovelTranslationGuidelines, NovelTranslationPipeline, NovelTranslationResult, NovelTranslationWarnings],
-  templateUrl: "./translation.component.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-translation',
+  imports: [
+    Cover,
+    Icon,
+    CoreModule,
+    NovelTranslationDictionary,
+    NovelTranslationGuidelines,
+    NovelTranslationPipeline,
+    NovelTranslationResult,
+    NovelTranslationWarnings,
+  ],
+  templateUrl: './translation.component.html',
 })
 export class NovelTranslation {
   private readonly novels = inject(NovelService);
@@ -53,7 +66,7 @@ export class NovelTranslation {
   }
 
   onTarget(event: Event): void {
-    this.translation.setTarget(this.novelId(), (event.target as HTMLSelectElement).value as TargetLang);
+    this.translation.setTarget(this.novelId(), fieldValue(event) as TargetLang);
   }
 
   labelKey(step: TranslationStep): LanguageKey {
@@ -82,26 +95,44 @@ export class NovelTranslation {
     const review = this.translation.reviewCountOf(id);
     const warnings = this.translation.warningsOf(id).length;
     switch (step) {
-      case "dict":
-        return this.languageService.translate("novel.translation.summary.dict", { count: this.translation.of(id).dict.length });
-      case "guide":
-        return this.languageService.translate(this.translation.of(id).guidelines ? "novel.translation.summary.guideSet" : "novel.translation.summary.guideEmpty");
-      case "trans":
-        return this.translation.isTranslating(id) ? this.languageService.translate("novel.translation.summary.running") : this.languageService.translate("novel.translation.summary.trans", { done: this.translation.translatedCountOf(id), total });
-      case "result":
-        return review ? this.languageService.translate("novel.translation.summary.review", { count: review }) : this.languageService.translate("novel.translation.summary.reviewed");
-      case "warn":
-        return warnings ? this.languageService.translate("novel.translation.summary.warn", { count: warnings }) : this.languageService.translate("novel.translation.summary.none");
+      case 'dict':
+        return this.languageService.translate('novel.translation.summary.dict', {
+          count: this.translation.of(id).dict.length,
+        });
+      case 'guide':
+        return this.languageService.translate(
+          this.translation.of(id).guidelines
+            ? 'novel.translation.summary.guideSet'
+            : 'novel.translation.summary.guideEmpty',
+        );
+      case 'trans':
+        return this.translation.isTranslating(id)
+          ? this.languageService.translate('novel.translation.summary.running')
+          : this.languageService.translate('novel.translation.summary.trans', {
+              done: this.translation.translatedCountOf(id),
+              total,
+            });
+      case 'result':
+        return review
+          ? this.languageService.translate('novel.translation.summary.review', { count: review })
+          : this.languageService.translate('novel.translation.summary.reviewed');
+      case 'warn':
+        return warnings
+          ? this.languageService.translate('novel.translation.summary.warn', { count: warnings })
+          : this.languageService.translate('novel.translation.summary.none');
     }
   }
 
   isWarn(step: TranslationStep): boolean {
     const id = this.novelId();
-    return (step === "warn" && this.translation.warningsOf(id).length > 0) || (step === "result" && this.translation.reviewCountOf(id) > 0);
+    return (
+      (step === 'warn' && this.translation.warningsOf(id).length > 0) ||
+      (step === 'result' && this.translation.reviewCountOf(id) > 0)
+    );
   }
 
   isRunning(step: TranslationStep): boolean {
-    return step === "trans" && this.translation.isTranslating(this.novelId());
+    return step === 'trans' && this.translation.isTranslating(this.novelId());
   }
 
   private findNovel(): NovelSummary | null {
@@ -110,7 +141,7 @@ export class NovelTranslation {
 
   private buildCover(): string {
     const novel = this.novel();
-    return novel ? (this.novels.coverUrl(novel) ?? "") : "";
+    return novel ? (this.novels.coverUrl(novel) ?? '') : '';
   }
 
   private buildTarget(): TargetLang {

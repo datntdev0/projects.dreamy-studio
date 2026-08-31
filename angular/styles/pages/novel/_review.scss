@@ -1,0 +1,80 @@
+.rv-rules {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  padding: var(--sp-md);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--canvas-card);
+}
+.rule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  height: 26px;
+  padding: 0 var(--sp-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-full);
+  background: none;
+  color: var(--body);
+  font: 400 12.5px/1 var(--font);
+  cursor: pointer;
+}
+.rule:hover {
+  background: var(--canvas-soft);
+}
+.rule.is-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.rule b {
+  font: 500 11.5px/1 var(--font-mono);
+}
+.rule.is-err b {
+  color: var(--danger);
+}
+.rule.is-warn b {
+  color: var(--warning);
+}
+.rule.is-ok {
+  color: var(--mute);
+}
+.rule.is-ok .ic {
+  width: 13px;
+  height: 13px;
+  color: var(--success);
+}
+.rv-list .iss {
+  display: grid;
+  gap: var(--sp-sm);
+  border-left: 3px solid var(--warning);
+  cursor: pointer;
+  width: min(100%, var(--kb-w));
+  justify-self: center;
+}
+.rv-list .iss.is-error {
+  border-left-color: var(--danger);
+}
+.iss-top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+.iss p {
+  margin: 0;
+}
+.iss-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+}
+.iss-ev {
+  display: grid;
+  gap: var(--sp-xs);
+}
+.quote.is-bad {
+  border-left-color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}

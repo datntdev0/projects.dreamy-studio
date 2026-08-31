@@ -1,0 +1,27 @@
+<span class="opt-row" data-testid="novel-range-fields">
+  <input
+    class="input an-num"
+    type="number"
+    inputmode="numeric"
+    step="1"
+    [min]="min()"
+    [max]="max()"
+    [value]="from()"
+    [attr.aria-label]="fromKey() | t"
+    [attr.data-testid]="testidPrefix() + '-from'"
+    (change)="changeFrom($event)"
+  />
+  <span class="t-mute">{{ joinKey() | t }}</span>
+  <input
+    class="input an-num"
+    type="number"
+    inputmode="numeric"
+    step="1"
+    [min]="min()"
+    [max]="max()"
+    [value]="to()"
+    [attr.aria-label]="toKey() | t"
+    [attr.data-testid]="testidPrefix() + '-to'"
+    (change)="changeTo($event)"
+  />
+</span>

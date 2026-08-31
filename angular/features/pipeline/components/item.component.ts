@@ -1,26 +1,30 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { formatStamp } from "@features/novel/novel.rules";
-import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@features/novel/novel.translation.models";
-import { PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, elapsedMs, etaMs, firstError, formatDuration, isActive, kindIcon, kindKey, kindSize, percentOf, queuedCount, runningTasks } from "../pipeline.rules";
-import { PipelineService } from "../pipeline.service";
-import { PipelineStrip } from "./strip.component";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Icon } from '@components/icon';
+import { formatStamp } from '@features/novel/novel.rules';
+// prettier-ignore
+import { PipelineSnapshot, PipelineStatus, PipelineTask } from '@features/novel/novel.translation.models';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+
+// prettier-ignore
+import { durationMs, elapsedMs, etaMs, firstError, formatDuration, isActive, kindIcon, kindKey, kindSize, percentOf, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, queuedCount, runningTasks } from '../pipeline.rules';
+import { PipelineService } from '../pipeline.service';
+import { PipelineStrip } from './strip.component';
 
 @Component({
-  selector: "li[app-pipeline-item]",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'li[app-pipeline-item]',
   host: {
-    class: "pipe-item",
-    "[class.is-running]": "running()",
-    "[class.is-selected]": "selected()",
-    "[attr.data-pipeline-id]": "pipeline().id",
-    "[attr.data-status]": "pipeline().status",
-    "[attr.data-kind]": "pipeline().kind",
+    class: 'pipe-item',
+    'data-testid': 'pipeline-item',
+    '[class.is-running]': 'running()',
+    '[class.is-selected]': 'selected()',
+    '[attr.data-pipeline-id]': 'pipeline().id',
+    '[attr.data-status]': 'pipeline().status',
+    '[attr.data-kind]': 'pipeline().kind',
   },
   imports: [Icon, CoreModule, PipelineStrip],
-  templateUrl: "./item.component.html",
+  templateUrl: './item.component.html',
 })
 export class PipelineItem {
   readonly pipelines = inject(PipelineService);
@@ -49,7 +53,7 @@ export class PipelineItem {
   }
 
   taskLabelKey(task: PipelineTask): LanguageKey {
-    return task.passage === null ? "pipeline.task.chapter" : "pipeline.task.passage";
+    return task.passage === null ? 'pipeline.task.chapter' : 'pipeline.task.passage';
   }
 
   open(): void {
@@ -86,7 +90,7 @@ export class PipelineItem {
 
   private buildEta(): string {
     const eta = etaMs(this.pipeline(), this.now());
-    return eta === null ? "" : formatDuration(eta);
+    return eta === null ? '' : formatDuration(eta);
   }
 
   private buildDuration(): string {

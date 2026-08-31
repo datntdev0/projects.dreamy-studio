@@ -1,18 +1,19 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { Graph, GraphEdge, GraphGroup, GraphLabels, GraphNode } from "@components/graph";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { KnowledgeView } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { entitiesOf, flaggedIds, graphLinks, predicateLabel } from "../novel.knowledge.rules";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Graph, GraphEdge, GraphGroup, GraphLabels, GraphNode } from '@components/graph';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { KnowledgeView } from '../novel.knowledge.models';
+import { entitiesOf, flaggedIds, graphLinks, predicateLabel } from '../novel.knowledge.rules';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
 
 @Component({
-  selector: "app-novel-knowledge-graph",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-knowledge-graph',
   imports: [Graph, CoreModule],
-  templateUrl: "./knowledge-graph.component.html",
+  templateUrl: './knowledge-graph.component.html',
 })
 export class NovelKnowledgeGraph {
   private readonly knowledge = inject(NovelKnowledgeService);
@@ -21,7 +22,7 @@ export class NovelKnowledgeGraph {
 
   readonly novelId = input.required<number>();
 
-  readonly hiddenGroups: string[] = ["term", "event"];
+  readonly hiddenGroups: string[] = ['term', 'event'];
 
   readonly view = computed(this.buildView.bind(this));
   readonly nodes = computed(this.buildNodes.bind(this));
@@ -53,7 +54,11 @@ export class NovelKnowledgeGraph {
   }
 
   private buildNodes(): GraphNode[] {
-    return entitiesOf(this.knowledge.visibleOf(this.novelId()).items).map((entity) => ({ id: entity.id, label: entity.name, group: entity.type }));
+    return entitiesOf(this.knowledge.visibleOf(this.novelId()).items).map((entity) => ({
+      id: entity.id,
+      label: entity.name,
+      group: entity.type,
+    }));
   }
 
   private buildEdges(): GraphEdge[] {
@@ -61,7 +66,9 @@ export class NovelKnowledgeGraph {
   }
 
   private buildGroups(): GraphGroup[] {
-    return this.knowledge.ontology().types.map((type) => ({ key: type.key, label: this.text(type.labelKey), color: type.color }));
+    return this.knowledge
+      .ontology()
+      .types.map((type) => ({ key: type.key, label: this.text(type.labelKey), color: type.color }));
   }
 
   private buildFlagged(): string[] {
@@ -76,23 +83,23 @@ export class NovelKnowledgeGraph {
 
   private buildLabels(): Partial<GraphLabels> {
     return {
-      graph: this.text("novel.knowledge.graph.title"),
-      empty: this.text("novel.knowledge.graph.empty"),
-      zoomIn: this.text("novel.knowledge.graph.zoomIn"),
-      zoomOut: this.text("novel.knowledge.graph.zoomOut"),
-      fit: this.text("novel.knowledge.graph.fit"),
-      controls: "Graph controls",
-      filters: this.text("novel.knowledge.graph.filters"),
-      search: this.text("novel.knowledge.graph.search"),
-      orphans: this.text("novel.knowledge.graph.orphans"),
-      display: this.text("novel.knowledge.graph.display"),
-      nodeLabels: this.text("novel.knowledge.graph.nodeLabels"),
-      edgeLabels: this.text("novel.knowledge.graph.edgeLabels"),
-      forces: this.text("novel.knowledge.graph.forces"),
-      center: this.text("novel.knowledge.graph.center"),
-      repel: this.text("novel.knowledge.graph.repel"),
-      distance: this.text("novel.knowledge.graph.distance"),
-      rearrange: this.text("novel.knowledge.graph.rearrange"),
+      graph: this.text('novel.knowledge.graph.title'),
+      empty: this.text('novel.knowledge.graph.empty'),
+      zoomIn: this.text('novel.knowledge.graph.zoomIn'),
+      zoomOut: this.text('novel.knowledge.graph.zoomOut'),
+      fit: this.text('novel.knowledge.graph.fit'),
+      controls: 'Graph controls',
+      filters: this.text('novel.knowledge.graph.filters'),
+      search: this.text('novel.knowledge.graph.search'),
+      orphans: this.text('novel.knowledge.graph.orphans'),
+      display: this.text('novel.knowledge.graph.display'),
+      nodeLabels: this.text('novel.knowledge.graph.nodeLabels'),
+      edgeLabels: this.text('novel.knowledge.graph.edgeLabels'),
+      forces: this.text('novel.knowledge.graph.forces'),
+      center: this.text('novel.knowledge.graph.center'),
+      repel: this.text('novel.knowledge.graph.repel'),
+      distance: this.text('novel.knowledge.graph.distance'),
+      rearrange: this.text('novel.knowledge.graph.rearrange'),
     };
   }
 }

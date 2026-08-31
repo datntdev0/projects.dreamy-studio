@@ -1,4 +1,4 @@
-import { ComponentFixture } from "@angular/core/testing";
+import { ComponentFixture } from '@angular/core/testing';
 
 export function byId(root: HTMLElement, id: string): HTMLElement | null {
   const selector = `[data-testid="${id}"]`;
@@ -14,7 +14,7 @@ export function click(root: HTMLElement, id: string): void {
   if (target === null) {
     throw new Error(`No element with data-testid="${id}"`);
   }
-  const inner = target.tagName === "DS-BUTTON" ? target.querySelector("button") : null;
+  const inner = target.tagName === 'DS-BUTTON' ? target.querySelector('button') : null;
   (inner ?? target).click();
 }
 
@@ -24,8 +24,8 @@ export function type(root: HTMLElement, id: string, value: string): void {
     throw new Error(`No element with data-testid="${id}"`);
   }
   target.value = value;
-  target.dispatchEvent(new Event("input", { bubbles: true }));
-  target.dispatchEvent(new Event("change", { bubbles: true }));
+  target.dispatchEvent(new Event('input', { bubbles: true }));
+  target.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 export function rootOf(fixture: ComponentFixture<unknown>): HTMLElement {

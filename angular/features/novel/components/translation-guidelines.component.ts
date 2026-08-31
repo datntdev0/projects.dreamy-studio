@@ -1,15 +1,16 @@
-import { Component, computed, inject, input } from "@angular/core";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { toNovelError } from "../novel.rules";
-import { NovelTranslationService } from "../novel.translation.service";
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+import { toNovelError } from '../novel.rules';
+import { NovelTranslationService } from '../novel.translation.service';
 
 @Component({
-  selector: "app-novel-translation-guidelines",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-translation-guidelines',
   imports: [CoreModule],
-  templateUrl: "./translation-guidelines.component.html",
+  templateUrl: './translation-guidelines.component.html',
 })
 export class NovelTranslationGuidelines {
   private readonly languageService = inject(LanguageService);
@@ -25,17 +26,23 @@ export class NovelTranslationGuidelines {
       this.announce(changed);
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
     }
   }
 
   private announce(changed: boolean): void {
     if (!changed) {
-      this.toasts.show(this.languageService.translate("novel.translation.guide.unchanged"), "warning");
+      this.toasts.show(
+        this.languageService.translate('novel.translation.guide.unchanged'),
+        'warning',
+      );
       return;
     }
     const count = this.translation.translatedCountOf(this.novelId());
-    this.toasts.show(this.languageService.translate("novel.translation.guide.saved", { count }), "warning");
+    this.toasts.show(
+      this.languageService.translate('novel.translation.guide.saved', { count }),
+      'warning',
+    );
   }
 
   private buildGuidelines(): string {

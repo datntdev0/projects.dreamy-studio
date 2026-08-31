@@ -1,19 +1,19 @@
-import { Component, effect, inject, signal } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { WorkspaceService } from "../workspace.service";
-import { LoadRequest } from "../workspace.models";
-import { RecentWorkspace } from "../workspace.models";
-import { RecentWorkspaceList } from "./recent.component";
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+
+import { LoadRequest, RecentWorkspace } from '../workspace.models';
+import { WorkspaceService } from '../workspace.service';
+import { RecentWorkspaceList } from './recent.component';
 
 @Component({
-  selector: "app-switch-workspace-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-switch-workspace-dialog',
   imports: [Button, Icon, CoreModule, RecentWorkspaceList],
-  templateUrl: "./switch.dialog.html",
-  host: { "data-testid": "switch-workspace-dialog" },
+  templateUrl: './switch.dialog.html',
+  host: { 'data-testid': 'switch-workspace-dialog' },
 })
 export class SwitchWorkspaceDialog {
   private readonly workspace = inject(WorkspaceService);
@@ -58,7 +58,7 @@ export class SwitchWorkspaceDialog {
 
   private async switchToPicked(request: LoadRequest): Promise<void> {
     if (await this.isOpenWorkspace(request.path)) {
-      this.notice.set(this.languageService.translate("switch.alreadyOpen"));
+      this.notice.set(this.languageService.translate('switch.alreadyOpen'));
       return;
     }
     this.notice.set(null);

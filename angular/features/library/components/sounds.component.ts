@@ -1,36 +1,35 @@
-import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@angular/core";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
-import { Icon } from "@components/icon";
-import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@core/desktop/desktop-ipc.service";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { LibraryConfirmService } from "../library.confirm.service";
-import { AssetRef } from "../library.models";
-import { formatBytes } from "../library.rules";
-import { LibraryService } from "../library.service";
-import { LibrarySound, SoundSort } from "../library.sounds.models";
-import { durationText } from "../library.sounds.rules";
-import { LibrarySoundService } from "../library.sounds.service";
-import { LibrarySoundMedia } from "./sound-media.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
+// prettier-ignore
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+// prettier-ignore
+import { DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
-const FIELD_SELECTOR = "input,textarea,select";
-
-function isField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(FIELD_SELECTOR) !== null;
-}
+import { LibraryConfirmService } from '../library.confirm.service';
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { listenForLibraryDrops } from '../library.drag-drop';
+import { AssetRef } from '../library.models';
+import { formatBytes } from '../library.rules';
+import { LibraryService } from '../library.service';
+import { LibrarySound, SoundSort } from '../library.sounds.models';
+import { durationText } from '../library.sounds.rules';
+import { LibrarySoundService } from '../library.sounds.service';
+import { LibrarySoundMedia } from './sound-media.component';
 
 function toAssetRef(sound: LibrarySound): AssetRef {
-  return { kind: "sound", id: sound.id };
+  return { kind: 'sound', id: sound.id };
 }
 
 @Component({
-  selector: "app-library-sounds",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-sounds',
   imports: [Datatable, DatatableCell, Icon, CoreModule, LibrarySoundMedia],
-  templateUrl: "./sounds.component.html",
-  host: { "data-testid": "library-sounds" },
+  templateUrl: './sounds.component.html',
 })
 export class LibrarySounds implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
@@ -52,14 +51,14 @@ export class LibrarySounds implements OnInit, OnDestroy {
   }
 
   onQuery(event: Event): void {
-    this.sounds.query.set((event.target as HTMLInputElement).value);
+    this.sounds.query.set(fieldValue(event));
   }
 
   onSort(event: Event): void {
-    this.sounds.sort.set((event.target as HTMLSelectElement).value as SoundSort);
+    this.sounds.sort.set(fieldValue(event) as SoundSort);
   }
 
-  setView(value: "grid" | "list"): void {
+  setView(value: 'grid' | 'list'): void {
     this.library.setViewMode(value);
   }
 
@@ -73,22 +72,22 @@ export class LibrarySounds implements OnInit, OnDestroy {
   }
 
   onSoundKeydown(sound: LibrarySound, event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.open(sound);
     }
-    if (event.key === " ") {
+    if (event.key === ' ') {
       event.preventDefault();
       this.select(sound);
     }
   }
 
   openUpload(): void {
-    this.dialogs.openUpload([], "sound");
+    this.dialogs.openUpload([], 'sound');
   }
 
   clearAllFilters(): void {
-    this.sounds.query.set("");
+    this.sounds.query.set('');
     this.library.clearFilters();
   }
 
@@ -101,20 +100,22 @@ export class LibrarySounds implements OnInit, OnDestroy {
   }
 
   collectionName(sound: LibrarySound): string {
-    return sound.collectionId === null ? "—" : this.library.collectionById(sound.collectionId)?.name ?? "—";
+    return sound.collectionId === null
+      ? '—'
+      : (this.library.collectionById(sound.collectionId)?.name ?? '—');
   }
 
   collectionFilterName(): string {
     const filter = this.library.filterCollection();
-    return typeof filter === "number" ? this.library.collectionById(filter)?.name ?? "—" : "";
+    return typeof filter === 'number' ? (this.library.collectionById(filter)?.name ?? '—') : '';
   }
 
   collectionFilterIsKey(): boolean {
-    return this.library.filterCollection() === "none";
+    return this.library.filterCollection() === 'none';
   }
 
   unfiledKey(): LanguageKey {
-    return "library.explorer.filters.unfiled";
+    return 'library.explorer.filters.unfiled';
   }
 
   duration(sound: LibrarySound): string {
@@ -133,14 +134,30 @@ export class LibrarySounds implements OnInit, OnDestroy {
     return this.sounds.query().trim().length > 0 || this.library.filtersActive();
   }
 
-  readonly tableRowClass = (row: object): Record<string, boolean> => ({ "is-selected": this.isSelected(this.soundOf(row)) });
+  readonly tableRowClass = (row: object): Record<string, boolean> => ({
+    'is-selected': this.isSelected(this.soundOf(row)),
+  });
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "name", label: this.languageService.translate("library.image.column.name") },
-      { key: "spec", label: this.languageService.translate("library.sound.column.spec"), width: "120px" },
-      { key: "size", label: this.languageService.translate("library.image.column.size"), align: "right", width: "110px" },
-      { key: "collection", label: this.languageService.translate("library.image.column.collection"), width: "180px", ellipsis: true },
+      { key: 'name', label: this.languageService.translate('library.image.column.name') },
+      {
+        key: 'spec',
+        label: this.languageService.translate('library.sound.column.spec'),
+        width: '120px',
+      },
+      {
+        key: 'size',
+        label: this.languageService.translate('library.image.column.size'),
+        align: 'right',
+        width: '110px',
+      },
+      {
+        key: 'collection',
+        label: this.languageService.translate('library.image.column.collection'),
+        width: '180px',
+        ellipsis: true,
+      },
     ];
   }
 
@@ -163,39 +180,25 @@ export class LibrarySounds implements OnInit, OnDestroy {
     this.open(this.soundOf(event.row));
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onDeleteKey(event: KeyboardEvent): void {
     const id = this.sounds.selectedId();
-    if (event.key !== "Delete" || isField(event.target) || id === null || this.dialogs.uploadOpen() || this.isDialogOpen()) {
+    if (
+      !isDeleteShortcut(event) ||
+      id === null ||
+      this.dialogs.uploadOpen() ||
+      this.isDialogOpen()
+    ) {
       return;
     }
     this.confirms.deleteSounds([id]);
   }
 
   private async listenForDrops(): Promise<void> {
-    this.unlisten = await this.ipc.onDragDrop(this.handleDragDrop.bind(this));
-  }
-
-  private handleDragDrop(event: DesktopDragDropEvent): void {
-    if (this.dialogs.uploadOpen()) {
-      this.dragging.set(false);
-      return;
-    }
-    if (event.type === "enter" || event.type === "over") {
-      this.dragging.set(true);
-      return;
-    }
-    if (event.type === "leave") {
-      this.dragging.set(false);
-      return;
-    }
-    if (event.type === "drop") {
-      this.dragging.set(false);
-      this.dialogs.openUpload(event.paths, "sound");
-    }
+    this.unlisten = await listenForLibraryDrops(this.ipc, this.dragging, this.dialogs, 'sound');
   }
 
   private isDialogOpen(): boolean {
-    return this.dialogs.previewSoundId() !== null || document.querySelector(".modal") !== null;
+    return this.dialogs.previewSoundId() !== null || isModalOpen();
   }
 }

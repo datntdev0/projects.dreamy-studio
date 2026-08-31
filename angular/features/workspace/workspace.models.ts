@@ -3,9 +3,9 @@ export interface AppInfo {
   version: string;
 }
 
-export type RecentWorkspaceStatus = "ok" | "not_found";
+export type RecentWorkspaceStatus = 'ok' | 'not_found';
 
-export type RecentWorkspaceReason = "missing" | "not_a_directory" | "no_access";
+export type RecentWorkspaceReason = 'missing' | 'not_a_directory' | 'no_access';
 
 export interface RecentWorkspace {
   path: string;
@@ -17,66 +17,64 @@ export interface RecentWorkspace {
   isCurrent?: boolean;
 }
 
-export type LoadMode = "create" | "open";
+export type LoadMode = 'create' | 'open';
 
-export type LoadStepId = "application" | "backend" | "llm" | "workspace";
+export type LoadStepId = 'application' | 'backend' | 'llm' | 'workspace';
 
-export type LoadStepState = "running" | "done" | "error";
+export type LoadStepState = 'running' | 'done' | 'error';
 
 export interface LoadStartedEvent {
-  kind: "started";
+  kind: 'started';
   mode: LoadMode;
   name: string;
   path: string;
 }
 
 export interface LoadStepEvent {
-  kind: "step";
+  kind: 'step';
   id: LoadStepId;
   state: LoadStepState;
   detail?: string;
 }
 
 export interface LoadProgressEvent {
-  kind: "progress";
+  kind: 'progress';
   percent: number;
 }
 
 export type LoadEvent = LoadStartedEvent | LoadStepEvent | LoadProgressEvent;
 
 export interface LoadReadyOutcome {
-  result: "ready";
+  result: 'ready';
   name: string;
   path: string;
   mode: LoadMode;
 }
 
 export interface LoadCancelledOutcome {
-  result: "cancelled";
+  result: 'cancelled';
 }
 
 export type LoadOutcome = LoadReadyOutcome | LoadCancelledOutcome;
 
 export interface CancelledCancelOutcome {
-  result: "cancelled";
+  result: 'cancelled';
 }
 
 export interface AlreadyEnteredCancelOutcome {
-  result: "already_entered";
+  result: 'already_entered';
 }
 
-export type CancelOutcome =
-  | CancelledCancelOutcome
-  | AlreadyEnteredCancelOutcome;
+export type CancelOutcome = CancelledCancelOutcome | AlreadyEnteredCancelOutcome;
 
 export interface EnteredOutcome {
-  result: "entered";
+  result: 'entered';
   name: string;
   path: string;
 }
 
 export interface EnterCancelledOutcome {
-  result: "cancelled";
+  result: 'cancelled';
 }
 
 export type EnterOutcome = EnteredOutcome | EnterCancelledOutcome;
@@ -87,18 +85,18 @@ export interface CurrentWorkspace {
 }
 
 export type LoadErrorCode =
-  | "folder_missing"
-  | "folder_not_directory"
-  | "folder_not_readable"
-  | "folder_not_writable"
-  | "db_corrupt"
-  | "db_newer_version"
-  | "db_migration_failed"
-  | "db_io"
-  | "logs_failed"
-  | "backend_missing"
-  | "backend_start_failed"
-  | "backend_timeout";
+  | 'folder_missing'
+  | 'folder_not_directory'
+  | 'folder_not_readable'
+  | 'folder_not_writable'
+  | 'db_corrupt'
+  | 'db_newer_version'
+  | 'db_migration_failed'
+  | 'db_io'
+  | 'logs_failed'
+  | 'backend_missing'
+  | 'backend_start_failed'
+  | 'backend_timeout';
 
 export interface LoadError {
   step: LoadStepId;
@@ -112,16 +110,16 @@ export interface LoadRequest {
   origin?: LoadOrigin;
 }
 
-export type LoadStepView = "pending" | LoadStepState;
+export type LoadStepView = 'pending' | LoadStepState;
 
 export interface LoadStepItem {
   id: LoadStepId;
   state: LoadStepView;
 }
 
-export type LoadStatus = "running" | "failed";
+export type LoadStatus = 'running' | 'failed';
 
-export type LoadOrigin = "splash" | "switch";
+export type LoadOrigin = 'splash' | 'switch';
 
 export interface LoadState {
   origin: LoadOrigin;

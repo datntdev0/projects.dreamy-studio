@@ -2,100 +2,146 @@
   <div class="tabbar" role="tablist" data-testid="editor-tabbar">
     <div class="etabs">
       @for (tab of tabs.tabs(); track tab.id) {
-        <div class="etab" [class.is-active]="tabs.isActive(tab.id)" [class.is-fixed]="!tab.closable" role="tab" tabindex="0" [attr.aria-selected]="tabs.isActive(tab.id)" [attr.title]="tabLabel(tab)" [attr.data-tab-id]="tab.id" [attr.data-testid]="'editor-tab-' + tab.kind" (click)="activate(tab.id)" (keydown.enter)="activate(tab.id)">
-          @if (tab.icon) {
-            <ds-icon [name]="tab.icon" [size]="15" />
-          } @else {
-            <img src="/assets/dreamy-studio-mark.svg" alt="" />
-          }
-          <span class="etab-label">{{ tabLabel(tab) }}</span>
-          @if (tab.closable) {
-            <button type="button" class="etab-close" [attr.aria-label]="'tabs.close' | t" [attr.data-tip]="'tabs.closeTip' | t" data-testid="editor-tab-close" (click)="closeTab($event, tab.id)"><ds-icon name="x" [size]="13" /></button>
-          }
-        </div>
+      <div
+        class="etab"
+        [class.is-active]="tabs.isActive(tab.id)"
+        [class.is-fixed]="!tab.closable"
+        role="tab"
+        tabindex="0"
+        [attr.aria-selected]="tabs.isActive(tab.id)"
+        [attr.title]="tabLabel(tab)"
+        [attr.data-tab-id]="tab.id"
+        [attr.data-testid]="'editor-tab-' + tab.kind"
+        (click)="activate(tab.id)"
+        (keydown.enter)="activate(tab.id)"
+      >
+        @if (tab.icon) {
+        <ds-icon [name]="tab.icon" [size]="15" />
+        } @else {
+        <img src="/assets/dreamy-studio-mark.svg" alt="" />
+        }
+        <span class="etab-label">{{ tabLabel(tab) }}</span>
+        @if (tab.closable) {
+        <button
+          type="button"
+          class="etab-close"
+          [attr.aria-label]="'tabs.close' | t"
+          [attr.data-tip]="'tabs.closeTip' | t"
+          data-testid="editor-tab-close"
+          (click)="closeTab($event, tab.id)"
+        >
+          <ds-icon name="x" [size]="13" />
+        </button>
+        }
+      </div>
       }
     </div>
   </div>
   <div class="crumbs" data-testid="editor-crumbs">
     @if (workspace(); as ws) {
-      <span data-testid="editor-crumbs-workspace">{{ ws.name }}</span>
-      <ds-icon name="chev-r" [size]="13" />
-    }
-    @if (crumbSection(); as section) {
-      <span data-testid="editor-crumbs-section">{{ section }}</span>
-      <ds-icon name="chev-r" [size]="13" />
+    <span data-testid="editor-crumbs-workspace">{{ ws.name }}</span>
+    <ds-icon name="chev-r" [size]="13" />
+    } @if (crumbSection(); as section) {
+    <span data-testid="editor-crumbs-section">{{ section }}</span>
+    <ds-icon name="chev-r" [size]="13" />
     }
     <span data-testid="editor-crumbs-current">{{ crumbCurrent() }}</span>
   </div>
   <section class="editor" [class.is-fill]="tabs.active().kind !== 'home'" data-testid="editor-body">
-    @switch (tabs.active().kind) {
-      @case ("projects") {
-        <div class="nv-host" data-testid="editor-projects-host">
-          <app-project-list />
-        </div>
+    @switch (tabs.active().kind) { @case ("projects") {
+    <div class="nv-host" data-testid="editor-projects-host">
+      <app-project-list />
+    </div>
+    } @case ("project") {
+    <div
+      class="nv-host"
+      [attr.data-project-id]="tabs.active().projectId"
+      data-testid="editor-project-host"
+    >
+      @if (tabs.active().projectId; as projectId) {
+      <app-project-view [projectId]="projectId" data-testid="project-view" />
       }
-      @case ("project") {
-        <div class="nv-host" [attr.data-project-id]="tabs.active().projectId" data-testid="editor-project-host">
-          @if (tabs.active().projectId; as projectId) {
-            <app-project-view [projectId]="projectId" data-testid="project-view" />
-          }
-        </div>
+    </div>
+    } @case ("novels") {
+    <div class="nv-host" data-testid="editor-novels-host">
+      <app-novel-list />
+    </div>
+    } @case ("novel") {
+    <div
+      class="nv-host"
+      [attr.data-novel-id]="tabs.active().novelId"
+      data-testid="editor-novel-host"
+    >
+      @if (tabs.active().novelId; as novelId) {
+      <app-novel-view [novelId]="novelId" data-testid="novel-view" />
       }
-      @case ("novels") {
-        <div class="nv-host" data-testid="editor-novels-host">
-          <app-novel-list />
-        </div>
+    </div>
+    } @case ("translation") {
+    <div
+      class="nv-host"
+      [attr.data-novel-id]="tabs.active().novelId"
+      data-testid="editor-translation-host"
+    >
+      @if (tabs.active().novelId; as novelId) {
+      <app-novel-translation [novelId]="novelId" />
       }
-      @case ("novel") {
-        <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-novel-host">
-          @if (tabs.active().novelId; as novelId) {
-            <app-novel-view [novelId]="novelId" data-testid="novel-view" />
-          }
-        </div>
+    </div>
+    } @case ("knowledge") {
+    <div
+      class="nv-host"
+      [attr.data-novel-id]="tabs.active().novelId"
+      data-testid="editor-knowledge-host"
+    >
+      @if (tabs.active().novelId; as novelId) {
+      <app-novel-knowledge [novelId]="novelId" />
       }
-      @case ("translation") {
-        <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-translation-host">
-          @if (tabs.active().novelId; as novelId) {
-            <app-novel-translation [novelId]="novelId" />
-          }
-        </div>
+    </div>
+    } @case ("collections") {
+    <div class="nv-host" data-testid="editor-collections-host"><app-library-collections /></div>
+    } @case ("collection") {
+    <div
+      class="nv-host"
+      [attr.data-collection-id]="tabs.active().collectionId"
+      data-testid="editor-collection-host"
+    >
+      @if (tabs.active().collectionId !== null) {
+      <app-library-collection
+        [collectionId]="tabs.active().collectionId!"
+        data-testid="library-collection"
+      />
       }
-      @case ("knowledge") {
-        <div class="nv-host" [attr.data-novel-id]="tabs.active().novelId" data-testid="editor-knowledge-host">
-          @if (tabs.active().novelId; as novelId) {
-            <app-novel-knowledge [novelId]="novelId" />
-          }
-        </div>
-      }
-      @case ("collections") {
-        <div class="nv-host" data-testid="editor-collections-host"><app-library-collections /></div>
-      }
-      @case ("collection") {
-        <div class="nv-host" [attr.data-collection-id]="tabs.active().collectionId" data-testid="editor-collection-host">
-          @if (tabs.active().collectionId !== null) { <app-library-collection [collectionId]="tabs.active().collectionId!" data-testid="library-collection" /> }
-        </div>
-      }
-      @case ("images") {
-        <div class="nv-host" data-testid="editor-images-host"><app-library-images data-testid="editor-images" /></div>
-      }
-      @case ("sounds") { <div class="nv-host" data-testid="editor-sounds-host"><app-library-sounds data-testid="editor-sounds" /></div> }
-      @case ("videos") { <div class="nv-host" data-testid="editor-videos-host"><app-library-videos data-testid="editor-videos" /></div> }
-      @case ("pipelines") { <div class="nv-host" data-testid="editor-pipelines-host"><app-pipeline-history data-testid="editor-pipelines" /></div> }
-      @case ("prompts") { <div class="nv-host" data-testid="editor-prompts-host"><app-library-prompts data-testid="editor-prompts" /></div> }
-      @default {
-        @if (workspace(); as ws) {
-          <section class="home" data-testid="home-panel">
-            <div class="home-head">
-              <span class="eyebrow" data-testid="home-eyebrow">Workspace</span>
-              <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
-              <span class="path t-mute" data-testid="home-workspace-path">{{ ws.path }}</span>
-            </div>
-          </section>
-        }
-      }
-    }
+    </div>
+    } @case ("images") {
+    <div class="nv-host" data-testid="editor-images-host">
+      <app-library-images data-testid="editor-images" />
+    </div>
+    } @case ("sounds") {
+    <div class="nv-host" data-testid="editor-sounds-host">
+      <app-library-sounds data-testid="editor-sounds" />
+    </div>
+    } @case ("videos") {
+    <div class="nv-host" data-testid="editor-videos-host">
+      <app-library-videos data-testid="editor-videos" />
+    </div>
+    } @case ("pipelines") {
+    <div class="nv-host" data-testid="editor-pipelines-host">
+      <app-pipeline-history data-testid="editor-pipelines" />
+    </div>
+    } @case ("prompts") {
+    <div class="nv-host" data-testid="editor-prompts-host">
+      <app-library-prompts data-testid="editor-prompts" />
+    </div>
+    } @default { @if (workspace(); as ws) {
+    <section class="home" data-testid="home-panel">
+      <div class="home-head">
+        <span class="eyebrow" data-testid="home-eyebrow">Workspace</span>
+        <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
+        <span class="path t-mute" data-testid="home-workspace-path">{{ ws.path }}</span>
+      </div>
+    </section>
+    } } }
   </section>
   @if (layout.bottomOpen()) {
-    <app-bottom />
+  <app-bottom />
   }
 </main>

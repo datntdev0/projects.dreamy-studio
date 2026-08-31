@@ -1,1 +1,11 @@
-<input class="range" type="range" data-testid="slider" [attr.min]="min" [attr.max]="max" [attr.step]="step" [value]="value" [attr.aria-label]="label" (input)="onInput($event)">
+<input
+  class="range"
+  type="range"
+  data-testid="slider"
+  [attr.min]="min()"
+  [attr.max]="max()"
+  [attr.step]="step()"
+  [value]="value"
+  [attr.aria-label]="label()"
+  (input)="onInput($event)"
+/>

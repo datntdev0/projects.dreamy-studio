@@ -1,18 +1,18 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
-  selector: "ds-button",
-  standalone: true,
-  templateUrl: "./button.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-button',
+  templateUrl: './button.html',
 })
 export class Button {
-  @Input() variant: "primary" | "outline" | "ghost" | "danger" = "outline";
-  @Input() size: "medium" | "small" = "medium";
-  @Input() type: "button" | "submit" | "reset" = "button";
-  @Input() label = "";
-  @Input() iconOnly = false;
-  @Input() block = false;
-  @Input() active = false;
-  @Input() disabled = false;
-  @Output() pressed = new EventEmitter<void>();
+  readonly variant = input<'primary' | 'outline' | 'ghost' | 'danger'>('outline');
+  readonly size = input<'medium' | 'small'>('medium');
+  readonly type = input<'button' | 'submit' | 'reset'>('button');
+  readonly label = input('');
+  readonly iconOnly = input(false);
+  readonly block = input(false);
+  readonly active = input(false);
+  readonly disabled = input(false);
+  readonly pressed = output<void>();
 }

@@ -1,20 +1,23 @@
-import { Component, computed, inject } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { formatStamp } from "@features/novel/novel.rules";
-import { PipelineSnapshot, PipelineStatus, PipelineTask } from "@features/novel/novel.translation.models";
-import { PipelineLogEntry } from "../pipeline.models";
-import { PipelineStrip } from "./strip.component";
-import { PIPELINE_LOG_KEYS, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS, durationMs, formatClock, formatDuration, isActive, kindIcon, kindKey, kindSize, logOf, percentOf } from "../pipeline.rules";
-import { PipelineService } from "../pipeline.service";
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Icon } from '@components/icon';
+import { formatStamp } from '@features/novel/novel.rules';
+// prettier-ignore
+import { PipelineSnapshot, PipelineStatus, PipelineTask } from '@features/novel/novel.translation.models';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+
+import { PipelineLogEntry } from '../pipeline.models';
+// prettier-ignore
+import { durationMs, formatClock, formatDuration, isActive, kindIcon, kindKey, kindSize, logOf, percentOf, PIPELINE_LOG_KEYS, PIPELINE_STATUS_BADGES, PIPELINE_STATUS_KEYS } from '../pipeline.rules';
+import { PipelineService } from '../pipeline.service';
+import { PipelineStrip } from './strip.component';
 
 @Component({
-  selector: "app-pipeline-log",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-pipeline-log',
   imports: [Icon, CoreModule, PipelineStrip],
-  templateUrl: "./log.component.html",
+  templateUrl: './log.component.html',
 })
 export class PipelineLog {
   private readonly languageService = inject(LanguageService);
@@ -73,9 +76,9 @@ export class PipelineLog {
       failed: pipeline.failed,
       status: this.languageService.translate(PIPELINE_STATUS_KEYS[pipeline.status]),
       duration: formatDuration(durationMs(pipeline)),
-      label: entry.task ? this.labelOf(pipeline, entry.task) : "",
+      label: entry.task ? this.labelOf(pipeline, entry.task) : '',
       progress: entry.task?.progress ?? 0,
-      error: entry.task?.error ?? "",
+      error: entry.task?.error ?? '',
     });
   }
 
@@ -92,8 +95,12 @@ export class PipelineLog {
 
   private labelOf(pipeline: PipelineSnapshot, task: PipelineTask): string {
     const chapter = this.pipelines.chapterOf(pipeline.novelId, task.chapterId);
-    const key: LanguageKey = task.passage === null ? "pipeline.task.chapter" : "pipeline.task.passage";
-    const base = this.languageService.translate(key, { seq: chapter?.seq ?? 0, n: task.passage ?? 0 });
+    const key: LanguageKey =
+      task.passage === null ? 'pipeline.task.chapter' : 'pipeline.task.passage';
+    const base = this.languageService.translate(key, {
+      seq: chapter?.seq ?? 0,
+      n: task.passage ?? 0,
+    });
     return chapter?.title ? `${base} · ${chapter.title}` : base;
   }
 

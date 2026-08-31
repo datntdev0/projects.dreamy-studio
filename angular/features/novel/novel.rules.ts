@@ -1,26 +1,8 @@
-import { DesktopIpcError } from "@core/desktop/desktop-ipc-error";
-import { LanguageKey } from "@core/language/language.models";
-import { ChapterRow } from "./novel.models";
-import { FracState } from "./novel.models";
-import { InspectCheck } from "./novel.models";
-import { InspectEvent } from "./novel.models";
-import { InspectStep } from "./novel.models";
-import { LangCount } from "./novel.models";
-import { NovelError } from "./novel.models";
-import { NovelField } from "./novel.models";
-import { NovelFilters } from "./novel.models";
-import { NovelFormValue } from "./novel.models";
-import { NovelInput } from "./novel.models";
-import { NovelLang } from "./novel.models";
-import { NovelPatch } from "./novel.models";
-import { NovelProgress } from "./novel.models";
-import { NovelSummary } from "./novel.models";
-import { NovelTotals } from "./novel.models";
-import { ReaderFont } from "./novel.models";
-import { ReaderPaper } from "./novel.models";
-import { ReaderPrefs } from "./novel.models";
-import { TagCheck } from "./novel.models";
-import { TagCount } from "./novel.models";
+import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
+import { LanguageKey } from '@shared/language/language.models';
+
+// prettier-ignore
+import { ChapterRow, FracState, InspectCheck, InspectEvent, InspectStep, LangCount, NovelError, NovelField, NovelFilters, NovelFormValue, NovelInput, NovelLang, NovelPatch, NovelProgress, NovelSummary, NovelTotals, ReaderFont, ReaderPaper, ReaderPrefs, TagCheck, TagCount } from './novel.models';
 
 export const MAX_TAGS = 12;
 
@@ -34,28 +16,28 @@ export const COVER_MAX_HEIGHT = 640;
 
 export const RECENT_LIMIT = 3;
 
-export const NOVEL_LANGS: NovelLang[] = ["EN", "VI", "ZH", "JA", "KO"];
+export const NOVEL_LANGS: NovelLang[] = ['EN', 'VI', 'ZH', 'JA', 'KO'];
 
 export const NOVEL_LANG_KEYS: Record<NovelLang, LanguageKey> = {
-  EN: "novel.lang.EN",
-  VI: "novel.lang.VI",
-  ZH: "novel.lang.ZH",
-  JA: "novel.lang.JA",
-  KO: "novel.lang.KO",
+  EN: 'novel.lang.EN',
+  VI: 'novel.lang.VI',
+  ZH: 'novel.lang.ZH',
+  JA: 'novel.lang.JA',
+  KO: 'novel.lang.KO',
 };
 
 export const INSPECT_STEPS: InspectStep[] = [
-  "format",
-  "open",
-  "manifest",
-  "chapters",
-  "list",
-  "cover",
+  'format',
+  'open',
+  'manifest',
+  'chapters',
+  'list',
+  'cover',
 ];
 
-export const READER_FONTS: ReaderFont[] = ["serif", "sans", "mono"];
+export const READER_FONTS: ReaderFont[] = ['serif', 'sans', 'mono'];
 
-export const READER_PAPERS: ReaderPaper[] = ["default", "sepia", "night"];
+export const READER_PAPERS: ReaderPaper[] = ['default', 'sepia', 'night'];
 
 export const READER_LINE_HEIGHTS: number[] = [1.5, 1.75, 2];
 
@@ -64,39 +46,39 @@ export const READER_WIDTHS: number[] = [560, 680, 820];
 export const READER_SIZE_RANGE = { min: 13, max: 24, step: 1 };
 
 export const READER_PREF_DEFAULT: ReaderPrefs = {
-  font: "serif",
+  font: 'serif',
   size: 17,
   lh: 1.75,
   width: 680,
-  paper: "default",
+  paper: 'default',
   nums: true,
   justify: false,
 };
 
 const READER_FONT_FAMILIES: Record<ReaderFont, string> = {
-  serif: "var(--font-serif)",
-  sans: "var(--font)",
-  mono: "var(--font-mono)",
+  serif: 'var(--font-serif)',
+  sans: 'var(--font)',
+  mono: 'var(--font-mono)',
 };
 
 const READER_PAPER_VARS: Record<ReaderPaper, string> = {
-  default: "",
-  sepia: "--rd-bg:#f3ead7;--rd-fg:#3b3226;--rd-mute:#8a7d68;",
-  night: "--rd-bg:#14161c;--rd-fg:#cfd3dc;--rd-mute:#7c8493;",
+  default: '',
+  sepia: '--rd-bg:#f3ead7;--rd-fg:#3b3226;--rd-mute:#8a7d68;',
+  night: '--rd-bg:#14161c;--rd-fg:#cfd3dc;--rd-mute:#7c8493;',
 };
 
 export function normTag(value: string): string {
   return String(value)
     .toLowerCase()
-    .replace(/[,#]/g, " ")
+    .replace(/[,#]/g, ' ')
     .trim()
-    .replace(/\s+/g, "-")
+    .replace(/\s+/g, '-')
     .slice(0, MAX_TAG_LENGTH);
 }
 
 export function parseTags(text: string): string[] {
   const out: string[] = [];
-  for (const part of String(text).split(",")) {
+  for (const part of String(text).split(',')) {
     const tag = normTag(part);
     if (tag && !out.includes(tag)) {
       out.push(tag);
@@ -107,12 +89,12 @@ export function parseTags(text: string): string[] {
 
 export function checkTag(tags: string[], tag: string): TagCheck {
   if (!tag) {
-    return "empty";
+    return 'empty';
   }
   if (tags.includes(tag)) {
-    return "duplicate";
+    return 'duplicate';
   }
-  return tags.length >= MAX_TAGS ? "limit" : "ok";
+  return tags.length >= MAX_TAGS ? 'limit' : 'ok';
 }
 
 export function withoutTag(tags: string[], tag: string): string[] {
@@ -125,12 +107,12 @@ export function withoutTag(tags: string[], tag: string): string[] {
   return out;
 }
 
-export function displayName(novel: Pick<NovelSummary, "name" | "title">): string {
+export function displayName(novel: Pick<NovelSummary, 'name' | 'title'>): string {
   const name = novel.name.trim();
   return name ? name : novel.title;
 }
 
-export function hasCustomName(novel: Pick<NovelSummary, "name" | "title">): boolean {
+export function hasCustomName(novel: Pick<NovelSummary, 'name' | 'title'>): boolean {
   return displayName(novel) !== novel.title;
 }
 
@@ -249,9 +231,9 @@ export function novelProgress(novel: NovelSummary): NovelProgress {
 
 export function fracState(done: number, total: number): FracState {
   if (total && done >= total) {
-    return "is-full";
+    return 'is-full';
   }
-  return done ? "is-part" : "";
+  return done ? 'is-part' : '';
 }
 
 export function novelTotals(novels: NovelSummary[]): NovelTotals {
@@ -292,7 +274,7 @@ export function toNovelInput(form: NovelFormValue): NovelInput {
   const name = form.name.trim();
   return {
     title,
-    name: name === title ? "" : name,
+    name: name === title ? '' : name,
     author: form.author.trim(),
     lang: form.lang,
     description: form.description.trim(),
@@ -300,22 +282,18 @@ export function toNovelInput(form: NovelFormValue): NovelInput {
   };
 }
 
-export function fieldPatch(
-  novel: NovelSummary,
-  field: NovelField,
-  raw: string,
-): NovelPatch | null {
+export function fieldPatch(novel: NovelSummary, field: NovelField, raw: string): NovelPatch | null {
   const value = raw.trim();
   switch (field) {
-    case "title":
+    case 'title':
       return value ? { title: value } : null;
-    case "name":
-      return { name: value === novel.title ? "" : value };
-    case "lang":
+    case 'name':
+      return { name: value === novel.title ? '' : value };
+    case 'lang':
       return { lang: value as NovelLang };
-    case "author":
+    case 'author':
       return { author: value };
-    case "description":
+    case 'description':
       return { description: value };
   }
 }
@@ -344,11 +322,11 @@ export function clampSeq(seq: number, total: number): number {
 }
 
 export function normalizeParagraphText(text: string): string {
-  return text.trim().replace(/\s*[\r\n]+\s*/g, " ");
+  return text.trim().replace(/\s*[\r\n]+\s*/g, ' ');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === 'object' && value !== null;
 }
 
 function pickEnum<T extends string>(value: unknown, allowed: T[], fallback: T): T {
@@ -356,11 +334,11 @@ function pickEnum<T extends string>(value: unknown, allowed: T[], fallback: T): 
 }
 
 function pickNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function pickBoolean(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
+  return typeof value === 'boolean' ? value : fallback;
 }
 
 export function sanitizePrefs(stored: unknown): ReaderPrefs {
@@ -369,13 +347,13 @@ export function sanitizePrefs(stored: unknown): ReaderPrefs {
     return { ...base };
   }
   return {
-    font: pickEnum(stored["font"], READER_FONTS, base.font),
-    size: pickNumber(stored["size"], base.size),
-    lh: pickNumber(stored["lh"], base.lh),
-    width: pickNumber(stored["width"], base.width),
-    paper: pickEnum(stored["paper"], READER_PAPERS, base.paper),
-    nums: pickBoolean(stored["nums"], base.nums),
-    justify: pickBoolean(stored["justify"], base.justify),
+    font: pickEnum(stored['font'], READER_FONTS, base.font),
+    size: pickNumber(stored['size'], base.size),
+    lh: pickNumber(stored['lh'], base.lh),
+    width: pickNumber(stored['width'], base.width),
+    paper: pickEnum(stored['paper'], READER_PAPERS, base.paper),
+    nums: pickBoolean(stored['nums'], base.nums),
+    justify: pickBoolean(stored['justify'], base.justify),
   };
 }
 
@@ -386,18 +364,18 @@ export function readerPageStyle(prefs: ReaderPrefs): string {
     `--rd-w:${prefs.width}px`,
     `--rd-font:${READER_FONT_FAMILIES[prefs.font]};`,
   ];
-  return `${vars.join(";")}${READER_PAPER_VARS[prefs.paper]}`;
+  return `${vars.join(';')}${READER_PAPER_VARS[prefs.paper]}`;
 }
 
 function isNovelError(value: unknown): value is NovelError {
   if (!isRecord(value)) {
     return false;
   }
-  return typeof value["code"] === "string" && typeof value["detail"] === "string";
+  return typeof value['code'] === 'string' && typeof value['detail'] === 'string';
 }
 
 export function isChapterLocked(row: ChapterRow): boolean {
-  return row.translationStatus !== "none" || row.analysisStatus !== "none";
+  return row.translationStatus !== 'none' || row.analysisStatus !== 'none';
 }
 
 export function toNovelError(error: unknown): NovelError {
@@ -405,13 +383,10 @@ export function toNovelError(error: unknown): NovelError {
   if (isNovelError(payload)) {
     return payload;
   }
-  return { code: "unknown", detail: String(payload) };
+  return { code: 'unknown', detail: String(payload) };
 }
 
-export function applyInspectEvent(
-  checks: InspectCheck[],
-  event: InspectEvent,
-): InspectCheck[] {
+export function applyInspectEvent(checks: InspectCheck[], event: InspectEvent): InspectCheck[] {
   const next: InspectCheck = {
     step: event.step,
     status: event.status,
@@ -427,7 +402,7 @@ export function applyInspectEvent(
 export function inspectPercent(checks: InspectCheck[]): number {
   let finished = 0;
   for (const check of checks) {
-    finished += check.status === "running" ? 0 : 1;
+    finished += check.status === 'running' ? 0 : 1;
   }
   return Math.round((finished / INSPECT_STEPS.length) * 100);
 }
@@ -438,22 +413,34 @@ export function fileNameOf(path: string): string {
   return last ? last : path;
 }
 
-const EXPORT_FILE_FALLBACK = "novel";
-const EXPORT_FILE_EXTENSION = ".dsnovel";
-const EXPORT_ILLEGAL_CHARS = /[<>:"/\\|?*\u0000-\u001f]/g;
+const EXPORT_FILE_FALLBACK = 'novel';
+const EXPORT_FILE_EXTENSION = '.dsnovel';
+const EXPORT_ILLEGAL_CHARS = /[<>:"/\\|?*]/g;
+const FIRST_PRINTABLE_CODE = 0x20;
+
+function controlCharToSpace(char: string): string {
+  return char.charCodeAt(0) < FIRST_PRINTABLE_CODE ? ' ' : char;
+}
+
+function replaceControlChars(value: string): string {
+  return Array.from(value, controlCharToSpace).join('');
+}
 
 export function exportFileName(novel: NovelSummary): string {
-  const cleaned = displayName(novel).replace(EXPORT_ILLEGAL_CHARS, " ").replace(/\s+/g, " ").trim();
-  const stem = cleaned.replace(/[. ]+$/, "");
+  const cleaned = replaceControlChars(displayName(novel))
+    .replace(EXPORT_ILLEGAL_CHARS, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const stem = cleaned.replace(/[. ]+$/, '');
   return `${stem || EXPORT_FILE_FALLBACK}${EXPORT_FILE_EXTENSION}`;
 }
 
 export function formatCount(value: number): string {
-  return Number(value).toLocaleString("en-US");
+  return Number(value).toLocaleString('en-US');
 }
 
 function pad(value: number): string {
-  return String(value).padStart(2, "0");
+  return String(value).padStart(2, '0');
 }
 
 export function formatStamp(iso: string): string {

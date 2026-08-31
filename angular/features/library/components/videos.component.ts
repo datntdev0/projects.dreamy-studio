@@ -1,48 +1,45 @@
-import {
-  Component,
-  HostListener,
-  OnDestroy,
-  OnInit,
-  inject,
-  signal,
-} from "@angular/core";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
-import { Icon } from "@components/icon";
-import { Slider } from "@components/slider";
-import {
-  DesktopDragDropEvent,
-  DesktopIpcService,
-  DesktopUnlisten,
-} from "@core/desktop/desktop-ipc.service";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { LibraryConfirmService } from "../library.confirm.service";
-import { AssetRef, ASSET_RATIOS } from "../library.models";
-import { formatBytes } from "../library.rules";
-import { LibraryService } from "../library.service";
-import { LibraryVideo, VideoSort } from "../library.videos.models";
-import { videoMeta } from "../library.videos.rules";
-import { LibraryVideoService } from "../library.videos.service";
-import { LibraryVideoMedia } from "./video-media.component";
-import { LibraryVideoThumb } from "./video-thumb.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
+// prettier-ignore
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { Slider } from '@components/slider';
+import { CoreModule } from '@shared/core.module';
+// prettier-ignore
+import { DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
-const FIELD_SELECTOR = "input,textarea,select";
+import { LibraryConfirmService } from '../library.confirm.service';
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { listenForLibraryDrops } from '../library.drag-drop';
+import { ASSET_RATIOS, AssetRef } from '../library.models';
+import { formatBytes } from '../library.rules';
+import { LibraryService } from '../library.service';
+import { LibraryVideo, VideoSort } from '../library.videos.models';
+import { videoMeta } from '../library.videos.rules';
+import { LibraryVideoService } from '../library.videos.service';
+import { LibraryVideoMedia } from './video-media.component';
+import { LibraryVideoThumb } from './video-thumb.component';
 
-function isField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(FIELD_SELECTOR) !== null;
-}
 function toAssetRef(video: LibraryVideo): AssetRef {
-  return { kind: "video", id: video.id };
+  return { kind: 'video', id: video.id };
 }
 
 @Component({
-  selector: "app-library-videos",
-  standalone: true,
-  imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryVideoMedia, LibraryVideoThumb, Slider],
-  templateUrl: "./videos.component.html",
-  host: { "data-testid": "library-videos" },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-videos',
+  imports: [
+    Datatable,
+    DatatableCell,
+    Icon,
+    CoreModule,
+    LibraryVideoMedia,
+    LibraryVideoThumb,
+    Slider,
+  ],
+  templateUrl: './videos.component.html',
 })
 export class LibraryVideos implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
@@ -64,12 +61,10 @@ export class LibraryVideos implements OnInit, OnDestroy {
     this.unlisten?.();
   }
   onQuery(event: Event): void {
-    this.videos.query.set((event.target as HTMLInputElement).value);
+    this.videos.query.set(fieldValue(event));
   }
   onSort(event: Event): void {
-    this.videos.sort.set(
-      (event.target as HTMLSelectElement).value as VideoSort,
-    );
+    this.videos.sort.set(fieldValue(event) as VideoSort);
   }
   onGridSize(value: number): void {
     this.videos.setGridSize(value);
@@ -77,7 +72,7 @@ export class LibraryVideos implements OnInit, OnDestroy {
   setRatio(value: string): void {
     this.videos.setGridRatio(value);
   }
-  setView(value: "grid" | "list"): void {
+  setView(value: 'grid' | 'list'): void {
     this.library.setViewMode(value);
   }
   select(video: LibraryVideo): void {
@@ -86,28 +81,25 @@ export class LibraryVideos implements OnInit, OnDestroy {
 
   open(video: LibraryVideo): void {
     this.select(video);
-    this.dialogs.openVideoPreview(
-      video.id,
-      this.videos.visible().map(toAssetRef),
-    );
+    this.dialogs.openVideoPreview(video.id, this.videos.visible().map(toAssetRef));
   }
 
   onVideoKeydown(video: LibraryVideo, event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.open(video);
     }
-    if (event.key === " ") {
+    if (event.key === ' ') {
       event.preventDefault();
       this.select(video);
     }
   }
 
   openUpload(): void {
-    this.dialogs.openUpload([], "video");
+    this.dialogs.openUpload([], 'video');
   }
   clearAllFilters(): void {
-    this.videos.query.set("");
+    this.videos.query.set('');
     this.library.clearFilters();
   }
   removeCollectionFilter(): void {
@@ -126,39 +118,53 @@ export class LibraryVideos implements OnInit, OnDestroy {
     return this.videos.selectedId() === video.id;
   }
   hasActiveFilters(): boolean {
-    return (
-      this.videos.query().trim().length > 0 || this.library.filtersActive()
-    );
+    return this.videos.query().trim().length > 0 || this.library.filtersActive();
   }
   collectionName(video: LibraryVideo): string {
     return video.collectionId === null
-      ? "\u2014"
-      : (this.library.collectionById(video.collectionId)?.name ?? "\u2014");
+      ? '\u2014'
+      : (this.library.collectionById(video.collectionId)?.name ?? '\u2014');
   }
   collectionFilterName(): string {
     const filter = this.library.filterCollection();
-    return typeof filter === "number"
-      ? (this.library.collectionById(filter)?.name ?? "\u2014")
-      : "";
+    return typeof filter === 'number'
+      ? (this.library.collectionById(filter)?.name ?? '\u2014')
+      : '';
   }
   collectionFilterIsKey(): boolean {
-    return this.library.filterCollection() === "none";
+    return this.library.filterCollection() === 'none';
   }
   unfiledKey(): LanguageKey {
-    return "library.explorer.filters.unfiled";
+    return 'library.explorer.filters.unfiled';
   }
   ratioIcon(value: string): string {
-    return `ratio-${value.replace("/", "-")}`;
+    return `ratio-${value.replace('/', '-')}`;
   }
 
-  readonly tableRowClass = (row: object): Record<string, boolean> => ({ "is-selected": this.isSelected(this.videoOf(row)) });
+  readonly tableRowClass = (row: object): Record<string, boolean> => ({
+    'is-selected': this.isSelected(this.videoOf(row)),
+  });
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "name", label: this.languageService.translate("library.image.column.name") },
-      { key: "spec", label: this.languageService.translate("library.image.info.specs"), width: "170px" },
-      { key: "size", label: this.languageService.translate("library.image.column.size"), align: "right", width: "110px" },
-      { key: "collection", label: this.languageService.translate("library.image.column.collection"), width: "180px", ellipsis: true },
+      { key: 'name', label: this.languageService.translate('library.image.column.name') },
+      {
+        key: 'spec',
+        label: this.languageService.translate('library.image.info.specs'),
+        width: '170px',
+      },
+      {
+        key: 'size',
+        label: this.languageService.translate('library.image.column.size'),
+        align: 'right',
+        width: '110px',
+      },
+      {
+        key: 'collection',
+        label: this.languageService.translate('library.image.column.collection'),
+        width: '180px',
+        ellipsis: true,
+      },
     ];
   }
 
@@ -181,47 +187,25 @@ export class LibraryVideos implements OnInit, OnDestroy {
     this.open(this.videoOf(event.row));
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onDeleteKey(event: KeyboardEvent): void {
     const id = this.videos.selectedId();
     if (
-      event.key !== "Delete" ||
-      isField(event.target) ||
+      !isDeleteShortcut(event) ||
       id === null ||
       this.dialogs.uploadOpen() ||
       this.isDialogOpen()
-    )
+    ) {
       return;
+    }
     this.confirms.deleteVideos([id]);
   }
 
   private async listenForDrops(): Promise<void> {
-    this.unlisten = await this.ipc.onDragDrop(this.handleDragDrop.bind(this));
-  }
-
-  private handleDragDrop(event: DesktopDragDropEvent): void {
-    if (this.dialogs.uploadOpen()) {
-      this.dragging.set(false);
-      return;
-    }
-    if (event.type === "enter" || event.type === "over") {
-      this.dragging.set(true);
-      return;
-    }
-    if (event.type === "leave") {
-      this.dragging.set(false);
-      return;
-    }
-    if (event.type === "drop") {
-      this.dragging.set(false);
-      this.dialogs.openUpload(event.paths, "video");
-    }
+    this.unlisten = await listenForLibraryDrops(this.ipc, this.dragging, this.dialogs, 'video');
   }
 
   private isDialogOpen(): boolean {
-    return (
-      this.dialogs.previewVideoId() !== null ||
-      document.querySelector(".modal") !== null
-    );
+    return this.dialogs.previewVideoId() !== null || isModalOpen();
   }
 }

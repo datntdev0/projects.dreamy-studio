@@ -1,0 +1,95 @@
+.bottom {
+  flex: none;
+  height: var(--bt-h, 160px);
+  border-top: 1px solid var(--hairline);
+  background: var(--canvas-card);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.resizer-h {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 1px;
+  cursor: row-resize;
+  z-index: 4;
+  touch-action: none;
+}
+.resizer-h::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+.bottom-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.log {
+  font: 400 12px/18px var(--font-mono);
+  padding: var(--sp-xs) 0;
+}
+.log-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-md);
+  padding: 1px var(--sp-md);
+}
+.log-lv {
+  width: 36px;
+  text-transform: uppercase;
+  flex: none;
+}
+.log-ok .log-lv {
+  color: var(--success);
+}
+.log-warn .log-lv {
+  color: var(--warning);
+}
+.log-err .log-lv {
+  color: var(--danger);
+}
+.log-info .log-lv {
+  color: var(--info);
+}
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  background: var(--canvas-card);
+  border-top: 1px solid var(--hairline);
+  padding: 0 var(--sp-xs);
+  font-size: 12px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.sb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 var(--sp-sm);
+  color: var(--mute);
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+.sb-item .ic {
+  width: 14px;
+  height: 14px;
+}
+.sb-item .mono {
+  font-size: 11px;
+}
+button.sb-item {
+  cursor: pointer;
+}
+button.sb-item:hover {
+  background: var(--canvas-soft);
+  color: var(--body);
+}
+.sb-warn {
+  color: var(--warning);
+}

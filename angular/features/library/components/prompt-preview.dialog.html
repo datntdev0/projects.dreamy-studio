@@ -1,1 +1,73 @@
-@if (open() && prompt(); as item) { <ds-dialog size="xl" [title]="item.name" [eyebrow]="'library.preview.position' | t: { kind: 'library.prompt.title' | t, current: position().index + 1, total: position().total }" [closeLabel]="'library.preview.close' | t" data-testid="library-prompt-preview-dialog-panel" (closed)="close()"><div class="lbp" data-testid="library-prompt-preview-content"><div class="lbp-stage lbp-prompt" data-testid="library-prompt-preview-stage"><div class="row-actions" data-testid="library-prompt-preview-bar"><span class="badge" data-testid="library-prompt-preview-kind">{{ kind(item) | t }}</span><span class="spacer" data-testid="library-prompt-preview-spacer"></span><ds-button size="small" data-testid="library-prompt-preview-copy" (pressed)="copy(item)"><ds-icon name="copy" [size]="14" data-testid="library-prompt-preview-copy-icon" />{{ 'library.prompt.copy' | t }}</ds-button></div><pre class="lb-prompt" data-testid="library-prompt-preview-text">@for (segment of segments(item); track $index) { @if (segment.variable) { <mark class="lb-var" data-testid="library-prompt-preview-variable">{{ segment.text }}</mark> } @else { {{ segment.text }} } }</pre></div><aside class="lbp-side" data-testid="library-prompt-preview-side"><dl class="kv" data-testid="library-prompt-preview-info"><dt data-testid="library-prompt-preview-code-label">{{ 'library.image.info.code' | t }}</dt><dd class="mono" data-testid="library-prompt-preview-code">{{ code(item) }}</dd><dt data-testid="library-prompt-preview-length-label">{{ 'library.prompt.info.length' | t }}</dt><dd data-testid="library-prompt-preview-length">{{ 'library.prompt.chars' | t: { count: meta(item) } }}</dd><dt data-testid="library-prompt-preview-size-label">{{ 'library.video.info.size' | t }}</dt><dd data-testid="library-prompt-preview-size">{{ size(item) }}</dd><dt data-testid="library-prompt-preview-rights-label">{{ 'library.video.field.rights' | t }}</dt><dd data-testid="library-prompt-preview-rights">{{ rights(item) | t }}</dd></dl><div data-testid="library-prompt-preview-tags">@for (tag of item.tags; track tag) { <span class="tag" data-testid="library-prompt-preview-tag">{{ tag }}</span> }</div>@if (item.collectionId !== null) { <span class="tag lb-ctag" data-testid="library-prompt-preview-collection">{{ collection(item) }}</span> }<div class="row-actions" data-testid="library-prompt-preview-navigation"><ds-button size="small" [disabled]="position().index <= 0" data-testid="library-prompt-preview-previous" (pressed)="previous()">{{ 'library.preview.previous' | t }}</ds-button><ds-button size="small" [disabled]="position().index + 1 >= position().total" data-testid="library-prompt-preview-next" (pressed)="next()">{{ 'library.preview.next' | t }}</ds-button></div></aside></div></ds-dialog> }
+@if (open() && prompt(); as item) {
+<ds-dialog
+  size="xl"
+  [title]="item.name"
+  [eyebrow]="'library.preview.position' | t: { kind: 'library.prompt.title' | t, current: position().index + 1, total: position().total }"
+  [closeLabel]="'library.preview.close' | t"
+  data-testid="library-prompt-preview-dialog-panel"
+  (closed)="close()"
+>
+  <div class="lbp" data-testid="library-prompt-preview-content">
+    <div class="lbp-stage lbp-prompt" data-testid="library-prompt-preview-stage">
+      <div class="row-actions" data-testid="library-prompt-preview-bar">
+        <span class="badge" data-testid="library-prompt-preview-kind">{{ kind(item) | t }}</span>
+        <span class="spacer" data-testid="library-prompt-preview-spacer"></span>
+        <ds-button size="small" data-testid="library-prompt-preview-copy" (pressed)="copy(item)">
+          <ds-icon name="copy" [size]="14" data-testid="library-prompt-preview-copy-icon" />
+          {{ 'library.prompt.copy' | t }}
+        </ds-button>
+      </div>
+      <pre
+        class="lb-prompt"
+        data-testid="library-prompt-preview-text"
+      >@for (segment of segments(item); track $index) { @if (segment.variable) { <mark class="lb-var" data-testid="library-prompt-preview-variable">{{ segment.text }}</mark> } @else { {{ segment.text }} } }</pre>
+    </div>
+    <aside class="lbp-side" data-testid="library-prompt-preview-side">
+      <dl class="kv" data-testid="library-prompt-preview-info">
+        <dt data-testid="library-prompt-preview-code-label">{{ 'library.image.info.code' | t }}</dt>
+        <dd class="mono" data-testid="library-prompt-preview-code">{{ code(item) }}</dd>
+        <dt data-testid="library-prompt-preview-length-label">
+          {{ 'library.prompt.info.length' | t }}
+        </dt>
+        <dd data-testid="library-prompt-preview-length">
+          {{ 'library.prompt.chars' | t: { count: meta(item) } }}
+        </dd>
+        <dt data-testid="library-prompt-preview-size-label">{{ 'library.video.info.size' | t }}</dt>
+        <dd data-testid="library-prompt-preview-size">{{ size(item) }}</dd>
+        <dt data-testid="library-prompt-preview-rights-label">
+          {{ 'library.video.field.rights' | t }}
+        </dt>
+        <dd data-testid="library-prompt-preview-rights">{{ rights(item) | t }}</dd>
+      </dl>
+      <div data-testid="library-prompt-preview-tags">
+        @for (tag of item.tags; track tag) {
+        <span class="tag" data-testid="library-prompt-preview-tag">{{ tag }}</span>
+        }
+      </div>
+      @if (item.collectionId !== null) {
+      <span class="tag lb-ctag" data-testid="library-prompt-preview-collection">
+        {{ collection(item) }}
+      </span>
+      }
+      <div class="row-actions" data-testid="library-prompt-preview-navigation">
+        <ds-button
+          size="small"
+          [disabled]="position().index <= 0"
+          data-testid="library-prompt-preview-previous"
+          (pressed)="previous()"
+        >
+          {{ 'library.preview.previous' | t }}
+        </ds-button>
+        <ds-button
+          size="small"
+          [disabled]="position().index + 1 >= position().total"
+          data-testid="library-prompt-preview-next"
+          (pressed)="next()"
+        >
+          {{ 'library.preview.next' | t }}
+        </ds-button>
+      </div>
+    </aside>
+  </div>
+</ds-dialog>
+}

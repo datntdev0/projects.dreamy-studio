@@ -1,12 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { PEAK_RATE, decodePeaks, overviewBars, overviewLevel, pageStart, peakAt, peakLevel, peakScale, slideStart, spectrumBands, spectrumContrast } from "./library.sounds.audio";
+import { describe, expect, it } from 'vitest';
 
-describe("library.sounds.audio", () => {
-  it("decodes peaks", () => {
+// prettier-ignore
+import { decodePeaks, overviewBars, overviewLevel, pageStart, PEAK_RATE, peakAt, peakLevel, peakScale, slideStart, spectrumBands, spectrumContrast } from './library.sounds.audio';
+
+describe('library.sounds.audio', () => {
+  it('decodes peaks', () => {
     expect([...decodePeaks(btoa(String.fromCharCode(0, 128, 255)))]).toEqual([0, 128, 255]);
   });
 
-  it("interpolates peaks over time", () => {
+  it('interpolates peaks over time', () => {
     const peaks = Uint8Array.from([0, 255]);
     expect(peakAt(null, 1)).toBe(0);
     expect(peakAt(new Uint8Array(), 1)).toBe(0);
@@ -15,7 +17,7 @@ describe("library.sounds.audio", () => {
     expect(peakAt(peaks, (0.5 + 0.5) / PEAK_RATE)).toBeCloseTo(0.5, 1);
   });
 
-  it("scales and shapes levels", () => {
+  it('scales and shapes levels', () => {
     const peaks = Uint8Array.from({ length: 100 }, (_, index) => index * 2);
     const scale = peakScale(peaks);
     expect(scale.high).toBeGreaterThan(scale.low);
@@ -24,13 +26,13 @@ describe("library.sounds.audio", () => {
     expect(peakLevel(peaks, 1000, 1, scale)).toBeGreaterThanOrEqual(0.06);
   });
 
-  it("derives overview data", () => {
+  it('derives overview data', () => {
     expect(overviewLevel([], 10, 5)).toBe(0);
     expect(overviewLevel([0, 255], 10, 5)).toBeCloseTo(0.5);
     expect(overviewBars([0, 255, 128])).toEqual([14, 100, 50]);
   });
 
-  it("positions waveform windows", () => {
+  it('positions waveform windows', () => {
     expect(slideStart(1, 100, 10)).toBe(0);
     expect(slideStart(50, 100, 10)).toBe(45);
     expect(slideStart(99, 100, 10)).toBe(90);
@@ -38,7 +40,7 @@ describe("library.sounds.audio", () => {
     expect(pageStart(100, 100, 10)).toBe(90);
   });
 
-  it("computes spectrum bands", () => {
+  it('computes spectrum bands', () => {
     expect(spectrumContrast(0)).toBe(0);
     expect(spectrumContrast(1)).toBe(1);
     const freq = Uint8Array.from({ length: 1024 }, (_, index) => (index < 512 ? 255 : 0));

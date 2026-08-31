@@ -1,35 +1,90 @@
 <section class="pipe-log" [attr.aria-label]="'pipeline.log.label' | t" data-testid="pipeline-log">
   @if (pipelines.selected(); as pipeline) {
-    <header class="pipe-log-head" [attr.data-status]="pipeline.status" data-testid="pipeline-log-head">
-      <span class="pipe-kind" data-testid="pipeline-log-kind"><ds-icon [name]="iconOf(pipeline)" [size]="sizeOf(pipeline)" /></span>
-      <span class="pipe-title" data-testid="pipeline-log-title">
-        <span class="pipe-name t-ink" data-testid="pipeline-log-novel">{{ novelOf(pipeline) }}</span>
-        <span class="pipe-sub t-sm t-mute" data-testid="pipeline-log-sub">@if (kindOf(pipeline); as label) { {{ label | t }} } @else { {{ pipeline.kind }} }<span class="pipe-sep">·</span><span class="mono" data-testid="pipeline-log-target">{{ pipeline.target }}</span><span class="pipe-sep">·</span><span class="mono" data-testid="pipeline-log-id">#{{ pipeline.id }}</span><span class="pipe-sep">·</span><span class="mono pipe-when-stamp" data-testid="pipeline-log-started">{{ stampOf(pipeline) }}</span></span>
+    <header
+      class="pipe-log-head"
+      [attr.data-status]="pipeline.status"
+      data-testid="pipeline-log-head"
+    >
+      <span class="pipe-kind" data-testid="pipeline-log-kind">
+        <ds-icon [name]="iconOf(pipeline)" [size]="sizeOf(pipeline)" />
       </span>
-      <span class="badge" [class]="statusBadge(pipeline.status)" data-testid="pipeline-log-status">{{ statusKey(pipeline.status) | t }}</span>
+      <span class="pipe-title" data-testid="pipeline-log-title">
+        <span class="pipe-name t-ink" data-testid="pipeline-log-novel">
+          {{ novelOf(pipeline) }}
+        </span>
+        <span class="pipe-sub t-sm t-mute" data-testid="pipeline-log-sub">
+          @if (kindOf(pipeline); as label) {
+            {{ label | t }}
+          } @else {
+            {{ pipeline.kind }}
+          }
+          <span class="pipe-sep">·</span>
+          <span class="mono" data-testid="pipeline-log-target">{{ pipeline.target }}</span>
+          <span class="pipe-sep">·</span>
+          <span class="mono" data-testid="pipeline-log-id">#{{ pipeline.id }}</span>
+          <span class="pipe-sep">·</span>
+          <span class="mono pipe-when-stamp" data-testid="pipeline-log-started">
+            {{ stampOf(pipeline) }}
+          </span>
+        </span>
+      </span>
+      <span class="badge" [class]="statusBadge(pipeline.status)" data-testid="pipeline-log-status">
+        {{ statusKey(pipeline.status) | t }}
+      </span>
       <span class="pipe-log-meter" data-testid="pipeline-log-meter">
         <app-pipeline-strip [pipeline]="pipeline" />
-        <span class="pipe-prog-text t-sm t-mute" data-testid="pipeline-log-summary"><span class="mono pipe-pct">{{ percent(pipeline) }}%</span><span>{{ "pipeline.progress" | t: { done: pipeline.done, total: pipeline.total } }}</span>@if (pipeline.failed > 0) { <span class="pipe-prog-failed">{{ "pipeline.failed" | t: { count: pipeline.failed } }}</span> }@if (!isActive(pipeline)) { <span>{{ durationOf(pipeline) }}</span> }</span>
+        <span class="pipe-prog-text t-sm t-mute" data-testid="pipeline-log-summary">
+          <span class="mono pipe-pct">{{ percent(pipeline) }}%</span>
+          <span>{{ 'pipeline.progress' | t: { done: pipeline.done, total: pipeline.total } }}</span>
+          @if (pipeline.failed > 0) {
+            <span class="pipe-prog-failed">
+              {{ 'pipeline.failed' | t: { count: pipeline.failed } }}
+            </span>
+          }
+          @if (!isActive(pipeline)) {
+            <span>{{ durationOf(pipeline) }}</span>
+          }
+        </span>
       </span>
       <span class="spacer"></span>
       @if (isActive(pipeline)) {
-        <button type="button" class="btn btn-sm" data-testid="pipeline-log-cancel" (click)="cancel()"><ds-icon name="stop" [size]="16" />{{ "pipeline.cancel" | t }}</button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="pipeline-log-cancel"
+          (click)="cancel()"
+        >
+          <ds-icon name="stop" [size]="16" />
+          {{ 'pipeline.cancel' | t }}
+        </button>
       }
     </header>
     <div class="log" role="log" data-testid="pipeline-log-entries">
       @for (entry of entries(); track $index) {
-        <div [class]="'log-row log-' + entry.level" [attr.data-kind]="entry.kind" data-testid="pipeline-log-entry">
-          <span class="t-mute pipe-log-time" data-testid="pipeline-log-time">{{ clockOf(entry) }}</span>
+        <div
+          [class]="'log-row log-' + entry.level"
+          [attr.data-kind]="entry.kind"
+          data-testid="pipeline-log-entry"
+        >
+          <span class="t-mute pipe-log-time" data-testid="pipeline-log-time">
+            {{ clockOf(entry) }}
+          </span>
           <span class="log-lv" data-testid="pipeline-log-level">{{ entry.level }}</span>
-          <span class="pipe-log-msg" data-testid="pipeline-log-message">{{ messageOf(pipeline, entry) }}</span>
+          <span class="pipe-log-msg" data-testid="pipeline-log-message">
+            {{ messageOf(pipeline, entry) }}
+          </span>
         </div>
       }
     </div>
   } @else {
     <div class="empty" data-testid="pipeline-log-empty">
       <div class="empty-inner">
-        <h4 class="t-display-xs" data-testid="pipeline-log-empty-title">{{ "pipeline.log.empty.title" | t }}</h4>
-        <p class="t-sm t-mute" data-testid="pipeline-log-empty-description">{{ "pipeline.log.empty.description" | t }}</p>
+        <h4 class="t-display-xs" data-testid="pipeline-log-empty-title">
+          {{ 'pipeline.log.empty.title' | t }}
+        </h4>
+        <p class="t-sm t-mute" data-testid="pipeline-log-empty-description">
+          {{ 'pipeline.log.empty.description' | t }}
+        </p>
       </div>
     </div>
   }

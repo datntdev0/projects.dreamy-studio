@@ -1,5 +1,7 @@
 @if (item(); as item) {
   <app-novel-knowledge-detail [novelId]="novelId()" [item]="item" />
 } @else {
-  <div class="ins-empty" data-testid="novel-knowledge-inspector-empty"><p class="t-sm t-mute">{{ "novel.knowledge.detail.empty" | t }}</p></div>
+  <div class="ins-empty" data-testid="novel-knowledge-inspector-empty">
+    <p class="t-sm t-mute">{{ 'novel.knowledge.detail.empty' | t }}</p>
+  </div>
 }

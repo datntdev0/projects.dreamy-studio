@@ -1,1 +1,23 @@
-<nav class="crumbs" data-testid="breadcrumbs" aria-label="Breadcrumbs"><ol>@for (item of items; track $index) { <li>@if (!$first) { <ds-icon name="chev-r" [size]="13" /> }@if ($last) { <span class="current" aria-current="page">@if (item.icon) { <ds-icon [name]="item.icon" [size]="14" /> }{{ item.label }}</span> } @else { <button type="button" (click)="navigate.emit($index)">@if (item.icon) { <ds-icon [name]="item.icon" [size]="14" /> }{{ item.label }}</button> }</li> }</ol></nav>
+<nav class="crumbs" data-testid="breadcrumbs" aria-label="Breadcrumbs">
+  <ol>
+    @for (item of items(); track $index) {
+    <li>
+      @if (!$first) {
+      <ds-icon name="chev-r" [size]="13" />
+      }@if ($last) {
+      <span class="current" aria-current="page">
+        @if (item.icon) {
+        <ds-icon [name]="item.icon" [size]="14" />
+        }{{ item.label }}
+      </span>
+      } @else {
+      <button type="button" (click)="navigate.emit($index)">
+        @if (item.icon) {
+        <ds-icon [name]="item.icon" [size]="14" />
+        }{{ item.label }}
+      </button>
+      }
+    </li>
+    }
+  </ol>
+</nav>

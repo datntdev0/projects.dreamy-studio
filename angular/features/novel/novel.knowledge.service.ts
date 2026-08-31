@@ -1,23 +1,25 @@
-import { Injectable, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { DialogService } from "@core/dialog/dialog.service";
-import { LanguageKey, LanguageParams } from "@core/language/language.models";
-import { LanguageService } from "@core/language/language.service";
-import { WorkspaceService } from "../workspace/workspace.service";
-import { AnalysisStatus, NovelError } from "./novel.models";
-import { NovelService } from "./novel.service";
-import { toNovelError } from "./novel.rules";
-import { NovelTranslationService, ANALYSIS_KIND } from "./novel.translation.service";
-import { KnowledgeEdit, KnowledgeEditResult, KnowledgeIssue, KnowledgeLang, KnowledgeTab, KnowledgeView, KnowledgeVisibility, NovelKnowledge, OntologyView, WireKnowledge } from "./novel.knowledge.models";
-import { EMPTY_ONTOLOGY, Ontology, buildOntology } from "./novel.knowledge.ontology";
-import { EMPTY_KNOWLEDGE, checkKnowledge, emptyView, visibilityOf } from "./novel.knowledge.rules";
-import { targetsOf } from "./novel.translation.rules";
+import { effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { DialogService } from '@shared/dialog/dialog.service';
+import { LanguageKey, LanguageParams } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+
+import { WorkspaceService } from '../workspace/workspace.service';
+// prettier-ignore
+import { KnowledgeEdit, KnowledgeEditResult, KnowledgeIssue, KnowledgeLang, KnowledgeTab, KnowledgeView, KnowledgeVisibility, NovelKnowledge, OntologyView, WireKnowledge } from './novel.knowledge.models';
+import { buildOntology, EMPTY_ONTOLOGY, Ontology } from './novel.knowledge.ontology';
+import { checkKnowledge, EMPTY_KNOWLEDGE, emptyView, visibilityOf } from './novel.knowledge.rules';
+import { AnalysisStatus, NovelError } from './novel.models';
+import { toNovelError } from './novel.rules';
+import { NovelService } from './novel.service';
+import { targetsOf } from './novel.translation.rules';
+import { ANALYSIS_KIND, NovelTranslationService } from './novel.translation.service';
 
 function storeKey(novelId: number, lang: KnowledgeLang): string {
   return `${novelId}:${lang}`;
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class NovelKnowledgeService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly novels = inject(NovelService);
@@ -41,10 +43,10 @@ export class NovelKnowledgeService {
   defaultLangOf(novelId: number): KnowledgeLang {
     const lang = this.novels.novelById(novelId)?.lang;
     const targets = targetsOf(lang);
-    if (lang === "VI") {
-      return "src";
+    if (lang === 'VI') {
+      return 'src';
     }
-    return targets.includes("VI") ? "VI" : (targets[0] ?? "src");
+    return targets.includes('VI') ? 'VI' : (targets[0] ?? 'src');
   }
 
   of(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): NovelKnowledge {
@@ -68,15 +70,17 @@ export class NovelKnowledgeService {
   }
 
   analysisOf(novelId: number, seq: number): AnalysisStatus {
-    const found = this.langsOf(novelId).map((lang) => this.of(novelId, lang).analyzed[seq]).filter((chapter) => chapter !== undefined);
+    const found = this.langsOf(novelId)
+      .map((lang) => this.of(novelId, lang).analyzed[seq])
+      .filter((chapter) => chapter !== undefined);
     if (found.length === 0) {
-      return "none";
+      return 'none';
     }
-    return found.some((chapter) => !chapter.stale) ? "done" : "stale";
+    return found.some((chapter) => !chapter.stale) ? 'done' : 'stale';
   }
 
   analyzedSeqCountOf(novelId: number, seqs: number[]): number {
-    return seqs.filter((seq) => this.analysisOf(novelId, seq) !== "none").length;
+    return seqs.filter((seq) => this.analysisOf(novelId, seq) !== 'none').length;
   }
 
   issuesOf(novelId: number): KnowledgeIssue[] {
@@ -106,7 +110,7 @@ export class NovelKnowledgeService {
   }
 
   clearFilters(novelId: number): void {
-    this.patchView(novelId, { q: "", type: "all", chapter: 0, onlyIssues: false });
+    this.patchView(novelId, { q: '', type: 'all', chapter: 0, onlyIssues: false });
   }
 
   async ensure(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): Promise<void> {
@@ -123,7 +127,7 @@ export class NovelKnowledgeService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const wire = await this.ipc.invoke<WireKnowledge>("knowledge_get", { novelId, lang });
+      const wire = await this.ipc.invoke<WireKnowledge>('knowledge_get', { novelId, lang });
       await this.novels.loadChapters(novelId);
       this.storeKnowledge(novelId, lang, wire);
     } catch (cause) {
@@ -135,39 +139,58 @@ export class NovelKnowledgeService {
 
   async apply(novelId: number, edits: KnowledgeEdit[]): Promise<KnowledgeEditResult> {
     const lang = this.viewOf(novelId).lang;
-    const result = await this.ipc.invoke<KnowledgeEditResult>("knowledge_edit", { novelId, lang, edits });
+    const result = await this.ipc.invoke<KnowledgeEditResult>('knowledge_edit', {
+      novelId,
+      lang,
+      edits,
+    });
     this.storeKnowledge(novelId, lang, result.knowledge);
     this.followRemap(novelId, lang, result);
     return result;
   }
 
   async remove(novelId: number, ids: string[]): Promise<void> {
-    await this.apply(novelId, ids.map((id) => ({ k: "del", id })));
+    await this.apply(
+      novelId,
+      ids.map((id) => ({ k: 'del', id })),
+    );
   }
 
   async confirmRemove(novelId: number, ids: string[], name: string): Promise<void> {
     await this.dialogs.ask({
-      title: this.translate("novel.knowledge.remove.title"),
-      eyebrow: this.translate("novel.knowledge.edit.eyebrow"),
-      message: this.translate("novel.knowledge.remove.message", { name }),
-      warning: this.translate("novel.knowledge.remove.warning"),
-      confirmLabel: this.translate("novel.knowledge.remove.confirm"),
-      confirmIcon: "trash",
-      cancelLabel: this.translate("common.cancel"),
-      closeLabel: this.translate("novel.dialog.close"),
-      tone: "danger",
+      title: this.translate('novel.knowledge.remove.title'),
+      eyebrow: this.translate('novel.knowledge.edit.eyebrow'),
+      message: this.translate('novel.knowledge.remove.message', { name }),
+      warning: this.translate('novel.knowledge.remove.warning'),
+      confirmLabel: this.translate('novel.knowledge.remove.confirm'),
+      confirmIcon: 'trash',
+      cancelLabel: this.translate('common.cancel'),
+      closeLabel: this.translate('novel.dialog.close'),
+      tone: 'danger',
       onConfirm: this.remove.bind(this, novelId, ids),
     });
   }
 
   async staleAccept(novelId: number, chapters: number[]): Promise<void> {
     const lang = this.viewOf(novelId).lang;
-    const wire = await this.ipc.invoke<WireKnowledge>("knowledge_stale_accept", { novelId, lang, chapters });
+    const wire = await this.ipc.invoke<WireKnowledge>('knowledge_stale_accept', {
+      novelId,
+      lang,
+      chapters,
+    });
     this.storeKnowledge(novelId, lang, wire);
   }
 
-  async analyze(novelId: number, seqs: number[], lang: KnowledgeLang, _overwrite: boolean): Promise<void> {
-    const chapterIds = this.novels.chaptersOf(novelId).filter((row) => seqs.includes(row.seq)).map((row) => row.id);
+  async analyze(
+    novelId: number,
+    seqs: number[],
+    lang: KnowledgeLang,
+    _overwrite: boolean,
+  ): Promise<void> {
+    const chapterIds = this.novels
+      .chaptersOf(novelId)
+      .filter((row) => seqs.includes(row.seq))
+      .map((row) => row.id);
     await this.translation.startAnalysis(novelId, lang, chapterIds);
   }
 
@@ -180,7 +203,7 @@ export class NovelKnowledgeService {
   }
 
   private langsOf(novelId: number): KnowledgeLang[] {
-    return ["src", ...targetsOf(this.novels.novelById(novelId)?.lang)];
+    return ['src', ...targetsOf(this.novels.novelById(novelId)?.lang)];
   }
 
   private translate(key: LanguageKey, params?: LanguageParams): string {
@@ -196,7 +219,10 @@ export class NovelKnowledgeService {
 
   private storeKnowledge(novelId: number, lang: KnowledgeLang, wire: WireKnowledge): void {
     this.storeOntology(wire.ontology);
-    this.store.set({ ...this.store(), [storeKey(novelId, lang)]: { lang, items: wire.items, analyzed: wire.analyzed } });
+    this.store.set({
+      ...this.store(),
+      [storeKey(novelId, lang)]: { lang, items: wire.items, analyzed: wire.analyzed },
+    });
   }
 
   private followRemap(novelId: number, lang: KnowledgeLang, result: KnowledgeEditResult): void {

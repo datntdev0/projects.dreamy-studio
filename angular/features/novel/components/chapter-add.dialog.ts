@@ -1,30 +1,33 @@
-import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { toNovelError } from "../novel.rules";
-import { NovelService } from "../novel.service";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
 
 @Component({
-  selector: "app-novel-chapter-add-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-chapter-add-dialog',
   imports: [Button, Icon, CoreModule],
-  templateUrl: "./chapter-add.dialog.html",
-  host: { "data-testid": "novel-chapter-add-dialog" },
+  templateUrl: './chapter-add.dialog.html',
+  host: { 'data-testid': 'novel-chapter-add-dialog' },
 })
 export class NovelChapterAddDialog {
   private readonly novels = inject(NovelService);
   private readonly dialogs = inject(NovelDialogsService);
   private readonly toasts = inject(ToastService);
   private readonly languageService = inject(LanguageService);
-  private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>("titleInput");
+  private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
 
   readonly open = computed(this.buildOpen.bind(this));
   readonly nextSeq = computed(this.buildNextSeq.bind(this));
-  readonly title = signal("");
+  readonly title = signal('');
   readonly busy = signal(false);
 
   constructor() {
@@ -37,7 +40,7 @@ export class NovelChapterAddDialog {
   }
 
   onInput(event: Event): void {
-    this.title.set((event.target as HTMLInputElement).value);
+    this.title.set(fieldValue(event));
   }
 
   async submit(): Promise<void> {
@@ -49,10 +52,15 @@ export class NovelChapterAddDialog {
     try {
       const row = await this.novels.addChapter(novelId, this.title().trim());
       this.close();
-      this.toasts.show(this.languageService.translate("novel.toast.chapterAdded", { n: row.seq, title: row.title }));
+      this.toasts.show(
+        this.languageService.translate('novel.toast.chapterAdded', {
+          n: row.seq,
+          title: row.title,
+        }),
+      );
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
     } finally {
       this.busy.set(false);
     }
@@ -74,7 +82,7 @@ export class NovelChapterAddDialog {
   }
 
   private clearTitle(): void {
-    this.title.set("");
+    this.title.set('');
     this.busy.set(false);
   }
 

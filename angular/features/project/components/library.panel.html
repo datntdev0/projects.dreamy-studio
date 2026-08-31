@@ -2,17 +2,30 @@
   <section class="ins-sec" data-testid="project-library-summary">
     <span class="eyebrow">{{ "project.panel.library" | t }}</span>
     <dl class="kv" data-testid="project-library-totals">
-      <dt>{{ "project.panel.total" | t }}</dt><dd>{{ projects.totals().projects }}</dd>
-      <dt>{{ "project.status.active" | t }}</dt><dd>{{ projects.totals().active }}</dd>
-      <dt>{{ "project.status.archived" | t }}</dt><dd>{{ projects.totals().archived }}</dd>
+      <dt>{{ "project.panel.total" | t }}</dt>
+      <dd>{{ projects.totals().projects }}</dd>
+      <dt>{{ "project.status.active" | t }}</dt>
+      <dd>{{ projects.totals().active }}</dd>
+      <dt>{{ "project.status.archived" | t }}</dt>
+      <dd>{{ projects.totals().archived }}</dd>
     </dl>
   </section>
   @if (projects.recent().length > 0) {
-    <section class="ins-sec" data-testid="project-library-recent">
-      <span class="eyebrow">{{ "project.panel.recent" | t }}</span>
-      @for (project of projects.recent(); track project.id) {
-        <button type="button" class="nm-recent" [attr.title]="project.folder" data-testid="project-library-recent-item" (click)="open(project)"><app-project-thumb size="xs" [project]="project" /><span class="tree-label">{{ project.name }}</span><span class="mono t-mute">{{ labels.dayOf(project.openedAt) }}</span></button>
-      }
-    </section>
+  <section class="ins-sec" data-testid="project-library-recent">
+    <span class="eyebrow">{{ "project.panel.recent" | t }}</span>
+    @for (project of projects.recent(); track project.id) {
+    <button
+      type="button"
+      class="nm-recent"
+      [attr.title]="project.folder"
+      data-testid="project-library-recent-item"
+      (click)="open(project)"
+    >
+      <app-project-thumb size="xs" [project]="project" />
+      <span class="tree-label">{{ project.name }}</span>
+      <span class="mono t-mute">{{ labels.dayOf(project.openedAt) }}</span>
+    </button>
+    }
+  </section>
   }
 </section>

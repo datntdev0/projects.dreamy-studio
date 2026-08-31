@@ -1,12 +1,12 @@
-export type ProjectTemplateId = "audiobook" | "filmseries" | "blank";
+export type ProjectTemplateId = 'audiobook' | 'filmseries' | 'blank';
 
-export type ProjectSrcKind = "original" | "translation";
+export type ProjectSrcKind = 'original' | 'translation';
 
-export type ProjectStatus = "active" | "archived";
+export type ProjectStatus = 'active' | 'archived';
 
-export type ProjectViewMode = "grid" | "list";
+export type ProjectViewMode = 'grid' | 'list';
 
-export type ProjectSort = "updated" | "name";
+export type ProjectSort = 'updated' | 'name';
 
 export interface ProjectSummary {
   id: number;
@@ -43,7 +43,7 @@ export interface ProjectPatch {
 
 export interface DirEntry {
   name: string;
-  kind: "dir" | "file";
+  kind: 'dir' | 'file';
   size: number;
 }
 

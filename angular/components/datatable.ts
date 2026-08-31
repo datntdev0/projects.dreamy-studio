@@ -1,26 +1,34 @@
-import { ChangeDetectorRef, Component, Directive, ElementRef, EventEmitter, HostBinding, HostListener, Input, OnChanges, Output, SimpleChanges, TemplateRef, ViewChild, contentChildren, inject, signal } from "@angular/core";
-import { NgClass, NgTemplateOutlet } from "@angular/common";
-import { FormOption } from "./form";
-import { Icon } from "./icon";
+import { NgClass, NgTemplateOutlet } from '@angular/common';
+// prettier-ignore
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, contentChildren, Directive, ElementRef, EventEmitter, HostBinding, HostListener, inject, input, OnChanges, Output, output, signal, SimpleChanges, TemplateRef, ViewChild } from '@angular/core';
+import { fieldValue } from '@shared/utils/dom';
+
+import { FormOption } from './form';
+import { Icon } from './icon';
 
 export type DatatableColumn = {
   key: string;
   label: string;
-  align?: "left" | "right" | "center";
+  align?: 'left' | 'right' | 'center';
   width?: string;
   ellipsis?: boolean;
   editable?: boolean;
-  editor?: "text" | "select";
+  editor?: 'text' | 'select';
   options?: FormOption[];
 };
 
 export type DatatableRow = object;
 
-export type DatatableVariant = "card" | "fill";
+export type DatatableVariant = 'card' | 'fill';
 
 export type DatatableRowEvent = { row: DatatableRow; event: Event };
 
-export type DatatableCellEdit = { row: DatatableRow; key: string; value: string; previousValue: unknown };
+export type DatatableCellEdit = {
+  row: DatatableRow;
+  key: string;
+  value: string;
+  previousValue: unknown;
+};
 
 export type DatatableAction = {
   key: string;
@@ -37,50 +45,50 @@ const MENU_GAP = 4;
 
 type DatatableCellContext = { $implicit: DatatableRow };
 
-@Directive({ selector: "ng-template[dsCell]", standalone: true })
+@Directive({ selector: 'ng-template[dsCell]' })
 export class DatatableCell {
-  @Input("dsCell") key = "";
+  readonly key = input('', { alias: 'dsCell' });
 
-  constructor(readonly template: TemplateRef<DatatableCellContext>) {}
+  readonly template = inject<TemplateRef<DatatableCellContext>>(TemplateRef);
 }
 
-@Directive({ selector: "ng-template[dsEmpty]", standalone: true })
+@Directive({ selector: 'ng-template[dsEmpty]' })
 export class DatatableEmpty {
-  constructor(readonly template: TemplateRef<unknown>) {}
+  readonly template = inject<TemplateRef<unknown>>(TemplateRef);
 }
 
 @Component({
-  selector: "ds-datatable",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-datatable',
   imports: [NgClass, NgTemplateOutlet, Icon],
-  templateUrl: "./datatable.html",
+  templateUrl: './datatable.html',
 })
 export class Datatable implements OnChanges {
-  @Input() columns: DatatableColumn[] = [];
-  @Input() rows: DatatableRow[] = [];
-  @Input() trackKey: string | null = null;
-  @Input() selectedIndex = -1;
-  @Input() emptyMessage = "No data";
-  @Input() rowClass: ((row: DatatableRow) => Record<string, boolean>) | null = null;
-  @Input() rowTestId = "datatable-row";
-  @Input() minWidth = "";
-  @Input() variant: DatatableVariant = "card";
-  @Input() actions: DatatableActions | null = null;
-  @Input() actionsLabel = "Actions";
-  @Input() canEdit: ((row: DatatableRow, column: DatatableColumn) => boolean) | null = null;
-  @Output() rowSelected = new EventEmitter<number>();
-  @Output() rowClick = new EventEmitter<DatatableRowEvent>();
-  @Output() rowDblClick = new EventEmitter<DatatableRowEvent>();
-  @Output() rowEnter = new EventEmitter<DatatableRowEvent>();
-  @Output() rowPointerDown = new EventEmitter<DatatableRowEvent>();
-  @Output() cellEdit = new EventEmitter<DatatableCellEdit>();
+  readonly columns = input<DatatableColumn[]>([]);
+  readonly rows = input<DatatableRow[]>([]);
+  readonly trackKey = input<string | null>(null);
+  readonly selectedIndex = input(-1);
+  readonly emptyMessage = input('No data');
+  readonly rowClass = input<((row: DatatableRow) => Record<string, boolean>) | null>(null);
+  readonly rowTestId = input('datatable-row');
+  readonly minWidth = input('');
+  readonly variant = input<DatatableVariant>('card');
+  readonly actions = input<DatatableActions | null>(null);
+  readonly actionsLabel = input('Actions');
+  readonly canEdit = input<((row: DatatableRow, column: DatatableColumn) => boolean) | null>(null);
+  readonly rowSelected = output<number>();
+  readonly rowClick = output<DatatableRowEvent>();
+  @Output() readonly rowDblClick = new EventEmitter<DatatableRowEvent>();
+  readonly rowEnter = output<DatatableRowEvent>();
+  readonly rowPointerDown = output<DatatableRowEvent>();
+  readonly cellEdit = output<DatatableCellEdit>();
 
-  @ViewChild("header") private header?: ElementRef<HTMLElement>;
-  @ViewChild("menu", { static: true }) private menu!: ElementRef<HTMLElement>;
+  @ViewChild('header') private header?: ElementRef<HTMLElement>;
+  @ViewChild('menu', { static: true }) private menu!: ElementRef<HTMLElement>;
 
   private readonly changes = inject(ChangeDetectorRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private editDraft = "";
+  private editDraft = '';
   private menuTrigger: HTMLElement | null = null;
 
   readonly menuRow = signal<DatatableRow | null>(null);
@@ -90,28 +98,28 @@ export class Datatable implements OnChanges {
   private readonly cellTemplates = contentChildren(DatatableCell);
   private readonly emptyTemplates = contentChildren(DatatableEmpty);
 
-  @HostBinding("class.is-fill")
+  @HostBinding('class.is-fill')
   get isFill(): boolean {
-    return this.variant === "fill";
+    return this.variant() === 'fill';
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes["rows"] || changes["actions"]) {
+    if (changes['rows'] || changes['actions']) {
       this.closeMenu();
     }
     const edit = this.editing();
-    if (changes["rows"] && edit && !this.rows.includes(edit.row)) {
+    if (changes['rows'] && edit && !this.rows().includes(edit.row)) {
       this.finishEdit(false, null);
     }
   }
 
   get hasActions(): boolean {
-    return this.actions !== null;
+    return this.actions() !== null;
   }
 
   cellTemplate(key: string): TemplateRef<DatatableCellContext> | null {
     for (const cell of this.cellTemplates()) {
-      if (cell.key === key) {
+      if (cell.key() === key) {
         return cell.template;
       }
     }
@@ -132,11 +140,12 @@ export class Datatable implements OnChanges {
   }
 
   trackRow(index: number, row: DatatableRow): unknown {
-    return this.trackKey ? this.cellValue(row, this.trackKey) ?? index : index;
+    const trackKey = this.trackKey();
+    return trackKey ? (this.cellValue(row, trackKey) ?? index) : index;
   }
 
   rowClasses(row: DatatableRow): Record<string, boolean> {
-    return this.rowClass?.(row) ?? {};
+    return this.rowClass()?.(row) ?? {};
   }
 
   onPointerDown(row: DatatableRow, event: PointerEvent): void {
@@ -173,7 +182,7 @@ export class Datatable implements OnChanges {
   }
 
   isEditable(row: DatatableRow, column: DatatableColumn): boolean {
-    return !!column.editable && (this.canEdit?.(row, column) ?? true);
+    return !!column.editable && (this.canEdit()?.(row, column) ?? true);
   }
 
   isEditing(row: DatatableRow, key: string): boolean {
@@ -190,7 +199,7 @@ export class Datatable implements OnChanges {
   }
 
   onRowEdit(row: DatatableRow, event: Event): void {
-    const column = this.columns.find((item) => this.isEditable(row, item));
+    const column = this.columns().find((item) => this.isEditable(row, item));
     if (!column || event.target !== event.currentTarget) {
       return;
     }
@@ -199,19 +208,19 @@ export class Datatable implements OnChanges {
   }
 
   onEditInput(event: Event): void {
-    this.editDraft = (event.target as HTMLInputElement).value;
+    this.editDraft = fieldValue(event);
   }
 
   onEditSelect(event: Event): void {
-    this.editDraft = (event.target as HTMLSelectElement).value;
+    this.editDraft = fieldValue(event);
     this.finishEdit(true, event.target as HTMLElement);
   }
 
   onEditKeydown(event: KeyboardEvent): void {
     event.stopPropagation();
-    if (event.key === "Enter" || event.key === "Escape") {
+    if (event.key === 'Enter' || event.key === 'Escape') {
       event.preventDefault();
-      this.finishEdit(event.key === "Enter", event.currentTarget as HTMLElement);
+      this.finishEdit(event.key === 'Enter', event.currentTarget as HTMLElement);
     }
   }
 
@@ -224,10 +233,11 @@ export class Datatable implements OnChanges {
   }
 
   actionsFor(row: DatatableRow): DatatableAction[] {
-    if (!this.actions) {
+    const actions = this.actions();
+    if (!actions) {
       return [];
     }
-    return typeof this.actions === "function" ? this.actions(row) : this.actions;
+    return typeof actions === 'function' ? actions(row) : actions;
   }
 
   toggleMenu(row: DatatableRow, event: Event): void {
@@ -261,29 +271,31 @@ export class Datatable implements OnChanges {
   }
 
   onMenuKeydown(event: KeyboardEvent): void {
-    if (event.key === "Tab") {
+    if (event.key === 'Tab') {
       this.closeMenu();
       return;
     }
-    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+    const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
     if (step === 0) {
       return;
     }
     event.preventDefault();
-    const items = Array.from(this.menu.nativeElement.querySelectorAll<HTMLElement>("button:not([disabled])"));
+    const items = Array.from(
+      this.menu.nativeElement.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    );
     const current = items.indexOf(document.activeElement as HTMLElement);
     items[(current + step + items.length) % items.length]?.focus();
   }
 
-  @HostListener("document:keydown.escape")
+  @HostListener('document:keydown.escape')
   closeMenuOnEscape(): void {
     const trigger = this.menuTrigger;
     this.closeMenu();
     trigger?.focus();
   }
 
-  @HostListener("document:click")
-  @HostListener("window:resize")
+  @HostListener('document:click')
+  @HostListener('window:resize')
   closeMenu(): void {
     if (!this.menuTrigger) {
       return;
@@ -301,20 +313,26 @@ export class Datatable implements OnChanges {
     const size = menu.getBoundingClientRect();
     const fitsBelow = anchor.bottom + MENU_GAP + size.height <= window.innerHeight;
     const fitsAbove = anchor.top - MENU_GAP - size.height >= 0;
-    const top = fitsBelow || !fitsAbove ? anchor.bottom + MENU_GAP : anchor.top - MENU_GAP - size.height;
-    const left = Math.max(MENU_GAP, Math.min(anchor.right - size.width, window.innerWidth - size.width - MENU_GAP));
+    const top =
+      fitsBelow || !fitsAbove ? anchor.bottom + MENU_GAP : anchor.top - MENU_GAP - size.height;
+    const left = Math.max(
+      MENU_GAP,
+      Math.min(anchor.right - size.width, window.innerWidth - size.width - MENU_GAP),
+    );
     menu.style.top = `${top}px`;
     menu.style.left = `${left}px`;
-    menu.querySelector<HTMLElement>("button:not([disabled])")?.focus();
+    menu.querySelector<HTMLElement>('button:not([disabled])')?.focus();
   }
 
   private startEdit(row: DatatableRow, key: string): void {
     this.finishEdit(true, null);
     this.closeMenu();
-    this.editDraft = String(this.cellValue(row, key) ?? "");
+    this.editDraft = String(this.cellValue(row, key) ?? '');
     this.editing.set({ row, key });
     this.changes.detectChanges();
-    const input = this.host.nativeElement.querySelector<HTMLInputElement | HTMLSelectElement>('[data-testid="datatable-cell-input"]');
+    const input = this.host.nativeElement.querySelector<HTMLInputElement | HTMLSelectElement>(
+      '[data-testid="datatable-cell-input"]',
+    );
     input?.focus();
     if (input instanceof HTMLInputElement) {
       input.select();
@@ -330,9 +348,9 @@ export class Datatable implements OnChanges {
     }
     this.editing.set(null);
     const previousValue = this.cellValue(edit.row, edit.key);
-    if (commit && this.editDraft !== String(previousValue ?? "")) {
+    if (commit && this.editDraft !== String(previousValue ?? '')) {
       this.cellEdit.emit({ row: edit.row, key: edit.key, value: this.editDraft, previousValue });
     }
-    input?.closest("tr")?.focus();
+    input?.closest('tr')?.focus();
   }
 }

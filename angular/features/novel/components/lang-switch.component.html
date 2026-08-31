@@ -1,8 +1,21 @@
-<select class="select" [attr.aria-label]="'novel.reader.lang.group' | t" data-testid="novel-lang-switch" (change)="onChange($event)">
+<select
+  class="select"
+  [attr.aria-label]="'novel.reader.lang.group' | t"
+  data-testid="novel-lang-switch"
+  (change)="onChange($event)"
+>
   @if (novel(); as novel) {
-    <option value="src" [selected]="view().lang === 'src'" data-testid="novel-lang-switch-src">{{ "novel.reader.lang.source" | t }}</option>
+    <option value="src" [selected]="view().lang === 'src'" data-testid="novel-lang-switch-src">
+      {{ 'novel.reader.lang.source' | t }}
+    </option>
   }
   @for (lang of targets(); track lang) {
-    <option [value]="lang" [selected]="view().lang === lang" [attr.data-testid]="'novel-lang-switch-' + lang">{{ lang }} · {{ nameKey(lang) | t }}</option>
+    <option
+      [value]="lang"
+      [selected]="view().lang === lang"
+      [attr.data-testid]="'novel-lang-switch-' + lang"
+    >
+      {{ lang }} · {{ nameKey(lang) | t }}
+    </option>
   }
 </select>

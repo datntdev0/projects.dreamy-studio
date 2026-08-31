@@ -1,8 +1,9 @@
-import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { LayoutSettings } from "@features/settings/settings.models";
-import { SettingsService } from "@features/settings/settings.service";
-import { BottomTabId, PanelId, RailId, RightTabId } from "./layout.models";
-import { TabsService } from "./tabs.service";
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { LayoutSettings } from '@features/settings/settings.models';
+import { SettingsService } from '@features/settings/settings.service';
+
+import { BottomTabId, PanelId, RailId, RightTabId } from './layout.models';
+import { TabsService } from './tabs.service';
 
 export const PANEL_LIMITS: Record<PanelId, { min: number; max: number; initial: number }> = {
   explorer: { min: 200, max: 420, initial: 264 },
@@ -20,26 +21,30 @@ function clampSize(panel: PanelId, size: number | undefined): number {
   return Math.max(limits.min, Math.min(limits.max, Math.round(size)));
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class LayoutService {
   private readonly tabs = inject(TabsService);
   private readonly settings = inject(SettingsService);
   private readonly stored = this.settings.layout();
 
-  readonly rail = signal<RailId>("projects");
+  readonly rail = signal<RailId>('projects');
   readonly explorerOpen = signal(this.stored.explorerOpen ?? true);
   readonly inspectorOpen = signal(this.stored.inspectorOpen ?? true);
   readonly bottomOpen = signal(this.stored.bottomOpen ?? false);
-  readonly bottomTab = signal<BottomTabId>("pipelines");
-  readonly explorerSize = signal(clampSize("explorer", this.stored.explorerSize));
-  readonly inspectorSize = signal(clampSize("inspector", this.stored.inspectorSize));
-  readonly bottomSize = signal(clampSize("bottom", this.stored.bottomSize));
+  readonly bottomTab = signal<BottomTabId>('pipelines');
+  readonly explorerSize = signal(clampSize('explorer', this.stored.explorerSize));
+  readonly inspectorSize = signal(clampSize('inspector', this.stored.inspectorSize));
+  readonly bottomSize = signal(clampSize('bottom', this.stored.bottomSize));
   readonly resizing = signal(false);
-  readonly rightTab = signal<RightTabId>(this.stored.rightTab ?? "inspector");
+  readonly rightTab = signal<RightTabId>(this.stored.rightTab ?? 'inspector');
   readonly explorerVisible = computed(this.isExplorerVisible.bind(this));
   readonly assistantActive = computed(this.isAssistantActive.bind(this));
   readonly panelLimits = PANEL_LIMITS;
-  private readonly sizes = { explorer: this.explorerSize, inspector: this.inspectorSize, bottom: this.bottomSize };
+  private readonly sizes = {
+    explorer: this.explorerSize,
+    inspector: this.inspectorSize,
+    bottom: this.bottomSize,
+  };
   private resizingPanel: PanelId | null = null;
   private resizeStart = 0;
   private resizeSize = 0;
@@ -85,7 +90,7 @@ export class LayoutService {
   beginResize(panel: PanelId, event: PointerEvent): void {
     event.preventDefault();
     this.resizingPanel = panel;
-    this.resizeStart = panel === "bottom" ? event.clientY : event.clientX;
+    this.resizeStart = panel === 'bottom' ? event.clientY : event.clientX;
     this.resizeSize = this.sizeOf(panel)();
     this.resizing.set(true);
   }
@@ -94,8 +99,8 @@ export class LayoutService {
     if (!this.resizingPanel) {
       return;
     }
-    const coordinate = this.resizingPanel === "bottom" ? event.clientY : event.clientX;
-    const direction = this.resizingPanel === "explorer" ? 1 : -1;
+    const coordinate = this.resizingPanel === 'bottom' ? event.clientY : event.clientX;
+    const direction = this.resizingPanel === 'explorer' ? 1 : -1;
     this.setSize(this.resizingPanel, this.resizeSize + direction * (coordinate - this.resizeStart));
   }
 
@@ -107,25 +112,25 @@ export class LayoutService {
   handleResizeKey(panel: PanelId, event: KeyboardEvent): void {
     const step = event.shiftKey ? 40 : 10;
     let delta = 0;
-    if (panel === "bottom" && event.key === "ArrowUp") {
+    if (panel === 'bottom' && event.key === 'ArrowUp') {
       delta = step;
     }
-    if (panel === "bottom" && event.key === "ArrowDown") {
+    if (panel === 'bottom' && event.key === 'ArrowDown') {
       delta = -step;
     }
-    if (panel === "explorer" && event.key === "ArrowRight") {
+    if (panel === 'explorer' && event.key === 'ArrowRight') {
       delta = step;
     }
-    if (panel === "explorer" && event.key === "ArrowLeft") {
+    if (panel === 'explorer' && event.key === 'ArrowLeft') {
       delta = -step;
     }
-    if (panel === "inspector" && event.key === "ArrowLeft") {
+    if (panel === 'inspector' && event.key === 'ArrowLeft') {
       delta = step;
     }
-    if (panel === "inspector" && event.key === "ArrowRight") {
+    if (panel === 'inspector' && event.key === 'ArrowRight') {
       delta = -step;
     }
-    if (event.key === "Home") {
+    if (event.key === 'Home') {
       event.preventDefault();
       this.resetSize(panel);
       return;
@@ -146,7 +151,7 @@ export class LayoutService {
       this.inspectorOpen.set(false);
       return;
     }
-    this.rightTab.set("assistant");
+    this.rightTab.set('assistant');
     this.inspectorOpen.set(true);
   }
 
@@ -155,13 +160,13 @@ export class LayoutService {
   }
 
   private openRailView(id: RailId): void {
-    if (id === "projects") {
+    if (id === 'projects') {
       this.tabs.openProjects();
     }
-    if (id === "novels") {
+    if (id === 'novels') {
       this.tabs.openNovels();
     }
-    if (id === "library") this.tabs.openCollections();
+    if (id === 'library') this.tabs.openCollections();
   }
 
   private syncRailWithActiveTab(): void {
@@ -172,11 +177,11 @@ export class LayoutService {
   }
 
   private isExplorerVisible(): boolean {
-    return this.explorerOpen() && this.tabs.active().kind !== "pipelines";
+    return this.explorerOpen() && this.tabs.active().kind !== 'pipelines';
   }
 
   private isAssistantActive(): boolean {
-    return this.inspectorOpen() && this.rightTab() === "assistant";
+    return this.inspectorOpen() && this.rightTab() === 'assistant';
   }
 
   private sizeOf(panel: PanelId): typeof this.explorerSize {

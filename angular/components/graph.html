@@ -1,51 +1,169 @@
 <div #surface class="graph" data-testid="graph">
-  <canvas #canvas class="graph-canvas" data-testid="graph-canvas" role="img" [attr.aria-label]="text.graph"></canvas>
-  @if (showPanel) {
-    <aside class="graph-panel" data-testid="graph-panel" [attr.aria-label]="text.controls">
-      <details open data-testid="graph-panel-filters">
-        <summary>{{ text.filters }}</summary>
-        <div class="graph-section">
-          <input class="input" type="search" data-testid="graph-search" [value]="query" [placeholder]="text.search" [attr.aria-label]="text.search" (input)="onQuery($event)" />
-          @for (group of groups; track group.key) {
-            <label class="check"><input type="checkbox" [attr.data-testid]="'graph-group-' + group.key" [checked]="!isHidden(group.key)" (change)="onGroup(group.key, $event)" /><span class="dot" [style.background]="cssColor(group)"></span><span>{{ group.label }}</span></label>
-          }
-          <label class="check"><input type="checkbox" data-testid="graph-orphans" [checked]="showOrphans" (change)="onOrphans($event)" /><span>{{ text.orphans }}</span></label>
-        </div>
-      </details>
-      <details data-testid="graph-panel-display">
-        <summary>{{ text.display }}</summary>
-        <div class="graph-section">
-          <label class="check"><input type="checkbox" data-testid="graph-labels" [checked]="showLabels" (change)="onLabels($event)" /><span>{{ text.nodeLabels }}</span></label>
-          <label class="check"><input type="checkbox" data-testid="graph-edge-labels" [checked]="showEdgeLabels" (change)="onEdgeLabels($event)" /><span>{{ text.edgeLabels }}</span></label>
-        </div>
-      </details>
-      <details data-testid="graph-panel-forces">
-        <summary>{{ text.forces }}</summary>
-        <div class="graph-section">
-          <label class="graph-range"><span>{{ text.center }}</span><input class="range" type="range" data-testid="graph-force-center" min="0" max="0.2" step="0.01" [value]="forceValue('center')" (input)="onForce('center', $event)" /></label>
-          <label class="graph-range"><span>{{ text.repel }}</span><input class="range" type="range" data-testid="graph-force-repel" min="0" max="400" step="10" [value]="forceValue('repel')" (input)="onForce('repel', $event)" /></label>
-          <label class="graph-range"><span>{{ text.distance }}</span><input class="range" type="range" data-testid="graph-force-distance" min="10" max="200" step="5" [value]="forceValue('distance')" (input)="onForce('distance', $event)" /></label>
-          <button class="btn btn-sm" type="button" data-testid="graph-rearrange" (click)="rearrange()">{{ text.rearrange }}</button>
-        </div>
-      </details>
-    </aside>
-  }
-  @if (showLegend && groups.length) {
-    <ul class="graph-legend" data-testid="graph-legend">
-      @for (group of groups; track group.key) {
-        <li data-testid="graph-legend-item"><span class="dot" [style.background]="cssColor(group)"></span>{{ group.label }}</li>
-      }
-      @if (flagLabel && flaggedIds.length) {
-        <li data-testid="graph-legend-flag"><span class="dot" style="background: var(--danger)"></span>{{ flagLabel }}</li>
-      }
-    </ul>
+  <canvas
+    #canvas
+    class="graph-canvas"
+    data-testid="graph-canvas"
+    role="img"
+    [attr.aria-label]="text.graph"
+  ></canvas>
+  @if (showPanel()) {
+  <aside class="graph-panel" data-testid="graph-panel" [attr.aria-label]="text.controls">
+    <details open data-testid="graph-panel-filters">
+      <summary>{{ text.filters }}</summary>
+      <div class="graph-section">
+        <input
+          class="input"
+          type="search"
+          data-testid="graph-search"
+          [value]="query"
+          [placeholder]="text.search"
+          [attr.aria-label]="text.search"
+          (input)="onQuery($event)"
+        />
+        @for (group of groups; track group.key) {
+        <label class="check">
+          <input
+            type="checkbox"
+            [attr.data-testid]="'graph-group-' + group.key"
+            [checked]="!isHidden(group.key)"
+            (change)="onGroup(group.key, $event)"
+          />
+          <span class="dot" [style.background]="cssColor(group)"></span>
+          <span>{{ group.label }}</span>
+        </label>
+        }
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="graph-orphans"
+            [checked]="showOrphans"
+            (change)="onOrphans($event)"
+          />
+          <span>{{ text.orphans }}</span>
+        </label>
+      </div>
+    </details>
+    <details data-testid="graph-panel-display">
+      <summary>{{ text.display }}</summary>
+      <div class="graph-section">
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="graph-labels"
+            [checked]="showLabels"
+            (change)="onLabels($event)"
+          />
+          <span>{{ text.nodeLabels }}</span>
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="graph-edge-labels"
+            [checked]="showEdgeLabels"
+            (change)="onEdgeLabels($event)"
+          />
+          <span>{{ text.edgeLabels }}</span>
+        </label>
+      </div>
+    </details>
+    <details data-testid="graph-panel-forces">
+      <summary>{{ text.forces }}</summary>
+      <div class="graph-section">
+        <label class="graph-range">
+          <span>{{ text.center }}</span>
+          <input
+            class="range"
+            type="range"
+            data-testid="graph-force-center"
+            min="0"
+            max="0.2"
+            step="0.01"
+            [value]="forceValue('center')"
+            (input)="onForce('center', $event)"
+          />
+        </label>
+        <label class="graph-range">
+          <span>{{ text.repel }}</span>
+          <input
+            class="range"
+            type="range"
+            data-testid="graph-force-repel"
+            min="0"
+            max="400"
+            step="10"
+            [value]="forceValue('repel')"
+            (input)="onForce('repel', $event)"
+          />
+        </label>
+        <label class="graph-range">
+          <span>{{ text.distance }}</span>
+          <input
+            class="range"
+            type="range"
+            data-testid="graph-force-distance"
+            min="10"
+            max="200"
+            step="5"
+            [value]="forceValue('distance')"
+            (input)="onForce('distance', $event)"
+          />
+        </label>
+        <button
+          class="btn btn-sm"
+          type="button"
+          data-testid="graph-rearrange"
+          (click)="rearrange()"
+        >
+          {{ text.rearrange }}
+        </button>
+      </div>
+    </details>
+  </aside>
+  } @if (showLegend() && groups.length) {
+  <ul class="graph-legend" data-testid="graph-legend">
+    @for (group of groups; track group.key) {
+    <li data-testid="graph-legend-item">
+      <span class="dot" [style.background]="cssColor(group)"></span>
+      {{ group.label }}
+    </li>
+    } @if (flagLabel && flaggedIds().length) {
+    <li data-testid="graph-legend-flag">
+      <span class="dot" style="background: var(--danger)"></span>
+      {{ flagLabel }}
+    </li>
+    }
+  </ul>
   }
   <div class="graph-zoom" data-testid="graph-zoom" role="toolbar" [attr.aria-label]="text.graph">
-    <button class="btn btn-icon btn-sm" type="button" data-testid="graph-zoom-in" [attr.aria-label]="text.zoomIn" (click)="zoomIn()">+</button>
-    <button class="btn btn-icon btn-sm" type="button" data-testid="graph-zoom-out" [attr.aria-label]="text.zoomOut" (click)="zoomOut()">−</button>
-    <button class="btn btn-icon btn-sm" type="button" data-testid="graph-fit" [attr.aria-label]="text.fit" (click)="fit()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-refresh" /></svg></button>
+    <button
+      class="btn btn-icon btn-sm"
+      type="button"
+      data-testid="graph-zoom-in"
+      [attr.aria-label]="text.zoomIn"
+      (click)="zoomIn()"
+    >
+      +
+    </button>
+    <button
+      class="btn btn-icon btn-sm"
+      type="button"
+      data-testid="graph-zoom-out"
+      [attr.aria-label]="text.zoomOut"
+      (click)="zoomOut()"
+    >
+      −
+    </button>
+    <button
+      class="btn btn-icon btn-sm"
+      type="button"
+      data-testid="graph-fit"
+      [attr.aria-label]="text.fit"
+      (click)="fit()"
+    >
+      <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-refresh" /></svg>
+    </button>
   </div>
-  @if (!nodes.length) {
-    <div class="graph-empty" data-testid="graph-empty">{{ text.empty }}</div>
+  @if (!nodes().length) {
+  <div class="graph-empty" data-testid="graph-empty">{{ text.empty }}</div>
   }
 </div>

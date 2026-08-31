@@ -1,17 +1,26 @@
-import { LanguageKey } from "@core/language/language.models";
-import { TargetLang } from "./novel.models";
+import { LanguageKey } from '@shared/language/language.models';
+
+import { TargetLang } from './novel.models';
 
 export type EntityType = string;
-export type PredicateKind = "scalar" | "relationship";
-export type RuleId = "character_predicate" | "persona_link" | "relation_signature" | "dangling_ref" | "relation_unique" | "entity_duplicate" | "evidence" | "source_stale";
+export type PredicateKind = 'scalar' | 'relationship';
+export type RuleId =
+  | 'character_predicate'
+  | 'persona_link'
+  | 'relation_signature'
+  | 'dangling_ref'
+  | 'relation_unique'
+  | 'entity_duplicate'
+  | 'evidence'
+  | 'source_stale';
 
-export type KnowledgeTab = "graph" | "list" | "review";
-export type KnowledgeListKind = "entity" | "fact";
-export type KnowledgeLang = "src" | TargetLang;
-export type AnalyzeMode = "missing" | "range" | "all";
-export type Severity = "error" | "warning";
-export type ItemState = "same" | "edited" | "new" | "deleted" | "merged" | "removed";
-export type DraftPreviewState = "idle" | "invalid" | "resolved" | "open" | "clean" | "warn";
+export type KnowledgeTab = 'graph' | 'list' | 'review';
+export type KnowledgeListKind = 'entity' | 'fact';
+export type KnowledgeLang = 'src' | TargetLang;
+export type AnalyzeMode = 'missing' | 'range' | 'all';
+export type Severity = 'error' | 'warning';
+export type ItemState = 'same' | 'edited' | 'new' | 'deleted' | 'merged' | 'removed';
+export type DraftPreviewState = 'idle' | 'invalid' | 'resolved' | 'open' | 'clean' | 'warn';
 
 export interface EntityTypeDef {
   key: EntityType;
@@ -59,7 +68,7 @@ interface KnowledgeBase {
 }
 
 export interface KnowledgeEntity extends KnowledgeBase {
-  kind: "entity";
+  kind: 'entity';
   type: EntityType;
   name: string;
   titles: string[];
@@ -67,7 +76,7 @@ export interface KnowledgeEntity extends KnowledgeBase {
 }
 
 export interface KnowledgeFact extends KnowledgeBase {
-  kind: "fact";
+  kind: 'fact';
   pred: string;
   subject: string;
   object: string | null;
@@ -76,16 +85,31 @@ export interface KnowledgeFact extends KnowledgeBase {
 export type KnowledgeItem = KnowledgeEntity | KnowledgeFact;
 
 export type KnowledgeEdit =
-  | { k: "rename"; id: string; name: string }
-  | { k: "retype"; id: string; type: EntityType }
-  | { k: "del"; id: string }
-  | { k: "merge"; sources: string[]; target: string }
-  | { k: "fact"; id: string; pred?: string; subject?: string; object?: string }
-  | { k: "props"; id: string; titles?: string[]; aliases?: string[] }
-  | { k: "evidence"; id: string; add?: EvidenceRef[]; remove?: EvidenceRef[] }
-  | { k: "add_entity"; ref: string; type: EntityType; name: string; titles?: string[]; aliases?: string[]; ev: EvidenceRef[] }
-  | { k: "add_fact"; ref: string; pred: string; subject: string; object?: string; ev: EvidenceRef[] }
-  | { k: "character"; persona: string };
+  | { k: 'rename'; id: string; name: string }
+  | { k: 'retype'; id: string; type: EntityType }
+  | { k: 'del'; id: string }
+  | { k: 'merge'; sources: string[]; target: string }
+  | { k: 'fact'; id: string; pred?: string; subject?: string; object?: string }
+  | { k: 'props'; id: string; titles?: string[]; aliases?: string[] }
+  | { k: 'evidence'; id: string; add?: EvidenceRef[]; remove?: EvidenceRef[] }
+  | {
+      k: 'add_entity';
+      ref: string;
+      type: EntityType;
+      name: string;
+      titles?: string[];
+      aliases?: string[];
+      ev: EvidenceRef[];
+    }
+  | {
+      k: 'add_fact';
+      ref: string;
+      pred: string;
+      subject: string;
+      object?: string;
+      ev: EvidenceRef[];
+    }
+  | { k: 'character'; persona: string };
 
 export interface KnowledgeIssue {
   id: string;
@@ -161,7 +185,7 @@ export interface KnowledgeView {
   chapter: number;
   onlyIssues: boolean;
   sel: string | null;
-  rule: RuleId | "all";
+  rule: RuleId | 'all';
   spoiler: boolean;
   upTo: number;
 }

@@ -1,0 +1,142 @@
+.rd-page {
+  flex: 1;
+  overflow: auto;
+  background: var(--rd-bg, var(--canvas));
+  color: var(--rd-fg, var(--body));
+}
+.rd-col {
+  max-width: calc(var(--rd-w, 680px) + 2 * var(--sp-2xl));
+  margin: 0 auto;
+  padding: var(--sp-2xl) var(--sp-2xl) 80px;
+  display: grid;
+  gap: var(--sp-md);
+  font-family: var(--rd-font, var(--font-serif));
+}
+.rd-page .eyebrow,
+.rd-page .rd-meta {
+  color: var(--rd-mute, var(--mute));
+  font-family: var(--font);
+}
+.rd-h {
+  margin: 0;
+  font-size: calc(var(--rd-fs, 17px) * 1.7);
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--rd-fg, var(--ink));
+}
+.rd-h .rd-h-in {
+  width: 100%;
+  height: auto;
+  padding: var(--sp-xs) var(--sp-sm);
+  font: inherit;
+  line-height: 1.2;
+  color: inherit;
+  background: transparent;
+}
+.rd-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  min-height: 22px;
+  font-family: var(--font);
+}
+.rd-add {
+  display: flex;
+  padding: var(--sp-xs) var(--sp-sm);
+  font-family: var(--font);
+}
+.table td .row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+.table tbody tr.is-reorderable {
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.table tbody tr.is-dragging {
+  cursor: grabbing;
+}
+.table tbody tr.is-dragging {
+  opacity: 0.45;
+}
+.table tbody tr.is-drop-before td {
+  box-shadow: inset 0 2px 0 var(--primary);
+}
+.table tbody tr.is-drop-after td {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.rd-meta {
+  margin-bottom: var(--sp-sm);
+}
+.rd-para {
+  margin: 0;
+  display: flex;
+  gap: var(--sp-lg);
+  font-size: var(--rd-fs, 17px);
+  line-height: var(--rd-lh, 1.75);
+  color: var(--rd-fg, var(--body));
+  padding: var(--sp-xs) var(--sp-sm);
+  border-radius: var(--r-sm);
+}
+.rd-tx {
+  flex: 1;
+  min-width: 0;
+}
+.rd-para.is-editable {
+  cursor: text;
+}
+.rd-para.is-editable:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.rd-no {
+  flex: none;
+  width: 20px;
+  text-align: right;
+  font: 400 11px/1 var(--font-mono);
+  color: var(--rd-mute, var(--mute));
+  padding-top: 0.55em;
+  user-select: none;
+}
+.rd-page.no-nums .rd-no {
+  display: none;
+}
+.rd-page.is-justify .rd-tx {
+  text-align: justify;
+  hyphens: auto;
+}
+.rd-edit {
+  display: grid;
+  gap: var(--sp-sm);
+  font-family: var(--font);
+}
+.rd-edit .textarea {
+  font: 400 var(--rd-fs, 17px)/var(--rd-lh, 1.75) var(--rd-font, var(--font-serif));
+}
+.rd-edit-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.rd-write .textarea {
+  min-height: 50vh;
+}
+.rd-end {
+  padding-top: var(--sp-xl);
+  display: flex;
+  justify-content: center;
+  font-family: var(--font);
+}
+.rd-col > .empty {
+  height: auto;
+  padding: var(--sp-lg) 0;
+  place-items: start;
+  text-align: left;
+  font-family: var(--font);
+}
+.rd-col > .empty .empty-inner {
+  justify-items: start;
+  max-width: none;
+}

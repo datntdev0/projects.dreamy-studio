@@ -2,63 +2,254 @@
   <div class="nv-bar" data-testid="library-sounds-toolbar">
     <div class="nv-bar-l" data-testid="library-sounds-toolbar-left">
       <label class="search" data-testid="library-sounds-search-label">
-        <span class="sr-only" data-testid="library-sounds-search-label-text">{{ "library.sound.search" | t }}</span>
-        <input class="input" type="search" [value]="sounds.query()" [attr.placeholder]="'library.sound.searchPlaceholder' | t" data-testid="library-sounds-search" (input)="onQuery($event)" />
+        <span class="sr-only" data-testid="library-sounds-search-label-text">
+          {{ 'library.sound.search' | t }}
+        </span>
+        <input
+          class="input"
+          type="search"
+          [value]="sounds.query()"
+          [attr.placeholder]="'library.sound.searchPlaceholder' | t"
+          data-testid="library-sounds-search"
+          (input)="onQuery($event)"
+        />
       </label>
-      <span class="t-sm t-mute" data-testid="library-sounds-count">@if (sounds.visible().length === sounds.items().length) { {{ "library.sound.countAll" | t: { count: sounds.visible().length } }} } @else { {{ "library.sound.countFiltered" | t: { shown: sounds.visible().length, total: sounds.items().length } }} }</span>
+      <span class="t-sm t-mute" data-testid="library-sounds-count">
+        @if (sounds.visible().length === sounds.items().length) {
+          {{ 'library.sound.countAll' | t: { count: sounds.visible().length } }}
+        } @else {
+          {{
+            'library.sound.countFiltered'
+              | t: { shown: sounds.visible().length, total: sounds.items().length }
+          }}
+        }
+      </span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-sounds-filter-chips">
           @if (library.filterCollection() !== null) {
             <span class="tag" data-testid="library-sounds-collection-chip">
               @if (collectionFilterIsKey()) {
-                <span data-testid="library-sounds-collection-chip-label">{{ unfiledKey() | t }}</span>
+                <span data-testid="library-sounds-collection-chip-label">
+                  {{ unfiledKey() | t }}
+                </span>
               } @else {
-                <span data-testid="library-sounds-collection-chip-label">{{ collectionFilterName() }}</span>
+                <span data-testid="library-sounds-collection-chip-label">
+                  {{ collectionFilterName() }}
+                </span>
               }
-              <button type="button" class="tag-x" [attr.aria-label]="'library.explorer.filters.clear' | t" data-testid="library-sounds-collection-chip-remove" (click)="removeCollectionFilter()"><ds-icon name="x" [size]="18" data-testid="library-sounds-collection-chip-remove-icon" /></button>
+              <button
+                type="button"
+                class="tag-x"
+                [attr.aria-label]="'library.explorer.filters.clear' | t"
+                data-testid="library-sounds-collection-chip-remove"
+                (click)="removeCollectionFilter()"
+              >
+                <ds-icon
+                  name="x"
+                  [size]="18"
+                  data-testid="library-sounds-collection-chip-remove-icon"
+                />
+              </button>
             </span>
           }
           @for (tag of library.filterTags(); track tag) {
-            <span class="tag" data-testid="library-sounds-tag-chip"><span data-testid="library-sounds-tag-chip-label">{{ tag }}</span><button type="button" class="tag-x" [attr.aria-label]="'library.explorer.filters.clear' | t" data-testid="library-sounds-tag-chip-remove" (click)="removeTagFilter(tag)"><ds-icon name="x" [size]="18" data-testid="library-sounds-tag-chip-remove-icon" /></button></span>
+            <span class="tag" data-testid="library-sounds-tag-chip">
+              <span data-testid="library-sounds-tag-chip-label">{{ tag }}</span>
+              <button
+                type="button"
+                class="tag-x"
+                [attr.aria-label]="'library.explorer.filters.clear' | t"
+                data-testid="library-sounds-tag-chip-remove"
+                (click)="removeTagFilter(tag)"
+              >
+                <ds-icon name="x" [size]="18" data-testid="library-sounds-tag-chip-remove-icon" />
+              </button>
+            </span>
           }
-          <button type="button" class="btn btn-sm btn-ghost" data-testid="library-sounds-clear-filters" (click)="clearAllFilters()">{{ "library.explorer.filters.clear" | t }}</button>
+          <button
+            type="button"
+            class="btn btn-sm btn-ghost"
+            data-testid="library-sounds-clear-filters"
+            (click)="clearAllFilters()"
+          >
+            {{ 'library.explorer.filters.clear' | t }}
+          </button>
         </span>
       }
     </div>
     <span class="spacer" data-testid="library-sounds-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-sounds-toolbar-right">
-      <select class="select" [value]="sounds.sort()" [attr.aria-label]="'library.sound.sort' | t" data-testid="library-sounds-sort" (change)="onSort($event)">
-        <option value="new" data-testid="library-sounds-sort-new">{{ "library.sound.sort.new" | t }}</option>
-        <option value="name" data-testid="library-sounds-sort-name">{{ "library.sound.sort.name" | t }}</option>
-        <option value="size" data-testid="library-sounds-sort-size">{{ "library.sound.sort.size" | t }}</option>
+      <select
+        class="select"
+        [value]="sounds.sort()"
+        [attr.aria-label]="'library.sound.sort' | t"
+        data-testid="library-sounds-sort"
+        (change)="onSort($event)"
+      >
+        <option value="new" data-testid="library-sounds-sort-new">
+          {{ 'library.sound.sort.new' | t }}
+        </option>
+        <option value="name" data-testid="library-sounds-sort-name">
+          {{ 'library.sound.sort.name' | t }}
+        </option>
+        <option value="size" data-testid="library-sounds-sort-size">
+          {{ 'library.sound.sort.size' | t }}
+        </option>
       </select>
-      <div class="seg" role="group" [attr.aria-label]="'library.sound.viewMode' | t" data-testid="library-sounds-view">
-        <button type="button" [class.is-active]="library.viewMode() === 'grid'" [attr.aria-label]="'library.sound.view.grid' | t" [attr.aria-pressed]="library.viewMode() === 'grid'" data-testid="library-sounds-view-grid" (click)="setView('grid')"><ds-icon name="frames" [size]="14" data-testid="library-sounds-view-grid-icon" /></button>
-        <button type="button" [class.is-active]="library.viewMode() === 'list'" [attr.aria-label]="'library.sound.view.list' | t" [attr.aria-pressed]="library.viewMode() === 'list'" data-testid="library-sounds-view-list" (click)="setView('list')"><ds-icon name="list" [size]="14" data-testid="library-sounds-view-list-icon" /></button>
+      <div
+        class="seg"
+        role="group"
+        [attr.aria-label]="'library.sound.viewMode' | t"
+        data-testid="library-sounds-view"
+      >
+        <button
+          type="button"
+          [class.is-active]="library.viewMode() === 'grid'"
+          [attr.aria-label]="'library.sound.view.grid' | t"
+          [attr.aria-pressed]="library.viewMode() === 'grid'"
+          data-testid="library-sounds-view-grid"
+          (click)="setView('grid')"
+        >
+          <ds-icon name="frames" [size]="14" data-testid="library-sounds-view-grid-icon" />
+        </button>
+        <button
+          type="button"
+          [class.is-active]="library.viewMode() === 'list'"
+          [attr.aria-label]="'library.sound.view.list' | t"
+          [attr.aria-pressed]="library.viewMode() === 'list'"
+          data-testid="library-sounds-view-list"
+          (click)="setView('list')"
+        >
+          <ds-icon name="list" [size]="14" data-testid="library-sounds-view-list-icon" />
+        </button>
       </div>
-      <button type="button" class="btn btn-sm btn-primary" data-testid="library-sounds-upload" (click)="openUpload()"><ds-icon name="plus" [size]="16" data-testid="library-sounds-upload-icon" />{{ "library.sound.upload" | t }}</button>
+      <button
+        type="button"
+        class="btn btn-sm btn-primary"
+        data-testid="library-sounds-upload"
+        (click)="openUpload()"
+      >
+        <ds-icon name="plus" [size]="16" data-testid="library-sounds-upload-icon" />
+        {{ 'library.sound.upload' | t }}
+      </button>
     </div>
   </div>
   <div class="nv-body" data-testid="library-sounds-body">
-    <div class="nv-scroll" [class.table-view]="library.viewMode() === 'list' && sounds.visible().length > 0" data-testid="library-sounds-scroll">
+    <div
+      class="nv-scroll"
+      [class.table-view]="library.viewMode() === 'list' && sounds.visible().length > 0"
+      data-testid="library-sounds-scroll"
+    >
       @if (sounds.visible().length === 0) {
         @if (sounds.items().length === 0 && !hasActiveFilters()) {
-          <div class="empty" data-testid="library-sounds-empty"><div class="empty-inner" data-testid="library-sounds-empty-inner"><div class="illus" data-testid="library-sounds-empty-illustration"></div><h4 class="t-display-xs" data-testid="library-sounds-empty-title">{{ "library.sound.empty.title" | t }}</h4><p class="t-sm t-mute" data-testid="library-sounds-empty-description">{{ "library.sound.empty.description" | t }}</p><div class="empty-act" data-testid="library-sounds-empty-actions"><button type="button" class="btn btn-primary" data-testid="library-sounds-empty-upload" (click)="openUpload()"><ds-icon name="plus" [size]="16" data-testid="library-sounds-empty-upload-icon" />{{ "library.sound.empty.upload" | t }}</button></div></div></div>
+          <div class="empty" data-testid="library-sounds-empty">
+            <div class="empty-inner" data-testid="library-sounds-empty-inner">
+              <div class="illus" data-testid="library-sounds-empty-illustration"></div>
+              <h4 class="t-display-xs" data-testid="library-sounds-empty-title">
+                {{ 'library.sound.empty.title' | t }}
+              </h4>
+              <p class="t-sm t-mute" data-testid="library-sounds-empty-description">
+                {{ 'library.sound.empty.description' | t }}
+              </p>
+              <div class="empty-act" data-testid="library-sounds-empty-actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  data-testid="library-sounds-empty-upload"
+                  (click)="openUpload()"
+                >
+                  <ds-icon name="plus" [size]="16" data-testid="library-sounds-empty-upload-icon" />
+                  {{ 'library.sound.empty.upload' | t }}
+                </button>
+              </div>
+            </div>
+          </div>
         } @else if (sounds.loaded()) {
-          <div class="empty" data-testid="library-sounds-empty-filtered"><div class="empty-inner" data-testid="library-sounds-empty-filtered-inner"><div class="illus" data-testid="library-sounds-empty-filtered-illustration"></div><h4 class="t-display-xs" data-testid="library-sounds-empty-filtered-title">{{ "library.sound.emptyFiltered.title" | t }}</h4><p class="t-sm t-mute" data-testid="library-sounds-empty-filtered-description">{{ "library.sound.emptyFiltered.description" | t }}</p><button type="button" class="btn" data-testid="library-sounds-empty-filtered-clear" (click)="clearAllFilters()">{{ "library.sound.emptyFiltered.clear" | t }}</button></div></div>
+          <div class="empty" data-testid="library-sounds-empty-filtered">
+            <div class="empty-inner" data-testid="library-sounds-empty-filtered-inner">
+              <div class="illus" data-testid="library-sounds-empty-filtered-illustration"></div>
+              <h4 class="t-display-xs" data-testid="library-sounds-empty-filtered-title">
+                {{ 'library.sound.emptyFiltered.title' | t }}
+              </h4>
+              <p class="t-sm t-mute" data-testid="library-sounds-empty-filtered-description">
+                {{ 'library.sound.emptyFiltered.description' | t }}
+              </p>
+              <button
+                type="button"
+                class="btn"
+                data-testid="library-sounds-empty-filtered-clear"
+                (click)="clearAllFilters()"
+              >
+                {{ 'library.sound.emptyFiltered.clear' | t }}
+              </button>
+            </div>
+          </div>
         }
-      } @else if (library.viewMode() === "grid") {
+      } @else if (library.viewMode() === 'grid') {
         <div class="lb-grid" data-testid="library-sounds-grid">
           @for (sound of sounds.visible(); track sound.id) {
-            <div class="lb-card is-dblclick" [class.is-selected]="isSelected(sound)" tabindex="0" [attr.title]="sound.name" data-testid="library-sounds-card" (click)="select(sound)" (dblclick)="open(sound)" (keydown)="onSoundKeydown(sound, $event)"><app-library-sound-media [sound]="sound" data-testid="library-sounds-card-media" /><div class="lb-card-b" data-testid="library-sounds-card-body"><div class="lb-name" data-testid="library-sounds-card-name"><span class="t-ink lb-name-t" data-testid="library-sounds-card-name-text">{{ sound.name }}</span></div><div class="t-sm t-mute lb-sub" data-testid="library-sounds-card-meta">{{ duration(sound) }} · {{ size(sound) }}</div></div></div>
+            <div
+              class="lb-card is-dblclick"
+              [class.is-selected]="isSelected(sound)"
+              tabindex="0"
+              [attr.title]="sound.name"
+              data-testid="library-sounds-card"
+              (click)="select(sound)"
+              (dblclick)="open(sound)"
+              (keydown)="onSoundKeydown(sound, $event)"
+            >
+              <app-library-sound-media [sound]="sound" data-testid="library-sounds-card-media" />
+              <div class="lb-card-b" data-testid="library-sounds-card-body">
+                <div class="lb-name" data-testid="library-sounds-card-name">
+                  <span class="t-ink lb-name-t" data-testid="library-sounds-card-name-text">
+                    {{ sound.name }}
+                  </span>
+                </div>
+                <div class="t-sm t-mute lb-sub" data-testid="library-sounds-card-meta">
+                  {{ duration(sound) }} · {{ size(sound) }}
+                </div>
+              </div>
+            </div>
           }
         </div>
       } @else {
-        <ds-datatable [columns]="tableColumns" [rows]="sounds.visible()" trackKey="id" variant="fill" rowTestId="library-sounds-table-row" [rowClass]="tableRowClass" data-testid="library-sounds-table" (rowSelected)="onRowSelected($event)" (rowDblClick)="onRowDblClick($event)" (rowEnter)="onRowEnter($event)">
-          <ng-template dsCell="name" let-row><div class="nm-title" data-testid="library-sounds-table-name-wrap"><span class="lb-th is-ic" data-testid="library-sounds-table-thumb"><ds-icon name="music" [size]="16" /></span><div class="lb-rname" data-testid="library-sounds-table-name-content"><div class="t-ink" data-testid="library-sounds-table-name-text">{{ soundOf(row).name }}</div></div></div></ng-template>
-          <ng-template dsCell="spec" let-row><span class="mono t-mute" data-testid="library-sounds-table-spec">{{ duration(soundOf(row)) }}</span></ng-template>
-          <ng-template dsCell="size" let-row><span data-testid="library-sounds-table-size">{{ size(soundOf(row)) }}</span></ng-template>
-          <ng-template dsCell="collection" let-row><span class="t-sm t-mute" data-testid="library-sounds-table-collection">{{ collectionName(soundOf(row)) }}</span></ng-template>
+        <ds-datatable
+          [columns]="tableColumns"
+          [rows]="sounds.visible()"
+          trackKey="id"
+          variant="fill"
+          rowTestId="library-sounds-table-row"
+          [rowClass]="tableRowClass"
+          data-testid="library-sounds-table"
+          (rowSelected)="onRowSelected($event)"
+          (rowDblClick)="onRowDblClick($event)"
+          (rowEnter)="onRowEnter($event)"
+        >
+          <ng-template dsCell="name" let-row>
+            <div class="nm-title" data-testid="library-sounds-table-name-wrap">
+              <span class="lb-th is-ic" data-testid="library-sounds-table-thumb">
+                <ds-icon name="music" [size]="16" />
+              </span>
+              <div class="lb-rname" data-testid="library-sounds-table-name-content">
+                <div class="t-ink" data-testid="library-sounds-table-name-text">
+                  {{ soundOf(row).name }}
+                </div>
+              </div>
+            </div>
+          </ng-template>
+          <ng-template dsCell="spec" let-row>
+            <span class="mono t-mute" data-testid="library-sounds-table-spec">
+              {{ duration(soundOf(row)) }}
+            </span>
+          </ng-template>
+          <ng-template dsCell="size" let-row>
+            <span data-testid="library-sounds-table-size">{{ size(soundOf(row)) }}</span>
+          </ng-template>
+          <ng-template dsCell="collection" let-row>
+            <span class="t-sm t-mute" data-testid="library-sounds-table-collection">
+              {{ collectionName(soundOf(row)) }}
+            </span>
+          </ng-template>
         </ds-datatable>
       }
     </div>

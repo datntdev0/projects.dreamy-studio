@@ -1,20 +1,23 @@
-import { Component, computed, inject, input, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { NovelReaderService } from "../novel.reader.service";
-import { toNovelError } from "../novel.rules";
-import { TranslationWarning, WarningFilter, WarningKind } from "../novel.translation.models";
-import { WARNING_FILTERS, WARNING_FILTER_KEYS, WARNING_KIND_BADGES, WARNING_KIND_KEYS, filterWarnings, warningReason } from "../novel.translation.rules";
-import { NovelTranslationService } from "../novel.translation.service";
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+import { NovelReaderService } from '../novel.reader.service';
+import { toNovelError } from '../novel.rules';
+import { TranslationWarning, WarningFilter, WarningKind } from '../novel.translation.models';
+// prettier-ignore
+import { filterWarnings, WARNING_FILTER_KEYS, WARNING_FILTERS, WARNING_KIND_BADGES, WARNING_KIND_KEYS, warningReason } from '../novel.translation.rules';
+import { NovelTranslationService } from '../novel.translation.service';
 
 @Component({
-  selector: "app-novel-translation-warnings",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-translation-warnings',
   imports: [Icon, CoreModule],
-  templateUrl: "./translation-warnings.component.html",
+  templateUrl: './translation-warnings.component.html',
+  host: { 'data-testid': 'novel-translation-warnings' },
 })
 export class NovelTranslationWarnings {
   private readonly languageService = inject(LanguageService);
@@ -24,7 +27,7 @@ export class NovelTranslationWarnings {
 
   readonly novelId = input.required<number>();
   readonly filters = WARNING_FILTERS;
-  readonly filter = signal<WarningFilter>("all");
+  readonly filter = signal<WarningFilter>('all');
 
   readonly all = computed(this.buildAll.bind(this));
   readonly rows = computed(this.buildRows.bind(this));
@@ -59,7 +62,7 @@ export class NovelTranslationWarnings {
   }
 
   openDictionary(): void {
-    this.translation.setStep(this.novelId(), "dict");
+    this.translation.setStep(this.novelId(), 'dict');
   }
 
   view(warning: TranslationWarning): void {
@@ -76,7 +79,7 @@ export class NovelTranslationWarnings {
     } catch (cause) {
       const error = toNovelError(cause);
       const detail = error.detail;
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
     }
   }
 

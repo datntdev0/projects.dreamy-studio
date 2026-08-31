@@ -1,19 +1,56 @@
-<section class="bottom" [style.--bt-h.px]="layout.bottomSize()" [attr.aria-label]="'main.bottom.label' | t" data-testid="bottom">
-  <div class="resizer-h" role="separator" aria-orientation="horizontal" [attr.aria-label]="'main.panel.resize.bottom' | t" tabindex="0" [attr.aria-valuenow]="layout.bottomSize()" [attr.aria-valuemin]="layout.panelLimits.bottom.min" [attr.aria-valuemax]="layout.panelLimits.bottom.max" data-testid="bottom-resizer" (pointerdown)="layout.beginResize('bottom', $event)" (keydown)="layout.handleResizeKey('bottom', $event)" (dblclick)="layout.resetSize('bottom')"></div>
+<section
+  class="bottom"
+  [style.--bt-h.px]="layout.bottomSize()"
+  [attr.aria-label]="'main.bottom.label' | t"
+  data-testid="bottom"
+>
+  <div
+    class="resizer-h"
+    role="separator"
+    aria-orientation="horizontal"
+    [attr.aria-label]="'main.panel.resize.bottom' | t"
+    tabindex="0"
+    [attr.aria-valuenow]="layout.bottomSize()"
+    [attr.aria-valuemin]="layout.panelLimits.bottom.min"
+    [attr.aria-valuemax]="layout.panelLimits.bottom.max"
+    data-testid="bottom-resizer"
+    (pointerdown)="layout.beginResize('bottom', $event)"
+    (keydown)="layout.handleResizeKey('bottom', $event)"
+    (dblclick)="layout.resetSize('bottom')"
+  ></div>
   <header class="bottom-head" data-testid="bottom-head">
     @for (item of tabs; track item.id) {
-      <button type="button" class="ins-tab" [class.is-active]="layout.bottomTab() === item.id" [attr.aria-pressed]="layout.bottomTab() === item.id" [attr.data-tab]="item.id" data-testid="bottom-tab" (click)="selectTab(item.id)">{{ item.labelKey | t }}</button>
+    <button
+      type="button"
+      class="ins-tab"
+      [class.is-active]="layout.bottomTab() === item.id"
+      [attr.aria-pressed]="layout.bottomTab() === item.id"
+      [attr.data-tab]="item.id"
+      data-testid="bottom-tab"
+      (click)="selectTab(item.id)"
+    >
+      {{ item.labelKey | t }}
+    </button>
     }
     <span class="spacer"></span>
-    <ds-button size="small" [iconOnly]="true" [label]="'main.bottom.close' | t" [attr.title]="'main.bottom.close' | t" data-testid="bottom-close" (pressed)="layout.toggleBottom()"><ds-icon name="x" [size]="17" /></ds-button>
+    <ds-button
+      size="small"
+      [iconOnly]="true"
+      [label]="'main.bottom.close' | t"
+      [attr.title]="'main.bottom.close' | t"
+      data-testid="bottom-close"
+      (pressed)="layout.toggleBottom()"
+    >
+      <ds-icon name="x" [size]="17" />
+    </ds-button>
   </header>
   <div class="bottom-body" data-testid="bottom-body">
     @if (layout.bottomTab() === "pipelines") {
-      <app-pipeline-list data-testid="bottom-pipelines" />
+    <app-pipeline-list data-testid="bottom-pipelines" />
     } @else if (layout.bottomTab() === "omniscient") {
-      <app-novel-omniscient data-testid="bottom-omniscient" />
+    <app-novel-omniscient data-testid="bottom-omniscient" />
     } @else {
-      <app-pipeline-log data-testid="bottom-output" />
+    <app-pipeline-log data-testid="bottom-output" />
     }
   </div>
 </section>

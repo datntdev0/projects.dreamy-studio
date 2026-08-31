@@ -1,219 +1,852 @@
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
-      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
-      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
-      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
-      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
-      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
-      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
-      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
-    </defs>
-  </svg>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24">
+      <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24">
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9v4M12 17h.01" />
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" />
+      <path
+        d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+      />
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </symbol>
+    <symbol id="i-book" viewBox="0 0 24 24">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z" />
+      <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5" />
+    </symbol>
+  </defs>
+</svg>
 
-  <div class="page" data-testid="foundation">
-    <aside class="side">
-      <div class="brand"><img src="assets/dreamy-studio-mark.svg" alt="">Design system</div>
-      <nav aria-label="Sections">
-        <button type="button" (click)="scrollToSection('overview')">Overview</button>
-        <button type="button" (click)="scrollToSection('colors')">Colors</button>
-        <button type="button" (click)="scrollToSection('typography')">Typography</button>
-        <button type="button" (click)="scrollToSection('layout')">Layout &amp; spacing</button>
-        <button type="button" (click)="scrollToSection('shapes')">Shapes</button>
-        <button type="button" (click)="scrollToSection('elevation')">Elevation</button>
-        <button type="button" (click)="scrollToSection('dos')">Do's and Don'ts</button>
-      </nav>
-      <span class="spacer"></span>
-    </aside>
+<div class="page" data-testid="foundation">
+  <aside class="side">
+    <div class="brand">
+      <img src="assets/dreamy-studio-mark.svg" alt="" />
+      Design system
+    </div>
+    <nav aria-label="Sections">
+      <button type="button" (click)="scrollToSection('overview')">Overview</button>
+      <button type="button" (click)="scrollToSection('colors')">Colors</button>
+      <button type="button" (click)="scrollToSection('typography')">Typography</button>
+      <button type="button" (click)="scrollToSection('layout')">Layout &amp; spacing</button>
+      <button type="button" (click)="scrollToSection('shapes')">Shapes</button>
+      <button type="button" (click)="scrollToSection('elevation')">Elevation</button>
+      <button type="button" (click)="scrollToSection('dos')">Do's and Don'ts</button>
+    </nav>
+    <span class="spacer"></span>
+  </aside>
 
-    <main>
-<section id="overview" style="padding-top:0">
-        <span class="eyebrow">Dreamy Studio</span>
-        <h1 class="t-display-lg" style="margin:var(--sp-sm) 0 var(--sp-lg)">Design system</h1>
-        <p class="lead" style="color:var(--body);">
-          Dreamy Studio là một studio desktop chạy trên máy cá nhân, nơi một người sáng tạo biến ý tưởng thành hình ảnh, audiobook và video với sự hỗ trợ của AI. Giao diện giữ yên tĩnh và không chen vào việc của người dùng: nền phẳng, viền hairline, nút outline, và chính tác phẩm của người dùng (ảnh, chương truyện, canvas) là màu sắc thật sự duy nhất trên màn hình.
-        </p>
-        <p style="color:var(--body);margin-bottom:var(--sp-xl)">
-          Hai màu thương hiệu lấy từ không khí "dream at dusk" của cái tên.
-          <strong style="color:var(--primary-text);font-weight:500">Dusk Purple</strong> là tiếng nói chính: CTA, vùng đang chọn, focus, điều hướng đang hoạt động.
-          <strong style="color:var(--secondary-text);font-weight:500">Sunset Orange</strong> là tiếng nói phụ: hoạt động đang diễn ra (đang tạo, tác vụ nền), điểm nhấn và những khoảnh khắc "mới". Cam được dùng dè dặt để luôn mang ý nghĩa.
-        </p>
-        <div class="grid g3">
-          <div class="card"><div class="cap">Typefaces</div><div class="t-ink">Geist + Geist Mono</div><div class="t-sm t-mute">Geist sentence-case cho nội dung. Geist Mono UPPERCASE cho nhãn kỹ thuật.</div></div>
-          <div class="card"><div class="cap">Themes</div><div class="t-ink">Dark (mặc định) + Light</div><div class="t-sm t-mute">Cùng bộ token ngữ nghĩa, đổi bằng <code>data-theme</code> trên root.</div></div>
-          <div class="card"><div class="cap">Density</div><div class="t-ink">Dày, radius nhỏ</div><div class="t-sm t-mute">Control cao 28 / 24 px; radius 2 / 3 / 4 / 6 px. Ưu tiên desktop, chuột.</div></div>
-        </div>
-        <h3>Đặc điểm chính</h3>
-        <ul style="color:var(--body);display:grid;gap:var(--sp-sm);padding-left:18px;margin:0">
-          <li>Bề mặt phẳng (<code>--canvas</code>) với viền hairline thay vì bóng đổ; nội dung người dùng tạo ra màu sắc.</li>
-          <li>Dusk Purple đánh dấu "tôi đang thao tác ở đâu"; Sunset Orange đánh dấu "có việc đang chạy".</li>
-          <li>Nút, input, chip dùng <code>--r-sm</code> (3 px); card và panel dùng <code>--r-md</code> (4 px); modal dùng <code>--r-lg</code> (6 px).</li>
-          <li>Geist sentence-case đi cùng Geist Mono UPPERCASE: sự tương phản hai typeface là giọng nói của thương hiệu.</li>
-          <li>Component chỉ tham chiếu token ngữ nghĩa, không dùng hex trực tiếp, nên chạy được ở cả hai theme.</li>
-        </ul>
-      </section>
-<section id="colors">
-        <h2>Colors</h2>
-        <p class="lead">Mọi màu là token ngữ nghĩa có giá trị dark và light. Theme đặt trên phần tử root bằng <code>data-theme="dark" | "light"</code>. Ô màu bên dưới hiển thị theme đang chọn.</p>
-
-        <h3>Brand</h3>
-        <table class="spec" id="t-brand"><thead><tr><th>Token</th><th>Dark</th><th>Light</th><th>Dùng cho</th></tr></thead><tbody>
-          <tr><td><span class="sw" style="background:var(--primary)"></span><code>--primary</code></td><td class="val">#7c3aed</td><td class="val">#7c3aed</td><td>Dusk Purple. Nền nút primary, chỉ báo nav đang chọn, selection, focus ring, toggle bật.</td></tr>
-          <tr><td><span class="sw" style="background:var(--primary-hover)"></span><code>--primary-hover</code></td><td class="val">#8b5cf6</td><td class="val">#6d28d9</td><td>Hover / pressed của nền primary.</td></tr>
-          <tr><td><span class="sw" style="background:var(--on-primary)"></span><code>--on-primary</code></td><td class="val">#ffffff</td><td class="val">#ffffff</td><td>Chữ / icon trên nền primary.</td></tr>
-          <tr><td><span class="sw" style="background:var(--primary-text)"></span><code>--primary-text</code></td><td class="val">#c4b5fd</td><td class="val">#6d28d9</td><td>Tím dùng làm chữ / icon trên canvas (link, nhãn nav đang chọn).</td></tr>
-          <tr><td><span class="sw" style="background:var(--primary-soft)"></span><code>--primary-soft</code></td><td class="val">rgba(124,58,237,0.18)</td><td class="val">rgba(124,58,237,0.10)</td><td>Nền nhạt: dòng đang chọn, nav item active, card đang chọn.</td></tr>
-          <tr><td><span class="sw" style="background:var(--secondary)"></span><code>--secondary</code></td><td class="val">#ff7a17</td><td class="val">#ff7a17</td><td>Sunset Orange. Chỉ báo job đang chạy, progress fill, badge nhấn.</td></tr>
-          <tr><td><span class="sw" style="background:var(--secondary-hover)"></span><code>--secondary-hover</code></td><td class="val">#ff9442</td><td class="val">#ea6a0a</td><td>Hover của nền secondary.</td></tr>
-          <tr><td><span class="sw" style="background:var(--on-secondary)"></span><code>--on-secondary</code></td><td class="val">#0a0a0a</td><td class="val">#0a0a0a</td><td>Chữ / icon trên nền secondary.</td></tr>
-          <tr><td><span class="sw" style="background:var(--secondary-text)"></span><code>--secondary-text</code></td><td class="val">#ffc285</td><td class="val">#c2410c</td><td>Cam dùng làm chữ / icon trên canvas.</td></tr>
-          <tr><td><span class="sw" style="background:var(--secondary-soft)"></span><code>--secondary-soft</code></td><td class="val">rgba(255,122,23,0.16)</td><td class="val">rgba(255,122,23,0.12)</td><td>Nền nhạt cho mục đang chạy / được làm nổi bật.</td></tr>
-        </tbody></table>
-
-        <h3>Surface</h3>
-        <table class="spec"><thead><tr><th>Token</th><th>Dark</th><th>Light</th><th>Dùng cho</th></tr></thead><tbody>
-          <tr><td><span class="sw" style="background:var(--canvas)"></span><code>--canvas</code></td><td class="val">#0a0a0a</td><td class="val">#fafaf7</td><td>Nền trang / cửa sổ.</td></tr>
-          <tr><td><span class="sw" style="background:var(--canvas-soft)"></span><code>--canvas-soft</code></td><td class="val">#1a1c20</td><td class="val">#f1f0ec</td><td>Nav item hover, nền input, tooltip.</td></tr>
-          <tr><td><span class="sw" style="background:var(--canvas-card)"></span><code>--canvas-card</code></td><td class="val">#151517</td><td class="val">#ffffff</td><td>Card, panel, sidebar, modal.</td></tr>
-          <tr><td><span class="sw" style="background:var(--canvas-mid)"></span><code>--canvas-mid</code></td><td class="val">#363a3f</td><td class="val">#e4e3de</td><td>Bề mặt lồng nhau, placeholder ảnh, thumb scrollbar, track progress.</td></tr>
-          <tr><td><span class="sw" style="background:var(--hairline)"></span><code>--hairline</code></td><td class="val">#212327</td><td class="val">#e6e5e0</td><td>Đường kẻ 1 px và viền card.</td></tr>
-          <tr><td><span class="sw" style="background:var(--hairline-strong)"></span><code>--hairline-strong</code></td><td class="val">rgba(255,255,255,0.25)</td><td class="val">rgba(10,10,10,0.20)</td><td>Viền nút outline, viền input.</td></tr>
-          <tr><td><span class="sw" style="background:var(--scrim)"></span><code>--scrim</code></td><td class="val">rgba(0,0,0,0.60)</td><td class="val">rgba(10,10,10,0.35)</td><td>Lớp phủ phía sau modal.</td></tr>
-        </tbody></table>
-
-        <h3>Text</h3>
-        <table class="spec"><thead><tr><th>Token</th><th>Dark</th><th>Light</th><th>Dùng cho</th></tr></thead><tbody>
-          <tr><td><span class="sw" style="background:var(--ink)"></span><code>--ink</code></td><td class="val">#ffffff</td><td class="val">#0a0a0a</td><td>Tiêu đề và chữ chính.</td></tr>
-          <tr><td><span class="sw" style="background:var(--body)"></span><code>--body</code></td><td class="val">#dadbdf</td><td class="val">#3a3d42</td><td>Nội dung.</td></tr>
-          <tr><td><span class="sw" style="background:var(--mute)"></span><code>--mute</code></td><td class="val">#7d8187</td><td class="val">#6b6f75</td><td>Chú thích, metadata, placeholder.</td></tr>
-        </tbody></table>
-
-        <h3>Semantic</h3>
-        <table class="spec"><thead><tr><th>Token</th><th>Dark</th><th>Light</th><th>Dùng cho</th></tr></thead><tbody>
-          <tr><td><span class="sw" style="background:var(--success)"></span><code>--success</code></td><td class="val">#4ade80</td><td class="val">#15803d</td><td>Job hoàn tất, kênh đã kết nối, đã lưu.</td></tr>
-          <tr><td><span class="sw" style="background:var(--warning)"></span><code>--warning</code></td><td class="val">#fbbf24</td><td class="val">#b45309</td><td>Cần chú ý: thiếu model, token sắp hết hạn.</td></tr>
-          <tr><td><span class="sw" style="background:var(--danger)"></span><code>--danger</code></td><td class="val">#f87171</td><td class="val">#dc2626</td><td>Job lỗi, thao tác hủy diệt, lỗi validate.</td></tr>
-          <tr><td><span class="sw" style="background:var(--info)"></span><code>--info</code></td><td class="val">#a0c3ec</td><td class="val">#2f6aa8</td><td>Thông tin trung tính, gợi ý.</td></tr>
-        </tbody></table>
-        <p class="t-sm t-mute" style="margin-top:var(--sp-md)">Mỗi màu ngữ nghĩa có biến thể <code>-soft</code> (alpha 16 % ở dark, 10 % ở light) cho nền nhạt.</p>
-
-        <h3>Illustration accents</h3>
-        <p class="t-sm t-mute" style="margin-bottom:var(--sp-md)">Chỉ dùng cho minh họa, empty state, hình nền splash. Không bao giờ dùng cho control.</p>
-        <div class="accents">
-          <div><i style="background:var(--acc-twilight)"></i><span class="t-sm t-ink">Twilight</span><br><span class="val">#c4b5fd</span></div>
-          <div><i style="background:var(--acc-sunset)"></i><span class="t-sm t-ink">Sunset Soft</span><br><span class="val">#ffc285</span></div>
-          <div><i style="background:var(--acc-breeze)"></i><span class="t-sm t-ink">Breeze Blue</span><br><span class="val">#a0c3ec</span></div>
-          <div><i style="background:var(--acc-midnight)"></i><span class="t-sm t-ink">Midnight</span><br><span class="val">#0d1726</span></div>
-        </div>
-
-        <h3>Ghi chú tương phản</h3>
-        <ul style="color:var(--body);display:grid;gap:var(--sp-sm);padding-left:18px;margin:0">
-          <li>Chữ trắng trên <code>--primary</code> khoảng 5.7 : 1, an toàn cho nhãn nút ở cả hai theme.</li>
-          <li><code>--primary</code> làm chữ trên canvas tối chỉ khoảng 3.5 : 1, nên theme dark dùng <code>--primary-text</code> (#c4b5fd) cho chữ tím.</li>
-          <li><code>--secondary</code> làm chữ trên canvas sáng chỉ khoảng 2.6 : 1, nên theme light dùng <code>--secondary-text</code> (#c2410c).</li>
-          <li><code>--mute</code> giữ tối thiểu 4.5 : 1 trên <code>--canvas</code> ở cả hai theme.</li>
-        </ul>
-      </section>
-<section id="typography">
-        <h2>Typography</h2>
-        <p class="lead">Hai typeface: <strong style="color:var(--ink);font-weight:500">Geist</strong> (dự phòng Inter, system-ui) cho tiêu đề, nội dung, nút, điều hướng; <strong style="color:var(--ink);font-weight:500">Geist Mono</strong> (dự phòng JetBrains Mono, ui-monospace) cho eyebrow, nhãn, ID, bộ đếm, thời gian, tiến độ job.</p>
-        <div class="ladder">
-          <div><div class="meta"><code>display-lg</code><div class="val">48 / 52 · 400 · -1.2px</div><div class="t-sm t-mute">Hero (splash).</div></div><div class="t-display-lg t-ink">Dreamy Studio</div></div>
-          <div><div class="meta"><code>display-md</code><div class="val">32 / 36 · 400 · -0.6px</div><div class="t-sm t-mute">Tiêu đề trang.</div></div><div class="t-display-md t-ink">Novel translation</div></div>
-          <div><div class="meta"><code>display-sm</code><div class="val">24 / 30 · 400 · -0.4px</div><div class="t-sm t-mute">Tiêu đề section, modal.</div></div><div class="t-display-sm t-ink">Đổi workspace</div></div>
-          <div><div class="meta"><code>display-xs</code><div class="val">18 / 26 · 400 · -0.2px</div><div class="t-sm t-mute">Tiêu đề card, panel.</div></div><div class="t-display-xs t-ink">Chưa có pipeline nào chạy</div></div>
-          <div><div class="meta"><code>body-md</code><div class="val">14 / 20 · 400</div><div class="t-sm t-mute">Nội dung mặc định trong app.</div></div><div>Dịch theo chương, giữ liên kết giữa đoạn gốc và đoạn dịch.</div></div>
-          <div><div class="meta"><code>body-sm</code><div class="val">13 / 18 · 400</div><div class="t-sm t-mute">Nội dung phụ, metadata danh sách.</div></div><div class="t-sm">6 project · 48.2 GB · mở lần cuối 2026-11-09</div></div>
-          <div><div class="meta"><code>label / button-md</code><div class="val">13 / 18 · 500</div><div class="t-sm t-mute">Nav item, tab, nhãn form, nhãn nút.</div></div><div style="font-weight:500;font-size:13px" class="t-ink">Tạo workspace mới</div></div>
-          <div><div class="meta"><code>caption-mono</code><div class="val">12 / 16 · 400 · 1.2px · UPPERCASE</div><div class="t-sm t-mute">Eyebrow section.</div></div><div class="eyebrow">Workspace gần đây</div></div>
-          <div><div class="meta"><code>caption-mono-sm</code><div class="val">11 / 14 · 400 · 1px · UPPERCASE</div><div class="t-sm t-mute">Badge, bộ đếm, ID.</div></div><div class="row"><span class="badge badge-info">Coming soon</span><span class="mono t-mute">REQ-01-001</span></div></div>
-        </div>
-        <h3>Nguyên tắc</h3>
-        <ul style="color:var(--body);display:grid;gap:var(--sp-sm);padding-left:18px;margin:0">
-          <li>Weight 400 cho display và body. Thứ bậc đến từ cỡ chữ và tracking. Weight 500 chỉ dùng cho nhãn UI nhỏ (nav, tab, nút) nơi 13 px regular quá mờ.</li>
-          <li>Tracking âm chặt ở cỡ display, trung tính ở cỡ body.</li>
-          <li>Geist Mono UPPERCASE cho eyebrow và dữ liệu kỹ thuật (số lượng, % tiến độ, tên model). Đường dẫn file dùng Geist Mono giữ nguyên chữ hoa/thường.</li>
-          <li>Body của app là 14 px (mật độ desktop), không phải 16 px như trang marketing.</li>
-        </ul>
-      </section>
-<section id="layout">
-        <h2>Layout &amp; spacing</h2>
-        <h3>Spacing scale</h3>
-        <p class="lead">Đơn vị cơ sở 4 px, thang dày.</p>
-        <table class="spec"><thead><tr><th>Token</th><th>Giá trị</th><th></th></tr></thead><tbody>
-          <tr><td><code>--sp-xxs</code></td><td class="val">2 px</td><td><span class="bar" style="width:2px"></span></td></tr>
-          <tr><td><code>--sp-xs</code></td><td class="val">4 px</td><td><span class="bar" style="width:4px"></span></td></tr>
-          <tr><td><code>--sp-sm</code></td><td class="val">6 px</td><td><span class="bar" style="width:6px"></span></td></tr>
-          <tr><td><code>--sp-md</code></td><td class="val">8 px</td><td><span class="bar" style="width:8px"></span></td></tr>
-          <tr><td><code>--sp-lg</code></td><td class="val">12 px</td><td><span class="bar" style="width:12px"></span></td></tr>
-          <tr><td><code>--sp-xl</code></td><td class="val">16 px</td><td><span class="bar" style="width:16px"></span></td></tr>
-          <tr><td><code>--sp-2xl</code></td><td class="val">24 px</td><td><span class="bar" style="width:24px"></span></td></tr>
-          <tr><td><code>--sp-3xl</code></td><td class="val">32 px</td><td><span class="bar" style="width:32px"></span></td></tr>
-          <tr><td><code>--sp-4xl</code></td><td class="val">48 px</td><td><span class="bar" style="width:48px"></span></td></tr>
-        </tbody></table>
-
-        <h3>Kích thước control</h3>
-        <table class="spec"><thead><tr><th>Token</th><th>Giá trị</th><th>Dùng cho</th></tr></thead><tbody>
-          <tr><td><code>--ctl-h</code></td><td class="val">28 px</td><td>Nút, input, select mặc định.</td></tr>
-          <tr><td><code>--ctl-h-sm</code></td><td class="val">24 px</td><td>Nút trong toolbar / inline, nút icon, nút trên title bar.</td></tr>
-          <tr><td>Hàng cây / list</td><td class="val">24 px</td><td>Hàng trong explorer, danh sách.</td></tr>
-        </tbody></table>
-        <p class="t-sm t-mute" style="margin-top:var(--sp-md)">Nút chỉ có icon có vùng bấm vuông bằng chiều cao control và luôn có tooltip. Tối ưu cho chuột, desktop trước.</p>
-
-        <h3>Khung ứng dụng</h3>
-        <div class="demo" style="margin-top:var(--sp-md)">
-          <div class="layout-map" aria-label="Sơ đồ layout">
-            <div class="tb">Title bar · 32</div>
-            <div>Rail<br>44</div><div>Explorer<br>264</div><div class="ed">Editor · tabs · breadcrumb<br>(bottom panel khi mở)</div><div>Inspector<br>320</div>
-            <div class="sb">Status bar · 24</div>
+  <main>
+    <section id="overview" style="padding-top: 0">
+      <span class="eyebrow">Dreamy Studio</span>
+      <h1 class="t-display-lg" style="margin: var(--sp-sm) 0 var(--sp-lg)">Design system</h1>
+      <p class="lead" style="color: var(--body)">
+        Dreamy Studio là một studio desktop chạy trên máy cá nhân, nơi một người sáng tạo biến ý
+        tưởng thành hình ảnh, audiobook và video với sự hỗ trợ của AI. Giao diện giữ yên tĩnh và
+        không chen vào việc của người dùng: nền phẳng, viền hairline, nút outline, và chính tác phẩm
+        của người dùng (ảnh, chương truyện, canvas) là màu sắc thật sự duy nhất trên màn hình.
+      </p>
+      <p style="color: var(--body); margin-bottom: var(--sp-xl)">
+        Hai màu thương hiệu lấy từ không khí "dream at dusk" của cái tên.
+        <strong style="color: var(--primary-text); font-weight: 500">Dusk Purple</strong>
+        là tiếng nói chính: CTA, vùng đang chọn, focus, điều hướng đang hoạt động.
+        <strong style="color: var(--secondary-text); font-weight: 500">Sunset Orange</strong>
+        là tiếng nói phụ: hoạt động đang diễn ra (đang tạo, tác vụ nền), điểm nhấn và những khoảnh
+        khắc "mới". Cam được dùng dè dặt để luôn mang ý nghĩa.
+      </p>
+      <div class="grid g3">
+        <div class="card">
+          <div class="cap">Typefaces</div>
+          <div class="t-ink">Geist + Geist Mono</div>
+          <div class="t-sm t-mute">
+            Geist sentence-case cho nội dung. Geist Mono UPPERCASE cho nhãn kỹ thuật.
           </div>
-          <div class="t-sm t-mute">Rail 44 px · Explorer 264 px (200 đến 420) · Inspector 320 px (240 đến 480) · Bottom panel 200 px (120 đến 520). Padding vùng nội dung: <code>--sp-2xl</code> đến <code>--sp-3xl</code>. Padding card: <code>--sp-lg</code> (gọn) hoặc <code>--sp-xl</code> (feature card).</div>
         </div>
+        <div class="card">
+          <div class="cap">Themes</div>
+          <div class="t-ink">Dark (mặc định) + Light</div>
+          <div class="t-sm t-mute">
+            Cùng bộ token ngữ nghĩa, đổi bằng
+            <code>data-theme</code>
+            trên root.
+          </div>
+        </div>
+        <div class="card">
+          <div class="cap">Density</div>
+          <div class="t-ink">Dày, radius nhỏ</div>
+          <div class="t-sm t-mute">
+            Control cao 28 / 24 px; radius 2 / 3 / 4 / 6 px. Ưu tiên desktop, chuột.
+          </div>
+        </div>
+      </div>
+      <h3>Đặc điểm chính</h3>
+      <ul
+        style="color: var(--body); display: grid; gap: var(--sp-sm); padding-left: 18px; margin: 0"
+      >
+        <li>
+          Bề mặt phẳng (
+          <code>--canvas</code>
+          ) với viền hairline thay vì bóng đổ; nội dung người dùng tạo ra màu sắc.
+        </li>
+        <li>
+          Dusk Purple đánh dấu "tôi đang thao tác ở đâu"; Sunset Orange đánh dấu "có việc đang
+          chạy".
+        </li>
+        <li>
+          Nút, input, chip dùng
+          <code>--r-sm</code>
+          (3 px); card và panel dùng
+          <code>--r-md</code>
+          (4 px); modal dùng
+          <code>--r-lg</code>
+          (6 px).
+        </li>
+        <li>
+          Geist sentence-case đi cùng Geist Mono UPPERCASE: sự tương phản hai typeface là giọng nói
+          của thương hiệu.
+        </li>
+        <li>
+          Component chỉ tham chiếu token ngữ nghĩa, không dùng hex trực tiếp, nên chạy được ở cả hai
+          theme.
+        </li>
+      </ul>
+    </section>
+    <section id="colors">
+      <h2>Colors</h2>
+      <p class="lead">
+        Mọi màu là token ngữ nghĩa có giá trị dark và light. Theme đặt trên phần tử root bằng
+        <code>data-theme="dark" | "light"</code>
+        . Ô màu bên dưới hiển thị theme đang chọn.
+      </p>
 
-        <h3>Hình ảnh</h3>
-        <p class="t-sm" style="color:var(--body)">Ảnh của người dùng hiển thị <code>object-fit: cover</code> trong lưới và <code>contain</code> trong trình xem, trên nền <code>--canvas-mid</code> khi đang tải.</p>
-      </section>
-<section id="shapes">
-        <h2>Shapes</h2>
-        <p class="lead">Radius nhỏ, gần với công cụ chuyên nghiệp. Hình tròn chỉ dành cho status dot và avatar.</p>
-        <table class="spec"><thead><tr><th>Token</th><th>Giá trị</th><th>Dùng cho</th><th></th></tr></thead><tbody>
-          <tr><td><code>--r-xs</code></td><td class="val">2 px</td><td>Badge, thumbnail trong list, progress.</td><td><div class="box" style="border-radius:var(--r-xs)">2</div></td></tr>
-          <tr><td><code>--r-sm</code></td><td class="val">3 px</td><td>Nút, input, chip, hàng cây, mục menu.</td><td><div class="box" style="border-radius:var(--r-sm)">3</div></td></tr>
-          <tr><td><code>--r-md</code></td><td class="val">4 px</td><td>Card, panel, danh sách, tile ảnh.</td><td><div class="box" style="border-radius:var(--r-md)">4</div></td></tr>
-          <tr><td><code>--r-lg</code></td><td class="val">6 px</td><td>Modal, splash card, preview media lớn.</td><td><div class="box" style="border-radius:var(--r-lg)">6</div></td></tr>
-          <tr><td><code>--r-full</code></td><td class="val">9999 px</td><td>Status dot, avatar.</td><td><div class="box" style="border-radius:var(--r-full);width:56px">●</div></td></tr>
-        </tbody></table>
-      </section>
-<section id="elevation">
-        <h2>Elevation &amp; depth</h2>
-        <p class="lead">Bề mặt tĩnh không có bóng; viền hairline đảm nhiệm vai trò nâng lớp.</p>
-        <div class="grid g3">
-          <div class="lvl l0"><div class="cap">Level 0 · Flat</div><div class="t-sm">Không bóng, không viền. Nền trang, vùng full-bleed.</div></div>
-          <div class="lvl"><div class="cap">Level 1 · Hairline</div><div class="t-sm">1 px <code>--hairline</code>. Card, panel, sidebar, input.</div></div>
-          <div class="lvl l2"><div class="cap">Level 2 · Floating</div><div class="t-sm">Hairline + <code>--shadow-float</code> (<span class="val">0 8px 24px</span>). Chỉ cho menu, popover, modal, toast.</div></div>
+      <h3>Brand</h3>
+      <table class="spec" id="t-brand">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Dark</th>
+            <th>Light</th>
+            <th>Dùng cho</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--primary)"></span>
+              <code>--primary</code>
+            </td>
+            <td class="val">#7c3aed</td>
+            <td class="val">#7c3aed</td>
+            <td>
+              Dusk Purple. Nền nút primary, chỉ báo nav đang chọn, selection, focus ring, toggle
+              bật.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--primary-hover)"></span>
+              <code>--primary-hover</code>
+            </td>
+            <td class="val">#8b5cf6</td>
+            <td class="val">#6d28d9</td>
+            <td>Hover / pressed của nền primary.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--on-primary)"></span>
+              <code>--on-primary</code>
+            </td>
+            <td class="val">#ffffff</td>
+            <td class="val">#ffffff</td>
+            <td>Chữ / icon trên nền primary.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--primary-text)"></span>
+              <code>--primary-text</code>
+            </td>
+            <td class="val">#c4b5fd</td>
+            <td class="val">#6d28d9</td>
+            <td>Tím dùng làm chữ / icon trên canvas (link, nhãn nav đang chọn).</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--primary-soft)"></span>
+              <code>--primary-soft</code>
+            </td>
+            <td class="val">rgba(124,58,237,0.18)</td>
+            <td class="val">rgba(124,58,237,0.10)</td>
+            <td>Nền nhạt: dòng đang chọn, nav item active, card đang chọn.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--secondary)"></span>
+              <code>--secondary</code>
+            </td>
+            <td class="val">#ff7a17</td>
+            <td class="val">#ff7a17</td>
+            <td>Sunset Orange. Chỉ báo job đang chạy, progress fill, badge nhấn.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--secondary-hover)"></span>
+              <code>--secondary-hover</code>
+            </td>
+            <td class="val">#ff9442</td>
+            <td class="val">#ea6a0a</td>
+            <td>Hover của nền secondary.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--on-secondary)"></span>
+              <code>--on-secondary</code>
+            </td>
+            <td class="val">#0a0a0a</td>
+            <td class="val">#0a0a0a</td>
+            <td>Chữ / icon trên nền secondary.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--secondary-text)"></span>
+              <code>--secondary-text</code>
+            </td>
+            <td class="val">#ffc285</td>
+            <td class="val">#c2410c</td>
+            <td>Cam dùng làm chữ / icon trên canvas.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--secondary-soft)"></span>
+              <code>--secondary-soft</code>
+            </td>
+            <td class="val">rgba(255,122,23,0.16)</td>
+            <td class="val">rgba(255,122,23,0.12)</td>
+            <td>Nền nhạt cho mục đang chạy / được làm nổi bật.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Surface</h3>
+      <table class="spec">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Dark</th>
+            <th>Light</th>
+            <th>Dùng cho</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--canvas)"></span>
+              <code>--canvas</code>
+            </td>
+            <td class="val">#0a0a0a</td>
+            <td class="val">#fafaf7</td>
+            <td>Nền trang / cửa sổ.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--canvas-soft)"></span>
+              <code>--canvas-soft</code>
+            </td>
+            <td class="val">#1a1c20</td>
+            <td class="val">#f1f0ec</td>
+            <td>Nav item hover, nền input, tooltip.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--canvas-card)"></span>
+              <code>--canvas-card</code>
+            </td>
+            <td class="val">#151517</td>
+            <td class="val">#ffffff</td>
+            <td>Card, panel, sidebar, modal.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--canvas-mid)"></span>
+              <code>--canvas-mid</code>
+            </td>
+            <td class="val">#363a3f</td>
+            <td class="val">#e4e3de</td>
+            <td>Bề mặt lồng nhau, placeholder ảnh, thumb scrollbar, track progress.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--hairline)"></span>
+              <code>--hairline</code>
+            </td>
+            <td class="val">#212327</td>
+            <td class="val">#e6e5e0</td>
+            <td>Đường kẻ 1 px và viền card.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--hairline-strong)"></span>
+              <code>--hairline-strong</code>
+            </td>
+            <td class="val">rgba(255,255,255,0.25)</td>
+            <td class="val">rgba(10,10,10,0.20)</td>
+            <td>Viền nút outline, viền input.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--scrim)"></span>
+              <code>--scrim</code>
+            </td>
+            <td class="val">rgba(0,0,0,0.60)</td>
+            <td class="val">rgba(10,10,10,0.35)</td>
+            <td>Lớp phủ phía sau modal.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Text</h3>
+      <table class="spec">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Dark</th>
+            <th>Light</th>
+            <th>Dùng cho</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--ink)"></span>
+              <code>--ink</code>
+            </td>
+            <td class="val">#ffffff</td>
+            <td class="val">#0a0a0a</td>
+            <td>Tiêu đề và chữ chính.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--body)"></span>
+              <code>--body</code>
+            </td>
+            <td class="val">#dadbdf</td>
+            <td class="val">#3a3d42</td>
+            <td>Nội dung.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--mute)"></span>
+              <code>--mute</code>
+            </td>
+            <td class="val">#7d8187</td>
+            <td class="val">#6b6f75</td>
+            <td>Chú thích, metadata, placeholder.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Semantic</h3>
+      <table class="spec">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Dark</th>
+            <th>Light</th>
+            <th>Dùng cho</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--success)"></span>
+              <code>--success</code>
+            </td>
+            <td class="val">#4ade80</td>
+            <td class="val">#15803d</td>
+            <td>Job hoàn tất, kênh đã kết nối, đã lưu.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--warning)"></span>
+              <code>--warning</code>
+            </td>
+            <td class="val">#fbbf24</td>
+            <td class="val">#b45309</td>
+            <td>Cần chú ý: thiếu model, token sắp hết hạn.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--danger)"></span>
+              <code>--danger</code>
+            </td>
+            <td class="val">#f87171</td>
+            <td class="val">#dc2626</td>
+            <td>Job lỗi, thao tác hủy diệt, lỗi validate.</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="sw" style="background: var(--info)"></span>
+              <code>--info</code>
+            </td>
+            <td class="val">#a0c3ec</td>
+            <td class="val">#2f6aa8</td>
+            <td>Thông tin trung tính, gợi ý.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="t-sm t-mute" style="margin-top: var(--sp-md)">
+        Mỗi màu ngữ nghĩa có biến thể
+        <code>-soft</code>
+        (alpha 16 % ở dark, 10 % ở light) cho nền nhạt.
+      </p>
+
+      <h3>Illustration accents</h3>
+      <p class="t-sm t-mute" style="margin-bottom: var(--sp-md)">
+        Chỉ dùng cho minh họa, empty state, hình nền splash. Không bao giờ dùng cho control.
+      </p>
+      <div class="accents">
+        <div>
+          <i style="background: var(--acc-twilight)"></i>
+          <span class="t-sm t-ink">Twilight</span>
+          <br />
+          <span class="val">#c4b5fd</span>
         </div>
-      </section>
-<section id="dos">
-        <h2>Do's and Don'ts</h2>
-        <div class="grid g2" style="margin-top:var(--sp-lg)">
-          <div class="do"><h3>Do</h3><ul>
+        <div>
+          <i style="background: var(--acc-sunset)"></i>
+          <span class="t-sm t-ink">Sunset Soft</span>
+          <br />
+          <span class="val">#ffc285</span>
+        </div>
+        <div>
+          <i style="background: var(--acc-breeze)"></i>
+          <span class="t-sm t-ink">Breeze Blue</span>
+          <br />
+          <span class="val">#a0c3ec</span>
+        </div>
+        <div>
+          <i style="background: var(--acc-midnight)"></i>
+          <span class="t-sm t-ink">Midnight</span>
+          <br />
+          <span class="val">#0d1726</span>
+        </div>
+      </div>
+
+      <h3>Ghi chú tương phản</h3>
+      <ul
+        style="color: var(--body); display: grid; gap: var(--sp-sm); padding-left: 18px; margin: 0"
+      >
+        <li>
+          Chữ trắng trên
+          <code>--primary</code>
+          khoảng 5.7 : 1, an toàn cho nhãn nút ở cả hai theme.
+        </li>
+        <li>
+          <code>--primary</code>
+          làm chữ trên canvas tối chỉ khoảng 3.5 : 1, nên theme dark dùng
+          <code>--primary-text</code>
+          (#c4b5fd) cho chữ tím.
+        </li>
+        <li>
+          <code>--secondary</code>
+          làm chữ trên canvas sáng chỉ khoảng 2.6 : 1, nên theme light dùng
+          <code>--secondary-text</code>
+          (#c2410c).
+        </li>
+        <li>
+          <code>--mute</code>
+          giữ tối thiểu 4.5 : 1 trên
+          <code>--canvas</code>
+          ở cả hai theme.
+        </li>
+      </ul>
+    </section>
+    <section id="typography">
+      <h2>Typography</h2>
+      <p class="lead">
+        Hai typeface:
+        <strong style="color: var(--ink); font-weight: 500">Geist</strong>
+        (dự phòng Inter, system-ui) cho tiêu đề, nội dung, nút, điều hướng;
+        <strong style="color: var(--ink); font-weight: 500">Geist Mono</strong>
+        (dự phòng JetBrains Mono, ui-monospace) cho eyebrow, nhãn, ID, bộ đếm, thời gian, tiến độ
+        job.
+      </p>
+      <div class="ladder">
+        <div>
+          <div class="meta">
+            <code>display-lg</code>
+            <div class="val">48 / 52 · 400 · -1.2px</div>
+            <div class="t-sm t-mute">Hero (splash).</div>
+          </div>
+          <div class="t-display-lg t-ink">Dreamy Studio</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>display-md</code>
+            <div class="val">32 / 36 · 400 · -0.6px</div>
+            <div class="t-sm t-mute">Tiêu đề trang.</div>
+          </div>
+          <div class="t-display-md t-ink">Novel translation</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>display-sm</code>
+            <div class="val">24 / 30 · 400 · -0.4px</div>
+            <div class="t-sm t-mute">Tiêu đề section, modal.</div>
+          </div>
+          <div class="t-display-sm t-ink">Đổi workspace</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>display-xs</code>
+            <div class="val">18 / 26 · 400 · -0.2px</div>
+            <div class="t-sm t-mute">Tiêu đề card, panel.</div>
+          </div>
+          <div class="t-display-xs t-ink">Chưa có pipeline nào chạy</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>body-md</code>
+            <div class="val">14 / 20 · 400</div>
+            <div class="t-sm t-mute">Nội dung mặc định trong app.</div>
+          </div>
+          <div>Dịch theo chương, giữ liên kết giữa đoạn gốc và đoạn dịch.</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>body-sm</code>
+            <div class="val">13 / 18 · 400</div>
+            <div class="t-sm t-mute">Nội dung phụ, metadata danh sách.</div>
+          </div>
+          <div class="t-sm">6 project · 48.2 GB · mở lần cuối 2026-11-09</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>label / button-md</code>
+            <div class="val">13 / 18 · 500</div>
+            <div class="t-sm t-mute">Nav item, tab, nhãn form, nhãn nút.</div>
+          </div>
+          <div style="font-weight: 500; font-size: 13px" class="t-ink">Tạo workspace mới</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>caption-mono</code>
+            <div class="val">12 / 16 · 400 · 1.2px · UPPERCASE</div>
+            <div class="t-sm t-mute">Eyebrow section.</div>
+          </div>
+          <div class="eyebrow">Workspace gần đây</div>
+        </div>
+        <div>
+          <div class="meta">
+            <code>caption-mono-sm</code>
+            <div class="val">11 / 14 · 400 · 1px · UPPERCASE</div>
+            <div class="t-sm t-mute">Badge, bộ đếm, ID.</div>
+          </div>
+          <div class="row">
+            <span class="badge badge-info">Coming soon</span>
+            <span class="mono t-mute">REQ-01-001</span>
+          </div>
+        </div>
+      </div>
+      <h3>Nguyên tắc</h3>
+      <ul
+        style="color: var(--body); display: grid; gap: var(--sp-sm); padding-left: 18px; margin: 0"
+      >
+        <li>
+          Weight 400 cho display và body. Thứ bậc đến từ cỡ chữ và tracking. Weight 500 chỉ dùng cho
+          nhãn UI nhỏ (nav, tab, nút) nơi 13 px regular quá mờ.
+        </li>
+        <li>Tracking âm chặt ở cỡ display, trung tính ở cỡ body.</li>
+        <li>
+          Geist Mono UPPERCASE cho eyebrow và dữ liệu kỹ thuật (số lượng, % tiến độ, tên model).
+          Đường dẫn file dùng Geist Mono giữ nguyên chữ hoa/thường.
+        </li>
+        <li>Body của app là 14 px (mật độ desktop), không phải 16 px như trang marketing.</li>
+      </ul>
+    </section>
+    <section id="layout">
+      <h2>Layout &amp; spacing</h2>
+      <h3>Spacing scale</h3>
+      <p class="lead">Đơn vị cơ sở 4 px, thang dày.</p>
+      <table class="spec">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Giá trị</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--sp-xxs</code></td>
+            <td class="val">2 px</td>
+            <td><span class="bar" style="width: 2px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-xs</code></td>
+            <td class="val">4 px</td>
+            <td><span class="bar" style="width: 4px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-sm</code></td>
+            <td class="val">6 px</td>
+            <td><span class="bar" style="width: 6px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-md</code></td>
+            <td class="val">8 px</td>
+            <td><span class="bar" style="width: 8px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-lg</code></td>
+            <td class="val">12 px</td>
+            <td><span class="bar" style="width: 12px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-xl</code></td>
+            <td class="val">16 px</td>
+            <td><span class="bar" style="width: 16px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-2xl</code></td>
+            <td class="val">24 px</td>
+            <td><span class="bar" style="width: 24px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-3xl</code></td>
+            <td class="val">32 px</td>
+            <td><span class="bar" style="width: 32px"></span></td>
+          </tr>
+          <tr>
+            <td><code>--sp-4xl</code></td>
+            <td class="val">48 px</td>
+            <td><span class="bar" style="width: 48px"></span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Kích thước control</h3>
+      <table class="spec">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Giá trị</th>
+            <th>Dùng cho</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--ctl-h</code></td>
+            <td class="val">28 px</td>
+            <td>Nút, input, select mặc định.</td>
+          </tr>
+          <tr>
+            <td><code>--ctl-h-sm</code></td>
+            <td class="val">24 px</td>
+            <td>Nút trong toolbar / inline, nút icon, nút trên title bar.</td>
+          </tr>
+          <tr>
+            <td>Hàng cây / list</td>
+            <td class="val">24 px</td>
+            <td>Hàng trong explorer, danh sách.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="t-sm t-mute" style="margin-top: var(--sp-md)">
+        Nút chỉ có icon có vùng bấm vuông bằng chiều cao control và luôn có tooltip. Tối ưu cho
+        chuột, desktop trước.
+      </p>
+
+      <h3>Khung ứng dụng</h3>
+      <div class="demo" style="margin-top: var(--sp-md)">
+        <div class="layout-map" aria-label="Sơ đồ layout">
+          <div class="tb">Title bar · 32</div>
+          <div>
+            Rail
+            <br />
+            44
+          </div>
+          <div>
+            Explorer
+            <br />
+            264
+          </div>
+          <div class="ed">
+            Editor · tabs · breadcrumb
+            <br />
+            (bottom panel khi mở)
+          </div>
+          <div>
+            Inspector
+            <br />
+            320
+          </div>
+          <div class="sb">Status bar · 24</div>
+        </div>
+        <div class="t-sm t-mute">
+          Rail 44 px · Explorer 264 px (200 đến 420) · Inspector 320 px (240 đến 480) · Bottom panel
+          200 px (120 đến 520). Padding vùng nội dung:
+          <code>--sp-2xl</code>
+          đến
+          <code>--sp-3xl</code>
+          . Padding card:
+          <code>--sp-lg</code>
+          (gọn) hoặc
+          <code>--sp-xl</code>
+          (feature card).
+        </div>
+      </div>
+
+      <h3>Hình ảnh</h3>
+      <p class="t-sm" style="color: var(--body)">
+        Ảnh của người dùng hiển thị
+        <code>object-fit: cover</code>
+        trong lưới và
+        <code>contain</code>
+        trong trình xem, trên nền
+        <code>--canvas-mid</code>
+        khi đang tải.
+      </p>
+    </section>
+    <section id="shapes">
+      <h2>Shapes</h2>
+      <p class="lead">
+        Radius nhỏ, gần với công cụ chuyên nghiệp. Hình tròn chỉ dành cho status dot và avatar.
+      </p>
+      <table class="spec">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Giá trị</th>
+            <th>Dùng cho</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--r-xs</code></td>
+            <td class="val">2 px</td>
+            <td>Badge, thumbnail trong list, progress.</td>
+            <td><div class="box" style="border-radius: var(--r-xs)">2</div></td>
+          </tr>
+          <tr>
+            <td><code>--r-sm</code></td>
+            <td class="val">3 px</td>
+            <td>Nút, input, chip, hàng cây, mục menu.</td>
+            <td><div class="box" style="border-radius: var(--r-sm)">3</div></td>
+          </tr>
+          <tr>
+            <td><code>--r-md</code></td>
+            <td class="val">4 px</td>
+            <td>Card, panel, danh sách, tile ảnh.</td>
+            <td><div class="box" style="border-radius: var(--r-md)">4</div></td>
+          </tr>
+          <tr>
+            <td><code>--r-lg</code></td>
+            <td class="val">6 px</td>
+            <td>Modal, splash card, preview media lớn.</td>
+            <td><div class="box" style="border-radius: var(--r-lg)">6</div></td>
+          </tr>
+          <tr>
+            <td><code>--r-full</code></td>
+            <td class="val">9999 px</td>
+            <td>Status dot, avatar.</td>
+            <td><div class="box" style="border-radius: var(--r-full); width: 56px">●</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+    <section id="elevation">
+      <h2>Elevation &amp; depth</h2>
+      <p class="lead">Bề mặt tĩnh không có bóng; viền hairline đảm nhiệm vai trò nâng lớp.</p>
+      <div class="grid g3">
+        <div class="lvl l0">
+          <div class="cap">Level 0 · Flat</div>
+          <div class="t-sm">Không bóng, không viền. Nền trang, vùng full-bleed.</div>
+        </div>
+        <div class="lvl">
+          <div class="cap">Level 1 · Hairline</div>
+          <div class="t-sm">
+            1 px
+            <code>--hairline</code>
+            . Card, panel, sidebar, input.
+          </div>
+        </div>
+        <div class="lvl l2">
+          <div class="cap">Level 2 · Floating</div>
+          <div class="t-sm">
+            Hairline +
+            <code>--shadow-float</code>
+            (
+            <span class="val">0 8px 24px</span>
+            ). Chỉ cho menu, popover, modal, toast.
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="dos">
+      <h2>Do's and Don'ts</h2>
+      <div class="grid g2" style="margin-top: var(--sp-lg)">
+        <div class="do">
+          <h3>Do</h3>
+          <ul>
             <li>Chỉ tham chiếu token ngữ nghĩa để mọi màn hình chạy ở cả dark và light.</li>
-            <li>Dùng <code>--primary</code> cho hành động chính duy nhất và cho "đang chọn / active / focus".</li>
-            <li>Dùng <code>--secondary</code> chỉ cho hoạt động đang diễn ra và điểm nhấn.</li>
-            <li>Dùng <code>--r-sm</code> cho nút, input, chip; <code>--r-md</code> cho card, panel; <code>--r-lg</code> cho modal.</li>
-            <li>Kết hợp Geist sentence-case với Geist Mono UPPERCASE cho nhãn và dữ liệu kỹ thuật.</li>
+            <li>
+              Dùng
+              <code>--primary</code>
+              cho hành động chính duy nhất và cho "đang chọn / active / focus".
+            </li>
+            <li>
+              Dùng
+              <code>--secondary</code>
+              chỉ cho hoạt động đang diễn ra và điểm nhấn.
+            </li>
+            <li>
+              Dùng
+              <code>--r-sm</code>
+              cho nút, input, chip;
+              <code>--r-md</code>
+              cho card, panel;
+              <code>--r-lg</code>
+              cho modal.
+            </li>
+            <li>
+              Kết hợp Geist sentence-case với Geist Mono UPPERCASE cho nhãn và dữ liệu kỹ thuật.
+            </li>
             <li>Kiểm tra mọi màn hình ở cả hai theme, kể cả độ tương phản của chữ tím và cam.</li>
-          </ul></div>
-          <div class="dont"><h3>Don't</h3><ul>
+          </ul>
+        </div>
+        <div class="dont">
+          <h3>Don't</h3>
+          <ul>
             <li>Không hard-code hex trong component; đi qua token.</li>
-            <li>Không dùng Sunset Orange cho hành động chính hay để trang trí, vì nó sẽ mất nghĩa "đang chạy".</li>
-            <li>Không dùng <code>--primary</code> (#7c3aed) làm chữ trên canvas tối; dùng <code>--primary-text</code>.</li>
+            <li>
+              Không dùng Sunset Orange cho hành động chính hay để trang trí, vì nó sẽ mất nghĩa
+              "đang chạy".
+            </li>
+            <li>
+              Không dùng
+              <code>--primary</code>
+              (#7c3aed) làm chữ trên canvas tối; dùng
+              <code>--primary-text</code>
+              .
+            </li>
             <li>Không thêm bóng cho card tĩnh; chỉ lớp nổi mới có Level 2.</li>
             <li>Không in đậm tiêu đề display.</li>
             <li>Không dùng illustration accents (twilight, breeze, midnight) cho control.</li>
-          </ul></div>
+          </ul>
         </div>
-      </section>
-    </main>
-  </div>
+      </div>
+    </section>
+  </main>
+</div>

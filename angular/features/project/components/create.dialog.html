@@ -1,64 +1,163 @@
 @if (open()) {
-  <ds-dialog [title]="'project.create.title' | t" [eyebrow]="'project.cap' | t" [closeLabel]="'project.create.close' | t" size="xl" data-testid="project-create-dialog-panel" (closed)="close()">
-    <div class="pjc" data-testid="project-create-content">
-      <div class="pjc-l" data-testid="project-create-template">
-        <span class="eyebrow">{{ "project.create.template" | t }}</span>
-        <div class="opts" role="radiogroup" [attr.aria-label]="'project.create.template' | t" data-testid="project-create-template-options">
-          @for (template of templates; track template.id) {
-            <label class="opt" [class.is-on]="form().template === template.id" [attr.data-testid]="'project-create-template-' + template.id">
-              <input type="radio" name="pj-tpl" [value]="template.id" [checked]="form().template === template.id" (change)="onTemplate(template.id)" />
-              <div class="opt-b"><span class="t-ink pjc-t"><ds-icon [name]="template.icon" [size]="16" />{{ template.labelKey | t }}</span><span class="t-sm t-mute">{{ template.blurbKey | t }}</span></div>
-            </label>
-          }
-        </div>
-      </div>
-      <div class="pjc-r">
-        <div class="field" data-testid="project-create-name-field">
-          <label for="pj-create-name">{{ "project.create.name" | t }}</label>
-          <input #nameInput id="pj-create-name" class="input" [class.is-invalid]="!!nameError()" [placeholder]="'project.create.namePlaceholder' | t" [value]="form().name" autocomplete="off" aria-describedby="pj-create-name-error" data-testid="project-create-name-input" (input)="onName($event)" />
-          @if (nameError(); as error) {
-            <p class="field-err" id="pj-create-name-error" data-testid="project-create-name-error">{{ error | t }}</p>
-          }
-        </div>
-        <div class="form-2" data-testid="project-create-source-row">
-          <div class="field" data-testid="project-create-novel-field">
-            <label for="pj-create-novel">{{ "project.create.sourceNovel" | t }}</label>
-            <select id="pj-create-novel" class="select" [value]="form().novelId ?? ''" data-testid="project-create-novel-select" (change)="onNovel($event)">
-              <option value="">{{ "project.source.none" | t }}</option>
-              @for (novel of novels.novels(); track novel.id) {
-                <option [value]="novel.id" [selected]="form().novelId === novel.id">{{ novel.name.trim() || novel.title }}</option>
-              }
-            </select>
+<ds-dialog
+  [title]="'project.create.title' | t"
+  [eyebrow]="'project.cap' | t"
+  [closeLabel]="'project.create.close' | t"
+  size="xl"
+  data-testid="project-create-dialog-panel"
+  (closed)="close()"
+>
+  <div class="pjc" data-testid="project-create-content">
+    <div class="pjc-l" data-testid="project-create-template">
+      <span class="eyebrow">{{ "project.create.template" | t }}</span>
+      <div
+        class="opts"
+        role="radiogroup"
+        [attr.aria-label]="'project.create.template' | t"
+        data-testid="project-create-template-options"
+      >
+        @for (template of templates; track template.id) {
+        <label
+          class="opt"
+          [class.is-on]="form().template === template.id"
+          [attr.data-testid]="'project-create-template-' + template.id"
+        >
+          <input
+            type="radio"
+            name="pj-tpl"
+            [value]="template.id"
+            [checked]="form().template === template.id"
+            (change)="onTemplate(template.id)"
+          />
+          <div class="opt-b">
+            <span class="t-ink pjc-t">
+              <ds-icon [name]="template.icon" [size]="16" />
+              {{ template.labelKey | t }}
+            </span>
+            <span class="t-sm t-mute">{{ template.blurbKey | t }}</span>
           </div>
-          <div class="field" data-testid="project-create-version-field">
-            <label for="pj-create-version">{{ "project.create.textVersion" | t }}</label>
-            <select id="pj-create-version" class="select" [disabled]="!selectedNovel()" data-testid="project-create-version-select">
-              @if (selectedNovel()) {
-                <option>{{ "project.source.original" | t }}</option>
-              } @else {
-                <option>—</option>
-              }
-            </select>
-          </div>
-        </div>
-        @if (selectedNovel(); as novel) {
-          <div class="field" data-testid="project-create-range-field">
-            <label>{{ "project.create.chapterRange" | t }}</label>
-            <div class="pjc-range" data-testid="project-create-range">
-              <label class="check" data-testid="project-create-all-chapters-label"><input type="checkbox" [checked]="form().allChapters" data-testid="project-create-all-chapters" (change)="onAllChapters($event)" />{{ "project.create.allChapters" | t: { count: novel.chapterCount } }}</label>
-              <span class="pjc-rg" [class.is-off]="form().allChapters">{{ "project.create.from" | t }} <input class="input" type="number" min="1" [max]="novel.chapterCount" [value]="form().rangeFrom ?? ''" [disabled]="form().allChapters" [attr.aria-label]="'project.create.fromLabel' | t" data-testid="project-create-from" (input)="onRange('rangeFrom', $event)" /> {{ "project.create.to" | t }} <input class="input" type="number" min="1" [max]="novel.chapterCount" [value]="form().rangeTo ?? ''" [disabled]="form().allChapters" [attr.aria-label]="'project.create.toLabel' | t" data-testid="project-create-to" (input)="onRange('rangeTo', $event)" /></span>
-            </div>
-            @if (rangeError(); as error) {
-              <p class="field-err" data-testid="project-create-range-error">{{ error | t: { count: novel.chapterCount } }}</p>
-            }
-          </div>
-        }
-        @if (formError()) {
-          <p class="field-err" role="alert" data-testid="project-create-error">{{ formError() }}</p>
+        </label>
         }
       </div>
     </div>
-    <ds-button dialogFoot data-testid="project-create-cancel" (pressed)="close()">{{ "common.cancel" | t }}</ds-button>
-    <ds-button dialogFoot variant="primary" [disabled]="busy()" data-testid="project-create-submit" (pressed)="submit()"><ds-icon name="plus" [size]="14" />{{ "project.action.create" | t }}</ds-button>
-  </ds-dialog>
+    <div class="pjc-r">
+      <div class="field" data-testid="project-create-name-field">
+        <label for="pj-create-name">{{ "project.create.name" | t }}</label>
+        <input
+          #nameInput
+          id="pj-create-name"
+          class="input"
+          [class.is-invalid]="!!nameError()"
+          [placeholder]="'project.create.namePlaceholder' | t"
+          [value]="form().name"
+          autocomplete="off"
+          aria-describedby="pj-create-name-error"
+          data-testid="project-create-name-input"
+          (input)="onName($event)"
+        />
+        @if (nameError(); as error) {
+        <p class="field-err" id="pj-create-name-error" data-testid="project-create-name-error">
+          {{ error | t }}
+        </p>
+        }
+      </div>
+      <div class="form-2" data-testid="project-create-source-row">
+        <div class="field" data-testid="project-create-novel-field">
+          <label for="pj-create-novel">{{ "project.create.sourceNovel" | t }}</label>
+          <select
+            id="pj-create-novel"
+            class="select"
+            [value]="form().novelId ?? ''"
+            data-testid="project-create-novel-select"
+            (change)="onNovel($event)"
+          >
+            <option value="">{{ "project.source.none" | t }}</option>
+            @for (novel of novels.novels(); track novel.id) {
+            <option [value]="novel.id" [selected]="form().novelId === novel.id">
+              {{ novel.name.trim() || novel.title }}
+            </option>
+            }
+          </select>
+        </div>
+        <div class="field" data-testid="project-create-version-field">
+          <label for="pj-create-version">{{ "project.create.textVersion" | t }}</label>
+          <select
+            id="pj-create-version"
+            class="select"
+            [disabled]="!selectedNovel()"
+            data-testid="project-create-version-select"
+          >
+            @if (selectedNovel()) {
+            <option>{{ "project.source.original" | t }}</option>
+            } @else {
+            <option>—</option>
+            }
+          </select>
+        </div>
+      </div>
+      @if (selectedNovel(); as novel) {
+      <div class="field" data-testid="project-create-range-field">
+        <label>{{ "project.create.chapterRange" | t }}</label>
+        <div class="pjc-range" data-testid="project-create-range">
+          <label class="check" data-testid="project-create-all-chapters-label">
+            <input
+              type="checkbox"
+              [checked]="form().allChapters"
+              data-testid="project-create-all-chapters"
+              (change)="onAllChapters($event)"
+            />
+            {{ "project.create.allChapters" | t: { count: novel.chapterCount } }}
+          </label>
+          <span class="pjc-rg" [class.is-off]="form().allChapters">
+            {{ "project.create.from" | t }}
+            <input
+              class="input"
+              type="number"
+              min="1"
+              [max]="novel.chapterCount"
+              [value]="form().rangeFrom ?? ''"
+              [disabled]="form().allChapters"
+              [attr.aria-label]="'project.create.fromLabel' | t"
+              data-testid="project-create-from"
+              (input)="onRange('rangeFrom', $event)"
+            />
+            {{ "project.create.to" | t }}
+            <input
+              class="input"
+              type="number"
+              min="1"
+              [max]="novel.chapterCount"
+              [value]="form().rangeTo ?? ''"
+              [disabled]="form().allChapters"
+              [attr.aria-label]="'project.create.toLabel' | t"
+              data-testid="project-create-to"
+              (input)="onRange('rangeTo', $event)"
+            />
+          </span>
+        </div>
+        @if (rangeError(); as error) {
+        <p class="field-err" data-testid="project-create-range-error">
+          {{ error | t: { count: novel.chapterCount } }}
+        </p>
+        }
+      </div>
+      } @if (formError()) {
+      <p class="field-err" role="alert" data-testid="project-create-error">{{ formError() }}</p>
+      }
+    </div>
+  </div>
+  <ds-button dialogFoot data-testid="project-create-cancel" (pressed)="close()">
+    {{ "common.cancel" | t }}
+  </ds-button>
+  <ds-button
+    dialogFoot
+    variant="primary"
+    [disabled]="busy()"
+    data-testid="project-create-submit"
+    (pressed)="submit()"
+  >
+    <ds-icon name="plus" [size]="14" />
+    {{ "project.action.create" | t }}
+  </ds-button>
+</ds-dialog>
 }

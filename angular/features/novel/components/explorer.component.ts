@@ -1,18 +1,20 @@
-import { Component, computed, effect, inject, signal } from "@angular/core";
-import { CoreModule } from "@core/core.module";
-import { NovelToolKind, novelTabId, novelToolTabId } from "@layout/layout.models";
-import { TabsService } from "@layout/tabs.service";
-import { NovelSummary } from "../novel.models";
-import { NovelReaderService } from "../novel.reader.service";
-import { NovelService } from "../novel.service";
-import { displayName, passesFilters } from "../novel.rules";
-import { Cover } from "@components/cover";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { Cover } from '@components/cover';
+import { novelTabId, NovelToolKind, novelToolTabId } from '@layout/layout.models';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+
+import { NovelSummary } from '../novel.models';
+import { NovelReaderService } from '../novel.reader.service';
+import { displayName, passesFilters } from '../novel.rules';
+import { NovelService } from '../novel.service';
 
 @Component({
-  selector: "app-novel-explorer",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-explorer',
   imports: [CoreModule, Cover],
-  templateUrl: "./explorer.component.html",
+  templateUrl: './explorer.component.html',
 })
 export class NovelExplorer {
   private readonly reader = inject(NovelReaderService);
@@ -31,7 +33,7 @@ export class NovelExplorer {
   }
 
   imageOf(novel: NovelSummary): string {
-    return this.novels.coverUrl(novel) ?? "";
+    return this.novels.coverUrl(novel) ?? '';
   }
 
   isOpen(novel: NovelSummary): boolean {

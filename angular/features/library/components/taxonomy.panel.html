@@ -1,1 +1,30 @@
-<section data-testid="library-taxonomy-panel-content"><section class="ins-sec"><span class="eyebrow">{{ "library.taxonomy.title" | t }}</span><dl class="kv"><dt>{{ "library.collection" | t }}</dt><dd>{{ library.collections().length }}</dd><dt>{{ "library.tag" | t }}</dt><dd>{{ library.tags().length }}</dd><dt>{{ "library.resources" | t }}</dt><dd>{{ total() }}</dd><dt>{{ "library.unfiled" | t }}</dt><dd>{{ unfiled() }}</dd></dl></section><section class="ins-sec"><span class="eyebrow">{{ "library.notInCollection" | t }}</span><div class="lb-cnts">@for (kind of kinds; track kind.id) {<span class="lb-cnt" [class.is-zero]="count(kind.id) === 0"><ds-icon [name]="kind.icon" [size]="13" /><b>{{ count(kind.id) }}</b></span>}</div></section><section class="ins-sec"><span class="eyebrow">{{ "library.howto.title" | t }}</span><p class="t-sm t-mute">{{ "library.howto.description" | t }}</p></section></section>
+<section data-testid="library-taxonomy-panel-content">
+  <section class="ins-sec">
+    <span class="eyebrow">{{ "library.taxonomy.title" | t }}</span>
+    <dl class="kv">
+      <dt>{{ "library.collection" | t }}</dt>
+      <dd>{{ library.collections().length }}</dd>
+      <dt>{{ "library.tag" | t }}</dt>
+      <dd>{{ library.tags().length }}</dd>
+      <dt>{{ "library.resources" | t }}</dt>
+      <dd>{{ total() }}</dd>
+      <dt>{{ "library.unfiled" | t }}</dt>
+      <dd>{{ unfiled() }}</dd>
+    </dl>
+  </section>
+  <section class="ins-sec">
+    <span class="eyebrow">{{ "library.notInCollection" | t }}</span>
+    <div class="lb-cnts">
+      @for (kind of kinds; track kind.id) {
+      <span class="lb-cnt" [class.is-zero]="count(kind.id) === 0">
+        <ds-icon [name]="kind.icon" [size]="13" />
+        <b>{{ count(kind.id) }}</b>
+      </span>
+      }
+    </div>
+  </section>
+  <section class="ins-sec">
+    <span class="eyebrow">{{ "library.howto.title" | t }}</span>
+    <p class="t-sm t-mute">{{ "library.howto.description" | t }}</p>
+  </section>
+</section>

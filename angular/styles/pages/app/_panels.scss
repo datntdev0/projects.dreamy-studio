@@ -1,0 +1,124 @@
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-sm) 0;
+  background: var(--canvas-card);
+  border-right: 1px solid var(--hairline);
+}
+.rail-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--mute);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  position: relative;
+}
+.rail-btn .ic {
+  width: 20px;
+  height: 20px;
+}
+.rail-btn:hover {
+  color: var(--ink);
+  background: var(--canvas-soft);
+}
+.rail-btn.is-active {
+  color: var(--primary-text);
+  background: var(--primary-soft);
+}
+
+.explorer,
+.inspector {
+  background: var(--canvas-card);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.pane-head {
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: 0 var(--sp-xs) 0 var(--sp-md);
+  border-bottom: 1px solid var(--hairline);
+}
+.pane-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.explorer .pane-body {
+  overflow-x: hidden;
+}
+.ex-sec + .ex-sec {
+  border-top: 1px solid var(--hairline);
+}
+.ex-sec-head {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: 0 var(--sp-sm);
+  font: 400 11px/14px var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mute);
+  cursor: pointer;
+}
+.ex-sec-head .ic {
+  width: 14px;
+  height: 14px;
+}
+.ex-sec-head:hover {
+  color: var(--body);
+}
+.ex-sec-body {
+  padding: 0 var(--sp-xs) var(--sp-sm);
+  min-width: 0;
+}
+.tree-row {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 0 var(--sp-sm);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tree-row {
+  min-width: 0;
+  overflow: hidden;
+}
+.tree-row .ic {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--mute);
+}
+.tree-row:hover {
+  background: var(--canvas-soft);
+}
+.tree-row.is-selected {
+  background: var(--primary-soft);
+  color: var(--ink);
+}
+.tree-row.is-selected .ic {
+  color: var(--primary-text);
+}
+.tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

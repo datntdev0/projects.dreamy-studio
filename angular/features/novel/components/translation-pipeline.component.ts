@@ -1,22 +1,26 @@
-import { Component, computed, inject, input, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { ChapterRow, TranslationStatus } from "../novel.models";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { NovelService } from "../novel.service";
-import { formatCount, matchesChapter, toNovelError } from "../novel.rules";
-import { ChapterFilter } from "../novel.translation.models";
-import { CHAPTER_FILTERS, CHAPTER_FILTER_KEYS, CHAPTER_ROW_LIMIT, STATUS_BADGES, STATUS_KEYS, matchesChapterFilter } from "../novel.translation.rules";
-import { NovelTranslationService } from "../novel.translation.service";
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { ChapterRow, TranslationStatus } from '../novel.models';
+import { formatCount, matchesChapter, toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { ChapterFilter } from '../novel.translation.models';
+// prettier-ignore
+import { CHAPTER_FILTER_KEYS, CHAPTER_FILTERS, CHAPTER_ROW_LIMIT, matchesChapterFilter, STATUS_BADGES, STATUS_KEYS } from '../novel.translation.rules';
+import { NovelTranslationService } from '../novel.translation.service';
 
 @Component({
-  selector: "app-novel-translation-pipeline",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-translation-pipeline',
   imports: [Icon, CoreModule],
-  templateUrl: "./translation-pipeline.component.html",
+  templateUrl: './translation-pipeline.component.html',
+  host: { 'data-testid': 'novel-translation-pipeline' },
 })
 export class NovelTranslationPipeline {
   private readonly novels = inject(NovelService);
@@ -29,8 +33,8 @@ export class NovelTranslationPipeline {
   readonly count = formatCount;
   readonly filters = CHAPTER_FILTERS;
   readonly limit = CHAPTER_ROW_LIMIT;
-  readonly query = signal("");
-  readonly filter = signal<ChapterFilter>("all");
+  readonly query = signal('');
+  readonly filter = signal<ChapterFilter>('all');
 
   readonly matching = computed(this.buildMatching.bind(this));
   readonly shown = computed(this.buildShown.bind(this));
@@ -49,7 +53,7 @@ export class NovelTranslationPipeline {
   }
 
   numberOf(row: ChapterRow): string {
-    return String(row.seq).padStart(2, "0");
+    return String(row.seq).padStart(2, '0');
   }
 
   statusOf(row: ChapterRow): TranslationStatus {
@@ -61,11 +65,11 @@ export class NovelTranslationPipeline {
   }
 
   onQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+    this.query.set(fieldValue(event));
   }
 
   onFilter(event: Event): void {
-    this.filter.set((event.target as HTMLSelectElement).value as ChapterFilter);
+    this.filter.set(fieldValue(event) as ChapterFilter);
   }
 
   read(row: ChapterRow): void {
@@ -81,14 +85,17 @@ export class NovelTranslationPipeline {
       await this.translation.cancelNovel(this.novelId());
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
     }
   }
 
   private buildMatching(): ChapterRow[] {
     const out: ChapterRow[] = [];
     for (const row of this.novels.chaptersOf(this.novelId())) {
-      if (matchesChapter(row, this.query()) && matchesChapterFilter(this.statusOf(row), this.filter())) {
+      if (
+        matchesChapter(row, this.query()) &&
+        matchesChapterFilter(this.statusOf(row), this.filter())
+      ) {
         out.push(row);
       }
     }

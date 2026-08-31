@@ -1,49 +1,114 @@
 <section class="pj-project-panel" data-testid="project-panel">
   @if (project(); as item) {
-    <section class="ins-sec pj-ins-top" data-testid="project-panel-summary">
-      <app-project-thumb kind="hero" [project]="item" data-testid="project-panel-thumb">
-        <span class="cover-actions" data-testid="project-panel-cover-actions">
-          <button type="button" class="cover-action" [attr.data-tip]="coverKey() | t" [attr.aria-label]="coverKey() | t" data-testid="project-panel-cover-pick" (click)="coverInput.click()"><ds-icon name="image" [size]="15" /></button>
-          <input #coverInput type="file" accept="image/jpeg,image/png" hidden data-testid="project-panel-cover-input" (change)="onCoverFile(item, $event)" />
-          <button type="button" class="cover-action" [attr.data-tip]="'project.panel.coverRemove' | t" [attr.aria-label]="'project.panel.coverRemove' | t" [disabled]="!hasCover()" data-testid="project-panel-cover-remove" (click)="clearCover(item)"><ds-icon name="x" [size]="15" /></button>
-        </span>
-      </app-project-thumb>
-      <div class="ins-hero-t" data-testid="project-panel-name">{{ item.name }}</div>
-      <div class="ins-hero-m" data-testid="project-panel-badges"><span class="badge" [class.badge-running]="!item.archived">{{ labels.statusKey(item) | t }}</span><span class="type-tag"><ds-icon [name]="labels.iconOf(item.template)" [size]="13" />{{ labels.templateKey(item.template) | t }}</span></div>
-      @if (item.description) {
-        <p class="t-sm t-mute" data-testid="project-panel-description">{{ item.description }}</p>
-      }
-    </section>
-    <section class="ins-sec" data-testid="project-panel-details">
-      <span class="eyebrow">{{ "project.panel.details" | t }}</span>
-      <dl class="kv" data-testid="project-panel-meta">
-        <dt>{{ "project.panel.code" | t }}</dt><dd><span class="mono">{{ code(item) }}</span></dd>
-        <dt>{{ "project.panel.type" | t }}</dt><dd>{{ labels.templateKey(item.template) | t }}</dd>
-        <dt>{{ "project.panel.source" | t }}</dt>
-        <dd data-testid="project-panel-source">
-          @if (item.novelId === null) {
-            <span class="t-mute">{{ labels.sourceOf(item) }}</span>
-          } @else {
-            {{ labels.sourceOf(item) }}
-            @if (labels.rangeOf(item)) {
-              <div class="t-sm t-mute">{{ labels.rangeOf(item) }}</div>
-            }
-          }
-        </dd>
-        <dt>{{ "project.panel.folder" | t }}</dt><dd><span class="path">{{ labels.pathOf(item) }}</span></dd>
-        <dt>{{ "project.panel.created" | t }}</dt><dd><span class="mono">{{ labels.stampOf(item.createdAt) }}</span></dd>
-        <dt>{{ "project.panel.updated" | t }}</dt><dd><span class="mono">{{ labels.stampOf(item.updatedAt) }}</span></dd>
-      </dl>
-    </section>
-    <section class="ins-sec ins-actions" data-testid="project-panel-actions">
-      @if (showOpen()) {
-        <button type="button" class="btn btn-primary" data-testid="project-panel-open" (click)="open(item)"><ds-icon name="folder-open" [size]="16" />{{ "project.action.open" | t }}</button>
-      }
-      <button type="button" class="btn" data-testid="project-panel-open-folder" (click)="openFolder(item)"><ds-icon name="folder-open" [size]="16" />{{ "project.action.openFolder" | t }}</button>
-      <button type="button" class="btn" data-testid="project-panel-archive" (click)="archive(item)"><ds-icon name="archive" [size]="16" />{{ (item.archived ? 'project.action.unarchive' : 'project.action.archive') | t }}</button>
-      <button type="button" class="btn btn-danger" data-testid="project-panel-delete" (click)="remove(item)"><ds-icon name="trash" [size]="16" />{{ "project.action.delete" | t }}</button>
-    </section>
+  <section class="ins-sec pj-ins-top" data-testid="project-panel-summary">
+    <app-project-thumb kind="hero" [project]="item" data-testid="project-panel-thumb">
+      <span class="cover-actions" data-testid="project-panel-cover-actions">
+        <button
+          type="button"
+          class="cover-action"
+          [attr.data-tip]="coverKey() | t"
+          [attr.aria-label]="coverKey() | t"
+          data-testid="project-panel-cover-pick"
+          (click)="coverInput.click()"
+        >
+          <ds-icon name="image" [size]="15" />
+        </button>
+        <input
+          #coverInput
+          type="file"
+          accept="image/jpeg,image/png"
+          hidden
+          data-testid="project-panel-cover-input"
+          (change)="onCoverFile(item, $event)"
+        />
+        <button
+          type="button"
+          class="cover-action"
+          [attr.data-tip]="'project.panel.coverRemove' | t"
+          [attr.aria-label]="'project.panel.coverRemove' | t"
+          [disabled]="!hasCover()"
+          data-testid="project-panel-cover-remove"
+          (click)="clearCover(item)"
+        >
+          <ds-icon name="x" [size]="15" />
+        </button>
+      </span>
+    </app-project-thumb>
+    <div class="ins-hero-t" data-testid="project-panel-name">{{ item.name }}</div>
+    <div class="ins-hero-m" data-testid="project-panel-badges">
+      <span class="badge" [class.badge-running]="!item.archived">
+        {{ labels.statusKey(item) | t }}
+      </span>
+      <span class="type-tag">
+        <ds-icon [name]="labels.iconOf(item.template)" [size]="13" />
+        {{ labels.templateKey(item.template) | t }}
+      </span>
+    </div>
+    @if (item.description) {
+    <p class="t-sm t-mute" data-testid="project-panel-description">{{ item.description }}</p>
+    }
+  </section>
+  <section class="ins-sec" data-testid="project-panel-details">
+    <span class="eyebrow">{{ "project.panel.details" | t }}</span>
+    <dl class="kv" data-testid="project-panel-meta">
+      <dt>{{ "project.panel.code" | t }}</dt>
+      <dd><span class="mono">{{ code(item) }}</span></dd>
+      <dt>{{ "project.panel.type" | t }}</dt>
+      <dd>{{ labels.templateKey(item.template) | t }}</dd>
+      <dt>{{ "project.panel.source" | t }}</dt>
+      <dd data-testid="project-panel-source">
+        @if (item.novelId === null) {
+        <span class="t-mute">{{ labels.sourceOf(item) }}</span>
+        } @else { {{ labels.sourceOf(item) }} @if (labels.rangeOf(item)) {
+        <div class="t-sm t-mute">{{ labels.rangeOf(item) }}</div>
+        } }
+      </dd>
+      <dt>{{ "project.panel.folder" | t }}</dt>
+      <dd><span class="path">{{ labels.pathOf(item) }}</span></dd>
+      <dt>{{ "project.panel.created" | t }}</dt>
+      <dd><span class="mono">{{ labels.stampOf(item.createdAt) }}</span></dd>
+      <dt>{{ "project.panel.updated" | t }}</dt>
+      <dd><span class="mono">{{ labels.stampOf(item.updatedAt) }}</span></dd>
+    </dl>
+  </section>
+  <section class="ins-sec ins-actions" data-testid="project-panel-actions">
+    @if (showOpen()) {
+    <button
+      type="button"
+      class="btn btn-primary"
+      data-testid="project-panel-open"
+      (click)="open(item)"
+    >
+      <ds-icon name="folder-open" [size]="16" />
+      {{ "project.action.open" | t }}
+    </button>
+    }
+    <button
+      type="button"
+      class="btn"
+      data-testid="project-panel-open-folder"
+      (click)="openFolder(item)"
+    >
+      <ds-icon name="folder-open" [size]="16" />
+      {{ "project.action.openFolder" | t }}
+    </button>
+    <button type="button" class="btn" data-testid="project-panel-archive" (click)="archive(item)">
+      <ds-icon name="archive" [size]="16" />
+      {{ (item.archived ? 'project.action.unarchive' : 'project.action.archive') | t }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-danger"
+      data-testid="project-panel-delete"
+      (click)="remove(item)"
+    >
+      <ds-icon name="trash" [size]="16" />
+      {{ "project.action.delete" | t }}
+    </button>
+  </section>
   } @else {
-    <div class="ins-empty" data-testid="project-panel-missing"><p class="t-sm t-mute">{{ "project.panel.unavailable" | t }}</p></div>
+  <div class="ins-empty" data-testid="project-panel-missing">
+    <p class="t-sm t-mute">{{ "project.panel.unavailable" | t }}</p>
+  </div>
   }
 </section>

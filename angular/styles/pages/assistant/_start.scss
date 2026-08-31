@@ -1,0 +1,208 @@
+.asst-hero {
+  display: grid;
+  gap: var(--sp-sm);
+  justify-items: center;
+  text-align: center;
+  padding: var(--sp-lg) var(--sp-md) var(--sp-xs);
+}
+.asst-hero .cs-ico {
+  width: 44px;
+  height: 44px;
+}
+.asst-hero p {
+  max-width: 34ch;
+}
+.asst-scope {
+  display: grid;
+  gap: var(--sp-xs);
+  min-width: 0;
+}
+.asst-scope-ico {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--canvas-soft);
+  color: var(--body);
+}
+.asst-scope-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+}
+.asst-scope-text > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asst-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--canvas-card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.asst-pick:hover {
+  border-color: var(--hairline-strong);
+}
+.asst-pick:focus-visible,
+.asst-pick-opt:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+}
+.asst-pick.is-open {
+  border-color: var(--primary);
+}
+.asst-pick .asst-scope-ico {
+  color: var(--primary-text);
+}
+.asst-pick-chev {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--mute);
+  transition: transform 0.15s ease;
+}
+.asst-pick.is-open .asst-pick-chev {
+  transform: rotate(180deg);
+}
+.asst-pick-panel {
+  display: grid;
+  gap: var(--sp-xs);
+  min-width: 0;
+  padding: var(--sp-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--canvas-card);
+}
+.asst-pick-search {
+  display: block;
+}
+.asst-pick-search .input {
+  width: 100%;
+  height: var(--ctl-h-sm);
+  padding: 0 var(--sp-md);
+  font-size: 12.5px;
+}
+.asst-pick-list {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.asst-pick-scroll {
+  display: grid;
+  gap: 1px;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--hairline);
+  padding-top: 1px;
+}
+.asst-pick-opt {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  height: 36px;
+  flex: none;
+  min-width: 0;
+  padding: 0 var(--sp-sm);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--body);
+  font: 400 13px/18px var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.asst-pick-opt:hover {
+  background: var(--canvas-soft);
+}
+.asst-pick-opt.is-active {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+.asst-pick-opt > .ic {
+  flex: none;
+  color: var(--mute);
+}
+.asst-pick-opt.is-active > .ic {
+  color: var(--primary-text);
+}
+.asst-pick-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.asst-pick-opt.is-active .asst-pick-name {
+  color: var(--primary-text);
+}
+.asst-pick-meta {
+  flex: none;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.asst-pick-empty {
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  text-align: center;
+}
+.asst-recent {
+  display: grid;
+  gap: var(--sp-xs);
+}
+.asst-recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.asst-recent-item {
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.asst-recent-item:hover {
+  background: var(--canvas-soft);
+}
+.asst-recent-title {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asst-scope-now {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xs) var(--sp-md) 0;
+  border-top: 1px solid var(--hairline);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.asst-scope-now + .asst-composer {
+  border-top: 0;
+  padding-top: var(--sp-xs);
+}

@@ -1,39 +1,26 @@
-import { Component, computed, effect, inject, input, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { TabsService } from "@layout/tabs.service";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { checkCoverFile } from "../novel.cover";
-import { prepareCover } from "../novel.cover";
-import { NovelConfirmService } from "../novel.confirm.service";
-import { NovelField } from "../novel.models";
-import { NovelLang } from "../novel.models";
-import { NovelOrigin } from "../novel.models";
-import { NovelPatch } from "../novel.models";
-import { NovelSummary } from "../novel.models";
-import { MAX_TAGS } from "../novel.rules";
-import { NOVEL_LANGS } from "../novel.rules";
-import { NOVEL_LANG_KEYS } from "../novel.rules";
-import { displayName } from "../novel.rules";
-import { exportFileName } from "../novel.rules";
-import { fieldPatch } from "../novel.rules";
-import { fileNameOf } from "../novel.rules";
-import { formatCount } from "../novel.rules";
-import { formatStamp } from "../novel.rules";
-import { hasCustomName } from "../novel.rules";
-import { normTag } from "../novel.rules";
-import { toNovelError } from "../novel.rules";
-import { NovelService } from "../novel.service";
-import { Cover } from "@components/cover";
-import { NovelProgressFrac } from "./progress-frac.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Cover } from '@components/cover';
+import { Icon } from '@components/icon';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+import { NovelConfirmService } from '../novel.confirm.service';
+import { checkCoverFile, prepareCover } from '../novel.cover';
+import { NovelField, NovelLang, NovelOrigin, NovelPatch, NovelSummary } from '../novel.models';
+// prettier-ignore
+import { displayName, exportFileName, fieldPatch, fileNameOf, formatCount, formatStamp, hasCustomName, MAX_TAGS, normTag, NOVEL_LANG_KEYS, NOVEL_LANGS, toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { NovelProgressFrac } from './progress-frac.component';
 
 type EditableElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 const ORIGIN_KEYS: Record<NovelOrigin, LanguageKey> = {
-  created: "novel.origin.created",
-  imported: "novel.origin.imported",
+  created: 'novel.origin.created',
+  imported: 'novel.origin.imported',
 };
 
 function currentValue(novel: NovelSummary, field: NovelField): string {
@@ -50,11 +37,11 @@ function fieldOf(patch: NovelPatch): NovelField {
 }
 
 @Component({
-  selector: "app-novel-panel",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-panel',
   imports: [Icon, CoreModule, Cover, NovelProgressFrac],
-  templateUrl: "./novel.panel.html",
-  host: { "data-testid": "novel-panel" },
+  templateUrl: './novel.panel.html',
+  host: { 'data-testid': 'novel-panel' },
 })
 export class NovelPanel {
   private readonly novels = inject(NovelService);
@@ -87,11 +74,11 @@ export class NovelPanel {
   }
 
   authorOf(novel: NovelSummary): string {
-    return novel.author.trim() || this.languageService.translate("novel.author.unknown");
+    return novel.author.trim() || this.languageService.translate('novel.author.unknown');
   }
 
   imageOf(novel: NovelSummary): string {
-    return this.novels.coverUrl(novel) ?? "";
+    return this.novels.coverUrl(novel) ?? '';
   }
 
   wordsOf(novel: NovelSummary): string {
@@ -115,7 +102,7 @@ export class NovelPanel {
   }
 
   coverKey(): LanguageKey {
-    return this.hasCover() ? "novel.panel.coverChange" : "novel.panel.coverChoose";
+    return this.hasCover() ? 'novel.panel.coverChange' : 'novel.panel.coverChoose';
   }
 
   openNovel(novel: NovelSummary): void {
@@ -127,7 +114,7 @@ export class NovelPanel {
   }
 
   exportTipKey(novel: NovelSummary): LanguageKey {
-    return novel.chapterCount === 0 ? "novel.panel.exportEmptyTip" : "novel.panel.exportTip";
+    return novel.chapterCount === 0 ? 'novel.panel.exportEmptyTip' : 'novel.panel.exportTip';
   }
 
   async exportNovel(novel: NovelSummary): Promise<void> {
@@ -151,7 +138,9 @@ export class NovelPanel {
     }
     const result = await this.novels.packageExport(novel.id, path);
     const file = fileNameOf(result.path);
-    this.toasts.show(this.languageService.translate("novel.toast.exported", { title: displayName(novel), file }));
+    this.toasts.show(
+      this.languageService.translate('novel.toast.exported', { title: displayName(novel), file }),
+    );
   }
 
   async onField(novel: NovelSummary, field: NovelField, event: Event): Promise<void> {
@@ -159,7 +148,7 @@ export class NovelPanel {
     const patch = fieldPatch(novel, field, element.value);
     if (patch === null) {
       element.value = novel.title;
-      this.toasts.show(this.languageService.translate("novel.form.titleEmpty"), "warning");
+      this.toasts.show(this.languageService.translate('novel.form.titleEmpty'), 'warning');
       return;
     }
     if (patchValue(patch, field) === currentValue(novel, field)) {
@@ -172,9 +161,9 @@ export class NovelPanel {
   async onTagEnter(novel: NovelSummary, event: Event): Promise<void> {
     const element = event.target as HTMLInputElement;
     const raw = element.value;
-    element.value = "";
+    element.value = '';
     const result = await this.addTag(novel.id, raw);
-    if (result === "added") {
+    if (result === 'added') {
       element.focus();
     }
   }
@@ -190,15 +179,15 @@ export class NovelPanel {
   async onCoverFile(novel: NovelSummary, event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    input.value = "";
+    input.value = '';
     if (!file) {
       return;
     }
     const check = checkCoverFile(file);
-    if (check === "notImage") {
-      this.toasts.show(this.languageService.translate("novel.toast.notImage"), "warning");
-    } else if (check === "tooLarge") {
-      this.toasts.show(this.languageService.translate("novel.toast.imageTooLarge"), "warning");
+    if (check === 'notImage') {
+      this.toasts.show(this.languageService.translate('novel.toast.notImage'), 'warning');
+    } else if (check === 'tooLarge') {
+      this.toasts.show(this.languageService.translate('novel.toast.imageTooLarge'), 'warning');
     } else {
       await this.applyCover(novel.id, file);
     }
@@ -207,7 +196,7 @@ export class NovelPanel {
   async clearCover(novel: NovelSummary): Promise<void> {
     try {
       await this.novels.clearCover(novel.id);
-      this.toasts.show(this.languageService.translate("novel.toast.coverRemoved"));
+      this.toasts.show(this.languageService.translate('novel.toast.coverRemoved'));
     } catch (cause) {
       this.fail(cause);
     }
@@ -234,15 +223,18 @@ export class NovelPanel {
       return result;
     } catch (cause) {
       this.fail(cause);
-      return "failed";
+      return 'failed';
     }
   }
 
   private notifyTag(result: string, tag: string): void {
-    if (result === "duplicate") {
-      this.toasts.show(this.languageService.translate("novel.toast.tagExists", { tag }), "warning");
-    } else if (result === "limit") {
-      this.toasts.show(this.languageService.translate("novel.toast.tagLimit", { count: MAX_TAGS }), "warning");
+    if (result === 'duplicate') {
+      this.toasts.show(this.languageService.translate('novel.toast.tagExists', { tag }), 'warning');
+    } else if (result === 'limit') {
+      this.toasts.show(
+        this.languageService.translate('novel.toast.tagLimit', { count: MAX_TAGS }),
+        'warning',
+      );
     }
   }
 
@@ -251,12 +243,12 @@ export class NovelPanel {
     try {
       dataUrl = await prepareCover(file);
     } catch {
-      this.toasts.show(this.languageService.translate("novel.toast.imageUnreadable"), "warning");
+      this.toasts.show(this.languageService.translate('novel.toast.imageUnreadable'), 'warning');
       return;
     }
     try {
       await this.novels.setCover(id, dataUrl);
-      this.toasts.show(this.languageService.translate("novel.toast.coverChanged"));
+      this.toasts.show(this.languageService.translate('novel.toast.coverChanged'));
     } catch (cause) {
       this.fail(cause);
     }
@@ -264,7 +256,7 @@ export class NovelPanel {
 
   private fail(cause: unknown): void {
     const detail = toNovelError(cause).detail;
-    this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
   }
 
   private loadCover(): void {

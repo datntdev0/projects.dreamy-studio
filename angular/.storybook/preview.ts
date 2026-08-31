@@ -1,28 +1,32 @@
-import type { Preview } from "@storybook/angular-vite";
-import "../styles.scss";
+import '../styles.scss';
+
+import type { Preview } from '@storybook/angular-vite';
 
 const preview: Preview = {
-  initialGlobals: { theme: "dark" },
+  initialGlobals: { theme: 'dark' },
   globalTypes: {
     theme: {
-      description: "Design system theme",
+      description: 'Design system theme',
       toolbar: {
         dynamicTitle: true,
-        icon: "circlehollow",
+        icon: 'circlehollow',
         items: [
-          { value: "dark", title: "Dark" },
-          { value: "light", title: "Light" },
+          { value: 'dark', title: 'Dark' },
+          { value: 'light', title: 'Light' },
         ],
       },
     },
   },
   decorators: [
     (story, context) => {
-      document.documentElement.setAttribute("data-theme", context.globals["theme"] === "light" ? "light" : "dark");
+      document.documentElement.setAttribute(
+        'data-theme',
+        context.globals['theme'] === 'light' ? 'light' : 'dark',
+      );
       return story();
     },
   ],
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: 'fullscreen' },
 };
 
 export default preview;

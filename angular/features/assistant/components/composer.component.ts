@@ -1,17 +1,19 @@
-import { Component, ElementRef, inject, viewChild } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { AssistantService } from "../assistant.service";
+import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { fieldValue } from '@shared/utils/dom';
+
+import { AssistantService } from '../assistant.service';
 
 @Component({
-  selector: "app-assistant-composer",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-assistant-composer',
   imports: [Button, Icon, CoreModule],
-  templateUrl: "./composer.component.html",
+  templateUrl: './composer.component.html',
 })
 export class AssistantComposer {
-  private readonly field = viewChild<ElementRef<HTMLTextAreaElement>>("field");
+  private readonly field = viewChild<ElementRef<HTMLTextAreaElement>>('field');
 
   readonly assistant = inject(AssistantService);
 
@@ -28,11 +30,11 @@ export class AssistantComposer {
   }
 
   onInput(event: Event): void {
-    this.assistant.draft.set((event.target as HTMLTextAreaElement).value);
+    this.assistant.draft.set(fieldValue(event));
   }
 
   onKeydown(event: KeyboardEvent): void {
-    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
       void this.submit();
     }
@@ -40,12 +42,12 @@ export class AssistantComposer {
 
   async submit(): Promise<void> {
     const text = this.assistant.draft();
-    if (text.trim() === "" || this.assistant.sending()) {
+    if (text.trim() === '' || this.assistant.sending()) {
       return;
     }
-    this.assistant.draft.set("");
+    this.assistant.draft.set('');
     const sent = await this.assistant.send(text);
-    if (!sent && this.assistant.draft() === "") {
+    if (!sent && this.assistant.draft() === '') {
       this.assistant.draft.set(text);
     }
   }

@@ -1,7 +1,0 @@
-@if (items().length > 0) {
-  <div class="toast-stack" data-testid="toast-stack">
-    @for (item of items(); track item.id) {
-      <ds-toast [message]="item.message" [tone]="item.tone" [dismissible]="false" data-testid="toast-item" />
-    }
-  </div>
-}

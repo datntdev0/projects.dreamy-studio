@@ -1,0 +1,13 @@
+<label class="opt" [class.is-on]="active()" [attr.data-testid]="testid()" [attr.data-mode]="mode()">
+  <input
+    type="radio"
+    [name]="groupName()"
+    [value]="mode()"
+    [checked]="active()"
+    (change)="pick()"
+  />
+  <span class="opt-b">
+    <b>{{ titleKey() | t }}</b>
+    <ng-content />
+  </span>
+</label>

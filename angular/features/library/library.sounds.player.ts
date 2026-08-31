@@ -1,13 +1,15 @@
-import { Injectable, signal, inject } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { ToastService } from "@core/toast/toast.service";
-import { LibrarySound } from "./library.sounds.models";
-import { SOUND_STREAM_SCHEME } from "./library.sounds.models";
-import { spectrumBands } from "./library.sounds.audio";
+import { inject, Injectable, signal } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { ToastService } from '@shared/toast/toast.service';
 
-function roundedPosition(value: number): number { return Math.round(value * 10) / 10; }
+import { spectrumBands } from './library.sounds.audio';
+import { LibrarySound, SOUND_STREAM_SCHEME } from './library.sounds.models';
 
-@Injectable({ providedIn: "root" })
+function roundedPosition(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+@Injectable({ providedIn: 'root' })
 export class LibrarySoundPlayer {
   private readonly ipc = inject(DesktopIpcService);
   private readonly toasts = inject(ToastService);
@@ -26,7 +28,8 @@ export class LibrarySoundPlayer {
   async toggle(sound: LibrarySound): Promise<void> {
     const audio = this.ensureAudio();
     if (this.currentId() === sound.id) {
-      if (this.playing()) audio.pause(); else await this.play(sound);
+      if (this.playing()) audio.pause();
+      else await this.play(sound);
       return;
     }
     audio.pause();
@@ -57,7 +60,9 @@ export class LibrarySoundPlayer {
     this.stopClock();
   }
 
-  currentTime(): number { return this.audio && this.playing() ? this.audio.currentTime : this.position(); }
+  currentTime(): number {
+    return this.audio && this.playing() ? this.audio.currentTime : this.position();
+  }
 
   spectrum(count: number): number[] | null {
     if (!this.analyser || !this.context || !this.bins) return null;
@@ -68,11 +73,11 @@ export class LibrarySoundPlayer {
   private ensureAudio(): HTMLAudioElement {
     if (this.audio) return this.audio;
     const audio = new Audio();
-    audio.crossOrigin = "anonymous";
-    audio.addEventListener("play", this.onPlay.bind(this));
-    audio.addEventListener("pause", this.onPause.bind(this));
-    audio.addEventListener("timeupdate", this.onTimeUpdate.bind(this));
-    audio.addEventListener("ended", this.onEnded.bind(this));
+    audio.crossOrigin = 'anonymous';
+    audio.addEventListener('play', this.onPlay.bind(this));
+    audio.addEventListener('pause', this.onPause.bind(this));
+    audio.addEventListener('timeupdate', this.onTimeUpdate.bind(this));
+    audio.addEventListener('ended', this.onEnded.bind(this));
     this.audio = audio;
     return audio;
   }
@@ -80,7 +85,13 @@ export class LibrarySoundPlayer {
   private async play(sound: LibrarySound): Promise<void> {
     const audio = this.ensureAudio();
     this.connectAnalyser(audio);
-    try { await audio.play(); } catch { this.playing.set(false); this.position.set(0); this.toasts.show("library.sound.toast.playFailed", "danger"); }
+    try {
+      await audio.play();
+    } catch {
+      this.playing.set(false);
+      this.position.set(0);
+      this.toasts.show('library.sound.toast.playFailed', 'danger');
+    }
     void sound;
   }
 
@@ -99,14 +110,36 @@ export class LibrarySoundPlayer {
       this.bins = new Uint8Array(analyser.frequencyBinCount);
       this.analysing.set(true);
       void context.resume();
-    } catch { this.analysing.set(false); }
+    } catch {
+      this.analysing.set(false);
+    }
   }
 
-  private onPlay(): void { this.playing.set(true); this.startClock(); }
-  private onPause(): void { this.playing.set(false); this.stopClock(); }
-  private onTimeUpdate(): void { if (this.audio) this.position.set(roundedPosition(this.audio.currentTime)); }
-  private onEnded(): void { this.position.set(0); this.playing.set(false); this.stopClock(); }
-  private startClock(): void { if (!this.frame) this.frame = requestAnimationFrame(this.tick.bind(this)); }
-  private stopClock(): void { if (this.frame) cancelAnimationFrame(this.frame); this.frame = 0; }
-  private tick(): void { this.clock.update((value) => value + 1); this.frame = this.playing() ? requestAnimationFrame(this.tick.bind(this)) : 0; }
+  private onPlay(): void {
+    this.playing.set(true);
+    this.startClock();
+  }
+  private onPause(): void {
+    this.playing.set(false);
+    this.stopClock();
+  }
+  private onTimeUpdate(): void {
+    if (this.audio) this.position.set(roundedPosition(this.audio.currentTime));
+  }
+  private onEnded(): void {
+    this.position.set(0);
+    this.playing.set(false);
+    this.stopClock();
+  }
+  private startClock(): void {
+    if (!this.frame) this.frame = requestAnimationFrame(this.tick.bind(this));
+  }
+  private stopClock(): void {
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = 0;
+  }
+  private tick(): void {
+    this.clock.update((value) => value + 1);
+    this.frame = this.playing() ? requestAnimationFrame(this.tick.bind(this)) : 0;
+  }
 }

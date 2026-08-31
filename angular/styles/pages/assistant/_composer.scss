@@ -1,0 +1,48 @@
+.asst-composer {
+  flex-direction: column;
+  gap: var(--sp-xs);
+}
+.asst-composer-field {
+  display: block;
+}
+.asst-composer .textarea {
+  min-height: 56px;
+  max-height: 180px;
+  resize: none;
+}
+.asst-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+}
+.asst-composer-bar .t-sm {
+  font-size: 11.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asst-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--danger-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 18px;
+}
+.asst-error > .ic {
+  color: var(--danger);
+  flex: none;
+  margin-top: 1px;
+}
+.asst-error > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

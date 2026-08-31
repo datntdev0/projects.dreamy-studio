@@ -1,5 +1,13 @@
 @if (def(); as def) {
-  <span class="type-tag" [class]="'type-tag gt-' + def.key" [attr.data-type]="def.key" data-testid="novel-knowledge-type"><ds-icon [name]="def.icon" [size]="13" />{{ def.labelKey | t }}</span>
+  <span
+    class="type-tag"
+    [class]="'type-tag gt-' + def.key"
+    [attr.data-type]="def.key"
+    data-testid="novel-knowledge-type"
+  >
+    <ds-icon [name]="def.icon" [size]="13" />
+    {{ def.labelKey | t }}
+  </span>
 } @else {
   <span class="type-tag" data-testid="novel-knowledge-type">{{ type() }}</span>
 }

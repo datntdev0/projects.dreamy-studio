@@ -1,10 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/angular-vite";
-import { ComponentsPage } from "./components.page";
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+
+import { ComponentsPage } from './components.page';
 
 const meta: Meta<ComponentsPage> = {
-  title: "Design System/Components",
+  title: 'Design System/Components',
   component: ComponentsPage,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: 'fullscreen' },
 };
 
 export default meta;

@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap');
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --primary: #7c3aed;
+  --primary-hover: #8b5cf6;
+  --on-primary: #ffffff;
+  --primary-text: #c4b5fd;
+  --primary-soft: rgba(124, 58, 237, 0.18);
+  --secondary: #ff7a17;
+  --secondary-hover: #ff9442;
+  --on-secondary: #0a0a0a;
+  --secondary-text: #ffc285;
+  --secondary-soft: rgba(255, 122, 23, 0.16);
+
+  --canvas: #0a0a0a;
+  --canvas-soft: #1a1c20;
+  --canvas-card: #151517;
+  --canvas-mid: #363a3f;
+  --hairline: #212327;
+  --hairline-strong: rgba(255, 255, 255, 0.25);
+  --scrim: rgba(0, 0, 0, 0.6);
+
+  --ink: #ffffff;
+  --body: #dadbdf;
+  --mute: #7d8187;
+
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #a0c3ec;
+  --success-soft: rgba(74, 222, 128, 0.16);
+  --warning-soft: rgba(251, 191, 36, 0.16);
+  --danger-soft: rgba(248, 113, 113, 0.16);
+  --info-soft: rgba(160, 195, 236, 0.16);
+
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  --acc-twilight: #c4b5fd;
+  --acc-sunset: #ffc285;
+  --acc-breeze: #a0c3ec;
+  --acc-midnight: #0d1726;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --primary-hover: #6d28d9;
+  --primary-text: #6d28d9;
+  --primary-soft: rgba(124, 58, 237, 0.1);
+  --secondary-hover: #ea6a0a;
+  --secondary-text: #c2410c;
+  --secondary-soft: rgba(255, 122, 23, 0.12);
+
+  --canvas: #fafaf7;
+  --canvas-soft: #f1f0ec;
+  --canvas-card: #ffffff;
+  --canvas-mid: #e4e3de;
+  --hairline: #e6e5e0;
+  --hairline-strong: rgba(10, 10, 10, 0.2);
+  --scrim: rgba(10, 10, 10, 0.35);
+
+  --ink: #0a0a0a;
+  --body: #3a3d42;
+  --mute: #6b6f75;
+
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --info: #2f6aa8;
+  --success-soft: rgba(21, 128, 61, 0.1);
+  --warning-soft: rgba(180, 83, 9, 0.1);
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --info-soft: rgba(47, 106, 168, 0.1);
+
+  --shadow-float: 0 8px 24px rgba(10, 10, 10, 0.1);
+}
+
+:root {
+  --font: 'Geist', Inter, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', 'Noto Serif', serif;
+
+  --sp-xxs: 2px;
+  --sp-xs: 4px;
+  --sp-sm: 6px;
+  --sp-md: 8px;
+  --sp-lg: 12px;
+  --sp-xl: 16px;
+  --sp-2xl: 24px;
+  --sp-3xl: 32px;
+  --sp-4xl: 48px;
+
+  --r-xs: 2px;
+  --r-sm: 3px;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-full: 9999px;
+
+  --ctl-h: 28px;
+  --ctl-h-sm: 24px;
+}

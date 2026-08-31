@@ -1,10 +1,42 @@
 ds-dialog {
-  & { display: contents; }
-  .dialog-panel:focus { outline: none; }
-  .dialog-head { justify-content: space-between; }
-  .dialog-heading { display: flex; align-items: center; min-width: 0; }
-  .dialog-eyebrow { white-space: nowrap; }
-  .dialog-title { min-width: 0; margin: 0; overflow: hidden; color: var(--ink); font: 600 12px/16px var(--font-mono); letter-spacing: 1.2px; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
-  .dialog-eyebrow + .dialog-title::before { content: ""; display: inline-block; width: 1px; height: 12px; margin: 0 var(--sp-lg) 0 var(--sp-sm); background: var(--hairline-strong); vertical-align: -2px; }
-  .dialog-foot:empty { display: none; }
+  & {
+    display: contents;
+  }
+  .dialog-panel:focus {
+    outline: none;
+  }
+  .dialog-head {
+    justify-content: space-between;
+  }
+  .dialog-heading {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .dialog-eyebrow {
+    white-space: nowrap;
+  }
+  .dialog-title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ink);
+    font: 600 12px/16px var(--font-mono);
+    letter-spacing: 1.2px;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .dialog-eyebrow + .dialog-title::before {
+    content: '';
+    display: inline-block;
+    width: 1px;
+    height: 12px;
+    margin: 0 var(--sp-lg) 0 var(--sp-sm);
+    background: var(--hairline-strong);
+    vertical-align: -2px;
+  }
+  .dialog-foot:empty {
+    display: none;
+  }
 }

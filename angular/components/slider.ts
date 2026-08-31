@@ -1,20 +1,21 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import { ChangeDetectionStrategy, Component, Input, input, output } from '@angular/core';
+import { fieldValue } from '@shared/utils/dom';
 
 @Component({
-  selector: "ds-slider",
-  standalone: true,
-  templateUrl: "./slider.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-slider',
+  templateUrl: './slider.html',
 })
 export class Slider {
-  @Input() label = "Value";
-  @Input() min = 0;
-  @Input() max = 100;
-  @Input() step = 1;
+  readonly label = input('Value');
+  readonly min = input(0);
+  readonly max = input(100);
+  readonly step = input(1);
   @Input() value = 0;
-  @Output() valueChange = new EventEmitter<number>();
+  readonly valueChange = output<number>();
 
   onInput(event: Event): void {
-    this.value = Number((event.target as HTMLInputElement).value);
+    this.value = Number(fieldValue(event));
     this.valueChange.emit(this.value);
   }
 }

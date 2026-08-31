@@ -1,47 +1,20 @@
-import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { WorkspaceService } from "../workspace/workspace.service";
-import { ChapterRow } from "./novel.models";
-import { ParagraphRow } from "./novel.models";
-import { CoverEntry } from "./novel.models";
-import { ExportSummary } from "./novel.models";
-import { InspectEvent } from "./novel.models";
-import { NovelError } from "./novel.models";
-import { NovelFilters } from "./novel.models";
-import { NovelInput } from "./novel.models";
-import { LangCount } from "./novel.models";
-import { NovelLang } from "./novel.models";
-import { NovelPatch } from "./novel.models";
-import { NovelSummary } from "./novel.models";
-import { NovelTotals } from "./novel.models";
-import { NovelViewMode } from "./novel.models";
-import { PackageSummary } from "./novel.models";
-import { TagAddResult } from "./novel.models";
-import { TagCount } from "./novel.models";
-import { RECENT_LIMIT } from "./novel.rules";
-import { checkTag } from "./novel.rules";
-import { compareNewestFirst } from "./novel.rules";
-import { filterNovels } from "./novel.rules";
-import { isDuplicateTitle } from "./novel.rules";
-import { langCounts } from "./novel.rules";
-import { normTag } from "./novel.rules";
-import { novelTotals } from "./novel.rules";
-import { pruneLangs } from "./novel.rules";
-import { pruneTags } from "./novel.rules";
-import { recentNovels } from "./novel.rules";
-import { tagCounts } from "./novel.rules";
-import { toNovelError } from "./novel.rules";
-import { toggled } from "./novel.rules";
-import { withoutTag } from "./novel.rules";
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
-const VIEW_STORAGE_KEY = "ds.nm.view";
+import { WorkspaceService } from '../workspace/workspace.service';
+// prettier-ignore
+import { ChapterRow, CoverEntry, ExportSummary, InspectEvent, LangCount, NovelError, NovelFilters, NovelInput, NovelLang, NovelPatch, NovelSummary, NovelTotals, NovelViewMode, PackageSummary, ParagraphRow, TagAddResult, TagCount } from './novel.models';
+// prettier-ignore
+import { checkTag, compareNewestFirst, filterNovels, isDuplicateTitle, langCounts, normTag, novelTotals, pruneLangs, pruneTags, RECENT_LIMIT, recentNovels, tagCounts, toggled, toNovelError, withoutTag } from './novel.rules';
+
+const VIEW_STORAGE_KEY = 'ds.nm.view';
 
 function readViewMode(): NovelViewMode {
   try {
     const raw = localStorage.getItem(VIEW_STORAGE_KEY);
-    return raw !== null && JSON.parse(raw) === "list" ? "list" : "grid";
+    return raw !== null && JSON.parse(raw) === 'list' ? 'list' : 'grid';
   } catch {
-    return "grid";
+    return 'grid';
   }
 }
 
@@ -94,10 +67,10 @@ function sumWords(rows: ChapterRow[]): number {
   return total;
 }
 
-function countStatus(rows: ChapterRow[], key: "translationStatus" | "analysisStatus"): number {
+function countStatus(rows: ChapterRow[], key: 'translationStatus' | 'analysisStatus'): number {
   let total = 0;
   for (const row of rows) {
-    if (row[key] !== "none") {
+    if (row[key] !== 'none') {
       total += 1;
     }
   }
@@ -112,7 +85,7 @@ function replaceChapter(rows: ChapterRow[], next: ChapterRow): ChapterRow[] {
   return out;
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class NovelService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly workspace = inject(WorkspaceService);
@@ -131,8 +104,8 @@ export class NovelService {
   readonly loading = signal(false);
   readonly error = signal<NovelError | null>(null);
   readonly view = signal<NovelViewMode>(readViewMode());
-  readonly query = signal("");
-  readonly chapterQuery = signal("");
+  readonly query = signal('');
+  readonly chapterQuery = signal('');
   readonly collapsedIds = signal<number[]>([]);
 
   readonly byId = computed(this.buildIndex.bind(this));
@@ -155,7 +128,7 @@ export class NovelService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const rows = await this.ipc.invoke<NovelSummary[]>("novel_list");
+      const rows = await this.ipc.invoke<NovelSummary[]>('novel_list');
       if (epoch === this.epoch) {
         this.items.set([...rows].sort(compareNewestFirst));
         this.loaded.set(true);
@@ -182,14 +155,14 @@ export class NovelService {
   }
 
   async create(input: NovelInput): Promise<NovelSummary> {
-    const created = await this.ipc.invoke<NovelSummary>("novel_create", { input });
+    const created = await this.ipc.invoke<NovelSummary>('novel_create', { input });
     this.items.set([created, ...this.items()]);
     return created;
   }
 
   async update(id: number, patch: NovelPatch): Promise<NovelSummary> {
     const before = this.novelById(id);
-    const next = await this.ipc.invoke<NovelSummary>("novel_update", { id, patch });
+    const next = await this.ipc.invoke<NovelSummary>('novel_update', { id, patch });
     this.items.set(replaceById(this.items(), next));
     if (before) {
       this.carryCover(before, next.updatedAt);
@@ -198,7 +171,7 @@ export class NovelService {
   }
 
   async remove(ids: number[]): Promise<number> {
-    const count = await this.ipc.invoke<number>("novel_delete", { ids });
+    const count = await this.ipc.invoke<number>('novel_delete', { ids });
     this.dropNovels(ids);
     return count;
   }
@@ -206,15 +179,15 @@ export class NovelService {
   async addTag(id: number, raw: string): Promise<TagAddResult> {
     const novel = this.novelById(id);
     if (!novel) {
-      return "missing";
+      return 'missing';
     }
     const tag = normTag(raw);
     const check = checkTag(novel.tags, tag);
-    if (check !== "ok") {
+    if (check !== 'ok') {
       return check;
     }
     await this.update(id, { tags: [...novel.tags, tag] });
-    return "added";
+    return 'added';
   }
 
   async removeTag(id: number, tag: string): Promise<void> {
@@ -246,14 +219,14 @@ export class NovelService {
   }
 
   async setCover(id: number, dataUrl: string): Promise<NovelSummary> {
-    const next = await this.ipc.invoke<NovelSummary>("novel_cover_set", { id, dataUrl });
+    const next = await this.ipc.invoke<NovelSummary>('novel_cover_set', { id, dataUrl });
     this.items.set(replaceById(this.items(), next));
     this.storeCover(next, dataUrl);
     return next;
   }
 
   async clearCover(id: number): Promise<NovelSummary> {
-    const next = await this.ipc.invoke<NovelSummary>("novel_cover_clear", { id });
+    const next = await this.ipc.invoke<NovelSummary>('novel_cover_clear', { id });
     this.items.set(replaceById(this.items(), next));
     this.storeCover(next, null);
     return next;
@@ -265,7 +238,7 @@ export class NovelService {
 
   async loadChapters(novelId: number): Promise<ChapterRow[]> {
     const epoch = this.epoch;
-    const rows = await this.ipc.invoke<ChapterRow[]>("novel_chapters", { novelId });
+    const rows = await this.ipc.invoke<ChapterRow[]>('novel_chapters', { novelId });
     if (epoch === this.epoch) {
       this.chapterCache.set({ ...this.chapterCache(), [novelId]: rows });
     }
@@ -285,25 +258,32 @@ export class NovelService {
   }
 
   async addChapter(novelId: number, title: string): Promise<ChapterRow> {
-    const row = await this.ipc.invoke<ChapterRow>("novel_chapter_add", { novelId, title });
+    const row = await this.ipc.invoke<ChapterRow>('novel_chapter_add', { novelId, title });
     this.storeChapters(novelId, [...this.chaptersOf(novelId), row], row.updatedAt);
     return row;
   }
 
   async deleteChapter(novelId: number, chapterId: string): Promise<ChapterRow[]> {
-    const rows = await this.ipc.invoke<ChapterRow[]>("novel_chapter_delete", { novelId, chapterId });
+    const rows = await this.ipc.invoke<ChapterRow[]>('novel_chapter_delete', {
+      novelId,
+      chapterId,
+    });
     this.storeChapters(novelId, rows, new Date().toISOString());
     return rows;
   }
 
   async moveChapter(novelId: number, chapterId: string, toSeq: number): Promise<ChapterRow[]> {
-    const rows = await this.ipc.invoke<ChapterRow[]>("novel_chapter_move", { novelId, chapterId, toSeq });
+    const rows = await this.ipc.invoke<ChapterRow[]>('novel_chapter_move', {
+      novelId,
+      chapterId,
+      toSeq,
+    });
     this.storeChapters(novelId, rows, new Date().toISOString());
     return rows;
   }
 
   readChapter(novelId: number, chapterId: string): Promise<ParagraphRow[]> {
-    return this.ipc.invoke<ParagraphRow[]>("novel_chapter_read", { novelId, chapterId });
+    return this.ipc.invoke<ParagraphRow[]>('novel_chapter_read', { novelId, chapterId });
   }
 
   async paragraphCount(novelId: number, chapterId: string): Promise<number> {
@@ -312,22 +292,19 @@ export class NovelService {
   }
 
   packagePick(): Promise<string | null> {
-    return this.ipc.invoke<string | null>("novel_package_pick");
+    return this.ipc.invoke<string | null>('novel_package_pick');
   }
 
-  packageInspect(
-    path: string,
-    onEvent: (event: InspectEvent) => void,
-  ): Promise<PackageSummary> {
+  packageInspect(path: string, onEvent: (event: InspectEvent) => void): Promise<PackageSummary> {
     const channel = this.ipc.channel<InspectEvent>(onEvent);
-    return this.ipc.invoke<PackageSummary>("novel_package_inspect", {
+    return this.ipc.invoke<PackageSummary>('novel_package_inspect', {
       path,
       onEvent: channel,
     });
   }
 
   async packageImport(path: string, meta: NovelInput): Promise<NovelSummary> {
-    const created = await this.ipc.invoke<NovelSummary>("novel_package_import", {
+    const created = await this.ipc.invoke<NovelSummary>('novel_package_import', {
       path,
       meta,
     });
@@ -336,11 +313,11 @@ export class NovelService {
   }
 
   packageSavePick(fileName: string): Promise<string | null> {
-    return this.ipc.invoke<string | null>("novel_package_save_pick", { fileName });
+    return this.ipc.invoke<string | null>('novel_package_save_pick', { fileName });
   }
 
   packageExport(id: number, path: string): Promise<ExportSummary> {
-    return this.ipc.invoke<ExportSummary>("novel_package_export", { id, path });
+    return this.ipc.invoke<ExportSummary>('novel_package_export', { id, path });
   }
 
   setView(mode: NovelViewMode): void {
@@ -374,7 +351,7 @@ export class NovelService {
   }
 
   clearQueryAndFilters(): void {
-    this.query.set("");
+    this.query.set('');
     this.clearFilters();
   }
 
@@ -392,8 +369,8 @@ export class NovelService {
     this.chapterCache.set({});
     this.collapsedIds.set([]);
     this.pendingCovers.clear();
-    this.query.set("");
-    this.chapterQuery.set("");
+    this.query.set('');
+    this.chapterQuery.set('');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
@@ -419,7 +396,7 @@ export class NovelService {
     const epoch = this.epoch;
     let url: string | null = null;
     try {
-      url = await this.ipc.invoke<string | null>("novel_cover_get", { id: novel.id });
+      url = await this.ipc.invoke<string | null>('novel_cover_get', { id: novel.id });
     } catch {
       url = null;
     }
@@ -438,7 +415,14 @@ export class NovelService {
     this.chapterCache.set({ ...this.chapterCache(), [novelId]: rows });
     const novel = this.novelById(novelId);
     if (novel) {
-      const touched = { ...novel, chapterCount: rows.length, wordCount: sumWords(rows), translatedCount: countStatus(rows, "translationStatus"), analyzedCount: countStatus(rows, "analysisStatus"), updatedAt: stamp };
+      const touched = {
+        ...novel,
+        chapterCount: rows.length,
+        wordCount: sumWords(rows),
+        translatedCount: countStatus(rows, 'translationStatus'),
+        analyzedCount: countStatus(rows, 'analysisStatus'),
+        updatedAt: stamp,
+      };
       this.items.set(replaceById(this.items(), touched));
       this.carryCover(novel, stamp);
     }

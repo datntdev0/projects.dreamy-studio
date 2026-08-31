@@ -1,30 +1,30 @@
-import { Component, HostListener, OnDestroy, OnInit, inject, signal } from "@angular/core";
-import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from "@components/datatable";
-import { Icon } from "@components/icon";
-import { Slider } from "@components/slider";
-import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from "@core/desktop/desktop-ipc.service";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { LibraryConfirmService } from "../library.confirm.service";
-import { IMAGE_RATIOS, ImageSort, ImageViewMode, LibraryImage } from "../library.images.models";
-import { dimensionsText, formatBytes } from "../library.images.rules";
-import { LibraryImageService } from "../library.images.service";
-import { LibraryService } from "../library.service";
-import { LibraryImageThumb } from "./image-thumb.component";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
+// prettier-ignore
+import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { Slider } from '@components/slider';
+import { CoreModule } from '@shared/core.module';
+// prettier-ignore
+import { DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
-const FIELD_SELECTOR = "input,textarea,select";
-
-function isField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(FIELD_SELECTOR) !== null;
-}
+import { LibraryConfirmService } from '../library.confirm.service';
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { listenForLibraryDrops } from '../library.drag-drop';
+import { IMAGE_RATIOS, ImageSort, ImageViewMode, LibraryImage } from '../library.images.models';
+import { dimensionsText, formatBytes } from '../library.images.rules';
+import { LibraryImageService } from '../library.images.service';
+import { LibraryService } from '../library.service';
+import { LibraryImageThumb } from './image-thumb.component';
 
 @Component({
-  selector: "app-library-images",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-images',
   imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryImageThumb, Slider],
-  templateUrl: "./images.component.html",
+  templateUrl: './images.component.html',
 })
 export class LibraryImages implements OnInit, OnDestroy {
   private readonly ipc = inject(DesktopIpcService);
@@ -47,11 +47,11 @@ export class LibraryImages implements OnInit, OnDestroy {
   }
 
   onQuery(event: Event): void {
-    this.images.query.set((event.target as HTMLInputElement).value);
+    this.images.query.set(fieldValue(event));
   }
 
   onSort(event: Event): void {
-    this.images.sort.set((event.target as HTMLSelectElement).value as ImageSort);
+    this.images.sort.set(fieldValue(event) as ImageSort);
   }
 
   onGridSize(value: number): void {
@@ -76,11 +76,11 @@ export class LibraryImages implements OnInit, OnDestroy {
   }
 
   onImageKeydown(image: LibraryImage, event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.open(image);
     }
-    if (event.key === " ") {
+    if (event.key === ' ') {
       event.preventDefault();
       this.select(image);
     }
@@ -91,7 +91,7 @@ export class LibraryImages implements OnInit, OnDestroy {
   }
 
   clearAllFilters(): void {
-    this.images.query.set("");
+    this.images.query.set('');
     this.library.clearFilters();
   }
 
@@ -105,22 +105,22 @@ export class LibraryImages implements OnInit, OnDestroy {
 
   collectionName(image: LibraryImage): string {
     if (image.collectionId === null) {
-      return "—";
+      return '—';
     }
-    return this.library.collectionById(image.collectionId)?.name ?? "—";
+    return this.library.collectionById(image.collectionId)?.name ?? '—';
   }
 
   collectionFilterName(): string {
     const filter = this.library.filterCollection();
-    return typeof filter === "number" ? this.library.collectionById(filter)?.name ?? "—" : "";
+    return typeof filter === 'number' ? (this.library.collectionById(filter)?.name ?? '—') : '';
   }
 
   collectionFilterIsKey(): boolean {
-    return this.library.filterCollection() === "none";
+    return this.library.filterCollection() === 'none';
   }
 
   unfiledKey(): LanguageKey {
-    return "library.explorer.filters.unfiled";
+    return 'library.explorer.filters.unfiled';
   }
 
   formatBytes(value: number): string {
@@ -132,7 +132,7 @@ export class LibraryImages implements OnInit, OnDestroy {
   }
 
   ratioIcon(value: string): string {
-    return `ratio-${value.replace("/", "-")}`;
+    return `ratio-${value.replace('/', '-')}`;
   }
 
   isSelected(image: LibraryImage): boolean {
@@ -143,14 +143,30 @@ export class LibraryImages implements OnInit, OnDestroy {
     return this.images.query().trim().length > 0 || this.library.filtersActive();
   }
 
-  readonly tableRowClass = (row: object): Record<string, boolean> => ({ "is-selected": this.isSelected(this.imageOf(row)) });
+  readonly tableRowClass = (row: object): Record<string, boolean> => ({
+    'is-selected': this.isSelected(this.imageOf(row)),
+  });
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "name", label: this.languageService.translate("library.image.column.name") },
-      { key: "dimensions", label: this.languageService.translate("library.image.column.dimensions"), width: "120px" },
-      { key: "size", label: this.languageService.translate("library.image.column.size"), align: "right", width: "110px" },
-      { key: "collection", label: this.languageService.translate("library.image.column.collection"), width: "180px", ellipsis: true },
+      { key: 'name', label: this.languageService.translate('library.image.column.name') },
+      {
+        key: 'dimensions',
+        label: this.languageService.translate('library.image.column.dimensions'),
+        width: '120px',
+      },
+      {
+        key: 'size',
+        label: this.languageService.translate('library.image.column.size'),
+        align: 'right',
+        width: '110px',
+      },
+      {
+        key: 'collection',
+        label: this.languageService.translate('library.image.column.collection'),
+        width: '180px',
+        ellipsis: true,
+      },
     ];
   }
 
@@ -173,39 +189,25 @@ export class LibraryImages implements OnInit, OnDestroy {
     this.open(this.imageOf(event.row));
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onDeleteKey(event: KeyboardEvent): void {
     const id = this.images.selectedId();
-    if (event.key !== "Delete" || isField(event.target) || id === null || this.dialogs.uploadOpen() || this.isDialogOpen()) {
+    if (
+      !isDeleteShortcut(event) ||
+      id === null ||
+      this.dialogs.uploadOpen() ||
+      this.isDialogOpen()
+    ) {
       return;
     }
     this.confirms.deleteImages([id]);
   }
 
   private async listenForDrops(): Promise<void> {
-    this.unlisten = await this.ipc.onDragDrop(this.handleDragDrop.bind(this));
-  }
-
-  private handleDragDrop(event: DesktopDragDropEvent): void {
-    if (this.dialogs.uploadOpen()) {
-      this.dragging.set(false);
-      return;
-    }
-    if (event.type === "enter" || event.type === "over") {
-      this.dragging.set(true);
-      return;
-    }
-    if (event.type === "leave") {
-      this.dragging.set(false);
-      return;
-    }
-    if (event.type === "drop") {
-      this.dragging.set(false);
-      this.dialogs.openUpload(event.paths);
-    }
+    this.unlisten = await listenForLibraryDrops(this.ipc, this.dragging, this.dialogs, 'image');
   }
 
   private isDialogOpen(): boolean {
-    return this.dialogs.previewImageId() !== null || document.querySelector(".modal") !== null;
+    return this.dialogs.previewImageId() !== null || isModalOpen();
   }
 }

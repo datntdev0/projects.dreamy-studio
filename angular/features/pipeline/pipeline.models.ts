@@ -1,7 +1,7 @@
-import { LanguageKey } from "@core/language/language.models";
-import { PipelineStatus, PipelineTask } from "@features/novel/novel.translation.models";
+import { PipelineStatus, PipelineTask } from '@features/novel/novel.translation.models';
+import { LanguageKey } from '@shared/language/language.models';
 
-export type PipelineFilter = "all" | PipelineStatus;
+export type PipelineFilter = 'all' | PipelineStatus;
 
 export interface PipelineTotals {
   count: number;
@@ -9,9 +9,16 @@ export interface PipelineTotals {
   total: number;
 }
 
-export type PipelineLogLevel = "info" | "ok" | "warn" | "err";
+export type PipelineLogLevel = 'info' | 'ok' | 'warn' | 'err';
 
-export type PipelineLogKind = "started" | "taskStarted" | "taskRunning" | "taskDone" | "taskFailed" | "taskCancelled" | "finished";
+export type PipelineLogKind =
+  | 'started'
+  | 'taskStarted'
+  | 'taskRunning'
+  | 'taskDone'
+  | 'taskFailed'
+  | 'taskCancelled'
+  | 'finished';
 
 export interface PipelineLogEntry {
   time: string;

@@ -1,3 +1,15 @@
-<button type="button" class="lb-pbtn" [class.is-sm]="size() === 'sm'" [class.is-lg]="size() === 'lg'" [attr.aria-label]="'library.video.play' | t" data-testid="library-video-play-button" (click)="open($event)">
-  <ds-icon name="play" [size]="size() === 'lg' ? 18 : size() === 'sm' ? 11 : 14" data-testid="library-video-play-icon" />
+<button
+  type="button"
+  class="lb-pbtn"
+  [class.is-sm]="size() === 'sm'"
+  [class.is-lg]="size() === 'lg'"
+  [attr.aria-label]="'library.video.play' | t"
+  data-testid="library-video-play-button"
+  (click)="open($event)"
+>
+  <ds-icon
+    name="play"
+    [size]="size() === 'lg' ? 18 : size() === 'sm' ? 11 : 14"
+    data-testid="library-video-play-icon"
+  />
 </button>

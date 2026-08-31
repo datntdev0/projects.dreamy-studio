@@ -1,32 +1,27 @@
-import { Component, HostListener, computed, effect, inject, signal, untracked } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { LibraryDialogsService } from "../library.dialogs.service";
-import { ImageRights, LibraryImage } from "../library.images.models";
-import { dimensionsText, formatBytes, imageCode } from "../library.images.rules";
-import { LibraryImageService } from "../library.images.service";
-import { LibraryService } from "../library.service";
-import { AssetRef } from "../library.models";
-import { formatIsoMinute } from "../library.rules";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, HostListener, inject, signal, untracked } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
 
-const RIGHTS_KEYS: Record<ImageRights, LanguageKey> = {
-  own: "library.rights.own",
-  licensed: "library.rights.licensed",
-  free: "library.rights.free",
-  other: "library.rights.other",
-};
+import { LibraryDialogsService } from '../library.dialogs.service';
+import { ImageRights, LibraryImage } from '../library.images.models';
+import { dimensionsText, formatBytes, imageCode } from '../library.images.rules';
+import { LibraryImageService } from '../library.images.service';
+import { AssetRef } from '../library.models';
+import { formatIsoMinute, rightsKey } from '../library.rules';
+import { LibraryService } from '../library.service';
 
 function sameId(id: number, image: LibraryImage): boolean {
   return image.id === id;
 }
 
 @Component({
-  selector: "app-library-image-preview-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-library-image-preview-dialog',
   imports: [Icon, CoreModule],
-  templateUrl: "./image-preview.dialog.html",
-  host: { "data-testid": "library-image-preview-dialog" },
+  templateUrl: './image-preview.dialog.html',
+  host: { 'data-testid': 'library-image-preview-dialog' },
 })
 export class LibraryImagePreviewDialog {
   private readonly images = inject(LibraryImageService);
@@ -81,36 +76,38 @@ export class LibraryImagePreviewDialog {
   }
 
   rightsKey(rights: ImageRights): LanguageKey {
-    return RIGHTS_KEYS[rights];
+    return rightsKey(rights);
   }
 
   originKey(image: LibraryImage): LanguageKey {
-    return image.origin === "app" ? "library.origin.app" : "library.origin.upload";
+    return image.origin === 'app' ? 'library.origin.app' : 'library.origin.upload';
   }
 
   collectionName(image: LibraryImage): string {
-    return image.collectionId === null ? "" : this.library.collectionById(image.collectionId)?.name ?? "—";
+    return image.collectionId === null
+      ? ''
+      : (this.library.collectionById(image.collectionId)?.name ?? '—');
   }
 
   hasCollection(image: LibraryImage): boolean {
     return image.collectionId !== null;
   }
 
-  @HostListener("document:keydown", ["$event"])
+  @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (!this.open()) {
       return;
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       this.close();
       return;
     }
-    if (event.key === "ArrowLeft") {
+    if (event.key === 'ArrowLeft') {
       event.preventDefault();
       this.previous();
     }
-    if (event.key === "ArrowRight") {
+    if (event.key === 'ArrowRight') {
       event.preventDefault();
       this.next();
     }
@@ -118,7 +115,7 @@ export class LibraryImagePreviewDialog {
 
   private findImage(): LibraryImage | null {
     const id = this.dialogs.previewImageId();
-    return id === null ? null : this.images.items().find(sameId.bind(null, id)) ?? null;
+    return id === null ? null : (this.images.items().find(sameId.bind(null, id)) ?? null);
   }
 
   private isOpen(): boolean {
@@ -128,7 +125,10 @@ export class LibraryImagePreviewDialog {
   private buildPosition(): { index: number; total: number } {
     const image = this.image();
     const sequence = this.sequence();
-    return { index: image === null ? -1 : sequence.findIndex(this.isImageRef.bind(null, image.id)), total: sequence.length };
+    return {
+      index: image === null ? -1 : sequence.findIndex(this.isImageRef.bind(null, image.id)),
+      total: sequence.length,
+    };
   }
 
   private syncPreview(): void {
@@ -161,7 +161,13 @@ export class LibraryImagePreviewDialog {
     if (next) this.dialogs.openPreviewRef(next, this.sequence());
   }
 
-  private sequence(): AssetRef[] { return this.dialogs.previewSequence() ?? this.images.visible().map(this.toRef); }
-  private toRef(image: LibraryImage): AssetRef { return { kind: "image", id: image.id }; }
-  private isImageRef(id: number, ref: AssetRef): boolean { return ref.kind === "image" && ref.id === id; }
+  private sequence(): AssetRef[] {
+    return this.dialogs.previewSequence() ?? this.images.visible().map(this.toRef);
+  }
+  private toRef(image: LibraryImage): AssetRef {
+    return { kind: 'image', id: image.id };
+  }
+  private isImageRef(id: number, ref: AssetRef): boolean {
+    return ref.kind === 'image' && ref.id === id;
+  }
 }

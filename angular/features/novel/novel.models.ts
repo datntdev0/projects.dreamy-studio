@@ -1,6 +1,6 @@
-export type NovelLang = "EN" | "VI" | "ZH" | "JA" | "KO";
+export type NovelLang = 'EN' | 'VI' | 'ZH' | 'JA' | 'KO';
 
-export type NovelOrigin = "created" | "imported";
+export type NovelOrigin = 'created' | 'imported';
 
 export interface NovelSummary {
   id: number;
@@ -37,9 +37,9 @@ export interface NovelPatch {
   tags?: string[];
 }
 
-export type TranslationStatus = "none" | "queued" | "running" | "done";
+export type TranslationStatus = 'none' | 'queued' | 'running' | 'done';
 
-export type AnalysisStatus = "none" | "done" | "stale" | "running";
+export type AnalysisStatus = 'none' | 'done' | 'stale' | 'running';
 
 export interface ChapterRow {
   id: string;
@@ -59,15 +59,9 @@ export interface ParagraphRow {
   hashcheck: string;
 }
 
-export type InspectStep =
-  | "format"
-  | "open"
-  | "manifest"
-  | "chapters"
-  | "list"
-  | "cover";
+export type InspectStep = 'format' | 'open' | 'manifest' | 'chapters' | 'list' | 'cover';
 
-export type InspectStatus = "running" | "ok" | "warn" | "fail";
+export type InspectStatus = 'running' | 'ok' | 'warn' | 'fail';
 
 export interface InspectEvent {
   step: InspectStep;
@@ -102,7 +96,7 @@ export interface NovelError {
   detail: string;
 }
 
-export type NovelViewMode = "grid" | "list";
+export type NovelViewMode = 'grid' | 'list';
 
 export interface NovelFilters {
   tags: string[];
@@ -133,11 +127,11 @@ export interface NovelTotals {
   analyzed: number;
 }
 
-export type TagCheck = "ok" | "empty" | "duplicate" | "limit";
+export type TagCheck = 'ok' | 'empty' | 'duplicate' | 'limit';
 
-export type TagAddResult = "added" | "empty" | "duplicate" | "limit" | "missing";
+export type TagAddResult = 'added' | 'empty' | 'duplicate' | 'limit' | 'missing';
 
-export type NovelField = "title" | "name" | "author" | "lang" | "description";
+export type NovelField = 'title' | 'name' | 'author' | 'lang' | 'description';
 
 export interface NovelFormValue {
   title: string;
@@ -153,26 +147,26 @@ export interface CoverEntry {
   url: string | null;
 }
 
-export type FracState = "" | "is-part" | "is-full";
+export type FracState = '' | 'is-part' | 'is-full';
 
-export type NovelScreen = "chapters" | "reading";
+export type NovelScreen = 'chapters' | 'reading';
 
-export type ReaderMode = "read" | "edit" | "write";
+export type ReaderMode = 'read' | 'edit' | 'write';
 
-export type TargetLang = "EN" | "VI";
+export type TargetLang = 'EN' | 'VI';
 
-export type ReaderLang = "src" | TargetLang;
+export type ReaderLang = 'src' | TargetLang;
 
-export type ReaderLayout = "single" | "parallel";
+export type ReaderLayout = 'single' | 'parallel';
 
 export interface ReaderView {
   lang: ReaderLang;
   layout: ReaderLayout;
 }
 
-export type ReaderFont = "serif" | "sans" | "mono";
+export type ReaderFont = 'serif' | 'sans' | 'mono';
 
-export type ReaderPaper = "default" | "sepia" | "night";
+export type ReaderPaper = 'default' | 'sepia' | 'night';
 
 export interface ReaderPrefs {
   font: ReaderFont;
@@ -184,4 +178,4 @@ export interface ReaderPrefs {
   justify: boolean;
 }
 
-export type ParagraphSaveResult = "saved" | "empty" | "unchanged" | "idle";
+export type ParagraphSaveResult = 'saved' | 'empty' | 'unchanged' | 'idle';

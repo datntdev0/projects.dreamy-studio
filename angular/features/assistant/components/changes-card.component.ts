@@ -1,15 +1,17 @@
-import { Component, input, output } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageKey } from "@core/language/language.models";
-import { AssistantCitation, KnowledgeChange, KnowledgeChangeSet, ProposalDecision, ProposalResolution, ProposalStatus } from "../assistant.models";
-import { OP_ICONS, OP_KEYS, STATUS_KEYS } from "../assistant.proposals";
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+
+// prettier-ignore
+import { AssistantCitation, KnowledgeChange, KnowledgeChangeSet, ProposalDecision, ProposalResolution, ProposalStatus } from '../assistant.models';
+import { OP_ICONS, OP_KEYS, STATUS_KEYS } from '../assistant.proposals';
 
 @Component({
-  selector: "app-assistant-changes-card",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-assistant-changes-card',
   imports: [Icon, CoreModule],
-  templateUrl: "./changes-card.component.html",
+  templateUrl: './changes-card.component.html',
 })
 export class AssistantChangesCard {
   readonly changeSet = input.required<KnowledgeChangeSet>();
@@ -34,16 +36,16 @@ export class AssistantChangesCard {
   }
 
   apply(): void {
-    this.decide("applied");
+    this.decide('applied');
   }
 
   reject(): void {
-    this.decide("rejected");
+    this.decide('rejected');
   }
 
   private decide(status: ProposalDecision): void {
     const set = this.changeSet();
-    if (set.status === "pending" && !this.busy()) {
+    if (set.status === 'pending' && !this.busy()) {
       this.resolved.emit({ messageId: this.messageId(), itemIds: [set.id], status });
     }
   }

@@ -1,31 +1,36 @@
-import { Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { AssistantService } from "@features/assistant/assistant.service";
-import { novelScope } from "@features/assistant/assistant.rules";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from "../novel.models";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { NovelService } from "../novel.service";
-import { NOVEL_LANG_KEYS, toNovelError } from "../novel.rules";
-import { ChapterTranslation, PassageState, PassageTranslation, TranslationView, TranslationWarning } from "../novel.translation.models";
-import { passageState, warningReason, warningsOfPassage } from "../novel.translation.rules";
-import { NovelTranslationService } from "../novel.translation.service";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
+import { Icon } from '@components/icon';
+import { novelScope } from '@features/assistant/assistant.rules';
+import { AssistantService } from '@features/assistant/assistant.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldChecked, fieldValue } from '@shared/utils/dom';
+
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { ChapterRow, NovelSummary, ParagraphRow, ParagraphSaveResult } from '../novel.models';
+import { NOVEL_LANG_KEYS, toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
+// prettier-ignore
+import { ChapterTranslation, PassageState, PassageTranslation, TranslationView, TranslationWarning } from '../novel.translation.models';
+import { passageState, warningReason, warningsOfPassage } from '../novel.translation.rules';
+import { NovelTranslationService } from '../novel.translation.service';
 
 const SAVE_NOTICES: Record<ParagraphSaveResult, LanguageKey | null> = {
-  saved: "novel.translation.result.saved",
-  empty: "novel.reader.empty",
-  unchanged: "novel.reader.unchanged",
+  saved: 'novel.translation.result.saved',
+  empty: 'novel.reader.empty',
+  unchanged: 'novel.reader.unchanged',
   idle: null,
 };
 
 @Component({
-  selector: "app-novel-translation-result",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-translation-result',
   imports: [Icon, CoreModule],
-  templateUrl: "./translation-result.component.html",
+  templateUrl: './translation-result.component.html',
+  host: { 'data-testid': 'novel-translation-result' },
 })
 export class NovelTranslationResult {
   private readonly novels = inject(NovelService);
@@ -42,8 +47,8 @@ export class NovelTranslationResult {
   readonly noteFor = signal<number | null>(null);
   readonly onlyReview = signal(false);
   readonly flash = signal<number | null>(null);
-  readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>("editor");
-  readonly noteInput = viewChild<ElementRef<HTMLInputElement>>("noteInput");
+  readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
+  readonly noteInput = viewChild<ElementRef<HTMLInputElement>>('noteInput');
 
   readonly novel = computed(this.findNovel.bind(this));
   readonly targetKey = computed(this.buildTargetKey.bind(this));
@@ -61,8 +66,10 @@ export class NovelTranslationResult {
   }
 
   jumpLabel(row: ChapterRow): string {
-    const note = this.translation.of(this.novelId()).chapters[row.id] ? "" : this.languageService.translate("novel.translation.result.untranslated");
-    return `${this.languageService.translate("novel.translation.result.chapterOption", { n: row.seq, title: row.title })}${note}`;
+    const note = this.translation.of(this.novelId()).chapters[row.id]
+      ? ''
+      : this.languageService.translate('novel.translation.result.untranslated');
+    return `${this.languageService.translate('novel.translation.result.chapterOption', { n: row.seq, title: row.title })}${note}`;
   }
 
   passageOf(n: number): PassageTranslation | null {
@@ -71,12 +78,16 @@ export class NovelTranslationResult {
 
   stateOf(n: number): PassageState {
     const chapter = this.chapter();
-    return chapter ? passageState(this.translation.warningsOf(this.novelId()), chapter.id, n) : "ok";
+    return chapter
+      ? passageState(this.translation.warningsOf(this.novelId()), chapter.id, n)
+      : 'ok';
   }
 
   warningsOf(n: number): TranslationWarning[] {
     const chapter = this.chapter();
-    return chapter ? warningsOfPassage(this.translation.warningsOf(this.novelId()), chapter.id, n) : [];
+    return chapter
+      ? warningsOfPassage(this.translation.warningsOf(this.novelId()), chapter.id, n)
+      : [];
   }
 
   reasonOf(warning: TranslationWarning): string {
@@ -97,11 +108,11 @@ export class NovelTranslationResult {
   }
 
   onJump(event: Event): void {
-    this.go(Number((event.target as HTMLSelectElement).value));
+    this.go(Number(fieldValue(event)));
   }
 
   onOnly(event: Event): void {
-    this.onlyReview.set((event.target as HTMLInputElement).checked);
+    this.onlyReview.set(fieldChecked(event));
   }
 
   askReview(): void {
@@ -110,14 +121,26 @@ export class NovelTranslationResult {
       return;
     }
     const target = this.translation.targetOf(this.novelId());
-    const text = this.languageService.translate("assistant.ask.translation", { n: chapter.seq, title: chapter.title });
-    void this.assistant.ask(novelScope(this.novelId()), text, { kind: "translation_review", chapterId: chapter.id, target });
+    const text = this.languageService.translate('assistant.ask.translation', {
+      n: chapter.seq,
+      title: chapter.title,
+    });
+    void this.assistant.ask(novelScope(this.novelId()), text, {
+      kind: 'translation_review',
+      chapterId: chapter.id,
+      target,
+    });
   }
 
   translateThis(): void {
     const chapter = this.chapter();
     if (chapter) {
-      this.dialogs.openTranslate(this.novelId(), { mode: "range", from: chapter.seq, to: chapter.seq, overwrite: true });
+      this.dialogs.openTranslate(this.novelId(), {
+        mode: 'range',
+        from: chapter.seq,
+        to: chapter.seq,
+        overwrite: true,
+      });
     }
   }
 
@@ -132,10 +155,13 @@ export class NovelTranslationResult {
   async save(chapter: ChapterRow, n: number, text: string): Promise<void> {
     try {
       const result = await this.translation.saveParagraph(this.novelId(), chapter.id, n, text);
-      this.editing.set(result === "empty" ? n : null);
+      this.editing.set(result === 'empty' ? n : null);
       const key = SAVE_NOTICES[result];
       if (key) {
-        this.toasts.show(this.languageService.translate(key), result === "saved" ? "success" : "warning");
+        this.toasts.show(
+          this.languageService.translate(key),
+          result === 'saved' ? 'success' : 'warning',
+        );
       }
     } catch (cause) {
       this.fail(cause);
@@ -171,7 +197,7 @@ export class NovelTranslationResult {
 
   private fail(cause: unknown): void {
     const detail = toNovelError(cause).detail;
-    this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+    this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
   }
 
   private buildTargetKey(): LanguageKey {
@@ -201,7 +227,7 @@ export class NovelTranslationResult {
 
   private buildRows(): ParagraphRow[] {
     const only = this.onlyReview();
-    return this.source().filter((paragraph) => !only || this.stateOf(paragraph.n) === "review");
+    return this.source().filter((paragraph) => !only || this.stateOf(paragraph.n) === 'review');
   }
 
   private syncSource(): void {
@@ -243,7 +269,7 @@ export class NovelTranslationResult {
   }
 
   private scrollToPassage(target: number): void {
-    document.getElementById(`ntp-${this.novelId()}-${target}`)?.scrollIntoView({ block: "center" });
+    document.getElementById(`ntp-${this.novelId()}-${target}`)?.scrollIntoView({ block: 'center' });
   }
 
   private syncEditor(): void {

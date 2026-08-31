@@ -1,0 +1,70 @@
+.kb-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.kb-tabbody {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.kb-table {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.iss-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: 500 11.5px/1 var(--font-mono);
+}
+.iss-dot .ic {
+  width: 13px;
+  height: 13px;
+}
+.iss-dot.is-err {
+  color: var(--danger);
+}
+.iss-dot.is-warn {
+  color: var(--warning);
+}
+.kb-ev {
+  display: grid;
+  gap: var(--sp-xs);
+}
+.kb-rel,
+.kb-relrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+  font-size: 13px;
+  padding: var(--sp-xxs) 0;
+}
+.iss-mini {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 17px;
+  padding: var(--sp-xs) var(--sp-sm);
+  border-radius: var(--r-sm);
+  background: var(--warning-soft);
+}
+.iss-mini.is-error {
+  background: var(--danger-soft);
+}
+.iss-mini .ic {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin-top: 1px;
+  color: var(--warning);
+}
+.iss-mini.is-error .ic {
+  color: var(--danger);
+}

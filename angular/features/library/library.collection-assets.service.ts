@@ -1,19 +1,25 @@
-import { Injectable, Signal, WritableSignal, computed, inject, signal } from "@angular/core";
-import { LibraryImageService } from "./library.images.service";
-import { AssetRow, toAssetRows } from "./library.assets.models";
-import { collectionTags, filterAssetRows } from "./library.assets.rules";
-import { AssetRef, LibraryTag } from "./library.models";
-import { LibraryService } from "./library.service";
-import { LibrarySoundService } from "./library.sounds.service";
-import { LibraryPromptService } from "./library.prompts.service";
-import { LibraryVideoService } from "./library.videos.service";
-import { VideoSort } from "./library.videos.models";
+import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 
-function sameRef(left: AssetRef, right: AssetRef): boolean { return left.kind === right.kind && left.id === right.id; }
-function containsRef(rows: AssetRow[], ref: AssetRef): boolean { return rows.some(sameRowRef.bind(null, ref)); }
-function sameRowRef(ref: AssetRef, row: AssetRow): boolean { return sameRef(row.ref, ref); }
+import { AssetRow, toAssetRows } from './library.assets.models';
+import { collectionTags, filterAssetRows } from './library.assets.rules';
+import { LibraryImageService } from './library.images.service';
+import { AssetRef, LibrarySort, LibraryTag } from './library.models';
+import { LibraryPromptService } from './library.prompts.service';
+import { LibraryService } from './library.service';
+import { LibrarySoundService } from './library.sounds.service';
+import { LibraryVideoService } from './library.videos.service';
 
-@Injectable({ providedIn: "root" })
+function sameRef(left: AssetRef, right: AssetRef): boolean {
+  return left.kind === right.kind && left.id === right.id;
+}
+function containsRef(rows: AssetRow[], ref: AssetRef): boolean {
+  return rows.some(sameRowRef.bind(null, ref));
+}
+function sameRowRef(ref: AssetRef, row: AssetRow): boolean {
+  return sameRef(row.ref, ref);
+}
+
+@Injectable({ providedIn: 'root' })
 export class LibraryCollectionAssetsService {
   private readonly images = inject(LibraryImageService);
   private readonly sounds = inject(LibrarySoundService);
@@ -23,19 +29,28 @@ export class LibraryCollectionAssetsService {
   private readonly rowsByCollection = new Map<number, Signal<AssetRow[]>>();
   private readonly selections = new Map<number, WritableSignal<AssetRef | null>>();
 
-  readonly query = signal("");
-  readonly sort = signal<VideoSort>("new");
+  readonly query = signal('');
+  readonly sort = signal<LibrarySort>('new');
 
   rows(collectionId: number): Signal<AssetRow[]> {
     const existing = this.rowsByCollection.get(collectionId);
     if (existing) return existing;
-    const rows = computed(() => filterAssetRows(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items(), this.prompts.items()), { query: this.query(), sort: this.sort(), collection: collectionId, tags: this.library.filterTags() }));
+    const rows = computed(this.filterRows.bind(this, collectionId));
     this.rowsByCollection.set(collectionId, rows);
     return rows;
   }
 
+  allRows(): AssetRow[] {
+    return toAssetRows(
+      this.images.items(),
+      this.sounds.items(),
+      this.videos.items(),
+      this.prompts.items(),
+    );
+  }
+
   tags(collectionId: number): LibraryTag[] {
-    return collectionTags(toAssetRows(this.images.items(), this.sounds.items(), this.videos.items(), this.prompts.items()), collectionId);
+    return collectionTags(this.allRows(), collectionId);
   }
 
   selectedRef(collectionId: number): AssetRef | null {
@@ -43,7 +58,18 @@ export class LibraryCollectionAssetsService {
     return ref !== null && containsRef(this.rows(collectionId)(), ref) ? ref : null;
   }
 
-  select(collectionId: number, ref: AssetRef | null): void { this.selection(collectionId).set(ref); }
+  select(collectionId: number, ref: AssetRef | null): void {
+    this.selection(collectionId).set(ref);
+  }
+
+  private filterRows(collectionId: number): AssetRow[] {
+    return filterAssetRows(this.allRows(), {
+      query: this.query(),
+      sort: this.sort(),
+      collection: collectionId,
+      tags: this.library.filterTags(),
+    });
+  }
 
   private selection(collectionId: number): WritableSignal<AssetRef | null> {
     const existing = this.selections.get(collectionId);

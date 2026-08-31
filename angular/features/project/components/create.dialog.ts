@@ -1,16 +1,20 @@
-import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from "@angular/core";
-import { Button } from "@components/button";
-import { Icon } from "@components/icon";
-import { TabsService } from "@layout/tabs.service";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { LanguageKey } from "@core/language/language.models";
-import { NovelService } from "@features/novel/novel.service";
-import { ProjectDialogsService } from "../project.dialogs.service";
-import { ProjectInput, ProjectTemplateId } from "../project.models";
-import { PROJECT_TEMPLATES, toProjectError, validateProjectName, validateRange } from "../project.rules";
-import { ProjectService } from "../project.service";
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
+import { Button } from '@components/button';
+import { Icon } from '@components/icon';
+import { NovelService } from '@features/novel/novel.service';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldChecked, fieldValue } from '@shared/utils/dom';
+
+import { ProjectDialogsService } from '../project.dialogs.service';
+import { ProjectInput, ProjectTemplateId } from '../project.models';
+// prettier-ignore
+import { PROJECT_TEMPLATES, toProjectError, validateProjectName, validateRange } from '../project.rules';
+import { ProjectService } from '../project.service';
 
 interface CreateForm {
   name: string;
@@ -21,14 +25,21 @@ interface CreateForm {
   rangeTo: number | null;
 }
 
-const EMPTY_FORM: CreateForm = { name: "", template: "audiobook", novelId: null, allChapters: true, rangeFrom: 1, rangeTo: 1 };
+const EMPTY_FORM: CreateForm = {
+  name: '',
+  template: 'audiobook',
+  novelId: null,
+  allChapters: true,
+  rangeFrom: 1,
+  rangeTo: 1,
+};
 
 @Component({
-  selector: "app-project-create-dialog",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-project-create-dialog',
   imports: [Button, Icon, CoreModule],
-  templateUrl: "./create.dialog.html",
-  host: { "data-testid": "project-create-dialog" },
+  templateUrl: './create.dialog.html',
+  host: { 'data-testid': 'project-create-dialog' },
 })
 export class ProjectCreateDialog {
   private readonly projects = inject(ProjectService);
@@ -37,14 +48,14 @@ export class ProjectCreateDialog {
   private readonly tabs = inject(TabsService);
   private readonly toasts = inject(ToastService);
   private readonly languageService = inject(LanguageService);
-  private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>("nameInput");
+  private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
   readonly open = this.dialogs.createOpen;
   readonly form = signal<CreateForm>({ ...EMPTY_FORM });
   readonly busy = signal(false);
   readonly nameError = signal<LanguageKey | null>(null);
   readonly rangeError = signal<LanguageKey | null>(null);
-  readonly formError = signal("");
+  readonly formError = signal('');
   readonly templates = PROJECT_TEMPLATES;
   readonly selectedNovel = computed(this.buildSelectedNovel.bind(this));
 
@@ -59,10 +70,10 @@ export class ProjectCreateDialog {
   }
 
   onName(event: Event): void {
-    const name = (event.target as HTMLInputElement).value;
+    const name = fieldValue(event);
     this.form.set({ ...this.form(), name });
     this.validateName();
-    this.formError.set("");
+    this.formError.set('');
   }
 
   onTemplate(template: ProjectTemplateId): void {
@@ -70,24 +81,30 @@ export class ProjectCreateDialog {
   }
 
   onNovel(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
+    const raw = fieldValue(event);
     const novelId = raw ? Number(raw) : null;
     const novel = novelId === null ? undefined : this.novels.novelById(novelId);
-    this.form.set({ ...this.form(), novelId, allChapters: true, rangeFrom: 1, rangeTo: novel?.chapterCount ?? 1 });
+    this.form.set({
+      ...this.form(),
+      novelId,
+      allChapters: true,
+      rangeFrom: 1,
+      rangeTo: novel?.chapterCount ?? 1,
+    });
     this.rangeError.set(null);
-    this.formError.set("");
+    this.formError.set('');
   }
 
   onAllChapters(event: Event): void {
-    const allChapters = (event.target as HTMLInputElement).checked;
+    const allChapters = fieldChecked(event);
     const count = this.selectedNovel()?.chapterCount ?? 1;
     this.form.set({ ...this.form(), allChapters, rangeFrom: 1, rangeTo: count });
     this.rangeError.set(null);
   }
 
-  onRange(field: "rangeFrom" | "rangeTo", event: Event): void {
-    const raw = (event.target as HTMLInputElement).value;
-    const value = raw === "" ? null : Number(raw);
+  onRange(field: 'rangeFrom' | 'rangeTo', event: Event): void {
+    const raw = fieldValue(event);
+    const value = raw === '' ? null : Number(raw);
     this.form.set({ ...this.form(), [field]: value });
     this.rangeError.set(null);
   }
@@ -99,22 +116,29 @@ export class ProjectCreateDialog {
     const value = this.form();
     const validName = this.validateName();
     const novel = this.selectedNovel();
-    const validRange = !novel || value.allChapters || (validateRange(value.rangeFrom, value.rangeTo) && value.rangeTo !== null && value.rangeTo <= novel.chapterCount);
+    const validRange =
+      !novel ||
+      value.allChapters ||
+      (validateRange(value.rangeFrom, value.rangeTo) &&
+        value.rangeTo !== null &&
+        value.rangeTo <= novel.chapterCount);
     if (!validRange) {
-    this.rangeError.set("project.create.rangeInvalid");
+      this.rangeError.set('project.create.rangeInvalid');
     }
     if (!validName || !validRange) {
       return;
     }
     this.busy.set(true);
-    this.formError.set("");
+    this.formError.set('');
     try {
       const input = this.toInput(value);
       const created = await this.projects.create(input);
       this.tabs.openProjects();
       this.projects.selectOnly(created.id);
       this.close();
-      this.toasts.show(this.languageService.translate("project.create.toast", { name: created.name }));
+      this.toasts.show(
+        this.languageService.translate('project.create.toast', { name: created.name }),
+      );
     } catch (cause) {
       this.applyBackendError(cause);
     } finally {
@@ -124,7 +148,7 @@ export class ProjectCreateDialog {
 
   private validateName(): boolean {
     const error = validateProjectName(this.form().name);
-    this.nameError.set(error ? "project.error.empty" : null);
+    this.nameError.set(error ? 'project.error.empty' : null);
     return error === null;
   }
 
@@ -133,9 +157,9 @@ export class ProjectCreateDialog {
     return {
       name: form.name.trim(),
       template: form.template,
-      description: "",
+      description: '',
       novelId: novel?.id ?? null,
-      srcKind: novel ? "original" : null,
+      srcKind: novel ? 'original' : null,
       rangeFrom: novel && !form.allChapters ? form.rangeFrom : null,
       rangeTo: novel && !form.allChapters ? form.rangeTo : null,
     };
@@ -148,16 +172,18 @@ export class ProjectCreateDialog {
 
   private applyBackendError(cause: unknown): void {
     const code = toProjectError(cause).code;
-    if (code === "range_invalid") {
-      this.rangeError.set("project.create.rangeInvalid");
+    if (code === 'range_invalid') {
+      this.rangeError.set('project.create.rangeInvalid');
       return;
     }
-    if (code === "novel_not_found") {
-      this.formError.set(this.languageService.translate("project.create.novelMissing"));
+    if (code === 'novel_not_found') {
+      this.formError.set(this.languageService.translate('project.create.novelMissing'));
       return;
     }
     const error = toProjectError(cause);
-    this.formError.set(this.languageService.translate("project.error.generic", { detail: error.detail }));
+    this.formError.set(
+      this.languageService.translate('project.error.generic', { detail: error.detail }),
+    );
   }
 
   private syncOpen(): void {
@@ -170,7 +196,7 @@ export class ProjectCreateDialog {
     this.form.set({ ...EMPTY_FORM });
     this.nameError.set(null);
     this.rangeError.set(null);
-    this.formError.set("");
+    this.formError.set('');
     this.busy.set(false);
   }
 

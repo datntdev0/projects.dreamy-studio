@@ -1,15 +1,18 @@
-import { Component, computed, input, output } from "@angular/core";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { LanguageKey } from "@core/language/language.models";
-import { DictProposal, MarkedText, ProposalDecision, ProposalResolution, ProposalStatus, TranslationFinding, TranslationReview } from "../assistant.models";
-import { CATEGORY_KEYS, SEVERITY_BADGES, SEVERITY_KEYS, STATUS_KEYS, countResolved, countSeverity, markText, pendingIds } from "../assistant.proposals";
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+
+// prettier-ignore
+import { DictProposal, MarkedText, ProposalDecision, ProposalResolution, ProposalStatus, TranslationFinding, TranslationReview } from '../assistant.models';
+// prettier-ignore
+import { CATEGORY_KEYS, countResolved, countSeverity, markText, pendingIds, SEVERITY_BADGES, SEVERITY_KEYS, STATUS_KEYS } from '../assistant.proposals';
 
 @Component({
-  selector: "app-assistant-review-card",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-assistant-review-card',
   imports: [Icon, CoreModule],
-  templateUrl: "./review-card.component.html",
+  templateUrl: './review-card.component.html',
 })
 export class AssistantReviewCard {
   readonly review = input.required<TranslationReview>();
@@ -55,19 +58,19 @@ export class AssistantReviewCard {
   }
 
   applyOne(item: TranslationFinding | DictProposal): void {
-    this.decide([item.id], "applied");
+    this.decide([item.id], 'applied');
   }
 
   rejectOne(item: TranslationFinding | DictProposal): void {
-    this.decide([item.id], "rejected");
+    this.decide([item.id], 'rejected');
   }
 
   applyAll(): void {
-    this.decide(this.pending(), "applied");
+    this.decide(this.pending(), 'applied');
   }
 
   rejectAll(): void {
-    this.decide(this.pending(), "rejected");
+    this.decide(this.pending(), 'rejected');
   }
 
   private buildPending(): string[] {
@@ -75,15 +78,15 @@ export class AssistantReviewCard {
   }
 
   private buildErrors(): number {
-    return countSeverity(this.review().findings, "error");
+    return countSeverity(this.review().findings, 'error');
   }
 
   private buildWarnings(): number {
-    return countSeverity(this.review().findings, "warning");
+    return countSeverity(this.review().findings, 'warning');
   }
 
   private buildInfos(): number {
-    return countSeverity(this.review().findings, "info");
+    return countSeverity(this.review().findings, 'info');
   }
 
   private buildDone(): number {

@@ -1,14 +1,10 @@
-<div
-  class="nv lb lb-body"
-  [class.is-drop]="dragging()"
-  data-testid="library-videos"
->
+<div class="nv lb lb-body" [class.is-drop]="dragging()" data-testid="library-videos">
   <div class="nv-bar" data-testid="library-videos-toolbar">
     <div class="nv-bar-l" data-testid="library-videos-toolbar-left">
       <label class="search" data-testid="library-videos-search-label">
-        <span class="sr-only" data-testid="library-videos-search-label-text">{{
-          "library.image.search" | t
-        }}</span>
+        <span class="sr-only" data-testid="library-videos-search-label-text">
+          {{ 'library.image.search' | t }}
+        </span>
         <input
           class="input"
           type="search"
@@ -18,16 +14,23 @@
           (input)="onQuery($event)"
         />
       </label>
-      <span class="t-sm t-mute" data-testid="library-videos-count">@if (videos.visible().length === videos.items().length) { {{ "library.video.countAll" | t: { count: videos.visible().length } }} } @else { {{ "library.video.countFiltered" | t: { shown: videos.visible().length, total: videos.items().length } }} }</span>
+      <span class="t-sm t-mute" data-testid="library-videos-count">
+        @if (videos.visible().length === videos.items().length) {
+          {{ 'library.video.countAll' | t: { count: videos.visible().length } }}
+        } @else {
+          {{
+            'library.video.countFiltered'
+              | t: { shown: videos.visible().length, total: videos.items().length }
+          }}
+        }
+      </span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-videos-filter-chips">
           @if (library.filterCollection() !== null) {
             <span class="tag" data-testid="library-videos-collection-chip">
-              <span data-testid="library-videos-collection-chip-label">{{
-                collectionFilterIsKey()
-                  ? (unfiledKey() | t)
-                  : collectionFilterName()
-              }}</span>
+              <span data-testid="library-videos-collection-chip-label">
+                {{ collectionFilterIsKey() ? (unfiledKey() | t) : collectionFilterName() }}
+              </span>
               <button
                 type="button"
                 class="tag-x"
@@ -44,21 +47,18 @@
             </span>
           }
           @for (tag of library.filterTags(); track tag) {
-            <span class="tag" data-testid="library-videos-tag-chip"
-              ><span data-testid="library-videos-tag-chip-label">{{ tag }}</span
-              ><button
+            <span class="tag" data-testid="library-videos-tag-chip">
+              <span data-testid="library-videos-tag-chip-label">{{ tag }}</span>
+              <button
                 type="button"
                 class="tag-x"
                 [attr.aria-label]="'library.explorer.filters.clear' | t"
                 data-testid="library-videos-tag-chip-remove"
                 (click)="removeTagFilter(tag)"
               >
-                <ds-icon
-                  name="x"
-                  [size]="18"
-                  data-testid="library-videos-tag-chip-remove-icon"
-                /></button
-            ></span>
+                <ds-icon name="x" [size]="18" data-testid="library-videos-tag-chip-remove-icon" />
+              </button>
+            </span>
           }
           <button
             type="button"
@@ -66,19 +66,17 @@
             data-testid="library-videos-clear-filters"
             (click)="clearAllFilters()"
           >
-            {{ "library.explorer.filters.clear" | t }}
+            {{ 'library.explorer.filters.clear' | t }}
           </button>
         </span>
       }
     </div>
     <span class="spacer" data-testid="library-videos-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-videos-toolbar-right">
-      @if (library.viewMode() === "grid") {
-        <span class="lb-size" data-testid="library-videos-grid-size"
-          ><ds-icon
-            name="image"
-            [size]="14"
-            data-testid="library-videos-grid-size-icon" /><ds-slider
+      @if (library.viewMode() === 'grid') {
+        <span class="lb-size" data-testid="library-videos-grid-size">
+          <ds-icon name="image" [size]="14" data-testid="library-videos-grid-size-icon" />
+          <ds-slider
             [min]="110"
             [max]="360"
             [step]="10"
@@ -86,12 +84,9 @@
             [label]="'library.image.previewSize' | t"
             data-testid="library-videos-grid-size-input"
             (valueChange)="onGridSize($event)"
-        /></span>
-        <div
-          class="seg"
-          role="group"
-          data-testid="library-videos-ratio"
-        >
+          />
+        </span>
+        <div class="seg" role="group" data-testid="library-videos-ratio">
           @for (ratio of ratioOptions; track ratio[0]) {
             <button
               type="button"
@@ -118,13 +113,13 @@
         (change)="onSort($event)"
       >
         <option value="new" data-testid="library-videos-sort-new">
-          {{ "library.image.sort.new" | t }}
+          {{ 'library.image.sort.new' | t }}
         </option>
         <option value="name" data-testid="library-videos-sort-name">
-          {{ "library.image.sort.name" | t }}
+          {{ 'library.image.sort.name' | t }}
         </option>
         <option value="size" data-testid="library-videos-sort-size">
-          {{ "library.image.sort.size" | t }}
+          {{ 'library.image.sort.size' | t }}
         </option>
       </select>
       <div
@@ -141,11 +136,7 @@
           data-testid="library-videos-view-grid"
           (click)="setView('grid')"
         >
-          <ds-icon
-            name="frames"
-            [size]="14"
-            data-testid="library-videos-view-grid-icon"
-          />
+          <ds-icon name="frames" [size]="14" data-testid="library-videos-view-grid-icon" />
         </button>
         <button
           type="button"
@@ -155,11 +146,7 @@
           data-testid="library-videos-view-list"
           (click)="setView('list')"
         >
-          <ds-icon
-            name="list"
-            [size]="14"
-            data-testid="library-videos-view-list-icon"
-          />
+          <ds-icon name="list" [size]="14" data-testid="library-videos-view-list-icon" />
         </button>
       </div>
       <button
@@ -168,32 +155,27 @@
         data-testid="library-videos-upload"
         (click)="openUpload()"
       >
-        <ds-icon
-          name="upload"
-          [size]="16"
-          data-testid="library-videos-upload-icon"
-        />{{ "library.image.upload" | t }}
+        <ds-icon name="upload" [size]="16" data-testid="library-videos-upload-icon" />
+        {{ 'library.image.upload' | t }}
       </button>
     </div>
   </div>
   <div class="nv-body" data-testid="library-videos-body">
-    <div class="nv-scroll" [class.table-view]="library.viewMode() === 'list' && videos.visible().length > 0" data-testid="library-videos-scroll">
+    <div
+      class="nv-scroll"
+      [class.table-view]="library.viewMode() === 'list' && videos.visible().length > 0"
+      data-testid="library-videos-scroll"
+    >
       @if (videos.visible().length === 0) {
         @if (videos.items().length === 0 && !hasActiveFilters()) {
           <div class="empty" data-testid="library-videos-empty">
             <div class="empty-inner" data-testid="library-videos-empty-inner">
-              <div
-                class="illus"
-                data-testid="library-videos-empty-illustration"
-              ></div>
+              <div class="illus" data-testid="library-videos-empty-illustration"></div>
               <h4 class="t-display-xs" data-testid="library-videos-empty-title">
-                {{ "library.video.empty.title" | t }}
+                {{ 'library.video.empty.title' | t }}
               </h4>
-              <p
-                class="t-sm t-mute"
-                data-testid="library-videos-empty-description"
-              >
-                {{ "library.video.empty.description" | t }}
+              <p class="t-sm t-mute" data-testid="library-videos-empty-description">
+                {{ 'library.video.empty.description' | t }}
               </p>
               <div class="empty-act" data-testid="library-videos-empty-actions">
                 <button
@@ -202,36 +184,21 @@
                   data-testid="library-videos-empty-upload"
                   (click)="openUpload()"
                 >
-                  <ds-icon
-                    name="plus"
-                    [size]="16"
-                    data-testid="library-videos-empty-upload-icon"
-                  />{{ "library.video.empty.upload" | t }}
+                  <ds-icon name="plus" [size]="16" data-testid="library-videos-empty-upload-icon" />
+                  {{ 'library.video.empty.upload' | t }}
                 </button>
               </div>
             </div>
           </div>
         } @else if (videos.loaded()) {
           <div class="empty" data-testid="library-videos-empty-filtered">
-            <div
-              class="empty-inner"
-              data-testid="library-videos-empty-filtered-inner"
-            >
-              <div
-                class="illus"
-                data-testid="library-videos-empty-filtered-illustration"
-              ></div>
-              <h4
-                class="t-display-xs"
-                data-testid="library-videos-empty-filtered-title"
-              >
-                {{ "library.video.emptyFiltered.title" | t }}
+            <div class="empty-inner" data-testid="library-videos-empty-filtered-inner">
+              <div class="illus" data-testid="library-videos-empty-filtered-illustration"></div>
+              <h4 class="t-display-xs" data-testid="library-videos-empty-filtered-title">
+                {{ 'library.video.emptyFiltered.title' | t }}
               </h4>
-              <p
-                class="t-sm t-mute"
-                data-testid="library-videos-empty-filtered-description"
-              >
-                {{ "library.video.emptyFiltered.description" | t }}
+              <p class="t-sm t-mute" data-testid="library-videos-empty-filtered-description">
+                {{ 'library.video.emptyFiltered.description' | t }}
               </p>
               <button
                 type="button"
@@ -239,12 +206,12 @@
                 data-testid="library-videos-empty-filtered-clear"
                 (click)="clearAllFilters()"
               >
-                {{ "library.video.emptyFiltered.clear" | t }}
+                {{ 'library.video.emptyFiltered.clear' | t }}
               </button>
             </div>
           </div>
         }
-      } @else if (library.viewMode() === "grid") {
+      } @else if (library.viewMode() === 'grid') {
         <div
           class="lb-grid"
           [style.--lb-min]="videos.gridSize() + 'px'"
@@ -262,22 +229,14 @@
               (dblclick)="open(video)"
               (keydown)="onVideoKeydown(video, $event)"
             >
-              <app-library-video-media
-                [video]="video"
-                data-testid="library-videos-card-media"
-              />
+              <app-library-video-media [video]="video" data-testid="library-videos-card-media" />
               <div class="lb-card-b" data-testid="library-videos-card-body">
                 <div class="lb-name" data-testid="library-videos-card-name">
-                  <span
-                    class="t-ink lb-name-t"
-                    data-testid="library-videos-card-name-text"
-                    >{{ video.name }}</span
-                  >
+                  <span class="t-ink lb-name-t" data-testid="library-videos-card-name-text">
+                    {{ video.name }}
+                  </span>
                 </div>
-                <div
-                  class="t-sm t-mute lb-sub"
-                  data-testid="library-videos-card-meta"
-                >
+                <div class="t-sm t-mute lb-sub" data-testid="library-videos-card-meta">
                   {{ videoDetails(video) }} · {{ size(video) }}
                 </div>
               </div>
@@ -285,11 +244,44 @@
           }
         </div>
       } @else {
-        <ds-datatable [columns]="tableColumns" [rows]="videos.visible()" trackKey="id" variant="fill" rowTestId="library-videos-table-row" [rowClass]="tableRowClass" data-testid="library-videos-table" (rowSelected)="onRowSelected($event)" (rowDblClick)="onRowDblClick($event)" (rowEnter)="onRowEnter($event)">
-          <ng-template dsCell="name" let-row><div class="nm-title" data-testid="library-videos-table-name-wrap"><app-library-video-thumb [video]="videoOf(row)" data-testid="library-videos-table-thumb" /><div class="lb-rname" data-testid="library-videos-table-name-content"><div class="t-ink" data-testid="library-videos-table-name-text">{{ videoOf(row).name }}</div></div></div></ng-template>
-          <ng-template dsCell="spec" let-row><span class="mono t-mute" data-testid="library-videos-table-spec">{{ videoDetails(videoOf(row)) }}</span></ng-template>
-          <ng-template dsCell="size" let-row><span data-testid="library-videos-table-size">{{ size(videoOf(row)) }}</span></ng-template>
-          <ng-template dsCell="collection" let-row><span class="t-sm t-mute" data-testid="library-videos-table-collection">{{ collectionName(videoOf(row)) }}</span></ng-template>
+        <ds-datatable
+          [columns]="tableColumns"
+          [rows]="videos.visible()"
+          trackKey="id"
+          variant="fill"
+          rowTestId="library-videos-table-row"
+          [rowClass]="tableRowClass"
+          data-testid="library-videos-table"
+          (rowSelected)="onRowSelected($event)"
+          (rowDblClick)="onRowDblClick($event)"
+          (rowEnter)="onRowEnter($event)"
+        >
+          <ng-template dsCell="name" let-row>
+            <div class="nm-title" data-testid="library-videos-table-name-wrap">
+              <app-library-video-thumb
+                [video]="videoOf(row)"
+                data-testid="library-videos-table-thumb"
+              />
+              <div class="lb-rname" data-testid="library-videos-table-name-content">
+                <div class="t-ink" data-testid="library-videos-table-name-text">
+                  {{ videoOf(row).name }}
+                </div>
+              </div>
+            </div>
+          </ng-template>
+          <ng-template dsCell="spec" let-row>
+            <span class="mono t-mute" data-testid="library-videos-table-spec">
+              {{ videoDetails(videoOf(row)) }}
+            </span>
+          </ng-template>
+          <ng-template dsCell="size" let-row>
+            <span data-testid="library-videos-table-size">{{ size(videoOf(row)) }}</span>
+          </ng-template>
+          <ng-template dsCell="collection" let-row>
+            <span class="t-sm t-mute" data-testid="library-videos-table-collection">
+              {{ collectionName(videoOf(row)) }}
+            </span>
+          </ng-template>
         </ds-datatable>
       }
     </div>

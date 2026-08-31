@@ -1,34 +1,19 @@
-import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { WorkspaceService } from "../workspace/workspace.service";
-import { DirEntry } from "./project.models";
-import { ProjectError } from "./project.models";
-import { ProjectFilters } from "./project.models";
-import { ProjectInput } from "./project.models";
-import { ProjectPatch } from "./project.models";
-import { ProjectSort } from "./project.models";
-import { ProjectStatus } from "./project.models";
-import { ProjectStatusCount } from "./project.models";
-import { ProjectSummary } from "./project.models";
-import { ProjectTemplateCount } from "./project.models";
-import { ProjectTemplateId } from "./project.models";
-import { ProjectTotals } from "./project.models";
-import { ProjectViewMode } from "./project.models";
-import { PROJECT_TEMPLATES } from "./project.rules";
-import { filterProjects } from "./project.rules";
-import { sortDirEntries } from "./project.rules";
-import { sortProjects } from "./project.rules";
-import { toProjectError } from "./project.rules";
-import { toggled } from "./project.rules";
-import { treeKey } from "./project.rules";
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
-const VIEW_STORAGE_KEY = "ds.pj.view";
+import { WorkspaceService } from '../workspace/workspace.service';
+// prettier-ignore
+import { DirEntry, ProjectError, ProjectFilters, ProjectInput, ProjectPatch, ProjectSort, ProjectStatus, ProjectStatusCount, ProjectSummary, ProjectTemplateCount, ProjectTemplateId, ProjectTotals, ProjectViewMode } from './project.models';
+// prettier-ignore
+import { filterProjects, PROJECT_TEMPLATES, sortDirEntries, sortProjects, toggled, toProjectError, treeKey } from './project.rules';
+
+const VIEW_STORAGE_KEY = 'ds.pj.view';
 
 function readViewMode(): ProjectViewMode {
   try {
-    return localStorage.getItem(VIEW_STORAGE_KEY) === '"list"' ? "list" : "grid";
+    return localStorage.getItem(VIEW_STORAGE_KEY) === '"list"' ? 'list' : 'grid';
   } catch {
-    return "grid";
+    return 'grid';
   }
 }
 
@@ -49,7 +34,11 @@ function findProject(projects: ProjectSummary[], id: number): ProjectSummary | u
   return undefined;
 }
 
-function replaceProject(projects: ProjectSummary[], id: number, next: ProjectSummary): ProjectSummary[] {
+function replaceProject(
+  projects: ProjectSummary[],
+  id: number,
+  next: ProjectSummary,
+): ProjectSummary[] {
   const rows: ProjectSummary[] = [];
   for (const project of projects) {
     rows.push(project.id === id ? next : project);
@@ -57,7 +46,11 @@ function replaceProject(projects: ProjectSummary[], id: number, next: ProjectSum
   return rows;
 }
 
-function archiveProjects(projects: ProjectSummary[], ids: Set<number>, archived: boolean): ProjectSummary[] {
+function archiveProjects(
+  projects: ProjectSummary[],
+  ids: Set<number>,
+  archived: boolean,
+): ProjectSummary[] {
   const rows: ProjectSummary[] = [];
   for (const project of projects) {
     rows.push(ids.has(project.id) ? { ...project, archived } : project);
@@ -75,7 +68,10 @@ function withoutProjects(projects: ProjectSummary[], ids: Set<number>): ProjectS
   return rows;
 }
 
-function withoutCovers(covers: Record<number, string | null>, removed: Set<number>): Record<number, string | null> {
+function withoutCovers(
+  covers: Record<number, string | null>,
+  removed: Set<number>,
+): Record<number, string | null> {
   const next: Record<number, string | null> = {};
   for (const key of Object.keys(covers)) {
     if (!removed.has(Number(key))) {
@@ -85,12 +81,12 @@ function withoutCovers(covers: Record<number, string | null>, removed: Set<numbe
   return next;
 }
 
-function matchesName(project: ProjectSummary, needle: string, exceptId: number | undefined): boolean {
+function matchesName(
+  project: ProjectSummary,
+  needle: string,
+  exceptId: number | undefined,
+): boolean {
   return project.id !== exceptId && project.name.trim().toLocaleLowerCase() === needle;
-}
-
-function idOf(project: ProjectSummary): number {
-  return project.id;
 }
 
 function templateOf(project: ProjectSummary): ProjectTemplateId {
@@ -98,7 +94,7 @@ function templateOf(project: ProjectSummary): ProjectTemplateId {
 }
 
 function statusOf(project: ProjectSummary): ProjectStatus {
-  return project.archived ? "archived" : "active";
+  return project.archived ? 'archived' : 'active';
 }
 
 function compareOpenedAt(a: ProjectSummary, b: ProjectSummary): number {
@@ -117,7 +113,7 @@ function hasTreePrefix(prefix: string, key: string): boolean {
   return key.startsWith(prefix);
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ProjectService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly workspace = inject(WorkspaceService);
@@ -140,8 +136,8 @@ export class ProjectService {
   readonly loading = signal(false);
   readonly error = signal<ProjectError | null>(null);
   readonly view = signal<ProjectViewMode>(readViewMode());
-  readonly query = signal("");
-  readonly sort = signal<ProjectSort>("updated");
+  readonly query = signal('');
+  readonly sort = signal<ProjectSort>('updated');
   readonly filters = computed(this.buildFilters.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
@@ -162,7 +158,7 @@ export class ProjectService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const rows = await this.ipc.invoke<ProjectSummary[]>("project_list");
+      const rows = await this.ipc.invoke<ProjectSummary[]>('project_list');
       if (epoch === this.epoch) {
         this.items.set(rows);
         this.loaded.set(true);
@@ -190,25 +186,25 @@ export class ProjectService {
   }
 
   async create(input: ProjectInput): Promise<ProjectSummary> {
-    const created = await this.ipc.invoke<ProjectSummary>("project_create", { input });
+    const created = await this.ipc.invoke<ProjectSummary>('project_create', { input });
     this.items.set([created, ...this.items()]);
     return created;
   }
 
   async update(id: number, patch: ProjectPatch): Promise<ProjectSummary> {
-    const next = await this.ipc.invoke<ProjectSummary>("project_update", { id, patch });
+    const next = await this.ipc.invoke<ProjectSummary>('project_update', { id, patch });
     this.items.set(replaceProject(this.items(), id, next));
     return next;
   }
 
   async setArchived(ids: number[], archived: boolean): Promise<void> {
-    await this.ipc.invoke<void>("project_archive", { ids, archived });
+    await this.ipc.invoke<void>('project_archive', { ids, archived });
     const selectedIds = new Set(ids);
     this.items.set(archiveProjects(this.items(), selectedIds, archived));
   }
 
   async remove(ids: number[]): Promise<number> {
-    const count = await this.ipc.invoke<number>("project_delete", { ids });
+    const count = await this.ipc.invoke<number>('project_delete', { ids });
     const removed = new Set(ids);
     this.items.set(withoutProjects(this.items(), removed));
     this.selected.set(this.selectionAfterRemoval(removed));
@@ -230,27 +226,27 @@ export class ProjectService {
   }
 
   async setCover(id: number, dataUrl: string): Promise<ProjectSummary> {
-    const next = await this.ipc.invoke<ProjectSummary>("project_cover_set", { id, dataUrl });
+    const next = await this.ipc.invoke<ProjectSummary>('project_cover_set', { id, dataUrl });
     this.items.set(replaceProject(this.items(), id, next));
     this.covers.set({ ...this.covers(), [id]: dataUrl });
     return next;
   }
 
   async clearCover(id: number): Promise<ProjectSummary> {
-    const next = await this.ipc.invoke<ProjectSummary>("project_cover_clear", { id });
+    const next = await this.ipc.invoke<ProjectSummary>('project_cover_clear', { id });
     this.items.set(replaceProject(this.items(), id, next));
     this.covers.set({ ...this.covers(), [id]: null });
     return next;
   }
 
   async open(id: number): Promise<ProjectSummary> {
-    const opened = await this.ipc.invoke<ProjectSummary>("project_open", { id });
+    const opened = await this.ipc.invoke<ProjectSummary>('project_open', { id });
     this.items.set(replaceProject(this.items(), id, opened));
     return opened;
   }
 
   folderOpen(id: number): Promise<void> {
-    return this.ipc.invoke<void>("project_folder_open", { id });
+    return this.ipc.invoke<void>('project_folder_open', { id });
   }
 
   isDuplicateName(name: string, exceptId?: number): boolean {
@@ -293,7 +289,7 @@ export class ProjectService {
   }
 
   clearQueryAndFilters(): void {
-    this.query.set("");
+    this.query.set('');
     this.clearFilters();
   }
 
@@ -315,7 +311,7 @@ export class ProjectService {
 
   dirEntries(projectId: number, path: string): DirEntry[] {
     const key = treeKey(projectId, path);
-    return this.loadedDirectories()[key] ? this.directoryCache()[key] ?? [] : [];
+    return this.loadedDirectories()[key] ? (this.directoryCache()[key] ?? []) : [];
   }
 
   async ensureDir(projectId: number, path: string): Promise<DirEntry[]> {
@@ -364,8 +360,8 @@ export class ProjectService {
     this.expanded.set([]);
     this.covers.set({});
     this.pendingCovers.clear();
-    this.query.set("");
-    this.sort.set("updated");
+    this.query.set('');
+    this.sort.set('updated');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
@@ -375,7 +371,7 @@ export class ProjectService {
     const epoch = this.epoch;
     let url: string | null = null;
     try {
-      url = await this.ipc.invoke<string | null>("project_cover_get", { id });
+      url = await this.ipc.invoke<string | null>('project_cover_get', { id });
     } catch {
       url = null;
     }
@@ -385,9 +381,17 @@ export class ProjectService {
     }
   }
 
-  private async fetchDirectory(projectId: number, path: string, key: string, treeEpoch: number): Promise<DirEntry[]> {
+  private async fetchDirectory(
+    projectId: number,
+    path: string,
+    key: string,
+    treeEpoch: number,
+  ): Promise<DirEntry[]> {
     try {
-      const entries = await this.ipc.invoke<DirEntry[]>("project_dir_list", { id: projectId, path });
+      const entries = await this.ipc.invoke<DirEntry[]>('project_dir_list', {
+        id: projectId,
+        path,
+      });
       if (treeEpoch === this.treeEpoch) {
         this.directoryCache.set({ ...this.directoryCache(), [key]: sortDirEntries(entries) });
         this.loadedDirectories.set({ ...this.loadedDirectories(), [key]: true });
@@ -474,7 +478,7 @@ export class ProjectService {
   private buildTotals(): ProjectTotals {
     const totals: ProjectTotals = { projects: this.items().length, active: 0, archived: 0 };
     for (const project of this.items()) {
-      totals[project.archived ? "archived" : "active"] += 1;
+      totals[project.archived ? 'archived' : 'active'] += 1;
     }
     return totals;
   }
@@ -509,6 +513,9 @@ export class ProjectService {
         active += 1;
       }
     }
-    return [{ status: "active", count: active }, { status: "archived", count: archived }];
+    return [
+      { status: 'active', count: active },
+      { status: 'archived', count: archived },
+    ];
   }
 }

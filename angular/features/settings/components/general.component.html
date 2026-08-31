@@ -1,47 +1,167 @@
 <div class="st" data-testid="settings-general-content">
-  <p class="t-sm t-mute" data-testid="settings-general-intro">{{ "settings.general.intro" | t }}</p>
-  <ds-tabs data-testid="settings-general-tabs" idPrefix="settings-general" [label]="'settings.general.tabs' | t" [options]="tabOptions()" [value]="tab()" (valueChange)="onTab($event)" />
-  @if (tab() === "interface") {
-  <section class="st-card" role="tabpanel" id="settings-general-panel-interface" aria-labelledby="settings-general-tab-interface" data-testid="settings-general-interface">
-    <div class="st-rows">
-      <div class="st-row" data-testid="settings-general-language-row">
-        <div class="field"><span class="t-ink">{{ "settings.general.language" | t }}</span><span class="field-hint">{{ "settings.general.language.hint" | t }}</span></div>
-        <ds-segments data-testid="settings-general-language" [label]="'settings.general.language' | t" [options]="languageOptions" [value]="language()" (valueChange)="onLanguage($event)" />
+  <p class="t-sm t-mute" data-testid="settings-general-intro">{{ 'settings.general.intro' | t }}</p>
+  <ds-tabs
+    data-testid="settings-general-tabs"
+    idPrefix="settings-general"
+    [label]="'settings.general.tabs' | t"
+    [options]="tabOptions()"
+    [value]="tab()"
+    (valueChange)="onTab($event)"
+  />
+  @if (tab() === 'interface') {
+    <section
+      class="st-card"
+      role="tabpanel"
+      id="settings-general-panel-interface"
+      aria-labelledby="settings-general-tab-interface"
+      data-testid="settings-general-interface"
+    >
+      <div class="st-rows">
+        <div class="st-row" data-testid="settings-general-language-row">
+          <div class="field">
+            <span class="t-ink">{{ 'settings.general.language' | t }}</span>
+            <span class="field-hint">{{ 'settings.general.language.hint' | t }}</span>
+          </div>
+          <ds-segments
+            data-testid="settings-general-language"
+            [label]="'settings.general.language' | t"
+            [options]="languageOptions"
+            [value]="language()"
+            (valueChange)="onLanguage($event)"
+          />
+        </div>
+        <div class="st-row" data-testid="settings-general-theme-row">
+          <div class="field">
+            <span class="t-ink">{{ 'settings.general.theme' | t }}</span>
+            <span class="field-hint">{{ 'settings.general.theme.hint' | t }}</span>
+          </div>
+          <ds-segments
+            data-testid="settings-general-theme"
+            [label]="'settings.general.theme' | t"
+            [options]="themeOptions()"
+            [value]="theme()"
+            (valueChange)="onTheme($event)"
+          />
+        </div>
       </div>
-      <div class="st-row" data-testid="settings-general-theme-row">
-        <div class="field"><span class="t-ink">{{ "settings.general.theme" | t }}</span><span class="field-hint">{{ "settings.general.theme.hint" | t }}</span></div>
-        <ds-segments data-testid="settings-general-theme" [label]="'settings.general.theme' | t" [options]="themeOptions()" [value]="theme()" (valueChange)="onTheme($event)" />
+    </section>
+  } @else if (tab() === 'pipelines') {
+    <section
+      class="st-card"
+      role="tabpanel"
+      id="settings-general-panel-pipelines"
+      aria-labelledby="settings-general-tab-pipelines"
+      data-testid="settings-general-pipelines"
+    >
+      <div class="st-rows">
+        <div class="st-row" data-testid="settings-general-max-pipelines-row">
+          <div class="field">
+            <span class="t-ink">{{ 'settings.general.maxPipelines' | t }}</span>
+            <span class="field-hint">{{ 'settings.general.maxPipelines.hint' | t }}</span>
+          </div>
+          <div class="st-slider" data-testid="settings-general-max-pipelines">
+            <ds-slider
+              data-testid="settings-general-max-pipelines-input"
+              [min]="1"
+              [max]="maxPipelinesLimit"
+              [step]="1"
+              [value]="maxPipelines()"
+              [label]="'settings.general.maxPipelines' | t"
+              (valueChange)="onMaxPipelines($event)"
+            />
+            <span class="mono t-mute" data-testid="settings-general-max-pipelines-value">
+              {{ maxPipelines() }}
+            </span>
+          </div>
+        </div>
+        <div class="st-row" data-testid="settings-general-max-tasks-row">
+          <div class="field">
+            <span class="t-ink">{{ 'settings.general.maxTasks' | t }}</span>
+            <span class="field-hint">{{ 'settings.general.maxTasks.hint' | t }}</span>
+          </div>
+          <div class="st-slider" data-testid="settings-general-max-tasks">
+            <ds-slider
+              data-testid="settings-general-max-tasks-input"
+              [min]="1"
+              [max]="maxTasksLimit"
+              [step]="1"
+              [value]="maxTasks()"
+              [label]="'settings.general.maxTasks' | t"
+              (valueChange)="onMaxTasks($event)"
+            />
+            <span class="mono t-mute" data-testid="settings-general-max-tasks-value">
+              {{ maxTasks() }}
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
-  } @else if (tab() === "pipelines") {
-  <section class="st-card" role="tabpanel" id="settings-general-panel-pipelines" aria-labelledby="settings-general-tab-pipelines" data-testid="settings-general-pipelines">
-    <div class="st-rows">
-      <div class="st-row" data-testid="settings-general-max-pipelines-row">
-        <div class="field"><span class="t-ink">{{ "settings.general.maxPipelines" | t }}</span><span class="field-hint">{{ "settings.general.maxPipelines.hint" | t }}</span></div>
-        <div class="st-slider" data-testid="settings-general-max-pipelines"><ds-slider data-testid="settings-general-max-pipelines-input" [min]="1" [max]="maxPipelinesLimit" [step]="1" [value]="maxPipelines()" [label]="'settings.general.maxPipelines' | t" (valueChange)="onMaxPipelines($event)" /><span class="mono t-mute" data-testid="settings-general-max-pipelines-value">{{ maxPipelines() }}</span></div>
-      </div>
-      <div class="st-row" data-testid="settings-general-max-tasks-row">
-        <div class="field"><span class="t-ink">{{ "settings.general.maxTasks" | t }}</span><span class="field-hint">{{ "settings.general.maxTasks.hint" | t }}</span></div>
-        <div class="st-slider" data-testid="settings-general-max-tasks"><ds-slider data-testid="settings-general-max-tasks-input" [min]="1" [max]="maxTasksLimit" [step]="1" [value]="maxTasks()" [label]="'settings.general.maxTasks' | t" (valueChange)="onMaxTasks($event)" /><span class="mono t-mute" data-testid="settings-general-max-tasks-value">{{ maxTasks() }}</span></div>
-      </div>
-    </div>
-  </section>
+    </section>
   } @else {
-  <section class="st-card" role="tabpanel" id="settings-general-panel-storage" aria-labelledby="settings-general-tab-storage" data-testid="settings-general-storage">
-    @if (workspace(); as ws) {
-      <div class="field" data-testid="settings-general-workspace-field">
-        <span class="st-label" id="settings-workspace-label">{{ "settings.general.workspace" | t }}</span>
-        <div class="st-path" role="group" aria-labelledby="settings-workspace-label" data-testid="settings-general-workspace"><span class="path" [attr.title]="ws.path" data-testid="settings-general-workspace-path">{{ ws.path }}</span><button type="button" class="btn btn-sm" [attr.aria-label]="'settings.general.openWorkspace' | t" data-testid="settings-general-workspace-open" (click)="openFolder('workspace')"><ds-icon name="folder-open" [size]="16" />{{ "settings.general.open" | t }}</button></div>
-        <span class="field-hint">{{ "settings.general.workspace.hint" | t }}</span>
+    <section
+      class="st-card"
+      role="tabpanel"
+      id="settings-general-panel-storage"
+      aria-labelledby="settings-general-tab-storage"
+      data-testid="settings-general-storage"
+    >
+      @if (workspace(); as ws) {
+        <div class="field" data-testid="settings-general-workspace-field">
+          <span class="st-label" id="settings-workspace-label">
+            {{ 'settings.general.workspace' | t }}
+          </span>
+          <div
+            class="st-path"
+            role="group"
+            aria-labelledby="settings-workspace-label"
+            data-testid="settings-general-workspace"
+          >
+            <span class="path" [attr.title]="ws.path" data-testid="settings-general-workspace-path">
+              {{ ws.path }}
+            </span>
+            <button
+              type="button"
+              class="btn btn-sm"
+              [attr.aria-label]="'settings.general.openWorkspace' | t"
+              data-testid="settings-general-workspace-open"
+              (click)="openFolder('workspace')"
+            >
+              <ds-icon name="folder-open" [size]="16" />
+              {{ 'settings.general.open' | t }}
+            </button>
+          </div>
+          <span class="field-hint">{{ 'settings.general.workspace.hint' | t }}</span>
+        </div>
+      }
+      <div class="field" data-testid="settings-general-data-field">
+        <span class="st-label" id="settings-data-label">{{ 'settings.general.data' | t }}</span>
+        <div
+          class="st-path"
+          role="group"
+          aria-labelledby="settings-data-label"
+          data-testid="settings-general-data"
+        >
+          <span class="path" [attr.title]="dataDir()" data-testid="settings-general-data-path">
+            {{ dataDir() }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [attr.aria-label]="'settings.general.openData' | t"
+            data-testid="settings-general-data-open"
+            (click)="openFolder('appData')"
+          >
+            <ds-icon name="folder-open" [size]="16" />
+            {{ 'settings.general.open' | t }}
+          </button>
+        </div>
+        <span class="field-hint">
+          {{ 'settings.general.data.hint' | t: { file: 'settings.json' } }}
+        </span>
       </div>
-    }
-    <div class="field" data-testid="settings-general-data-field">
-      <span class="st-label" id="settings-data-label">{{ "settings.general.data" | t }}</span>
-      <div class="st-path" role="group" aria-labelledby="settings-data-label" data-testid="settings-general-data"><span class="path" [attr.title]="dataDir()" data-testid="settings-general-data-path">{{ dataDir() }}</span><button type="button" class="btn btn-sm" [attr.aria-label]="'settings.general.openData' | t" data-testid="settings-general-data-open" (click)="openFolder('appData')"><ds-icon name="folder-open" [size]="16" />{{ "settings.general.open" | t }}</button></div>
-      <span class="field-hint">{{ "settings.general.data.hint" | t: { file: "settings.json" } }}</span>
-    </div>
-  </section>
+    </section>
   }
-  <div class="st-note" data-testid="settings-general-note"><ds-icon name="info" [size]="15" /><span>{{ "settings.general.note" | t }}</span></div>
+  <div class="st-note" data-testid="settings-general-note">
+    <ds-icon name="info" [size]="15" />
+    <span>{{ 'settings.general.note' | t }}</span>
+  </div>
 </div>

@@ -1,19 +1,225 @@
 @if (prompt(); as item) {
-  <section data-testid="library-prompt-panel-content">
-    <section class="ins-sec lb-ins-top" data-testid="library-prompt-panel-summary">
-      <div class="lb-ins-name" data-testid="library-prompt-panel-type"><span class="type-tag" data-testid="library-prompt-panel-type-tag"><ds-icon name="prompt" [size]="13" data-testid="library-prompt-panel-type-icon" />{{ "library.prompt.title" | t }}</span></div>
-      <div class="field" data-testid="library-prompt-panel-name-field"><label for="library-prompt-panel-name" data-testid="library-prompt-panel-name-label">{{ "library.prompt.field.name" | t }}</label><input id="library-prompt-panel-name" class="input" maxlength="255" [value]="item.name" autocomplete="off" data-testid="library-prompt-panel-name" (blur)="nameBlur(item, $event)" /></div>
-      <div class="field" data-testid="library-prompt-panel-kind-field"><label for="library-prompt-panel-kind" data-testid="library-prompt-panel-kind-label">{{ "library.prompt.field.kind" | t }}</label><select id="library-prompt-panel-kind" class="select" data-testid="library-prompt-panel-kind" (change)="setKind(item, $event)">@for (kind of kinds; track kind) { <option [value]="kind" [selected]="item.kind === kind" data-testid="library-prompt-panel-kind-option">{{ kindKey(kind) | t }}</option> }</select></div>
-      <div class="field" data-testid="library-prompt-panel-text-field"><label for="library-prompt-panel-text" data-testid="library-prompt-panel-text-label">{{ "library.prompt.field.text" | t }}</label><textarea id="library-prompt-panel-text" class="textarea" rows="8" [value]="item.text" data-testid="library-prompt-panel-text" (change)="textChange(item, $event)"></textarea><span class="field-hint" data-testid="library-prompt-panel-text-hint">{{ "library.prompt.field.textHint" | t }}</span></div>
-    </section>
-    <section class="ins-sec ins-form" data-testid="library-prompt-panel-fields">
-      <div class="field" data-testid="library-prompt-panel-tags-field"><label for="library-prompt-panel-tags" data-testid="library-prompt-panel-tags-label">{{ "library.prompt.field.tags" | t }} <span class="t-mute mono" data-testid="library-prompt-panel-tags-count">{{ item.tags.length }}/12</span></label><div class="tags" data-testid="library-prompt-panel-tags">@if (item.tags.length) { @for (tag of item.tags; track tag) { <span class="tag" data-testid="library-prompt-panel-tag">{{ tag }}<button type="button" class="tag-x" [attr.aria-label]="'library.prompt.field.tagRemove' | t: { tag }" data-testid="library-prompt-panel-tag-remove" (click)="removeTag(item, tag)"><ds-icon name="x" [size]="16" data-testid="library-prompt-panel-tag-remove-icon" /></button></span> } } @else { <span class="t-sm t-mute" data-testid="library-prompt-panel-tags-empty">{{ "library.prompt.field.tagsEmpty" | t }}</span> }</div><input id="library-prompt-panel-tags" class="input tag-in" list="library-prompt-panel-tag-suggestions" [disabled]="item.tags.length >= 12" [attr.placeholder]="'library.prompt.field.tagsPlaceholder' | t" autocomplete="off" data-testid="library-prompt-panel-tag-input" (keydown)="addTag(item, $event)" /><datalist id="library-prompt-panel-tag-suggestions" data-testid="library-prompt-panel-tag-suggestions">@for (tag of library.tags(); track tag.tag) { <option [value]="tag.tag" data-testid="library-prompt-panel-tag-suggestion"></option> }</datalist></div>
-      <div class="field" data-testid="library-prompt-panel-collection-field"><label for="library-prompt-panel-collection" data-testid="library-prompt-panel-collection-label">{{ "library.prompt.field.collection" | t }}</label><select id="library-prompt-panel-collection" class="select" data-testid="library-prompt-panel-collection" (change)="setCollection(item, $event)"><option value="" [selected]="item.collectionId === null" data-testid="library-prompt-panel-collection-none">{{ "library.prompt.field.collectionNone" | t }}</option>@for (collection of library.collections(); track collection.id) { <option [value]="collection.id" [selected]="item.collectionId === collection.id" data-testid="library-prompt-panel-collection-option">{{ collection.name }}</option> }<option value="__new" data-testid="library-prompt-panel-collection-new">{{ "library.prompt.field.collectionNew" | t }}</option></select></div>
-      <div class="field" data-testid="library-prompt-panel-rights-field"><label for="library-prompt-panel-rights" data-testid="library-prompt-panel-rights-label">{{ "library.prompt.field.rights" | t }}</label><select id="library-prompt-panel-rights" class="select" data-testid="library-prompt-panel-rights" (change)="setRights(item, $event)">@for (right of rights; track right) { <option [value]="right" [selected]="item.rights === right" data-testid="library-prompt-panel-right-option">{{ rightKey(right) | t }}</option> }</select><span class="field-hint" data-testid="library-prompt-panel-rights-hint">{{ "library.prompt.field.rightsHint" | t }}</span></div>
-    </section>
-    <section class="ins-sec" data-testid="library-prompt-panel-info"><span class="eyebrow" data-testid="library-prompt-panel-info-title">{{ "library.prompt.info" | t }}</span><dl class="kv" data-testid="library-prompt-panel-info-list"><dt data-testid="library-prompt-panel-code-label">{{ "library.image.info.code" | t }}</dt><dd class="mono" data-testid="library-prompt-panel-code">{{ code(item) }}</dd><dt data-testid="library-prompt-panel-length-label">{{ "library.prompt.info.length" | t }}</dt><dd data-testid="library-prompt-panel-length">{{ "library.prompt.chars" | t: { count: length(item) } }}</dd><dt data-testid="library-prompt-panel-variables-label">{{ "library.prompt.info.variables" | t }}</dt><dd data-testid="library-prompt-panel-variables">@if (variables(item).length) { @for (variable of variables(item); track variable) { <span class="chip is-static" data-testid="library-prompt-panel-variable">{{ variableLabel(variable) }}</span> } } @else { <span data-testid="library-prompt-panel-variables-empty">{{ "library.prompt.info.variablesEmpty" | t }}</span> }</dd><dt data-testid="library-prompt-panel-size-label">{{ "library.image.info.size" | t }}</dt><dd data-testid="library-prompt-panel-size">{{ size(item) }}</dd><dt data-testid="library-prompt-panel-added-label">{{ "library.image.info.added" | t }}</dt><dd class="mono" data-testid="library-prompt-panel-added">{{ addedAt(item) }}</dd><dt data-testid="library-prompt-panel-origin-label">{{ "library.image.info.origin" | t }}</dt><dd data-testid="library-prompt-panel-origin">{{ originKey(item) | t }}</dd></dl></section>
-    <section class="ins-sec ins-actions" data-testid="library-prompt-panel-actions"><button type="button" class="btn" data-testid="library-prompt-panel-copy" (click)="copy(item)"><ds-icon name="copy" [size]="16" data-testid="library-prompt-panel-copy-icon" />{{ "library.prompt.copy" | t }}</button><button type="button" class="btn btn-danger" data-testid="library-prompt-panel-delete" (click)="remove(item)"><ds-icon name="trash" [size]="16" data-testid="library-prompt-panel-delete-icon" />{{ "library.prompt.delete" | t }}</button></section>
+<section data-testid="library-prompt-panel-content">
+  <section class="ins-sec lb-ins-top" data-testid="library-prompt-panel-summary">
+    <div class="lb-ins-name" data-testid="library-prompt-panel-type">
+      <span class="type-tag" data-testid="library-prompt-panel-type-tag">
+        <ds-icon name="prompt" [size]="13" data-testid="library-prompt-panel-type-icon" />
+        {{ "library.prompt.title" | t }}
+      </span>
+    </div>
+    <div class="field" data-testid="library-prompt-panel-name-field">
+      <label for="library-prompt-panel-name" data-testid="library-prompt-panel-name-label">
+        {{ "library.prompt.field.name" | t }}
+      </label>
+      <input
+        id="library-prompt-panel-name"
+        class="input"
+        maxlength="255"
+        [value]="item.name"
+        autocomplete="off"
+        data-testid="library-prompt-panel-name"
+        (blur)="nameBlur(item, $event)"
+      />
+    </div>
+    <div class="field" data-testid="library-prompt-panel-kind-field">
+      <label for="library-prompt-panel-kind" data-testid="library-prompt-panel-kind-label">
+        {{ "library.prompt.field.kind" | t }}
+      </label>
+      <select
+        id="library-prompt-panel-kind"
+        class="select"
+        data-testid="library-prompt-panel-kind"
+        (change)="setKind(item, $event)"
+      >
+        @for (kind of kinds; track kind) {
+        <option
+          [value]="kind"
+          [selected]="item.kind === kind"
+          data-testid="library-prompt-panel-kind-option"
+        >
+          {{ kindKey(kind) | t }}
+        </option>
+        }
+      </select>
+    </div>
+    <div class="field" data-testid="library-prompt-panel-text-field">
+      <label for="library-prompt-panel-text" data-testid="library-prompt-panel-text-label">
+        {{ "library.prompt.field.text" | t }}
+      </label>
+      <textarea
+        id="library-prompt-panel-text"
+        class="textarea"
+        rows="8"
+        [value]="item.text"
+        data-testid="library-prompt-panel-text"
+        (change)="textChange(item, $event)"
+      ></textarea>
+      <span class="field-hint" data-testid="library-prompt-panel-text-hint">
+        {{ "library.prompt.field.textHint" | t }}
+      </span>
+    </div>
   </section>
+  <section class="ins-sec ins-form" data-testid="library-prompt-panel-fields">
+    <div class="field" data-testid="library-prompt-panel-tags-field">
+      <label for="library-prompt-panel-tags" data-testid="library-prompt-panel-tags-label">
+        {{ "library.prompt.field.tags" | t }}
+        <span class="t-mute mono" data-testid="library-prompt-panel-tags-count">
+          {{ item.tags.length }}/12
+        </span>
+      </label>
+      <div class="tags" data-testid="library-prompt-panel-tags">
+        @if (item.tags.length) { @for (tag of item.tags; track tag) {
+        <span class="tag" data-testid="library-prompt-panel-tag">
+          {{ tag }}
+          <button
+            type="button"
+            class="tag-x"
+            [attr.aria-label]="'library.prompt.field.tagRemove' | t: { tag }"
+            data-testid="library-prompt-panel-tag-remove"
+            (click)="removeTag(item, tag)"
+          >
+            <ds-icon name="x" [size]="16" data-testid="library-prompt-panel-tag-remove-icon" />
+          </button>
+        </span>
+        } } @else {
+        <span class="t-sm t-mute" data-testid="library-prompt-panel-tags-empty">
+          {{ "library.prompt.field.tagsEmpty" | t }}
+        </span>
+        }
+      </div>
+      <input
+        id="library-prompt-panel-tags"
+        class="input tag-in"
+        list="library-prompt-panel-tag-suggestions"
+        [disabled]="item.tags.length >= 12"
+        [attr.placeholder]="'library.prompt.field.tagsPlaceholder' | t"
+        autocomplete="off"
+        data-testid="library-prompt-panel-tag-input"
+        (keydown)="addTag(item, $event)"
+      />
+      <datalist
+        id="library-prompt-panel-tag-suggestions"
+        data-testid="library-prompt-panel-tag-suggestions"
+      >
+        @for (tag of library.tags(); track tag.tag) {
+        <option [value]="tag.tag" data-testid="library-prompt-panel-tag-suggestion"></option>
+        }
+      </datalist>
+    </div>
+    <div class="field" data-testid="library-prompt-panel-collection-field">
+      <label
+        for="library-prompt-panel-collection"
+        data-testid="library-prompt-panel-collection-label"
+      >
+        {{ "library.prompt.field.collection" | t }}
+      </label>
+      <select
+        id="library-prompt-panel-collection"
+        class="select"
+        data-testid="library-prompt-panel-collection"
+        (change)="setCollection(item, $event)"
+      >
+        <option
+          value=""
+          [selected]="item.collectionId === null"
+          data-testid="library-prompt-panel-collection-none"
+        >
+          {{ "library.prompt.field.collectionNone" | t }}
+        </option>
+        @for (collection of library.collections(); track collection.id) {
+        <option
+          [value]="collection.id"
+          [selected]="item.collectionId === collection.id"
+          data-testid="library-prompt-panel-collection-option"
+        >
+          {{ collection.name }}
+        </option>
+        }
+        <option value="__new" data-testid="library-prompt-panel-collection-new">
+          {{ "library.prompt.field.collectionNew" | t }}
+        </option>
+      </select>
+    </div>
+    <div class="field" data-testid="library-prompt-panel-rights-field">
+      <label for="library-prompt-panel-rights" data-testid="library-prompt-panel-rights-label">
+        {{ "library.prompt.field.rights" | t }}
+      </label>
+      <select
+        id="library-prompt-panel-rights"
+        class="select"
+        data-testid="library-prompt-panel-rights"
+        (change)="setRights(item, $event)"
+      >
+        @for (right of rights; track right) {
+        <option
+          [value]="right"
+          [selected]="item.rights === right"
+          data-testid="library-prompt-panel-right-option"
+        >
+          {{ rightKey(right) | t }}
+        </option>
+        }
+      </select>
+      <span class="field-hint" data-testid="library-prompt-panel-rights-hint">
+        {{ "library.prompt.field.rightsHint" | t }}
+      </span>
+    </div>
+  </section>
+  <section class="ins-sec" data-testid="library-prompt-panel-info">
+    <span class="eyebrow" data-testid="library-prompt-panel-info-title">
+      {{ "library.prompt.info" | t }}
+    </span>
+    <dl class="kv" data-testid="library-prompt-panel-info-list">
+      <dt data-testid="library-prompt-panel-code-label">{{ "library.image.info.code" | t }}</dt>
+      <dd class="mono" data-testid="library-prompt-panel-code">{{ code(item) }}</dd>
+      <dt data-testid="library-prompt-panel-length-label">
+        {{ "library.prompt.info.length" | t }}
+      </dt>
+      <dd data-testid="library-prompt-panel-length">
+        {{ "library.prompt.chars" | t: { count: length(item) } }}
+      </dd>
+      <dt data-testid="library-prompt-panel-variables-label">
+        {{ "library.prompt.info.variables" | t }}
+      </dt>
+      <dd data-testid="library-prompt-panel-variables">
+        @if (variables(item).length) { @for (variable of variables(item); track variable) {
+        <span class="chip is-static" data-testid="library-prompt-panel-variable">
+          {{ variableLabel(variable) }}
+        </span>
+        } } @else {
+        <span data-testid="library-prompt-panel-variables-empty">
+          {{ "library.prompt.info.variablesEmpty" | t }}
+        </span>
+        }
+      </dd>
+      <dt data-testid="library-prompt-panel-size-label">{{ "library.image.info.size" | t }}</dt>
+      <dd data-testid="library-prompt-panel-size">{{ size(item) }}</dd>
+      <dt data-testid="library-prompt-panel-added-label">{{ "library.image.info.added" | t }}</dt>
+      <dd class="mono" data-testid="library-prompt-panel-added">{{ addedAt(item) }}</dd>
+      <dt data-testid="library-prompt-panel-origin-label">{{ "library.image.info.origin" | t }}</dt>
+      <dd data-testid="library-prompt-panel-origin">{{ originKey(item) | t }}</dd>
+    </dl>
+  </section>
+  <section class="ins-sec ins-actions" data-testid="library-prompt-panel-actions">
+    <button type="button" class="btn" data-testid="library-prompt-panel-copy" (click)="copy(item)">
+      <ds-icon name="copy" [size]="16" data-testid="library-prompt-panel-copy-icon" />
+      {{ "library.prompt.copy" | t }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-danger"
+      data-testid="library-prompt-panel-delete"
+      (click)="remove(item)"
+    >
+      <ds-icon name="trash" [size]="16" data-testid="library-prompt-panel-delete-icon" />
+      {{ "library.prompt.delete" | t }}
+    </button>
+  </section>
+</section>
 } @else {
-  <div class="ins-empty" data-testid="library-prompt-panel-empty"><p class="t-sm t-mute" data-testid="library-prompt-panel-empty-text">{{ "library.prompt.empty" | t }}</p></div>
+<div class="ins-empty" data-testid="library-prompt-panel-empty">
+  <p class="t-sm t-mute" data-testid="library-prompt-panel-empty-text">
+    {{ "library.prompt.empty" | t }}
+  </p>
+</div>
 }

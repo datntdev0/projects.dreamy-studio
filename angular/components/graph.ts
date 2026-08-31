@@ -1,9 +1,13 @@
-import { AfterViewInit, Component, DestroyRef, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild, inject } from "@angular/core";
-import { Simulation, SimulationLinkDatum, SimulationNodeDatum, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY } from "d3-force";
-import { D3DragEvent, drag } from "d3-drag";
-import { D3ZoomEvent, ZoomBehavior, ZoomTransform, zoom, zoomIdentity } from "d3-zoom";
-import { pointer, select } from "d3-selection";
-import "d3-transition";
+import 'd3-transition';
+
+// prettier-ignore
+import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, inject, Input, input, OnChanges, output, SimpleChanges, ViewChild } from '@angular/core';
+import { fieldChecked, fieldValue } from '@shared/utils/dom';
+import { D3DragEvent, drag } from 'd3-drag';
+// prettier-ignore
+import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, Simulation, SimulationLinkDatum, SimulationNodeDatum } from 'd3-force';
+import { pointer, select } from 'd3-selection';
+import { D3ZoomEvent, zoom, ZoomBehavior, zoomIdentity, ZoomTransform } from 'd3-zoom';
 
 export type GraphNode = { id: string; label: string; group?: string };
 
@@ -33,11 +37,30 @@ export type GraphLabels = {
   rearrange: string;
 };
 
-export type GraphForceKey = "center" | "repel" | "distance";
+export type GraphForceKey = 'center' | 'repel' | 'distance';
 
-type GraphTheme = { node: string; link: string; text: string; accent: string; ring: string; flag: string; font: string };
+type GraphTheme = {
+  node: string;
+  link: string;
+  text: string;
+  accent: string;
+  ring: string;
+  flag: string;
+  font: string;
+};
 
-type SimNode = SimulationNodeDatum & { id: string; label: string; group: string; color: string; radius: number; degree: number; alpha: number; target: number; x: number; y: number };
+type SimNode = SimulationNodeDatum & {
+  id: string;
+  label: string;
+  group: string;
+  color: string;
+  radius: number;
+  degree: number;
+  alpha: number;
+  target: number;
+  x: number;
+  y: number;
+};
 
 type SimLink = SimulationLinkDatum<SimNode> & { source: SimNode; target: SimNode; label: string };
 
@@ -50,23 +73,23 @@ type GraphDragEvent = D3DragEvent<HTMLCanvasElement, unknown, DragSubject | unde
 const DEFAULT_FORCES: GraphForces = { center: 0.05, repel: 120, link: 1, distance: 60 };
 
 const DEFAULT_LABELS: GraphLabels = {
-  graph: "Graph",
-  empty: "No data",
-  zoomIn: "Zoom in",
-  zoomOut: "Zoom out",
-  fit: "Fit to view",
-  controls: "Graph controls",
-  filters: "Filters",
-  search: "Search nodes…",
-  orphans: "Show nodes without links",
-  display: "Display",
-  nodeLabels: "Node labels",
-  edgeLabels: "Relation labels",
-  forces: "Forces",
-  center: "Pull to center",
-  repel: "Repulsion",
-  distance: "Link distance",
-  rearrange: "Rearrange",
+  graph: 'Graph',
+  empty: 'No data',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  fit: 'Fit to view',
+  controls: 'Graph controls',
+  filters: 'Filters',
+  search: 'Search nodes…',
+  orphans: 'Show nodes without links',
+  display: 'Display',
+  nodeLabels: 'Node labels',
+  edgeLabels: 'Relation labels',
+  forces: 'Forces',
+  center: 'Pull to center',
+  repel: 'Repulsion',
+  distance: 'Link distance',
+  rearrange: 'Rearrange',
 };
 
 const DIM_ALPHA = 0.1;
@@ -90,31 +113,31 @@ const LARGE_GRAPH = 500;
 const COLOR_TOKEN = /^[a-z][a-z0-9-]*$/;
 
 @Component({
-  selector: "ds-graph",
-  standalone: true,
-  templateUrl: "./graph.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-graph',
+  templateUrl: './graph.html',
 })
 export class Graph implements AfterViewInit, OnChanges {
-  @Input() nodes: GraphNode[] = [];
-  @Input() edges: GraphEdge[] = [];
+  readonly nodes = input<GraphNode[]>([]);
+  readonly edges = input<GraphEdge[]>([]);
   @Input() groups: GraphGroup[] = [];
   @Input() selectedId: string | null = null;
-  @Input() flaggedIds: string[] = [];
-  @Input() flagLabel = "";
-  @Input() query = "";
+  readonly flaggedIds = input<string[]>([]);
+  @Input() flagLabel = '';
+  @Input() query = '';
   @Input() hiddenGroups: string[] = [];
   @Input() showOrphans = true;
   @Input() showLabels = true;
   @Input() showEdgeLabels = false;
-  @Input() showLegend = true;
-  @Input() showPanel = true;
+  readonly showLegend = input(true);
+  readonly showPanel = input(true);
   @Input() forces: Partial<GraphForces> = {};
-  @Input() labels: Partial<GraphLabels> = {};
-  @Output() selectedIdChange = new EventEmitter<string | null>();
-  @Output() nodeOpen = new EventEmitter<string>();
+  readonly labels = input<Partial<GraphLabels>>({});
+  readonly selectedIdChange = output<string | null>();
+  readonly nodeOpen = output<string>();
 
-  @ViewChild("surface", { static: true }) private surface!: ElementRef<HTMLElement>;
-  @ViewChild("canvas", { static: true }) private canvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('surface', { static: true }) private surface!: ElementRef<HTMLElement>;
+  @ViewChild('canvas', { static: true }) private canvas!: ElementRef<HTMLCanvasElement>;
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -126,7 +149,15 @@ export class Graph implements AfterViewInit, OnChanges {
   private resizeObserver: ResizeObserver | null = null;
   private themeObserver: MutationObserver | null = null;
   private transform: ZoomTransform = zoomIdentity;
-  private theme: GraphTheme = { node: "#888", link: "#444", text: "#ddd", accent: "#7c3aed", ring: "#c4b5fd", flag: "#e5484d", font: "sans-serif" };
+  private theme: GraphTheme = {
+    node: '#888',
+    link: '#444',
+    text: '#ddd',
+    accent: '#7c3aed',
+    ring: '#c4b5fd',
+    flag: '#e5484d',
+    font: 'sans-serif',
+  };
   private simNodes: SimNode[] = [];
   private simLinks: SimLink[] = [];
   private byId = new Map<string, SimNode>();
@@ -148,21 +179,38 @@ export class Graph implements AfterViewInit, OnChanges {
 
   ngAfterViewInit(): void {
     const canvas = this.canvas.nativeElement;
-    this.context = canvas.getContext("2d");
-    this.simulation = forceSimulation<SimNode, SimLink>().alphaDecay(0.03).velocityDecay(0.35).on("tick", this.requestDraw).stop();
-    this.zoomBehavior = zoom<HTMLCanvasElement, unknown>().scaleExtent([MIN_ZOOM, MAX_ZOOM]).on("zoom", this.onZoom);
+    this.context = canvas.getContext('2d');
+    this.simulation = forceSimulation<SimNode, SimLink>()
+      .alphaDecay(0.03)
+      .velocityDecay(0.35)
+      .on('tick', this.requestDraw)
+      .stop();
+    this.zoomBehavior = zoom<HTMLCanvasElement, unknown>()
+      .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+      .on('zoom', this.onZoom);
     select(canvas)
-      .call(drag<HTMLCanvasElement, unknown, DragSubject | undefined>().container(canvas).clickDistance(4).subject(this.dragSubject).on("start", this.onDragStart).on("drag", this.onDrag).on("end", this.onDragEnd))
+      .call(
+        drag<HTMLCanvasElement, unknown, DragSubject | undefined>()
+          .container(canvas)
+          .clickDistance(4)
+          .subject(this.dragSubject)
+          .on('start', this.onDragStart)
+          .on('drag', this.onDrag)
+          .on('end', this.onDragEnd),
+      )
       .call(this.zoomBehavior)
-      .on("dblclick.zoom", null);
-    canvas.addEventListener("pointermove", this.onPointerMove);
-    canvas.addEventListener("pointerleave", this.onPointerLeave);
-    canvas.addEventListener("click", this.onClick);
-    canvas.addEventListener("dblclick", this.onDblClick);
+      .on('dblclick.zoom', null);
+    canvas.addEventListener('pointermove', this.onPointerMove);
+    canvas.addEventListener('pointerleave', this.onPointerLeave);
+    canvas.addEventListener('click', this.onClick);
+    canvas.addEventListener('dblclick', this.onDblClick);
     this.resizeObserver = new ResizeObserver(this.onResize);
     this.resizeObserver.observe(this.surface.nativeElement);
     this.themeObserver = new MutationObserver(this.onTheme);
-    this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    this.themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
     this.destroyRef.onDestroy(this.destroy);
     this.ready = true;
     this.readTheme();
@@ -171,24 +219,31 @@ export class Graph implements AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes["labels"]) {
-      this.text = { ...DEFAULT_LABELS, ...this.labels };
+    if (changes['labels']) {
+      this.text = { ...DEFAULT_LABELS, ...this.labels() };
     }
-    if (changes["flaggedIds"]) {
-      this.flagged = new Set(this.flaggedIds);
+    if (changes['flaggedIds']) {
+      this.flagged = new Set(this.flaggedIds());
     }
     if (!this.ready) {
       return;
     }
-    if (changes["nodes"] || changes["edges"] || changes["groups"] || changes["query"] || changes["hiddenGroups"] || changes["showOrphans"]) {
+    if (
+      changes['nodes'] ||
+      changes['edges'] ||
+      changes['groups'] ||
+      changes['query'] ||
+      changes['hiddenGroups'] ||
+      changes['showOrphans']
+    ) {
       this.rebuild();
       return;
     }
-    if (changes["forces"]) {
+    if (changes['forces']) {
       this.configureForces();
       this.simulation?.alpha(RESTART_ALPHA).restart();
     }
-    if (changes["selectedId"]) {
+    if (changes['selectedId']) {
       this.applyFocus();
     }
     this.requestDraw();
@@ -207,33 +262,35 @@ export class Graph implements AfterViewInit, OnChanges {
   }
 
   onQuery(event: Event): void {
-    this.query = (event.target as HTMLInputElement).value;
+    this.query = fieldValue(event);
     this.rebuild();
   }
 
   onGroup(key: string, event: Event): void {
-    const visible = (event.target as HTMLInputElement).checked;
-    this.hiddenGroups = visible ? this.hiddenGroups.filter((item) => item !== key) : [...this.hiddenGroups, key];
+    const visible = fieldChecked(event);
+    this.hiddenGroups = visible
+      ? this.hiddenGroups.filter((item) => item !== key)
+      : [...this.hiddenGroups, key];
     this.rebuild();
   }
 
   onOrphans(event: Event): void {
-    this.showOrphans = (event.target as HTMLInputElement).checked;
+    this.showOrphans = fieldChecked(event);
     this.rebuild();
   }
 
   onLabels(event: Event): void {
-    this.showLabels = (event.target as HTMLInputElement).checked;
+    this.showLabels = fieldChecked(event);
     this.requestDraw();
   }
 
   onEdgeLabels(event: Event): void {
-    this.showEdgeLabels = (event.target as HTMLInputElement).checked;
+    this.showEdgeLabels = fieldChecked(event);
     this.requestDraw();
   }
 
   onForce(key: GraphForceKey, event: Event): void {
-    this.forces = { ...this.forces, [key]: Number((event.target as HTMLInputElement).value) };
+    this.forces = { ...this.forces, [key]: Number(fieldValue(event)) };
     this.configureForces();
     this.simulation?.alpha(FORCE_RESTART_ALPHA).restart();
   }
@@ -276,11 +333,11 @@ export class Graph implements AfterViewInit, OnChanges {
     this.simulation?.stop();
     this.resizeObserver?.disconnect();
     this.themeObserver?.disconnect();
-    canvas.removeEventListener("pointermove", this.onPointerMove);
-    canvas.removeEventListener("pointerleave", this.onPointerLeave);
-    canvas.removeEventListener("click", this.onClick);
-    canvas.removeEventListener("dblclick", this.onDblClick);
-    select(canvas).interrupt().on(".zoom", null).on(".drag", null);
+    canvas.removeEventListener('pointermove', this.onPointerMove);
+    canvas.removeEventListener('pointerleave', this.onPointerLeave);
+    canvas.removeEventListener('click', this.onClick);
+    canvas.removeEventListener('dblclick', this.onDblClick);
+    select(canvas).interrupt().on('.zoom', null).on('.drag', null);
     cancelAnimationFrame(this.frame);
     this.ready = false;
   };
@@ -310,7 +367,9 @@ export class Graph implements AfterViewInit, OnChanges {
     }
     if (previousWidth && previousHeight && this.zoomBehavior) {
       const t = this.transform;
-      const shifted = zoomIdentity.translate(t.x + (this.width - previousWidth) / 2, t.y + (this.height - previousHeight) / 2).scale(t.k);
+      const shifted = zoomIdentity
+        .translate(t.x + (this.width - previousWidth) / 2, t.y + (this.height - previousHeight) / 2)
+        .scale(t.k);
       select(this.canvas.nativeElement).call(this.zoomBehavior.transform, shifted);
     }
     this.requestDraw();
@@ -323,7 +382,9 @@ export class Graph implements AfterViewInit, OnChanges {
 
   private readonly dragSubject = (event: GraphDragEvent): DragSubject | undefined => {
     const node = this.nodeAt(event.x, event.y);
-    return node ? { x: this.transform.applyX(node.x), y: this.transform.applyY(node.y), node } : undefined;
+    return node
+      ? { x: this.transform.applyX(node.x), y: this.transform.applyY(node.y), node }
+      : undefined;
   };
 
   private readonly onDragStart = (event: GraphDragEvent): void => {
@@ -395,7 +456,8 @@ export class Graph implements AfterViewInit, OnChanges {
 
   private readonly collideRadius = (node: SimNode): number => node.radius + 2;
 
-  private readonly linkStrength = (link: SimLink): number => this.forceValues().link / Math.min(link.source.degree, link.target.degree);
+  private readonly linkStrength = (link: SimLink): number =>
+    this.forceValues().link / Math.min(link.source.degree, link.target.degree);
 
   private forceValues(): GraphForces {
     return { ...DEFAULT_FORCES, ...this.forces };
@@ -415,13 +477,13 @@ export class Graph implements AfterViewInit, OnChanges {
     const style = getComputedStyle(this.host.nativeElement);
     const theme = this.theme;
     this.theme = {
-      node: this.token(style, "--mute", theme.node),
-      link: this.token(style, "--hairline-strong", theme.link),
-      text: this.token(style, "--body", theme.text),
-      accent: this.token(style, "--primary", theme.accent),
-      ring: this.token(style, "--primary-text", theme.ring),
-      flag: this.token(style, "--danger", theme.flag),
-      font: this.token(style, "--font", theme.font),
+      node: this.token(style, '--mute', theme.node),
+      link: this.token(style, '--hairline-strong', theme.link),
+      text: this.token(style, '--body', theme.text),
+      accent: this.token(style, '--primary', theme.accent),
+      ring: this.token(style, '--primary-text', theme.ring),
+      flag: this.token(style, '--danger', theme.flag),
+      font: this.token(style, '--font', theme.font),
     };
     this.paintNodes();
   }
@@ -434,7 +496,9 @@ export class Graph implements AfterViewInit, OnChanges {
     const style = getComputedStyle(this.host.nativeElement);
     const colors = new Map<string, string>();
     for (const group of this.groups) {
-      const value = COLOR_TOKEN.test(group.color) ? this.token(style, `--${group.color}`, "") : group.color;
+      const value = COLOR_TOKEN.test(group.color)
+        ? this.token(style, `--${group.color}`, '')
+        : group.color;
       colors.set(group.key, value || this.theme.node);
     }
     for (const node of this.simNodes) {
@@ -492,15 +556,30 @@ export class Graph implements AfterViewInit, OnChanges {
     const hidden = new Set(this.hiddenGroups);
     const nodes: SimNode[] = [];
     const seen = new Set<string>();
-    for (const input of this.nodes) {
-      const group = input.group ?? "";
-      if (seen.has(input.id) || hidden.has(group) || (needle && !input.label.toLowerCase().includes(needle))) {
+    for (const input of this.nodes()) {
+      const group = input.group ?? '';
+      if (
+        seen.has(input.id) ||
+        hidden.has(group) ||
+        (needle && !input.label.toLowerCase().includes(needle))
+      ) {
         continue;
       }
       seen.add(input.id);
       const spot = this.memory.get(input.id);
       const alpha = this.byId.get(input.id)?.alpha ?? 1;
-      nodes.push({ id: input.id, label: input.label, group, color: this.theme.node, radius: 0, degree: 0, alpha, target: 1, x: spot?.x ?? NaN, y: spot?.y ?? NaN });
+      nodes.push({
+        id: input.id,
+        label: input.label,
+        group,
+        color: this.theme.node,
+        radius: 0,
+        degree: 0,
+        alpha,
+        target: 1,
+        x: spot?.x ?? NaN,
+        y: spot?.y ?? NaN,
+      });
     }
     return nodes;
   }
@@ -510,15 +589,18 @@ export class Graph implements AfterViewInit, OnChanges {
     const links: SimLink[] = [];
     const neighbors = new Map<string, Set<string>>();
     const seen = new Set<string>();
-    for (const edge of this.edges) {
+    for (const edge of this.edges()) {
       const source = byId.get(edge.source);
       const target = byId.get(edge.target);
-      const key = edge.source < edge.target ? `${edge.source}\n${edge.target}` : `${edge.target}\n${edge.source}`;
+      const key =
+        edge.source < edge.target
+          ? `${edge.source}\n${edge.target}`
+          : `${edge.target}\n${edge.source}`;
       if (!source || !target || source === target || seen.has(key)) {
         continue;
       }
       seen.add(key);
-      links.push({ source, target, label: edge.label ?? "" });
+      links.push({ source, target, label: edge.label ?? '' });
       source.degree += 1;
       target.degree += 1;
       this.neighborSet(neighbors, source.id).add(target.id);
@@ -544,15 +626,23 @@ export class Graph implements AfterViewInit, OnChanges {
     }
     const values = this.forceValues();
     simulation
-      .force("link", forceLink<SimNode, SimLink>(this.simLinks).distance(values.distance).strength(this.linkStrength))
-      .force("charge", forceManyBody<SimNode>().strength(-values.repel).distanceMax(500).theta(0.9))
-      .force("x", forceX<SimNode>(0).strength(values.center))
-      .force("y", forceY<SimNode>(0).strength(values.center))
-      .force("collide", forceCollide<SimNode>(this.collideRadius));
+      .force(
+        'link',
+        forceLink<SimNode, SimLink>(this.simLinks)
+          .distance(values.distance)
+          .strength(this.linkStrength),
+      )
+      .force('charge', forceManyBody<SimNode>().strength(-values.repel).distanceMax(500).theta(0.9))
+      .force('x', forceX<SimNode>(0).strength(values.center))
+      .force('y', forceY<SimNode>(0).strength(values.center))
+      .force('collide', forceCollide<SimNode>(this.collideRadius));
   }
 
   private applyFocus(): void {
-    const focus = this.dragged ?? this.hovered ?? (this.selectedId ? this.byId.get(this.selectedId) ?? null : null);
+    const focus =
+      this.dragged ??
+      this.hovered ??
+      (this.selectedId ? (this.byId.get(this.selectedId) ?? null) : null);
     const around = focus ? this.neighbors.get(focus.id) : undefined;
     this.focus = focus;
     this.dimming = !!focus;
@@ -567,7 +657,7 @@ export class Graph implements AfterViewInit, OnChanges {
       return;
     }
     this.hovered = node;
-    this.canvas.nativeElement.classList.toggle("is-hover", !!node);
+    this.canvas.nativeElement.classList.toggle('is-hover', !!node);
     this.applyFocus();
   }
 
@@ -579,14 +669,19 @@ export class Graph implements AfterViewInit, OnChanges {
     if (!hit) {
       return null;
     }
-    return Math.hypot(hit.x - worldX, hit.y - worldY) <= hit.radius + HIT_PADDING / t.k ? hit : null;
+    return Math.hypot(hit.x - worldX, hit.y - worldY) <= hit.radius + HIT_PADDING / t.k
+      ? hit
+      : null;
   }
 
   private zoomBy(factor: number): void {
     if (!this.zoomBehavior) {
       return;
     }
-    select(this.canvas.nativeElement).transition().duration(ZOOM_DURATION).call(this.zoomBehavior.scaleBy, factor);
+    select(this.canvas.nativeElement)
+      .transition()
+      .duration(ZOOM_DURATION)
+      .call(this.zoomBehavior.scaleBy, factor);
   }
 
   private fitView(duration: number): void {
@@ -604,8 +699,17 @@ export class Graph implements AfterViewInit, OnChanges {
       x1 = Math.max(x1, node.x + node.radius);
       y1 = Math.max(y1, node.y + node.radius);
     }
-    const k = Math.max(MIN_ZOOM, Math.min(FIT_MAX_ZOOM, (this.width - FIT_PADDING * 2) / Math.max(x1 - x0, 1), (this.height - FIT_PADDING * 2) / Math.max(y1 - y0, 1)));
-    const target = zoomIdentity.translate(this.width / 2 - (k * (x0 + x1)) / 2, this.height / 2 - (k * (y0 + y1)) / 2).scale(k);
+    const k = Math.max(
+      MIN_ZOOM,
+      Math.min(
+        FIT_MAX_ZOOM,
+        (this.width - FIT_PADDING * 2) / Math.max(x1 - x0, 1),
+        (this.height - FIT_PADDING * 2) / Math.max(y1 - y0, 1),
+      ),
+    );
+    const target = zoomIdentity
+      .translate(this.width / 2 - (k * (x0 + x1)) / 2, this.height / 2 - (k * (y0 + y1)) / 2)
+      .scale(k);
     const selection = select(this.canvas.nativeElement);
     this.fitPending = false;
     if (duration > 0) {
@@ -626,7 +730,14 @@ export class Graph implements AfterViewInit, OnChanges {
     this.fading = this.stepFade();
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
-    context.setTransform(this.ratio * t.k, 0, 0, this.ratio * t.k, this.ratio * t.x, this.ratio * t.y);
+    context.setTransform(
+      this.ratio * t.k,
+      0,
+      0,
+      this.ratio * t.k,
+      this.ratio * t.x,
+      this.ratio * t.y,
+    );
     this.drawLinks(context, t);
     this.drawNodes(context, t);
     if (this.showEdgeLabels && t.k >= EDGE_LABEL_ZOOM) {
@@ -672,7 +783,11 @@ export class Graph implements AfterViewInit, OnChanges {
     }
     for (const link of this.simLinks) {
       const alpha = Math.min(link.source.alpha, link.target.alpha);
-      if (alpha < 0.02 || !this.linkVisible(link, bounds) || (focus && (link.source === focus || link.target === focus))) {
+      if (
+        alpha < 0.02 ||
+        !this.linkVisible(link, bounds) ||
+        (focus && (link.source === focus || link.target === focus))
+      ) {
         continue;
       }
       context.globalAlpha = alpha;
@@ -701,7 +816,13 @@ export class Graph implements AfterViewInit, OnChanges {
     const focus = this.focus;
     const selected = this.selectedId ? this.byId.get(this.selectedId) : undefined;
     for (const node of this.simNodes) {
-      if (node.alpha < 0.02 || node.x < bounds.x0 - node.radius || node.x > bounds.x1 + node.radius || node.y < bounds.y0 - node.radius || node.y > bounds.y1 + node.radius) {
+      if (
+        node.alpha < 0.02 ||
+        node.x < bounds.x0 - node.radius ||
+        node.x > bounds.x1 + node.radius ||
+        node.y < bounds.y0 - node.radius ||
+        node.y > bounds.y1 + node.radius
+      ) {
         continue;
       }
       context.globalAlpha = node.alpha;
@@ -731,8 +852,8 @@ export class Graph implements AfterViewInit, OnChanges {
     const bounds = this.viewBounds(t);
     const scale = Math.pow(t.k, -0.8);
     context.font = `${10 * scale}px ${this.theme.font}`;
-    context.textAlign = "center";
-    context.textBaseline = "alphabetic";
+    context.textAlign = 'center';
+    context.textBaseline = 'alphabetic';
     context.fillStyle = this.theme.node;
     for (const link of this.simLinks) {
       const alpha = Math.min(link.source.alpha, link.target.alpha);
@@ -740,7 +861,11 @@ export class Graph implements AfterViewInit, OnChanges {
         continue;
       }
       context.globalAlpha = alpha;
-      context.fillText(link.label, (link.source.x + link.target.x) / 2, (link.source.y + link.target.y) / 2 - 3 * scale);
+      context.fillText(
+        link.label,
+        (link.source.x + link.target.x) / 2,
+        (link.source.y + link.target.y) / 2 - 3 * scale,
+      );
     }
     context.globalAlpha = 1;
   }
@@ -749,11 +874,17 @@ export class Graph implements AfterViewInit, OnChanges {
     const bounds = this.viewBounds(t);
     const scale = Math.pow(t.k, -0.8);
     context.font = `${11 * scale}px ${this.theme.font}`;
-    context.textAlign = "center";
-    context.textBaseline = "top";
+    context.textAlign = 'center';
+    context.textBaseline = 'top';
     context.fillStyle = this.theme.text;
     for (const node of this.simNodes) {
-      if (node.alpha < 0.02 || node.x < bounds.x0 || node.x > bounds.x1 || node.y < bounds.y0 || node.y > bounds.y1) {
+      if (
+        node.alpha < 0.02 ||
+        node.x < bounds.x0 ||
+        node.x > bounds.x1 ||
+        node.y < bounds.y0 ||
+        node.y > bounds.y1
+      ) {
         continue;
       }
       const zoomAlpha = Math.max(0, Math.min(1, (t.k * (0.5 + node.radius / 8) - 1.1) / 0.5));
@@ -770,11 +901,24 @@ export class Graph implements AfterViewInit, OnChanges {
 
   private viewBounds(t: ZoomTransform): { x0: number; y0: number; x1: number; y1: number } {
     const margin = CULL_PADDING / t.k;
-    return { x0: t.invertX(0) - margin, y0: t.invertY(0) - margin, x1: t.invertX(this.width) + margin, y1: t.invertY(this.height) + margin };
+    return {
+      x0: t.invertX(0) - margin,
+      y0: t.invertY(0) - margin,
+      x1: t.invertX(this.width) + margin,
+      y1: t.invertY(this.height) + margin,
+    };
   }
 
-  private linkVisible(link: SimLink, bounds: { x0: number; y0: number; x1: number; y1: number }): boolean {
+  private linkVisible(
+    link: SimLink,
+    bounds: { x0: number; y0: number; x1: number; y1: number },
+  ): boolean {
     const { source, target } = link;
-    return !((source.x < bounds.x0 && target.x < bounds.x0) || (source.x > bounds.x1 && target.x > bounds.x1) || (source.y < bounds.y0 && target.y < bounds.y0) || (source.y > bounds.y1 && target.y > bounds.y1));
+    return !(
+      (source.x < bounds.x0 && target.x < bounds.x0) ||
+      (source.x > bounds.x1 && target.x > bounds.x1) ||
+      (source.y < bounds.y0 && target.y < bounds.y0) ||
+      (source.y > bounds.y1 && target.y > bounds.y1)
+    );
   }
 }

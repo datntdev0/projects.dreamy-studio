@@ -1,15 +1,16 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
-import { Icon } from "./icon";
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+
+import { Icon } from './icon';
 
 export type BreadcrumbItem = { label: string; icon?: string };
 
 @Component({
-  selector: "ds-breadcrumbs",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'ds-breadcrumbs',
   imports: [Icon],
-  templateUrl: "./breadcrumbs.html",
+  templateUrl: './breadcrumbs.html',
 })
 export class Breadcrumbs {
-  @Input() items: BreadcrumbItem[] = [];
-  @Output() navigate = new EventEmitter<number>();
+  readonly items = input<BreadcrumbItem[]>([]);
+  readonly navigate = output<number>();
 }

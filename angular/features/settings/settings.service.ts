@@ -1,12 +1,14 @@
-import { Injectable, inject, signal } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { Language } from "@core/language/language.models";
-import { LanguageService } from "@core/language/language.service";
-import { Theme } from "@core/theme/theme.models";
-import { ThemeService } from "@core/theme/theme.service";
-import { ToastService } from "@core/toast/toast.service";
-import { LlmService } from "./llm.service";
-import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from "./settings.models";
+import { inject, Injectable, signal } from '@angular/core';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { Language } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { Theme } from '@shared/theme/theme.models';
+import { ThemeService } from '@shared/theme/theme.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+import { LlmService } from './llm.service';
+// prettier-ignore
+import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from './settings.models';
 
 const DEFAULT_MAX_PIPELINES = 1;
 const DEFAULT_MAX_TASKS = 5;
@@ -18,7 +20,7 @@ function clampLimit(value: number | undefined, max: number, fallback: number): n
   return Math.min(max, Math.max(1, Math.round(value)));
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class SettingsService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly languageService = inject(LanguageService);
@@ -28,9 +30,9 @@ export class SettingsService {
   private writes: Promise<void> = Promise.resolve();
 
   readonly open = signal(false);
-  readonly section = signal<SettingsSectionId>("general");
-  readonly dataDir = signal("");
-  readonly file = signal("");
+  readonly section = signal<SettingsSectionId>('general');
+  readonly dataDir = signal('');
+  readonly file = signal('');
   readonly layout = signal<LayoutSettings>({});
   readonly maxPipelines = signal(DEFAULT_MAX_PIPELINES);
   readonly maxTasks = signal(DEFAULT_MAX_TASKS);
@@ -42,7 +44,7 @@ export class SettingsService {
 
   private async loadGeneral(): Promise<void> {
     try {
-      const view = await this.ipc.invoke<SettingsView>("settings_get");
+      const view = await this.ipc.invoke<SettingsView>('settings_get');
       this.dataDir.set(view.dataDir);
       this.file.set(view.file);
       this.layout.set(view.layout ?? {});
@@ -53,7 +55,7 @@ export class SettingsService {
     }
   }
 
-  openDialog(section: SettingsSectionId = "general"): void {
+  openDialog(section: SettingsSectionId = 'general'): void {
     this.section.set(section);
     this.open.set(true);
   }
@@ -93,9 +95,9 @@ export class SettingsService {
 
   async openFolder(target: SettingsFolderTarget): Promise<void> {
     try {
-      await this.ipc.invoke<void>("settings_folder_open", { target });
+      await this.ipc.invoke<void>('settings_folder_open', { target });
     } catch {
-      this.toasts.show(this.languageService.translate("settings.general.openFailed"), "danger");
+      this.toasts.show(this.languageService.translate('settings.general.openFailed'), 'danger');
     }
   }
 
@@ -106,13 +108,15 @@ export class SettingsService {
     if (general.theme) {
       this.themes.setTheme(general.theme);
     }
-    this.maxPipelines.set(clampLimit(general.pipelines?.maxPipelines, MAX_PIPELINES_LIMIT, DEFAULT_MAX_PIPELINES));
+    this.maxPipelines.set(
+      clampLimit(general.pipelines?.maxPipelines, MAX_PIPELINES_LIMIT, DEFAULT_MAX_PIPELINES),
+    );
     this.maxTasks.set(clampLimit(general.pipelines?.maxTasks, MAX_TASKS_LIMIT, DEFAULT_MAX_TASKS));
   }
 
   private async syncBackground(): Promise<void> {
     try {
-      await this.ipc.invoke<void>("window_background_set", { theme: this.themes.theme() });
+      await this.ipc.invoke<void>('window_background_set', { theme: this.themes.theme() });
     } catch {
       return;
     }
@@ -125,7 +129,7 @@ export class SettingsService {
 
   private async writeLayout(layout: LayoutSettings): Promise<void> {
     try {
-      await this.ipc.invoke<LayoutSettings>("settings_layout_save", { layout });
+      await this.ipc.invoke<LayoutSettings>('settings_layout_save', { layout });
     } catch {
       return;
     }
@@ -138,9 +142,9 @@ export class SettingsService {
       pipelines: { maxPipelines: this.maxPipelines(), maxTasks: this.maxTasks() },
     };
     try {
-      await this.ipc.invoke<GeneralSettings>("settings_general_save", { general });
+      await this.ipc.invoke<GeneralSettings>('settings_general_save', { general });
     } catch {
-      this.toasts.show(this.languageService.translate("settings.general.saveFailed"), "danger");
+      this.toasts.show(this.languageService.translate('settings.general.saveFailed'), 'danger');
     }
   }
 }

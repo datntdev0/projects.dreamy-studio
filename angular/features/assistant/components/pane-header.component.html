@@ -1,0 +1,16 @@
+<header class="asst-bar" data-testid="assistant-pane-header">
+  <ng-content />
+  <span class="spacer"></span>
+  <ds-button
+    variant="ghost"
+    size="small"
+    [iconOnly]="true"
+    [label]="'assistant.new' | t"
+    [attr.title]="'assistant.new' | t"
+    [attr.data-testid]="newTestId()"
+    (pressed)="assistant.startNew()"
+  >
+    <ds-icon name="plus" [size]="16" />
+  </ds-button>
+  <ng-content select="[paneEnd]" />
+</header>

@@ -1,16 +1,17 @@
-import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { ChapterRow, NovelError, NovelSummary } from "@features/novel/novel.models";
-import { toNovelError, displayName } from "@features/novel/novel.rules";
-import { PipelineSnapshot } from "@features/novel/novel.translation.models";
-import { NovelService } from "@features/novel/novel.service";
-import { NovelTranslationService } from "@features/novel/novel.translation.service";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { LayoutService } from "@layout/layout.service";
-import { PipelineTotals } from "./pipeline.models";
-import { HISTORY_LIMIT, compareNewestFirst, totalsOf } from "./pipeline.rules";
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { ChapterRow, NovelError, NovelSummary } from '@features/novel/novel.models';
+import { displayName, toNovelError } from '@features/novel/novel.rules';
+import { NovelService } from '@features/novel/novel.service';
+import { PipelineSnapshot } from '@features/novel/novel.translation.models';
+import { NovelTranslationService } from '@features/novel/novel.translation.service';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+import { LayoutService } from '@layout/layout.service';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
-@Injectable({ providedIn: "root" })
+import { PipelineTotals } from './pipeline.models';
+import { compareNewestFirst, HISTORY_LIMIT, totalsOf } from './pipeline.rules';
+
+@Injectable({ providedIn: 'root' })
 export class PipelineService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly novels = inject(NovelService);
@@ -84,7 +85,7 @@ export class PipelineService {
 
   openLog(id: number): void {
     this.select(id);
-    this.layout.showBottomTab("output");
+    this.layout.showBottomTab('output');
   }
 
   async cancel(id: number): Promise<void> {
@@ -104,7 +105,7 @@ export class PipelineService {
   private loadRunningChapters(records: PipelineSnapshot[]): void {
     const novelIds = new Set<number>();
     for (const record of records) {
-      if (record.status === "running" && this.novels.chaptersOf(record.novelId).length === 0) {
+      if (record.status === 'running' && this.novels.chaptersOf(record.novelId).length === 0) {
         novelIds.add(record.novelId);
       }
     }
@@ -118,7 +119,10 @@ export class PipelineService {
   }
 
   private fetchNovel(novel: NovelSummary): Promise<PipelineSnapshot[]> {
-    return this.ipc.invoke<PipelineSnapshot[]>("pipeline_history_list", { novelId: novel.id, limit: HISTORY_LIMIT });
+    return this.ipc.invoke<PipelineSnapshot[]>('pipeline_history_list', {
+      novelId: novel.id,
+      limit: HISTORY_LIMIT,
+    });
   }
 
   private buildRunning(): PipelineSnapshot[] {

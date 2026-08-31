@@ -3,9 +3,5 @@
   "compilerOptions": {
     "types": []
   },
-  "include": [
-    "../components/**/*.ts",
-    "../stories/**/*.ts",
-    "./*.ts"
-  ]
+  "include": ["../components/**/*.ts", "../stories/**/*.ts", "./*.ts"]
 }

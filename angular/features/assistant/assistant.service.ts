@@ -1,20 +1,23 @@
-import { Injectable, computed, effect, inject, signal, untracked } from "@angular/core";
-import { DesktopIpcService } from "@core/desktop/desktop-ipc.service";
-import { DialogService } from "@core/dialog/dialog.service";
-import { LanguageService } from "@core/language/language.service";
-import { ToastService } from "@core/toast/toast.service";
-import { KnowledgeLang } from "@features/novel/novel.knowledge.models";
-import { NovelKnowledgeService } from "@features/novel/novel.knowledge.service";
-import { TargetLang } from "@features/novel/novel.models";
-import { NovelReaderService } from "@features/novel/novel.reader.service";
-import { NovelService } from "@features/novel/novel.service";
-import { NovelTranslationService } from "@features/novel/novel.translation.service";
-import { displayName, toNovelError } from "@features/novel/novel.rules";
-import { WorkspaceService } from "@features/workspace/workspace.service";
-import { LayoutService } from "@layout/layout.service";
-import { TabsService } from "@layout/tabs.service";
-import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from "./assistant.models";
-import { NOVEL_SCOPES, RECENT_SESSIONS, WORKSPACE_SCOPE, compareRecentFirst, novelScope } from "./assistant.rules";
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { KnowledgeLang } from '@features/novel/novel.knowledge.models';
+import { NovelKnowledgeService } from '@features/novel/novel.knowledge.service';
+import { TargetLang } from '@features/novel/novel.models';
+import { NovelReaderService } from '@features/novel/novel.reader.service';
+import { displayName, toNovelError } from '@features/novel/novel.rules';
+import { NovelService } from '@features/novel/novel.service';
+import { NovelTranslationService } from '@features/novel/novel.translation.service';
+import { WorkspaceService } from '@features/workspace/workspace.service';
+import { LayoutService } from '@layout/layout.service';
+import { TabsService } from '@layout/tabs.service';
+import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { DialogService } from '@shared/dialog/dialog.service';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+
+// prettier-ignore
+import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from './assistant.models';
+// prettier-ignore
+import { compareRecentFirst, NOVEL_SCOPES, novelScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
 
 function summaryOf(session: AssistantSession): AssistantSessionSummary {
   return {
@@ -29,7 +32,7 @@ function summaryOf(session: AssistantSession): AssistantSessionSummary {
   };
 }
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class AssistantService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly dialogs = inject(DialogService);
@@ -49,7 +52,7 @@ export class AssistantService {
   readonly loaded = signal(false);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly view = signal<AssistantView>("start");
+  readonly view = signal<AssistantView>('start');
   readonly active = signal<AssistantSession | null>(null);
   readonly opening = signal(false);
   readonly sending = signal(false);
@@ -58,7 +61,7 @@ export class AssistantService {
   readonly sendError = signal<string | null>(null);
   readonly resolving = signal<string | null>(null);
   readonly permitting = signal(false);
-  readonly draft = signal("");
+  readonly draft = signal('');
   readonly draftScope = signal<AssistantScope>(WORKSPACE_SCOPE);
   readonly sessions = computed(this.buildSessions.bind(this));
   readonly recent = computed(this.buildRecent.bind(this));
@@ -79,7 +82,7 @@ export class AssistantService {
     this.error.set(null);
     try {
       await this.novels.ensureLoaded();
-      const rows = await this.ipc.invoke<AssistantSessionSummary[]>("assistant_session_list");
+      const rows = await this.ipc.invoke<AssistantSessionSummary[]>('assistant_session_list');
       if (epoch === this.epoch) {
         this.items.set(rows ?? []);
         this.loaded.set(true);
@@ -100,23 +103,25 @@ export class AssistantService {
       return WORKSPACE_SCOPE;
     }
     const novelId = this.tabs.active().novelId ?? this.novels.selectedId();
-    return novelId !== null && this.novels.novelById(novelId) ? novelScope(novelId) : WORKSPACE_SCOPE;
+    return novelId !== null && this.novels.novelById(novelId)
+      ? novelScope(novelId)
+      : WORKSPACE_SCOPE;
   }
 
   startNew(): void {
     this.active.set(null);
     this.sendError.set(null);
-    this.draft.set("");
+    this.draft.set('');
     this.draftScope.set(this.contextScope());
-    this.view.set("start");
+    this.view.set('start');
   }
 
   showSessions(): void {
-    this.view.set("sessions");
+    this.view.set('sessions');
   }
 
   back(): void {
-    this.view.set(this.active() && this.view() === "sessions" ? "chat" : "start");
+    this.view.set(this.active() && this.view() === 'sessions' ? 'chat' : 'start');
   }
 
   chooseScope(scope: AssistantScope): void {
@@ -125,24 +130,29 @@ export class AssistantService {
 
   async open(id: string): Promise<void> {
     if (this.active()?.id === id) {
-      this.view.set("chat");
+      this.view.set('chat');
       return;
     }
     const epoch = this.epoch;
     this.opening.set(true);
     this.sendError.set(null);
-    this.draft.set("");
-    this.view.set("chat");
+    this.draft.set('');
+    this.view.set('chat');
     try {
-      const session = await this.ipc.invoke<AssistantSession>("assistant_session_get", { id });
+      const session = await this.ipc.invoke<AssistantSession>('assistant_session_get', { id });
       if (epoch === this.epoch) {
         this.active.set(session);
       }
     } catch (cause) {
       if (epoch === this.epoch) {
         this.active.set(null);
-        this.view.set("sessions");
-        this.toasts.show(this.languageService.translate("assistant.error.open", { detail: toNovelError(cause).detail }), "danger");
+        this.view.set('sessions');
+        this.toasts.show(
+          this.languageService.translate('assistant.error.open', {
+            detail: toNovelError(cause).detail,
+          }),
+          'danger',
+        );
       }
     } finally {
       if (epoch === this.epoch) {
@@ -160,7 +170,7 @@ export class AssistantService {
     }
     await this.ensureLoaded();
     this.active.set(null);
-    this.draft.set("");
+    this.draft.set('');
     this.draftScope.set(scope);
     return this.send(text, context);
   }
@@ -173,16 +183,23 @@ export class AssistantService {
     const epoch = this.epoch;
     this.resolving.set(resolution.messageId);
     try {
-      const next = await this.ipc.invoke<AssistantSession>("assistant_proposal_resolve", { sessionId: session.id, ...resolution });
+      const next = await this.ipc.invoke<AssistantSession>('assistant_proposal_resolve', {
+        sessionId: session.id,
+        ...resolution,
+      });
       if (epoch === this.epoch && this.active()?.id === next.id) {
         this.active.set(next);
         this.upsert(summaryOf(next));
       }
-      if (resolution.status === "applied") {
+      if (resolution.status === 'applied') {
         void this.reloadReview(next, resolution.messageId).catch(this.ignoreReload.bind(this));
       }
-      const key = resolution.status === "applied" ? "assistant.toast.applied" : "assistant.toast.rejected";
-      this.toasts.show(this.languageService.translate(key, { count: resolution.itemIds.length }), resolution.status === "applied" ? "success" : "info");
+      const key =
+        resolution.status === 'applied' ? 'assistant.toast.applied' : 'assistant.toast.rejected';
+      this.toasts.show(
+        this.languageService.translate(key, { count: resolution.itemIds.length }),
+        resolution.status === 'applied' ? 'success' : 'info',
+      );
     } catch (cause) {
       if (epoch === this.epoch) {
         this.showResolveError(cause);
@@ -201,13 +218,13 @@ export class AssistantService {
     }
     if (granted) {
       await this.dialogs.ask({
-        title: this.languageService.translate("assistant.edit.confirm.title"),
-        eyebrow: this.languageService.translate("assistant.cap"),
-        closeLabel: this.languageService.translate("assistant.dialog.close"),
-        items: [{ name: session.title, meta: this.scopeLabel(session.scope), icon: "pen" }],
-        warning: this.languageService.translate("assistant.edit.confirm.warn"),
-        confirmLabel: this.languageService.translate("assistant.edit.confirm.ok"),
-        confirmIcon: "pen",
+        title: this.languageService.translate('assistant.edit.confirm.title'),
+        eyebrow: this.languageService.translate('assistant.cap'),
+        closeLabel: this.languageService.translate('assistant.dialog.close'),
+        items: [{ name: session.title, meta: this.scopeLabel(session.scope), icon: 'pen' }],
+        warning: this.languageService.translate('assistant.edit.confirm.warn'),
+        confirmLabel: this.languageService.translate('assistant.edit.confirm.ok'),
+        confirmIcon: 'pen',
         onConfirm: this.permit.bind(this, session.id, true),
       });
       return;
@@ -215,13 +232,13 @@ export class AssistantService {
     try {
       await this.permit(session.id, false);
     } catch (cause) {
-      this.toasts.show(cause instanceof Error ? cause.message : String(cause), "danger");
+      this.toasts.show(cause instanceof Error ? cause.message : String(cause), 'danger');
     }
   }
 
   async send(text: string, context: AssistantContext | null = null): Promise<boolean> {
     const body = text.trim();
-    if (body === "" || this.sending()) {
+    if (body === '' || this.sending()) {
       return false;
     }
     const epoch = this.epoch;
@@ -229,10 +246,15 @@ export class AssistantService {
     this.sendError.set(null);
     this.pendingText.set(body);
     this.liveActivities.set([]);
-    this.view.set("chat");
+    this.view.set('chat');
     try {
       const session = this.active() ?? (await this.create());
-      const next = await this.ipc.invoke<AssistantSession>("assistant_message_send", { sessionId: session.id, text: body, context, onEvent: this.ipc.channel<AssistantEvent>(this.onEvent.bind(this)) });
+      const next = await this.ipc.invoke<AssistantSession>('assistant_message_send', {
+        sessionId: session.id,
+        text: body,
+        context,
+        onEvent: this.ipc.channel<AssistantEvent>(this.onEvent.bind(this)),
+      });
       if (epoch === this.epoch && this.active()?.id === next.id) {
         this.active.set(next);
         this.upsert(summaryOf(next));
@@ -242,7 +264,7 @@ export class AssistantService {
       if (epoch === this.epoch) {
         this.sendError.set(toNovelError(cause).detail);
         if (this.active() === null) {
-          this.view.set("start");
+          this.view.set('start');
         }
       }
       return false;
@@ -265,27 +287,36 @@ export class AssistantService {
       return Promise.resolve(false);
     }
     return this.dialogs.ask({
-      title: this.languageService.translate("assistant.delete.title"),
-      eyebrow: this.languageService.translate("assistant.cap"),
-      closeLabel: this.languageService.translate("assistant.dialog.close"),
-      items: [{ name: session.title, meta: this.languageService.translate("assistant.delete.meta", { scope: this.scopeLabel(session.scope), count: session.messageCount }), icon: "spark" }],
-      warning: this.languageService.translate("assistant.delete.warn"),
-      confirmLabel: this.languageService.translate("assistant.delete.confirm"),
-      confirmIcon: "trash",
+      title: this.languageService.translate('assistant.delete.title'),
+      eyebrow: this.languageService.translate('assistant.cap'),
+      closeLabel: this.languageService.translate('assistant.dialog.close'),
+      items: [
+        {
+          name: session.title,
+          meta: this.languageService.translate('assistant.delete.meta', {
+            scope: this.scopeLabel(session.scope),
+            count: session.messageCount,
+          }),
+          icon: 'spark',
+        },
+      ],
+      warning: this.languageService.translate('assistant.delete.warn'),
+      confirmLabel: this.languageService.translate('assistant.delete.confirm'),
+      confirmIcon: 'trash',
       onConfirm: this.remove.bind(this, session),
     });
   }
 
   scopeLabel(scope: AssistantScope): string {
-    if (scope.kind === "workspace" || scope.novelId === null) {
-      return this.languageService.translate("assistant.scope.workspace");
+    if (scope.kind === 'workspace' || scope.novelId === null) {
+      return this.languageService.translate('assistant.scope.workspace');
     }
     const novel = this.novels.novelById(scope.novelId);
     return novel ? displayName(novel) : `#${scope.novelId}`;
   }
 
   scopeIcon(scope: AssistantScope): string {
-    return scope.kind === "novel" ? "book" : "globe";
+    return scope.kind === 'novel' ? 'book' : 'globe';
   }
 
   reset(): void {
@@ -302,13 +333,13 @@ export class AssistantService {
     this.sendError.set(null);
     this.resolving.set(null);
     this.permitting.set(false);
-    this.draft.set("");
+    this.draft.set('');
     this.draftScope.set(WORKSPACE_SCOPE);
-    this.view.set("start");
+    this.view.set('start');
   }
 
   private onEvent(event: AssistantEvent): void {
-    if (event.kind === "activity") {
+    if (event.kind === 'activity') {
       this.liveActivities.update(this.withLabel.bind(this, event.label));
     } else {
       void this.refresh(event);
@@ -316,14 +347,14 @@ export class AssistantService {
   }
 
   private async refresh(change: AssistantChange): Promise<void> {
-    if (change.target === "novel") {
+    if (change.target === 'novel') {
       await this.novels.load();
-    } else if (change.target === "chapter") {
+    } else if (change.target === 'chapter') {
       await this.novels.loadChapters(change.novelId);
       if (change.chapterId !== null) {
         await this.reader.invalidate(change.novelId, change.chapterId);
       }
-    } else if (change.target === "translation") {
+    } else if (change.target === 'translation') {
       if (change.translationTarget !== null) {
         await this.translation.load(change.novelId, change.translationTarget as TargetLang);
       }
@@ -334,8 +365,8 @@ export class AssistantService {
 
   private showResolveError(cause: unknown): void {
     const error = toNovelError(cause);
-    const key = error.code === "conflict" ? "assistant.error.conflict" : "assistant.error.resolve";
-    this.toasts.show(this.languageService.translate(key, { detail: error.detail }), "danger");
+    const key = error.code === 'conflict' ? 'assistant.error.conflict' : 'assistant.error.resolve';
+    this.toasts.show(this.languageService.translate(key, { detail: error.detail }), 'danger');
   }
 
   private ignoreReload(): void {
@@ -344,12 +375,12 @@ export class AssistantService {
 
   private async reloadReview(session: AssistantSession, messageId: string): Promise<void> {
     const message = session.messages.find((item) => item.id === messageId);
-    const review = message?.attachments?.find((item) => item.kind === "translation_review");
-    if (review?.kind === "translation_review" && session.scope.novelId !== null) {
+    const review = message?.attachments?.find((item) => item.kind === 'translation_review');
+    if (review?.kind === 'translation_review' && session.scope.novelId !== null) {
       await this.translation.load(session.scope.novelId, review.target as TargetLang);
     }
-    const changes = message?.attachments?.find((item) => item.kind === "knowledge_changes");
-    if (changes?.kind === "knowledge_changes" && changes.status === "applied") {
+    const changes = message?.attachments?.find((item) => item.kind === 'knowledge_changes');
+    if (changes?.kind === 'knowledge_changes' && changes.status === 'applied') {
       const novelId = changes.novelId ?? session.scope.novelId;
       if (novelId !== null && changes.lang !== undefined) {
         await this.knowledge.load(novelId, changes.lang as KnowledgeLang);
@@ -361,7 +392,10 @@ export class AssistantService {
     const epoch = this.epoch;
     this.permitting.set(true);
     try {
-      const next = await this.ipc.invoke<AssistantSession>("assistant_session_permit", { id, editGranted: granted });
+      const next = await this.ipc.invoke<AssistantSession>('assistant_session_permit', {
+        id,
+        editGranted: granted,
+      });
       if (epoch === this.epoch) {
         if (this.active()?.id === next.id) {
           this.active.set(next);
@@ -369,7 +403,11 @@ export class AssistantService {
         this.upsert(summaryOf(next));
       }
     } catch (cause) {
-      throw new Error(this.languageService.translate("assistant.error.permit", { detail: toNovelError(cause).detail }));
+      throw new Error(
+        this.languageService.translate('assistant.error.permit', {
+          detail: toNovelError(cause).detail,
+        }),
+      );
     } finally {
       if (epoch === this.epoch) {
         this.permitting.set(false);
@@ -382,7 +420,9 @@ export class AssistantService {
   }
 
   private async create(): Promise<AssistantSession> {
-    const session = await this.ipc.invoke<AssistantSession>("assistant_session_create", { scope: this.draftScope() });
+    const session = await this.ipc.invoke<AssistantSession>('assistant_session_create', {
+      scope: this.draftScope(),
+    });
     this.active.set(session);
     this.upsert(summaryOf(session));
     return session;
@@ -390,16 +430,22 @@ export class AssistantService {
 
   private async remove(session: AssistantSessionSummary): Promise<void> {
     try {
-      await this.ipc.invoke("assistant_session_delete", { id: session.id });
+      await this.ipc.invoke('assistant_session_delete', { id: session.id });
     } catch (cause) {
-      throw new Error(this.languageService.translate("assistant.error.delete", { detail: toNovelError(cause).detail }));
+      throw new Error(
+        this.languageService.translate('assistant.error.delete', {
+          detail: toNovelError(cause).detail,
+        }),
+      );
     }
     this.items.set(this.items().filter((item) => item.id !== session.id));
     if (this.active()?.id === session.id) {
       this.active.set(null);
-      this.view.set(this.items().length > 0 ? "sessions" : "start");
+      this.view.set(this.items().length > 0 ? 'sessions' : 'start');
     }
-    this.toasts.show(this.languageService.translate("assistant.toast.deleted", { title: session.title }));
+    this.toasts.show(
+      this.languageService.translate('assistant.toast.deleted', { title: session.title }),
+    );
   }
 
   private upsert(summary: AssistantSessionSummary): void {

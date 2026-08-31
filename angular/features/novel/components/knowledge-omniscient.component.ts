@@ -1,15 +1,17 @@
-import { Component, computed, inject } from "@angular/core";
-import { Icon } from "@components/icon";
-import { SegmentOption, Segments } from "@components/segments";
-import { Slider } from "@components/slider";
-import { CoreModule } from "@core/core.module";
-import { LanguageService } from "@core/language/language.service";
-import { TabsService } from "@layout/tabs.service";
-import { KnowledgeView } from "../novel.knowledge.models";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { ChapterRow, NovelSummary } from "../novel.models";
-import { NovelService } from "../novel.service";
-import { displayName } from "../novel.rules";
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Icon } from '@components/icon';
+import { SegmentOption, Segments } from '@components/segments';
+import { Slider } from '@components/slider';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageService } from '@shared/language/language.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { KnowledgeView } from '../novel.knowledge.models';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+import { ChapterRow, NovelSummary } from '../novel.models';
+import { displayName } from '../novel.rules';
+import { NovelService } from '../novel.service';
 
 export interface OmniscientTick {
   seq: number;
@@ -19,13 +21,11 @@ export interface OmniscientTick {
   title: string;
 }
 
-type OmniscientMode = "omniscient" | "chapter";
-
 @Component({
-  selector: "app-novel-omniscient",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-omniscient',
   imports: [Icon, Segments, Slider, CoreModule],
-  templateUrl: "./knowledge-omniscient.component.html",
+  templateUrl: './knowledge-omniscient.component.html',
 })
 export class NovelOmniscient {
   private readonly tabs = inject(TabsService);
@@ -47,13 +47,16 @@ export class NovelOmniscient {
   }
 
   titleOf(row: ChapterRow): string {
-    return this.languageService.translate("novel.knowledge.omniscient.chapter", { n: row.seq, title: row.title });
+    return this.languageService.translate('novel.knowledge.omniscient.chapter', {
+      n: row.seq,
+      title: row.title,
+    });
   }
 
   onMode(value: string): void {
     const id = this.novelId();
     if (id !== null) {
-      this.knowledge.patchView(id, { spoiler: value === "chapter", upTo: this.cursor() });
+      this.knowledge.patchView(id, { spoiler: value === 'chapter', upTo: this.cursor() });
     }
   }
 
@@ -62,7 +65,7 @@ export class NovelOmniscient {
   }
 
   onSelect(event: Event): void {
-    this.setUpTo(Number((event.target as HTMLSelectElement).value));
+    this.setUpTo(Number(fieldValue(event)));
   }
 
   step(delta: number): void {
@@ -76,13 +79,15 @@ export class NovelOmniscient {
   private setUpTo(value: number): void {
     const id = this.novelId();
     if (id !== null) {
-      this.knowledge.patchView(id, { upTo: Math.min(Math.max(1, Math.round(value)), Math.max(1, this.total())) });
+      this.knowledge.patchView(id, {
+        upTo: Math.min(Math.max(1, Math.round(value)), Math.max(1, this.total())),
+      });
     }
   }
 
   private buildNovelId(): number | null {
     const tab = this.tabs.active();
-    return tab.kind === "knowledge" ? tab.novelId : null;
+    return tab.kind === 'knowledge' ? tab.novelId : null;
   }
 
   private findNovel(): NovelSummary | null {
@@ -110,8 +115,14 @@ export class NovelOmniscient {
 
   private buildModes(): SegmentOption[] {
     return [
-      { value: "omniscient", label: this.languageService.translate("novel.knowledge.omniscient.mode.omniscient") },
-      { value: "chapter", label: this.languageService.translate("novel.knowledge.omniscient.mode.chapter") },
+      {
+        value: 'omniscient',
+        label: this.languageService.translate('novel.knowledge.omniscient.mode.omniscient'),
+      },
+      {
+        value: 'chapter',
+        label: this.languageService.translate('novel.knowledge.omniscient.mode.chapter'),
+      },
     ];
   }
 
@@ -120,7 +131,12 @@ export class NovelOmniscient {
     const analyzed = id === null ? {} : this.knowledge.of(id).analyzed;
     const spoiler = this.view().spoiler;
     const cursor = this.cursor();
-    return this.chapters().map((row) => ({ seq: row.seq, analyzed: analyzed[row.seq] !== undefined, hidden: spoiler && row.seq > cursor, cursor: spoiler && row.seq === cursor, title: this.titleOf(row) }));
+    return this.chapters().map((row) => ({
+      seq: row.seq,
+      analyzed: analyzed[row.seq] !== undefined,
+      hidden: spoiler && row.seq > cursor,
+      cursor: spoiler && row.seq === cursor,
+      title: this.titleOf(row),
+    }));
   }
-
 }

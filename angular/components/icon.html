@@ -1,1 +1,11 @@
-<svg class="ic" data-testid="icon" [style.width.px]="size" [style.height.px]="size" [attr.role]="label ? 'img' : null" [attr.aria-label]="label || null" [attr.aria-hidden]="label ? null : 'true'"><use [attr.href]="'/assets/icons.svg#i-' + name" /></svg>
+<svg
+  class="ic"
+  data-testid="icon"
+  [style.width.px]="size()"
+  [style.height.px]="size()"
+  [attr.role]="label() ? 'img' : null"
+  [attr.aria-label]="label() || null"
+  [attr.aria-hidden]="label() ? null : 'true'"
+>
+  <use [attr.href]="'/assets/icons.svg#i-' + name()" />
+</svg>

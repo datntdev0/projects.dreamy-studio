@@ -1,47 +1,48 @@
-import { NgClass } from "@angular/common";
-import { Component, OnDestroy, computed, effect, inject, input, signal, untracked } from "@angular/core";
-import { LanguageKey } from "@core/language/language.models";
-import { LanguageService } from "@core/language/language.service";
-import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from "@components/datatable";
-import { Icon } from "@components/icon";
-import { CoreModule } from "@core/core.module";
-import { ToastService } from "@core/toast/toast.service";
-import { NovelDialogsService } from "../novel.dialogs.service";
-import { NovelConfirmService } from "../novel.confirm.service";
-import { AnalysisStatus, ChapterRow, TargetLang, TranslationStatus } from "../novel.models";
-import { NovelSummary } from "../novel.models";
-import { NovelReaderService } from "../novel.reader.service";
-import { NovelTranslationService } from "../novel.translation.service";
-import { NovelService } from "../novel.service";
-import { NovelKnowledgeService } from "../novel.knowledge.service";
-import { displayName } from "../novel.rules";
-import { matchesChapter } from "../novel.rules";
-import { formatCount } from "../novel.rules";
-import { isChapterLocked } from "../novel.rules";
-import { toNovelError } from "../novel.rules";
-import { Cover } from "@components/cover";
-import { NovelLangSwitch } from "./lang-switch.component";
-import { NovelProgressFrac } from "./progress-frac.component";
+import { NgClass } from '@angular/common';
+// prettier-ignore
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, OnDestroy, signal, untracked } from '@angular/core';
+import { Cover } from '@components/cover';
+// prettier-ignore
+import { Datatable, DatatableAction, DatatableCell, DatatableColumn, DatatableEmpty, DatatableRowEvent } from '@components/datatable';
+import { Icon } from '@components/icon';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
+import { fieldValue } from '@shared/utils/dom';
+
+import { NovelConfirmService } from '../novel.confirm.service';
+import { NovelDialogsService } from '../novel.dialogs.service';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+// prettier-ignore
+import { AnalysisStatus, ChapterRow, NovelSummary, TargetLang, TranslationStatus } from '../novel.models';
+import { NovelReaderService } from '../novel.reader.service';
+// prettier-ignore
+import { displayName, formatCount, isChapterLocked, matchesChapter, toNovelError } from '../novel.rules';
+import { NovelService } from '../novel.service';
+import { NovelTranslationService } from '../novel.translation.service';
+import { NovelLangSwitch } from './lang-switch.component';
+import { NovelProgressFrac } from './progress-frac.component';
 
 const DRAG_THRESHOLD = 5;
 
 type StatusView = { tone: string; title: LanguageKey };
 
 const TRANSLATION_VIEWS: Record<TranslationStatus, StatusView> = {
-  none: { tone: "none", title: "novel.chapters.translation.none" },
-  done: { tone: "success", title: "novel.chapters.translation.done" },
-  queued: { tone: "queued", title: "novel.chapters.translation.queued" },
-  running: { tone: "running", title: "novel.chapters.translation.running" },
+  none: { tone: 'none', title: 'novel.chapters.translation.none' },
+  done: { tone: 'success', title: 'novel.chapters.translation.done' },
+  queued: { tone: 'queued', title: 'novel.chapters.translation.queued' },
+  running: { tone: 'running', title: 'novel.chapters.translation.running' },
 };
 
 const ANALYSIS_VIEWS: Record<AnalysisStatus, StatusView> = {
-  none: { tone: "none", title: "novel.chapters.analysis.none" },
-  done: { tone: "info", title: "novel.chapters.analysis.done" },
-  stale: { tone: "warning", title: "novel.chapters.analysis.stale" },
-  running: { tone: "running", title: "novel.chapters.analysis.running" },
+  none: { tone: 'none', title: 'novel.chapters.analysis.none' },
+  done: { tone: 'info', title: 'novel.chapters.analysis.done' },
+  stale: { tone: 'warning', title: 'novel.chapters.analysis.stale' },
+  running: { tone: 'running', title: 'novel.chapters.analysis.running' },
 };
 
-type DropSide = "before" | "after";
+type DropSide = 'before' | 'after';
 
 interface DropTarget {
   id: string;
@@ -49,10 +50,20 @@ interface DropTarget {
 }
 
 @Component({
-  selector: "app-novel-chapters",
-  standalone: true,
-  imports: [NgClass, Datatable, DatatableCell, DatatableEmpty, Icon, CoreModule, Cover, NovelLangSwitch, NovelProgressFrac],
-  templateUrl: "./chapters.component.html",
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-novel-chapters',
+  imports: [
+    NgClass,
+    Datatable,
+    DatatableCell,
+    DatatableEmpty,
+    Icon,
+    CoreModule,
+    Cover,
+    NovelLangSwitch,
+    NovelProgressFrac,
+  ],
+  templateUrl: './chapters.component.html',
 })
 export class NovelChapters implements OnDestroy {
   private readonly novels = inject(NovelService);
@@ -88,27 +99,56 @@ export class NovelChapters implements OnDestroy {
     const id = this.chapterOf(row).id;
     const drop = this.dropTarget();
     return {
-      "is-current": this.resumeSeq() === this.chapterOf(row).seq,
-      "is-reorderable": this.canMove(this.chapterOf(row)),
-      "is-dragging": this.dragId() === id,
-      "is-drop-before": drop?.id === id && drop.side === "before",
-      "is-drop-after": drop?.id === id && drop.side === "after",
+      'is-current': this.resumeSeq() === this.chapterOf(row).seq,
+      'is-reorderable': this.canMove(this.chapterOf(row)),
+      'is-dragging': this.dragId() === id,
+      'is-drop-before': drop?.id === id && drop.side === 'before',
+      'is-drop-after': drop?.id === id && drop.side === 'after',
     };
   };
 
   readonly tableActions = (): DatatableAction[] => {
     return [
-      { key: "add", label: this.languageService.translate("novel.chapters.add"), icon: "plus", handler: this.add.bind(this) },
-      { key: "delete", label: this.languageService.translate("novel.chapters.delete"), icon: "trash", danger: true, handler: this.removeRow.bind(this) },
+      {
+        key: 'add',
+        label: this.languageService.translate('novel.chapters.add'),
+        icon: 'plus',
+        handler: this.add.bind(this),
+      },
+      {
+        key: 'delete',
+        label: this.languageService.translate('novel.chapters.delete'),
+        icon: 'trash',
+        danger: true,
+        handler: this.removeRow.bind(this),
+      },
     ];
   };
 
   get tableColumns(): DatatableColumn[] {
     return [
-      { key: "seq", label: this.languageService.translate("novel.chapters.col.number"), width: "56px" },
-      { key: "title", label: this.languageService.translate("novel.chapters.col.title"), ellipsis: true },
-      { key: "wordCount", label: this.languageService.translate("novel.chapters.col.words"), align: "right", width: "80px" },
-      { key: "status", label: this.languageService.translate("novel.chapters.col.status"), align: "center", width: "96px" },
+      {
+        key: 'seq',
+        label: this.languageService.translate('novel.chapters.col.number'),
+        width: '56px',
+      },
+      {
+        key: 'title',
+        label: this.languageService.translate('novel.chapters.col.title'),
+        ellipsis: true,
+      },
+      {
+        key: 'wordCount',
+        label: this.languageService.translate('novel.chapters.col.words'),
+        align: 'right',
+        width: '80px',
+      },
+      {
+        key: 'status',
+        label: this.languageService.translate('novel.chapters.col.status'),
+        align: 'center',
+        width: '96px',
+      },
     ];
   }
 
@@ -123,11 +163,11 @@ export class NovelChapters implements OnDestroy {
   }
 
   numberOf(row: ChapterRow): string {
-    return String(row.seq).padStart(2, "0");
+    return String(row.seq).padStart(2, '0');
   }
 
   onQuery(event: Event): void {
-    this.novels.setChapterQuery((event.target as HTMLInputElement).value);
+    this.novels.setChapterQuery(fieldValue(event));
   }
 
   read(): void {
@@ -139,7 +179,11 @@ export class NovelChapters implements OnDestroy {
   }
 
   isUntranslated(row: ChapterRow): boolean {
-    return this.translated() && this.translation.titleOf(this.novelId(), row.id, this.reader.readerTarget(this.novelId())) === null;
+    return (
+      this.translated() &&
+      this.translation.titleOf(this.novelId(), row.id, this.reader.readerTarget(this.novelId())) ===
+        null
+    );
   }
 
   open(seq: number): void {
@@ -159,7 +203,9 @@ export class NovelChapters implements OnDestroy {
   }
 
   translationView(row: ChapterRow): StatusView {
-    return TRANSLATION_VIEWS[this.translation.statusOf(this.novelId(), row.id, this.reader.readerTarget(this.novelId()))];
+    return TRANSLATION_VIEWS[
+      this.translation.statusOf(this.novelId(), row.id, this.reader.readerTarget(this.novelId()))
+    ];
   }
 
   analysisView(row: ChapterRow): StatusView {
@@ -175,13 +221,17 @@ export class NovelChapters implements OnDestroy {
   onPointerDown(event: DatatableRowEvent): void {
     const pointer = event.event as PointerEvent;
     const row = this.chapterOf(event.row);
-    if (pointer.button !== 0 || !this.canMove(row) || (pointer.target as Element).closest("button")) {
+    if (
+      pointer.button !== 0 ||
+      !this.canMove(row) ||
+      (pointer.target as Element).closest('button')
+    ) {
       return;
     }
     this.pressed = { id: row.id, y: pointer.clientY };
-    document.addEventListener("pointermove", this.moveListener);
-    document.addEventListener("pointerup", this.releaseListener);
-    document.addEventListener("pointercancel", this.releaseListener);
+    document.addEventListener('pointermove', this.moveListener);
+    document.addEventListener('pointerup', this.releaseListener);
+    document.addEventListener('pointercancel', this.releaseListener);
   }
 
   ngOnDestroy(): void {
@@ -206,7 +256,7 @@ export class NovelChapters implements OnDestroy {
       await this.reader.moveChapter(this.novelId(), row.id, toSeq);
     } catch (cause) {
       const detail = toNovelError(cause).detail;
-      this.toasts.show(this.languageService.translate("novel.error.generic", { detail }), "danger");
+      this.toasts.show(this.languageService.translate('novel.error.generic', { detail }), 'danger');
     }
   }
 
@@ -239,19 +289,19 @@ export class NovelChapters implements OnDestroy {
   private dropRow(dragged: ChapterRow, drop: DropTarget): void {
     const target = this.rowById(drop.id);
     if (target) {
-      const before = drop.side === "after" ? target.seq + 1 : target.seq;
+      const before = drop.side === 'after' ? target.seq + 1 : target.seq;
       void this.moveTo(dragged, before > dragged.seq ? before - 1 : before);
     }
   }
 
   private targetAt(x: number, y: number): DropTarget | null {
-    const element = document.elementFromPoint(x, y)?.closest("tr[data-row-key]");
-    const target = element ? this.rowById(element.getAttribute("data-row-key") ?? "") : null;
+    const element = document.elementFromPoint(x, y)?.closest('tr[data-row-key]');
+    const target = element ? this.rowById(element.getAttribute('data-row-key') ?? '') : null;
     if (!element || !target || target.id === this.dragId() || !this.canMove(target)) {
       return null;
     }
     const bounds = element.getBoundingClientRect();
-    return { id: target.id, side: y > bounds.top + bounds.height / 2 ? "after" : "before" };
+    return { id: target.id, side: y > bounds.top + bounds.height / 2 ? 'after' : 'before' };
   }
 
   private rowById(id: string): ChapterRow | null {
@@ -269,9 +319,9 @@ export class NovelChapters implements OnDestroy {
 
   private stopTracking(): void {
     this.pressed = null;
-    document.removeEventListener("pointermove", this.moveListener);
-    document.removeEventListener("pointerup", this.releaseListener);
-    document.removeEventListener("pointercancel", this.releaseListener);
+    document.removeEventListener('pointermove', this.moveListener);
+    document.removeEventListener('pointerup', this.releaseListener);
+    document.removeEventListener('pointercancel', this.releaseListener);
   }
 
   private clearDrag(): void {
@@ -280,7 +330,7 @@ export class NovelChapters implements OnDestroy {
   }
 
   private buildFiltered(): boolean {
-    return this.novels.chapterQuery().trim() !== "";
+    return this.novels.chapterQuery().trim() !== '';
   }
 
   private findNovel(): NovelSummary | null {
@@ -292,14 +342,17 @@ export class NovelChapters implements OnDestroy {
   }
 
   private buildTranslated(): boolean {
-    return this.reader.viewOf(this.novelId()).lang !== "src";
+    return this.reader.viewOf(this.novelId()).lang !== 'src';
   }
 
   private buildRows(): ChapterRow[] {
     const query = this.novels.chapterQuery();
     const out: ChapterRow[] = [];
     for (const row of this.all()) {
-      if (matchesChapter(row, query) || (this.translated() && matchesChapter({ ...row, title: this.titleOf(row) }, query))) {
+      if (
+        matchesChapter(row, query) ||
+        (this.translated() && matchesChapter({ ...row, title: this.titleOf(row) }, query))
+      ) {
         out.push(row);
       }
     }
@@ -311,16 +364,21 @@ export class NovelChapters implements OnDestroy {
   }
 
   private buildTranslatedCount(): number {
-    return Object.keys(this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).chapters).length;
+    return Object.keys(
+      this.translation.of(this.novelId(), this.reader.readerTarget(this.novelId())).chapters,
+    ).length;
   }
 
   private buildAnalyzedCount(): number {
-    return this.knowledge.analyzedSeqCountOf(this.novelId(), this.all().map((row) => row.seq));
+    return this.knowledge.analyzedSeqCountOf(
+      this.novelId(),
+      this.all().map((row) => row.seq),
+    );
   }
 
   private buildCover(): string {
     const novel = this.novel();
-    return novel ? (this.novels.coverUrl(novel) ?? "") : "";
+    return novel ? (this.novels.coverUrl(novel) ?? '') : '';
   }
 
   private syncTranslation(): void {

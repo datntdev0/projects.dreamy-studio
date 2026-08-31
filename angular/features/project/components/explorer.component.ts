@@ -1,24 +1,28 @@
-import { Component, computed, inject, signal } from "@angular/core";
-import { Icon } from "@components/icon";
-import { LanguageKey } from "@core/language/language.models";
-import { CoreModule } from "@core/core.module";
-import { projectTabId } from "@layout/layout.models";
-import { TabsService } from "@layout/tabs.service";
-import { ProjectLabels } from "../project.labels";
-import { ProjectStatus, ProjectSummary, ProjectTemplateId } from "../project.models";
-import { ProjectService } from "../project.service";
-import { ProjectTree } from "./tree.component";
-import { ProjectThumb } from "./thumb.component";
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Icon } from '@components/icon';
+import { projectTabId } from '@layout/layout.models';
+import { TabsService } from '@layout/tabs.service';
+import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
+
+import { ProjectLabels } from '../project.labels';
+import { ProjectStatus, ProjectSummary, ProjectTemplateId } from '../project.models';
+import { ProjectService } from '../project.service';
+import { ProjectThumb } from './thumb.component';
+import { ProjectTree } from './tree.component';
 
 function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
-  return Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  return (
+    Number(a.archived) - Number(b.archived) ||
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  );
 }
 
 @Component({
-  selector: "app-project-explorer",
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-project-explorer',
   imports: [Icon, CoreModule, ProjectTree, ProjectThumb],
-  templateUrl: "./explorer.component.html",
+  templateUrl: './explorer.component.html',
 })
 export class ProjectExplorer {
   readonly projects = inject(ProjectService);
@@ -63,7 +67,7 @@ export class ProjectExplorer {
     const key = this.projectRootKey(project);
     this.projects.toggleExpanded(key);
     if (this.projects.isExpanded(key)) {
-      void this.projects.ensureDir(project.id, "");
+      void this.projects.ensureDir(project.id, '');
     }
   }
 
@@ -86,15 +90,15 @@ export class ProjectExplorer {
   }
 
   onKeydown(project: ProjectSummary, event: KeyboardEvent): void {
-    if (event.key === "ArrowRight" && !this.isExpanded(project)) {
+    if (event.key === 'ArrowRight' && !this.isExpanded(project)) {
       event.preventDefault();
       this.toggle(project);
     }
-    if (event.key === "ArrowLeft" && this.isExpanded(project)) {
+    if (event.key === 'ArrowLeft' && this.isExpanded(project)) {
       event.preventDefault();
       this.toggle(project);
     }
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.open(project);
     }

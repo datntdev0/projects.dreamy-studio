@@ -1,0 +1,6 @@
+_output/
+desktop/binaries/
+desktop/resources/
+desktop/gen/
+node_modules/
+**/node_modules/

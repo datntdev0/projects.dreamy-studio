@@ -12,6 +12,9 @@
         "**/desktop/gen/": true,
         "**/node_modules": true,
         "**/.DS_Store": true,
-        "**/Thumbs.db": true
+        "**/Thumbs.db": true,
+        "**.ruff_cache": true,
+        "desktop/binaries": true,
+        "desktop/resources": true
     }
 }

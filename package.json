@@ -17,14 +17,27 @@
     "story:build": "pnpm --filter dreamy-studio-angular run story:build",
     "angular:test": "pnpm --filter dreamy-studio-angular run test",
     "coverage:desktop": "node _scripts/coverage_desktop.mjs",
-    "coverage:angular": "node _scripts/coverage_angular.mjs"
+    "coverage:angular": "node _scripts/coverage_angular.mjs",
+    "format": "node _scripts/format.mjs",
+    "format:fix": "node _scripts/format.mjs --fix",
+    "lint": "node _scripts/lint.mjs",
+    "lint:fix": "node _scripts/lint.mjs --fix"
   },
   "private": true,
   "devDependencies": {
+    "@angular-eslint/eslint-plugin": "^22.8.0",
+    "@angular-eslint/eslint-plugin-template": "^22.8.0",
+    "@angular-eslint/template-parser": "^22.8.0",
+    "@eslint/js": "^9.39.5",
     "@tauri-apps/cli": "^2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
+    "prettier": "^3.10.1",
+    "typescript-eslint": "^8.73.0",
     "yaml": "^2"
   },
   "packageManager": "pnpm@12.16.1"

@@ -45,15 +45,7 @@ export const test = providerTest.extend({
   },
 });
 
-export const NAV_LABELS = [
-  'General',
-  'LLM providers',
-  'Python backend',
-  'Local TTS models',
-  'Speech providers',
-];
-export const SECTION_PENDING =
-  'There is nothing to configure here yet. It will be added in a later version.';
+export const NAV_LABELS = ['General', 'LLM providers', 'Local backend', 'Cloud providers'];
 export const OPEN_FAILED = 'Could not open the folder.';
 export const TITLE_EN = 'Settings';
 export const TITLE_VI = 'Cài đặt';

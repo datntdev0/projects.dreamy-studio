@@ -1,0 +1,21 @@
+<button
+  type="button"
+  class="lb-pbtn"
+  [class.is-sm]="size() === 'sm'"
+  [class.is-lg]="size() === 'lg'"
+  [disabled]="disabled()"
+  [attr.title]="disabled() ? hint() : null"
+  [attr.aria-label]="label() | t"
+  data-testid="library-voice-play-button"
+  (click)="toggle($event)"
+  (dblclick)="isolate($event)"
+  (keydown.enter)="isolate($event)"
+  (keydown.space)="isolate($event)"
+>
+  <ds-icon
+    [class.is-solid]="!isPlaying()"
+    [name]="isPlaying() ? 'pause' : 'play'"
+    [size]="iconSize()"
+    data-testid="library-voice-play-icon"
+  />
+</button>

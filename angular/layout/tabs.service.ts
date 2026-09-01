@@ -2,7 +2,7 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 
 // prettier-ignore
-import { COLLECTIONS_TAB, collectionTab, collectionTabId, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, novelTab, novelTabId, NovelToolKind, novelToolTab, novelToolTabId, PIPELINES_TAB, PROJECTS_TAB, projectTab, projectTabId, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB } from './layout.models';
+import { COLLECTIONS_TAB, collectionTab, collectionTabId, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, novelTab, novelTabId, NovelToolKind, novelToolTab, novelToolTabId, PIPELINES_TAB, PROJECTS_TAB, projectTab, projectTabId, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, VOICES_TAB } from './layout.models';
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -56,6 +56,10 @@ export class TabsService {
 
   openPrompts(): void {
     this.open(PROMPTS_TAB);
+  }
+
+  openVoices(): void {
+    this.open(VOICES_TAB);
   }
 
   openCollections(): void {

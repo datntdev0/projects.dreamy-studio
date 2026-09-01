@@ -4,6 +4,7 @@ import { AssetRights, KindCounts, LibraryCollection, LibraryKind, LibrarySummary
 import { LibraryPrompt, PromptKind } from '@features/library/library.prompts.models';
 import { LibrarySound } from '@features/library/library.sounds.models';
 import { LibraryVideo } from '@features/library/library.videos.models';
+import { LibraryVoice, VoiceInput, VoiceReference } from '@features/library/library.voices.models';
 import type { Decorator } from '@storybook/angular-vite';
 
 import { baseHandlers, IpcHandlers, withScreen } from './screen.mocks';
@@ -23,6 +24,7 @@ interface LibraryData {
   sounds: LibrarySound[];
   videos: LibraryVideo[];
   prompts: LibraryPrompt[];
+  voices: LibraryVoice[];
 }
 
 interface AssetBase {
@@ -144,6 +146,85 @@ function prompt(
   return { id, name, kind, text, size: text.length, ...base(id, collectionId, tags) };
 }
 
+const SAMPLE_TEXT = 'The lamp keeper climbed the stairs as the tide rolled in beneath the harbor.';
+const SAMPLE_DURATION_MS = 4_200;
+
+function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
+  return {
+    id,
+    name: '',
+    description: '',
+    engine: 'vieneu-turbo',
+    engineKind: 'local',
+    source: 'preset',
+    language: 'vi',
+    gender: 'female',
+    preset: 'narrator-warm',
+    referenceSoundId: null,
+    referenceName: '',
+    prompt: '',
+    sampleText: SAMPLE_TEXT,
+    sampleDurationMs: SAMPLE_DURATION_MS,
+    createdAt: stamp(id),
+    updatedAt: stamp(id),
+    ...fields,
+  };
+}
+
+function voiceList(): LibraryVoice[] {
+  return [
+    voice(1, { name: 'Narrator An', description: 'Warm default narration voice.' }),
+    voice(2, {
+      name: 'Old Captain',
+      description: 'Gruff harbor captain cloned from the harbor ambience recording.',
+      gender: 'male',
+      source: 'clone',
+      preset: null,
+      referenceSoundId: 1,
+      referenceName: 'harbor-ambience.wav',
+    }),
+    voice(3, {
+      name: 'Lantern Keeper',
+      engine: 'omnivoice',
+      language: 'en',
+      gender: 'neutral',
+      source: 'design',
+      preset: null,
+      prompt: 'A quiet, weathered voice that sounds like it has told the same story for decades.',
+      sampleDurationMs: 5_600,
+    }),
+    voice(4, {
+      name: 'Mira',
+      engine: 'edge-read-aloud',
+      engineKind: 'cloud',
+      language: 'en',
+      preset: 'narrator-bright',
+      sampleDurationMs: 3_100,
+    }),
+    voice(5, {
+      name: 'Storyteller Bao',
+      description: 'Deep storyteller for fireside chapters.',
+      engine: 'vieneu-nano',
+      gender: 'male',
+      source: 'clone',
+      preset: null,
+      referenceName: 'storyteller-reference.wav',
+      sampleDurationMs: 6_400,
+    }),
+    voice(6, {
+      name: 'Harbor Chorus',
+      engine: 'elevenlabs',
+      engineKind: 'cloud',
+      language: 'multi',
+      gender: 'neutral',
+      source: 'design',
+      preset: null,
+      prompt: 'A layered crowd of dockworkers murmuring in several languages.',
+      sampleDurationMs: null,
+    }),
+  ];
+}
+
 function libraryData(): LibraryData {
   return {
     collections: [],
@@ -166,6 +247,7 @@ function libraryData(): LibraryData {
       video(2, 'quay-timelapse.mp4', 32_000, 3, ['harbor', 'fog'], 96 * MIB),
       video(3, 'tide-rising.mp4', 12_000, null, ['tide'], 30 * MIB),
     ],
+    voices: voiceList(),
     prompts: [
       prompt(
         1,
@@ -265,11 +347,49 @@ function summaryOf(data: LibraryData): LibrarySummary {
 
 function seed(scenario: LibraryScenario): LibraryData {
   if (scenario.empty) {
-    return { collections: [], images: [], sounds: [], videos: [], prompts: [] };
+    return { collections: [], images: [], sounds: [], videos: [], prompts: [], voices: [] };
   }
   const data = libraryData();
   data.collections = collectionsOf(data);
   return data;
+}
+
+function hasSoundId(id: number, item: LibrarySound): boolean {
+  return item.id === id;
+}
+
+function referenceNameOf(data: LibraryData, reference: VoiceReference | null): string {
+  if (reference?.kind === 'sound') {
+    return data.sounds.find(hasSoundId.bind(null, reference.soundId))?.name ?? '';
+  }
+  return reference?.kind === 'file' ? reference.name : '';
+}
+
+function createVoice(data: LibraryData, input: VoiceInput): LibraryVoice {
+  const id = data.voices.reduce((highest, item) => Math.max(highest, item.id), 0) + 1;
+  const { reference, ...fields } = input;
+  const created = voice(id, {
+    ...fields,
+    referenceSoundId: reference?.kind === 'sound' ? reference.soundId : null,
+    referenceName: referenceNameOf(data, reference),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  data.voices = [created, ...data.voices];
+  return created;
+}
+
+function updateVoice(data: LibraryData, id: number, patch: Partial<LibraryVoice>): LibraryVoice {
+  const current = data.voices.find((item) => item.id === id) as LibraryVoice;
+  const updated = { ...current, ...patch, updatedAt: new Date().toISOString() };
+  data.voices = data.voices.map((item) => (item.id === id ? updated : item));
+  return updated;
+}
+
+function deleteVoices(data: LibraryData, ids: number[]): number {
+  const before = data.voices.length;
+  data.voices = data.voices.filter((item) => !ids.includes(item.id));
+  return before - data.voices.length;
 }
 
 function libraryHandlers(scenario: LibraryScenario): IpcHandlers {
@@ -290,6 +410,12 @@ function libraryHandlers(scenario: LibraryScenario): IpcHandlers {
     library_video_list: () => data.videos,
     library_video_poster: (args) => gradient(Number(args['id']) * 70, 320, 180),
     library_prompt_list: () => data.prompts,
+    library_voice_list: () => data.voices,
+    library_voice_create: (args) => createVoice(data, args['input'] as VoiceInput),
+    library_voice_update: (args) =>
+      updateVoice(data, Number(args['id']), args['patch'] as Partial<LibraryVoice>),
+    library_voice_delete: (args) => deleteVoices(data, args['ids'] as number[]),
+    library_voice_preview: () => null,
   };
 }
 

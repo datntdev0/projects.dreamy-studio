@@ -3,6 +3,7 @@ import { ComponentCase, describeComponents } from '@testing/exercise';
 import { setupWorld, warmWorld } from '@testing/world';
 
 import { SettingsService } from '../settings.service';
+import { SettingsBackend } from './backend.component';
 import { SettingsGeneral } from './general.component';
 import { SettingsLlm } from './llm.component';
 import { SettingsDialog } from './settings.dialog';
@@ -14,6 +15,7 @@ async function warm(): Promise<void> {
 const cases: ComponentCase[] = [
   { name: 'SettingsGeneral', type: SettingsGeneral, before: warm },
   { name: 'SettingsLlm', type: SettingsLlm, before: warm },
+  { name: 'SettingsBackend', type: SettingsBackend, before: warm },
   {
     name: 'SettingsDialog (general)',
     type: SettingsDialog,
@@ -39,11 +41,11 @@ const cases: ComponentCase[] = [
     },
   },
   {
-    name: 'SettingsDialog (tts)',
+    name: 'SettingsDialog (cloud)',
     type: SettingsDialog,
     before: async () => {
       await warm();
-      TestBed.inject(SettingsService).openDialog('tts');
+      TestBed.inject(SettingsService).openDialog('cloud');
     },
   },
 ];

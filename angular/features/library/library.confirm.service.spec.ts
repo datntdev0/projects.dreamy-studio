@@ -41,6 +41,10 @@ describe('LibraryConfirmService', () => {
     expect(await acceptDialog(dialogs, confirms.deleteSounds([1]))).toBe(true);
     expect(await acceptDialog(dialogs, confirms.deleteVideos([1, 2]))).toBe(true);
     expect(await acceptDialog(dialogs, confirms.deletePrompts([1]))).toBe(true);
+    expect(await confirms.deleteVoices([])).toBe(false);
+    expect(await acceptDialog(dialogs, confirms.deleteVoices([1]))).toBe(true);
+    expect(await acceptDialog(dialogs, confirms.deleteVoices([1, 2]))).toBe(true);
+    expect(ipc.called('library_voice_delete')).toBe(2);
     expect(ipc.called('library_image_delete')).toBe(2);
     expect(ipc.called('library_prompt_delete')).toBe(1);
   });

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Icon } from '@components/icon';
 import { collectionTabId } from '@layout/layout.models';
 import { TabsService } from '@layout/tabs.service';
@@ -9,6 +9,7 @@ import { LibraryCollectionAssetsService } from '../library.collection-assets.ser
 import { LibraryKind, LibraryTag } from '../library.models';
 import { sumCounts, tagsForKind } from '../library.rules';
 import { LibraryService } from '../library.service';
+import { LibraryVoiceService } from '../library.voices.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,12 +18,16 @@ import { LibraryService } from '../library.service';
   templateUrl: './explorer.component.html',
   host: { 'data-testid': 'library-explorer' },
 })
-export class LibraryExplorer {
+export class LibraryExplorer implements OnInit {
   readonly library = inject(LibraryService);
   readonly tabs = inject(TabsService);
+  readonly voices = inject(LibraryVoiceService);
   private readonly collectionAssets = inject(LibraryCollectionAssetsService);
   readonly open = signal(true);
   readonly filtersOpen = signal(true);
+  ngOnInit(): void {
+    void this.voices.ensureLoaded();
+  }
   toggle(): void {
     this.open.set(!this.open());
   }
@@ -43,6 +48,9 @@ export class LibraryExplorer {
   }
   isPromptsActive(): boolean {
     return this.tabs.isActive('prompts');
+  }
+  isVoicesActive(): boolean {
+    return this.tabs.isActive('voices');
   }
   activeKind(): LibraryKind | null {
     const active = this.tabs.activeId();
@@ -86,6 +94,9 @@ export class LibraryExplorer {
   }
   openPrompts(): void {
     this.tabs.openPrompts();
+  }
+  openVoices(): void {
+    this.tabs.openVoices();
   }
   openCollection(id: number, name: string): void {
     this.library.selectCollection(id);

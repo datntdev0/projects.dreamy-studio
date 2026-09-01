@@ -32,18 +32,10 @@
       <app-settings-general />
       } @else if (current().id === "llm") {
       <app-settings-llm />
+      } @else if (current().id === "backend") {
+      <app-settings-backend />
       } @else {
-      <div class="empty" data-testid="settings-empty">
-        <div class="empty-inner" data-testid="settings-empty-inner">
-          <div class="illus" data-testid="settings-empty-illustration"></div>
-          <h4 class="t-display-xs" data-testid="settings-empty-title">
-            {{ current().labelKey | t }}
-          </h4>
-          <p class="t-sm t-mute" data-testid="settings-empty-description">
-            {{ "settings.empty.description" | t }}
-          </p>
-        </div>
-      </div>
+      <app-settings-cloud />
       }
     </div>
   </div>

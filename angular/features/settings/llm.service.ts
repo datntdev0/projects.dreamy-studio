@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { ipcErrorMessage } from '@shared/desktop/desktop-ipc-error';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
@@ -246,9 +247,6 @@ export class LlmService {
   }
 
   private describe(error: unknown): string {
-    const cause = error instanceof Error ? (error as { cause?: unknown }).cause : error;
-    return typeof cause === 'string'
-      ? cause
-      : this.languageService.translate('settings.llm.unknownError');
+    return ipcErrorMessage(error) ?? this.languageService.translate('settings.llm.unknownError');
   }
 }

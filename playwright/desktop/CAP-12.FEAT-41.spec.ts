@@ -1,5 +1,5 @@
 // prettier-ignore
-import { closeSettings, expect, IpcSpy, NAV_LABELS, OPEN_FAILED, openGeneralTab, openSettings, openWorkspace, patchGeneral, readSettingsJson, relaunch, SECTION_PENDING, SWITCH_THEME_EN, test,TITLE_EN, TITLE_VI } from '../scripts/settings.ts';
+import { closeSettings, expect, IpcSpy, NAV_LABELS, OPEN_FAILED, openGeneralTab, openSettings, openWorkspace, patchGeneral, readSettingsJson, relaunch, SWITCH_THEME_EN, test,TITLE_EN, TITLE_VI } from '../scripts/settings.ts';
 
 const OPEN_COMMAND = 'settings_folder_open';
 
@@ -15,7 +15,7 @@ test.describe('CAP-12 Configuration', () => {
       const folder = await openWorkspace(ui, picker, sandbox);
       await expect(ui.main.settings.html).toHaveAttribute('lang', 'vi');
 
-      await test.step('lists the General, LLM providers, Python backend, Local TTS models and Speech providers sections', async () => {
+      await test.step('lists the General, LLM providers, Local backend and Cloud providers sections', async () => {
         await openSettings(ui);
         await expect(ui.main.settings.dialog.title).toHaveText(TITLE_VI);
         await expect(ui.main.settings.dialog.navItems).toHaveText(NAV_LABELS);
@@ -67,12 +67,11 @@ test.describe('CAP-12 Configuration', () => {
         await app.page.keyboard.press('Escape');
       });
 
-      await test.step('tells that sections without settings will be added in a later version', async () => {
+      await test.step('shows the Local backend and Cloud providers panes', async () => {
         await openSettings(ui, 'backend');
-        for (const section of ['backend', 'tts', 'speech'] as const) {
-          await ui.main.settings.dialog.nav(section).click();
-          await expect(ui.main.settings.dialog.emptyDescription).toHaveText(SECTION_PENDING);
-        }
+        await expect(ui.main.settings.dialog.pane('backend')).toBeVisible();
+        await ui.main.settings.dialog.nav('cloud').click();
+        await expect(ui.main.settings.dialog.pane('cloud')).toBeVisible();
       });
     });
 

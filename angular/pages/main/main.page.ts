@@ -6,6 +6,7 @@ import { LibraryPromptPreviewDialog } from '@features/library/components/prompt-
 import { LibrarySoundPreviewDialog } from '@features/library/components/sound-preview.dialog';
 import { LibraryUploadDialog } from '@features/library/components/upload.dialog';
 import { LibraryVideoPreviewDialog } from '@features/library/components/video-preview.dialog';
+import { LibraryVoiceDialog } from '@features/library/components/voice.dialog';
 import { NovelChapterAddDialog } from '@features/novel/components/chapter-add.dialog';
 import { NovelCreateDialog } from '@features/novel/components/create.dialog';
 import { NovelImportDialog } from '@features/novel/components/import.dialog';
@@ -45,6 +46,7 @@ const APP_TITLE = 'Dreamy Studio';
     LibraryVideoPreviewDialog,
     LibraryPromptPreviewDialog,
     LibraryUploadDialog,
+    LibraryVoiceDialog,
   ],
   templateUrl: './main.page.html',
 })

@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 
-export type SettingsSectionId = 'general' | 'llm' | 'backend' | 'tts' | 'speech';
+export type SettingsSectionId = 'general' | 'llm' | 'backend' | 'cloud';
 export type GeneralTab = 'interface' | 'pipelines' | 'storage';
 export type LlmTab = 'cli' | 'cloud' | 'features';
 export type LlmFeatureId = 'translation' | 'knowledge' | 'assistant';
@@ -24,14 +24,6 @@ export class SettingsDialogPage {
 
   get navItems(): Locator {
     return this.page.getByTestId('settings-nav').getByRole('button');
-  }
-
-  get emptyTitle(): Locator {
-    return this.page.getByTestId('settings-empty-title');
-  }
-
-  get emptyDescription(): Locator {
-    return this.page.getByTestId('settings-empty-description');
   }
 
   nav(id: SettingsSectionId): Locator {

@@ -28,7 +28,12 @@ describe('SettingsService', () => {
   });
 
   it('exposes static catalogs', () => {
-    expect(SETTINGS_SECTIONS.map((section) => section.id)).toContain('llm');
+    expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual([
+      'general',
+      'llm',
+      'backend',
+      'cloud',
+    ]);
     expect(CLOUD_PROVIDERS.length).toBeGreaterThan(0);
     expect(MODEL_SUGGESTIONS['claude']).toContain('opus');
   });
@@ -67,7 +72,8 @@ describe('SettingsService', () => {
     settings.openDialog('llm');
     expect(settings.open()).toBe(true);
     expect(settings.section()).toBe('llm');
-    settings.selectSection('tts');
+    settings.selectSection('cloud');
+    expect(settings.section()).toBe('cloud');
     settings.closeDialog();
     expect(settings.open()).toBe(false);
     settings.openDialog();
@@ -126,5 +132,11 @@ describe('SettingsService', () => {
     TestBed.configureTestingModule({ providers: [provideSettings()] });
     await TestBed.inject(SettingsService).load();
     expect(ipc.called('settings_get')).toBeGreaterThan(0);
+  });
+
+  it('loads the backend and cloud sections together with the general settings', async () => {
+    await settings.load();
+    expect(ipc.called('backend_status')).toBe(1);
+    expect(ipc.called('backend_model_list')).toBe(1);
   });
 });

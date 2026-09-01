@@ -7,6 +7,7 @@ import { LibraryPromptService } from '@features/library/library.prompts.service'
 import { LibraryService } from '@features/library/library.service';
 import { LibrarySoundService } from '@features/library/library.sounds.service';
 import { LibraryVideoService } from '@features/library/library.videos.service';
+import { LibraryVoiceService } from '@features/library/library.voices.service';
 import { WireKnowledge } from '@features/novel/novel.knowledge.models';
 import { NovelKnowledgeService } from '@features/novel/novel.knowledge.service';
 import { ChapterRow, ParagraphRow } from '@features/novel/novel.models';
@@ -22,7 +23,7 @@ import { DialogService } from '@shared/dialog/dialog.service';
 
 import { FakeIpc, provideFakeIpc } from './fake-ipc';
 // prettier-ignore
-import { chapter, libraryCollection, libraryImage, libraryPrompt, librarySound, libraryVideo, novel, pipeline, project, session, task } from './fixtures';
+import { chapter, libraryCollection, libraryImage, libraryPrompt, librarySound, libraryVideo, libraryVoice, novel, pipeline, project, session, task } from './fixtures';
 import { entity, fact, ONTOLOGY_VIEW } from './knowledge';
 
 const COUNTS = { image: 2, sound: 1, video: 1, prompt: 1 };
@@ -352,6 +353,56 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
     latencyMs: 10,
     checkedAtMs: 1_700_000_000_000,
   });
+  ipc.on('backend_status', {
+    server: {
+      status: 'running',
+      port: 52814,
+      version: '0.1.0',
+      pythonVersion: '3.12',
+      startedAt: '2026-01-01T00:00:00Z',
+      latencyMs: 12,
+      checkedAt: '2026-01-01T01:00:00Z',
+      error: '',
+    },
+    gpu: { found: true, name: 'RTX 4070', vramMb: 12282, driver: '566.14' },
+    cuda: {
+      state: 'none',
+      receivedBytes: 0,
+      totalBytes: 2_576_980_378,
+      error: '',
+      version: '12.4',
+    },
+    device: 'cpu',
+    modelsDir: 'C:/data/models',
+  });
+  ipc.on('backend_model_list', [
+    {
+      id: 'vieneu-turbo',
+      name: 'VieNeu Turbo',
+      source: 'hf/vieneu-turbo',
+      languages: ['vi'],
+      cloning: true,
+      gpuRecommended: false,
+      isDefault: true,
+      state: 'installed',
+      receivedBytes: 100,
+      totalBytes: 100,
+      error: '',
+    },
+    {
+      id: 'omnivoice',
+      name: 'OmniVoice',
+      source: 'hf/omnivoice',
+      languages: ['vi', 'en'],
+      cloning: true,
+      gpuRecommended: true,
+      isDefault: false,
+      state: 'none',
+      receivedBytes: 0,
+      totalBytes: 300,
+      error: '',
+    },
+  ]);
   ipc.on('project_list', projects);
   ipc.on('project_create', project({ id: 9, name: 'Created' }));
   ipc.on('project_update', projects[0]);
@@ -555,6 +606,36 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
   ipc.on('library_prompt_create', prompts[0]);
   ipc.on('library_prompt_update', prompts[0]);
   ipc.on('library_prompt_delete', 1);
+  const voices = [
+    libraryVoice({ id: 1, name: 'Narrator An' }),
+    libraryVoice({
+      id: 2,
+      name: 'Old Captain',
+      engine: 'ghost-engine',
+      engineKind: 'cloud',
+      source: 'clone',
+      gender: 'male',
+      preset: null,
+      referenceSoundId: 1,
+      referenceName: 'harbor-ambience.wav',
+      sampleDurationMs: null,
+    }),
+    libraryVoice({
+      id: 3,
+      name: 'Lantern Keeper',
+      engine: 'omnivoice',
+      source: 'design',
+      language: 'en',
+      gender: 'neutral',
+      preset: null,
+      prompt: 'A quiet voice',
+    }),
+  ];
+  ipc.on('library_voice_list', voices);
+  ipc.on('library_voice_create', voices[0]);
+  ipc.on('library_voice_update', voices[0]);
+  ipc.on('library_voice_delete', 1);
+  ipc.on('library_voice_preview', null);
   ipc.on('assistant_session_list', [
     worldSession('s1'),
     worldSession('s2', {
@@ -583,6 +664,7 @@ export async function warmWorld(novelId = 1): Promise<void> {
     LibrarySoundService,
     LibraryVideoService,
     LibraryPromptService,
+    LibraryVoiceService,
     AssistantService,
     PipelineService,
     SettingsService,
@@ -603,6 +685,7 @@ export async function warmWorld(novelId = 1): Promise<void> {
     TestBed.inject(LibrarySoundService).ensureLoaded(),
     TestBed.inject(LibraryVideoService).ensureLoaded(),
     TestBed.inject(LibraryPromptService).ensureLoaded(),
+    TestBed.inject(LibraryVoiceService).ensureLoaded(),
   ]);
   await TestBed.inject(AssistantService).load();
   await TestBed.inject(PipelineService).load();

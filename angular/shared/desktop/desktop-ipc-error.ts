@@ -7,3 +7,8 @@ export class DesktopIpcError extends Error {
     this.name = 'DesktopIpcError';
   }
 }
+
+export function ipcErrorMessage(error: unknown): string | null {
+  const cause = error instanceof Error ? (error as { cause?: unknown }).cause : error;
+  return typeof cause === 'string' ? cause : null;
+}

@@ -1,0 +1,319 @@
+@if (open()) {
+<ds-dialog
+  [title]="'library.voice.dialog.title' | t"
+  [eyebrow]="'library.cap' | t"
+  [closeLabel]="'library.voice.dialog.close' | t"
+  data-testid="library-voice-dialog-panel"
+  (closed)="close()"
+>
+  <div class="field" data-testid="library-voice-dialog-name-field">
+    <label for="library-voice-dialog-name" data-testid="library-voice-dialog-name-label">
+      {{ 'library.voice.field.name' | t }}
+      <span aria-hidden="true">*</span>
+    </label>
+    <input
+      id="library-voice-dialog-name"
+      class="input"
+      maxlength="255"
+      autocomplete="off"
+      [value]="name()"
+      [attr.placeholder]="'library.voice.dialog.namePlaceholder' | t"
+      data-testid="library-voice-dialog-name"
+      (input)="onName($event)"
+    />
+  </div>
+  @if (!anyReady()) {
+  <app-library-voice-notice data-testid="library-voice-dialog-notice" />
+  }
+  <div class="field" data-testid="library-voice-dialog-engine-field">
+    <label for="library-voice-dialog-engine" data-testid="library-voice-dialog-engine-label">
+      {{ 'library.voice.field.engine' | t }}
+    </label>
+    <select
+      id="library-voice-dialog-engine"
+      class="select"
+      [disabled]="!anyReady()"
+      data-testid="library-voice-dialog-engine"
+      (change)="onEngine($event)"
+    >
+      @if (!anyReady()) {
+      <option value="" selected data-testid="library-voice-dialog-engine-placeholder">
+        {{ 'library.voice.dialog.enginePlaceholder' | t }}
+      </option>
+      } @for (group of engineGroups(); track group.kind) {
+      <optgroup [label]="groupKey(group) | t" data-testid="library-voice-dialog-engine-group">
+        @for (item of group.engines; track item.id) {
+        <option
+          [value]="item.id"
+          [disabled]="!item.ready"
+          [selected]="engine()?.id === item.id"
+          data-testid="library-voice-dialog-engine-option"
+        >
+          {{ engineText(item) }}
+        </option>
+        }
+      </optgroup>
+      }
+    </select>
+  </div>
+  <div class="field" data-testid="library-voice-dialog-source-field">
+    <label data-testid="library-voice-dialog-source-label">
+      {{ 'library.voice.field.source' | t }}
+    </label>
+    <ds-segments
+      [label]="'library.voice.field.source' | t"
+      [options]="sourceOptions()"
+      [value]="source()"
+      data-testid="library-voice-dialog-source"
+      (valueChange)="onSource($event)"
+    />
+  </div>
+  @switch (source()) { @case ('preset') {
+  <div class="field" data-testid="library-voice-dialog-preset-field">
+    <label for="library-voice-dialog-preset" data-testid="library-voice-dialog-preset-label">
+      {{ 'library.voice.dialog.preset' | t }}
+    </label>
+    <select
+      id="library-voice-dialog-preset"
+      class="select"
+      data-testid="library-voice-dialog-preset"
+      (change)="onPreset($event)"
+    >
+      @for (item of presets; track item.id) {
+      <option
+        [value]="item.id"
+        [selected]="preset() === item.id"
+        data-testid="library-voice-dialog-preset-option"
+      >
+        {{ item.name }}
+      </option>
+      }
+    </select>
+  </div>
+  } @case ('clone') {
+  <div class="field" data-testid="library-voice-dialog-reference-field">
+    <label data-testid="library-voice-dialog-reference-label">
+      {{ 'library.voice.dialog.reference' | t }}
+    </label>
+    <ds-segments
+      [label]="'library.voice.dialog.reference' | t"
+      [options]="referenceOptions()"
+      [value]="referenceMode()"
+      data-testid="library-voice-dialog-reference"
+      (valueChange)="onReferenceMode($event)"
+    />
+    @switch (referenceMode()) { @case ('library') { @if (soundItems().length > 0) {
+    <select
+      id="library-voice-dialog-sound"
+      class="select"
+      [attr.aria-label]="'library.voice.dialog.sound' | t"
+      data-testid="library-voice-dialog-sound"
+      (change)="onSound($event)"
+    >
+      <option
+        value=""
+        [selected]="referenceSoundId() === null"
+        data-testid="library-voice-dialog-sound-placeholder"
+      >
+        {{ 'library.voice.dialog.soundPlaceholder' | t }}
+      </option>
+      @for (item of soundItems(); track item.id) {
+      <option
+        [value]="item.id"
+        [selected]="referenceSoundId() === item.id"
+        data-testid="library-voice-dialog-sound-option"
+      >
+        {{ soundText(item) }}
+      </option>
+      }
+    </select>
+    } @else {
+    <span class="field-hint" data-testid="library-voice-dialog-sound-empty">
+      {{ 'library.voice.dialog.soundEmpty' | t }}
+    </span>
+    } } @case ('upload') {
+    <div class="lb-vo-ref" data-testid="library-voice-dialog-upload">
+      @if (referenceFile(); as file) {
+      <span class="lb-vo-file" data-testid="library-voice-dialog-file">
+        <ds-icon name="music" [size]="16" data-testid="library-voice-dialog-file-icon" />
+        <span class="t-ink lb-vo-file-name" data-testid="library-voice-dialog-file-name">
+          {{ file.name }}
+        </span>
+        @if (file.size !== null) {
+        <span class="mono t-sm t-mute" data-testid="library-voice-dialog-file-size">
+          {{ sizeText(file.size) }}
+        </span>
+        }
+      </span>
+      <ds-button
+        size="small"
+        data-testid="library-voice-dialog-file-remove"
+        (pressed)="removeFile()"
+      >
+        {{ 'library.voice.dialog.file.remove' | t }}
+      </ds-button>
+      } @else {
+      <ds-button data-testid="library-voice-dialog-file-choose" (pressed)="pickFile()">
+        <ds-icon name="upload" [size]="16" data-testid="library-voice-dialog-file-choose-icon" />
+        {{ 'library.voice.dialog.file.choose' | t }}
+      </ds-button>
+      }
+    </div>
+    } @case ('record') {
+    <div class="lb-vo-ref lb-vo-rec" data-testid="library-voice-dialog-recorder">
+      @switch (recorder.state()) { @case ('idle') {
+      <ds-button data-testid="library-voice-dialog-record-start" (pressed)="startRecording()">
+        <ds-icon name="mic" [size]="16" data-testid="library-voice-dialog-record-start-icon" />
+        {{ 'library.voice.dialog.record.start' | t }}
+      </ds-button>
+      } @case ('recording') {
+      <span class="lb-vo-rec-live" role="status" data-testid="library-voice-dialog-record-live">
+        <span
+          class="lb-vo-rec-dot"
+          aria-hidden="true"
+          data-testid="library-voice-dialog-record-dot"
+        ></span>
+        <span class="mono" data-testid="library-voice-dialog-record-elapsed">
+          {{ elapsedText() }}
+        </span>
+        <span class="t-sm t-mute mono" data-testid="library-voice-dialog-record-limit">
+          / {{ recordingLimit }}
+        </span>
+      </span>
+      <ds-button data-testid="library-voice-dialog-record-stop" (pressed)="stopRecording()">
+        <ds-icon name="stop" [size]="16" data-testid="library-voice-dialog-record-stop-icon" />
+        {{ 'library.voice.dialog.record.stop' | t }}
+      </ds-button>
+      } @case ('recorded') {
+      <button
+        type="button"
+        class="lb-pbtn"
+        [attr.aria-label]="(recorder.playing() ? 'library.voice.dialog.record.stopPlayback' : 'library.voice.dialog.record.play') | t"
+        data-testid="library-voice-dialog-record-play"
+        (click)="togglePlayback()"
+      >
+        <ds-icon
+          [class.is-solid]="!recorder.playing()"
+          [name]="recorder.playing() ? 'pause' : 'play'"
+          [size]="14"
+          data-testid="library-voice-dialog-record-play-icon"
+        />
+      </button>
+      <span class="mono t-sm t-mute" data-testid="library-voice-dialog-record-duration">
+        {{ elapsedText() }}
+      </span>
+      <ds-button
+        size="small"
+        data-testid="library-voice-dialog-record-again"
+        (pressed)="startRecording()"
+      >
+        {{ 'library.voice.dialog.record.again' | t }}
+      </ds-button>
+      <ds-button
+        size="small"
+        data-testid="library-voice-dialog-record-discard"
+        (pressed)="discardRecording()"
+      >
+        {{ 'library.voice.dialog.record.discard' | t }}
+      </ds-button>
+      } }
+    </div>
+    @if (recorder.failed()) {
+    <span class="field-err" role="alert" data-testid="library-voice-dialog-record-error">
+      {{ 'library.voice.dialog.record.denied' | t }}
+    </span>
+    } } }
+    <span class="field-hint" data-testid="library-voice-dialog-clone-help">
+      {{ 'library.voice.dialog.cloneHelp' | t }}
+    </span>
+  </div>
+  <div class="field is-checkbox" data-testid="library-voice-dialog-consent-field">
+    <label class="check" data-testid="library-voice-dialog-consent-label">
+      <input
+        type="checkbox"
+        [checked]="consent()"
+        data-testid="library-voice-dialog-consent"
+        (change)="onConsent($event)"
+      />
+      {{ 'library.voice.dialog.consent' | t }}
+    </label>
+  </div>
+  } @case ('design') {
+  <div class="field" data-testid="library-voice-dialog-prompt-field">
+    <label for="library-voice-dialog-prompt" data-testid="library-voice-dialog-prompt-label">
+      {{ 'library.voice.dialog.prompt' | t }}
+    </label>
+    <textarea
+      id="library-voice-dialog-prompt"
+      class="textarea"
+      rows="3"
+      [value]="prompt()"
+      [attr.placeholder]="'library.voice.dialog.promptPlaceholder' | t"
+      data-testid="library-voice-dialog-prompt"
+      (input)="onPrompt($event)"
+    ></textarea>
+  </div>
+  } }
+  <div class="field" data-testid="library-voice-dialog-language-field">
+    <label for="library-voice-dialog-language" data-testid="library-voice-dialog-language-label">
+      {{ 'library.voice.field.language' | t }}
+    </label>
+    <select
+      id="library-voice-dialog-language"
+      class="select"
+      data-testid="library-voice-dialog-language"
+      (change)="onLanguage($event)"
+    >
+      @for (code of languages; track code) {
+      <option
+        [value]="code"
+        [selected]="language() === code"
+        data-testid="library-voice-dialog-language-option"
+      >
+        {{ languageText(code) }}
+      </option>
+      }
+    </select>
+  </div>
+  <div class="field" data-testid="library-voice-dialog-gender-field">
+    <label data-testid="library-voice-dialog-gender-label">
+      {{ 'library.voice.field.gender' | t }}
+    </label>
+    <ds-segments
+      [label]="'library.voice.field.gender' | t"
+      [options]="genderOptions()"
+      [value]="gender()"
+      data-testid="library-voice-dialog-gender"
+      (valueChange)="onGender($event)"
+    />
+  </div>
+  <div class="field" data-testid="library-voice-dialog-description-field">
+    <label
+      for="library-voice-dialog-description"
+      data-testid="library-voice-dialog-description-label"
+    >
+      {{ 'library.voice.field.description' | t }}
+    </label>
+    <textarea
+      id="library-voice-dialog-description"
+      class="textarea"
+      rows="2"
+      [value]="description()"
+      data-testid="library-voice-dialog-description"
+      (input)="onDescription($event)"
+    ></textarea>
+  </div>
+  <ds-button dialogFoot data-testid="library-voice-dialog-cancel" (pressed)="close()">
+    {{ 'common.cancel' | t }}
+  </ds-button>
+  <ds-button
+    dialogFoot
+    variant="primary"
+    [disabled]="!canSubmit() || busy()"
+    data-testid="library-voice-dialog-submit"
+    (pressed)="submit()"
+  >
+    {{ 'library.voice.dialog.submit' | t }}
+  </ds-button>
+</ds-dialog>
+}

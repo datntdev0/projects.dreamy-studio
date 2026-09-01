@@ -1,0 +1,176 @@
+<div class="st" data-testid="settings-cloud-content">
+  <p class="t-sm t-mute" data-testid="settings-cloud-intro">{{ 'settings.cloud.intro' | t }}</p>
+  <div class="st-note" data-testid="settings-cloud-note">
+    <ds-icon name="shield" [size]="15" />
+    <span>{{ 'settings.cloud.note' | t }}</span>
+  </div>
+  <ds-tabs
+    data-testid="settings-cloud-tabs"
+    idPrefix="settings-cloud"
+    [label]="'settings.cloud.tabs' | t"
+    [options]="tabOptions()"
+    [value]="tab()"
+    (valueChange)="onTab($event)"
+  />
+  <section
+    class="llm-list"
+    role="tabpanel"
+    [id]="'settings-cloud-panel-' + tab()"
+    [attr.aria-labelledby]="'settings-cloud-tab-' + tab()"
+    [attr.data-testid]="'settings-cloud-' + tab()"
+  >
+    @for (a of visible(); track a.id) {
+      @let prefix = 'settings-cloud-' + tab() + '-' + a.id;
+      <article class="llm-card" [class]="mode(a)" [attr.data-testid]="prefix">
+        <header class="llm-card-h">
+          <div class="llm-card-t">
+            <span class="t-ink llm-name" [attr.data-testid]="prefix + '-name'">{{ a.name }}</span>
+            <ds-badge [tone]="statusTone(a)" [attr.data-testid]="prefix + '-badge'">
+              {{ statusKey(a) | t }}
+            </ds-badge>
+          </div>
+        </header>
+        <div class="llm-meta">
+          <span class="path t-mute" [attr.data-testid]="prefix + '-site'">{{ a.site }}</span>
+        </div>
+        @if (noteKey(tab(), a); as note) {
+          <p class="t-sm t-mute" [attr.data-testid]="prefix + '-note'">{{ note | t }}</p>
+        }
+        @if (isKeyless(a)) {
+          <div class="field">
+            <span class="field-hint" [attr.data-testid]="prefix + '-limits'">
+              {{ 'settings.cloud.keyless.limits' | t }}
+            </span>
+          </div>
+        } @else {
+          <div class="field">
+            <label [attr.for]="prefix + '-key'">{{ 'settings.cloud.key' | t }}</label>
+            @if (isEntering(a)) {
+              <div class="llm-row">
+                <input
+                  [id]="prefix + '-key'"
+                  class="input mono-in"
+                  [type]="isRevealed(a) ? 'text' : 'password'"
+                  [value]="draft(a)"
+                  [placeholder]="'settings.cloud.key.placeholder' | t"
+                  [attr.data-testid]="prefix + '-key'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  (input)="onDraft(a, keyInput.value)"
+                  (keydown.enter)="save(a)"
+                  #keyInput
+                />
+                <button
+                  type="button"
+                  class="btn btn-sm btn-icon"
+                  [attr.aria-pressed]="isRevealed(a)"
+                  [attr.aria-label]="
+                    (isRevealed(a) ? 'settings.cloud.key.hide' : 'settings.cloud.key.show') | t
+                  "
+                  [attr.data-testid]="prefix + '-reveal'"
+                  (click)="toggleReveal(a)"
+                >
+                  <ds-icon name="eye" [size]="16" />
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  [disabled]="!canSave(a)"
+                  [attr.data-testid]="prefix + '-save'"
+                  (click)="save(a)"
+                >
+                  {{ 'settings.cloud.save' | t }}
+                </button>
+                @if (isReplacing(a)) {
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [attr.data-testid]="prefix + '-cancel'"
+                    (click)="cancelReplace(a)"
+                  >
+                    {{ 'settings.cloud.cancel' | t }}
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="llm-row">
+                <input
+                  [id]="prefix + '-key'"
+                  class="input mono-in"
+                  readonly
+                  [value]="a.keyHint"
+                  [attr.data-testid]="prefix + '-key'"
+                />
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  [attr.data-testid]="prefix + '-replace'"
+                  (click)="startReplace(a)"
+                >
+                  {{ 'settings.cloud.replace' | t }}
+                </button>
+              </div>
+            }
+            @if (isShared(a)) {
+              <span class="field-hint" [attr.data-testid]="prefix + '-shared'">
+                {{ 'settings.cloud.key.shared' | t: { name: a.name } }}
+              </span>
+            }
+          </div>
+        }
+        @if (a.status === 'error' && a.error) {
+          <div class="llm-err" role="alert" [attr.data-testid]="prefix + '-error'">
+            <ds-icon name="alert" [size]="14" />
+            <span>{{ a.error }}</span>
+          </div>
+        }
+        <footer class="llm-foot">
+          @let msg = message(a);
+          <div
+            class="llm-msg t-sm"
+            [class.is-ok]="msg.tone === 'ok'"
+            [class.is-warn]="msg.tone === 'warn'"
+            role="status"
+            [attr.data-testid]="prefix + '-status'"
+          >
+            @switch (msg.tone) {
+              @case ('ok') {
+                <ds-icon name="check" [size]="14" />
+              }
+              @case ('warn') {
+                <ds-icon name="alert" [size]="14" />
+              }
+              @default {
+                @if (a.status === 'checking') {
+                  <span class="dot dot-running"></span>
+                }
+              }
+            }
+            <span>{{ msg.key | t: msg.params }}</span>
+          </div>
+          @if (a.connected && a.requiresKey) {
+            <button
+              type="button"
+              class="btn btn-sm"
+              [attr.data-testid]="prefix + '-remove'"
+              (click)="remove(a)"
+            >
+              {{ 'settings.cloud.remove' | t }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="a.connected && a.status !== 'ok'"
+            [disabled]="!canCheck(a)"
+            [attr.data-testid]="prefix + '-check'"
+            (click)="check(a)"
+          >
+            <ds-icon name="refresh" [size]="16" />
+            {{ 'settings.cloud.check' | t }}
+          </button>
+        </footer>
+      </article>
+    }
+  </section>
+</div>

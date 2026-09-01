@@ -7,6 +7,8 @@ import { LanguageService } from '@shared/language/language.service';
 import { applicationConfig, type Decorator } from '@storybook/angular-vite';
 
 import { APP_INFO, CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider } from '../features/mocks';
+import { backendServiceProvider } from '../features/settings-backend.mocks';
+import { cloudServiceProvider } from '../features/settings-cloud.mocks';
 
 export type IpcHandlers = Record<string, (args: Record<string, unknown>) => unknown>;
 
@@ -45,7 +47,13 @@ async function startup(): Promise<void> {
 }
 
 export function screenProviders(handlers: IpcHandlers): Array<Provider | EnvironmentProviders> {
-  return [ipcProvider(handlers), llmServiceProvider(LLM_PROVIDERS), provideAppInitializer(startup)];
+  return [
+    ipcProvider(handlers),
+    llmServiceProvider(LLM_PROVIDERS),
+    backendServiceProvider(),
+    cloudServiceProvider(),
+    provideAppInitializer(startup),
+  ];
 }
 
 export function withScreen(handlers: IpcHandlers): { decorators: Decorator[] } {

@@ -1,0 +1,24 @@
+<div class="st-note lb-vo-note" role="status" data-testid="library-voice-notice-content">
+  <ds-icon name="alert" [size]="15" data-testid="library-voice-notice-icon" />
+  <span class="lb-vo-note-t" data-testid="library-voice-notice-text">
+    {{ 'library.voice.notice.text' | t }}
+  </span>
+  <span class="lb-vo-note-act" data-testid="library-voice-notice-actions">
+    <button
+      type="button"
+      class="btn btn-sm"
+      data-testid="library-voice-notice-local"
+      (click)="openLocal()"
+    >
+      {{ 'library.voice.notice.local' | t }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm"
+      data-testid="library-voice-notice-cloud"
+      (click)="openCloud()"
+    >
+      {{ 'library.voice.notice.cloud' | t }}
+    </button>
+  </span>
+</div>

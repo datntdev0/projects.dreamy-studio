@@ -1,0 +1,193 @@
+<div class="nv lb lb-body" data-testid="library-voices">
+  <div class="nv-bar" data-testid="library-voices-toolbar">
+    <div class="nv-bar-l" data-testid="library-voices-toolbar-left">
+      <label class="search" data-testid="library-voices-search-label">
+        <span class="sr-only" data-testid="library-voices-search-label-text">
+          {{ 'library.voice.search' | t }}
+        </span>
+        <input
+          class="input"
+          type="search"
+          [value]="voices.query()"
+          [attr.placeholder]="'library.voice.search' | t"
+          data-testid="library-voices-search"
+          (input)="onQuery($event)"
+        />
+      </label>
+      <span class="t-sm t-mute" data-testid="library-voices-count">
+        @if (voices.visible().length === voices.items().length) {
+          {{ 'library.voice.countAll' | t: { count: voices.visible().length } }}
+        } @else {
+          {{
+            'library.voice.countFiltered'
+              | t: { shown: voices.visible().length, total: voices.items().length }
+          }}
+        }
+      </span>
+      <ds-segments
+        [label]="'library.voice.filter.label' | t"
+        [options]="engineOptions"
+        [value]="voices.engineFilter()"
+        data-testid="library-voices-filter"
+        (valueChange)="onEngineFilter($event)"
+      />
+    </div>
+    <span class="spacer" data-testid="library-voices-toolbar-spacer"></span>
+    <div class="nv-bar-r" data-testid="library-voices-toolbar-right">
+      <select
+        class="select"
+        [value]="voices.sort()"
+        [attr.aria-label]="'library.voice.sort' | t"
+        data-testid="library-voices-sort"
+        (change)="onSort($event)"
+      >
+        <option value="new" data-testid="library-voices-sort-new">
+          {{ 'library.voice.sort.new' | t }}
+        </option>
+        <option value="name" data-testid="library-voices-sort-name">
+          {{ 'library.voice.sort.name' | t }}
+        </option>
+      </select>
+      <button
+        type="button"
+        class="btn btn-sm btn-primary"
+        data-testid="library-voices-create"
+        (click)="openCreate()"
+      >
+        <ds-icon name="plus" [size]="16" data-testid="library-voices-create-icon" />
+        {{ 'library.voice.new' | t }}
+      </button>
+    </div>
+  </div>
+  @if (noEngineReady()) {
+    <app-library-voice-notice data-testid="library-voices-notice" />
+  }
+  <div class="nv-body" data-testid="library-voices-body">
+    <div
+      class="nv-scroll"
+      [class.table-view]="voices.visible().length > 0"
+      data-testid="library-voices-scroll"
+    >
+      @if (voices.visible().length === 0) {
+        @if (voices.items().length === 0 && !hasActiveFilters()) {
+          <div class="empty" data-testid="library-voices-empty">
+            <div class="empty-inner" data-testid="library-voices-empty-inner">
+              <div class="illus" data-testid="library-voices-empty-illustration"></div>
+              <h4 class="t-display-xs" data-testid="library-voices-empty-title">
+                {{ 'library.voice.empty.title' | t }}
+              </h4>
+              <p class="t-sm t-mute" data-testid="library-voices-empty-description">
+                {{ 'library.voice.empty.description' | t }}
+              </p>
+              <div class="empty-act" data-testid="library-voices-empty-actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  data-testid="library-voices-empty-create"
+                  (click)="openCreate()"
+                >
+                  <ds-icon name="plus" [size]="16" data-testid="library-voices-empty-create-icon" />
+                  {{ 'library.voice.new' | t }}
+                </button>
+              </div>
+            </div>
+          </div>
+        } @else if (voices.loaded()) {
+          <div class="empty" data-testid="library-voices-empty-filtered">
+            <div class="empty-inner" data-testid="library-voices-empty-filtered-inner">
+              <div class="illus" data-testid="library-voices-empty-filtered-illustration"></div>
+              <h4 class="t-display-xs" data-testid="library-voices-empty-filtered-title">
+                {{ 'library.voice.emptyFiltered.title' | t }}
+              </h4>
+              <p class="t-sm t-mute" data-testid="library-voices-empty-filtered-description">
+                {{ 'library.voice.emptyFiltered.description' | t }}
+              </p>
+              <button
+                type="button"
+                class="btn"
+                data-testid="library-voices-empty-filtered-clear"
+                (click)="clearAllFilters()"
+              >
+                {{ 'library.voice.emptyFiltered.clear' | t }}
+              </button>
+            </div>
+          </div>
+        }
+      } @else {
+        <ds-datatable
+          [columns]="tableColumns"
+          [rows]="voices.visible()"
+          trackKey="id"
+          variant="fill"
+          minWidth="940px"
+          rowTestId="library-voices-table-row"
+          [rowClass]="tableRowClass"
+          data-testid="library-voices-table"
+          (rowSelected)="onRowSelected($event)"
+          (rowDblClick)="onRowDblClick($event)"
+          (rowEnter)="onRowEnter($event)"
+        >
+          <ng-template dsCell="name" let-row>
+            <div class="nm-title" data-testid="library-voices-table-name-wrap">
+              <app-library-voice-avatar
+                [voice]="voiceOf(row)"
+                size="sm"
+                data-testid="library-voices-table-avatar"
+              />
+              <div class="lb-rname" data-testid="library-voices-table-name-content">
+                <div class="t-ink" data-testid="library-voices-table-name-text">
+                  {{ voiceOf(row).name }}
+                </div>
+                @if (voiceOf(row).description) {
+                  <div class="t-sm t-mute" data-testid="library-voices-table-description">
+                    {{ voiceOf(row).description }}
+                  </div>
+                }
+              </div>
+            </div>
+          </ng-template>
+          <ng-template dsCell="play" let-row>
+            <app-library-voice-play
+              [voice]="voiceOf(row)"
+              size="sm"
+              [disabled]="!voices.isReady(voiceOf(row))"
+              [hint]="notReadyHint"
+              data-testid="library-voices-table-play"
+            />
+          </ng-template>
+          <ng-template dsCell="engine" let-row>
+            <app-library-voice-engine
+              [voice]="voiceOf(row)"
+              data-testid="library-voices-table-engine"
+            />
+          </ng-template>
+          <ng-template dsCell="language" let-row>
+            <span class="t-sm t-mute" data-testid="library-voices-table-language">
+              {{ languageText(voiceOf(row)) }}
+            </span>
+          </ng-template>
+          <ng-template dsCell="gender" let-row>
+            <span class="t-sm t-mute" data-testid="library-voices-table-gender">
+              {{ genderText(voiceOf(row)) }}
+            </span>
+          </ng-template>
+          <ng-template dsCell="source" let-row>
+            <span class="t-sm t-mute" data-testid="library-voices-table-source">
+              {{ sourceText(voiceOf(row)) }}
+            </span>
+          </ng-template>
+          <ng-template dsCell="duration" let-row>
+            <span class="mono t-mute" data-testid="library-voices-table-duration">
+              {{ durationText(voiceOf(row)) }}
+            </span>
+          </ng-template>
+          <ng-template dsCell="updated" let-row>
+            <span class="mono t-mute" data-testid="library-voices-table-updated">
+              {{ updatedText(voiceOf(row)) }}
+            </span>
+          </ng-template>
+        </ds-datatable>
+      }
+    </div>
+  </div>
+</div>

@@ -15,6 +15,8 @@ import { formatBytes, libraryErrorKey, sumCounts } from './library.rules';
 import { LibraryService } from './library.service';
 import { LibrarySoundService } from './library.sounds.service';
 import { LibraryVideoService } from './library.videos.service';
+import { LibraryVoice } from './library.voices.models';
+import { LibraryVoiceService } from './library.voices.service';
 
 const IMAGE_LIMIT = 8;
 
@@ -71,6 +73,14 @@ const PROMPT_KEYS: AssetKeys = {
   warning: 'library.promptDelete.warning',
 };
 
+const VOICE_KEYS: AssetKeys = {
+  title: ['library.voiceDelete.title.one', 'library.voiceDelete.title.other'],
+  confirm: ['library.voiceDelete.confirm.one', 'library.voiceDelete.confirm.other'],
+  toast: ['library.voice.toast.deleted.one', 'library.voice.toast.deleted.other'],
+  close: 'library.voiceDelete.close',
+  warning: 'library.voiceDelete.warning',
+};
+
 @Injectable({ providedIn: 'root' })
 export class LibraryConfirmService {
   private readonly dialogs = inject(DialogService);
@@ -82,6 +92,7 @@ export class LibraryConfirmService {
   private readonly sounds = inject(LibrarySoundService);
   private readonly videos = inject(LibraryVideoService);
   private readonly prompts = inject(LibraryPromptService);
+  private readonly voices = inject(LibraryVoiceService);
 
   deleteCollection(id: number): Promise<boolean> {
     const collection = this.library.collectionById(id);
@@ -137,6 +148,13 @@ export class LibraryConfirmService {
     return this.askAssets(PROMPT_KEYS, ids, rows.map(toItem), remove, {});
   }
 
+  deleteVoices(ids: number[]): Promise<boolean> {
+    const rows = pickByIds(this.voices.items(), ids);
+    const items = rows.map(this.voiceDialogItem.bind(this));
+    const remove = this.voices.remove.bind(this.voices, ids);
+    return this.askAssets(VOICE_KEYS, ids, items, remove, {});
+  }
+
   confirmTag(kind: 'merge' | 'delete', tag: string, target: string): Promise<boolean> {
     const merge = kind === 'merge';
     const row = this.library.tags().find((entry) => entry.tag === tag);
@@ -170,6 +188,11 @@ export class LibraryConfirmService {
       meta: imageCode(image.id),
       image: this.images.thumb.bind(this.images, image.id),
     };
+  }
+
+  private voiceDialogItem(voice: LibraryVoice): DialogItem {
+    const kind = this.languageService.translate('library.explorer.voices');
+    return { name: voice.name, meta: `${kind} · ${this.voices.engineName(voice)}`, icon: 'voice' };
   }
 
   private mediaDialogItem<T extends NamedAsset>(

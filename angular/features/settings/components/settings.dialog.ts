@@ -5,13 +5,15 @@ import { CoreModule } from '@shared/core.module';
 import { SettingsSection, SettingsSectionId } from '../settings.models';
 import { SETTINGS_SECTIONS } from '../settings.sections';
 import { SettingsService } from '../settings.service';
+import { SettingsBackend } from './backend.component';
+import { SettingsCloud } from './cloud.component';
 import { SettingsGeneral } from './general.component';
 import { SettingsLlm } from './llm.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings-dialog',
-  imports: [Icon, CoreModule, SettingsGeneral, SettingsLlm],
+  imports: [Icon, CoreModule, SettingsBackend, SettingsCloud, SettingsGeneral, SettingsLlm],
   templateUrl: './settings.dialog.html',
   host: { 'data-testid': 'settings-dialog' },
 })

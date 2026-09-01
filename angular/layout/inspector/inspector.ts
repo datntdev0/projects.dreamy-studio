@@ -10,12 +10,14 @@ import { LibrarySoundPanel } from '@features/library/components/sound.panel';
 import { LibraryTagPanel } from '@features/library/components/tag.panel';
 import { LibraryTaxonomyPanel } from '@features/library/components/taxonomy.panel';
 import { LibraryVideoPanel } from '@features/library/components/video.panel';
+import { LibraryVoicePanel } from '@features/library/components/voice.panel';
 import { LibraryCollectionAssetsService } from '@features/library/library.collection-assets.service';
 import { LibraryImageService } from '@features/library/library.images.service';
 import { LibraryPromptService } from '@features/library/library.prompts.service';
 import { LibraryService } from '@features/library/library.service';
 import { LibrarySoundService } from '@features/library/library.sounds.service';
 import { LibraryVideoService } from '@features/library/library.videos.service';
+import { LibraryVoiceService } from '@features/library/library.voices.service';
 import { NovelDisplayPanel } from '@features/novel/components/display.panel';
 import { NovelKnowledgeInspector } from '@features/novel/components/knowledge-inspector.component';
 import { NovelPanel } from '@features/novel/components/novel.panel';
@@ -52,6 +54,7 @@ import { TabsService } from '../tabs.service';
     LibraryVideoPanel,
     LibraryPromptPanel,
     LibraryPromptsPanel,
+    LibraryVoicePanel,
   ],
   templateUrl: './inspector.html',
 })
@@ -66,6 +69,7 @@ export class Inspector {
   readonly sounds = inject(LibrarySoundService);
   readonly videos = inject(LibraryVideoService);
   readonly prompts = inject(LibraryPromptService);
+  readonly voices = inject(LibraryVoiceService);
   readonly reader = inject(NovelReaderService);
   readonly tabs = RIGHT_TABS;
 }

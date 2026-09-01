@@ -28,9 +28,6 @@
   overflow-y: auto;
   padding-right: var(--sp-sm);
 }
-.settings-pane > .empty {
-  min-height: 320px;
-}
 
 .st {
   display: grid;
@@ -365,5 +362,55 @@
   }
   .llm-msg {
     flex-basis: 100%;
+  }
+}
+
+.be-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm) var(--sp-xl);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--r-sm);
+  background: var(--canvas-soft);
+}
+.be-fact {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.be-fact dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.be-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+}
+.be-dl {
+  display: grid;
+  gap: var(--sp-xs);
+  min-width: 180px;
+}
+.be-progress {
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--hairline);
+  overflow: hidden;
+}
+.be-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+@media (max-width: 680px) {
+  .be-actions {
+    justify-content: flex-start;
   }
 }

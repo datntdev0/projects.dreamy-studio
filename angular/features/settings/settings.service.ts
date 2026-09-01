@@ -6,6 +6,8 @@ import { Theme } from '@shared/theme/theme.models';
 import { ThemeService } from '@shared/theme/theme.service';
 import { ToastService } from '@shared/toast/toast.service';
 
+import { BackendService } from './backend.service';
+import { CloudService } from './cloud.service';
 import { LlmService } from './llm.service';
 // prettier-ignore
 import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from './settings.models';
@@ -27,6 +29,8 @@ export class SettingsService {
   private readonly themes = inject(ThemeService);
   private readonly toasts = inject(ToastService);
   private readonly llm = inject(LlmService);
+  private readonly backend = inject(BackendService);
+  private readonly cloud = inject(CloudService);
   private writes: Promise<void> = Promise.resolve();
 
   readonly open = signal(false);
@@ -39,7 +43,12 @@ export class SettingsService {
 
   async load(): Promise<void> {
     await this.writes;
-    await Promise.all([this.loadGeneral(), this.llm.load()]);
+    await Promise.all([
+      this.loadGeneral(),
+      this.llm.load(),
+      this.backend.load(),
+      this.cloud.load(),
+    ]);
   }
 
   private async loadGeneral(): Promise<void> {

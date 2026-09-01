@@ -29,10 +29,11 @@ describe('TabsService', () => {
     tabs.openSounds();
     tabs.openVideos();
     tabs.openPrompts();
+    tabs.openVoices();
     tabs.openCollections();
     tabs.openPipelines();
     tabs.openNovels();
-    expect(tabs.tabs()).toHaveLength(9);
+    expect(tabs.tabs()).toHaveLength(10);
     expect(tabs.activeId()).toBe('novels');
     tabs.openHome();
     expect(tabs.activeId()).toBe(HOME_TAB_ID);

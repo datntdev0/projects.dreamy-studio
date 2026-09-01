@@ -20,6 +20,7 @@ export type EditorTabKind =
   | 'sounds'
   | 'videos'
   | 'prompts'
+  | 'voices'
   | 'collections'
   | 'collection'
   | 'pipelines';
@@ -60,6 +61,7 @@ export const SOUNDS_TAB_ID = 'sounds';
 
 export const VIDEOS_TAB_ID = 'videos';
 export const PROMPTS_TAB_ID = 'prompts';
+export const VOICES_TAB_ID = 'voices';
 
 export const COLLECTIONS_TAB_ID = 'collections';
 
@@ -148,6 +150,19 @@ export const PROMPTS_TAB: EditorTab = {
   kind: 'prompts',
   icon: 'prompt',
   labelKey: 'tabs.prompts.title',
+  title: '',
+  novelId: null,
+  projectId: null,
+  collectionId: null,
+  rail: 'library',
+  closable: true,
+};
+
+export const VOICES_TAB: EditorTab = {
+  id: VOICES_TAB_ID,
+  kind: 'voices',
+  icon: 'voice',
+  labelKey: 'tabs.voices.title',
   title: '',
   novelId: null,
   projectId: null,

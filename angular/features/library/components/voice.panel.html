@@ -1,0 +1,138 @@
+@if (voice(); as item) {
+<section data-testid="library-voice-panel-content">
+  <section class="ins-sec lb-ins-top" data-testid="library-voice-panel-summary">
+    <div class="lb-vo-head" data-testid="library-voice-panel-head">
+      <app-library-voice-avatar [voice]="item" data-testid="library-voice-panel-avatar" />
+      <span class="t-ink lb-vo-head-name" data-testid="library-voice-panel-name">
+        {{ item.name }}
+      </span>
+    </div>
+    <app-library-voice-engine [voice]="item" data-testid="library-voice-panel-engine" />
+  </section>
+  @if (!ready(item)) {
+  <section class="ins-sec" data-testid="library-voice-panel-warning">
+    <div class="st-note lb-vo-note" role="alert" data-testid="library-voice-panel-warning-note">
+      <ds-icon name="alert" [size]="15" data-testid="library-voice-panel-warning-icon" />
+      <span class="lb-vo-note-t" data-testid="library-voice-panel-warning-text">
+        {{ 'library.voice.panel.notReady' | t: { engine: engineName(item) } }}
+      </span>
+      <button
+        type="button"
+        class="btn btn-sm"
+        data-testid="library-voice-panel-warning-settings"
+        (click)="openSettings(item)"
+      >
+        {{ 'library.voice.panel.openSettings' | t }}
+      </button>
+    </div>
+  </section>
+  }
+  <section class="ins-sec ins-form" data-testid="library-voice-panel-sample">
+    <span class="eyebrow" data-testid="library-voice-panel-sample-title">
+      {{ 'library.voice.panel.sample' | t }}
+    </span>
+    <div class="field" data-testid="library-voice-panel-sample-field">
+      <label for="library-voice-panel-sample-text" data-testid="library-voice-panel-sample-label">
+        {{ 'library.voice.field.sampleText' | t }}
+      </label>
+      <textarea
+        id="library-voice-panel-sample-text"
+        class="textarea"
+        rows="3"
+        [value]="item.sampleText"
+        data-testid="library-voice-panel-sample-text"
+        (change)="sampleChange(item, $event)"
+      ></textarea>
+    </div>
+    <div class="lb-vo-sample" data-testid="library-voice-panel-sample-player">
+      <app-library-voice-play
+        [voice]="item"
+        size="lg"
+        [disabled]="!ready(item)"
+        [hint]="notReadyHint()"
+        data-testid="library-voice-panel-play"
+      />
+      <span class="mono t-sm t-mute" data-testid="library-voice-panel-duration">
+        {{ duration(item) }}
+      </span>
+    </div>
+  </section>
+  <section class="ins-sec ins-form" data-testid="library-voice-panel-description-section">
+    <div class="field" data-testid="library-voice-panel-description-field">
+      <label
+        for="library-voice-panel-description"
+        data-testid="library-voice-panel-description-label"
+      >
+        {{ 'library.voice.field.description' | t }}
+      </label>
+      <textarea
+        id="library-voice-panel-description"
+        class="textarea"
+        rows="3"
+        [value]="item.description"
+        data-testid="library-voice-panel-description"
+        (change)="descriptionChange(item, $event)"
+      ></textarea>
+    </div>
+  </section>
+  <section class="ins-sec" data-testid="library-voice-panel-info">
+    <span class="eyebrow" data-testid="library-voice-panel-info-title">
+      {{ 'library.voice.info' | t }}
+    </span>
+    <dl class="kv" data-testid="library-voice-panel-info-list">
+      <dt data-testid="library-voice-panel-engine-label">{{ 'library.voice.field.engine' | t }}</dt>
+      <dd data-testid="library-voice-panel-engine-name">{{ engineName(item) }}</dd>
+      <dt data-testid="library-voice-panel-source-label">{{ 'library.voice.info.source' | t }}</dt>
+      <dd data-testid="library-voice-panel-source">
+        <span data-testid="library-voice-panel-source-name">{{ sourceName(item) | t }}</span>
+        <span class="t-sm t-mute lb-vo-src" data-testid="library-voice-panel-source-detail">
+          {{ sourceDetail(item) }}
+        </span>
+      </dd>
+      <dt data-testid="library-voice-panel-language-label">
+        {{ 'library.voice.field.language' | t }}
+      </dt>
+      <dd data-testid="library-voice-panel-language">{{ languageText(item) }}</dd>
+      <dt data-testid="library-voice-panel-gender-label">{{ 'library.voice.field.gender' | t }}</dt>
+      <dd data-testid="library-voice-panel-gender">{{ genderKey(item) | t }}</dd>
+      <dt data-testid="library-voice-panel-created-label">
+        {{ 'library.voice.info.created' | t }}
+      </dt>
+      <dd class="mono" data-testid="library-voice-panel-created">{{ createdAt(item) }}</dd>
+      <dt data-testid="library-voice-panel-updated-label">
+        {{ 'library.voice.info.updated' | t }}
+      </dt>
+      <dd class="mono" data-testid="library-voice-panel-updated">{{ updatedAt(item) }}</dd>
+    </dl>
+    <p class="t-sm t-mute lb-vo-hint" data-testid="library-voice-panel-immutable-hint">
+      {{ 'library.voice.panel.immutable' | t }}
+    </p>
+  </section>
+  <section class="ins-sec ins-actions" data-testid="library-voice-panel-actions">
+    <button
+      type="button"
+      class="btn"
+      data-testid="library-voice-panel-duplicate"
+      (click)="duplicate(item)"
+    >
+      <ds-icon name="copy" [size]="16" data-testid="library-voice-panel-duplicate-icon" />
+      {{ 'library.voice.duplicate' | t }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-danger"
+      data-testid="library-voice-panel-delete"
+      (click)="remove(item)"
+    >
+      <ds-icon name="trash" [size]="16" data-testid="library-voice-panel-delete-icon" />
+      {{ 'library.voice.delete' | t }}
+    </button>
+  </section>
+</section>
+} @else {
+<div class="ins-empty" data-testid="library-voice-panel-empty">
+  <p class="t-sm t-mute" data-testid="library-voice-panel-empty-text">
+    {{ 'library.voice.panel.empty' | t }}
+  </p>
+</div>
+}

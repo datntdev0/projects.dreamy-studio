@@ -5,6 +5,7 @@ import { AssetRef } from './library.models';
 @Injectable({ providedIn: 'root' })
 export class LibraryDialogsService {
   readonly createCollectionOpen = signal(false);
+  readonly createVoiceOpen = signal(false);
   readonly uploadOpen = signal(false);
   readonly uploadPaths = signal<string[]>([]);
   readonly uploadKind = signal<'image' | 'sound' | 'video' | 'prompt'>('image');
@@ -20,6 +21,12 @@ export class LibraryDialogsService {
   }
   closeCreateCollection(): void {
     this.createCollectionOpen.set(false);
+  }
+  openCreateVoice(): void {
+    this.createVoiceOpen.set(true);
+  }
+  closeCreateVoice(): void {
+    this.createVoiceOpen.set(false);
   }
   openUpload(
     paths: string[] = [],

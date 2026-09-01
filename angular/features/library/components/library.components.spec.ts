@@ -1,6 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { TabsService } from '@layout/tabs.service';
 import { ComponentCase, describeComponents } from '@testing/exercise';
-import { libraryImage, libraryPrompt, librarySound, libraryVideo } from '@testing/fixtures';
+import {
+  libraryImage,
+  libraryPrompt,
+  librarySound,
+  libraryVideo,
+  libraryVoice,
+} from '@testing/fixtures';
 import { setupWorld, warmWorld } from '@testing/world';
 
 import { LibraryDialogsService } from '../library.dialogs.service';
@@ -9,6 +16,7 @@ import { LibraryPromptService } from '../library.prompts.service';
 import { LibraryService } from '../library.service';
 import { LibrarySoundService } from '../library.sounds.service';
 import { LibraryVideoService } from '../library.videos.service';
+import { LibraryVoiceService } from '../library.voices.service';
 import { LibraryCollectionView } from './collection.component';
 import { LibraryCollectionDialog } from './collection.dialog';
 import { LibraryCollectionPanel } from './collection.panel';
@@ -41,6 +49,13 @@ import { LibraryVideoPlay } from './video-play.component';
 import { LibraryVideoPreviewDialog } from './video-preview.dialog';
 import { LibraryVideoThumb } from './video-thumb.component';
 import { LibraryVideos } from './videos.component';
+import { LibraryVoiceDialog } from './voice.dialog';
+import { LibraryVoicePanel } from './voice.panel';
+import { LibraryVoiceAvatar } from './voice-avatar.component';
+import { LibraryVoiceEngine } from './voice-engine.component';
+import { LibraryVoiceNotice } from './voice-notice.component';
+import { LibraryVoicePlay } from './voice-play.component';
+import { LibraryVoices } from './voices.component';
 
 async function warm(): Promise<void> {
   await warmWorld();
@@ -49,10 +64,20 @@ async function warm(): Promise<void> {
 const image = libraryImage({ id: 1, name: 'cover.png', tags: ['hero'], collectionId: 1 });
 const sound = librarySound({ id: 1, name: 'theme.mp3', tags: ['calm'], collectionId: 2 });
 const video = libraryVideo({ id: 1, name: 'clip.mp4', tags: ['hero'] });
+const voice = libraryVoice({ id: 1 });
+const offlineVoice = libraryVoice({ id: 9, engine: 'ghost-engine', engineKind: 'cloud' });
 const prompt = libraryPrompt({ id: 1, name: 'Scene prompt', tags: ['calm'] });
 
 const cases: ComponentCase[] = [
   { name: 'LibraryExplorer', type: LibraryExplorer, before: warm },
+  {
+    name: 'LibraryExplorer (voices)',
+    type: LibraryExplorer,
+    before: async () => {
+      await warm();
+      TestBed.inject(TabsService).openVoices();
+    },
+  },
   { name: 'LibraryCollections', type: LibraryCollections, before: warm },
   {
     name: 'LibraryCollectionView',
@@ -171,6 +196,56 @@ const cases: ComponentCase[] = [
     before: async () => {
       await warm();
       TestBed.inject(LibraryDialogsService).openPromptPreview(1);
+    },
+  },
+  { name: 'LibraryVoices', type: LibraryVoices, before: warm },
+  {
+    name: 'LibraryVoices (selected)',
+    type: LibraryVoices,
+    before: async () => {
+      await warm();
+      TestBed.inject(LibraryVoiceService).select(1);
+    },
+  },
+  {
+    name: 'LibraryVoices (filtered)',
+    type: LibraryVoices,
+    before: async () => {
+      await warm();
+      TestBed.inject(LibraryVoiceService).query.set('zzz');
+    },
+  },
+  {
+    name: 'LibraryVoicePanel',
+    type: LibraryVoicePanel,
+    before: async () => {
+      await warm();
+      TestBed.inject(LibraryVoiceService).select(1);
+    },
+  },
+  { name: 'LibraryVoicePanel (empty)', type: LibraryVoicePanel, before: warm },
+  {
+    name: 'LibraryVoicePanel (offline)',
+    type: LibraryVoicePanel,
+    inputs: { voiceId: 2 },
+    before: warm,
+  },
+  { name: 'LibraryVoiceAvatar', type: LibraryVoiceAvatar, inputs: { voice }, before: warm },
+  { name: 'LibraryVoiceEngine', type: LibraryVoiceEngine, inputs: { voice }, before: warm },
+  {
+    name: 'LibraryVoiceEngine (offline)',
+    type: LibraryVoiceEngine,
+    inputs: { voice: offlineVoice },
+    before: warm,
+  },
+  { name: 'LibraryVoicePlay', type: LibraryVoicePlay, inputs: { voice }, before: warm },
+  { name: 'LibraryVoiceNotice', type: LibraryVoiceNotice, before: warm },
+  {
+    name: 'LibraryVoiceDialog',
+    type: LibraryVoiceDialog,
+    before: async () => {
+      await warm();
+      TestBed.inject(LibraryDialogsService).openCreateVoice();
     },
   },
   {

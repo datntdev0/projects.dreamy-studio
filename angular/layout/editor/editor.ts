@@ -6,6 +6,7 @@ import { LibraryImages } from '@features/library/components/images.component';
 import { LibraryPrompts } from '@features/library/components/prompts.component';
 import { LibrarySounds } from '@features/library/components/sounds.component';
 import { LibraryVideos } from '@features/library/components/videos.component';
+import { LibraryVoices } from '@features/library/components/voices.component';
 import { NovelKnowledge } from '@features/novel/components/knowledge.component';
 import { NovelList } from '@features/novel/components/list.component';
 import { NovelView } from '@features/novel/components/novel-view.component';
@@ -41,6 +42,7 @@ import { TabsService } from '../tabs.service';
     LibrarySounds,
     LibraryVideos,
     LibraryPrompts,
+    LibraryVoices,
     PipelineHistory,
   ],
   templateUrl: './editor.html',
@@ -99,7 +101,8 @@ export class Editor {
       tab.kind === 'images' ||
       tab.kind === 'sounds' ||
       tab.kind === 'videos' ||
-      tab.kind === 'prompts'
+      tab.kind === 'prompts' ||
+      tab.kind === 'voices'
     ) {
       return this.languageService.translate('library.crumb');
     }

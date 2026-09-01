@@ -1,0 +1,9 @@
+<span
+  class="lb-vo-eng"
+  [class.is-off]="!ready()"
+  [attr.title]="ready() ? null : ('library.voice.engine.notReady' | t)"
+  data-testid="library-voice-engine-pill"
+>
+  <ds-icon [name]="icon()" [size]="12" data-testid="library-voice-engine-icon" />
+  <span class="lb-vo-eng-t" data-testid="library-voice-engine-name">{{ name() }}</span>
+</span>

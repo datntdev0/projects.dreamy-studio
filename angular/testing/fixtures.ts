@@ -4,6 +4,7 @@ import { LibraryCollection } from '@features/library/library.models';
 import { LibraryPrompt } from '@features/library/library.prompts.models';
 import { LibrarySound } from '@features/library/library.sounds.models';
 import { LibraryVideo } from '@features/library/library.videos.models';
+import { LibraryVoice } from '@features/library/library.voices.models';
 import { ChapterRow, NovelSummary } from '@features/novel/novel.models';
 import { PipelineSnapshot, PipelineTask } from '@features/novel/novel.translation.models';
 import { ProjectSummary } from '@features/project/project.models';
@@ -128,6 +129,28 @@ export function librarySound(overrides: Partial<LibrarySound> = {}): LibrarySoun
     origin: 'upload',
     collectionId: null,
     tags: [],
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+export function libraryVoice(overrides: Partial<LibraryVoice> = {}): LibraryVoice {
+  return {
+    id: 1,
+    name: 'Narrator An',
+    description: 'Warm narration voice',
+    engine: 'vieneu-turbo',
+    engineKind: 'local',
+    source: 'preset',
+    language: 'vi',
+    gender: 'female',
+    preset: 'narrator-warm',
+    referenceSoundId: null,
+    referenceName: '',
+    prompt: '',
+    sampleText: 'Once upon a time.',
+    sampleDurationMs: 3000,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,

@@ -1,0 +1,482 @@
+<div class="st be" data-testid="settings-backend-content">
+  <p class="t-sm t-mute" data-testid="settings-backend-intro">{{ 'settings.backend.intro' | t }}</p>
+  <ds-tabs
+    data-testid="settings-backend-tabs"
+    idPrefix="settings-backend"
+    [label]="'settings.backend.tabs' | t"
+    [options]="tabOptions()"
+    [value]="tab()"
+    (valueChange)="onTab($event)"
+  />
+  <ng-template #statusMessage let-msg let-testid="testid">
+    <div
+      class="llm-msg t-sm"
+      [class.is-ok]="msg.tone === 'ok'"
+      [class.is-warn]="msg.tone === 'warn'"
+      role="status"
+      [attr.data-testid]="testid"
+    >
+      @switch (msg.tone) {
+        @case ('ok') {
+          <ds-icon name="check" [size]="14" />
+        }
+        @case ('warn') {
+          <ds-icon name="alert" [size]="14" />
+        }
+        @default {
+          @if (msg.busy) {
+            <span class="dot dot-running"></span>
+          }
+        }
+      }
+      <span>{{ msg.key | t: msg.params }}</span>
+    </div>
+  </ng-template>
+  <ng-template #downloadProgress let-download let-testid="testid">
+    <div class="be-dl" [attr.data-testid]="testid">
+      <div
+        class="be-progress"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        [attr.aria-valuenow]="percent(download)"
+        [attr.aria-label]="'settings.backend.download' | t"
+        [attr.data-testid]="testid + '-bar'"
+      >
+        <i [style.width.%]="percent(download)"></i>
+      </div>
+      <span class="t-sm t-mute mono" [attr.data-testid]="testid + '-text'">
+        {{ 'settings.backend.progress' | t: progress(download) }}
+      </span>
+    </div>
+  </ng-template>
+  @if (tab() === 'general') {
+    <section
+      class="st"
+      role="tabpanel"
+      id="settings-backend-panel-general"
+      aria-labelledby="settings-backend-tab-general"
+      data-testid="settings-backend-general"
+    >
+      <article class="llm-card" [class]="serverMode()" data-testid="settings-backend-server">
+        <header class="llm-card-h">
+          <div class="llm-card-t">
+            <span class="t-ink llm-name" data-testid="settings-backend-server-name">
+              {{ 'settings.backend.server' | t }}
+            </span>
+            <ds-badge [tone]="serverTone()" data-testid="settings-backend-server-badge">
+              {{ serverKey() | t }}
+            </ds-badge>
+          </div>
+        </header>
+        <dl class="be-facts" data-testid="settings-backend-facts">
+          <div class="be-fact" data-testid="settings-backend-address-fact">
+            <dt class="t-sm t-mute">{{ 'settings.backend.fact.address' | t }}</dt>
+            <dd class="path" data-testid="settings-backend-address">{{ address() }}</dd>
+          </div>
+          <div class="be-fact" data-testid="settings-backend-version-fact">
+            <dt class="t-sm t-mute">{{ 'settings.backend.fact.version' | t }}</dt>
+            <dd class="path" data-testid="settings-backend-version">
+              {{ server().version || '—' }}
+            </dd>
+          </div>
+          <div class="be-fact" data-testid="settings-backend-python-fact">
+            <dt class="t-sm t-mute">{{ 'settings.backend.fact.python' | t }}</dt>
+            <dd class="path" data-testid="settings-backend-python">
+              {{ server().pythonVersion || '—' }}
+            </dd>
+          </div>
+          <div class="be-fact" data-testid="settings-backend-uptime-fact">
+            <dt class="t-sm t-mute">{{ 'settings.backend.fact.uptime' | t }}</dt>
+            <dd class="path" data-testid="settings-backend-uptime">{{ uptime() }}</dd>
+          </div>
+        </dl>
+        @if (server().error) {
+          <div class="llm-err" role="alert" data-testid="settings-backend-server-error">
+            <ds-icon name="alert" [size]="14" />
+            <span>{{ server().error }}</span>
+          </div>
+        }
+        <footer class="llm-foot">
+          <ng-container
+            [ngTemplateOutlet]="statusMessage"
+            [ngTemplateOutletContext]="{
+              $implicit: serverMessage(),
+              testid: 'settings-backend-status',
+            }"
+          />
+          <button
+            type="button"
+            class="btn btn-sm"
+            data-testid="settings-backend-logs"
+            (click)="openLogs()"
+          >
+            <ds-icon name="folder-open" [size]="16" />
+            {{ 'settings.backend.logs' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="!canCheck()"
+            data-testid="settings-backend-check"
+            (click)="check()"
+          >
+            <ds-icon name="refresh" [size]="16" />
+            {{ 'settings.backend.check' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="server().status === 'stopped' || server().status === 'error'"
+            [disabled]="!canRestart()"
+            data-testid="settings-backend-restart"
+            (click)="restart()"
+          >
+            <ds-icon [name]="server().status === 'running' ? 'refresh' : 'play'" [size]="16" />
+            {{ 'settings.backend.restart' | t }}
+          </button>
+        </footer>
+      </article>
+      <section
+        class="st-card"
+        [attr.aria-label]="'settings.backend.hardware' | t"
+        data-testid="settings-backend-hardware"
+      >
+        <div class="st-rows">
+          <div class="st-row" data-testid="settings-backend-gpu-row">
+            <div class="field">
+              <span class="t-ink">{{ 'settings.backend.gpu' | t }}</span>
+              <span class="field-hint" data-testid="settings-backend-gpu-hint">
+                @if (gpu().found) {
+                  {{ gpuHint() }}
+                } @else {
+                  {{ 'settings.backend.gpu.none' | t }}
+                }
+              </span>
+            </div>
+            <div class="be-actions">
+              <ds-badge
+                [tone]="gpu().found ? 'success' : 'default'"
+                data-testid="settings-backend-gpu-badge"
+              >
+                {{
+                  (gpu().found ? 'settings.backend.gpu.detected' : 'settings.backend.gpu.notFound')
+                    | t
+                }}
+              </ds-badge>
+              <button
+                type="button"
+                class="btn btn-sm"
+                [disabled]="scanning()"
+                data-testid="settings-backend-gpu-rescan"
+                (click)="scanGpu()"
+              >
+                <ds-icon name="refresh" [size]="16" />
+                {{ 'settings.backend.gpu.rescan' | t }}
+              </button>
+            </div>
+          </div>
+          <div class="st-row" data-testid="settings-backend-cuda-row">
+            <div class="field">
+              <span class="t-ink">{{ 'settings.backend.cuda' | t }}</span>
+              <span class="field-hint" data-testid="settings-backend-cuda-hint">
+                {{ cudaHint() }}
+              </span>
+            </div>
+            <div class="be-actions" data-testid="settings-backend-cuda-actions">
+              @if (!gpu().found) {
+                <span class="t-sm t-mute" data-testid="settings-backend-cuda-need-gpu">
+                  {{ 'settings.backend.cuda.needGpu' | t }}
+                </span>
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  disabled
+                  data-testid="settings-backend-cuda-download"
+                >
+                  <ds-icon name="download" [size]="16" />
+                  {{ 'settings.backend.download' | t }}
+                </button>
+              } @else {
+                @switch (cuda().state) {
+                  @case ('downloading') {
+                    <ng-container
+                      [ngTemplateOutlet]="downloadProgress"
+                      [ngTemplateOutletContext]="{
+                        $implicit: cuda(),
+                        testid: 'settings-backend-cuda-progress',
+                      }"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      data-testid="settings-backend-cuda-cancel"
+                      (click)="cancelCuda()"
+                    >
+                      {{ 'settings.backend.cancel' | t }}
+                    </button>
+                  }
+                  @case ('installed') {
+                    <ds-badge tone="success" data-testid="settings-backend-cuda-badge">
+                      {{ 'settings.backend.installed' | t }}
+                    </ds-badge>
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      data-testid="settings-backend-cuda-remove"
+                      (click)="removeCuda()"
+                    >
+                      <ds-icon name="trash" [size]="16" />
+                      {{ 'settings.backend.remove' | t }}
+                    </button>
+                  }
+                  @case ('error') {
+                    <span class="field-err" data-testid="settings-backend-cuda-error">
+                      {{ cuda().error || ('settings.backend.model.msg.error' | t) }}
+                    </span>
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      data-testid="settings-backend-cuda-retry"
+                      (click)="downloadCuda()"
+                    >
+                      <ds-icon name="refresh" [size]="16" />
+                      {{ 'settings.backend.retry' | t }}
+                    </button>
+                  }
+                  @default {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-primary"
+                      data-testid="settings-backend-cuda-download"
+                      (click)="downloadCuda()"
+                    >
+                      <ds-icon name="download" [size]="16" />
+                      {{ 'settings.backend.download' | t }}
+                    </button>
+                  }
+                }
+              }
+            </div>
+          </div>
+          <div class="st-row" data-testid="settings-backend-device-row">
+            <div class="field">
+              <span class="t-ink">{{ 'settings.backend.device' | t }}</span>
+              <span class="field-hint" data-testid="settings-backend-device-hint">
+                {{ deviceHintKey() | t }}
+              </span>
+            </div>
+            <ds-segments
+              data-testid="settings-backend-device"
+              [label]="'settings.backend.device' | t"
+              [options]="deviceOptions()"
+              [value]="device()"
+              (valueChange)="onDevice($event)"
+            />
+          </div>
+        </div>
+      </section>
+      <div class="st-note" data-testid="settings-backend-note">
+        <ds-icon name="info" [size]="15" />
+        <span>{{ 'settings.backend.note' | t }}</span>
+      </div>
+    </section>
+  } @else {
+    <section
+      class="st"
+      role="tabpanel"
+      id="settings-backend-panel-models"
+      aria-labelledby="settings-backend-tab-models"
+      data-testid="settings-backend-models"
+    >
+      <p class="t-sm t-mute" data-testid="settings-backend-models-intro">
+        {{ 'settings.backend.models.intro' | t }}
+      </p>
+      <div class="llm-list" data-testid="settings-backend-model-list">
+        @for (m of models(); track m.id) {
+          <article
+            class="llm-card"
+            [class]="modelMode(m)"
+            [attr.data-testid]="'settings-backend-model-' + m.id"
+          >
+            <header class="llm-card-h">
+              <div class="llm-card-t">
+                <span
+                  class="t-ink llm-name"
+                  [attr.data-testid]="'settings-backend-model-' + m.id + '-name'"
+                >
+                  {{ m.name }}
+                </span>
+                <ds-badge
+                  [tone]="modelTone(m)"
+                  [attr.data-testid]="'settings-backend-model-' + m.id + '-badge'"
+                >
+                  {{ modelKey(m) | t }}
+                </ds-badge>
+                @if (m.isDefault) {
+                  <ds-badge
+                    tone="primary"
+                    [attr.data-testid]="'settings-backend-model-' + m.id + '-default'"
+                  >
+                    {{ 'settings.backend.model.default' | t }}
+                  </ds-badge>
+                }
+              </div>
+            </header>
+            <div class="llm-meta">
+              <span
+                class="path t-mute"
+                [attr.data-testid]="'settings-backend-model-' + m.id + '-source'"
+              >
+                {{ m.source }}
+              </span>
+            </div>
+            @if (modelNote(m); as note) {
+              <p class="t-sm" [attr.data-testid]="'settings-backend-model-' + m.id + '-note'">
+                {{ note | t }}
+              </p>
+            }
+            <div class="tags" [attr.data-testid]="'settings-backend-model-' + m.id + '-tags'">
+              @for (language of m.languages; track language) {
+                <span class="tag">{{ language }}</span>
+              }
+              @if (m.cloning) {
+                <span class="tag is-more">{{ 'settings.backend.model.cloning' | t }}</span>
+              }
+              @if (m.gpuRecommended) {
+                <span class="tag is-more">{{ 'settings.backend.model.gpu' | t }}</span>
+              }
+              @if (m.totalBytes > 0) {
+                <span
+                  class="tag is-more"
+                  [attr.data-testid]="'settings-backend-model-' + m.id + '-size'"
+                >
+                  {{ size(m) }}
+                </span>
+              }
+            </div>
+            @if (warnsCpu(m)) {
+              <div
+                class="llm-msg is-warn t-sm"
+                [attr.data-testid]="'settings-backend-model-' + m.id + '-cpu-warning'"
+              >
+                <ds-icon name="alert" [size]="14" />
+                <span>{{ 'settings.backend.model.cpuWarn' | t }}</span>
+              </div>
+            }
+            @if (m.state === 'downloading') {
+              <ng-container
+                [ngTemplateOutlet]="downloadProgress"
+                [ngTemplateOutletContext]="{
+                  $implicit: m,
+                  testid: 'settings-backend-model-' + m.id + '-progress',
+                }"
+              />
+            }
+            @if (m.state === 'error' && m.error) {
+              <div
+                class="llm-err"
+                role="alert"
+                [attr.data-testid]="'settings-backend-model-' + m.id + '-error'"
+              >
+                <ds-icon name="alert" [size]="14" />
+                <span>{{ m.error }}</span>
+              </div>
+            }
+            <footer class="llm-foot">
+              <ng-container
+                [ngTemplateOutlet]="statusMessage"
+                [ngTemplateOutletContext]="{
+                  $implicit: modelMessage(m),
+                  testid: 'settings-backend-model-' + m.id + '-status',
+                }"
+              />
+              @switch (m.state) {
+                @case ('downloading') {
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [attr.data-testid]="'settings-backend-model-' + m.id + '-cancel'"
+                    (click)="cancelModel(m)"
+                  >
+                    {{ 'settings.backend.cancel' | t }}
+                  </button>
+                }
+                @case ('installed') {
+                  @if (!m.isDefault) {
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      [attr.data-testid]="'settings-backend-model-' + m.id + '-set-default'"
+                      (click)="setDefaultModel(m)"
+                    >
+                      <ds-icon name="check" [size]="16" />
+                      {{ 'settings.backend.model.setDefault' | t }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [attr.data-testid]="'settings-backend-model-' + m.id + '-remove'"
+                    (click)="removeModel(m)"
+                  >
+                    <ds-icon name="trash" [size]="16" />
+                    {{ 'settings.backend.remove' | t }}
+                  </button>
+                }
+                @case ('error') {
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [attr.data-testid]="'settings-backend-model-' + m.id + '-retry'"
+                    (click)="downloadModel(m)"
+                  >
+                    <ds-icon name="refresh" [size]="16" />
+                    {{ 'settings.backend.retry' | t }}
+                  </button>
+                }
+                @default {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    [attr.data-testid]="'settings-backend-model-' + m.id + '-download'"
+                    (click)="downloadModel(m)"
+                  >
+                    <ds-icon name="download" [size]="16" />
+                    {{ 'settings.backend.download' | t }}
+                  </button>
+                }
+              }
+            </footer>
+          </article>
+        }
+      </div>
+      <div class="field" data-testid="settings-backend-folder-field">
+        <span class="st-label" id="settings-backend-folder-label">
+          {{ 'settings.backend.folder' | t }}
+        </span>
+        <div
+          class="st-path"
+          role="group"
+          aria-labelledby="settings-backend-folder-label"
+          data-testid="settings-backend-folder"
+        >
+          <span class="path" [attr.title]="modelsDir()" data-testid="settings-backend-folder-path">
+            {{ modelsDir() }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [attr.aria-label]="'settings.backend.folder.open' | t"
+            data-testid="settings-backend-folder-open"
+            (click)="openModelsDir()"
+          >
+            <ds-icon name="folder-open" [size]="16" />
+            {{ 'settings.general.open' | t }}
+          </button>
+        </div>
+        <span class="field-hint">{{ 'settings.backend.folder.hint' | t }}</span>
+      </div>
+    </section>
+  }
+</div>

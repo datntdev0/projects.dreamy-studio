@@ -1,3 +1,5 @@
+import { TestBed } from '@angular/core/testing';
+import { LibraryVoiceService } from '@features/library/library.voices.service';
 import { MainPage } from '@pages/main/main.page';
 import { SplashPage } from '@pages/splash/splash.page';
 import { ComponentCase, describeComponents } from '@testing/exercise';
@@ -10,10 +12,17 @@ import { Explorer } from './explorer/explorer';
 import { Inspector } from './inspector/inspector';
 import { Railbar } from './railbar/railbar';
 import { Statusbar } from './statusbar/statusbar';
+import { TabsService } from './tabs.service';
 import { Titlebar } from './titlebar/titlebar';
 
 async function warm(): Promise<void> {
   await warmWorld();
+}
+
+async function warmVoices(selected: boolean): Promise<void> {
+  await warmWorld();
+  TestBed.inject(TabsService).openVoices();
+  if (selected) TestBed.inject(LibraryVoiceService).select(1);
 }
 
 const cases: ComponentCase[] = [
@@ -23,6 +32,9 @@ const cases: ComponentCase[] = [
   { name: 'Explorer', type: Explorer, before: warm },
   { name: 'Editor', type: Editor, before: warm },
   { name: 'Inspector', type: Inspector, before: warm },
+  { name: 'Editor (voices)', type: Editor, before: warmVoices.bind(null, false) },
+  { name: 'Inspector (voices)', type: Inspector, before: warmVoices.bind(null, true) },
+  { name: 'Inspector (voices, empty)', type: Inspector, before: warmVoices.bind(null, false) },
   { name: 'Bottom', type: Bottom, before: warm },
   { name: 'MainPage', type: MainPage, before: warm },
   { name: 'SplashPage', type: SplashPage, before: warm },

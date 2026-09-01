@@ -174,6 +174,18 @@
       <app-library-prompts-panel data-testid="inspector-prompts-panel" />
       }
     </div>
+    } @case ("voices") {
+    <div data-testid="inspector-voices-host">
+      @if (voices.selected()) {
+      <app-library-voice-panel data-testid="inspector-voice-panel" />
+      } @else {
+      <div class="ins-empty" data-testid="inspector-voices-empty">
+        <p class="t-sm t-mute" data-testid="inspector-voices-empty-text">
+          {{ "library.voice.panel.empty" | t }}
+        </p>
+      </div>
+      }
+    </div>
     } @default {
     <div class="ins-empty" data-testid="inspector-empty">
       <p>{{ "main.inspector.empty" | t }}</p>

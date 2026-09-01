@@ -175,7 +175,11 @@ fn rejects_what_the_job_refuses_without_claiming_the_executor() {
     let executor = PipelineExecutor::new();
     let job = FakeJob::new(&fixture, "VI").rejecting("chapter is not ready");
     let error = executor
-        .start(job.boxed(), fixture.tasks(), Arc::new(RecordingTarget::new()))
+        .start(
+            job.boxed(),
+            fixture.tasks(),
+            Arc::new(RecordingTarget::new()),
+        )
         .unwrap_err();
     assert_eq!(error.code, PipelineErrorCode::InvalidInput);
     assert_eq!(error.detail, "chapter is not ready");
@@ -220,7 +224,9 @@ fn queues_a_second_pipeline_at_the_default_limit_and_runs_it_afterwards() {
     assert_eq!(finished.status, PipelineStatus::Completed);
     assert!(finished.started_at.is_some());
     let events = second_target.events();
-    assert!(matches!(events.first(), Some(PipelineEvent::Started { pipeline }) if pipeline.status == PipelineStatus::Queued));
+    assert!(
+        matches!(events.first(), Some(PipelineEvent::Started { pipeline }) if pipeline.status == PipelineStatus::Queued)
+    );
     assert!(events.iter().any(|event| matches!(event, PipelineEvent::Updated { pipeline } if pipeline.status == PipelineStatus::Running)));
 }
 

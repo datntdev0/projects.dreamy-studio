@@ -87,7 +87,7 @@ fn is_verified(chapter: &LoadedChapter, evidence: &AnalysisEvidence) -> bool {
         .is_some_and(|text| contains(text, evidence.p, &evidence.q))
 }
 
-fn resolve_fact(
+pub(crate) fn resolve_fact(
     fact: &AnalysisFact,
     ids: &HashMap<String, String>,
 ) -> Option<(String, Option<String>)> {

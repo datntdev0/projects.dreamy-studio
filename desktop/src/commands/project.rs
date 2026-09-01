@@ -1,3 +1,4 @@
+use crate::commands::blocking::run_blocking_with;
 use crate::features::project::models::DirEntry;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
@@ -10,7 +11,6 @@ use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
-use tauri::async_runtime::spawn_blocking;
 use tauri_plugin_opener::OpenerExt;
 
 pub fn list_projects(
@@ -105,15 +105,12 @@ where
     T: Send + 'static,
     F: FnOnce(&ProjectService, &WorkspaceSession) -> ProjectResult<T> + Send + 'static,
 {
-    let task = spawn_blocking(move || {
+    run_blocking_with(app, task_failure, move |app| {
         let service = app.state::<ProjectService>();
         let session = app.state::<WorkspaceSession>();
         job(&service, &session)
-    });
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(error)),
-    }
+    })
+    .await
 }
 
 #[tauri::command]

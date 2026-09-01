@@ -5,71 +5,45 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PipelineStatus {
-    Queued,
-    Running,
-    Completed,
-    Failed,
-    Cancelled,
+macro_rules! status_enum {
+    ($name:ident) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+        #[serde(rename_all = "snake_case")]
+        pub enum $name {
+            Queued,
+            Running,
+            Completed,
+            Failed,
+            Cancelled,
+        }
+
+        impl $name {
+            pub fn as_str(self) -> &'static str {
+                match self {
+                    Self::Queued => "queued",
+                    Self::Running => "running",
+                    Self::Completed => "completed",
+                    Self::Failed => "failed",
+                    Self::Cancelled => "cancelled",
+                }
+            }
+
+            pub fn parse(value: &str) -> Option<Self> {
+                match value {
+                    "queued" => Some(Self::Queued),
+                    "running" => Some(Self::Running),
+                    "completed" => Some(Self::Completed),
+                    "failed" => Some(Self::Failed),
+                    "cancelled" => Some(Self::Cancelled),
+                    _ => None,
+                }
+            }
+        }
+    };
 }
 
-impl PipelineStatus {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Queued => "queued",
-            Self::Running => "running",
-            Self::Completed => "completed",
-            Self::Failed => "failed",
-            Self::Cancelled => "cancelled",
-        }
-    }
-
-    pub fn parse(value: &str) -> Option<Self> {
-        match value {
-            "queued" => Some(Self::Queued),
-            "running" => Some(Self::Running),
-            "completed" => Some(Self::Completed),
-            "failed" => Some(Self::Failed),
-            "cancelled" => Some(Self::Cancelled),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskStatus {
-    Queued,
-    Running,
-    Completed,
-    Failed,
-    Cancelled,
-}
-
-impl TaskStatus {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Queued => "queued",
-            Self::Running => "running",
-            Self::Completed => "completed",
-            Self::Failed => "failed",
-            Self::Cancelled => "cancelled",
-        }
-    }
-
-    pub fn parse(value: &str) -> Option<Self> {
-        match value {
-            "queued" => Some(Self::Queued),
-            "running" => Some(Self::Running),
-            "completed" => Some(Self::Completed),
-            "failed" => Some(Self::Failed),
-            "cancelled" => Some(Self::Cancelled),
-            _ => None,
-        }
-    }
-}
+status_enum!(PipelineStatus);
+status_enum!(TaskStatus);
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -42,7 +42,10 @@ fn candidates_go_to_the_chapters_that_mention_them_with_their_first_paragraph() 
         names(&reading.chapters[0].entities),
         ["Wren", "The Guild", "Harbor", "Mara Voss"]
     );
-    assert_eq!(names(&reading.chapters[1].entities), ["Aldous", "Mara Voss"]);
+    assert_eq!(
+        names(&reading.chapters[1].entities),
+        ["Aldous", "Mara Voss"]
+    );
     let wren = &reading.chapters[0].entities[0];
     assert_eq!(wren.id, "E1");
     assert_eq!(wren.titles, ["lamplighter"]);
@@ -470,7 +473,10 @@ fn reports_a_persona_without_a_persona_of_fact_and_drops_it() {
         ]
     );
     assert!(!names(&reading.chapters[0].entities).contains(&"Wren"));
-    assert_eq!(names(&reading.chapters[1].entities), ["Aldous", "Mara Voss"]);
+    assert_eq!(
+        names(&reading.chapters[1].entities),
+        ["Aldous", "Mara Voss"]
+    );
 }
 
 #[test]

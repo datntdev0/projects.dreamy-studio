@@ -14,6 +14,7 @@ use crate::features::settings::probe::locate;
 use crate::features::settings::probe::prepare;
 use crate::features::settings::repository::SettingsRepository;
 use crate::features::translation::service::TranslatedRun;
+use crate::shared::process::failure_snippet;
 use serde::Deserialize;
 use serde_json::Value;
 use serde_json::json;
@@ -38,7 +39,6 @@ const ASSISTANT_FEATURE: &str = "assistant";
 const RUN_TIMEOUT: Duration = Duration::from_secs(900);
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 const WORK_DIR: &str = "work";
-const DETAIL_LIMIT: usize = 400;
 const STARTED_PROGRESS: u8 = 10;
 const FINISHED_PROGRESS: u8 = 100;
 const SESSION_DEPTH: usize = 4;
@@ -832,12 +832,7 @@ fn stop(child: &mut Child) {
 }
 
 fn failure_detail(cli: &CliSpec, output: &Captured) -> String {
-    let source = if output.stderr.trim().is_empty() {
-        &output.stdout
-    } else {
-        &output.stderr
-    };
-    let detail: String = source.trim().chars().take(DETAIL_LIMIT).collect();
+    let detail = failure_snippet(&output.stdout, &output.stderr);
     if detail.is_empty() {
         format!("{} exited with {}.", cli.name, output.status)
     } else {

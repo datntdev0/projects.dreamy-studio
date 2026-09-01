@@ -1,3 +1,4 @@
+use crate::commands::blocking::run_blocking_with;
 use crate::commands::workspace::picked_path;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::ExportSummary;
@@ -265,15 +266,12 @@ where
     T: Send + 'static,
     F: FnOnce(&NovelService, &WorkspaceSession) -> NovelResult<T> + Send + 'static,
 {
-    let task = spawn_blocking(move || {
+    run_blocking_with(app, task_failure, move |app| {
         let service = app.state::<NovelService>();
         let session = app.state::<WorkspaceSession>();
         job(&service, &session)
-    });
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(error)),
-    }
+    })
+    .await
 }
 
 #[tauri::command]

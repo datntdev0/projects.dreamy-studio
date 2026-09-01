@@ -1,3 +1,4 @@
+use crate::commands::blocking::run_blocking_with;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::KnowledgeError;
@@ -9,7 +10,6 @@ use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
-use tauri::async_runtime::spawn_blocking;
 
 pub fn get(
     service: &KnowledgeService,
@@ -51,15 +51,12 @@ where
     T: Send + 'static,
     F: FnOnce(&KnowledgeService, &WorkspaceSession) -> KnowledgeResult<T> + Send + 'static,
 {
-    let task = spawn_blocking(move || {
+    run_blocking_with(app, task_failure, move |app| {
         let service = app.state::<KnowledgeService>();
         let session = app.state::<WorkspaceSession>();
         job(&service, &session)
-    });
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(error)),
-    }
+    })
+    .await
 }
 
 #[tauri::command]

@@ -48,6 +48,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+type RangeReader = Box<dyn Fn(u64, u64) -> LibraryResult<Vec<u8>>>;
+
 #[derive(Debug, Clone, Default)]
 pub struct LibraryService {
     gate: Arc<Mutex<()>>,
@@ -448,13 +450,13 @@ impl LibraryWorkspace {
             .connection_mut()
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         prompts::update(&tx, id, &patch, &format_timestamp(Utc::now()))?;
-        if let Some(text) = patch.text.as_deref() {
-            if let Err(error) = files.write(id, text) {
-                if let Some(previous) = previous.as_deref() {
-                    let _ = files.write(id, previous);
-                }
-                return Err(error);
+        if let Some(text) = patch.text.as_deref()
+            && let Err(error) = files.write(id, text)
+        {
+            if let Some(previous) = previous.as_deref() {
+                let _ = files.write(id, previous);
             }
+            return Err(error);
         }
         if let Err(error) = tx.commit() {
             if let Some(previous) = previous.as_deref() {
@@ -534,10 +536,10 @@ impl LibraryWorkspace {
                 &format_timestamp(Utc::now()),
             )?;
             files.commit(&staged, id, format)?;
-            if let Some(bytes) = poster.as_deref() {
-                if files.write_poster(id, bytes).is_ok() {
-                    videos::mark_poster(&tx, id)?;
-                }
+            if let Some(bytes) = poster.as_deref()
+                && files.write_poster(id, bytes).is_ok()
+            {
+                videos::mark_poster(&tx, id)?;
             }
             tx.commit()?;
             videos::get(db.connection(), id)
@@ -593,31 +595,30 @@ impl LibraryWorkspace {
         id: i64,
         range: Option<(u64, Option<u64>)>,
     ) -> LibraryResult<StreamChunk> {
-        let (mime, total, read): (String, u64, Box<dyn Fn(u64, u64) -> LibraryResult<Vec<u8>>>) =
-            match kind {
-                StreamKind::Sound => {
-                    let sound = sounds::get(self.database()?.connection(), id)?;
-                    let format = sound_format_from_extension(&sound.ext)?;
-                    let files = SoundFiles::new(self.dir.clone());
-                    let total = files.len(id, format)?;
-                    (
-                        format.mime().to_string(),
-                        total,
-                        Box::new(move |start, len| files.read_range(id, format, start, len)),
-                    )
-                }
-                StreamKind::Video => {
-                    let video = videos::get(self.database()?.connection(), id)?;
-                    let format = video_format_from_extension(&video.ext)?;
-                    let files = VideoFiles::new(self.dir.clone());
-                    let total = files.len(id, format)?;
-                    (
-                        format.mime().to_string(),
-                        total,
-                        Box::new(move |start, len| files.read_range(id, format, start, len)),
-                    )
-                }
-            };
+        let (mime, total, read): (String, u64, RangeReader) = match kind {
+            StreamKind::Sound => {
+                let sound = sounds::get(self.database()?.connection(), id)?;
+                let format = sound_format_from_extension(&sound.ext)?;
+                let files = SoundFiles::new(self.dir.clone());
+                let total = files.len(id, format)?;
+                (
+                    format.mime().to_string(),
+                    total,
+                    Box::new(move |start, len| files.read_range(id, format, start, len)),
+                )
+            }
+            StreamKind::Video => {
+                let video = videos::get(self.database()?.connection(), id)?;
+                let format = video_format_from_extension(&video.ext)?;
+                let files = VideoFiles::new(self.dir.clone());
+                let total = files.len(id, format)?;
+                (
+                    format.mime().to_string(),
+                    total,
+                    Box::new(move |start, len| files.read_range(id, format, start, len)),
+                )
+            }
+        };
         if total == 0 {
             return Err(LibraryError::new(
                 LibraryErrorCode::InvalidInput,
@@ -652,286 +653,136 @@ impl LibraryWorkspace {
     }
 }
 
-fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
+struct AssetRules {
+    supported: fn(&Path) -> bool,
+    max_bytes: u64,
+    unique_name: fn(&rusqlite::Connection, &str, Option<i64>) -> LibraryResult<String>,
+}
+
+const IMAGE_RULES: AssetRules = AssetRules {
+    supported: |path| image_format(path).is_ok(),
+    max_bytes: images::IMAGE_MAX_BYTES as u64,
+    unique_name: images::unique_name,
+};
+
+const SOUND_RULES: AssetRules = AssetRules {
+    supported: |path| sound_format(path).is_ok(),
+    max_bytes: sounds::SOUND_MAX_BYTES as u64,
+    unique_name: sounds::unique_name,
+};
+
+const VIDEO_RULES: AssetRules = AssetRules {
+    supported: |path| video_format(path).is_ok(),
+    max_bytes: videos::VIDEO_MAX_BYTES,
+    unique_name: videos::unique_name,
+};
+
+const PROMPT_RULES: AssetRules = AssetRules {
+    supported: |path| prompt_extension(path).is_ok(),
+    max_bytes: prompts::PROMPT_MAX_BYTES as u64,
+    unique_name: prompts::unique_name,
+};
+
+enum Screening {
+    Rejected(AssetCheck),
+    Accepted(i64),
+}
+
+fn screen_file(path: &str, name: &str, rules: &AssetRules) -> LibraryResult<Screening> {
     let source = Path::new(path);
-    let name = source
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(path)
-        .to_string();
     let metadata = match fs::metadata(source) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(image_check(
-                path,
-                name,
-                0,
-                AssetCheckStatus::Error,
-                "not_found",
-            ));
+            return Ok(rejected(path, name, 0, "not_found"));
         }
         Err(error) => return Err(error.into()),
     };
     let size = metadata.len() as i64;
     if size == 0 {
-        return Ok(image_check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "empty",
-        ));
+        return Ok(rejected(path, name, size, "empty"));
     }
-    if image_format(source).is_err() {
-        return Ok(image_check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "unsupported",
-        ));
+    if !(rules.supported)(source) {
+        return Ok(rejected(path, name, size, "unsupported"));
     }
-    if metadata.len() > images::IMAGE_MAX_BYTES as u64 {
-        return Ok(image_check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "too_large",
-        ));
+    if metadata.len() > rules.max_bytes {
+        return Ok(rejected(path, name, size, "too_large"));
     }
-    if images::unique_name(conn, &name, None)? != name {
-        return Ok(image_check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Warn,
-            "duplicate_name",
-        ));
-    }
-    Ok(image_check(path, name, size, AssetCheckStatus::Ok, ""))
+    Ok(Screening::Accepted(size))
 }
 
-fn image_check(
-    path: &str,
-    name: String,
-    size: i64,
-    status: AssetCheckStatus,
-    code: &str,
-) -> AssetCheck {
-    AssetCheck {
-        path: path.to_string(),
-        name,
+fn rejected(path: &str, name: &str, size: i64, code: &str) -> Screening {
+    Screening::Rejected(assets::check(
+        path,
+        name.to_string(),
         size,
-        status,
-        code: (!code.is_empty()).then(|| code.to_string()),
+        AssetCheckStatus::Error,
+        code,
+    ))
+}
+
+fn finish_check(path: &str, name: String, size: i64, duplicate: bool) -> AssetCheck {
+    if duplicate {
+        assets::check(path, name, size, AssetCheckStatus::Warn, "duplicate_name")
+    } else {
+        assets::check(path, name, size, AssetCheckStatus::Ok, "")
     }
+}
+
+fn inspect_asset(
+    conn: &rusqlite::Connection,
+    path: &str,
+    rules: &AssetRules,
+) -> LibraryResult<AssetCheck> {
+    let name = assets::display_name(path);
+    match screen_file(path, &name, rules)? {
+        Screening::Rejected(check) => Ok(check),
+        Screening::Accepted(size) => {
+            let duplicate = (rules.unique_name)(conn, &name, None)? != name;
+            Ok(finish_check(path, name, size, duplicate))
+        }
+    }
+}
+
+fn inspect_image(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
+    inspect_asset(conn, path, &IMAGE_RULES)
 }
 
 fn inspect_sound(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
-    let source = Path::new(path);
-    let name = source
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(path)
-        .to_string();
-    let metadata = match fs::metadata(source) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(assets::check(
-                path,
-                name,
-                0,
-                AssetCheckStatus::Error,
-                "not_found",
-            ));
-        }
-        Err(error) => return Err(error.into()),
-    };
-    let size = metadata.len() as i64;
-    if size == 0 {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "empty",
-        ));
-    }
-    if sound_format(source).is_err() {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "unsupported",
-        ));
-    }
-    if metadata.len() > sounds::SOUND_MAX_BYTES as u64 {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "too_large",
-        ));
-    }
-    if sounds::unique_name(conn, &name, None)? != name {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Warn,
-            "duplicate_name",
-        ));
-    }
-    Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
+    inspect_asset(conn, path, &SOUND_RULES)
 }
 
 fn inspect_video(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
-    let source = Path::new(path);
-    let name = source
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(path)
-        .to_string();
-    let metadata = match fs::metadata(source) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(assets::check(
-                path,
-                name,
-                0,
-                AssetCheckStatus::Error,
-                "not_found",
-            ));
-        }
-        Err(error) => return Err(error.into()),
-    };
-    let size = metadata.len() as i64;
-    if size == 0 {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "empty",
-        ));
-    }
-    if video_format(source).is_err() {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "unsupported",
-        ));
-    }
-    if metadata.len() > videos::VIDEO_MAX_BYTES {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Error,
-            "too_large",
-        ));
-    }
-    if videos::unique_name(conn, &name, None)? != name {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Warn,
-            "duplicate_name",
-        ));
-    }
-    Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
+    inspect_asset(conn, path, &VIDEO_RULES)
 }
 
 fn inspect_prompt(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
-    let source = Path::new(path);
-    let file_name = source
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(path)
-        .to_string();
-    let metadata = match fs::metadata(source) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(assets::check(
-                path,
-                file_name,
-                0,
-                AssetCheckStatus::Error,
-                "not_found",
-            ));
-        }
-        Err(error) => return Err(error.into()),
+    let file_name = assets::display_name(path);
+    let size = match screen_file(path, &file_name, &PROMPT_RULES)? {
+        Screening::Rejected(check) => return Ok(check),
+        Screening::Accepted(size) => size,
     };
-    let size = metadata.len() as i64;
-    if size == 0 {
+    if let Err(error) = prompts::decode_file(&fs::read(path)?) {
+        let code = match error.code {
+            LibraryErrorCode::PromptEmpty => "empty",
+            LibraryErrorCode::PromptUnreadable => "unreadable",
+            LibraryErrorCode::PromptTooLarge => "too_large",
+            _ => return Err(error),
+        };
         return Ok(assets::check(
             path,
             file_name,
             size,
             AssetCheckStatus::Error,
-            "empty",
+            code,
         ));
-    }
-    if prompt_extension(source).is_err() {
-        return Ok(assets::check(
-            path,
-            file_name,
-            size,
-            AssetCheckStatus::Error,
-            "unsupported",
-        ));
-    }
-    if metadata.len() > prompts::PROMPT_MAX_BYTES as u64 {
-        return Ok(assets::check(
-            path,
-            file_name,
-            size,
-            AssetCheckStatus::Error,
-            "too_large",
-        ));
-    }
-    match prompts::decode_file(&fs::read(source)?) {
-        Ok(_) => {}
-        Err(error) => {
-            let code = match error.code {
-                LibraryErrorCode::PromptEmpty => "empty",
-                LibraryErrorCode::PromptUnreadable => "unreadable",
-                LibraryErrorCode::PromptTooLarge => "too_large",
-                _ => return Err(error),
-            };
-            return Ok(assets::check(
-                path,
-                file_name,
-                size,
-                AssetCheckStatus::Error,
-                code,
-            ));
-        }
     }
     let name = prompts::normalize_name(&prompts::name_from_file(&file_name))?;
-    if prompts::unique_name(conn, &name, None)? != name {
-        return Ok(assets::check(
-            path,
-            name,
-            size,
-            AssetCheckStatus::Warn,
-            "duplicate_name",
-        ));
-    }
-    Ok(assets::check(path, name, size, AssetCheckStatus::Ok, ""))
+    let duplicate = prompts::unique_name(conn, &name, None)? != name;
+    Ok(finish_check(path, name, size, duplicate))
 }
 
 fn image_format(path: &Path) -> LibraryResult<ImageFormat> {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or("");
+    let extension = assets::extension(path);
     image_format_from_extension(extension)
 }
 
@@ -945,10 +796,7 @@ fn image_format_from_extension(extension: &str) -> LibraryResult<ImageFormat> {
 }
 
 fn sound_format(path: &Path) -> LibraryResult<SoundFormat> {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or("");
+    let extension = assets::extension(path);
     sound_format_from_extension(extension)
 }
 
@@ -972,18 +820,12 @@ fn poster_frame(staged: &Path, name: &str, duration_ms: i64) -> Option<Vec<u8>> 
 }
 
 fn video_format(path: &Path) -> LibraryResult<videos::VideoFormat> {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or("");
+    let extension = assets::extension(path);
     video_format_from_extension(extension)
 }
 
 fn prompt_extension(path: &Path) -> LibraryResult<()> {
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or("");
+    let extension = assets::extension(path);
     if prompts::PROMPT_EXTENSIONS
         .iter()
         .any(|supported| extension.eq_ignore_ascii_case(supported))

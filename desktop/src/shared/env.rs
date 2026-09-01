@@ -71,7 +71,10 @@ mod tests {
         assert_eq!(portable_data_dir_from(&executable), None);
 
         std::fs::write(dir.join(PORTABLE_MARKER), "").unwrap();
-        assert_eq!(portable_data_dir_from(&executable), Some(dir.join(PORTABLE_DATA_DIR)));
+        assert_eq!(
+            portable_data_dir_from(&executable),
+            Some(dir.join(PORTABLE_DATA_DIR))
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

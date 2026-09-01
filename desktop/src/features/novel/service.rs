@@ -194,15 +194,16 @@ pub fn cover_data_url(kind: CoverKind, bytes: &[u8]) -> String {
     format!("data:{};base64,{}", kind.mime(), STANDARD.encode(bytes))
 }
 
+fn invalid_cover() -> NovelError {
+    NovelError::new(
+        NovelErrorCode::CoverInvalid,
+        "cover must be a base64 data URL",
+    )
+}
+
 pub fn parse_cover_data_url(data_url: &str) -> NovelResult<(CoverKind, Vec<u8>)> {
-    let invalid = || {
-        NovelError::new(
-            NovelErrorCode::CoverInvalid,
-            "cover must be a base64 data URL",
-        )
-    };
-    let rest = data_url.strip_prefix("data:").ok_or_else(invalid)?;
-    let (mime, payload) = rest.split_once(";base64,").ok_or_else(invalid)?;
+    let rest = data_url.strip_prefix("data:").ok_or_else(invalid_cover)?;
+    let (mime, payload) = rest.split_once(";base64,").ok_or_else(invalid_cover)?;
     let kind = CoverKind::from_mime(mime).ok_or_else(|| {
         NovelError::new(
             NovelErrorCode::CoverInvalid,
@@ -212,7 +213,7 @@ pub fn parse_cover_data_url(data_url: &str) -> NovelResult<(CoverKind, Vec<u8>)>
     if payload.len() > max_encoded_len() {
         return Err(cover_too_large());
     }
-    let bytes = STANDARD.decode(payload).map_err(|_| invalid())?;
+    let bytes = STANDARD.decode(payload).map_err(|_| invalid_cover())?;
     check_cover_bytes(kind, &bytes)?;
     Ok((kind, bytes))
 }
@@ -509,11 +510,7 @@ impl NovelWorkspace {
         let files = self.files();
         let mut paragraphs = files.read_chapter(novel_id, chapter_id)?;
         replace_paragraph(&mut paragraphs, n, text)?;
-        files.write_chapter(novel_id, chapter_id, &paragraphs)?;
-        let now = now_text();
-        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(&paragraphs)), &now)?;
-        repo.touch_novel(novel_id, &now)?;
-        require_chapter(&repo, novel_id, chapter_id)
+        self.save_chapter(&repo, novel_id, chapter_id, &paragraphs)
     }
 
     pub fn chapter_write(
@@ -533,11 +530,7 @@ impl NovelWorkspace {
         if paragraphs.is_empty() {
             return Err(NovelError::invalid("chapter text must not be empty"));
         }
-        self.files().write_chapter(novel_id, chapter_id, &paragraphs)?;
-        let now = now_text();
-        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(&paragraphs)), &now)?;
-        repo.touch_novel(novel_id, &now)?;
-        require_chapter(&repo, novel_id, chapter_id)
+        self.save_chapter(&repo, novel_id, chapter_id, &paragraphs)
     }
 
     pub fn chapter_add(&self, novel_id: i64, title: &str) -> NovelResult<ChapterRow> {
@@ -646,11 +639,7 @@ impl NovelWorkspace {
         let files = self.files();
         let mut paragraphs = files.read_chapter(novel_id, chapter_id)?;
         paragraphs.push(make_paragraph(text));
-        files.write_chapter(novel_id, chapter_id, &paragraphs)?;
-        let now = now_text();
-        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(&paragraphs)), &now)?;
-        repo.touch_novel(novel_id, &now)?;
-        require_chapter(&repo, novel_id, chapter_id)
+        self.save_chapter(&repo, novel_id, chapter_id, &paragraphs)
     }
 
     pub fn import_package(&self, path: &Path, meta: NovelInput) -> NovelResult<NovelSummary> {
@@ -732,6 +721,21 @@ impl NovelWorkspace {
         Ok(Database::open_read_write(
             &self.dir.join(WORKSPACE_DB_FILE),
         )?)
+    }
+
+    fn save_chapter(
+        &self,
+        repo: &NovelRepository,
+        novel_id: i64,
+        chapter_id: &str,
+        paragraphs: &[Paragraph],
+    ) -> NovelResult<ChapterRow> {
+        self.files()
+            .write_chapter(novel_id, chapter_id, paragraphs)?;
+        let now = now_text();
+        repo.update_chapter_text(chapter_id, word_count(&paragraphs_text(paragraphs)), &now)?;
+        repo.touch_novel(novel_id, &now)?;
+        require_chapter(repo, novel_id, chapter_id)
     }
 
     fn files(&self) -> NovelFiles {

@@ -121,7 +121,7 @@ fn saving_the_window_keeps_the_general_settings() {
         theme: Some(Theme::Light),
         ..GeneralSettings::default()
     };
-    let window =WindowSettings::new(WindowBounds::new(10, 20, 1280, 800), true);
+    let window = WindowSettings::new(WindowBounds::new(10, 20, 1280, 800), true);
     let service = service(&dir);
     service.save_general(general.clone()).unwrap();
     service.save_window(window).unwrap();

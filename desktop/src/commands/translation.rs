@@ -1,3 +1,4 @@
+use crate::commands::blocking::run_blocking_with;
 use crate::features::translation::models::DictInput;
 use crate::features::translation::models::DictPatch;
 use crate::features::translation::models::TranslationError;
@@ -12,7 +13,6 @@ use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
-use tauri::async_runtime::spawn_blocking;
 
 pub fn get(
     service: &TranslationService,
@@ -110,15 +110,12 @@ where
     T: Send + 'static,
     F: FnOnce(&TranslationService, &WorkspaceSession) -> TranslationResult<T> + Send + 'static,
 {
-    let task = spawn_blocking(move || {
+    run_blocking_with(app, task_failure, move |app| {
         let service = app.state::<TranslationService>();
         let session = app.state::<WorkspaceSession>();
         job(&service, &session)
-    });
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(error)),
-    }
+    })
+    .await
 }
 
 #[tauri::command]

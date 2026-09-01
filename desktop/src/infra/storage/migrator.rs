@@ -25,19 +25,12 @@ pub struct Version {
 
 impl Version {
     pub fn parse(text: &str) -> StorageResult<Self> {
-        let invalid = || StorageError::InvalidScript(format!("invalid version '{text}'"));
         let mut parts = text.split('.');
-        let mut next = || -> StorageResult<u64> {
-            parts
-                .next()
-                .and_then(|part| part.parse::<u64>().ok())
-                .ok_or_else(invalid)
-        };
-        let major = next()?;
-        let minor = next()?;
-        let patch = next()?;
+        let major = next_part(&mut parts, text)?;
+        let minor = next_part(&mut parts, text)?;
+        let patch = next_part(&mut parts, text)?;
         if parts.next().is_some() {
-            return Err(invalid());
+            return Err(invalid_version(text));
         }
         Ok(Self {
             major,
@@ -72,11 +65,8 @@ impl Script {
     }
 
     pub fn from_file(file_name: &str, sql: &str) -> StorageResult<Self> {
-        let invalid = || StorageError::InvalidScript(file_name.to_string());
-        let stem = file_name.strip_suffix(".sql").ok_or_else(invalid)?;
-        let (head, name) = stem.split_once("__").ok_or_else(invalid)?;
-        let (version, seq) = head.split_once('_').ok_or_else(invalid)?;
-        let seq = seq.parse::<i64>().map_err(|_| invalid())?;
+        let (version, seq, name) = parse_file_name(file_name)
+            .ok_or_else(|| StorageError::InvalidScript(file_name.to_string()))?;
         Self::new(version, seq, name, sql)
     }
 
@@ -145,14 +135,9 @@ impl Migrator {
         after_script: &mut F,
     ) -> StorageResult<()> {
         let applied = read_history(conn).map_err(|error| map_db(error, cancel))?;
-        let is_known = |version: &str, seq: i64| {
-            ordered
-                .iter()
-                .any(|script| script.seq == seq && script.version.to_string() == version)
-        };
         if applied
             .iter()
-            .any(|(version, seq)| !is_known(version.as_str(), *seq))
+            .any(|(version, seq)| !is_known(ordered, version.as_str(), *seq))
         {
             return Err(StorageError::NewerVersion);
         }
@@ -168,18 +153,7 @@ impl Migrator {
             if cancel.load(Ordering::SeqCst) {
                 return Err(StorageError::Cancelled);
             }
-            let failed = |source: rusqlite::Error| {
-                if is_interrupt(&source) && cancel.load(Ordering::SeqCst) {
-                    StorageError::Cancelled
-                } else {
-                    StorageError::Migration {
-                        version: version.clone(),
-                        seq: script.seq,
-                        name: script.name.clone(),
-                        source,
-                    }
-                }
-            };
+            let failed = |source| migration_error(source, script, &version, cancel);
             conn.execute_batch(&script.sql).map_err(failed)?;
             conn.execute(
                 "INSERT INTO sys_migration_history (version, seq, name, applied_at) \
@@ -194,6 +168,48 @@ impl Migrator {
             return Err(StorageError::Cancelled);
         }
         Ok(())
+    }
+}
+
+fn invalid_version(text: &str) -> StorageError {
+    StorageError::InvalidScript(format!("invalid version '{text}'"))
+}
+
+fn next_part(parts: &mut std::str::Split<'_, char>, text: &str) -> StorageResult<u64> {
+    parts
+        .next()
+        .and_then(|part| part.parse::<u64>().ok())
+        .ok_or_else(|| invalid_version(text))
+}
+
+fn parse_file_name(file_name: &str) -> Option<(&str, i64, &str)> {
+    let stem = file_name.strip_suffix(".sql")?;
+    let (head, name) = stem.split_once("__")?;
+    let (version, seq) = head.split_once('_')?;
+    Some((version, seq.parse().ok()?, name))
+}
+
+fn is_known(ordered: &[&Script], version: &str, seq: i64) -> bool {
+    ordered
+        .iter()
+        .any(|script| script.seq == seq && script.version.to_string() == version)
+}
+
+fn migration_error(
+    source: rusqlite::Error,
+    script: &Script,
+    version: &str,
+    cancel: &AtomicBool,
+) -> StorageError {
+    if is_interrupt(&source) && cancel.load(Ordering::SeqCst) {
+        StorageError::Cancelled
+    } else {
+        StorageError::Migration {
+            version: version.to_string(),
+            seq: script.seq,
+            name: script.name.clone(),
+            source,
+        }
     }
 }
 

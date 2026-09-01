@@ -105,15 +105,19 @@ pub fn delete_tag(
     service.open(session)?.tag_delete(&tag)
 }
 
-pub fn pick_images<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
+fn pick_files<R: Runtime>(app: &AppHandle<R>, label: &str, extensions: &[&str]) -> Vec<String> {
     app.dialog()
         .file()
-        .add_filter(IMAGE_PICKER_LABEL, &IMAGE_EXTENSIONS)
+        .add_filter(label, extensions)
         .blocking_pick_files()
         .unwrap_or_default()
         .into_iter()
         .filter_map(|picked| picked_path(Some(picked)))
         .collect()
+}
+
+pub fn pick_images<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
+    pick_files(app, IMAGE_PICKER_LABEL, &IMAGE_EXTENSIONS)
 }
 
 pub fn inspect_images(
@@ -150,14 +154,7 @@ pub fn update_image(
 }
 
 pub fn pick_sounds<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
-    app.dialog()
-        .file()
-        .add_filter(SOUND_PICKER_LABEL, &SOUND_EXTENSIONS)
-        .blocking_pick_files()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|picked| picked_path(Some(picked)))
-        .collect()
+    pick_files(app, SOUND_PICKER_LABEL, &SOUND_EXTENSIONS)
 }
 
 pub fn inspect_sounds(
@@ -210,14 +207,7 @@ pub fn sound_peaks(
 }
 
 pub fn pick_videos<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
-    app.dialog()
-        .file()
-        .add_filter(VIDEO_PICKER_LABEL, &VIDEO_EXTENSIONS)
-        .blocking_pick_files()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|picked| picked_path(Some(picked)))
-        .collect()
+    pick_files(app, VIDEO_PICKER_LABEL, &VIDEO_EXTENSIONS)
 }
 pub fn inspect_videos(
     service: &LibraryService,
@@ -264,14 +254,7 @@ pub fn video_poster(
 }
 
 pub fn pick_prompts<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
-    app.dialog()
-        .file()
-        .add_filter(PROMPT_PICKER_LABEL, &PROMPT_EXTENSIONS)
-        .blocking_pick_files()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|picked| picked_path(Some(picked)))
-        .collect()
+    pick_files(app, PROMPT_PICKER_LABEL, &PROMPT_EXTENSIONS)
 }
 
 pub fn inspect_prompts(

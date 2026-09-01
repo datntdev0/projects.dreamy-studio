@@ -92,6 +92,44 @@ fn map_collection(
     })
 }
 
+fn unique_name_error(error: rusqlite::Error) -> LibraryError {
+    if matches!(error, rusqlite::Error::SqliteFailure(ref code, _) if code.code == rusqlite::ErrorCode::ConstraintViolation)
+    {
+        LibraryError::new(
+            LibraryErrorCode::CollectionExists,
+            "collection name already exists",
+        )
+    } else {
+        error.into()
+    }
+}
+
+fn ensure_exists(conn: &rusqlite::Connection, id: i64) -> LibraryResult<()> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM ws_library_collections WHERE id = ?1)",
+        [id],
+        |row| row.get(0),
+    )?;
+    if exists {
+        Ok(())
+    } else {
+        Err(LibraryError::new(
+            LibraryErrorCode::CollectionNotFound,
+            format!("collection {id} does not exist"),
+        ))
+    }
+}
+
+fn load_with_counts(
+    conn: &rusqlite::Connection,
+    id: i64,
+    tables: &[AssetTable],
+) -> LibraryResult<LibraryCollection> {
+    let mut collection = conn.query_row("SELECT id, name, description, created_at, updated_at FROM ws_library_collections WHERE id = ?1", [id], |row| map_collection(row, KindCounts::default()))?;
+    collection.counts = counts_for(conn, id, tables)?;
+    Ok(collection)
+}
+
 pub fn list(db: &Database, tables: &[AssetTable]) -> LibraryResult<Vec<LibraryCollection>> {
     let conn = db.connection();
     let mut statement = conn.prepare("SELECT id, name, description, created_at, updated_at FROM ws_library_collections ORDER BY name COLLATE NOCASE, id")?;
@@ -130,21 +168,8 @@ pub fn create(
         .connection_mut()
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
     let now = now_text();
-    let result = tx.execute("INSERT INTO ws_library_collections (name, description, created_at, updated_at) VALUES (?1, ?2, ?3, ?3)", rusqlite::params![name, description, now]);
-    if let Err(error) = result {
-        if matches!(error, rusqlite::Error::SqliteFailure(ref code, _) if code.code == rusqlite::ErrorCode::ConstraintViolation)
-        {
-            return Err(LibraryError::new(
-                LibraryErrorCode::CollectionExists,
-                "collection name already exists",
-            ));
-        }
-        return Err(error.into());
-    }
-    let id = tx.last_insert_rowid();
-    let collection = tx.query_row("SELECT id, name, description, created_at, updated_at FROM ws_library_collections WHERE id = ?1", [id], |row| map_collection(row, KindCounts::default()))?;
-    let mut collection = collection;
-    collection.counts = counts_for(&tx, id, tables)?;
+    tx.execute("INSERT INTO ws_library_collections (name, description, created_at, updated_at) VALUES (?1, ?2, ?3, ?3)", rusqlite::params![name, description, now]).map_err(unique_name_error)?;
+    let collection = load_with_counts(&tx, tx.last_insert_rowid(), tables)?;
     tx.commit()?;
     Ok(collection)
 }
@@ -164,32 +189,13 @@ pub fn update(
     let tx = db
         .connection_mut()
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
-    let exists: bool = tx.query_row(
-        "SELECT EXISTS(SELECT 1 FROM ws_library_collections WHERE id = ?1)",
-        [id],
-        |row| row.get(0),
-    )?;
-    if !exists {
-        return Err(LibraryError::new(
-            LibraryErrorCode::CollectionNotFound,
-            format!("collection {id} does not exist"),
-        ));
-    }
+    ensure_exists(&tx, id)?;
     if let Some(value) = name.as_deref() {
-        let result = tx.execute(
+        tx.execute(
             "UPDATE ws_library_collections SET name = ?1, updated_at = ?2 WHERE id = ?3",
             rusqlite::params![value, now_text(), id],
-        );
-        if let Err(error) = result {
-            if matches!(error, rusqlite::Error::SqliteFailure(ref code, _) if code.code == rusqlite::ErrorCode::ConstraintViolation)
-            {
-                return Err(LibraryError::new(
-                    LibraryErrorCode::CollectionExists,
-                    "collection name already exists",
-                ));
-            }
-            return Err(error.into());
-        }
+        )
+        .map_err(unique_name_error)?;
     }
     if let Some(value) = description.as_deref() {
         tx.execute(
@@ -197,9 +203,7 @@ pub fn update(
             rusqlite::params![value, now_text(), id],
         )?;
     }
-    let row = tx.query_row("SELECT id, name, description, created_at, updated_at FROM ws_library_collections WHERE id = ?1", [id], |row| map_collection(row, KindCounts::default()))?;
-    let mut row = row;
-    row.counts = counts_for(&tx, id, tables)?;
+    let row = load_with_counts(&tx, id, tables)?;
     tx.commit()?;
     Ok(row)
 }
@@ -208,17 +212,7 @@ pub fn delete(db: &mut Database, id: i64, tables: &[AssetTable]) -> LibraryResul
     let tx = db
         .connection_mut()
         .transaction_with_behavior(TransactionBehavior::Immediate)?;
-    let exists: bool = tx.query_row(
-        "SELECT EXISTS(SELECT 1 FROM ws_library_collections WHERE id = ?1)",
-        [id],
-        |row| row.get(0),
-    )?;
-    if !exists {
-        return Err(LibraryError::new(
-            LibraryErrorCode::CollectionNotFound,
-            format!("collection {id} does not exist"),
-        ));
-    }
+    ensure_exists(&tx, id)?;
     let mut unlinked = 0;
     for entry in tables {
         let sql = format!(

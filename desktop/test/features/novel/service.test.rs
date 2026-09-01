@@ -675,9 +675,16 @@ fn writes_full_chapter_text_and_splits_it_into_paragraphs() {
 
     let written = fixture
         .workspace
-        .chapter_write(novel.id, &chapter.id, "\n  first line \r\n\r\n second\n\n\nthird  \n")
+        .chapter_write(
+            novel.id,
+            &chapter.id,
+            "\n  first line \r\n\r\n second\n\n\nthird  \n",
+        )
         .unwrap();
-    let read = fixture.workspace.chapter_read(novel.id, &chapter.id).unwrap();
+    let read = fixture
+        .workspace
+        .chapter_read(novel.id, &chapter.id)
+        .unwrap();
     let empty = fixture
         .workspace
         .chapter_write(novel.id, &chapter.id, " \n\n ")
@@ -685,7 +692,10 @@ fn writes_full_chapter_text_and_splits_it_into_paragraphs() {
 
     let texts: Vec<&str> = read.iter().map(|row| row.text.as_str()).collect();
     assert_eq!(texts, ["first line", "second", "third"]);
-    assert_eq!(written.word_count, word_count("first line\nsecond\nthird\n"));
+    assert_eq!(
+        written.word_count,
+        word_count("first line\nsecond\nthird\n")
+    );
     assert_eq!(empty.code, NovelErrorCode::InvalidInput);
 }
 
@@ -700,7 +710,10 @@ fn writing_a_translated_chapter_replaces_its_paragraphs() {
         .workspace
         .chapter_write(novel.id, &chapter.id, "only one\n\nand two")
         .unwrap();
-    let read = fixture.workspace.chapter_read(novel.id, &chapter.id).unwrap();
+    let read = fixture
+        .workspace
+        .chapter_read(novel.id, &chapter.id)
+        .unwrap();
 
     assert_eq!(read.len(), 2);
 }

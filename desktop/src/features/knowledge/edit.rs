@@ -2,6 +2,7 @@ use crate::features::knowledge::edit_content::apply_content;
 use crate::features::knowledge::merge::LoadedChapter;
 use crate::features::knowledge::merge::entity_id;
 use crate::features::knowledge::merge::fact_id;
+use crate::features::knowledge::merge::resolve_fact;
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
 use crate::features::knowledge::models::AnalysisFact;
@@ -45,7 +46,7 @@ pub fn apply(
 }
 
 fn apply_one(
-    chapters: &mut Vec<LoadedChapter>,
+    chapters: &mut [LoadedChapter],
     remap: &mut HashMap<String, String>,
     edit: &KnowledgeEdit,
 ) -> KnowledgeResult<()> {
@@ -201,14 +202,7 @@ fn fact_ref(
     fact: &AnalysisFact,
     ids: &HashMap<String, String>,
 ) -> Option<FactRef> {
-    let subject = ids.get(&fact.subject)?.clone();
-    let object = match &fact.object {
-        Some(local) => Some(ids.get(local)?.clone()),
-        None => None,
-    };
-    if object.as_deref() == Some(subject.as_str()) {
-        return None;
-    }
+    let (subject, object) = resolve_fact(fact, ids)?;
     Some(FactRef {
         chapter,
         index,

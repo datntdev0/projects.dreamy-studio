@@ -1,4 +1,5 @@
 use crate::features::settings::llm::CliSpec;
+use crate::shared::process::failure_snippet;
 use serde::Serialize;
 use std::ffi::OsStr;
 use std::io::Read;
@@ -14,7 +15,6 @@ use std::time::UNIX_EPOCH;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 const POLL_INTERVAL: Duration = Duration::from_millis(25);
-const DETAIL_LIMIT: usize = 400;
 const ACCOUNT_LIMIT: usize = 80;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -262,12 +262,7 @@ fn drain<R: Read>(stream: Option<R>) -> String {
 }
 
 fn failure_detail(output: &Captured) -> String {
-    let source = if output.stderr.trim().is_empty() {
-        &output.stdout
-    } else {
-        &output.stderr
-    };
-    let detail: String = source.trim().chars().take(DETAIL_LIMIT).collect();
+    let detail = failure_snippet(&output.stdout, &output.stderr);
     if detail.is_empty() {
         format!("Command exited with {}.", output.status)
     } else {

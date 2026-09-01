@@ -1,3 +1,4 @@
+use crate::commands::blocking::run_blocking_with;
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::executor::PipelineLimits;
 use crate::features::pipeline::job::JobRegistry;
@@ -22,7 +23,6 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
-use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 
 impl PipelineTarget for Channel<PipelineEvent> {
@@ -120,16 +120,13 @@ where
         + Send
         + 'static,
 {
-    let task = spawn_blocking(move || {
+    run_blocking_with(app, task_failure, move |app| {
         let executor = app.state::<PipelineExecutor>();
         let registry = app.state::<JobRegistry>();
         let session = app.state::<WorkspaceSession>();
         job(&executor, &registry, &session)
-    });
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(error)),
-    }
+    })
+    .await
 }
 
 #[tauri::command]

@@ -50,6 +50,30 @@ pub fn definitions() -> Value {
     tools
 }
 
+const ENTRY_TYPES: [&str; 5] = ["name", "place", "org", "title", "term"];
+
+fn novel_id_property() -> Value {
+    json!({ "type": "integer", "description": "Novel id from list_novel." })
+}
+
+fn target_property() -> Value {
+    json!({ "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." })
+}
+
+fn new_dictionary_entry_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "src": { "type": "string", "description": "Source term." },
+            "dst": { "type": "string", "description": "Translated term." },
+            "type": { "type": "string", "enum": ENTRY_TYPES, "description": "Entry type." },
+            "note": { "type": "string", "description": "Optional note." }
+        },
+        "required": ["src", "dst", "type"],
+        "additionalProperties": false
+    })
+}
+
 fn base_definitions() -> Value {
     json!([
         {
@@ -67,7 +91,7 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." }
+                    "novelId": novel_id_property()
                 },
                 "required": ["novelId"],
                 "additionalProperties": false
@@ -79,7 +103,7 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
                     "from": { "type": "integer", "minimum": 1, "description": "First paragraph position, default 1." },
                     "to": { "type": "integer", "minimum": 1, "description": "Last paragraph position, default the end of the chapter." }
@@ -94,7 +118,7 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
                     "query": { "type": "string", "description": "Keep only entities whose name, titles or aliases contain this text." },
                     "type": { "type": "string", "description": "Keep only entities of this type key." },
@@ -111,8 +135,8 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
-                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "novelId": novel_id_property(),
+                    "target": target_property(),
                     "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
                     "from": { "type": "integer", "minimum": 1, "description": "First paragraph position, default 1." },
                     "to": { "type": "integer", "minimum": 1, "description": "Last paragraph position, default the end of the chapter." }
@@ -127,8 +151,8 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
-                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." }
+                    "novelId": novel_id_property(),
+                    "target": target_property()
                 },
                 "required": ["novelId", "target"],
                 "additionalProperties": false
@@ -140,7 +164,7 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "title": { "type": "string", "description": "New display title." },
                     "name": { "type": "string", "description": "New name." },
                     "author": { "type": "string", "description": "New author." },
@@ -157,7 +181,7 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
                     "title": { "type": "string", "description": "New chapter title." },
                     "paragraphs": {
@@ -185,7 +209,7 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
                     "edits": {
                         "type": "array",
@@ -210,8 +234,8 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
-                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "novelId": novel_id_property(),
+                    "target": target_property(),
                     "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
                     "p": { "type": "integer", "minimum": 1, "description": "1-based paragraph position." },
                     "expected": { "type": "string", "description": "Current translation of the paragraph, exactly as read." },
@@ -227,22 +251,12 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
-                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "novelId": novel_id_property(),
+                    "target": target_property(),
                     "add": {
                         "type": "array",
                         "description": "Entries to add.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "src": { "type": "string", "description": "Source term." },
-                                "dst": { "type": "string", "description": "Translated term." },
-                                "type": { "type": "string", "enum": ["name", "place", "org", "title", "term"], "description": "Entry type." },
-                                "note": { "type": "string", "description": "Optional note." }
-                            },
-                            "required": ["src", "dst", "type"],
-                            "additionalProperties": false
-                        }
+                        "items": new_dictionary_entry_schema()
                     },
                     "update": {
                         "type": "array",
@@ -253,7 +267,7 @@ fn base_definitions() -> Value {
                                 "id": { "type": "integer", "description": "Entry id from read_translation_guide." },
                                 "src": { "type": "string", "description": "New source term." },
                                 "dst": { "type": "string", "description": "New translated term." },
-                                "type": { "type": "string", "enum": ["name", "place", "org", "title", "term"], "description": "New entry type." },
+                                "type": { "type": "string", "enum": ENTRY_TYPES, "description": "New entry type." },
                                 "note": { "type": "string", "description": "New note." }
                             },
                             "required": ["id"],
@@ -276,8 +290,8 @@ fn base_definitions() -> Value {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
-                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
+                    "novelId": novel_id_property(),
+                    "target": target_property(),
                     "chapter": { "type": "integer", "description": "Chapter number from read_novel." },
                     "checked": { "type": "integer", "minimum": 0, "description": "Number of paragraphs you checked." },
                     "findings": {
@@ -300,17 +314,7 @@ fn base_definitions() -> Value {
                     "dictionary": {
                         "type": "array",
                         "description": "Dictionary entries worth adding. Terms already in the dictionary are dropped.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "src": { "type": "string", "description": "Source term." },
-                                "dst": { "type": "string", "description": "Translated term." },
-                                "type": { "type": "string", "enum": ["name", "place", "org", "title", "term"], "description": "Entry type." },
-                                "note": { "type": "string", "description": "Optional note." }
-                            },
-                            "required": ["src", "dst", "type"],
-                            "additionalProperties": false
-                        }
+                        "items": new_dictionary_entry_schema()
                     }
                 },
                 "required": ["novelId", "target", "chapter", "checked", "findings", "dictionary"],
@@ -328,7 +332,7 @@ fn knowledge_review_definitions() -> Vec<Value> {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
                     "issueIds": { "type": "array", "items": { "type": "string" }, "description": "Keep only the issues with these ids." },
                     "rule": { "type": "string", "description": "Keep only the issues raised by this rule key." }
@@ -343,7 +347,7 @@ fn knowledge_review_definitions() -> Vec<Value> {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id from list_novel." },
+                    "novelId": novel_id_property(),
                     "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language the edits apply to." },
                     "title": { "type": "string", "description": "Short title of the change set, in the user's language." },
                     "changes": {

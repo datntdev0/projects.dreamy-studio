@@ -22,6 +22,8 @@ const LABEL: &str = "knowledge analysis";
 const MAX_RETRIES: usize = 2;
 const MAX_LISTED: usize = 30;
 
+type ReplyReader<'a, T> = &'a dyn Fn(&str) -> Result<(T, Vec<String>), String>;
+
 const CANDIDATE_INTRO: &str = "You are a literary analyst. Read the novel chapters below and list the named entities they mention, following the entity types.\n";
 
 const CANDIDATE_RULES: &str = "\nRules:\n\
@@ -128,7 +130,7 @@ impl LlmAnalyzer {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-        read: &dyn Fn(&str) -> Result<(T, Vec<String>), String>,
+        read: ReplyReader<T>,
     ) -> Result<T, AnalyzeError> {
         let first = self.client.start(purpose, prompt, log, progress, cancel)?;
         log.line(&format!("{purpose}: session {}", first.session));
@@ -145,7 +147,7 @@ impl LlmAnalyzer {
         log: &TaskLog,
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
-        read: &dyn Fn(&str) -> Result<(T, Vec<String>), String>,
+        read: ReplyReader<T>,
     ) -> Result<T, AnalyzeError> {
         let mut best = None;
         let mut last_error = String::new();

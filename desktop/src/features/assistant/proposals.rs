@@ -647,21 +647,24 @@ fn write(work: &Work, book: &Book, sources: &Sources, novel_id: i64) -> Result<(
     }
 }
 
+fn owned_text(item: &Value, key: &str) -> Option<String> {
+    item.get(key).and_then(Value::as_str).map(str::to_string)
+}
+
 fn work_of(list: &str, item: &Value) -> Option<Work> {
-    let text = |key: &str| item.get(key).and_then(Value::as_str).map(str::to_string);
     if list == "findings" {
         let n = item.get("n").and_then(Value::as_u64)?;
         return Some(Work::Replace {
             n: usize::try_from(n).ok()?,
-            from: text("from")?,
-            to: text("to")?,
+            from: owned_text(item, "from")?,
+            to: owned_text(item, "to")?,
         });
     }
     Some(Work::Define(DictInput {
-        src: text("src")?,
-        dst: text("dst")?,
-        kind: text("type")?,
-        note: text("note").unwrap_or_default(),
+        src: owned_text(item, "src")?,
+        dst: owned_text(item, "dst")?,
+        kind: owned_text(item, "type")?,
+        note: owned_text(item, "note").unwrap_or_default(),
     }))
 }
 

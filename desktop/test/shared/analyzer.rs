@@ -157,12 +157,13 @@ impl Analyzer for FakeAnalyzer {
             .chapters
             .iter()
             .map(|chapter| {
-                self.drafts.get(&chapter.title).cloned().unwrap_or_else(|| {
-                    ChapterDraft {
+                self.drafts
+                    .get(&chapter.title)
+                    .cloned()
+                    .unwrap_or_else(|| ChapterDraft {
                         entities: default_entities(&chapter.title, &chapter.paragraphs),
                         facts: Vec::new(),
-                    }
-                })
+                    })
             })
             .collect())
     }

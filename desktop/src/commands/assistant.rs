@@ -1,3 +1,4 @@
+use crate::commands::blocking::run_blocking_with;
 use crate::features::assistant::grants::Grant;
 use crate::features::assistant::models::AssistantContext;
 use crate::features::assistant::models::AssistantError;
@@ -21,7 +22,6 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
-use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 
 const WORKSPACE_CLOSED: &str = "workspace is no longer open";
@@ -207,16 +207,13 @@ where
         + Send
         + 'static,
 {
-    let task = spawn_blocking(move || {
+    run_blocking_with(app, task_failure, move |app| {
         let service = app.state::<AssistantService>();
         let novels = app.state::<NovelService>();
         let session = app.state::<WorkspaceSession>();
         job(&service, &novels, &session)
-    });
-    match task.await {
-        Ok(result) => result,
-        Err(error) => Err(task_failure(error)),
-    }
+    })
+    .await
 }
 
 #[tauri::command]

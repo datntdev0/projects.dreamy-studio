@@ -5,6 +5,7 @@ use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibraryVideo;
+use crate::shared::files;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::params;
@@ -63,11 +64,11 @@ impl VideoFiles {
         start: u64,
         len: u64,
     ) -> LibraryResult<Vec<u8>> {
-        let mut file = File::open(self.original_path(id, format))?;
-        file.seek(SeekFrom::Start(start))?;
-        let mut bytes = Vec::new();
-        file.take(len).read_to_end(&mut bytes)?;
-        Ok(bytes)
+        Ok(files::read_range(
+            &self.original_path(id, format),
+            start,
+            len,
+        )?)
     }
 
     pub fn write_poster(&self, id: i64, bytes: &[u8]) -> LibraryResult<()> {
@@ -83,11 +84,7 @@ impl VideoFiles {
     }
 
     pub fn read_poster(&self, id: i64) -> LibraryResult<Option<Vec<u8>>> {
-        match fs::read(self.poster_path(id)) {
-            Ok(bytes) => Ok(Some(bytes)),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(error) => Err(error.into()),
-        }
+        Ok(files::read_if_exists(&self.poster_path(id))?)
     }
 
     pub fn remove(&self, id: i64, format: VideoFormat) -> LibraryResult<()> {
@@ -451,12 +448,11 @@ fn iso_find<'a>(data: &'a [u8], wanted: &[u8; 4]) -> LibraryResult<Option<&'a [u
 fn parse_moov(data: &[u8]) -> LibraryResult<VideoInfo> {
     let mvhd = iso_find(data, b"mvhd")?.ok_or_else(|| video_unreadable("video has no mvhd"))?;
     let (movie_scale, mut duration) = iso_time(mvhd)?;
-    if duration == 0 {
-        if let Some(mvex) = iso_find(data, b"mvex")? {
-            if let Some(mehd) = iso_find(mvex, b"mehd")? {
-                duration = mehd_duration(mehd)?;
-            }
-        }
+    if duration == 0
+        && let Some(mvex) = iso_find(data, b"mvex")?
+        && let Some(mehd) = iso_find(mvex, b"mehd")?
+    {
+        duration = mehd_duration(mehd)?;
     }
     let mut video = None;
     for track in iso_children(data)?
@@ -468,8 +464,13 @@ fn parse_moov(data: &[u8]) -> LibraryResult<VideoInfo> {
             break;
         }
     }
-    let (mut width, mut height, track_scale, track_duration, samples) =
-        video.ok_or_else(|| video_unreadable("video has no video track"))?;
+    let VideoTrack {
+        mut width,
+        mut height,
+        scale: track_scale,
+        duration: track_duration,
+        samples,
+    } = video.ok_or_else(|| video_unreadable("video has no video track"))?;
     if duration == 0 {
         duration = track_duration;
     }
@@ -520,7 +521,15 @@ fn mehd_duration(data: &[u8]) -> LibraryResult<u64> {
     }
 }
 
-fn parse_track(data: &[u8]) -> LibraryResult<Option<(u32, u32, u64, u64, Option<u64>)>> {
+struct VideoTrack {
+    width: u32,
+    height: u32,
+    scale: u64,
+    duration: u64,
+    samples: Option<u64>,
+}
+
+fn parse_track(data: &[u8]) -> LibraryResult<Option<VideoTrack>> {
     let mdia = match iso_find(data, b"mdia")? {
         Some(value) => value,
         None => return Ok(None),
@@ -545,7 +554,13 @@ fn parse_track(data: &[u8]) -> LibraryResult<Option<(u32, u32, u64, u64, Option<
     } else {
         (width, height)
     };
-    Ok(Some((width, height, scale, duration, samples)))
+    Ok(Some(VideoTrack {
+        width,
+        height,
+        scale,
+        duration,
+        samples,
+    }))
 }
 
 fn tkhd_dimensions(data: &[u8]) -> LibraryResult<(u32, u32, bool)> {
@@ -627,7 +642,7 @@ fn probe_ebml(file: &mut File) -> LibraryResult<VideoInfo> {
     let height =
         ebml_uint(ebml_find(video, 0xba)?.ok_or_else(|| video_unreadable("video has no height"))?)
             .ok_or_else(|| video_unreadable("invalid video height"))? as u32;
-    let fps = ebml_find(track, 0x23e3_83)?
+    let fps = ebml_find(track, 0x0023_e383)?
         .and_then(ebml_uint)
         .and_then(|nanos| {
             let value = ((1_000_000_000_f64 / nanos as f64) * 100.0).round() / 100.0;

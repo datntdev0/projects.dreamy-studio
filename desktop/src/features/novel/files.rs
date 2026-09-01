@@ -2,6 +2,8 @@ use crate::features::novel::models::NovelError;
 use crate::features::novel::models::NovelErrorCode;
 use crate::features::novel::models::NovelResult;
 use crate::features::novel::models::Paragraph;
+use crate::shared::files::read_if_exists;
+use crate::shared::files::remove_if_exists;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs;
@@ -113,7 +115,7 @@ impl NovelFiles {
         write_atomic(&dir.join(cover_name(kind)), bytes)?;
         for other in CoverKind::ALL {
             if other != kind {
-                remove_file_quietly(&dir.join(cover_name(other)))?;
+                remove_if_exists(&dir.join(cover_name(other)))?;
             }
         }
         Ok(())
@@ -121,20 +123,13 @@ impl NovelFiles {
 
     pub fn read_cover(&self, novel_id: i64) -> NovelResult<Option<(CoverKind, Vec<u8>)>> {
         let dir = self.novel_dir(novel_id);
-        for kind in CoverKind::ALL {
-            match fs::read(dir.join(cover_name(kind))) {
-                Ok(bytes) => return Ok(Some((kind, bytes))),
-                Err(error) if error.kind() == ErrorKind::NotFound => continue,
-                Err(error) => return Err(error.into()),
-            }
-        }
-        Ok(None)
+        Ok(read_first_cover(|kind| dir.join(cover_name(kind)))?)
     }
 
     pub fn clear_cover(&self, novel_id: i64) -> NovelResult<()> {
         let dir = self.novel_dir(novel_id);
         for kind in CoverKind::ALL {
-            remove_file_quietly(&dir.join(cover_name(kind)))?;
+            remove_if_exists(&dir.join(cover_name(kind)))?;
         }
         Ok(())
     }
@@ -153,7 +148,9 @@ impl NovelFiles {
     }
 
     pub fn remove_chapter(&self, novel_id: i64, chapter_id: &str) -> NovelResult<()> {
-        remove_file_quietly(&self.novel_dir(novel_id).join(chapter_name(chapter_id)?))
+        Ok(remove_if_exists(
+            &self.novel_dir(novel_id).join(chapter_name(chapter_id)?),
+        )?)
     }
 
     pub fn read_chapter(&self, novel_id: i64, chapter_id: &str) -> NovelResult<Vec<Paragraph>> {
@@ -206,12 +203,15 @@ fn is_chapter_id(value: &str) -> bool {
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
-pub(crate) fn remove_file_quietly(path: &Path) -> NovelResult<()> {
-    match fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
+pub(crate) fn read_first_cover(
+    path_of: impl Fn(CoverKind) -> PathBuf,
+) -> std::io::Result<Option<(CoverKind, Vec<u8>)>> {
+    for kind in CoverKind::ALL {
+        if let Some(bytes) = read_if_exists(&path_of(kind))? {
+            return Ok(Some((kind, bytes)));
+        }
     }
+    Ok(None)
 }
 
 pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {

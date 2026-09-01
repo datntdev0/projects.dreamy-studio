@@ -3,11 +3,11 @@ use crate::features::library::models::AssetCheckStatus;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
+use crate::shared::files;
 use crate::shared::tags::normalize_tags;
 use base64::Engine;
 use rusqlite::Connection;
 use rusqlite::params;
-use std::fs;
 use std::path::Path;
 
 pub fn data_url(mime: &str, bytes: &[u8]) -> String {
@@ -109,11 +109,7 @@ pub fn unique_name(
 }
 
 pub fn remove_if_exists(path: &Path) -> LibraryResult<()> {
-    match fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
-    }
+    Ok(files::remove_if_exists(path)?)
 }
 
 pub fn file_name(path: &Path) -> LibraryResult<String> {
@@ -126,6 +122,20 @@ pub fn file_name(path: &Path) -> LibraryResult<String> {
                 format!("path has no valid file name: {}", path.display()),
             )
         })
+}
+
+pub fn display_name(path: &str) -> String {
+    Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(path)
+        .to_string()
+}
+
+pub fn extension(path: &Path) -> &str {
+    path.extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
 }
 
 pub fn check(

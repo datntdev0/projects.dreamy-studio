@@ -5,6 +5,7 @@ use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibrarySound;
+use crate::shared::files;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::params;
@@ -225,11 +226,11 @@ impl SoundFiles {
         start: u64,
         len: u64,
     ) -> LibraryResult<Vec<u8>> {
-        let mut file = File::open(self.original_path(id, format))?;
-        file.seek(SeekFrom::Start(start))?;
-        let mut bytes = Vec::new();
-        file.take(len).read_to_end(&mut bytes)?;
-        Ok(bytes)
+        Ok(files::read_range(
+            &self.original_path(id, format),
+            start,
+            len,
+        )?)
     }
 
     pub fn len(&self, id: i64, format: SoundFormat) -> LibraryResult<u64> {

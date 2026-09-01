@@ -5,6 +5,7 @@ use tauri::App;
 use tauri::Manager;
 use tauri::Runtime;
 
+use crate::features::backend::supervisor::BackendSupervisor;
 use crate::features::settings::check::LlmCheck;
 use crate::features::settings::check::LlmChecker;
 use crate::features::settings::check::LlmStatus;
@@ -43,6 +44,7 @@ pub struct AppContainer {
     pub settings_path: PathBuf,
     pub logger: Logger,
     pub backend: Arc<dyn BackendHost>,
+    pub supervisor: Arc<BackendSupervisor>,
     pub llm_status: LlmStatus,
     pub llm: Arc<dyn LlmChecker>,
 }
@@ -58,7 +60,7 @@ impl AppContainer {
 
     pub fn from_root(root: PathBuf) -> Self {
         let logs = root.join("logs");
-        let backend = BackendProcess::new(BackendLaunch::resolve(logs));
+        let backend = BackendProcess::new(BackendLaunch::resolve(root.clone(), logs));
         let mut container = Self::with_backend(root, Arc::new(backend));
         let repository = SettingsRepository::new(container.settings_path.clone());
         let data_dir = container.directories.root.clone();
@@ -75,13 +77,18 @@ impl AppContainer {
         let database_path = directories.database_path();
         let settings_path = directories.settings_path();
         let logger = Logger::new(directories.logs.clone());
+        let supervisor = Arc::new(BackendSupervisor::new(
+            backend,
+            SettingsRepository::new(settings_path.clone()),
+        ));
 
         Self {
             directories,
             database_path,
             settings_path,
             logger,
-            backend,
+            backend: supervisor.clone(),
+            supervisor,
             llm_status: LlmStatus::default(),
             llm: Arc::new(NoLlmCheck),
         }

@@ -2,12 +2,8 @@ use std::env::current_exe;
 use std::fmt;
 use std::fs::File;
 use std::io::ErrorKind;
-use std::io::Read;
-use std::io::Write;
 use std::net::Ipv4Addr;
-use std::net::SocketAddr;
 use std::net::TcpListener;
-use std::net::TcpStream;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Child;
@@ -21,6 +17,8 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::time::Instant;
 
+use crate::infra::backend_client::BackendClient;
+
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const POLL_INTERVAL: Duration = Duration::from_millis(100);
 const PROBE_TIMEOUT: Duration = Duration::from_millis(300);
@@ -30,6 +28,7 @@ const STDERR_FILE: &str = "backend-stderr.log";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const BACKEND_DIR: &str = "backend";
 const PYTHON_DIR: &str = "python";
+pub const DEFAULT_DEVICE: &str = "cpu";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BackendError {
@@ -61,6 +60,7 @@ pub struct BackendReady {
 pub trait BackendHost: Send + Sync {
     fn start(&self, cancel: &AtomicBool) -> Result<BackendReady, BackendError>;
     fn stop(&self);
+    fn set_device(&self, device: &str);
 }
 
 #[derive(Debug, Clone)]
@@ -70,16 +70,18 @@ pub struct BackendLaunch {
     pub working_dir: Option<PathBuf>,
     pub run_mode: &'static str,
     pub log_dir: PathBuf,
+    pub data_dir: PathBuf,
     pub ready_timeout: Duration,
 }
 
 impl BackendLaunch {
-    pub fn resolve(log_dir: PathBuf) -> Self {
-        if cfg!(debug_assertions) {
+    pub fn resolve(data_dir: PathBuf, log_dir: PathBuf) -> Self {
+        let launch = if cfg!(debug_assertions) {
             Self::development(log_dir)
         } else {
             Self::packaged(log_dir)
-        }
+        };
+        Self { data_dir, ..launch }
     }
 
     fn development(log_dir: PathBuf) -> Self {
@@ -95,6 +97,7 @@ impl BackendLaunch {
             working_dir: Some(backend),
             run_mode: "dev",
             log_dir,
+            data_dir: PathBuf::new(),
             ready_timeout: READY_TIMEOUT,
         }
     }
@@ -107,6 +110,7 @@ impl BackendLaunch {
             working_dir: Some(root.join(BACKEND_DIR)),
             run_mode: "prod",
             log_dir,
+            data_dir: PathBuf::new(),
             ready_timeout: READY_TIMEOUT,
         }
     }
@@ -153,6 +157,7 @@ struct Running {
 pub struct BackendProcess {
     launch: BackendLaunch,
     state: Mutex<Option<Running>>,
+    device: Mutex<String>,
 }
 
 impl BackendProcess {
@@ -160,7 +165,12 @@ impl BackendProcess {
         Self {
             launch,
             state: Mutex::new(None),
+            device: Mutex::new(DEFAULT_DEVICE.to_string()),
         }
+    }
+
+    fn device(&self) -> String {
+        lock(&self.device).clone()
     }
 
     fn running_port(&self) -> Option<u16> {
@@ -186,7 +196,7 @@ impl BackendProcess {
         }
     }
 
-    fn spawn(&self, port: u16) -> Result<Child, BackendError> {
+    fn command(&self, port: u16) -> Command {
         let launch = &self.launch;
         let mut command = Command::new(&launch.program);
         command
@@ -197,6 +207,10 @@ impl BackendProcess {
             .arg(launch.run_mode)
             .arg("--log-dir")
             .arg(&launch.log_dir)
+            .arg("--data-dir")
+            .arg(&launch.data_dir)
+            .arg("--device")
+            .arg(self.device())
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(stderr_target(&launch.stderr_path()));
@@ -204,6 +218,12 @@ impl BackendProcess {
             command.current_dir(directory);
         }
         hide_window(&mut command);
+        command
+    }
+
+    fn spawn(&self, port: u16) -> Result<Child, BackendError> {
+        let launch = &self.launch;
+        let mut command = self.command(port);
         match command.spawn() {
             Ok(child) => Ok(child),
             Err(error) if error.kind() == ErrorKind::NotFound => Err(BackendError::Missing(
@@ -268,6 +288,10 @@ impl BackendHost for BackendProcess {
             terminate(&mut running.child);
         }
     }
+
+    fn set_device(&self, device: &str) {
+        *lock(&self.device) = device.to_string();
+    }
 }
 
 impl Drop for BackendProcess {
@@ -302,25 +326,7 @@ fn stderr_target(path: &Path) -> Stdio {
 }
 
 fn probe_health(port: u16) -> bool {
-    let address = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
-    let mut stream = match TcpStream::connect_timeout(&address, PROBE_TIMEOUT) {
-        Ok(stream) => stream,
-        Err(_) => return false,
-    };
-    let _ = stream.set_read_timeout(Some(PROBE_TIMEOUT));
-    let _ = stream.set_write_timeout(Some(PROBE_TIMEOUT));
-    let request =
-        format!("GET /health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n");
-    if stream.write_all(request.as_bytes()).is_err() {
-        return false;
-    }
-    let mut response = String::new();
-    let _ = stream.read_to_string(&mut response);
-    is_health_response(&response)
-}
-
-fn is_health_response(response: &str) -> bool {
-    response.starts_with("HTTP/1.1 200") && response.contains("\"status\":\"ok\"")
+    BackendClient::new(port, PROBE_TIMEOUT).health().is_ok()
 }
 
 fn terminate(child: &mut Child) {

@@ -8,6 +8,8 @@ use std::sync::atomic::Ordering;
 
 pub struct StubBackend {
     failure: Mutex<Option<BackendError>>,
+    devices: Mutex<Vec<String>>,
+    port: u16,
     spawned: bool,
     started: AtomicUsize,
     stopped: AtomicUsize,
@@ -17,6 +19,8 @@ impl StubBackend {
     pub fn new() -> Self {
         Self {
             failure: Mutex::new(None),
+            devices: Mutex::new(Vec::new()),
+            port: 4321,
             spawned: true,
             started: AtomicUsize::new(0),
             stopped: AtomicUsize::new(0),
@@ -31,11 +35,28 @@ impl StubBackend {
 
     pub fn failing(error: BackendError) -> Self {
         let stub = Self::new();
-        *stub
+        stub.fail_with(Some(error));
+        stub
+    }
+
+    pub fn on_port(port: u16) -> Self {
+        let mut stub = Self::new();
+        stub.port = port;
+        stub
+    }
+
+    pub fn fail_with(&self, error: Option<BackendError>) {
+        *self
             .failure
             .lock()
-            .unwrap_or_else(|error| error.into_inner()) = Some(error);
-        stub
+            .unwrap_or_else(|error| error.into_inner()) = error;
+    }
+
+    pub fn devices(&self) -> Vec<String> {
+        self.devices
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clone()
     }
 
     pub fn started(&self) -> usize {
@@ -62,12 +83,19 @@ impl BackendHost for StubBackend {
         }
         self.started.fetch_add(1, Ordering::SeqCst);
         Ok(BackendReady {
-            port: 4321,
+            port: self.port,
             spawned: self.spawned,
         })
     }
 
     fn stop(&self) {
         self.stopped.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn set_device(&self, device: &str) {
+        self.devices
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .push(device.to_string());
     }
 }

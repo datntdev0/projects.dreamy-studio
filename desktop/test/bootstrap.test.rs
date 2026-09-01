@@ -20,6 +20,7 @@ fn install_manages_every_service_the_commands_need() {
     assert!(app.try_state::<AssistantService>().is_some());
     assert!(app.try_state::<McpGrants>().is_some());
     assert!(app.try_state::<McpServer>().is_some());
+    assert!(app.try_state::<BackendService>().is_some());
 }
 
 #[test]

@@ -1,4 +1,5 @@
 pub mod assistant;
+pub mod backend;
 pub mod knowledge;
 pub mod library;
 pub mod novel;

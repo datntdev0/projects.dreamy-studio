@@ -4,6 +4,7 @@ pub mod assistant;
 pub mod audio;
 pub mod backend;
 pub mod cli;
+pub mod http;
 pub mod job;
 pub mod package;
 pub mod translator;

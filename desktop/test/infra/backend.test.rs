@@ -1,4 +1,6 @@
 use super::*;
+use std::io::Read;
+use std::io::Write;
 use std::thread::JoinHandle;
 use std::thread::spawn;
 use tempfile::tempdir;
@@ -24,27 +26,88 @@ fn launch_of(program: PathBuf, args: Vec<String>, log_dir: PathBuf) -> BackendLa
         args,
         working_dir: None,
         run_mode: "test",
+        data_dir: log_dir.join("data"),
         log_dir,
         ready_timeout: Duration::from_secs(5),
     }
 }
 
+const HEALTH_OK: &str = "HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 15
+Connection: close
+
+{\"status\":\"ok\"}";
+
 #[test]
-fn health_response_requires_ok_status_and_body() {
-    let ok = "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\n\r\n{\"status\":\"ok\"}";
-    assert!(is_health_response(ok));
-    assert!(!is_health_response(
-        "HTTP/1.1 500 Internal Server Error\r\n\r\n"
-    ));
-    assert!(!is_health_response(
-        "HTTP/1.1 200 OK\r\n\r\n{\"status\":\"down\"}"
-    ));
-    assert!(!is_health_response(""));
+fn probe_health_rejects_a_status_other_than_ok() {
+    let (port, handle) = serve_once(
+        "HTTP/1.1 200 OK
+Content-Length: 17
+Connection: close
+
+{\"status\":\"down\"}",
+    );
+
+    assert!(!probe_health(port));
+
+    handle.join().unwrap();
+}
+
+#[test]
+fn probe_health_rejects_a_server_error() {
+    let (port, handle) = serve_once(
+        "HTTP/1.1 500 Internal Server Error
+Content-Length: 0
+Connection: close
+
+",
+    );
+
+    assert!(!probe_health(port));
+
+    handle.join().unwrap();
+}
+
+#[test]
+fn command_passes_the_data_dir_and_the_selected_device() {
+    let dir = tempdir().unwrap();
+    let launch = launch_of(
+        dir.path().join("python"),
+        vec!["-m".to_string(), "app".to_string()],
+        dir.path().to_path_buf(),
+    );
+    let process = BackendProcess::new(launch);
+    let default_args = arguments(&process.command(5000));
+    process.set_device("cuda");
+    let cuda_args = arguments(&process.command(5000));
+
+    let data_dir = dir.path().join("data").to_string_lossy().to_string();
+    assert_eq!(
+        &default_args[..4],
+        &["-m", "app", "--port", "5000"].map(String::from)
+    );
+    assert_eq!(flag(&default_args, "--data-dir"), data_dir);
+    assert_eq!(flag(&default_args, "--device"), "cpu");
+    assert_eq!(flag(&cuda_args, "--device"), "cuda");
+    assert_eq!(flag(&cuda_args, "--run-mode"), "test");
+}
+
+fn arguments(command: &Command) -> Vec<String> {
+    command
+        .get_args()
+        .map(|arg| arg.to_string_lossy().to_string())
+        .collect()
+}
+
+fn flag(args: &[String], name: &str) -> String {
+    let index = args.iter().position(|arg| arg == name).unwrap();
+    args[index + 1].clone()
 }
 
 #[test]
 fn probe_health_reads_the_health_endpoint() {
-    let (port, handle) = serve_once("HTTP/1.1 200 OK\r\n\r\n{\"status\":\"ok\"}");
+    let (port, handle) = serve_once(HEALTH_OK);
 
     assert!(probe_health(port));
 
@@ -68,7 +131,8 @@ fn free_port_returns_a_bindable_port() {
 
 #[test]
 fn launch_resolves_to_the_expected_mode() {
-    let launch = BackendLaunch::resolve(PathBuf::from("logs"));
+    let launch = BackendLaunch::resolve(PathBuf::from("data"), PathBuf::from("logs"));
+    assert_eq!(launch.data_dir, PathBuf::from("data"));
 
     if cfg!(debug_assertions) {
         assert_eq!(launch.run_mode, "dev");
@@ -145,7 +209,7 @@ fn stop_without_a_running_process_is_harmless() {
 #[test]
 fn real_backend_starts_reuses_and_stops() {
     let dir = tempdir().unwrap();
-    let launch = BackendLaunch::resolve(dir.path().to_path_buf());
+    let launch = BackendLaunch::resolve(dir.path().join("data"), dir.path().to_path_buf());
     if !launch.program.is_file() {
         eprintln!("skipped: no backend interpreter at {:?}", launch.program);
         return;

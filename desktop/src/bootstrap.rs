@@ -18,6 +18,7 @@ use crate::features::assistant::server::McpServer;
 use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::service::CliAssistantLlm;
 use crate::features::assistant::service::McpEndpoint;
+use crate::features::backend::service::BackendService;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::library::models::StreamKind;
 use crate::features::novel::service::NovelService;
@@ -64,6 +65,19 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::settings::llm_logout,
             commands::settings::llm_profile_open,
             commands::settings::window_background_set,
+            commands::backend::backend_status,
+            commands::backend::backend_restart,
+            commands::backend::backend_logs_open,
+            commands::backend::backend_models_open,
+            commands::backend::backend_gpu_scan,
+            commands::backend::backend_device_set,
+            commands::backend::backend_cuda_download,
+            commands::backend::backend_cuda_cancel,
+            commands::backend::backend_cuda_remove,
+            commands::backend::backend_model_list,
+            commands::backend::backend_model_download,
+            commands::backend::backend_model_cancel,
+            commands::backend::backend_model_remove,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
             commands::workspace::workspace_delete,
@@ -211,6 +225,7 @@ pub fn install<R: Runtime>(app: &App<R>, container: AppContainer) {
     log_startup(app, &container);
     manage_workspace(app, &container);
     manage_assistant(app, &container);
+    manage_backend(app, &container);
     app.manage(container);
     prepare_window(app);
 }
@@ -240,6 +255,15 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
     manage_pipeline(app, container);
     app.manage(crate::features::project::service::ProjectService::new());
     app.manage(crate::features::library::service::LibraryService::new());
+}
+
+fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
+    app.manage(BackendService::new(
+        container.supervisor.clone(),
+        SettingsRepository::new(container.settings_path.clone()),
+        container.directories.root.clone(),
+        container.directories.logs.clone(),
+    ));
 }
 
 fn manage_assistant<R: Runtime>(app: &App<R>, container: &AppContainer) {

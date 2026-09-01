@@ -1,5 +1,6 @@
 pub mod app;
 pub mod assistant;
+pub mod backend;
 pub mod blocking;
 pub mod knowledge;
 pub mod library;

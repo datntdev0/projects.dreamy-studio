@@ -1,3 +1,4 @@
+pub mod backend;
 pub mod check;
 pub mod home;
 pub mod llm;

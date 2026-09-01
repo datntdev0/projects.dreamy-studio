@@ -23,7 +23,7 @@ import { DialogService } from '@shared/dialog/dialog.service';
 
 import { FakeIpc, provideFakeIpc } from './fake-ipc';
 // prettier-ignore
-import { chapter, libraryCollection, libraryImage, libraryPrompt, librarySound, libraryVideo, libraryVoice, novel, pipeline, project, session, task } from './fixtures';
+import { chapter, libraryCollection, libraryImage, libraryPrompt, librarySound, libraryVideo, libraryVoice, novel, pipeline, project, projectModuleState, session, task } from './fixtures';
 import { entity, fact, ONTOLOGY_VIEW } from './knowledge';
 
 const COUNTS = { image: 2, sound: 1, video: 1, prompt: 1 };
@@ -411,6 +411,11 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
   ipc.on('project_cover_get', 'data:image/png;base64,AA');
   ipc.on('project_cover_set', projects[0]);
   ipc.on('project_cover_clear', projects[0]);
+  ipc.on('project_modules', [
+    projectModuleState({ id: 'scripting', state: 'doing', done: 2, total: 3, note: '2/3' }),
+    projectModuleState({ id: 'audiobook', state: 'stale', done: 1, total: 3 }),
+    projectModuleState({ id: 'character', state: 'done', done: 4, total: 4 }),
+  ]);
   ipc.on('project_dir_list', [
     { name: 'audio', kind: 'dir', size: 0 },
     { name: 'notes.txt', kind: 'file', size: 12 },

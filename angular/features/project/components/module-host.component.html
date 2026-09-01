@@ -1,0 +1,14 @@
+@if (moduleId() === 'scripting') {
+  <app-scripting [projectId]="projectId()" />
+} @else {
+  <app-project-module-frame [projectId]="projectId()" [moduleId]="moduleId()">
+    @switch (moduleId()) {
+      @case ('audiobook') {
+        <app-project-module-placeholder [projectId]="projectId()" [moduleId]="moduleId()" />
+      }
+      @default {
+        <app-project-module-placeholder [projectId]="projectId()" [moduleId]="moduleId()" />
+      }
+    }
+  </app-project-module-frame>
+}

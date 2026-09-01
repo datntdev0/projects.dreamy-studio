@@ -1,0 +1,158 @@
+<div
+  class="sc-blk"
+  [class]="'is-' + block().type"
+  [class.is-sel]="selected()"
+  [class.is-stale]="stale()"
+  [attr.data-id]="block().id"
+  [attr.data-testid]="'sc-blk-' + block().id"
+  (focusin)="select()"
+>
+  <button
+    type="button"
+    class="sc-gut"
+    [disabled]="ctx().locked"
+    [attr.title]="'scripting.editor.block.typeTitle' | t: { type: (typeLabel() | t) }"
+    [attr.aria-label]="'scripting.editor.block.typeLabel' | t: { type: (typeLabel() | t) }"
+    [attr.data-testid]="'sc-type-btn-' + block().id"
+    (click)="openTypeMenu($event)"
+  >
+    <ds-icon [name]="definition().icon" [size]="13" />
+    <span>{{ typeLabel() | t }}</span>
+  </button>
+  <div class="sc-cell" data-testid="scripting-block-cell">
+    @switch (block().type) {
+      @case ('pause') {
+        <div class="sc-pz" [attr.data-testid]="'sc-pause-' + block().id">
+          <span>{{ 'scripting.editor.block.pause' | t }}</span>
+          <input
+            class="sc-num"
+            type="number"
+            min="0"
+            max="30"
+            step="0.1"
+            [value]="seconds()"
+            [disabled]="ctx().locked"
+            [attr.aria-label]="'scripting.editor.block.pause.label' | t"
+            [attr.data-testid]="'sc-pause-input-' + block().id"
+            (change)="editSeconds($event)"
+          />
+          <span>{{ 'scripting.editor.block.pause.seconds' | t }}</span>
+        </div>
+      }
+      @case ('scene') {
+        <div class="sc-slug" [attr.data-testid]="'sc-slug-' + block().id">
+          <input
+            class="sc-loc"
+            list="sc-places"
+            [value]="block().loc"
+            [attr.placeholder]="'scripting.editor.block.setting.placeholder' | t"
+            [attr.aria-label]="'scripting.editor.block.setting' | t"
+            [disabled]="ctx().locked"
+            [attr.data-testid]="'sc-loc-' + block().id"
+            (change)="editLocation($event)"
+          />
+          <span class="sc-dash">—</span>
+          <select
+            class="select sc-sel"
+            [disabled]="ctx().locked"
+            [attr.aria-label]="'scripting.editor.block.time' | t"
+            [attr.data-testid]="'sc-time-' + block().id"
+            (change)="editTime($event)"
+          >
+            @for (time of times; track time) {
+              <option [value]="time" [selected]="time === block().time">{{ time }}</option>
+            }
+          </select>
+        </div>
+      }
+      @default {
+        @if (hasLine()) {
+          <div class="sc-line" data-testid="scripting-block-line">
+            <button
+              type="button"
+              class="sc-who"
+              [class]="speakerClass()"
+              [disabled]="ctx().locked"
+              [attr.data-testid]="'sc-who-btn-' + block().id"
+              (click)="openWhoMenu($event)"
+            >
+              <i></i>
+              <span>{{ labels.speakerName(speaker()) }}</span>
+              <ds-icon name="chev-d" [size]="12" />
+            </button>
+            <input
+              class="sc-par"
+              [value]="block().paren"
+              [attr.placeholder]="'scripting.editor.block.tone.placeholder' | t"
+              [attr.aria-label]="'scripting.editor.block.tone' | t"
+              [disabled]="ctx().locked"
+              [attr.data-testid]="'sc-paren-' + block().id"
+              (change)="editParen($event)"
+            />
+          </div>
+        }
+        <div
+          class="sc-t"
+          spellcheck="false"
+          role="textbox"
+          aria-multiline="true"
+          [appScriptingText]="block().text"
+          [editable]="!ctx().locked"
+          [id]="'sc-t-' + block().id"
+          [attr.data-id]="block().id"
+          [attr.data-ph]="
+            (hasLine() ? 'scripting.editor.block.dialogue' : 'scripting.editor.block.content') | t
+          "
+          [attr.aria-label]="typeLabel() | t"
+          [attr.data-testid]="'sc-text-' + block().id"
+          (edited)="editText($event)"
+          (keydown)="onKeydown($event)"
+        ></div>
+      }
+    }
+  </div>
+  @if (!ctx().locked) {
+    <div class="sc-tools" [attr.data-testid]="'sc-tools-' + block().id">
+      <button
+        type="button"
+        class="btn btn-icon btn-sm"
+        [attr.title]="'scripting.editor.block.up' | t"
+        [attr.aria-label]="'scripting.editor.block.up' | t"
+        [attr.data-testid]="'sc-up-' + block().id"
+        (click)="move('up')"
+      >
+        <ds-icon name="arrow-up" [size]="17" />
+      </button>
+      <button
+        type="button"
+        class="btn btn-icon btn-sm"
+        [attr.title]="'scripting.editor.block.down' | t"
+        [attr.aria-label]="'scripting.editor.block.down' | t"
+        [attr.data-testid]="'sc-down-' + block().id"
+        (click)="move('down')"
+      >
+        <ds-icon name="arrow-down" [size]="17" />
+      </button>
+      <button
+        type="button"
+        class="btn btn-icon btn-sm"
+        [attr.title]="'scripting.editor.block.duplicate' | t"
+        [attr.aria-label]="'scripting.editor.block.duplicate' | t"
+        [attr.data-testid]="'sc-dup-' + block().id"
+        (click)="duplicate()"
+      >
+        <ds-icon name="copy" [size]="17" />
+      </button>
+      <button
+        type="button"
+        class="btn btn-icon btn-sm"
+        [attr.title]="'scripting.editor.block.delete' | t"
+        [attr.aria-label]="'scripting.editor.block.delete' | t"
+        [attr.data-testid]="'sc-del-' + block().id"
+        (click)="remove()"
+      >
+        <ds-icon name="trash" [size]="17" />
+      </button>
+    </div>
+  }
+</div>

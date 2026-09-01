@@ -62,6 +62,21 @@
       <app-project-view [projectId]="projectId" data-testid="project-view" />
       }
     </div>
+    } @case ("module") {
+    <div
+      class="nv-host"
+      [attr.data-project-id]="tabs.active().projectId"
+      [attr.data-module-id]="tabs.active().moduleId"
+      data-testid="editor-module-host"
+    >
+      @if (tabs.active().projectId; as projectId) { @if (tabs.active().moduleId; as moduleId) {
+      <app-project-module-host
+        [projectId]="projectId"
+        [moduleId]="moduleId"
+        data-testid="project-module-host"
+      />
+      } }
+    </div>
     } @case ("novels") {
     <div class="nv-host" data-testid="editor-novels-host">
       <app-novel-list />

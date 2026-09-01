@@ -1,0 +1,101 @@
+<div class="empty" data-testid="scripting-empty">
+  <div class="empty-inner">
+    <div class="illus"></div>
+    @switch (variant()) {
+      @case ('meta') {
+        <h3 class="t-display-xs">
+          {{ 'scripting.editor.empty.meta.title' | t: { unit: unitLower() } }}
+        </h3>
+        <p class="t-sm t-mute">
+          {{
+            'scripting.editor.empty.meta.text'
+              | t: { blocks: ctx().unit?.meta?.blocks ?? 0, words: words() }
+          }}
+        </p>
+        <div class="empty-act">
+          @if (ctx().locked) {
+            <button
+              type="button"
+              class="btn"
+              data-testid="sc-empty-unlock-btn"
+              (click)="dialogs.openUnlock(ctx().projectId)"
+            >
+              <ds-icon name="unlock" [size]="16" />
+              {{ 'scripting.editor.empty.meta.unlock' | t }}
+            </button>
+          } @else {
+            <button type="button" class="btn" data-testid="sc-empty-start-btn" (click)="start()">
+              {{ 'scripting.editor.empty.meta.rewrite' | t }}
+            </button>
+          }
+        </div>
+      }
+      @case ('default') {
+        <h3 class="t-display-xs">{{ 'scripting.editor.empty.title' | t: { unit: unit() } }}</h3>
+        <p class="t-sm t-mute">{{ 'scripting.editor.empty.default.text' | t }}</p>
+        <div class="empty-act">
+          <button
+            type="button"
+            class="btn btn-primary"
+            data-testid="sc-empty-draft-btn"
+            (click)="dialogs.openDraft(ctx().projectId)"
+          >
+            <ds-icon name="spark" [size]="16" />
+            {{ 'scripting.editor.empty.draft' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn"
+            data-testid="sc-empty-default-btn"
+            (click)="dialogs.openDefault(ctx().projectId)"
+          >
+            <ds-icon name="refresh" [size]="16" />
+            {{ 'scripting.editor.empty.default' | t }}
+          </button>
+          <button type="button" class="btn" data-testid="sc-empty-start-btn" (click)="start()">
+            <ds-icon name="pen" [size]="16" />
+            {{ 'scripting.editor.empty.start' | t }}
+          </button>
+        </div>
+      }
+      @case ('film') {
+        <h3 class="t-display-xs">{{ 'scripting.editor.empty.title' | t: { unit: unit() } }}</h3>
+        <p class="t-sm t-mute">
+          {{
+            (ctx().kb.ready
+              ? 'scripting.editor.empty.film.ready'
+              : 'scripting.editor.empty.film.notReady'
+            ) | t
+          }}
+        </p>
+        <div class="empty-act">
+          @if (ctx().kb.ready) {
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-testid="sc-empty-draft-btn"
+              (click)="dialogs.openDraft(ctx().projectId)"
+            >
+              <ds-icon name="spark" [size]="16" />
+              {{ 'scripting.editor.empty.draft' | t }}
+            </button>
+          }
+          <button type="button" class="btn" data-testid="sc-empty-start-btn" (click)="start()">
+            <ds-icon name="pen" [size]="16" />
+            {{ 'scripting.editor.empty.start' | t }}
+          </button>
+        </div>
+      }
+      @default {
+        <h3 class="t-display-xs">{{ 'scripting.editor.empty.title' | t: { unit: unit() } }}</h3>
+        <p class="t-sm t-mute">{{ 'scripting.editor.empty.scratch' | t }}</p>
+        <div class="empty-act">
+          <button type="button" class="btn" data-testid="sc-empty-start-btn" (click)="start()">
+            <ds-icon name="pen" [size]="16" />
+            {{ 'scripting.editor.empty.start' | t }}
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>

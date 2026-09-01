@@ -1,0 +1,118 @@
+ds-dialog[data-testid^='sc-'] .dialog-title {
+  text-transform: uppercase;
+}
+.pj-chk-list {
+  display: grid;
+  gap: var(--sp-xs);
+}
+.pj-chk-row {
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-xs) var(--sp-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+}
+.pj-chk-row input {
+  margin-top: 0;
+}
+.pj-chk-row .ic {
+  width: 15px;
+  height: 15px;
+  color: var(--mute);
+}
+.pj-chk-row .t-sm {
+  margin-left: auto;
+  max-width: 55%;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pj-chk-row.is-off {
+  opacity: 0.5;
+}
+.sc-chks {
+  display: grid;
+  padding: var(--sp-xs);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+}
+.sc-chk {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+}
+.sc-chk .ic {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.sc-chk.is-ok .ic {
+  color: var(--success);
+}
+.sc-chk.is-warn .ic {
+  color: var(--warning);
+}
+.sc-chk.is-error .ic {
+  color: var(--danger);
+}
+.sc-chk-t {
+  flex: 1;
+  min-width: 0;
+}
+.sc-est {
+  display: flex;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--r-sm);
+  background: var(--info-soft);
+}
+.sc-est .ic {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--info);
+}
+.modal .sc-ban {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--info-soft);
+  font-size: 13px;
+}
+.modal .sc-ban .ic {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--info);
+}
+.modal .sc-ban > span:not(.dot) {
+  flex: 1;
+  min-width: 0;
+}
+.modal .sc-ban.is-ok {
+  background: var(--success-soft);
+}
+.modal .sc-ban.is-ok .ic {
+  color: var(--success);
+}
+.modal .sc-ban.is-warn {
+  background: var(--warning-soft);
+}
+.modal .sc-ban.is-warn .ic {
+  color: var(--warning);
+}
+.modal .sc-ban.is-err {
+  background: var(--danger-soft);
+}
+.modal .sc-ban.is-err .ic {
+  color: var(--danger);
+}

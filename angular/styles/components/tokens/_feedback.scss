@@ -74,6 +74,9 @@
   background: var(--secondary);
   transition: width 0.3s ease;
 }
+.progress.is-done > i {
+  background: var(--success);
+}
 
 .is-dblclick,
 .is-dblclick * {

@@ -1,0 +1,80 @@
+<section class="ins-sec" data-testid="sc-ins-cast">
+  <span class="eyebrow">
+    {{ 'scripting.inspector.cast' | t: { n: ctx().cast.length } }}
+  </span>
+  <div class="sc-cast" data-testid="scripting-inspector-cast-list">
+    @for (row of rows(); track row.member.id) {
+      <div class="sc-cast-r" [attr.data-testid]="'sc-cast-' + row.member.id">
+        <i class="sc-dot {{ classOf(row.member) }}"></i>
+        <input
+          class="input"
+          [value]="labels.speakerName(row.member)"
+          [disabled]="!row.manual"
+          [attr.aria-label]="'scripting.inspector.cast.name' | t"
+          [attr.data-testid]="'sc-cast-name-' + row.member.id"
+          (change)="rename(row, $event)"
+        />
+        @if (row.member.kind === 'kb') {
+          <span
+            class="badge badge-info"
+            [attr.title]="'scripting.inspector.cast.fromKb' | t"
+            data-testid="scripting-inspector-cast-kb"
+          >
+            {{ 'scripting.inspector.cast.badgeKb' | t }}
+          </span>
+        } @else if (row.member.kind === 'narrator') {
+          <span class="badge badge-primary" data-testid="scripting-inspector-cast-narrator">
+            {{ 'scripting.inspector.cast.badgeNarrator' | t }}
+          </span>
+        } @else {
+          <span
+            class="mono t-mute"
+            [attr.title]="'scripting.inspector.cast.blockCount' | t"
+            data-testid="scripting-inspector-cast-used"
+          >
+            {{ row.used }}
+          </span>
+        }
+        <button
+          type="button"
+          class="btn btn-icon btn-sm"
+          [disabled]="!row.removable"
+          [attr.title]="row.deleteKey | t"
+          [attr.aria-label]="'scripting.inspector.cast.delete' | t"
+          [attr.data-testid]="'sc-cast-del-' + row.member.id"
+          (click)="remove(row)"
+        >
+          <ds-icon name="trash" [size]="17" />
+        </button>
+      </div>
+    } @empty {
+      <p class="t-sm t-mute" data-testid="scripting-inspector-cast-empty">
+        {{ 'scripting.inspector.cast.empty' | t }}
+      </p>
+    }
+  </div>
+  <div class="sc-cast-add" data-testid="scripting-inspector-cast-add">
+    <input
+      #newName
+      id="sc-new-spk"
+      class="input"
+      autocomplete="off"
+      [placeholder]="'scripting.inspector.cast.newPlaceholder' | t"
+      [attr.aria-label]="'scripting.inspector.cast.newLabel' | t"
+      data-testid="sc-cast-new-input"
+      (keydown.enter)="add(newName)"
+    />
+    <button type="button" class="btn btn-sm" data-testid="sc-cast-add-btn" (click)="add(newName)">
+      <ds-icon name="plus" [size]="16" />
+      {{ 'scripting.inspector.cast.add' | t }}
+    </button>
+  </div>
+  <span class="field-hint" data-testid="scripting-inspector-cast-hint">
+    {{
+      (ctx().kb.available
+        ? 'scripting.inspector.cast.hintKb'
+        : 'scripting.inspector.cast.hintManual'
+      ) | t
+    }}
+  </span>
+</section>

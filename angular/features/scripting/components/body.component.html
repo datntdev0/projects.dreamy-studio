@@ -1,0 +1,9 @@
+@if (ctx().unit; as unit) {
+  @if (!unit.blocks) {
+    <app-scripting-empty [ctx]="ctx()" />
+  } @else if (ctx().config.source && ctx().source) {
+    <app-scripting-source-page [ctx]="ctx()" />
+  } @else {
+    <app-scripting-page [ctx]="ctx()" />
+  }
+}

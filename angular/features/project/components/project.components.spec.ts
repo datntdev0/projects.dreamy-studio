@@ -9,6 +9,8 @@ import { ProjectCreateDialog } from './create.dialog';
 import { ProjectExplorer } from './explorer.component';
 import { ProjectLibraryPanel } from './library.panel';
 import { ProjectList } from './list.component';
+import { ProjectModuleHost } from './module-host.component';
+import { ProjectModules } from './modules.component';
 import { ProjectPanel } from './project.panel';
 import { ProjectView } from './project-view.component';
 import { ProjectThumb } from './thumb.component';
@@ -38,6 +40,18 @@ const cases: ComponentCase[] = [
     before: warm,
   },
   { name: 'ProjectPanel', type: ProjectPanel, inputs: { projectId: 1 }, before: warm },
+  {
+    name: 'ProjectModules',
+    type: ProjectModules,
+    inputs: { project: project({ id: 1 }) },
+    before: warm,
+  },
+  {
+    name: 'ProjectModuleHost',
+    type: ProjectModuleHost,
+    inputs: { projectId: 1, moduleId: 'scripting' },
+    before: warm,
+  },
   { name: 'ProjectTree', type: ProjectTree, inputs: { projectId: 1 }, before: warm },
   {
     name: 'ProjectThumb',

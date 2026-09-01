@@ -1,0 +1,81 @@
+@if (open() && ctx()) {
+<ds-dialog
+  [title]="'scripting.dialog.draft.title' | t"
+  [eyebrow]="'scripting.dialog.cap' | t"
+  [closeLabel]="'scripting.dialog.close' | t"
+  size="large"
+  data-testid="sc-draft-modal"
+  (closed)="close()"
+>
+  <p class="t-sm t-mute" data-testid="scripting-draft-intro">
+    {{ (film() ? "scripting.dialog.draft.intro.film" : "scripting.dialog.draft.intro.audiobook") | t
+    }}
+  </p>
+  <div class="field" data-testid="scripting-draft-units">
+    <span class="eyebrow">{{ unitsHeading() }}</span>
+    <div class="pj-chk-list" data-testid="sc-ai-units">
+      @for (option of options(); track option.unit.id) {
+      <label
+        class="check pj-chk-row"
+        [class.is-off]="!!option.reason"
+        [attr.data-testid]="'sc-ai-unit-' + option.unit.id"
+      >
+        <input
+          type="checkbox"
+          [checked]="isChecked(option)"
+          [disabled]="!!option.reason"
+          [attr.data-testid]="'sc-ai-input-' + option.unit.id"
+          (change)="onUnit(option, $event)"
+        />
+        <span>
+          {{ rowLabel(option.unit) }} @if (film()) {
+          <span class="t-mute">{{ spanLabel(option.unit) }}</span>
+          }
+        </span>
+        <span class="t-sm t-mute">
+          @if (option.reason; as reason) { {{ reason.key | t: reason.params }} } @else { {{
+          rowHint(option) | t }} }
+        </span>
+      </label>
+      }
+    </div>
+  </div>
+  <div class="field" data-testid="scripting-draft-provider">
+    <label for="sc-ai-prov">{{ "scripting.dialog.draft.provider" | t }}</label>
+    <select id="sc-ai-prov" class="select" data-testid="sc-ai-prov" (change)="onProvider($event)">
+      @for (item of providers(); track item.id) {
+      <option [value]="item.id" [selected]="item.id === provider()" [disabled]="!item.ready">
+        {{ providerLabel(item) }}
+      </option>
+      }
+    </select>
+  </div>
+  <div class="sc-est" data-testid="sc-ai-estimate">
+    <ds-icon name="info" [size]="16" />
+    <div
+      class="t-sm"
+      data-testid="scripting-draft-estimate-text"
+      [innerHTML]="estimateHtml()"
+    ></div>
+  </div>
+  @if (overwrite() > 0) {
+  <div class="sc-ban is-warn" data-testid="scripting-draft-banner">
+    <ds-icon name="alert" [size]="16" />
+    <span>{{ overwriteText() }}</span>
+  </div>
+  }
+  <ds-button dialogFoot data-testid="sc-draft-cancel-btn" (pressed)="close()">
+    {{ "common.cancel" | t }}
+  </ds-button>
+  <ds-button
+    dialogFoot
+    variant="primary"
+    [disabled]="selected().length === 0"
+    data-testid="sc-draft-go-btn"
+    (pressed)="generate()"
+  >
+    <ds-icon name="spark" [size]="14" />
+    {{ "scripting.dialog.draft.go" | t: { count: selected().length || "" } }}
+  </ds-button>
+</ds-dialog>
+}

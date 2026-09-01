@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { FakeIpc, setupIpc } from '@testing/fake-ipc';
-import { project } from '@testing/fixtures';
+import { project, projectModuleState } from '@testing/fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceService } from '../workspace/workspace.service';
@@ -128,6 +128,47 @@ describe('ProjectService', () => {
     expect(projects.isDuplicateName('alpha', 1)).toBe(false);
     expect(projects.isDuplicateName('  ')).toBe(false);
     expect(projects.isDuplicateName('gamma')).toBe(false);
+  });
+
+  it('loads module states once and completes the catalog', async () => {
+    ipc.on('project_modules', [
+      projectModuleState({ id: 'scripting', state: 'doing', done: 1, total: 2 }),
+    ]);
+    expect(projects.moduleStates(1).every((state) => state.state === 'idle')).toBe(true);
+    const first = projects.ensureModules(1);
+    const second = projects.ensureModules(1);
+    expect(await first).toHaveLength(7);
+    expect(await second).toHaveLength(7);
+    await projects.ensureModules(1);
+    expect(ipc.called('project_modules')).toBe(1);
+    expect(ipc.lastArgs('project_modules')).toEqual({ projectId: 1 });
+    expect(projects.moduleStateOf(1, 'scripting').state).toBe('doing');
+    expect(projects.moduleStateOf(1, 'video').state).toBe('idle');
+    expect(projects.moduleStateOf(2, 'scripting').state).toBe('idle');
+  });
+
+  it('falls back to idle modules when loading fails and refreshes on demand', async () => {
+    ipc.fail('project_modules', 'x');
+    expect((await projects.ensureModules(1)).every((state) => state.state === 'idle')).toBe(true);
+    expect(projects.error()).toBeNull();
+    ipc.on('project_modules', [projectModuleState({ id: 'audiobook', state: 'done' })]);
+    await projects.refreshModules(1);
+    expect(projects.moduleStateOf(1, 'audiobook').state).toBe('done');
+    ipc.on('project_modules', null);
+    await projects.refreshModules(2);
+    expect(projects.moduleStateOf(2, 'audiobook').state).toBe('idle');
+  });
+
+  it('drops module states when a project is removed or the workspace resets', async () => {
+    ipc.on('project_modules', [projectModuleState({ id: 'scripting', state: 'done' })]);
+    await projects.ensureModules(1);
+    await projects.ensureModules(2);
+    ipc.on('project_delete', 1);
+    await projects.remove([1]);
+    expect(projects.moduleStateOf(1, 'scripting').state).toBe('idle');
+    expect(projects.moduleStateOf(2, 'scripting').state).toBe('done');
+    projects.reset();
+    expect(projects.moduleStateOf(2, 'scripting').state).toBe('idle');
   });
 
   it('caches covers', async () => {

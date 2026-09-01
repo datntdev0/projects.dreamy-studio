@@ -1,0 +1,60 @@
+app-scripting,
+app-scripting-rail,
+app-scripting-subbar,
+app-scripting-add-bar,
+app-scripting-banners,
+app-scripting-body,
+app-scripting-page,
+app-scripting-source-page,
+app-scripting-group,
+app-scripting-block,
+app-scripting-stale-bar,
+app-scripting-missing,
+app-scripting-drawer,
+app-scripting-empty,
+app-scripting-presets,
+app-scripting-menu {
+  display: contents;
+}
+
+.spk-0 {
+  --spk: var(--primary-text);
+}
+.spk-1 {
+  --spk: var(--secondary-text);
+}
+.spk-2 {
+  --spk: var(--info);
+}
+.spk-3 {
+  --spk: var(--success);
+}
+.spk-4 {
+  --spk: var(--warning);
+}
+.spk-5 {
+  --spk: var(--danger);
+}
+.spk-n {
+  --spk: var(--mute);
+}
+.spk-x {
+  --spk: var(--danger);
+}
+.sc-dot,
+.sc-who i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--spk, var(--mute));
+}
+
+[data-testid='sc-root'] > .nv-bar .nv-bar-l {
+  flex-wrap: wrap;
+  row-gap: var(--sp-xs);
+}
+[data-testid='sc-root'] > .nv-bar .nv-ttl {
+  flex: none;
+}

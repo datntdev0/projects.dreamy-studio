@@ -1,0 +1,83 @@
+@if (ctx().unit; as unit) {
+  <div class="tl-sub is-wrap sc-sub" data-testid="sc-sub">
+    <span class="mono t-mute sc-sub-n" data-testid="scripting-subbar-number">
+      {{ labels.unitNumber(ctx().config, unit.no) }}
+    </span>
+    @if (ctx().config.preset === 'audiobook') {
+      <span class="t-ink sc-title-ro" data-testid="sc-unit-title">
+        {{ labels.unitTitle(ctx().config, unit.no, unit.title) }}
+      </span>
+    } @else {
+      <input
+        class="input sc-title"
+        [value]="unit.title"
+        [attr.placeholder]="'scripting.editor.sub.name' | t: { unit: unitLower() }"
+        [attr.aria-label]="'scripting.editor.sub.name' | t: { unit: unitLower() }"
+        [disabled]="ctx().locked"
+        data-testid="sc-unit-title"
+        (change)="setTitle($event)"
+      />
+    }
+    <span data-testid="scripting-subbar-status">
+      <span [class]="statusClass()" [attr.data-testid]="'sc-status-' + unit.id">
+        {{ statusKey() | t }}
+      </span>
+    </span>
+    @if (ctx().config.ranges) {
+      <span class="sc-chs" data-testid="sc-chs">
+        {{ 'scripting.editor.sub.chapters' | t }}
+        <input
+          class="input"
+          type="number"
+          min="1"
+          [attr.max]="ctx().chapterMax"
+          [value]="unit.chs ? unit.chs[0] : ''"
+          [disabled]="ctx().locked || !ctx().kb.novel"
+          [attr.aria-label]="'scripting.editor.sub.from' | t"
+          data-testid="sc-chs-from"
+          (change)="setChapter($event, 0)"
+        />
+        –
+        <input
+          class="input"
+          type="number"
+          min="1"
+          [attr.max]="ctx().chapterMax"
+          [value]="unit.chs ? unit.chs[1] : ''"
+          [disabled]="ctx().locked || !ctx().kb.novel"
+          [attr.aria-label]="'scripting.editor.sub.to' | t"
+          data-testid="sc-chs-to"
+          (change)="setChapter($event, 1)"
+        />
+      </span>
+    }
+    <span class="sc-stats mono" data-testid="sc-stats">
+      @for (part of stats(); track $index) {
+        <span>{{ part }}</span>
+      }
+    </span>
+    <span class="spacer"></span>
+    @if (grouped()) {
+      <button type="button" class="btn btn-sm" data-testid="sc-grp-all-btn" (click)="toggleAll()">
+        <ds-icon [name]="anyOpen() ? 'chev-r' : 'chev-d'" [size]="16" />
+        {{ (anyOpen() ? 'scripting.editor.sub.collapse' : 'scripting.editor.sub.expand') | t }}
+      </button>
+    }
+    @if (ctx().config.ranges && ctx().source) {
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.is-active]="ctx().view.drawer"
+        [attr.aria-pressed]="ctx().view.drawer"
+        data-testid="sc-drawer-btn"
+        (click)="toggleDrawer()"
+      >
+        <ds-icon name="book" [size]="16" />
+        {{ 'scripting.editor.sub.source' | t }}
+      </button>
+    }
+    @if (unit.blocks && !ctx().locked) {
+      <app-scripting-add-bar [ctx]="ctx()" />
+    }
+  </div>
+}

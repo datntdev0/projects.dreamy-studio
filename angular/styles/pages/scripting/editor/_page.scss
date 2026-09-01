@@ -1,0 +1,149 @@
+.sc-pagewrap {
+  padding: var(--sp-2xl) var(--sp-lg) var(--sp-4xl);
+  min-width: 0;
+}
+.sc-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+}
+.sc-page {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: var(--sp-3xl) var(--sp-2xl) var(--sp-4xl) var(--sp-sm);
+  background: var(--canvas-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+}
+.sc-page .sc-t,
+.sc-page .sc-slug,
+.sc-page .sc-who,
+.sc-page .sc-par,
+.sc-page .sc-loc,
+.sc-page .sc-sel {
+  font-family: var(--font-mono);
+}
+.sc-page .sc-t {
+  font-size: 13px;
+  line-height: 1.75;
+}
+.sc-page .sc-blk {
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: var(--sp-sm);
+}
+.sc-page .sc-gut {
+  max-width: none;
+  padding: 0 var(--sp-sm);
+}
+.sc-page .sc-gut span {
+  display: none;
+}
+.sc-ptitle {
+  display: grid;
+  gap: var(--sp-xs);
+  justify-items: center;
+  margin-bottom: var(--sp-2xl);
+  padding-left: 30px;
+  text-align: center;
+}
+.sc-ptitle h2 {
+  font: 500 16px/22px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--ink);
+}
+.sc-pempty {
+  padding-left: 38px;
+}
+.sc-page .sc-gut {
+  opacity: 0.4;
+}
+.sc-page .sc-blk:hover .sc-gut,
+.sc-page .sc-blk.is-sel .sc-gut {
+  opacity: 1;
+}
+.sc-page .sc-blk:hover {
+  background: transparent;
+}
+.sc-page .sc-blk.is-sel {
+  background: var(--canvas-soft);
+}
+.sc-page .sc-blk.is-scene {
+  margin-top: var(--sp-xl);
+  border-top: 0;
+}
+.sc-page .sc-blk.is-scene .sc-loc,
+.sc-page .sc-blk.is-scene .sc-sel {
+  font-weight: 500;
+}
+.sc-page .sc-blk.is-action .sc-cell {
+  padding-right: 6%;
+}
+.sc-page .sc-blk.is-dialogue .sc-cell {
+  padding: 0 12% 0 14%;
+}
+.sc-page .sc-blk.is-dialogue .sc-line {
+  padding-left: 24%;
+}
+.sc-page .sc-who {
+  border-color: transparent;
+  padding-left: 0;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.sc-page .sc-blk.is-transition .sc-t {
+  text-align: right;
+}
+.sc-page .sc-blk.is-heading .sc-t,
+.sc-page .sc-blk.is-heading .sc-cell {
+  text-align: center;
+}
+.sc-page .sc-blk.is-narration .sc-t {
+  font-style: italic;
+}
+.sc-page-ab {
+  padding-right: var(--sp-lg);
+}
+.sc-page-ab .sc-blk.is-narration .sc-t {
+  font-style: normal;
+}
+.sc-drawer {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: var(--sp-xs);
+  padding: var(--sp-md);
+  border-left: 1px solid var(--hairline);
+  background: var(--canvas);
+}
+.sc-drawer-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-xs) var(--sp-xs);
+}
+.sc-drawer-g {
+  padding: var(--sp-sm) var(--sp-xs) 0;
+}
+.sc-drawer .sc-src {
+  padding: var(--sp-sm) var(--sp-xs);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .sc-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sc-drawer {
+    position: static;
+    max-height: none;
+    border-left: 0;
+    border-top: 1px solid var(--hairline);
+  }
+}

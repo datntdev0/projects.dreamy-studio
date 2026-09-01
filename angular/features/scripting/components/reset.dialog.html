@@ -1,0 +1,62 @@
+@if (open() && ctx()) {
+<ds-dialog
+  [title]="'scripting.dialog.reset.title' | t"
+  [eyebrow]="'scripting.dialog.cap' | t"
+  [closeLabel]="'scripting.dialog.close' | t"
+  data-testid="sc-reset-modal"
+  (closed)="close()"
+>
+  <p
+    class="t-sm"
+    data-testid="scripting-reset-intro"
+    [innerHTML]="'scripting.dialog.reset.intro' | t"
+  ></p>
+  <div class="field" data-testid="scripting-reset-scope">
+    <span class="eyebrow">{{ "scripting.dialog.reset.scope" | t }}</span>
+    <div class="pj-chk-list" role="radiogroup" data-testid="scripting-reset-scopes">
+      <label class="check pj-chk-row" data-testid="sc-reset-scope-unit">
+        <input
+          type="radio"
+          name="sc-rs"
+          value="unit"
+          [checked]="scope() === 'unit'"
+          data-testid="sc-reset-scope-input-unit"
+          (change)="pick('unit')"
+        />
+        <span>{{ "scripting.dialog.reset.unit" | t: { unit: unitTitle(), no: unitNo() } }}</span>
+        <span class="t-sm t-mute">
+          {{ "scripting.dialog.reset.unit.hint" | t: { count: blocks() } }}
+        </span>
+      </label>
+      <label
+        class="check pj-chk-row"
+        [class.is-off]="!allEnabled()"
+        data-testid="sc-reset-scope-all"
+      >
+        <input
+          type="radio"
+          name="sc-rs"
+          value="all"
+          [checked]="scope() === 'all'"
+          [disabled]="!allEnabled()"
+          data-testid="sc-reset-scope-input-all"
+          (change)="pick('all')"
+        />
+        <span>{{ "scripting.dialog.reset.all" | t: { unit: unitName() } }}</span>
+        <span class="t-sm t-mute">{{ allHint() }}</span>
+      </label>
+    </div>
+  </div>
+  <div class="sc-ban is-warn" data-testid="scripting-reset-banner">
+    <ds-icon name="alert" [size]="16" />
+    <span>{{ "scripting.dialog.reset.warn" | t }}</span>
+  </div>
+  <ds-button dialogFoot data-testid="sc-reset-cancel-btn" (pressed)="close()">
+    {{ "common.cancel" | t }}
+  </ds-button>
+  <ds-button dialogFoot variant="primary" data-testid="sc-reset-go-btn" (pressed)="confirm()">
+    <ds-icon name="refresh" [size]="14" />
+    {{ "scripting.dialog.reset.go" | t }}
+  </ds-button>
+</ds-dialog>
+}

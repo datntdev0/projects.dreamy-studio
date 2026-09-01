@@ -1,0 +1,21 @@
+<aside
+  class="sc-drawer"
+  [attr.aria-label]="'scripting.editor.drawer.title' | t"
+  data-testid="sc-drawer"
+>
+  <div class="sc-drawer-h" data-testid="scripting-drawer-head">
+    <span class="eyebrow">{{ 'scripting.editor.drawer.title' | t }}</span>
+    <span class="mono t-mute">{{ range() }}</span>
+  </div>
+  @for (group of groups(); track group.chapter) {
+    <div class="sc-drawer-g" data-testid="scripting-drawer-group">
+      <span class="eyebrow">{{ 'scripting.editor.drawer.chapter' | t: { n: group.chapter } }}</span>
+    </div>
+    @for (paragraph of group.paragraphs; track paragraph.id) {
+      <div class="sc-src" [attr.data-testid]="'sc-src-' + paragraph.id">
+        <span class="sc-pno mono">{{ group.chapter }}.¶{{ paragraphNo(paragraph.id) }}</span>
+        <p>{{ paragraph.text }}</p>
+      </div>
+    }
+  }
+</aside>

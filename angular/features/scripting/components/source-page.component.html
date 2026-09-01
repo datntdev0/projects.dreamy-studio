@@ -1,0 +1,19 @@
+<div class="sc-pagewrap" data-testid="scripting-page-wrap">
+  <div class="sc-page sc-page-ab" data-testid="sc-page">
+    @if (ctx().unit; as unit) {
+      <header class="sc-ptitle" data-testid="sc-page-title">
+        <span class="mono">{{ labels.unitNumber(ctx().config, unit.no) }}</span>
+        <h2>{{ unit.title || ('scripting.editor.page.unnamed' | t) }}</h2>
+      </header>
+    }
+    @for (row of rows(); track rowKey(row)) {
+      @if (row.para) {
+        <app-scripting-group [ctx]="ctx()" [row]="row" />
+      } @else {
+        @for (block of row.blocks; track block.id) {
+          <app-scripting-block [ctx]="ctx()" [block]="block" />
+        }
+      }
+    }
+  </div>
+</div>

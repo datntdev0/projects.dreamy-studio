@@ -154,7 +154,7 @@ const PROFILE_ROOT = 'C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio\\llm';
 export const LLM_PROVIDERS: LlmProvider[] = [
   llmProvider({
     id: 'claude',
-    name: 'Claude Code',
+    name: 'Claude Code CLI',
     command: 'claude',
     version: '2.1.0',
     profileEnv: 'CLAUDE_CONFIG_DIR',

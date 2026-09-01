@@ -1,0 +1,25 @@
+<ng-template #sheet>
+  <div class="sc-pagewrap" data-testid="scripting-page-wrap">
+    <div class="sc-page" data-testid="sc-page">
+      <header class="sc-ptitle" data-testid="sc-page-title">
+        <span class="mono">{{ heading() }}</span>
+        <h2>{{ ctx().unit?.title || ('scripting.editor.page.unnamed' | t) }}</h2>
+      </header>
+      @for (block of blocks(); track block.id) {
+        <app-scripting-block [ctx]="ctx()" [block]="block" />
+      } @empty {
+        <p class="sc-pempty t-sm t-mute" data-testid="scripting-page-empty">
+          {{ 'scripting.editor.page.blank' | t }}
+        </p>
+      }
+    </div>
+  </div>
+</ng-template>
+@if (drawer()) {
+  <div class="sc-split" data-testid="scripting-split">
+    <ng-container [ngTemplateOutlet]="sheet" />
+    <app-scripting-drawer [ctx]="ctx()" />
+  </div>
+} @else {
+  <ng-container [ngTemplateOutlet]="sheet" />
+}

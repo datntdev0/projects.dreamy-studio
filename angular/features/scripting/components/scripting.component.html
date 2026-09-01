@@ -1,0 +1,82 @@
+@if (ctx(); as c) {
+  <div class="nv" data-testid="sc-root">
+    <div class="nv-bar" data-testid="scripting-bar">
+      <div class="nv-bar-l" data-testid="scripting-bar-left">
+        <button type="button" class="btn btn-sm" data-testid="sc-back-btn" (click)="back()">
+          <ds-icon name="arrow-left" [size]="16" />
+          {{ project()?.name }}
+        </button>
+        <span class="nv-ttl" data-testid="scripting-title">
+          <ds-icon name="pen" [size]="18" />
+          <span class="t-ink">{{ moduleLabel | t }}</span>
+          @if (preset(); as preset) {
+            <span
+              class="badge badge-primary"
+              [attr.title]="preset.labelKey | t"
+              data-testid="sc-preset-badge"
+            >
+              {{ preset.shortKey | t }}
+            </span>
+          }
+        </span>
+      </div>
+      <span class="spacer"></span>
+      <div class="nv-bar-r" data-testid="scripting-bar-right">
+        @if (!c.choose) {
+          @if (!c.locked) {
+            <button
+              type="button"
+              class="btn btn-sm"
+              data-testid="sc-draft-btn"
+              (click)="dialogs.openDraft(c.projectId)"
+            >
+              <ds-icon name="spark" [size]="16" />
+              {{ 'scripting.editor.bar.draft' | t }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              data-testid="sc-lock-btn"
+              (click)="dialogs.openCheck(c.projectId)"
+            >
+              <ds-icon name="shield" [size]="16" />
+              {{ 'scripting.editor.bar.lock' | t }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-sm"
+              data-testid="sc-unlock-btn"
+              (click)="dialogs.openUnlock(c.projectId)"
+            >
+              <ds-icon name="unlock" [size]="16" />
+              {{ 'scripting.editor.bar.unlock' | t }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+    <div class="nv-body" data-testid="scripting-body">
+      @if (c.choose) {
+        <app-scripting-presets [ctx]="c" />
+      } @else {
+        <app-scripting-rail [ctx]="c" />
+        <div class="sc-main" data-testid="sc-main">
+          <app-scripting-subbar [ctx]="c" />
+          <app-scripting-banners [ctx]="c" />
+          <div class="sc-scroll" data-testid="sc-scroll">
+            <app-scripting-body [ctx]="c" />
+          </div>
+        </div>
+        @if (c.config.ranges) {
+          <datalist id="sc-places" data-testid="sc-places">
+            @for (place of c.places; track place) {
+              <option [value]="place.toUpperCase()"></option>
+            }
+          </datalist>
+        }
+      }
+    </div>
+    <app-scripting-menu />
+  </div>
+}

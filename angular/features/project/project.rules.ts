@@ -1,7 +1,8 @@
 import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
+import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { DirEntry, ProjectError, ProjectFilters, ProjectStatus, ProjectSummary, ProjectTemplate, ProjectTemplateId } from './project.models';
+import { DirEntry, ProjectError, ProjectFilters, ProjectModule, ProjectModuleId, ProjectModuleRow, ProjectModuleStage, ProjectModuleState, ProjectModuleStatus, ProjectStatus, ProjectSummary, ProjectTemplate, ProjectTemplateId } from './project.models';
 
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   {
@@ -23,6 +24,41 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     blurbKey: 'project.template.blank.blurb',
   },
 ];
+
+function moduleDef(
+  id: ProjectModuleId,
+  stage: ProjectModuleStage,
+  icon: string,
+  implemented: boolean,
+): ProjectModule {
+  return {
+    id,
+    stage,
+    icon,
+    implemented,
+    labelKey: `project.module.${id}`,
+    blurbKey: `project.module.${id}.blurb`,
+  };
+}
+
+export const PROJECT_MODULES: ProjectModule[] = [
+  moduleDef('scripting', 'pre', 'pen', true),
+  moduleDef('character', 'pre', 'user', false),
+  moduleDef('world', 'pre', 'cube', false),
+  moduleDef('storyboard', 'pre', 'frames', false),
+  moduleDef('audiobook', 'prod', 'mic', true),
+  moduleDef('canvas', 'prod', 'nodes', false),
+  moduleDef('video', 'post', 'film', false),
+];
+
+export const PROJECT_MODULE_STAGES: ProjectModuleStage[] = ['pre', 'prod', 'post'];
+
+const MODULE_BADGE_CLASSES: Record<ProjectModuleStatus, string> = {
+  idle: '',
+  doing: 'badge-running',
+  done: 'badge-success',
+  stale: 'badge-warning',
+};
 
 function matchesProject(project: ProjectSummary, filters: ProjectFilters, needle: string): boolean {
   const templateOk = filters.templates.length === 0 || filters.templates.includes(project.template);
@@ -138,4 +174,69 @@ export function templateIcon(id: ProjectTemplateId): string {
 
 export function projectCode(id: number): string {
   return `PRJ-${String(id).padStart(4, '0')}`;
+}
+
+export function isProjectModuleId(value: string): value is ProjectModuleId {
+  for (const module of PROJECT_MODULES) {
+    if (module.id === value) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function projectModule(id: ProjectModuleId): ProjectModule {
+  for (const module of PROJECT_MODULES) {
+    if (module.id === id) {
+      return module;
+    }
+  }
+  return PROJECT_MODULES[0];
+}
+
+export function idleModuleState(id: ProjectModuleId): ProjectModuleState {
+  return { id, state: 'idle', done: 0, total: 0, note: '' };
+}
+
+function stateById(
+  states: ProjectModuleState[],
+  id: ProjectModuleId,
+): ProjectModuleState | undefined {
+  for (const state of states) {
+    if (state.id === id) {
+      return state;
+    }
+  }
+  return undefined;
+}
+
+function moduleRowOf(states: ProjectModuleState[], module: ProjectModule): ProjectModuleRow {
+  return { module, state: stateById(states, module.id) ?? idleModuleState(module.id) };
+}
+
+export function completeModuleStates(
+  states: ProjectModuleState[] | null | undefined,
+): ProjectModuleState[] {
+  const known = states ?? [];
+  const complete: ProjectModuleState[] = [];
+  for (const module of PROJECT_MODULES) {
+    complete.push(stateById(known, module.id) ?? idleModuleState(module.id));
+  }
+  return complete;
+}
+
+export function moduleRows(states: ProjectModuleState[]): ProjectModuleRow[] {
+  const rows: ProjectModuleRow[] = [];
+  for (const module of PROJECT_MODULES) {
+    rows.push(moduleRowOf(states, module));
+  }
+  return rows;
+}
+
+export function moduleStateKey(status: ProjectModuleStatus): LanguageKey {
+  return `project.module.state.${status}`;
+}
+
+export function moduleBadgeClass(status: ProjectModuleStatus): string {
+  return MODULE_BADGE_CLASSES[status];
 }

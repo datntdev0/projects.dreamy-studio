@@ -1,0 +1,102 @@
+<section class="ins-sec" data-testid="scripting-inspector-summary-details">
+  <span class="eyebrow">
+    {{ 'scripting.inspector.unitTitle' | t: { unit: labels.unit(ctx().config), no: unit().no } }}
+  </span>
+  <dl class="kv" data-testid="scripting-inspector-summary-kv">
+    <dt>{{ 'scripting.inspector.name' | t }}</dt>
+    <dd data-testid="scripting-inspector-summary-name">
+      {{ unit().title || ('scripting.inspector.unnamed' | t) }}
+    </dd>
+    <dt>{{ 'scripting.inspector.status' | t }}</dt>
+    <dd>
+      <span class="badge {{ badge().className }}" [attr.data-testid]="'sc-status-' + unit().id">
+        {{ badge().key | t }}
+      </span>
+    </dd>
+    @if (ctx().config.ranges) {
+      <dt>{{ 'scripting.inspector.sourceChapters' | t }}</dt>
+      <dd data-testid="scripting-inspector-summary-chapters">{{ labels.chapterLabel(unit()) }}</dd>
+      <dt>{{ 'scripting.inspector.scene' | t }}</dt>
+      <dd data-testid="scripting-inspector-summary-scenes">{{ metrics().scenes }}</dd>
+    }
+    <dt>{{ 'scripting.inspector.dialogue' | t }}</dt>
+    <dd data-testid="scripting-inspector-summary-lines">{{ metrics().lines }}</dd>
+    <dt>{{ 'scripting.inspector.blocks' | t }}</dt>
+    <dd data-testid="scripting-inspector-summary-blocks">{{ metrics().blocks }}</dd>
+    <dt>{{ 'scripting.inspector.words' | t }}</dt>
+    <dd data-testid="scripting-inspector-summary-words">{{ count(metrics().words) }}</dd>
+    <dt>{{ 'scripting.inspector.estimate' | t }}</dt>
+    <dd data-testid="scripting-inspector-summary-estimate">
+      ≈ {{ labels.duration(metrics().secs) }}
+    </dd>
+    @if (unit().updated) {
+      <dt>{{ 'scripting.inspector.editedAt' | t }}</dt>
+      <dd>
+        <span class="mono" data-testid="scripting-inspector-summary-updated">
+          {{ labels.stamp(unit().updated) }}
+        </span>
+      </dd>
+    }
+  </dl>
+</section>
+@if (ctx().config.speakers) {
+  @if (who().length > 0) {
+    <section class="ins-sec" data-testid="sc-ins-dist">
+      <span class="eyebrow">{{ 'scripting.inspector.distWho' | t }}</span>
+      @for (row of who(); track row.id) {
+        <div class="sc-bar" [attr.data-testid]="'sc-dist-' + row.id">
+          <span class="sc-bar-n ellip">
+            <i class="sc-dot {{ speakerClassOf(row.id) }}"></i>
+            {{ speakerNameOf(row.id) }}
+          </span>
+          <div class="progress"><i [style.width.%]="row.percent"></i></div>
+          <span class="mono t-mute">{{ count(row.words) }}</span>
+        </div>
+      }
+    </section>
+  }
+} @else if (typeRows().length > 0) {
+  <section class="ins-sec" data-testid="sc-ins-types">
+    <span class="eyebrow">{{ 'scripting.inspector.distType' | t }}</span>
+    @for (row of typeRows(); track row.type) {
+      <div class="sc-bar" [attr.data-testid]="'sc-type-' + row.type">
+        <span class="sc-bar-n ellip">
+          <ds-icon [name]="types[row.type].icon" [size]="18" />
+          {{ types[row.type].labelKey | t }}
+        </span>
+        <div class="progress"><i [style.width.%]="row.percent"></i></div>
+        <span class="mono t-mute">{{ row.count }}</span>
+      </div>
+    }
+  </section>
+}
+<section class="ins-sec" data-testid="sc-ins-issues">
+  <span class="eyebrow">
+    @if (ctx().issues.length > 0) {
+      {{ 'scripting.inspector.checkCount' | t: { n: ctx().issues.length } }}
+    } @else {
+      {{ 'scripting.inspector.check' | t }}
+    }
+  </span>
+  @for (issue of issues(); track $index) {
+    <button
+      type="button"
+      class="sc-iss is-{{ issue.level }}"
+      [disabled]="!issue.blockId && !issue.ref"
+      data-testid="sc-issue"
+      (click)="go(issue)"
+    >
+      <ds-icon [name]="issue.level === 'error' ? 'x-circle' : 'alert'" [size]="14" />
+      <span>{{ message(issue) }}</span>
+    </button>
+  } @empty {
+    <p class="t-sm t-mute" data-testid="scripting-inspector-summary-empty">
+      {{ (hasBlocks() ? 'scripting.inspector.noIssues' : 'scripting.inspector.noContent') | t }}
+    </p>
+  }
+  @if (ctx().issues.length > issues().length) {
+    <span class="t-sm t-mute" data-testid="scripting-inspector-summary-more">
+      {{ 'scripting.inspector.moreIssues' | t: { n: ctx().issues.length - issues().length } }}
+    </span>
+  }
+</section>

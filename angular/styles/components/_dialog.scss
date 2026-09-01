@@ -11,6 +11,7 @@ ds-dialog {
   .dialog-heading {
     display: flex;
     align-items: center;
+    gap: var(--sp-sm);
     min-width: 0;
   }
   .dialog-eyebrow {

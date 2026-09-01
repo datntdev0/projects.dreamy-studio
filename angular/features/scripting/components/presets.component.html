@@ -1,0 +1,20 @@
+<div class="sc-pick" data-testid="sc-pick">
+  <h2 class="t-display-xs">{{ 'scripting.editor.pick.title' | t }}</h2>
+  <p class="t-sm t-mute">{{ 'scripting.editor.pick.text' | t }}</p>
+  <div class="sc-presets" data-testid="scripting-presets">
+    @for (preset of presets; track preset.id) {
+      <button
+        type="button"
+        class="sc-preset"
+        [attr.data-testid]="'sc-pick-' + preset.id"
+        (click)="pick(preset.id)"
+      >
+        <span class="sc-preset-h">
+          <ds-icon [name]="preset.icon" [size]="18" />
+          <b>{{ preset.labelKey | t }}</b>
+        </span>
+        <span class="t-sm t-mute">{{ preset.blurbKey | t }}</span>
+      </button>
+    }
+  </div>
+</div>

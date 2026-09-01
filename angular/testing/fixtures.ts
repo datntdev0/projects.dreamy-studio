@@ -7,7 +7,7 @@ import { LibraryVideo } from '@features/library/library.videos.models';
 import { LibraryVoice } from '@features/library/library.voices.models';
 import { ChapterRow, NovelSummary } from '@features/novel/novel.models';
 import { PipelineSnapshot, PipelineTask } from '@features/novel/novel.translation.models';
-import { ProjectSummary } from '@features/project/project.models';
+import { ProjectModuleState, ProjectSummary } from '@features/project/project.models';
 
 export function novel(overrides: Partial<NovelSummary> = {}): NovelSummary {
   return {
@@ -95,6 +95,12 @@ export function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary
     openedAt: '2026-01-02T03:04:00Z',
     ...overrides,
   };
+}
+
+export function projectModuleState(
+  overrides: Partial<ProjectModuleState> = {},
+): ProjectModuleState {
+  return { id: 'scripting', state: 'idle', done: 0, total: 0, note: '', ...overrides };
 }
 
 export function libraryImage(overrides: Partial<LibraryImage> = {}): LibraryImage {

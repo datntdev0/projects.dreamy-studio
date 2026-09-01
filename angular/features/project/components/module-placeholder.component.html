@@ -1,0 +1,32 @@
+<div class="nv-scroll" data-testid="project-module-placeholder">
+  <div class="cs" [attr.data-module-id]="moduleId()" data-testid="project-module-placeholder-body">
+    <div class="cs-ico" data-testid="project-module-placeholder-icon">
+      <ds-icon [name]="module().icon" [size]="26" />
+    </div>
+    <div>
+      <span class="eyebrow" data-testid="project-module-placeholder-cap">
+        {{ 'project.cap' | t }}
+      </span>
+      <div class="cs-title">
+        <h1 class="t-display-md" data-testid="project-module-placeholder-title">
+          {{ module().labelKey | t }}
+        </h1>
+        @if (!module().implemented) {
+          <span class="badge badge-info" data-testid="project-module-placeholder-soon">
+            {{ 'project.module.soon' | t }}
+          </span>
+        }
+      </div>
+    </div>
+    <p data-testid="project-module-placeholder-blurb">{{ module().blurbKey | t }}</p>
+    @if (project(); as project) {
+      <div class="pj-ctx" data-testid="project-module-placeholder-context">
+        <span class="eyebrow">{{ 'project.module.context' | t }}</span>
+        <div class="t-ink" data-testid="project-module-placeholder-project">{{ project.name }}</div>
+        <div class="t-sm t-mute" data-testid="project-module-placeholder-note">
+          {{ state().note || (stateKey() | t) }}
+        </div>
+      </div>
+    }
+  </div>
+</div>

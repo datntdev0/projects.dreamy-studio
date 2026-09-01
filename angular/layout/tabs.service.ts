@@ -1,8 +1,10 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { ProjectModuleId } from '@features/project/project.models';
+import { projectModule } from '@features/project/project.rules';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 
 // prettier-ignore
-import { COLLECTIONS_TAB, collectionTab, collectionTabId, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, NOVELS_TAB, novelTab, novelTabId, NovelToolKind, novelToolTab, novelToolTabId, PIPELINES_TAB, PROJECTS_TAB, projectTab, projectTabId, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, VOICES_TAB } from './layout.models';
+import { COLLECTIONS_TAB, collectionTab, collectionTabId, EditorTab, HOME_TAB, HOME_TAB_ID, IMAGES_TAB, moduleTab, moduleTabId, NOVELS_TAB, novelTab, novelTabId, NovelToolKind, novelToolTab, novelToolTabId, PIPELINES_TAB, PROJECTS_TAB, projectTab, projectTabId, PROMPTS_TAB, SOUNDS_TAB, VIDEOS_TAB, VOICES_TAB } from './layout.models';
 
 function indexOfTab(tabs: EditorTab[], id: string): number {
   for (let index = 0; index < tabs.length; index++) {
@@ -11,6 +13,10 @@ function indexOfTab(tabs: EditorTab[], id: string): number {
     }
   }
   return -1;
+}
+
+function isProjectTab(tab: EditorTab, projectId: number): boolean {
+  return (tab.kind === 'project' || tab.kind === 'module') && tab.projectId === projectId;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -102,6 +108,16 @@ export class TabsService {
     this.open(projectTab(id, title, icon));
   }
 
+  openModule(projectId: number, projectName: string, moduleId: ProjectModuleId): void {
+    const tabId = moduleTabId(projectId, moduleId);
+    if (indexOfTab(this.tabs(), tabId) >= 0) {
+      this.renameProject(projectId, projectName);
+      this.activate(tabId);
+      return;
+    }
+    this.open(moduleTab(projectId, moduleId, projectName, projectModule(moduleId).icon));
+  }
+
   openNovel(novelId: number, title: string): void {
     const id = novelTabId(novelId);
     if (indexOfTab(this.tabs(), id) >= 0) {
@@ -140,11 +156,11 @@ export class TabsService {
 
   renameProject(id: number, title: string): void {
     const tabs = [...this.tabs()];
-    const index = indexOfTab(tabs, projectTabId(id));
-    if (index < 0) {
-      return;
+    for (let index = 0; index < tabs.length; index++) {
+      if (isProjectTab(tabs[index], id)) {
+        tabs[index] = { ...tabs[index], title };
+      }
     }
-    tabs[index] = { ...tabs[index], title };
     this.tabs.set(tabs);
   }
 
@@ -180,7 +196,16 @@ export class TabsService {
     }
   }
 
+  closeModule(projectId: number, moduleId: ProjectModuleId): void {
+    this.close(moduleTabId(projectId, moduleId));
+  }
+
   closeProject(id: number): void {
+    for (const tab of this.tabs()) {
+      if (tab.kind === 'module' && tab.projectId === id) {
+        this.close(tab.id);
+      }
+    }
     this.close(projectTabId(id));
   }
 

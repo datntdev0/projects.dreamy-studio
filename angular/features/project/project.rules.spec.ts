@@ -1,9 +1,9 @@
 import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
-import { project } from '@testing/fixtures';
+import { project, projectModuleState } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { filterProjects, isProjectTemplate, PROJECT_TEMPLATES, projectCode, projectStatus, sortDirEntries, sortProjects, templateIcon, toggled, toProjectError, treeKey, validateProjectName, validateRange } from './project.rules';
+import { completeModuleStates, filterProjects, idleModuleState, isProjectModuleId, isProjectTemplate, moduleBadgeClass, moduleRows, moduleStateKey, PROJECT_MODULE_STAGES, PROJECT_MODULES, PROJECT_TEMPLATES, projectCode, projectModule, projectStatus, sortDirEntries, sortProjects, templateIcon, toggled, toProjectError, treeKey, validateProjectName, validateRange } from './project.rules';
 
 describe('project.rules', () => {
   it('validates names and ranges', () => {
@@ -75,5 +75,52 @@ describe('project.rules', () => {
     expect(templateIcon('audiobook')).toBe('mic');
     expect(templateIcon('nope' as never)).toBe('folder');
     expect(projectCode(7)).toBe('PRJ-0007');
+  });
+
+  it('describes the module catalog', () => {
+    expect(PROJECT_MODULES.map((module) => module.id)).toEqual([
+      'scripting',
+      'character',
+      'world',
+      'storyboard',
+      'audiobook',
+      'canvas',
+      'video',
+    ]);
+    expect(PROJECT_MODULE_STAGES).toEqual(['pre', 'prod', 'post']);
+    expect(
+      PROJECT_MODULES.filter((module) => module.implemented).map((module) => module.id),
+    ).toEqual(['scripting', 'audiobook']);
+    expect(projectModule('audiobook')).toMatchObject({
+      stage: 'prod',
+      icon: 'mic',
+      labelKey: 'project.module.audiobook',
+      blurbKey: 'project.module.audiobook.blurb',
+    });
+    expect(projectModule('video').stage).toBe('post');
+    expect(isProjectModuleId('canvas')).toBe(true);
+    expect(isProjectModuleId('nope')).toBe(false);
+  });
+
+  it('completes module states with idle defaults', () => {
+    const known = projectModuleState({ id: 'audiobook', state: 'done', done: 3, total: 3 });
+    const complete = completeModuleStates([known]);
+    expect(complete).toHaveLength(PROJECT_MODULES.length);
+    expect(complete.find((state) => state.id === 'audiobook')).toBe(known);
+    expect(complete.find((state) => state.id === 'world')).toEqual(idleModuleState('world'));
+    expect(completeModuleStates(null)).toHaveLength(PROJECT_MODULES.length);
+    expect(completeModuleStates(undefined).every((state) => state.state === 'idle')).toBe(true);
+  });
+
+  it('builds module rows and state presentation', () => {
+    const rows = moduleRows([projectModuleState({ id: 'scripting', state: 'stale' })]);
+    expect(rows).toHaveLength(PROJECT_MODULES.length);
+    expect(rows[0].state.state).toBe('stale');
+    expect(rows[1].state.state).toBe('idle');
+    expect(moduleStateKey('doing')).toBe('project.module.state.doing');
+    expect(moduleBadgeClass('idle')).toBe('');
+    expect(moduleBadgeClass('doing')).toBe('badge-running');
+    expect(moduleBadgeClass('done')).toBe('badge-success');
+    expect(moduleBadgeClass('stale')).toBe('badge-warning');
   });
 });

@@ -1,6 +1,10 @@
 app-project-list,
 app-project-explorer,
 app-project-tree,
+app-project-modules,
+app-project-module-host,
+app-project-module-frame,
+app-project-module-placeholder,
 app-project-library-panel,
 app-project-panel {
   display: contents;
@@ -297,4 +301,23 @@ app-project-view {
   overflow: hidden;
   text-overflow: ellipsis;
   text-transform: none;
+}
+.dot-doing {
+  background: var(--secondary);
+}
+.pj-ctx {
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-md) var(--sp-lg);
+  border-left: 2px solid var(--primary);
+  background: var(--canvas-soft);
+  border-radius: var(--r-sm);
+  width: 100%;
+}
+.tree-row.nx-child.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.tree-row.nx-child.is-disabled:hover {
+  background: transparent;
 }

@@ -1,0 +1,21 @@
+<div class="sc-add" data-testid="sc-add-bar">
+  <span
+    class="eyebrow"
+    [attr.title]="'scripting.editor.add.shortcuts' | t"
+    data-testid="scripting-add-label"
+  >
+    {{ 'scripting.editor.add.label' | t }}
+  </span>
+  @for (type of ctx().config.types; track type) {
+    <button
+      type="button"
+      class="btn btn-sm"
+      [attr.data-tip]="definition(type).hintKey | t"
+      [attr.data-testid]="'sc-add-' + type"
+      (click)="add(type)"
+    >
+      <ds-icon [name]="definition(type).icon" [size]="16" />
+      {{ definition(type).labelKey | t }}
+    </button>
+  }
+</div>

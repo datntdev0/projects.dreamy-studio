@@ -1,3 +1,4 @@
+import { ProjectModuleId } from '@features/project/project.models';
 import { LanguageKey } from '@shared/language/language.models';
 
 export type RailId = 'projects' | 'novels' | 'library' | 'distribution';
@@ -16,6 +17,7 @@ export type EditorTabKind =
   | 'knowledge'
   | 'projects'
   | 'project'
+  | 'module'
   | 'images'
   | 'sounds'
   | 'videos'
@@ -45,6 +47,7 @@ export interface EditorTab {
   novelId: number | null;
   projectId: number | null;
   collectionId: number | null;
+  moduleId: ProjectModuleId | null;
   rail: RailId | null;
   closable: boolean;
 }
@@ -76,6 +79,7 @@ export const HOME_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: null,
   closable: false,
 };
@@ -89,6 +93,7 @@ export const NOVELS_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'novels',
   closable: true,
 };
@@ -102,6 +107,7 @@ export const PROJECTS_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'projects',
   closable: true,
 };
@@ -115,6 +121,7 @@ export const IMAGES_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'library',
   closable: true,
 };
@@ -128,6 +135,7 @@ export const SOUNDS_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'library',
   closable: true,
 };
@@ -141,6 +149,7 @@ export const VIDEOS_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'library',
   closable: true,
 };
@@ -154,6 +163,7 @@ export const PROMPTS_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'library',
   closable: true,
 };
@@ -167,6 +177,7 @@ export const VOICES_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'library',
   closable: true,
 };
@@ -180,6 +191,7 @@ export const PIPELINES_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: null,
   closable: true,
 };
@@ -210,6 +222,7 @@ export function novelTab(novelId: number, title: string): EditorTab {
     novelId,
     projectId: null,
     collectionId: null,
+    moduleId: null,
     rail: 'novels',
     closable: true,
   };
@@ -231,6 +244,7 @@ export function novelToolTab(kind: NovelToolKind, novelId: number, title: string
     novelId,
     projectId: null,
     collectionId: null,
+    moduleId: null,
     rail: 'novels',
     closable: true,
   };
@@ -250,6 +264,32 @@ export function projectTab(id: number, title: string, icon = 'folder'): EditorTa
     novelId: null,
     projectId: id,
     collectionId: null,
+    moduleId: null,
+    rail: 'projects',
+    closable: true,
+  };
+}
+
+export function moduleTabId(projectId: number, moduleId: ProjectModuleId): string {
+  return `pmod:${projectId}:${moduleId}`;
+}
+
+export function moduleTab(
+  projectId: number,
+  moduleId: ProjectModuleId,
+  projectName: string,
+  icon: string,
+): EditorTab {
+  return {
+    id: moduleTabId(projectId, moduleId),
+    kind: 'module',
+    icon,
+    labelKey: null,
+    title: projectName,
+    novelId: null,
+    projectId,
+    collectionId: null,
+    moduleId,
     rail: 'projects',
     closable: true,
   };
@@ -264,6 +304,7 @@ export const COLLECTIONS_TAB: EditorTab = {
   novelId: null,
   projectId: null,
   collectionId: null,
+  moduleId: null,
   rail: 'library',
   closable: true,
 };
@@ -282,6 +323,7 @@ export function collectionTab(id: number, title: string): EditorTab {
     novelId: null,
     projectId: null,
     collectionId: id,
+    moduleId: null,
     rail: 'library',
     closable: true,
   };

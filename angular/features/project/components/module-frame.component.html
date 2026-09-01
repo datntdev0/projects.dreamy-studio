@@ -1,0 +1,49 @@
+<div class="nv pmod" [attr.data-module-id]="moduleId()" data-testid="project-module-frame">
+  @if (project(); as project) {
+    <div class="nv-bar" data-testid="project-module-frame-bar">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [attr.aria-label]="'project.module.back' | t: { name: project.name }"
+        data-testid="project-module-frame-back"
+        (click)="backToProject(project)"
+      >
+        <ds-icon name="arrow-left" [size]="16" />
+        {{ project.name }}
+      </button>
+      <span class="nv-ttl" data-testid="project-module-frame-heading">
+        <ds-icon [name]="module().icon" [size]="18" />
+        <span class="t-ink" data-testid="project-module-frame-title">
+          {{ module().labelKey | t }}
+        </span>
+        <span
+          class="badge"
+          [class]="badgeClass()"
+          [attr.data-state]="state().state"
+          data-testid="project-module-frame-state"
+        >
+          {{ stateKey() | t }}
+        </span>
+      </span>
+    </div>
+    <div class="nv-body" data-testid="project-module-frame-body">
+      <ng-content />
+    </div>
+  } @else if (projects.loaded()) {
+    <div class="empty" data-testid="project-module-frame-empty">
+      <div class="empty-inner">
+        <div class="illus"></div>
+        <h4 class="t-display-xs">{{ 'project.module.missing.title' | t }}</h4>
+        <p class="t-sm t-mute">{{ 'project.module.missing.description' | t }}</p>
+        <button
+          type="button"
+          class="btn"
+          data-testid="project-module-frame-catalog"
+          (click)="backToCatalog()"
+        >
+          {{ 'project.view.back' | t }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

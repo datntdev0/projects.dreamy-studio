@@ -1,0 +1,15 @@
+<div class="sc-miss" [attr.data-testid]="'sc-miss-' + reference()">
+  <ds-icon name="alert" [size]="15" />
+  <span class="t-sm">{{ 'scripting.editor.miss.text' | t }}</span>
+  @if (!ctx().locked) {
+    <button
+      type="button"
+      class="btn btn-sm"
+      [attr.data-testid]="'sc-cover-' + reference()"
+      (click)="cover()"
+    >
+      <ds-icon name="plus" [size]="16" />
+      {{ 'scripting.editor.miss.cover' | t }}
+    </button>
+  }
+</div>

@@ -4,7 +4,7 @@ import { flushEffects, setupApp } from '@testing/service';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { COLLECTIONS_TAB_ID, collectionTabId, HOME_TAB_ID, novelTabId, novelToolTabId, projectTabId } from './layout.models';
+import { COLLECTIONS_TAB_ID, collectionTabId, HOME_TAB_ID, moduleTabId, novelTabId, novelToolTabId, projectTabId } from './layout.models';
 import { TabsService } from './tabs.service';
 
 describe('TabsService', () => {
@@ -68,6 +68,35 @@ describe('TabsService', () => {
     tabs.closeCollection(3);
     tabs.closeProjects([2]);
     expect(tabs.tabs()).toHaveLength(1);
+  });
+
+  it('opens, renames and closes project module tabs', () => {
+    tabs.openProject(4, 'Harrowmere');
+    tabs.openModule(4, 'Harrowmere', 'scripting');
+    tabs.openModule(4, 'Harrowmere', 'audiobook');
+    tabs.openModule(5, 'Other', 'scripting');
+    expect(moduleTabId(4, 'scripting')).toBe('pmod:4:scripting');
+    expect(tabs.activeId()).toBe('pmod:5:scripting');
+    const module = tabs.tabs().find((tab) => tab.id === 'pmod:4:scripting');
+    expect(module).toMatchObject({
+      kind: 'module',
+      icon: 'pen',
+      projectId: 4,
+      moduleId: 'scripting',
+      rail: 'projects',
+      title: 'Harrowmere',
+    });
+    tabs.openModule(4, 'Renamed', 'scripting');
+    expect(tabs.activeId()).toBe('pmod:4:scripting');
+    expect(tabs.tabs()).toHaveLength(5);
+    expect(tabs.tabs().find((tab) => tab.id === 'pmod:4:audiobook')?.title).toBe('Renamed');
+    expect(tabs.tabs().find((tab) => tab.id === projectTabId(4))?.title).toBe('Renamed');
+    expect(tabs.tabs().find((tab) => tab.id === 'pmod:5:scripting')?.title).toBe('Other');
+    tabs.closeModule(4, 'audiobook');
+    expect(tabs.tabs()).toHaveLength(4);
+    tabs.openModule(4, 'Renamed', 'audiobook');
+    tabs.closeProjects([4]);
+    expect(tabs.tabs().map((tab) => tab.id)).toEqual([HOME_TAB_ID, 'pmod:5:scripting']);
   });
 
   it('closes tabs and falls back to a neighbour', () => {

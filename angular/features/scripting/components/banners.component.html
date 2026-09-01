@@ -1,0 +1,45 @@
+@if (ctx().generating) {
+  <div class="sc-ban is-run" data-testid="sc-ban-run">
+    <span class="dot dot-running"></span>
+    <span>{{ 'scripting.editor.ban.running' | t: { unit: unitLower() } }}</span>
+  </div>
+}
+@if (ctx().locked) {
+  <div class="sc-ban is-ok" data-testid="sc-ban-locked">
+    <ds-icon name="lock" [size]="16" />
+    <span>{{ 'scripting.editor.ban.locked' | t }}</span>
+  </div>
+}
+@if (staleCount() > 0) {
+  <div class="sc-ban is-warn" data-testid="sc-ban-stale">
+    <ds-icon name="alert" [size]="16" />
+    <span>{{ 'scripting.editor.ban.stale' | t: { count: staleCount() } }}</span>
+  </div>
+}
+@if (showKb()) {
+  @if (!ctx().kb.novel) {
+    <div class="sc-ban is-info" data-testid="sc-ban-kb">
+      <ds-icon name="info" [size]="16" />
+      <span>{{ 'scripting.editor.ban.noNovel' | t }}</span>
+    </div>
+  } @else if (!ctx().kb.available) {
+    <div class="sc-ban is-info" data-testid="sc-ban-kb">
+      <ds-icon name="info" [size]="16" />
+      <span>{{ 'scripting.editor.ban.noKb' | t }}</span>
+    </div>
+  } @else if (ctx().kb.missing.length > 0) {
+    <div class="sc-ban is-warn" data-testid="sc-ban-kb">
+      <ds-icon name="alert" [size]="16" />
+      <span>{{ 'scripting.editor.ban.missingKb' | t: { chapters: missing() } }}</span>
+      <button
+        type="button"
+        class="btn btn-sm"
+        data-testid="sc-open-kb-btn"
+        (click)="openKnowledge()"
+      >
+        <ds-icon name="graph" [size]="16" />
+        {{ 'scripting.editor.ban.openKb' | t }}
+      </button>
+    </div>
+  }
+}

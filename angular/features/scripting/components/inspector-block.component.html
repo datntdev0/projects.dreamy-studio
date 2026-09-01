@@ -1,0 +1,190 @@
+<section class="ins-sec" data-testid="sc-ins-block">
+  <span class="eyebrow" data-testid="scripting-inspector-block-title">
+    {{ 'scripting.inspector.block' | t }}
+  </span>
+  <div class="ins-h" data-testid="scripting-inspector-block-head">
+    <ds-icon [name]="def().icon" [size]="18" />
+    <span class="t-ink">{{ def().labelKey | t }}</span>
+  </div>
+  <p class="t-sm t-mute" data-testid="scripting-inspector-block-hint">{{ def().hintKey | t }}</p>
+  <div class="ins-form" data-testid="scripting-inspector-block-form">
+    <div class="field">
+      <label for="ib-type">{{ 'scripting.inspector.blockType' | t }}</label>
+      <select
+        id="ib-type"
+        class="select"
+        [disabled]="ctx().locked"
+        data-testid="sc-ins-type"
+        (change)="changeType($event)"
+      >
+        @for (option of typeOptions(); track option.type) {
+          <option [value]="option.type" [selected]="option.type === block().type">
+            {{ option.labelKey | t }}
+          </option>
+        }
+      </select>
+    </div>
+    @if (block().type === 'dialogue' && ctx().config.speakers) {
+      <div class="field">
+        <label for="ib-who">{{ 'scripting.inspector.who' | t }}</label>
+        <select
+          id="ib-who"
+          class="select"
+          [disabled]="ctx().locked"
+          data-testid="sc-ins-who"
+          (change)="change('who', $event)"
+        >
+          <option value="" [selected]="!block().who">
+            {{ 'scripting.inspector.unassigned' | t }}
+          </option>
+          @for (option of whoOptions(); track option.id) {
+            <option [value]="option.id" [selected]="option.id === block().who">
+              {{ option.name }}
+            </option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="ib-par">{{ 'scripting.inspector.tone' | t }}</label>
+        <input
+          id="ib-par"
+          class="input"
+          [value]="block().paren"
+          [placeholder]="'scripting.inspector.tonePlaceholder' | t"
+          [disabled]="ctx().locked"
+          data-testid="sc-ins-paren"
+          (change)="change('paren', $event)"
+        />
+      </div>
+    }
+    @if (block().type === 'scene') {
+      <div class="field">
+        <label for="ib-loc">{{ 'scripting.inspector.setting' | t }}</label>
+        <input
+          id="ib-loc"
+          class="input"
+          list="sc-ins-places"
+          [value]="block().loc"
+          [disabled]="ctx().locked"
+          data-testid="sc-ins-loc"
+          (change)="change('loc', $event)"
+        />
+        <datalist id="sc-ins-places" data-testid="scripting-inspector-block-places">
+          @for (place of ctx().places; track place) {
+            <option [value]="place.toUpperCase()"></option>
+          }
+        </datalist>
+      </div>
+      <div class="field">
+        <label for="ib-time">{{ 'scripting.inspector.time' | t }}</label>
+        <select
+          id="ib-time"
+          class="select"
+          [disabled]="ctx().locked"
+          data-testid="sc-ins-time"
+          (change)="change('time', $event)"
+        >
+          @for (time of times; track time) {
+            <option [value]="time" [selected]="time === block().time">{{ time }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="ib-beat">{{ 'scripting.inspector.beat' | t }}</label>
+        <textarea
+          id="ib-beat"
+          class="textarea"
+          rows="3"
+          [value]="block().beat"
+          [disabled]="ctx().locked"
+          data-testid="sc-ins-beat"
+          (change)="change('beat', $event)"
+        ></textarea>
+      </div>
+    }
+    @if (block().type === 'pause') {
+      <div class="field">
+        <label for="ib-ms">{{ 'scripting.inspector.pauseSeconds' | t }}</label>
+        <input
+          id="ib-ms"
+          class="input"
+          type="number"
+          min="0"
+          max="30"
+          step="0.1"
+          [value]="seconds()"
+          [disabled]="ctx().locked"
+          data-testid="sc-ins-ms"
+          (change)="changeSeconds($event)"
+        />
+      </div>
+    }
+  </div>
+  @if (block().type === 'dialogue' && !ctx().config.speakers) {
+    <span class="field-hint" data-testid="scripting-inspector-block-speakers-hint">
+      {{ 'scripting.inspector.speakersHint' | t }}
+    </span>
+  }
+</section>
+@if (block().ref) {
+  <section class="ins-sec" data-testid="scripting-inspector-block-source">
+    <span class="eyebrow">{{ 'scripting.inspector.source' | t }}</span>
+    <dl class="kv">
+      <dt>{{ 'scripting.inspector.sourceParagraph' | t }}</dt>
+      <dd>
+        <span class="mono" data-testid="scripting-inspector-block-paragraph">
+          ¶{{ paragraph() }}
+        </span>
+      </dd>
+      <dt>{{ 'scripting.inspector.sourceMatch' | t }}</dt>
+      <dd>
+        @if (stale()) {
+          <span class="badge badge-warning" data-testid="scripting-inspector-block-changed">
+            {{ 'scripting.inspector.changed' | t }}
+          </span>
+        } @else {
+          <span class="badge badge-success" data-testid="scripting-inspector-block-matches">
+            {{ 'scripting.inspector.matches' | t }}
+          </span>
+        }
+      </dd>
+    </dl>
+  </section>
+}
+@if (block().type === 'scene' && evidence().length > 0) {
+  <section class="ins-sec" data-testid="scripting-inspector-block-evidence">
+    <dl class="kv">
+      <dt>{{ 'scripting.inspector.evidence' | t }}</dt>
+      <dd>
+        @for (item of evidence(); track $index) {
+          <span class="sc-ref" data-testid="scripting-inspector-block-ref">
+            {{
+              'scripting.inspector.ref' | t: { chapter: item.chapter, paragraph: item.paragraph }
+            }}
+          </span>
+          {{ ' ' }}
+        }
+      </dd>
+    </dl>
+  </section>
+}
+@if (!ctx().locked) {
+  <section class="ins-sec ins-actions" data-testid="sc-ins-actions">
+    <button type="button" class="btn" data-testid="sc-ins-up" (click)="move('up')">
+      <ds-icon name="arrow-up" [size]="16" />
+      {{ 'scripting.inspector.up' | t }}
+    </button>
+    <button type="button" class="btn" data-testid="sc-ins-down" (click)="move('down')">
+      <ds-icon name="arrow-down" [size]="16" />
+      {{ 'scripting.inspector.down' | t }}
+    </button>
+    <button type="button" class="btn" data-testid="sc-ins-dup" (click)="duplicate()">
+      <ds-icon name="copy" [size]="16" />
+      {{ 'scripting.inspector.duplicate' | t }}
+    </button>
+    <button type="button" class="btn btn-danger" data-testid="sc-ins-del" (click)="remove()">
+      <ds-icon name="trash" [size]="16" />
+      {{ 'scripting.inspector.delete' | t }}
+    </button>
+  </section>
+}

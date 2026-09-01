@@ -1,0 +1,30 @@
+@if (menus.state(); as menu) {
+  <div
+    #menu
+    class="menu"
+    role="menu"
+    [style.left.px]="menu.left"
+    [style.top.px]="menu.top"
+    data-testid="scripting-menu"
+  >
+    @for (row of menu.rows; track $index) {
+      @if (row.kind === 'divider') {
+        <hr class="divider" data-testid="scripting-menu-divider" />
+      } @else {
+        <button
+          type="button"
+          class="menu-row"
+          role="menuitem"
+          [class.is-disabled]="row.disabled"
+          [disabled]="row.disabled"
+          data-testid="scripting-menu-item"
+          (click)="choose(row)"
+        >
+          <ds-icon [name]="row.icon" [size]="16" />
+          <span>{{ row.label }}</span>
+          <span class="spacer"></span>
+        </button>
+      }
+    }
+  </div>
+}

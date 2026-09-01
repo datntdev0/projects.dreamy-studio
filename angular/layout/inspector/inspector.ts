@@ -26,6 +26,7 @@ import { NovelService } from '@features/novel/novel.service';
 import { ProjectLibraryPanel } from '@features/project/components/library.panel';
 import { ProjectPanel } from '@features/project/components/project.panel';
 import { ProjectService } from '@features/project/project.service';
+import { ScriptingInspector } from '@features/scripting/components/inspector.component';
 import { CoreModule } from '@shared/core.module';
 
 import { RIGHT_TABS } from '../layout.models';
@@ -46,6 +47,7 @@ import { TabsService } from '../tabs.service';
     NovelDisplayPanel,
     ProjectLibraryPanel,
     ProjectPanel,
+    ScriptingInspector,
     LibraryTaxonomyPanel,
     LibraryCollectionPanel,
     LibraryImagePanel,

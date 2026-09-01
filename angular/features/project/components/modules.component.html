@@ -1,0 +1,35 @@
+<div role="group" [attr.aria-label]="'project.module.list' | t" data-testid="project-modules">
+  @for (row of rows(); track row.module.id) {
+    <div
+      class="tree-row nx-child"
+      [class.is-selected]="isActive(row)"
+      [class.is-disabled]="!row.module.implemented"
+      role="treeitem"
+      [attr.tabindex]="row.module.implemented ? 0 : -1"
+      [attr.aria-disabled]="!row.module.implemented"
+      [attr.aria-selected]="isActive(row)"
+      [attr.title]="row.module.implemented ? null : ('project.module.soon' | t)"
+      [attr.data-module-id]="row.module.id"
+      [attr.data-state]="row.state.state"
+      data-testid="project-modules-row"
+      (click)="open(row)"
+      (keydown)="onKeydown(row, $event)"
+    >
+      <ds-icon [name]="row.module.icon" [size]="16" />
+      <span class="tree-label" data-testid="project-modules-label">
+        {{ row.module.labelKey | t }}
+      </span>
+      <span class="nx-n mono">
+        <span
+          [class.dot-o]="row.state.state === 'idle'"
+          [class.dot]="row.state.state !== 'idle'"
+          [class.dot-success]="row.state.state === 'done'"
+          [class.dot-doing]="row.state.state === 'doing'"
+          [class.dot-warning]="row.state.state === 'stale'"
+          [attr.title]="stateKey(row) | t"
+          data-testid="project-modules-dot"
+        ></span>
+      </span>
+    </div>
+  }
+</div>

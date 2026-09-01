@@ -63,6 +63,15 @@
       <app-project-panel [projectId]="projectId" />
       }
     </div>
+    } @case ("module") {
+    <div [attr.data-project-id]="editorTabs.active().projectId" data-testid="inspector-module-host">
+      @if (editorTabs.active().projectId; as projectId) { @if (editorTabs.active().moduleId ===
+      "scripting") {
+      <app-scripting-inspector [projectId]="projectId" />
+      } @else {
+      <app-project-panel [projectId]="projectId" />
+      } }
+    </div>
     } @case ("novels") {
     <div data-testid="inspector-novels-host">
       @if (novels.selectedId() === null) {

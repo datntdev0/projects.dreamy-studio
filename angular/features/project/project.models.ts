@@ -79,3 +79,32 @@ export interface ProjectTotals {
   active: number;
   archived: number;
 }
+
+export type ProjectModuleId =
+  'scripting' | 'character' | 'world' | 'storyboard' | 'audiobook' | 'canvas' | 'video';
+
+export type ProjectModuleStage = 'pre' | 'prod' | 'post';
+
+export type ProjectModuleStatus = 'idle' | 'doing' | 'done' | 'stale';
+
+export interface ProjectModule {
+  id: ProjectModuleId;
+  stage: ProjectModuleStage;
+  icon: string;
+  implemented: boolean;
+  labelKey: `project.module.${ProjectModuleId}`;
+  blurbKey: `project.module.${ProjectModuleId}.blurb`;
+}
+
+export interface ProjectModuleState {
+  id: ProjectModuleId;
+  state: ProjectModuleStatus;
+  done: number;
+  total: number;
+  note: string;
+}
+
+export interface ProjectModuleRow {
+  module: ProjectModule;
+  state: ProjectModuleState;
+}

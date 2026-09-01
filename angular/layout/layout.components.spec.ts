@@ -25,6 +25,11 @@ async function warmVoices(selected: boolean): Promise<void> {
   if (selected) TestBed.inject(LibraryVoiceService).select(1);
 }
 
+async function warmModule(): Promise<void> {
+  await warmWorld();
+  TestBed.inject(TabsService).openModule(1, 'Audiobook One', 'scripting');
+}
+
 const cases: ComponentCase[] = [
   { name: 'Titlebar', type: Titlebar, before: warm },
   { name: 'Railbar', type: Railbar, before: warm },
@@ -35,6 +40,8 @@ const cases: ComponentCase[] = [
   { name: 'Editor (voices)', type: Editor, before: warmVoices.bind(null, false) },
   { name: 'Inspector (voices)', type: Inspector, before: warmVoices.bind(null, true) },
   { name: 'Inspector (voices, empty)', type: Inspector, before: warmVoices.bind(null, false) },
+  { name: 'Editor (project module)', type: Editor, before: warmModule },
+  { name: 'Inspector (project module)', type: Inspector, before: warmModule },
   { name: 'Bottom', type: Bottom, before: warm },
   { name: 'MainPage', type: MainPage, before: warm },
   { name: 'SplashPage', type: SplashPage, before: warm },

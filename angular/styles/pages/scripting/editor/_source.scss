@@ -1,0 +1,128 @@
+.sc-src {
+  display: flex;
+  gap: var(--sp-md);
+  padding: var(--sp-lg);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--body);
+}
+.sc-src p {
+  margin: 0;
+  min-width: 0;
+}
+.sc-pno {
+  flex: none;
+  padding-top: 3px;
+  color: var(--mute);
+  font-size: 11px;
+}
+.sc-stale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: var(--sp-xs) 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--r-sm);
+  background: var(--warning-soft);
+  font-size: 12.5px;
+}
+.sc-stale > ds-icon {
+  margin-top: 2px;
+}
+.sc-stale .ic {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--warning);
+}
+.sc-stale-b {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.sc-stale-a {
+  margin-left: 23px;
+  display: flex;
+  gap: var(--sp-xs);
+  flex: none;
+}
+.sc-was {
+  margin-right: var(--sp-xs);
+  font: 400 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.sc-miss {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  margin: var(--sp-xs) 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px dashed var(--warning);
+  border-radius: var(--r-sm);
+}
+.sc-miss .ic {
+  width: 15px;
+  height: 15px;
+  color: var(--warning);
+}
+.sc-miss > span {
+  flex: 1;
+  min-width: 0;
+}
+.sc-grp {
+  margin: 0 0 var(--sp-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+}
+.sc-grp.is-stale {
+  border-color: var(--warning);
+}
+.sc-grp-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font);
+}
+.sc-grp-h:hover {
+  background: var(--canvas-soft);
+}
+.sc-grp-h .ic {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--mute);
+}
+.sc-grp-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mute);
+  font: 400 12.5px/18px var(--font);
+}
+.sc-grp-b {
+  border-top: 1px solid var(--hairline);
+  padding: var(--sp-xs) var(--sp-xs) var(--sp-sm);
+}
+.sc-grp-src {
+  margin: var(--sp-sm) var(--sp-sm) var(--sp-sm) 38px;
+  padding: var(--sp-xs) var(--sp-md);
+  border-left: 2px solid var(--hairline-strong);
+  color: var(--mute);
+  font: 400 12.5px/1.6 var(--font);
+}
+.sc-page-ab .sc-grp .sc-stale,
+.sc-page-ab .sc-grp .sc-miss {
+  margin-left: 38px;
+}
+.sc-page-ab .sc-grp .sc-pno {
+  padding-top: 0;
+}

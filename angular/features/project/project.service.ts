@@ -3,9 +3,9 @@ import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
 import { WorkspaceService } from '../workspace/workspace.service';
 // prettier-ignore
-import { DirEntry, ProjectError, ProjectFilters, ProjectInput, ProjectPatch, ProjectSort, ProjectStatus, ProjectStatusCount, ProjectSummary, ProjectTemplateCount, ProjectTemplateId, ProjectTotals, ProjectViewMode } from './project.models';
+import { DirEntry, ProjectError, ProjectFilters, ProjectInput, ProjectModuleId, ProjectModuleState, ProjectPatch, ProjectSort, ProjectStatus, ProjectStatusCount, ProjectSummary, ProjectTemplateCount, ProjectTemplateId, ProjectTotals, ProjectViewMode } from './project.models';
 // prettier-ignore
-import { filterProjects, PROJECT_TEMPLATES, sortDirEntries, sortProjects, toggled, toProjectError, treeKey } from './project.rules';
+import { completeModuleStates, filterProjects, idleModuleState, PROJECT_TEMPLATES, sortDirEntries, sortProjects, toggled, toProjectError, treeKey } from './project.rules';
 
 const VIEW_STORAGE_KEY = 'ds.pj.view';
 
@@ -109,6 +109,23 @@ function isKnownStatus(known: Set<ProjectStatus>, status: ProjectStatus): boolea
   return known.has(status);
 }
 
+function matchesModule(moduleId: ProjectModuleId, state: ProjectModuleState): boolean {
+  return state.id === moduleId;
+}
+
+function withoutModules(
+  modules: Record<number, ProjectModuleState[]>,
+  removed: Set<number>,
+): Record<number, ProjectModuleState[]> {
+  const next: Record<number, ProjectModuleState[]> = {};
+  for (const key of Object.keys(modules)) {
+    if (!removed.has(Number(key))) {
+      next[Number(key)] = modules[Number(key)];
+    }
+  }
+  return next;
+}
+
 function hasTreePrefix(prefix: string, key: string): boolean {
   return key.startsWith(prefix);
 }
@@ -127,6 +144,8 @@ export class ProjectService {
   private readonly expanded = signal<string[]>([]);
   private readonly covers = signal<Record<number, string | null>>({});
   private readonly pendingCovers = new Set<number>();
+  private readonly modules = signal<Record<number, ProjectModuleState[]>>({});
+  private readonly pendingModules = new Map<number, Promise<ProjectModuleState[]>>();
   private epoch = 0;
   private treeEpoch = 0;
   private workspacePath: string | null | undefined = undefined;
@@ -209,6 +228,7 @@ export class ProjectService {
     this.items.set(withoutProjects(this.items(), removed));
     this.selected.set(this.selectionAfterRemoval(removed));
     this.covers.set(withoutCovers(this.covers(), removed));
+    this.modules.set(withoutModules(this.modules(), removed));
     this.refreshTreeForIds(ids);
     return count;
   }
@@ -332,6 +352,34 @@ export class ProjectService {
     return entries;
   }
 
+  moduleStates(projectId: number): ProjectModuleState[] {
+    return this.modules()[projectId] ?? completeModuleStates(null);
+  }
+
+  moduleStateOf(projectId: number, moduleId: ProjectModuleId): ProjectModuleState {
+    return (
+      this.moduleStates(projectId).find(matchesModule.bind(null, moduleId)) ??
+      idleModuleState(moduleId)
+    );
+  }
+
+  async ensureModules(projectId: number): Promise<ProjectModuleState[]> {
+    const cached = this.modules()[projectId];
+    if (cached) {
+      return cached;
+    }
+    const pending = this.pendingModules.get(projectId);
+    if (pending) {
+      return pending;
+    }
+    return this.requestModules(projectId);
+  }
+
+  async refreshModules(projectId: number): Promise<ProjectModuleState[]> {
+    this.pendingModules.delete(projectId);
+    return this.requestModules(projectId);
+  }
+
   refreshTree(projectId?: number): void {
     this.treeEpoch += 1;
     this.pendingDirectories.clear();
@@ -360,6 +408,8 @@ export class ProjectService {
     this.expanded.set([]);
     this.covers.set({});
     this.pendingCovers.clear();
+    this.modules.set({});
+    this.pendingModules.clear();
     this.query.set('');
     this.sort.set('updated');
     this.loaded.set(false);
@@ -379,6 +429,30 @@ export class ProjectService {
     if (epoch === this.epoch) {
       this.covers.set({ ...this.covers(), [id]: url });
     }
+  }
+
+  private async requestModules(projectId: number): Promise<ProjectModuleState[]> {
+    const request = this.fetchModules(projectId, this.epoch);
+    this.pendingModules.set(projectId, request);
+    const states = await request;
+    if (this.pendingModules.get(projectId) === request) {
+      this.pendingModules.delete(projectId);
+    }
+    return states;
+  }
+
+  private async fetchModules(projectId: number, epoch: number): Promise<ProjectModuleState[]> {
+    let rows: ProjectModuleState[] | null = null;
+    try {
+      rows = await this.ipc.invoke<ProjectModuleState[] | null>('project_modules', { projectId });
+    } catch {
+      rows = null;
+    }
+    const states = completeModuleStates(rows);
+    if (epoch === this.epoch) {
+      this.modules.set({ ...this.modules(), [projectId]: states });
+    }
+    return states;
   }
 
   private async fetchDirectory(

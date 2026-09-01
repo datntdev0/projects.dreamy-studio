@@ -13,7 +13,9 @@ import { NovelView } from '@features/novel/components/novel-view.component';
 import { NovelTranslation } from '@features/novel/components/translation.component';
 import { PipelineHistory } from '@features/pipeline/components/history.component';
 import { ProjectList } from '@features/project/components/list.component';
+import { ProjectModuleHost } from '@features/project/components/module-host.component';
 import { ProjectView } from '@features/project/components/project-view.component';
+import { projectModule } from '@features/project/project.rules';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageService } from '@shared/language/language.service';
@@ -36,6 +38,7 @@ import { TabsService } from '../tabs.service';
     NovelList,
     ProjectList,
     ProjectView,
+    ProjectModuleHost,
     LibraryCollections,
     LibraryCollectionView,
     LibraryImages,
@@ -62,6 +65,12 @@ export class Editor {
     }
     if (tab.kind === 'knowledge') {
       return this.languageService.translate('tabs.novel.knowledge', { name: tab.title });
+    }
+    if (tab.kind === 'module' && tab.moduleId) {
+      return this.languageService.translate('tabs.project.module', {
+        module: this.languageService.translate(projectModule(tab.moduleId).labelKey),
+        name: tab.title,
+      });
     }
     return tab.labelKey ? this.languageService.translate(tab.labelKey) : tab.title;
   }
@@ -106,7 +115,10 @@ export class Editor {
     ) {
       return this.languageService.translate('library.crumb');
     }
-    return tab.kind === 'novel' || tab.kind === 'translation' || tab.kind === 'knowledge'
+    return tab.kind === 'novel' ||
+      tab.kind === 'translation' ||
+      tab.kind === 'knowledge' ||
+      tab.kind === 'module'
       ? tab.title
       : null;
   }
@@ -115,6 +127,9 @@ export class Editor {
     const tab = this.tabs.active();
     if (tab.kind === 'project' || tab.kind === 'collection') {
       return tab.title;
+    }
+    if (tab.kind === 'module' && tab.moduleId) {
+      return this.languageService.translate(projectModule(tab.moduleId).labelKey);
     }
     if (tab.kind === 'translation') {
       return this.languageService.translate('novel.tool.translation.title');

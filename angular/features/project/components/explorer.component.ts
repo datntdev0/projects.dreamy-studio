@@ -8,6 +8,7 @@ import { LanguageKey } from '@shared/language/language.models';
 import { ProjectLabels } from '../project.labels';
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from '../project.models';
 import { ProjectService } from '../project.service';
+import { ProjectModules } from './modules.component';
 import { ProjectThumb } from './thumb.component';
 import { ProjectTree } from './tree.component';
 
@@ -21,7 +22,7 @@ function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-project-explorer',
-  imports: [Icon, CoreModule, ProjectTree, ProjectThumb],
+  imports: [Icon, CoreModule, ProjectModules, ProjectTree, ProjectThumb],
   templateUrl: './explorer.component.html',
 })
 export class ProjectExplorer {

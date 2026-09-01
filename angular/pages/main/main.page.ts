@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, HostListener, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
+import { AudiobookFlagDialog } from '@features/audiobook/components/flag.dialog';
+import { AudiobookGenerateDialog } from '@features/audiobook/components/generate.dialog';
 import { LibraryCollectionDialog } from '@features/library/components/collection.dialog';
 import { LibraryImagePreviewDialog } from '@features/library/components/image-preview.dialog';
 import { LibraryPromptPreviewDialog } from '@features/library/components/prompt-preview.dialog';
@@ -50,6 +52,8 @@ const APP_TITLE = 'Dreamy Studio';
     ScriptingResetDialog,
     ScriptingDefaultDialog,
     ScriptingDraftDialog,
+    AudiobookGenerateDialog,
+    AudiobookFlagDialog,
     LibraryCollectionDialog,
     LibraryImagePreviewDialog,
     LibrarySoundPreviewDialog,

@@ -68,6 +68,8 @@
       @if (editorTabs.active().projectId; as projectId) { @if (editorTabs.active().moduleId ===
       "scripting") {
       <app-scripting-inspector [projectId]="projectId" />
+      } @else if (editorTabs.active().moduleId === "audiobook") {
+      <app-audiobook-inspector [projectId]="projectId" />
       } @else {
       <app-project-panel [projectId]="projectId" />
       } }

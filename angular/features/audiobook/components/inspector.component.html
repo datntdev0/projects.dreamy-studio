@@ -1,0 +1,18 @@
+@if (ctx(); as c) {
+  @switch (c.inspector) {
+    @case ('voices') {
+      <app-audiobook-inspector-voices [ctx]="c" />
+    }
+    @case ('rules') {
+      <app-audiobook-inspector-rules [ctx]="c" />
+    }
+    @case ('segment') {
+      @if (c.segmentPanel; as panel) {
+        <app-audiobook-inspector-segment [ctx]="c" [panel]="panel" />
+      }
+    }
+    @default {
+      <app-audiobook-inspector-chapter [ctx]="c" />
+    }
+  }
+}

@@ -1,0 +1,92 @@
+<div
+  class="ab-seg"
+  tabindex="0"
+  [class]="'is-' + row().state"
+  [class.is-sel]="selected()"
+  [class.is-playing]="playing()"
+  [style.--pg]="progress()"
+  [attr.data-id]="row().block.id"
+  [attr.data-testid]="'ab-seg-' + row().block.id"
+  (click)="select()"
+  (keydown.enter)="selectOnKey($event)"
+>
+  <button
+    type="button"
+    class="ab-play"
+    [disabled]="!row().record"
+    [attr.aria-label]="'audiobook.editor.seg.listen' | t"
+    [attr.data-testid]="'ab-play-' + row().block.id"
+    (click)="play($event)"
+  >
+    <ds-icon name="play" [size]="13" />
+  </button>
+  <div class="ab-seg-b" data-testid="audiobook-segment-body">
+    <div class="ab-seg-h" data-testid="audiobook-segment-head">
+      <span class="ab-n mono">{{ labels.pad(row().n) }}</span>
+      <span class="type-tag">
+        <ds-icon [name]="definition().icon" [size]="13" />
+        {{ definition().labelKey | t }}
+      </span>
+      <span class="ab-chip" [class]="row().speakerClass" data-testid="audiobook-segment-speaker">
+        <i class="sc-dot"></i>
+        {{ labels.speakerName(row()) }}
+      </span>
+      <span class="ab-voice t-sm t-mute" data-testid="audiobook-segment-voice">
+        {{ labels.voiceName(row()) }}
+      </span>
+      @if (row().block.paren) {
+        <span class="ab-par" data-testid="audiobook-segment-paren">{{ row().block.paren }}</span>
+      }
+    </div>
+    <p class="ab-text" data-testid="audiobook-segment-text">
+      @for (part of row().parts; track $index) {
+        @if (part.say !== null) {
+          <mark class="ab-hit" [attr.title]="hitTitle(part.say)">{{ part.text }}</mark>
+        } @else {
+          <ng-container>{{ part.text }}</ng-container>
+        }
+      }
+    </p>
+    @if (row().state === 'flag') {
+      <div class="ab-why is-flag" data-testid="audiobook-segment-flag">
+        <ds-icon name="flag" [size]="14" />
+        <span>{{ 'audiobook.editor.seg.failed' | t: { note: flagNote() } }}</span>
+      </div>
+    } @else if (row().state === 'stale' && row().reasons.length > 0) {
+      <div class="ab-why" data-testid="audiobook-segment-why">
+        <ds-icon name="alert" [size]="14" />
+        <span>{{ labels.reasons(row()) }}</span>
+      </div>
+    }
+  </div>
+  <div class="ab-seg-r" data-testid="audiobook-segment-right">
+    <span class="mono t-mute" data-testid="audiobook-segment-duration">
+      {{ duration() }}
+    </span>
+    <span [class]="stateClass()" [attr.data-testid]="'audiobook-segment-state-' + row().block.id">
+      {{ stateLabel() }}
+    </span>
+    <span class="ab-act" data-testid="audiobook-segment-actions">
+      <button
+        type="button"
+        class="btn btn-icon btn-sm"
+        [attr.title]="'audiobook.editor.seg.regenerate' | t"
+        [attr.aria-label]="'audiobook.editor.seg.regenerate' | t"
+        [attr.data-testid]="'ab-regen-' + row().block.id"
+        (click)="regenerate($event)"
+      >
+        <ds-icon name="refresh" [size]="17" />
+      </button>
+      <button
+        type="button"
+        class="btn btn-icon btn-sm"
+        [attr.title]="'audiobook.editor.seg.edit' | t"
+        [attr.aria-label]="'audiobook.editor.seg.edit' | t"
+        [attr.data-testid]="'ab-edit-' + row().block.id"
+        (click)="edit($event)"
+      >
+        <ds-icon name="pen" [size]="17" />
+      </button>
+    </span>
+  </div>
+</div>

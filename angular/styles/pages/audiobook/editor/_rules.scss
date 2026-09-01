@@ -1,0 +1,44 @@
+.ab-lex-table .input {
+  height: 26px;
+}
+.ab-lex-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 140px auto;
+  gap: var(--sp-sm);
+}
+.ab-two {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--sp-lg);
+  align-items: start;
+}
+.ab-test-out {
+  min-height: 64px;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--primary);
+  border-radius: var(--r-sm);
+  background: var(--primary-soft);
+  color: var(--ink);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.ab-syms {
+  display: grid;
+  gap: var(--sp-sm);
+}
+.ab-sym {
+  align-items: center;
+}
+.ab-sym-k {
+  min-width: 48px;
+  color: var(--primary-text);
+}
+
+@media (max-width: 1100px) {
+  .ab-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ab-lex-add {
+    grid-template-columns: 1fr 1fr;
+  }
+}

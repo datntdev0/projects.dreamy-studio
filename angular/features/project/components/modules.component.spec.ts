@@ -71,14 +71,22 @@ describe('project module components', () => {
 
   it('wraps the module host in the frame with a back button and state badge', async () => {
     setupWorld();
-    const mounted = await mount(ProjectModuleHost, { projectId: 1, moduleId: 'audiobook' }, warm);
+    const mounted = await mount(ProjectModuleHost, { projectId: 1, moduleId: 'character' }, warm);
     expect(byId(mounted.root, 'project-module-frame-title')?.textContent?.trim()).toBeTruthy();
-    expect(byId(mounted.root, 'project-module-frame-state')?.dataset['state']).toBe('stale');
+    expect(byId(mounted.root, 'project-module-frame-state')?.dataset['state']).toBe('done');
     expect(byId(mounted.root, 'project-module-placeholder')).not.toBeNull();
-    expect(byId(mounted.root, 'project-module-placeholder-soon')).toBeNull();
+    expect(byId(mounted.root, 'project-module-placeholder-soon')).not.toBeNull();
     const tabs = TestBed.inject(TabsService);
     click(mounted.root, 'project-module-frame-back');
     expect(tabs.activeId()).toBe('project:1');
+    mounted.fixture.destroy();
+  });
+
+  it('renders the audiobook module outside the generic frame', async () => {
+    setupWorld();
+    const mounted = await mount(ProjectModuleHost, { projectId: 1, moduleId: 'audiobook' }, warm);
+    expect(byId(mounted.root, 'project-module-frame-title')).toBeNull();
+    expect(mounted.root.querySelector('app-audiobook')).not.toBeNull();
     mounted.fixture.destroy();
   });
 

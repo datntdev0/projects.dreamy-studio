@@ -1,0 +1,24 @@
+.ab-spk {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.ab-spk .input {
+  width: 160px;
+  height: 26px;
+}
+.ab-vsel {
+  width: 100%;
+  min-width: 200px;
+}
+.ab-speed {
+  width: 84px;
+}
+.ab-spk-table td {
+  vertical-align: middle;
+}
+.ab-add {
+  display: flex;
+  gap: var(--sp-sm);
+  max-width: 420px;
+}

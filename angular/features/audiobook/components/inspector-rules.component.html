@@ -1,0 +1,17 @@
+<section class="ins-sec" data-testid="audiobook-inspector-rules-details">
+  <span class="eyebrow">{{ 'audiobook.inspector.rules' | t }}</span>
+  <dl class="kv" data-testid="audiobook-inspector-rules-kv">
+    <dt>{{ 'audiobook.inspector.pronunciation' | t }}</dt>
+    <dd data-testid="audiobook-inspector-rules-pronunciation">
+      {{ ctx().rulesPanel.pronunciations }}
+    </dd>
+    <dt>{{ 'audiobook.inspector.symbols' | t }}</dt>
+    <dd data-testid="audiobook-inspector-rules-symbols">{{ ctx().rulesPanel.activeSymbols }}</dd>
+    <dt>{{ 'audiobook.inspector.affected' | t }}</dt>
+    <dd data-testid="audiobook-inspector-rules-affected">{{ ctx().rulesPanel.affected }}</dd>
+  </dl>
+</section>
+<section class="ins-sec" data-testid="audiobook-inspector-rules-note">
+  <span class="eyebrow">{{ 'audiobook.inspector.how' | t }}</span>
+  <p class="t-sm t-mute">{{ 'audiobook.inspector.rulesNote' | t }}</p>
+</section>

@@ -1,0 +1,174 @@
+@if (ctx(); as c) {
+  <div class="ab-scroll ab-pad" data-testid="ab-voices">
+    <div class="ab-wrap" data-testid="audiobook-voices-wrap">
+      <div class="ab-head" data-testid="audiobook-voices-head">
+        <h2 class="t-display-xs" data-testid="audiobook-voices-title">
+          {{ 'audiobook.voices.title' | t }}
+        </h2>
+        <p class="t-sm t-mute" data-testid="audiobook-voices-intro">
+          {{ 'audiobook.voices.intro' | t }}
+        </p>
+      </div>
+      @if (c.lostDialogues > 0) {
+        <div class="sc-ban is-warn" data-testid="ab-lost-ban">
+          <ds-icon name="alert" [size]="16" />
+          <span data-testid="audiobook-voices-lost">
+            {{ 'audiobook.voices.lost' | t: { count: c.lostDialogues } }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            data-testid="ab-lost-go-btn"
+            (click)="openScripting()"
+          >
+            {{ 'audiobook.voices.openScripting' | t }}
+          </button>
+        </div>
+      }
+      <div class="ab-tw" data-testid="audiobook-voices-table-wrap">
+        <table class="table ab-spk-table" data-testid="ab-spk-table">
+          <thead data-testid="audiobook-voices-head-row">
+            <tr>
+              <th>{{ 'audiobook.voices.col.speaker' | t }}</th>
+              <th>{{ 'audiobook.voices.col.voice' | t }}</th>
+              <th>{{ 'audiobook.voices.col.speed' | t }}</th>
+              <th class="num">{{ 'audiobook.voices.col.blocks' | t }}</th>
+              <th>{{ 'audiobook.voices.col.status' | t }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-testid="audiobook-voices-body">
+            @for (row of c.speakers; track row.member.id) {
+              <tr [attr.data-testid]="'ab-spk-' + row.member.id">
+                <td>
+                  <div class="ab-spk" data-testid="audiobook-voices-speaker">
+                    <i class="sc-dot {{ row.speakerClass }}"></i>
+                    <input
+                      class="input"
+                      [value]="labels.speakerName(row.member)"
+                      [disabled]="!row.nameEditable"
+                      [attr.aria-label]="'audiobook.voices.nameLabel' | t"
+                      [attr.data-testid]="'ab-spk-name-' + row.member.id"
+                      (change)="rename(row, $event)"
+                    />
+                    @if (row.member.kind === 'narrator') {
+                      <span class="badge badge-primary" data-testid="audiobook-voices-narrator">
+                        {{ 'audiobook.voices.badge.narrator' | t }}
+                      </span>
+                    } @else if (row.member.kind === 'kb') {
+                      <span
+                        class="badge badge-info"
+                        [attr.title]="'audiobook.voices.badge.kbTitle' | t"
+                        data-testid="audiobook-voices-kb"
+                      >
+                        {{ 'audiobook.voices.badge.kb' | t }}
+                      </span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <select
+                    class="select ab-vsel"
+                    [attr.aria-label]="'audiobook.voices.voiceLabel' | t"
+                    [attr.data-testid]="'ab-spk-voice-' + row.member.id"
+                    (change)="setVoice(row, $event)"
+                  >
+                    <option value="" [selected]="row.voiceId === null">
+                      {{ 'audiobook.voice.none' | t }}
+                    </option>
+                    @for (group of groups(); track group.kind) {
+                      <optgroup [label]="group.labelKey | t">
+                        @for (choice of group.choices; track choice.id) {
+                          <option [value]="choice.id" [selected]="choice.id === row.voiceId">
+                            {{ choice.label }}
+                          </option>
+                        }
+                      </optgroup>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input
+                    class="input ab-speed"
+                    type="number"
+                    [min]="speedMin"
+                    [max]="speedMax"
+                    [step]="speedStep"
+                    [value]="row.speed"
+                    [attr.aria-label]="'audiobook.voices.speedLabel' | t"
+                    [attr.data-testid]="'ab-spk-speed-' + row.member.id"
+                    (change)="setSpeed(row, $event)"
+                  />
+                </td>
+                <td class="num mono t-mute" data-testid="audiobook-voices-uses">{{ row.uses }}</td>
+                <td data-testid="audiobook-voices-status">
+                  @switch (row.status) {
+                    @case ('ready') {
+                      <span class="dot dot-success"></span>
+                      <span class="t-sm">&ngsp;{{ 'audiobook.voices.status.ready' | t }}</span>
+                    }
+                    @case ('engine') {
+                      <span class="badge badge-warning" [attr.title]="issueText(row)">
+                        {{ statusKey(row) | t }}
+                      </span>
+                    }
+                    @case ('noVoice') {
+                      <span class="badge badge-warning">{{ statusKey(row) | t }}</span>
+                    }
+                    @default {
+                      <span class="badge">{{ statusKey(row) | t }}</span>
+                    }
+                  }
+                </td>
+                <td class="row-actions">
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [disabled]="!row.canPreview"
+                    [attr.data-testid]="'ab-spk-preview-' + row.member.id"
+                    (click)="preview(row)"
+                  >
+                    <ds-icon name="play" [size]="16" />
+                    {{ 'audiobook.voices.preview' | t }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-icon btn-sm"
+                    [disabled]="row.deleteBlock !== null"
+                    [attr.title]="deleteKey(row) | t"
+                    [attr.aria-label]="'audiobook.voices.delete' | t"
+                    [attr.data-testid]="'ab-spk-del-' + row.member.id"
+                    (click)="remove(row)"
+                  >
+                    <ds-icon name="trash" [size]="17" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="ab-add" data-testid="audiobook-voices-add">
+        <input
+          #newName
+          id="ab-new-spk"
+          class="input"
+          autocomplete="off"
+          [placeholder]="'audiobook.voices.new.placeholder' | t"
+          [attr.aria-label]="'audiobook.voices.new.label' | t"
+          data-testid="ab-spk-new-input"
+          (keydown.enter)="add(newName)"
+        />
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="ab-spk-add-btn"
+          (click)="add(newName)"
+        >
+          <ds-icon name="plus" [size]="16" />
+          {{ 'audiobook.voices.add' | t }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

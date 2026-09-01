@@ -1,0 +1,47 @@
+@if (open() && plan(); as plan) {
+<ds-dialog
+  [title]="'audiobook.dialog.generate.title' | t: { unit: unitName(), no: unitNo() }"
+  [eyebrow]="'audiobook.dialog.cap' | t"
+  [closeLabel]="'audiobook.dialog.close' | t"
+  data-testid="ab-gen-modal"
+  (closed)="close()"
+>
+  <p class="t-sm" data-testid="audiobook-generate-intro" [innerHTML]="introHtml()"></p>
+  <div class="sc-chks" data-testid="ab-gen-groups">
+    @for (group of plan.groups; track group.key) { @if (group.kind === "local") {
+    <div class="sc-chk is-ok" [attr.data-testid]="'ab-gen-group-' + group.key">
+      <ds-icon name="hdd" [size]="16" />
+      <span class="sc-chk-t">{{ "audiobook.dialog.generate.local" | t }}</span>
+      <span class="mono">
+        {{ "audiobook.dialog.generate.chars" | t: { count: labels.count(group.chars) } }}
+      </span>
+    </div>
+    } @else {
+    <div class="sc-chk is-warn" [attr.data-testid]="'ab-gen-group-' + group.key">
+      <ds-icon name="cloud" [size]="16" />
+      <span class="sc-chk-t">
+        {{ groupKey(group) | t: { name: group.name, cost: labels.money(group.cost) } }}
+      </span>
+      <span class="mono">
+        {{ "audiobook.dialog.generate.chars" | t: { count: labels.count(group.chars) } }}
+      </span>
+    </div>
+    } }
+  </div>
+  <div class="sc-est" data-testid="ab-gen-estimate">
+    <ds-icon name="info" [size]="16" />
+    <div
+      class="t-sm"
+      data-testid="audiobook-generate-estimate-text"
+      [innerHTML]="estimateHtml()"
+    ></div>
+  </div>
+  <ds-button dialogFoot data-testid="ab-gen-cancel-btn" (pressed)="close()">
+    {{ "common.cancel" | t }}
+  </ds-button>
+  <ds-button dialogFoot variant="primary" data-testid="ab-gen-go-btn" (pressed)="generate()">
+    <ds-icon name="spark" [size]="14" />
+    {{ "audiobook.dialog.generate.go" | t: { count: plan.segments } }}
+  </ds-button>
+</ds-dialog>
+}

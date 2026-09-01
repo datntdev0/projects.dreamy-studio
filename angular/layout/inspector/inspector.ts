@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Button } from '@components/button';
 import { Icon } from '@components/icon';
 import { AssistantPanel } from '@features/assistant/components/panel.component';
+import { AudiobookInspector } from '@features/audiobook/components/inspector.component';
 import { LibraryCollectionPanel } from '@features/library/components/collection.panel';
 import { LibraryImagePanel } from '@features/library/components/image.panel';
 import { LibraryPromptPanel } from '@features/library/components/prompt.panel';
@@ -48,6 +49,7 @@ import { TabsService } from '../tabs.service';
     ProjectLibraryPanel,
     ProjectPanel,
     ScriptingInspector,
+    AudiobookInspector,
     LibraryTaxonomyPanel,
     LibraryCollectionPanel,
     LibraryImagePanel,

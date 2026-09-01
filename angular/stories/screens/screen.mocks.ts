@@ -1,4 +1,5 @@
 import { EnvironmentProviders, inject, provideAppInitializer, Provider } from '@angular/core';
+import { CloudAccount } from '@features/settings/cloud.models';
 import { SettingsView } from '@features/settings/settings.models';
 import { SettingsService } from '@features/settings/settings.service';
 import { WorkspaceService } from '@features/workspace/workspace.service';
@@ -46,16 +47,22 @@ async function startup(): Promise<void> {
   await workspace.restoreCurrent();
 }
 
-export function screenProviders(handlers: IpcHandlers): Array<Provider | EnvironmentProviders> {
+export function screenProviders(
+  handlers: IpcHandlers,
+  accounts?: CloudAccount[],
+): Array<Provider | EnvironmentProviders> {
   return [
     ipcProvider(handlers),
     llmServiceProvider(LLM_PROVIDERS),
     backendServiceProvider(),
-    cloudServiceProvider(),
+    cloudServiceProvider(accounts),
     provideAppInitializer(startup),
   ];
 }
 
-export function withScreen(handlers: IpcHandlers): { decorators: Decorator[] } {
-  return { decorators: [applicationConfig({ providers: screenProviders(handlers) })] };
+export function withScreen(
+  handlers: IpcHandlers,
+  accounts?: CloudAccount[],
+): { decorators: Decorator[] } {
+  return { decorators: [applicationConfig({ providers: screenProviders(handlers, accounts) })] };
 }

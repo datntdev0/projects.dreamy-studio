@@ -1,0 +1,185 @@
+@if (ctx(); as c) {
+  <div class="ab-scroll ab-pad" data-testid="ab-rules">
+    <div class="ab-wrap" data-testid="audiobook-rules-wrap">
+      <div class="ab-head" data-testid="audiobook-rules-head">
+        <h2 class="t-display-xs" data-testid="audiobook-rules-title">
+          {{ 'audiobook.rules.title' | t }}
+        </h2>
+        <p class="t-sm t-mute" data-testid="audiobook-rules-intro">
+          {{ 'audiobook.rules.intro' | t: { unit: unitLower() } }}
+        </p>
+      </div>
+      @if (c.affected > 0) {
+        <div class="sc-ban is-warn" data-testid="ab-rules-ban">
+          <ds-icon name="alert" [size]="16" />
+          <span data-testid="audiobook-rules-affected">
+            {{ 'audiobook.rules.affected' | t: { count: c.affected } }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            data-testid="ab-rules-go-btn"
+            (click)="showProduction()"
+          >
+            {{ 'audiobook.rules.viewProduction' | t }}
+          </button>
+        </div>
+      }
+      <section class="pw-card" data-testid="ab-lex">
+        <h3 class="t-display-xs" data-testid="audiobook-rules-lex-title">
+          {{ 'audiobook.rules.lex.title' | t }}
+        </h3>
+        <div class="ab-tw" data-testid="audiobook-rules-lex-wrap">
+          <table class="table ab-lex-table" data-testid="audiobook-rules-lex-table">
+            <thead data-testid="audiobook-rules-lex-head">
+              <tr>
+                <th>{{ 'audiobook.rules.lex.term' | t }}</th>
+                <th>{{ 'audiobook.rules.lex.say' | t }}</th>
+                <th>{{ 'audiobook.rules.lex.type' | t }}</th>
+                <th class="num">{{ 'audiobook.rules.lex.occurrences' | t }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody data-testid="audiobook-rules-lex-body">
+              @for (row of c.lexicon; track row.rule.id) {
+                <tr [attr.data-testid]="'ab-lex-' + row.rule.id">
+                  <td>
+                    <input
+                      class="input"
+                      [value]="row.rule.term"
+                      [attr.aria-label]="'audiobook.rules.lex.term' | t"
+                      [attr.data-testid]="'ab-lex-term-' + row.rule.id"
+                      (change)="editLex(row, 'term', $event)"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      class="input"
+                      [value]="row.rule.say"
+                      [attr.aria-label]="'audiobook.rules.lex.sayLabel' | t"
+                      [attr.data-testid]="'ab-lex-say-' + row.rule.id"
+                      (change)="editLex(row, 'say', $event)"
+                    />
+                  </td>
+                  <td>
+                    <span class="type-tag" data-testid="audiobook-rules-lex-kind">
+                      {{ kindKey(row.rule.kind) | t }}
+                    </span>
+                  </td>
+                  <td class="num mono t-mute" data-testid="audiobook-rules-lex-count">
+                    {{ row.occurrences }}×
+                  </td>
+                  <td class="row-actions">
+                    <button
+                      type="button"
+                      class="btn btn-icon btn-sm"
+                      [attr.title]="'audiobook.rules.lex.delete' | t"
+                      [attr.aria-label]="'audiobook.rules.lex.deleteLabel' | t"
+                      [attr.data-testid]="'ab-lex-del-' + row.rule.id"
+                      (click)="removeLex(row)"
+                    >
+                      <ds-icon name="trash" [size]="17" />
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr data-testid="audiobook-rules-lex-empty">
+                  <td colspan="5" class="t-mute">{{ 'audiobook.rules.lex.empty' | t }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="ab-lex-add" data-testid="audiobook-rules-lex-add">
+          <input
+            #term
+            id="ab-lx-term"
+            class="input"
+            autocomplete="off"
+            [placeholder]="'audiobook.rules.lex.term' | t"
+            [attr.aria-label]="'audiobook.rules.lex.term' | t"
+            data-testid="ab-lex-term-input"
+          />
+          <input
+            #say
+            id="ab-lx-say"
+            class="input"
+            autocomplete="off"
+            [placeholder]="'audiobook.rules.lex.say' | t"
+            [attr.aria-label]="'audiobook.rules.lex.sayLabel' | t"
+            data-testid="ab-lex-say-input"
+            (keydown.enter)="addLex(term, say, kind)"
+          />
+          <select
+            #kind
+            id="ab-lx-kind"
+            class="select"
+            [attr.aria-label]="'audiobook.rules.lex.type' | t"
+            data-testid="ab-lex-kind-select"
+          >
+            @for (option of kinds; track option) {
+              <option [value]="option">{{ kindKey(option) | t }}</option>
+            }
+          </select>
+          <button
+            type="button"
+            class="btn btn-sm"
+            data-testid="ab-lex-add-btn"
+            (click)="addLex(term, say, kind)"
+          >
+            <ds-icon name="plus" [size]="16" />
+            {{ 'audiobook.rules.lex.add' | t }}
+          </button>
+        </div>
+      </section>
+      <div class="ab-two" data-testid="audiobook-rules-two">
+        <section class="pw-card" data-testid="ab-test">
+          <h3 class="t-display-xs" data-testid="audiobook-rules-test-title">
+            {{ 'audiobook.rules.test.title' | t }}
+          </h3>
+          <span class="field-hint" data-testid="audiobook-rules-test-hint">
+            {{ 'audiobook.rules.test.hint' | t }}
+          </span>
+          <textarea
+            id="ab-test-in"
+            class="textarea"
+            rows="3"
+            [value]="testText()"
+            [attr.aria-label]="'audiobook.rules.test.label' | t"
+            data-testid="ab-test-input"
+            (input)="setTest($event)"
+          ></textarea>
+          <div
+            class="ab-test-out"
+            id="ab-test-out"
+            data-testid="ab-test-out"
+            [textContent]="testOutput()"
+          ></div>
+        </section>
+        <section class="pw-card" data-testid="ab-symbols">
+          <h3 class="t-display-xs" data-testid="audiobook-rules-symbols-title">
+            {{ 'audiobook.rules.symbols.title' | t }}
+          </h3>
+          <div class="ab-syms" data-testid="audiobook-rules-symbols">
+            @for (symbol of c.symbols; track symbol.id) {
+              <label class="check ab-sym" [attr.data-testid]="'ab-sym-' + symbol.id">
+                <input
+                  type="checkbox"
+                  [checked]="symbol.on"
+                  [attr.data-testid]="'ab-sym-input-' + symbol.id"
+                  (change)="toggleSymbol(symbol.id, $event)"
+                />
+                <span class="mono ab-sym-k" data-testid="audiobook-rules-symbol-key">
+                  {{ symbol.sym }}
+                </span>
+                <span class="t-sm" data-testid="audiobook-rules-symbol-text">
+                  {{ symbol.ruleKey | t }}
+                </span>
+              </label>
+            }
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+}

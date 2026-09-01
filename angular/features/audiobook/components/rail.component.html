@@ -1,0 +1,84 @@
+<aside
+  class="sc-rail"
+  [attr.aria-label]="'scripting.editor.rail.label' | t: { unit: unitLower() }"
+  data-testid="ab-rail"
+>
+  <div class="sc-rail-h" data-testid="audiobook-rail-head">
+    <span class="eyebrow">{{ unit() }}</span>
+    <span class="mono t-mute" data-testid="ab-rail-count">
+      {{
+        'audiobook.editor.rail.count'
+          | t: { done: ctx().railSummary.done, total: ctx().railSummary.total }
+      }}
+    </span>
+  </div>
+  <div class="progress is-done sc-rail-pg" data-testid="audiobook-rail-progress">
+    <i [style.width.%]="ctx().railSummary.percent"></i>
+  </div>
+  <div class="sc-units" role="tree" data-testid="ab-units">
+    @for (row of ctx().rail; track row.unit.id) {
+      <div
+        class="sc-unit"
+        role="treeitem"
+        tabindex="0"
+        [class.is-active]="row.active"
+        [attr.aria-selected]="row.active"
+        [attr.data-testid]="'ab-unit-' + row.unit.id"
+        (click)="select(row)"
+        (keydown.enter)="selectOnKey($event, row)"
+        (keydown.space)="selectOnKey($event, row)"
+      >
+        <span class="sc-un mono">{{ labels.pad(row.unit.no) }}</span>
+        <div class="sc-ub">
+          <div class="t-ink ellip">
+            {{ labels.unitTitle(ctx(), row.unit.no, row.unit.title) }}
+          </div>
+          <div class="t-sm t-mute ellip">{{ labels.railMeta(row) }}</div>
+        </div>
+        @if (!row.locked) {
+          <span
+            class="sc-mk"
+            [attr.title]="'audiobook.editor.rail.unlocked' | t"
+            data-testid="audiobook-rail-unlocked"
+          >
+            <ds-icon name="unlock" [size]="14" />
+          </span>
+        }
+        @switch (row.stat.state) {
+          @case ('done') {
+            <span
+              class="sc-mk is-ok"
+              [attr.title]="'audiobook.unit.done' | t"
+              data-testid="audiobook-rail-mark"
+            >
+              <ds-icon name="check-circle" [size]="14" />
+            </span>
+          }
+          @case ('stale') {
+            <span
+              class="sc-mk is-warn"
+              [attr.title]="'audiobook.unit.stale' | t"
+              data-testid="audiobook-rail-mark"
+            >
+              <ds-icon name="alert" [size]="14" />
+            </span>
+          }
+          @case ('doing') {
+            <span
+              class="dot dot-running"
+              [attr.title]="'audiobook.unit.doing' | t"
+              data-testid="audiobook-rail-mark"
+            ></span>
+          }
+          @default {
+            <span
+              class="dot-o"
+              [attr.title]="'audiobook.unit.none' | t"
+              data-testid="audiobook-rail-mark"
+            ></span>
+          }
+        }
+      </div>
+    }
+  </div>
+</aside>

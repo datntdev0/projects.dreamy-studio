@@ -1,0 +1,48 @@
+@for (blocker of ctx().blockers; track $index) {
+  <div class="sc-ban is-warn" [attr.data-testid]="'ab-ban-' + blocker.kind">
+    <ds-icon name="alert" [size]="16" />
+    <span>{{ labels.blocker(blocker) }}</span>
+    @switch (blocker.kind) {
+      @case ('lock') {
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="ab-open-script-btn"
+          (click)="openScripting()"
+        >
+          {{ 'audiobook.editor.ban.openScript' | t }}
+        </button>
+      }
+      @case ('who') {
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="ab-go-who-btn"
+          (click)="editBlock(blocker)"
+        >
+          {{ 'audiobook.editor.ban.editWho' | t }}
+        </button>
+      }
+      @case ('engine') {
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="ab-fix-engine-btn"
+          (click)="openVoices()"
+        >
+          {{ 'audiobook.editor.ban.changeVoice' | t }}
+        </button>
+      }
+      @default {
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="ab-pick-voice-btn"
+          (click)="openVoices()"
+        >
+          {{ 'audiobook.editor.ban.chooseVoice' | t }}
+        </button>
+      }
+    }
+  </div>
+}

@@ -30,6 +30,11 @@ async function warmModule(): Promise<void> {
   TestBed.inject(TabsService).openModule(1, 'Audiobook One', 'scripting');
 }
 
+async function warmAudiobook(): Promise<void> {
+  await warmWorld();
+  TestBed.inject(TabsService).openModule(1, 'Audiobook One', 'audiobook');
+}
+
 const cases: ComponentCase[] = [
   { name: 'Titlebar', type: Titlebar, before: warm },
   { name: 'Railbar', type: Railbar, before: warm },
@@ -42,6 +47,7 @@ const cases: ComponentCase[] = [
   { name: 'Inspector (voices, empty)', type: Inspector, before: warmVoices.bind(null, false) },
   { name: 'Editor (project module)', type: Editor, before: warmModule },
   { name: 'Inspector (project module)', type: Inspector, before: warmModule },
+  { name: 'Inspector (audiobook module)', type: Inspector, before: warmAudiobook },
   { name: 'Bottom', type: Bottom, before: warm },
   { name: 'MainPage', type: MainPage, before: warm },
   { name: 'SplashPage', type: SplashPage, before: warm },

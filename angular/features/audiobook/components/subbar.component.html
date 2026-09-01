@@ -1,0 +1,38 @@
+@if (ctx().unit; as unit) {
+  <div class="tl-sub is-wrap ab-sub" data-testid="ab-sub">
+    <span class="mono t-mute sc-sub-n" data-testid="audiobook-subbar-number">
+      {{ labels.unitNumber(ctx(), unit.no) }}
+    </span>
+    <span class="t-ink ab-sub-t" data-testid="audiobook-subbar-title">
+      {{ labels.unitTitle(ctx(), unit.no, unit.title) }}
+    </span>
+    @if (ctx().locked) {
+      <span class="badge badge-success" data-testid="audiobook-subbar-lock">
+        {{ 'audiobook.editor.sub.locked' | t }}
+      </span>
+    } @else {
+      <span class="badge badge-warning" data-testid="audiobook-subbar-lock">
+        {{ 'audiobook.editor.sub.unlocked' | t }}
+      </span>
+    }
+    <span class="sc-stats mono" data-testid="ab-stats">
+      @for (part of stats(); track $index) {
+        <span>{{ part }}</span>
+      }
+    </span>
+    <span class="spacer"></span>
+    <div class="seg" role="group" data-testid="ab-filters">
+      @for (option of filters; track option.filter) {
+        <button
+          type="button"
+          [class.is-active]="ctx().view.filter === option.filter"
+          [attr.aria-pressed]="ctx().view.filter === option.filter"
+          [attr.data-testid]="'ab-filters-' + option.filter"
+          (click)="setFilter(option.filter)"
+        >
+          {{ option.labelKey | t }}
+        </button>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,90 @@
+@if (ctx(); as c) {
+  <div class="nv" data-testid="ab-root">
+    <div class="nv-bar" data-testid="audiobook-bar">
+      <div class="nv-bar-l" data-testid="audiobook-bar-left">
+        <button
+          type="button"
+          class="btn btn-sm"
+          data-testid="ab-back-btn"
+          (click)="navigation.back(c.projectId)"
+        >
+          <ds-icon name="arrow-left" [size]="16" />
+          {{ project()?.name }}
+        </button>
+        <span class="nv-ttl" data-testid="audiobook-title">
+          <ds-icon name="mic" [size]="18" />
+          <span class="t-ink">{{ moduleLabel | t }}</span>
+        </span>
+        <div class="seg" role="group" data-testid="ab-views">
+          @for (view of views; track view.mode) {
+            <button
+              type="button"
+              [class.is-active]="c.view.mode === view.mode"
+              [attr.aria-pressed]="c.view.mode === view.mode"
+              [attr.data-testid]="'ab-views-' + view.mode"
+              (click)="setMode(view.mode)"
+            >
+              <ds-icon [name]="view.icon" [size]="14" />
+              {{ view.labelKey | t }}
+            </button>
+          }
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <div class="nv-bar-r" data-testid="audiobook-bar-right">
+        @if (c.view.mode === 'prod' && c.unit?.blocks) {
+          <button
+            type="button"
+            class="btn btn-sm"
+            data-testid="ab-play-all-btn"
+            (click)="playChapter()"
+          >
+            <ds-icon name="play" [size]="16" />
+            {{ 'audiobook.editor.bar.playAll' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            [disabled]="!c.canGenerate"
+            data-testid="ab-generate-btn"
+            (click)="generate()"
+          >
+            <ds-icon name="spark" [size]="16" />
+            {{
+              c.todo.length
+                ? ('audiobook.editor.bar.generate' | t: { count: c.todo.length })
+                : ('audiobook.editor.bar.complete' | t)
+            }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="nv-body" data-testid="audiobook-body">
+      @switch (c.view.mode) {
+        @case ('voices') {
+          <div class="ab-main" data-testid="ab-main">
+            <app-audiobook-voices [projectId]="c.projectId" />
+          </div>
+        }
+        @case ('rules') {
+          <div class="ab-main" data-testid="ab-main">
+            <app-audiobook-rules [projectId]="c.projectId" />
+          </div>
+        }
+        @default {
+          <app-audiobook-rail [ctx]="c" />
+          <div class="ab-main" data-testid="ab-main">
+            <app-audiobook-subbar [ctx]="c" />
+            <app-audiobook-banners [ctx]="c" />
+            <div class="ab-scroll" data-testid="ab-scroll">
+              <div class="ab-list" data-testid="ab-list">
+                <app-audiobook-list [ctx]="c" />
+              </div>
+            </div>
+            <app-audiobook-player />
+          </div>
+        }
+      }
+    </div>
+  </div>
+}

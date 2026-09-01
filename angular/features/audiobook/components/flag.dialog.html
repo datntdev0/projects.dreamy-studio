@@ -1,0 +1,32 @@
+@if (open() && ctx()) {
+<ds-dialog
+  [title]="'audiobook.dialog.flag.title' | t"
+  [eyebrow]="'audiobook.dialog.cap' | t"
+  [closeLabel]="'audiobook.dialog.close' | t"
+  data-testid="ab-flag-modal"
+  (closed)="close()"
+>
+  <p class="t-sm t-mute" data-testid="audiobook-flag-intro">
+    {{ "audiobook.dialog.flag.intro" | t }}
+  </p>
+  <div class="field" data-testid="audiobook-flag-field">
+    <label for="ab-flag-note">{{ "audiobook.dialog.flag.note" | t }}</label>
+    <textarea
+      id="ab-flag-note"
+      class="textarea"
+      rows="3"
+      [value]="note()"
+      [placeholder]="'audiobook.dialog.flag.placeholder' | t"
+      data-testid="ab-flag-note"
+      (input)="onNote($event)"
+    ></textarea>
+  </div>
+  <ds-button dialogFoot data-testid="ab-flag-cancel-btn" (pressed)="close()">
+    {{ "common.cancel" | t }}
+  </ds-button>
+  <ds-button dialogFoot variant="primary" data-testid="ab-flag-save-btn" (pressed)="save()">
+    <ds-icon name="flag" [size]="14" />
+    {{ "audiobook.dialog.flag.save" | t }}
+  </ds-button>
+</ds-dialog>
+}

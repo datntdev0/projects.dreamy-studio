@@ -1,0 +1,34 @@
+<div class="empty" data-testid="audiobook-empty">
+  <div class="empty-inner">
+    <div class="illus"></div>
+    @switch (variant()) {
+      @case ('filter') {
+        <h3 class="t-display-xs">{{ 'audiobook.editor.empty.filter.title' | t }}</h3>
+        <p class="t-sm t-mute">{{ 'audiobook.editor.empty.filter.text' | t }}</p>
+      }
+      @case ('meta') {
+        <h3 class="t-display-xs">
+          {{ 'scripting.editor.empty.meta.title' | t: { unit: unitLower() } }}
+        </h3>
+        <p class="t-sm t-mute">
+          {{ 'audiobook.editor.empty.meta.text' | t: { unit: unit(), state: (stateKey() | t) } }}
+        </p>
+      }
+      @default {
+        <h3 class="t-display-xs">{{ 'scripting.editor.empty.title' | t: { unit: unit() } }}</h3>
+        <p class="t-sm t-mute">{{ 'audiobook.editor.empty.script.text' | t }}</p>
+        <div class="empty-act">
+          <button
+            type="button"
+            class="btn btn-primary"
+            data-testid="ab-empty-script-btn"
+            (click)="openScripting()"
+          >
+            <ds-icon name="pen" [size]="16" />
+            {{ 'audiobook.editor.ban.openScript' | t }}
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>

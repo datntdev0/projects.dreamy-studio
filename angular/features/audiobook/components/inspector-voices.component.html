@@ -1,0 +1,47 @@
+<section class="ins-sec" data-testid="audiobook-inspector-voices-engine">
+  <span class="eyebrow">{{ 'audiobook.inspector.engine' | t }}</span>
+  <dl class="kv" data-testid="audiobook-inspector-voices-kv">
+    <dt>{{ 'audiobook.inspector.localTts' | t }}</dt>
+    <dd>
+      @if (ctx().engines.localModels > 0) {
+        <span class="badge badge-success" data-testid="audiobook-inspector-voices-local">
+          {{ 'audiobook.inspector.models' | t: { count: ctx().engines.localModels } }}
+        </span>
+      } @else {
+        <span class="badge badge-warning" data-testid="audiobook-inspector-voices-local">
+          {{ 'audiobook.inspector.notInstalled' | t }}
+        </span>
+      }
+    </dd>
+    <dt>{{ 'audiobook.inspector.cloudSpeech' | t }}</dt>
+    <dd>
+      @if (ctx().engines.cloudProviders > 0) {
+        <span class="badge badge-success" data-testid="audiobook-inspector-voices-cloud">
+          {{ 'audiobook.inspector.providers' | t: { count: ctx().engines.cloudProviders } }}
+        </span>
+      } @else {
+        <span class="badge badge-warning" data-testid="audiobook-inspector-voices-cloud">
+          {{ 'audiobook.inspector.notConnected' | t }}
+        </span>
+      }
+    </dd>
+  </dl>
+</section>
+<section class="ins-sec ins-actions" data-testid="ab-ins-engine">
+  <button type="button" class="btn" data-testid="ab-ins-tts-btn" (click)="openLocal()">
+    <ds-icon name="cpu" [size]="16" />
+    {{ 'audiobook.inspector.localTts' | t }}
+  </button>
+  <button type="button" class="btn" data-testid="ab-ins-speech-btn" (click)="openCloud()">
+    <ds-icon name="cloud" [size]="16" />
+    {{ 'audiobook.inspector.cloudSpeech' | t }}
+  </button>
+  <button type="button" class="btn" data-testid="ab-ins-library-btn" (click)="openLibrary()">
+    <ds-icon name="voice" [size]="16" />
+    {{ 'audiobook.inspector.voiceLibrary' | t }}
+  </button>
+</section>
+<section class="ins-sec" data-testid="audiobook-inspector-voices-note">
+  <span class="eyebrow">{{ 'audiobook.inspector.note' | t }}</span>
+  <p class="t-sm t-mute">{{ 'audiobook.inspector.voicesNote' | t }}</p>
+</section>

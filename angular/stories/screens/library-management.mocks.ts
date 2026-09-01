@@ -171,7 +171,7 @@ function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
   };
 }
 
-function voiceList(): LibraryVoice[] {
+export function libraryVoiceFixtures(): LibraryVoice[] {
   return [
     voice(1, { name: 'Narrator An', description: 'Warm default narration voice.' }),
     voice(2, {
@@ -247,7 +247,7 @@ function libraryData(): LibraryData {
       video(2, 'quay-timelapse.mp4', 32_000, 3, ['harbor', 'fog'], 96 * MIB),
       video(3, 'tide-rising.mp4', 12_000, null, ['tide'], 30 * MIB),
     ],
-    voices: voiceList(),
+    voices: libraryVoiceFixtures(),
     prompts: [
       prompt(
         1,

@@ -1,0 +1,85 @@
+<section class="ins-sec" data-testid="audiobook-inspector-chapter-details">
+  <span class="eyebrow">{{ 'audiobook.inspector.chapters' | t }}</span>
+  <dl class="kv" data-testid="audiobook-inspector-chapter-kv">
+    <dt>{{ 'audiobook.inspector.chapters' | t }}</dt>
+    <dd data-testid="audiobook-inspector-chapter-name">
+      @if (ctx().unit; as unit) {
+        {{ labels.unitTitle(ctx().config, unit) }}
+      }
+    </dd>
+    <dt>{{ 'audiobook.inspector.script' | t }}</dt>
+    <dd>
+      @if (panel().locked) {
+        <span class="badge badge-success" data-testid="audiobook-inspector-chapter-locked">
+          {{ 'audiobook.inspector.locked' | t }}
+        </span>
+      } @else {
+        <span class="badge badge-warning" data-testid="audiobook-inspector-chapter-unlocked">
+          {{ 'audiobook.inspector.notLocked' | t }}
+        </span>
+      }
+    </dd>
+    <dt>{{ 'audiobook.inspector.passage' | t }}</dt>
+    <dd data-testid="audiobook-inspector-chapter-total">{{ panel().total || empty }}</dd>
+    <dt>{{ 'audiobook.inspector.generated' | t }}</dt>
+    <dd data-testid="audiobook-inspector-chapter-generated">
+      {{ panel().total ? panel().generated + '/' + panel().total : empty }}
+    </dd>
+    <dt>{{ 'audiobook.inspector.attention' | t }}</dt>
+    <dd data-testid="audiobook-inspector-chapter-attention">
+      {{ panel().total ? panel().attention : empty }}
+    </dd>
+    <dt>{{ 'audiobook.inspector.audio' | t }}</dt>
+    <dd data-testid="audiobook-inspector-chapter-duration">
+      {{ panel().duration ? '≈ ' + labels.duration(panel().duration) : empty }}
+    </dd>
+  </dl>
+</section>
+@if (panel().mix; as mix) {
+  <section class="ins-sec" data-testid="ab-ins-mix">
+    <span class="eyebrow">{{ 'audiobook.inspector.assembly' | t }}</span>
+    <div class="ins-form" data-testid="audiobook-inspector-chapter-form">
+      @for (def of mixFields; track def.field) {
+        <div class="field">
+          <label [for]="'ab-m-' + def.field">{{ def.labelKey | t }}</label>
+          <div class="ab-mix">
+            <input
+              class="input"
+              type="number"
+              [id]="'ab-m-' + def.field"
+              [min]="def.min"
+              [max]="def.max"
+              [step]="def.step"
+              [value]="mix[def.field]"
+              [attr.data-testid]="'ab-mix-' + def.field"
+              (change)="changeMix(def.field, $event)"
+            />
+            <span class="t-sm t-mute">{{ def.unitKey | t }}</span>
+          </div>
+        </div>
+      }
+    </div>
+    <span class="field-hint" data-testid="audiobook-inspector-chapter-mix-hint">
+      {{ 'audiobook.inspector.mix.hint' | t }}
+    </span>
+  </section>
+}
+@if (blockers().length > 0) {
+  <section class="ins-sec" data-testid="ab-ins-blockers">
+    <span class="eyebrow">
+      {{ 'audiobook.inspector.blockers' | t: { count: blockers().length } }}
+    </span>
+    @for (text of blockers(); track $index) {
+      <div class="sc-iss is-warn" data-testid="audiobook-inspector-chapter-blocker">
+        <ds-icon name="alert" [size]="14" />
+        <span>{{ text }}</span>
+      </div>
+    }
+  </section>
+}
+<section class="ins-sec ins-actions" data-testid="ab-ins-actions">
+  <button type="button" class="btn" data-testid="ab-ins-script-btn" (click)="openScript()">
+    <ds-icon name="pen" [size]="16" />
+    {{ 'audiobook.inspector.openScript' | t }}
+  </button>
+</section>

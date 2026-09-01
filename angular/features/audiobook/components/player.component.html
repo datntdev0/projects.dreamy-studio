@@ -1,0 +1,32 @@
+@if (player.current()) {
+  <div class="ab-player" data-testid="ab-player">
+    <button
+      type="button"
+      class="btn btn-icon btn-sm"
+      [attr.aria-label]="
+        (player.playing() ? 'audiobook.editor.player.pause' : 'audiobook.editor.player.play') | t
+      "
+      data-testid="ab-pl-toggle"
+      (click)="player.toggle()"
+    >
+      <ds-icon [name]="player.playing() ? 'pause' : 'play'" [size]="17" />
+    </button>
+    <div class="ab-pl-b" data-testid="audiobook-player-body">
+      <div class="t-sm t-ink ellip" data-testid="ab-pl-title">{{ title() }}</div>
+      <div class="progress" data-testid="audiobook-player-progress">
+        <i [style.width.%]="player.percent()"></i>
+      </div>
+    </div>
+    <span class="mono t-mute" data-testid="audiobook-player-time">{{ time() }}</span>
+    <button
+      type="button"
+      class="btn btn-icon btn-sm"
+      [attr.title]="'audiobook.editor.player.stop' | t"
+      [attr.aria-label]="'audiobook.editor.player.stop' | t"
+      data-testid="ab-pl-stop"
+      (click)="player.stop()"
+    >
+      <ds-icon name="stop" [size]="17" />
+    </button>
+  </div>
+}

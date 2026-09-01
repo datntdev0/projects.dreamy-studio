@@ -341,7 +341,7 @@ describe('Inspector wiring', () => {
     expect(byId(mounted.root, 'scripting-inspector')).not.toBeNull();
     expect(byId(mounted.root, 'sc-ins-script')).not.toBeNull();
     expect(byId(mounted.root, 'project-panel')).toBeNull();
-    TestBed.inject(TabsService).openModule(1, 'Harrowmere', 'audiobook');
+    TestBed.inject(TabsService).openModule(1, 'Harrowmere', 'character');
     await settle(mounted.fixture);
     expect(byId(mounted.root, 'scripting-inspector')).toBeNull();
     expect(byId(mounted.root, 'project-panel')).not.toBeNull();

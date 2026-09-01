@@ -1,0 +1,106 @@
+<section class="ins-sec" data-testid="ab-ins-seg">
+  <span class="eyebrow">{{ 'audiobook.inspector.segment' | t }}</span>
+  <div class="ins-h" data-testid="audiobook-inspector-segment-head">
+    <ds-icon [name]="def().icon" [size]="18" />
+    <span class="t-ink">{{ def().labelKey | t }}</span>
+    <span class="{{ badge() }}" data-testid="audiobook-inspector-segment-badge">
+      {{ stateKey() | t }}
+    </span>
+  </div>
+  <div class="ab-ro" data-testid="ab-ins-text">{{ panel().row.block.text }}</div>
+  @if (panel().changed) {
+    <span class="eyebrow">{{ 'audiobook.inspector.readAs' | t }}</span>
+    <div class="ab-ro is-read" data-testid="ab-ins-read">{{ panel().row.readText }}</div>
+  }
+  <span class="field-hint" data-testid="audiobook-inspector-segment-hint">
+    {{ 'audiobook.inspector.textHint' | t }}
+  </span>
+</section>
+<section class="ins-sec" data-testid="audiobook-inspector-segment-audio">
+  <span class="eyebrow">{{ 'audiobook.inspector.audio' | t }}</span>
+  <dl class="kv" data-testid="audiobook-inspector-segment-kv">
+    <dt>{{ 'audiobook.inspector.status' | t }}</dt>
+    <dd data-testid="audiobook-inspector-segment-status">{{ stateKey() | t }}</dd>
+    <dt>{{ 'audiobook.inspector.characters' | t }}</dt>
+    <dd data-testid="audiobook-inspector-segment-speaker">{{ speaker() }}</dd>
+    @if (panel().row.block.paren) {
+      <dt>{{ 'audiobook.inspector.tone' | t }}</dt>
+      <dd data-testid="audiobook-inspector-segment-tone">{{ panel().row.block.paren }}</dd>
+    }
+    <dt>{{ 'audiobook.inspector.voice' | t }}</dt>
+    <dd data-testid="audiobook-inspector-segment-voice">
+      @if (panel().row.voice; as voice) {
+        {{ voice.name }}
+        <div class="t-sm t-mute" data-testid="audiobook-inspector-segment-engine">
+          {{ engineLine() }}
+        </div>
+      } @else {
+        {{ 'audiobook.inspector.voiceNone' | t }}
+      }
+    </dd>
+    <dt>{{ 'audiobook.inspector.speed' | t }}</dt>
+    <dd data-testid="audiobook-inspector-segment-speed">{{ panel().row.speed }}×</dd>
+    <dt>{{ 'audiobook.inspector.duration' | t }}</dt>
+    <dd data-testid="audiobook-inspector-segment-duration">
+      {{ panel().row.record ? labels.duration(panel().row.record!.dur) : empty }}
+    </dd>
+    <dt>{{ 'audiobook.inspector.createdAt' | t }}</dt>
+    <dd>
+      @if (panel().row.record; as record) {
+        <span class="mono" data-testid="audiobook-inspector-segment-created">
+          {{ labels.stamp(record.at) }}
+        </span>
+      } @else {
+        {{ empty }}
+      }
+    </dd>
+  </dl>
+</section>
+@if (reasons().length > 0) {
+  <section class="ins-sec" data-testid="audiobook-inspector-segment-why">
+    <span class="eyebrow">{{ 'audiobook.inspector.why' | t }}</span>
+    @for (text of reasons(); track $index) {
+      <div class="sc-iss is-warn" data-testid="audiobook-inspector-segment-reason">
+        <ds-icon name="alert" [size]="14" />
+        <span>{{ text }}</span>
+      </div>
+    }
+  </section>
+}
+@if (panel().row.record?.flag; as note) {
+  <section class="ins-sec" data-testid="audiobook-inspector-segment-flag-note">
+    <span class="eyebrow">{{ 'audiobook.inspector.flagNote' | t }}</span>
+    <p class="t-sm">{{ note }}</p>
+  </section>
+}
+<section class="ins-sec ins-actions" data-testid="ab-ins-seg-actions">
+  <button
+    type="button"
+    class="btn"
+    [disabled]="!panel().row.record"
+    data-testid="ab-ins-play"
+    (click)="play()"
+  >
+    <ds-icon name="play" [size]="16" />
+    {{ 'audiobook.inspector.listen' | t }}
+  </button>
+  <button type="button" class="btn" data-testid="ab-ins-regen" (click)="regenerate()">
+    <ds-icon name="refresh" [size]="16" />
+    {{ 'audiobook.inspector.regenerate' | t }}
+  </button>
+  @if (panel().canClearFlag) {
+    <button type="button" class="btn" data-testid="ab-ins-unflag" (click)="clearFlag()">
+      <ds-icon name="check" [size]="16" />
+      {{ 'audiobook.inspector.clearFlag' | t }}
+    </button>
+  } @else if (panel().canFlag) {
+    <button type="button" class="btn" data-testid="ab-ins-flag" (click)="flag()">
+      <ds-icon name="flag" [size]="16" />
+      {{ 'audiobook.inspector.flag' | t }}
+    </button>
+  }
+  <button type="button" class="btn" data-testid="ab-ins-edit" (click)="editScript()">
+    <ds-icon name="pen" [size]="16" />
+    {{ 'audiobook.inspector.editScript' | t }}
+  </button>
+</section>

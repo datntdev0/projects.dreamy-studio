@@ -1,0 +1,15 @@
+@for (row of ctx().rows; track row.kind === 'segment' ? row.segment.block.id : row.pause.block.id) {
+  @if (row.kind === 'segment') {
+    <app-audiobook-segment
+      [projectId]="ctx().projectId"
+      [row]="row.segment"
+      [selected]="ctx().view.sel === row.segment.block.id"
+    />
+  } @else {
+    <div class="ab-gap" [attr.data-testid]="'ab-gap-' + row.pause.block.id">
+      <span>{{ 'audiobook.editor.gap' | t: { seconds: row.pause.seconds.toFixed(1) } }}</span>
+    </div>
+  }
+} @empty {
+  <app-audiobook-empty [ctx]="ctx()" />
+}

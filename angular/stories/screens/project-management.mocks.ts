@@ -3,17 +3,22 @@ import { NovelSummary } from '@features/novel/novel.models';
 import { ProjectSummary } from '@features/project/project.models';
 import type { Decorator } from '@storybook/angular-vite';
 
+import { AUDIOBOOK_CLOUD_ACCOUNTS } from './audiobook.fixtures';
+import { audiobookHandlers } from './audiobook.mocks';
 import { knowledgeScreenHandlers } from './novel-knowledge.mocks';
 // prettier-ignore
 import { PROJECT_DIRECTORY, PROJECT_FIXTURES, PROJECT_NOVELS, projectCoverFor, projectModuleStatesFor } from './project-management.fixtures';
 import { IpcHandlers, withScreen } from './screen.mocks';
-import { scriptingHandlers } from './scripting.mocks';
+import { createScriptingState, scriptingHandlers } from './scripting.mocks';
 
 const ANALYZED_CHAPTERS = [1, 2];
+
+const NO_ASSETS = { image: 0, sound: 0, video: 0, prompt: 0 };
 
 const SHELL_HANDLERS: IpcHandlers = {
   app_info: () => ({ name: 'Dreamy Studio', version: '0.0.0' }),
   workspace_current: () => ({ name: 'Dreamy Studio', path: String.raw`D:\Dreamy Studio` }),
+  library_summary: () => ({ assets: NO_ASSETS, unfiled: NO_ASSETS }),
 };
 
 export interface ProjectScenario {
@@ -61,17 +66,20 @@ function knowledgeHandlers(source: IpcHandlers): IpcHandlers {
 export function projectScreenHandlers(scenario: ProjectScenario = {}): IpcHandlers {
   const empty = scenario.empty === true;
   const base = knowledgeScreenHandlers({ chapters: !empty });
-  const scripting = scriptingHandlers(base, scenario.stale === true);
+  const scriptingState = createScriptingState(scenario.stale === true);
+  const scripting = scriptingHandlers(base, scenario.stale === true, scriptingState);
+  const audiobook = audiobookHandlers(scriptingState, scripting['project_modules']);
   return {
     ...base,
     ...SHELL_HANDLERS,
     ...novelHandlers(base, empty),
     ...projectHandlers(empty ? [] : PROJECT_FIXTURES),
     ...scripting,
+    ...audiobook,
     ...knowledgeHandlers(scripting),
   };
 }
 
 export function withProjects(scenario: ProjectScenario = {}): { decorators: Decorator[] } {
-  return withScreen(projectScreenHandlers(scenario));
+  return withScreen(projectScreenHandlers(scenario), AUDIOBOOK_CLOUD_ACCOUNTS);
 }

@@ -10,7 +10,7 @@ import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from '../stories/scre
 // prettier-ignore
 import { PROJECT_FIXTURES, projectModuleStatesFor } from '../stories/screens/project-management.fixtures';
 import { SPEAKER_HINTS } from '../stories/screens/scripting.fixtures';
-import { scriptingHandlers } from '../stories/screens/scripting.mocks';
+import { scriptingHandlers, ScriptingState } from '../stories/screens/scripting.mocks';
 
 const STAMP = '2026-11-09T09:15:00Z';
 const SAMPLE_CHAPTERS = 3;
@@ -64,11 +64,15 @@ function knowledgeWire() {
   };
 }
 
-export function installScriptingBackend(ipc: FakeIpc): void {
-  const backend = scriptingHandlers({
-    translation_get: () => translationWire(),
-    knowledge_get: knowledgeWire,
-  });
+export function installScriptingBackend(ipc: FakeIpc, state?: ScriptingState): void {
+  const backend = scriptingHandlers(
+    {
+      translation_get: () => translationWire(),
+      knowledge_get: knowledgeWire,
+    },
+    true,
+    state,
+  );
   ipc.on('project_list', PROJECT_FIXTURES);
   ipc.on('novel_chapters', chapterRows());
   ipc.on('novel_chapter_read', (args) => originalRows(String(args?.['chapterId'])));

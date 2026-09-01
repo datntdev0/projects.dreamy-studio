@@ -1,0 +1,54 @@
+app-audiobook,
+app-audiobook-rail,
+app-audiobook-subbar,
+app-audiobook-banners,
+app-audiobook-list,
+app-audiobook-segment,
+app-audiobook-empty,
+app-audiobook-player {
+  display: contents;
+}
+
+.ab-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ab-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.ab-pad {
+  padding: var(--sp-xl) var(--sp-lg);
+}
+.ab-wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-lg);
+  align-content: start;
+}
+.ab-tw {
+  overflow-x: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+}
+.ab-tw .table th {
+  position: static;
+}
+.ab-head {
+  display: grid;
+  gap: var(--sp-xs);
+}
+.ab-sub-t {
+  font-weight: 500;
+}
+.ab-list {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--sp-sm) var(--sp-lg) var(--sp-3xl);
+}

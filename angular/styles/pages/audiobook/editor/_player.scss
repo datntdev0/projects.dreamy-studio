@@ -1,0 +1,18 @@
+.ab-player {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-lg);
+  border-top: 1px solid var(--hairline);
+  background: var(--canvas-card);
+}
+.ab-pl-b {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--sp-xs);
+}
+.ab-pl-b .ellip {
+  max-width: none;
+}

@@ -15,7 +15,7 @@ import { mockUnitSource, seedScripts, SPEAKER_HINTS, TEA_WOMAN } from './scripti
 const DRAFT_DELAY_MS = 700;
 const THIRD_CHAPTER = 3;
 
-interface ScriptingState {
+export interface ScriptingState {
   scripts: Record<number, Script>;
   progress: Record<number, ProjectModuleState>;
 }
@@ -150,8 +150,15 @@ function knowledgeHandlers(base: IpcHandlers): IpcHandlers {
   return source ? { knowledge_get: (args) => withTeaWoman(source(args) as WireKnowledge) } : {};
 }
 
-export function scriptingHandlers(base: IpcHandlers, stale = true): IpcHandlers {
-  const state: ScriptingState = { scripts: seedScripts(stale), progress: {} };
+export function createScriptingState(stale: boolean): ScriptingState {
+  return { scripts: seedScripts(stale), progress: {} };
+}
+
+export function scriptingHandlers(
+  base: IpcHandlers,
+  stale = true,
+  state: ScriptingState = createScriptingState(stale),
+): IpcHandlers {
   return {
     scripting_get: (args) => {
       const script = state.scripts[numberArg(args, 'projectId')];

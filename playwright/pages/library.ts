@@ -1,45 +1,45 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page } from '@playwright/test';
 
-export type SectionKind = "image" | "sound" | "video" | "prompt";
+export type SectionKind = 'image' | 'sound' | 'video' | 'prompt';
 
 const SECTION_ROOTS: Readonly<Record<SectionKind, string>> = {
-  image: "library-images",
-  sound: "library-sounds",
-  video: "library-videos",
-  prompt: "library-prompts-content",
+  image: 'library-images',
+  sound: 'library-sounds',
+  video: 'library-videos',
+  prompt: 'library-prompts-content',
 };
 
 const SECTION_PREFIXES: Readonly<Record<SectionKind, string>> = {
-  image: "library-images",
-  sound: "library-sounds",
-  video: "library-videos",
-  prompt: "library-prompts",
+  image: 'library-images',
+  sound: 'library-sounds',
+  video: 'library-videos',
+  prompt: 'library-prompts',
 };
 
 const EXPLORER_ROWS: Readonly<Record<SectionKind, string>> = {
-  image: "library-explorer-images",
-  sound: "library-explorer-sounds",
-  video: "library-explorer-videos",
-  prompt: "library-explorer-prompts",
+  image: 'library-explorer-images',
+  sound: 'library-explorer-sounds',
+  video: 'library-explorer-videos',
+  prompt: 'library-explorer-prompts',
 };
 
 export class LibraryExplorer {
   constructor(private readonly page: Page) {}
 
   get root(): Locator {
-    return this.page.getByTestId("library-explorer-content");
+    return this.page.getByTestId('library-explorer-content');
   }
 
   get taxonomy(): Locator {
-    return this.page.getByTestId("library-explorer-taxonomy");
+    return this.page.getByTestId('library-explorer-taxonomy');
   }
 
   get voices(): Locator {
-    return this.page.getByTestId("library-explorer-voices");
+    return this.page.getByTestId('library-explorer-voices');
   }
 
   get organizeHead(): Locator {
-    return this.page.getByTestId("library-explorer-section");
+    return this.page.getByTestId('library-explorer-section');
   }
 
   get collections(): Locator {
@@ -47,23 +47,23 @@ export class LibraryExplorer {
   }
 
   get emptyCollections(): Locator {
-    return this.page.getByTestId("library-explorer-empty");
+    return this.page.getByTestId('library-explorer-empty');
   }
 
   get filtersHead(): Locator {
-    return this.page.getByTestId("library-explorer-filters-head");
+    return this.page.getByTestId('library-explorer-filters-head');
   }
 
   get filterCollection(): Locator {
-    return this.page.getByTestId("library-explorer-filter-collection-select");
+    return this.page.getByTestId('library-explorer-filter-collection-select');
   }
 
   get filterTags(): Locator {
-    return this.page.getByTestId("library-explorer-filter-tag");
+    return this.page.getByTestId('library-explorer-filter-tag');
   }
 
   get filterClear(): Locator {
-    return this.page.getByTestId("library-explorer-filter-clear");
+    return this.page.getByTestId('library-explorer-filter-clear');
   }
 
   row(kind: SectionKind): Locator {
@@ -83,7 +83,9 @@ export class LibraryExplorer {
   }
 
   filterTag(tag: string): Locator {
-    return this.filterTags.filter({ has: this.page.getByTestId("library-explorer-filter-tag-name").filter({ hasText: new RegExp(`^${tag}$`) }) });
+    return this.filterTags.filter({
+      has: withExactText(this.page.getByTestId('library-explorer-filter-tag-name'), tag),
+    });
   }
 }
 
@@ -98,67 +100,67 @@ export class LibrarySectionList {
   }
 
   get toolbar(): Locator {
-    return this.part("toolbar");
+    return this.part('toolbar');
   }
 
   get search(): Locator {
-    return this.part("search");
+    return this.part('search');
   }
 
   get count(): Locator {
-    return this.part("count");
+    return this.part('count');
   }
 
   get sort(): Locator {
-    return this.part("sort");
+    return this.part('sort');
   }
 
   get gridView(): Locator {
-    return this.part("view-grid");
+    return this.part('view-grid');
   }
 
   get listView(): Locator {
-    return this.part("view-list");
+    return this.part('view-list');
   }
 
   get upload(): Locator {
-    return this.part("upload");
+    return this.part('upload');
   }
 
   get empty(): Locator {
-    return this.part("empty");
+    return this.part('empty');
   }
 
   get emptyFiltered(): Locator {
-    return this.part("empty-filtered");
+    return this.part('empty-filtered');
   }
 
   get emptyUpload(): Locator {
-    return this.part("empty-upload");
+    return this.part('empty-upload');
   }
 
   get clearFilters(): Locator {
-    return this.part("clear-filters");
+    return this.part('clear-filters');
   }
 
   get grid(): Locator {
-    return this.part("grid");
+    return this.part('grid');
   }
 
   get cards(): Locator {
-    return this.part("card");
+    return this.part('card');
   }
 
   get table(): Locator {
-    return this.part("table");
+    return this.part('table');
   }
 
   get rows(): Locator {
-    return this.part("table-row");
+    return this.part('table-row');
   }
 
   get cardNames(): Locator {
-    return this.part("card-name");
+    return this.part('card-name');
   }
 
   card(name: string): Locator {
@@ -178,23 +180,23 @@ export class LibraryTaxonomy {
   constructor(private readonly page: Page) {}
 
   get root(): Locator {
-    return this.page.getByTestId("library-collections-page");
+    return this.page.getByTestId('library-collections-page');
   }
 
   get create(): Locator {
-    return this.page.getByTestId("library-collections-create");
+    return this.page.getByTestId('library-collections-create');
   }
 
   get emptyCreate(): Locator {
-    return this.page.getByTestId("library-collections-empty-create");
+    return this.page.getByTestId('library-collections-empty-create');
   }
 
   get collectionsPane(): Locator {
-    return this.page.getByTestId("library-collections-pane");
+    return this.page.getByTestId('library-collections-pane');
   }
 
   get tagsPane(): Locator {
-    return this.page.getByTestId("library-tags-pane");
+    return this.page.getByTestId('library-tags-pane');
   }
 
   get collectionRows(): Locator {
@@ -206,7 +208,7 @@ export class LibraryTaxonomy {
   }
 
   get tagSearch(): Locator {
-    return this.page.getByTestId("library-tag-search");
+    return this.page.getByTestId('library-tag-search');
   }
 
   collectionRow(id: number): Locator {
@@ -226,31 +228,31 @@ export class LibraryCollectionView {
   constructor(private readonly page: Page) {}
 
   get root(): Locator {
-    return this.page.getByTestId("library-collection-assets");
+    return this.page.getByTestId('library-collection-assets');
   }
 
   get missing(): Locator {
-    return this.page.getByTestId("library-collection-missing");
+    return this.page.getByTestId('library-collection-missing');
   }
 
   get title(): Locator {
-    return this.page.getByTestId("library-collection-assets-title-text");
+    return this.page.getByTestId('library-collection-assets-title-text');
   }
 
   get count(): Locator {
-    return this.page.getByTestId("library-collection-assets-count");
+    return this.page.getByTestId('library-collection-assets-count');
   }
 
   get empty(): Locator {
-    return this.page.getByTestId("library-collection-assets-empty");
+    return this.page.getByTestId('library-collection-assets-empty');
   }
 
   get cards(): Locator {
-    return this.page.getByTestId("library-collection-assets-card");
+    return this.page.getByTestId('library-collection-assets-card');
   }
 
   get rows(): Locator {
-    return this.page.getByTestId("library-collection-assets-table-row");
+    return this.page.getByTestId('library-collection-assets-table-row');
   }
 }
 
@@ -265,30 +267,30 @@ export class LibraryNav {
 
   constructor(readonly page: Page) {
     this.explorer = new LibraryExplorer(page);
-    this.images = new LibrarySectionList(page, "image");
-    this.sounds = new LibrarySectionList(page, "sound");
-    this.videos = new LibrarySectionList(page, "video");
-    this.prompts = new LibrarySectionList(page, "prompt");
+    this.images = new LibrarySectionList(page, 'image');
+    this.sounds = new LibrarySectionList(page, 'sound');
+    this.videos = new LibrarySectionList(page, 'video');
+    this.prompts = new LibrarySectionList(page, 'prompt');
     this.taxonomy = new LibraryTaxonomy(page);
     this.collection = new LibraryCollectionView(page);
   }
 
   get rail(): Locator {
-    return this.page.locator("[data-testid=railbar-item][data-rail=library]");
+    return this.page.locator('[data-testid=railbar-item][data-rail=library]');
   }
 
   get tabbar(): Locator {
-    return this.page.getByTestId("editor-tabbar");
+    return this.page.getByTestId('editor-tabbar');
   }
 
   section(kind: SectionKind): LibrarySectionList {
-    if (kind === "sound") {
+    if (kind === 'sound') {
       return this.sounds;
     }
-    if (kind === "video") {
+    if (kind === 'video') {
       return this.videos;
     }
-    return kind === "prompt" ? this.prompts : this.images;
+    return kind === 'prompt' ? this.prompts : this.images;
   }
 }
 
@@ -296,79 +298,83 @@ export class UploadDialog {
   constructor(private readonly page: Page) {}
 
   get root(): Locator {
-    return this.page.getByTestId("library-upload-dialog-panel");
+    return this.page.getByTestId('library-upload-dialog-panel');
   }
 
   get title(): Locator {
-    return this.root.getByTestId("dialog-title");
+    return this.root.getByTestId('dialog-title');
   }
 
   get closeButton(): Locator {
-    return this.root.getByTestId("dialog-close").locator("button");
+    return this.root.getByTestId('dialog-close').locator('button');
   }
 
   get dropzone(): Locator {
-    return this.page.getByTestId("library-upload-dialog-dropzone");
+    return this.page.getByTestId('library-upload-dialog-dropzone');
   }
 
   get dropzoneTitle(): Locator {
-    return this.page.getByTestId("library-upload-dialog-dropzone-title");
+    return this.page.getByTestId('library-upload-dialog-dropzone-title');
   }
 
   get pick(): Locator {
-    return this.page.getByTestId("library-upload-dialog-pick").locator("button");
+    return this.page.getByTestId('library-upload-dialog-pick').locator('button');
   }
 
   get queue(): Locator {
-    return this.page.getByTestId("library-upload-dialog-queue");
+    return this.page.getByTestId('library-upload-dialog-queue');
   }
 
   get rows(): Locator {
-    return this.page.getByTestId("library-upload-dialog-queue-row");
+    return this.page.getByTestId('library-upload-dialog-queue-row');
   }
 
   get collection(): Locator {
-    return this.page.getByTestId("library-upload-dialog-collection");
+    return this.page.getByTestId('library-upload-dialog-collection');
   }
 
   get newCollection(): Locator {
-    return this.page.getByTestId("library-upload-dialog-new-collection");
+    return this.page.getByTestId('library-upload-dialog-new-collection');
   }
 
   get tags(): Locator {
-    return this.page.getByTestId("library-upload-dialog-tags");
+    return this.page.getByTestId('library-upload-dialog-tags');
   }
 
   get rights(): Locator {
-    return this.page.getByTestId("library-upload-dialog-rights");
+    return this.page.getByTestId('library-upload-dialog-rights');
   }
 
   get submit(): Locator {
-    return this.page.getByTestId("library-upload-dialog-submit").locator("button");
+    return this.page.getByTestId('library-upload-dialog-submit').locator('button');
   }
 
   get cancel(): Locator {
-    return this.page.getByTestId("library-upload-dialog-cancel").locator("button");
+    return this.page.getByTestId('library-upload-dialog-cancel').locator('button');
   }
 
   row(name: string): Locator {
-    return this.rows.filter({ has: this.page.getByTestId("library-upload-dialog-file-name").getByText(name, { exact: true }) });
+    return this.rows.filter({
+      has: this.page
+        .getByTestId('library-upload-dialog-file-name')
+        .getByText(name, { exact: true }),
+    });
   }
 
   badge(name: string): Locator {
-    return this.row(name).getByTestId("library-upload-dialog-status-badge");
+    return this.row(name).getByTestId('library-upload-dialog-status-badge');
   }
 
   message(name: string): Locator {
-    return this.row(name).getByTestId("library-upload-dialog-file-message");
+    return this.row(name).getByTestId('library-upload-dialog-file-message');
   }
 
   size(name: string): Locator {
-    return this.row(name).getByTestId("library-upload-dialog-queue-size");
+    return this.row(name).getByTestId('library-upload-dialog-queue-size');
   }
 
   remove(name: string): Locator {
-    return this.row(name).getByTestId("library-upload-dialog-remove");
+    return this.row(name).getByTestId('library-upload-dialog-remove');
   }
 }
 
@@ -376,107 +382,109 @@ export class PromptDialog {
   constructor(private readonly page: Page) {}
 
   get panel(): Locator {
-    return this.page.getByTestId("library-upload-dialog-panel");
+    return this.page.getByTestId('library-upload-dialog-panel');
   }
 
   get tabs(): Locator {
-    return this.page.getByTestId("library-upload-dialog-tabs");
+    return this.page.getByTestId('library-upload-dialog-tabs');
   }
 
   get filesTab(): Locator {
-    return this.tabs.getByRole("button").nth(0);
+    return this.tabs.getByRole('button').nth(0);
   }
 
   get writeTab(): Locator {
-    return this.tabs.getByRole("button").nth(1);
+    return this.tabs.getByRole('button').nth(1);
   }
 
   get title(): Locator {
-    return this.panel.getByTestId("dialog-title");
+    return this.panel.getByTestId('dialog-title');
   }
 
   get closeButton(): Locator {
-    return this.panel.getByTestId("dialog-close").getByTestId("button");
+    return this.panel.getByTestId('dialog-close').getByTestId('button');
   }
 
   get dropzone(): Locator {
-    return this.page.getByTestId("library-upload-dialog-dropzone");
+    return this.page.getByTestId('library-upload-dialog-dropzone');
   }
 
   get dropzoneTitle(): Locator {
-    return this.page.getByTestId("library-upload-dialog-dropzone-title");
+    return this.page.getByTestId('library-upload-dialog-dropzone-title');
   }
 
   get pick(): Locator {
-    return this.page.getByTestId("library-upload-dialog-pick").getByTestId("button");
+    return this.page.getByTestId('library-upload-dialog-pick').getByTestId('button');
   }
 
   get queueRows(): Locator {
-    return this.page.getByTestId("library-upload-dialog-queue-row");
+    return this.page.getByTestId('library-upload-dialog-queue-row');
   }
 
   get name(): Locator {
-    return this.page.getByTestId("library-upload-dialog-write-name");
+    return this.page.getByTestId('library-upload-dialog-write-name');
   }
 
   get nameError(): Locator {
-    return this.page.getByTestId("library-upload-dialog-write-name-error");
+    return this.page.getByTestId('library-upload-dialog-write-name-error');
   }
 
   get kind(): Locator {
-    return this.page.getByTestId("library-upload-dialog-write-kind");
+    return this.page.getByTestId('library-upload-dialog-write-kind');
   }
 
   get text(): Locator {
-    return this.page.getByTestId("library-upload-dialog-write-text");
+    return this.page.getByTestId('library-upload-dialog-write-text');
   }
 
   get textError(): Locator {
-    return this.page.getByTestId("library-upload-dialog-write-text-error");
+    return this.page.getByTestId('library-upload-dialog-write-text-error');
   }
 
   get variables(): Locator {
-    return this.page.getByTestId("library-upload-dialog-write-variables");
+    return this.page.getByTestId('library-upload-dialog-write-variables');
   }
 
   get collection(): Locator {
-    return this.page.getByTestId("library-upload-dialog-collection");
+    return this.page.getByTestId('library-upload-dialog-collection');
   }
 
   get newCollection(): Locator {
-    return this.page.getByTestId("library-upload-dialog-new-collection");
+    return this.page.getByTestId('library-upload-dialog-new-collection');
   }
 
   get tags(): Locator {
-    return this.page.getByTestId("library-upload-dialog-tags");
+    return this.page.getByTestId('library-upload-dialog-tags');
   }
 
   get rights(): Locator {
-    return this.page.getByTestId("library-upload-dialog-rights");
+    return this.page.getByTestId('library-upload-dialog-rights');
   }
 
   get submit(): Locator {
-    return this.page.getByTestId("library-upload-dialog-submit").getByTestId("button");
+    return this.page.getByTestId('library-upload-dialog-submit').getByTestId('button');
   }
 
   get cancel(): Locator {
-    return this.page.getByTestId("library-upload-dialog-cancel").getByTestId("button");
+    return this.page.getByTestId('library-upload-dialog-cancel').getByTestId('button');
   }
 
   row(fileName: string): Locator {
-    return this.queueRows.filter({ has: this.page.getByTestId("library-upload-dialog-file-name").filter({ hasText: new RegExp(`^${escapePattern(fileName)}$`) }) });
+    return this.queueRows.filter({
+      has: withExactText(this.page.getByTestId('library-upload-dialog-file-name'), fileName),
+    });
   }
 
   badge(fileName: string): Locator {
-    return this.row(fileName).getByTestId("library-upload-dialog-status-badge");
+    return this.row(fileName).getByTestId('library-upload-dialog-status-badge');
   }
 
   message(fileName: string): Locator {
-    return this.row(fileName).getByTestId("library-upload-dialog-file-message");
+    return this.row(fileName).getByTestId('library-upload-dialog-file-message');
   }
 
   size(fileName: string): Locator {
-    return this.row(fileName).getByTestId("library-upload-dialog-queue-size");
+    return this.row(fileName).getByTestId('library-upload-dialog-queue-size');
   }
 }
 
@@ -484,31 +492,31 @@ export class PromptInspector {
   constructor(private readonly page: Page) {}
 
   get name(): Locator {
-    return this.page.getByTestId("library-prompt-panel-name");
+    return this.page.getByTestId('library-prompt-panel-name');
   }
 
   get kind(): Locator {
-    return this.page.getByTestId("library-prompt-panel-kind");
+    return this.page.getByTestId('library-prompt-panel-kind');
   }
 
   get text(): Locator {
-    return this.page.getByTestId("library-prompt-panel-text");
+    return this.page.getByTestId('library-prompt-panel-text');
   }
 
   get tags(): Locator {
-    return this.page.getByTestId("library-prompt-panel-tag");
+    return this.page.getByTestId('library-prompt-panel-tag');
   }
 
   get collection(): Locator {
-    return this.page.getByTestId("library-prompt-panel-collection");
+    return this.page.getByTestId('library-prompt-panel-collection');
   }
 
   get rights(): Locator {
-    return this.page.getByTestId("library-prompt-panel-rights");
+    return this.page.getByTestId('library-prompt-panel-rights');
   }
 
   get variables(): Locator {
-    return this.page.getByTestId("library-prompt-panel-variable");
+    return this.page.getByTestId('library-prompt-panel-variable');
   }
 }
 
@@ -522,19 +530,21 @@ export class PromptAuthoringPage {
   }
 
   get write(): Locator {
-    return this.page.getByTestId("library-prompts-write");
+    return this.page.getByTestId('library-prompts-write');
   }
 
   get upload(): Locator {
-    return this.page.getByTestId("library-prompts-upload");
+    return this.page.getByTestId('library-prompts-upload');
   }
 
   get cards(): Locator {
-    return this.page.getByTestId("library-prompts-card");
+    return this.page.getByTestId('library-prompts-card');
   }
 
   card(name: string): Locator {
-    return this.cards.filter({ has: this.page.getByTestId("library-prompts-card-name").filter({ hasText: new RegExp(`^${escapePattern(name)}$`) }) });
+    return this.cards.filter({
+      has: withExactText(this.page.getByTestId('library-prompts-card-name'), name),
+    });
   }
 
   async setValue(field: Locator, value: string): Promise<void> {
@@ -545,22 +555,22 @@ export class PromptAuthoringPage {
 function assignValue(element: Element, value: string): void {
   const field = element as HTMLInputElement | HTMLTextAreaElement;
   field.value = value;
-  field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function escapePattern(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function withExactText(locator: Locator, text: string): Locator {
+  return locator.and(locator.page().getByText(text, { exact: true }));
 }
 
 export class LibraryBrowsingPage {
   constructor(private readonly page: Page) {}
 
   get uploadDialog(): Locator {
-    return this.page.getByTestId("library-upload-dialog-panel");
+    return this.page.getByTestId('library-upload-dialog-panel');
   }
 
   get uploadCancel(): Locator {
-    return this.page.getByTestId("library-upload-dialog-cancel");
+    return this.page.getByTestId('library-upload-dialog-cancel');
   }
 
   emptyFilteredClear(kind: SectionKind): Locator {
@@ -576,11 +586,11 @@ export class LibraryBrowsingPage {
   }
 
   private prefix(kind: SectionKind): string {
-    return kind === "prompt" ? "library-prompts" : `library-${kind}s`;
+    return kind === 'prompt' ? 'library-prompts' : `library-${kind}s`;
   }
 }
 
-export type PreviewKind = "image" | "sound" | "video" | "prompt";
+export type PreviewKind = 'image' | 'sound' | 'video' | 'prompt';
 
 export class AssetPreview {
   constructor(
@@ -593,31 +603,31 @@ export class AssetPreview {
   }
 
   get previous(): Locator {
-    return this.part("previous");
+    return this.part('previous');
   }
 
   get next(): Locator {
-    return this.part("next");
+    return this.part('next');
   }
 
   get code(): Locator {
-    return this.part("code");
+    return this.part('code');
   }
 
   get size(): Locator {
-    return this.part("size");
+    return this.part('size');
   }
 
   get rights(): Locator {
-    return this.part("rights");
+    return this.part('rights');
   }
 
   get tags(): Locator {
-    return this.part("tag");
+    return this.part('tag');
   }
 
   get collection(): Locator {
-    return this.part("collection");
+    return this.part('collection');
   }
 
   protected part(suffix: string): Locator {
@@ -627,85 +637,85 @@ export class AssetPreview {
 
 export class ImagePreview extends AssetPreview {
   constructor(page: Page) {
-    super(page, "image");
+    super(page, 'image');
   }
 
   get image(): Locator {
-    return this.part("image");
+    return this.part('image');
   }
 
   get specs(): Locator {
-    return this.part("specs");
+    return this.part('specs');
   }
 
   get added(): Locator {
-    return this.part("added");
+    return this.part('added');
   }
 
   get originLabel(): Locator {
-    return this.part("origin-label");
+    return this.part('origin-label');
   }
 
   get origin(): Locator {
-    return this.part("origin");
+    return this.part('origin');
   }
 }
 
 export class SoundPreview extends AssetPreview {
   constructor(page: Page) {
-    super(page, "sound");
+    super(page, 'sound');
   }
 
   get wave(): Locator {
-    return this.part("wave");
+    return this.part('wave');
   }
 
   get waveCanvas(): Locator {
-    return this.part("wave").getByTestId("library-sound-wave-canvas");
+    return this.part('wave').getByTestId('library-sound-wave-canvas');
   }
 
   get specs(): Locator {
-    return this.part("specs");
+    return this.part('specs');
   }
 
   get time(): Locator {
-    return this.part("time");
+    return this.part('time');
   }
 
   get play(): Locator {
-    return this.part("play").getByTestId("library-sound-play-button");
+    return this.part('play').getByTestId('library-sound-play-button');
   }
 }
 
 export class VideoPreview extends AssetPreview {
   constructor(page: Page) {
-    super(page, "video");
+    super(page, 'video');
   }
 
   get player(): Locator {
-    return this.part("player");
+    return this.part('player');
   }
 
   get parameters(): Locator {
-    return this.part("parameters");
+    return this.part('parameters');
   }
 }
 
 export class PromptPreview extends AssetPreview {
   constructor(page: Page) {
-    super(page, "prompt");
+    super(page, 'prompt');
   }
 
   get text(): Locator {
-    return this.part("text");
+    return this.part('text');
   }
 
   get variables(): Locator {
-    return this.part("variable");
+    return this.part('variable');
   }
 
   get copy(): Locator {
-    return this.part("copy");
+    return this.part('copy');
   }
 }
 
@@ -713,7 +723,7 @@ export class PromptPreviewInspector {
   constructor(private readonly page: Page) {}
 
   get variables(): Locator {
-    return this.page.getByTestId("library-prompt-panel-variable");
+    return this.page.getByTestId('library-prompt-panel-variable');
   }
 }
 
@@ -733,11 +743,11 @@ export class PreviewPages {
   }
 }
 
-export type InfoKind = "image" | "prompt";
+export type InfoKind = 'image' | 'prompt';
 
 const TAG_INPUT_IDS: Readonly<Record<InfoKind, string>> = {
-  image: "tags-input",
-  prompt: "tag-input",
+  image: 'tags-input',
+  prompt: 'tag-input',
 };
 
 export class LibraryInfoPanel {
@@ -751,15 +761,15 @@ export class LibraryInfoPanel {
   }
 
   get name(): Locator {
-    return this.part("name");
+    return this.part('name');
   }
 
   get rights(): Locator {
-    return this.part("rights");
+    return this.part('rights');
   }
 
   get collection(): Locator {
-    return this.part("collection");
+    return this.part('collection');
   }
 
   get tagInput(): Locator {
@@ -767,27 +777,27 @@ export class LibraryInfoPanel {
   }
 
   get tagCount(): Locator {
-    return this.part("tags-count");
+    return this.part('tags-count');
   }
 
   get tags(): Locator {
-    return this.part("tag");
+    return this.part('tag');
   }
 
   get promptKind(): Locator {
-    return this.part("kind");
+    return this.part('kind');
   }
 
   get promptText(): Locator {
-    return this.part("text");
+    return this.part('text');
   }
 
   get variables(): Locator {
-    return this.part("variable");
+    return this.part('variable');
   }
 
   tag(name: string): Locator {
-    return this.tags.filter({ hasText: new RegExp(`^\\s*${name}\\s*$`) });
+    return withExactText(this.tags, name);
   }
 
   removeTag(name: string): Locator {
@@ -796,7 +806,7 @@ export class LibraryInfoPanel {
 
   async rename(value: string): Promise<void> {
     await this.name.fill(value);
-    await this.name.press("Enter");
+    await this.name.press('Enter');
   }
 
   async blurName(value: string): Promise<void> {
@@ -806,7 +816,7 @@ export class LibraryInfoPanel {
 
   async addTag(value: string): Promise<void> {
     await this.tagInput.fill(value);
-    await this.tagInput.press("Enter");
+    await this.tagInput.press('Enter');
   }
 
   async setText(value: string): Promise<void> {
@@ -819,7 +829,7 @@ export class LibraryInfoPanel {
   }
 }
 
-export type DeletionKind = "image" | "sound" | "video" | "prompt";
+export type DeletionKind = 'image' | 'sound' | 'video' | 'prompt';
 
 export class LibraryDeletionPage {
   constructor(private readonly page: Page) {}
@@ -833,27 +843,27 @@ export class CollectionDialog {
   constructor(private readonly page: Page) {}
 
   get panel(): Locator {
-    return this.page.getByTestId("library-collection-dialog-panel");
+    return this.page.getByTestId('library-collection-dialog-panel');
   }
 
   get name(): Locator {
-    return this.page.getByTestId("library-collection-dialog-name");
+    return this.page.getByTestId('library-collection-dialog-name');
   }
 
   get description(): Locator {
-    return this.page.getByTestId("library-collection-dialog-description");
+    return this.page.getByTestId('library-collection-dialog-description');
   }
 
   get error(): Locator {
-    return this.page.getByTestId("library-collection-dialog-error");
+    return this.page.getByTestId('library-collection-dialog-error');
   }
 
   get submit(): Locator {
-    return this.page.getByTestId("library-collection-dialog-submit");
+    return this.page.getByTestId('library-collection-dialog-submit');
   }
 
   get cancel(): Locator {
-    return this.page.getByTestId("library-collection-dialog-cancel");
+    return this.page.getByTestId('library-collection-dialog-cancel');
   }
 }
 
@@ -861,27 +871,27 @@ export class CollectionPanel {
   constructor(private readonly page: Page) {}
 
   get root(): Locator {
-    return this.page.getByTestId("library-collection-panel-content");
+    return this.page.getByTestId('library-collection-panel-content');
   }
 
   get name(): Locator {
-    return this.page.getByTestId("library-collection-panel-name");
+    return this.page.getByTestId('library-collection-panel-name');
   }
 
   get error(): Locator {
-    return this.page.getByTestId("library-collection-panel-error");
+    return this.page.getByTestId('library-collection-panel-error');
   }
 
   get description(): Locator {
-    return this.page.getByTestId("library-collection-panel-description");
+    return this.page.getByTestId('library-collection-panel-description');
   }
 
   get open(): Locator {
-    return this.page.getByTestId("library-collection-panel-open");
+    return this.page.getByTestId('library-collection-panel-open');
   }
 
   get remove(): Locator {
-    return this.page.getByTestId("library-collection-panel-delete");
+    return this.page.getByTestId('library-collection-panel-delete');
   }
 }
 
@@ -899,15 +909,17 @@ export class CollectionsPage {
   }
 
   row(name: string): Locator {
-    return this.rows.filter({ has: this.page.locator(".t-ink", { hasText: new RegExp(`^${name}$`) }) });
+    return this.rows.filter({
+      has: withExactText(this.page.locator('.t-ink'), name),
+    });
   }
 
   descriptionOf(row: Locator): Locator {
-    return row.locator(".lb-desc");
+    return row.locator('.lb-desc');
   }
 
   countsOf(row: Locator): Locator {
-    return row.locator(".lb-cnt b");
+    return row.locator('.lb-cnt b');
   }
 }
 
@@ -915,27 +927,27 @@ export class LibraryTagPanelView {
   constructor(private readonly page: Page) {}
 
   get root(): Locator {
-    return this.page.getByTestId("library-tag-panel-content");
+    return this.page.getByTestId('library-tag-panel-content');
   }
 
   get name(): Locator {
-    return this.page.getByTestId("library-tag-panel-name");
+    return this.page.getByTestId('library-tag-panel-name');
   }
 
   get hint(): Locator {
-    return this.page.getByTestId("library-tag-panel-name-hint");
+    return this.page.getByTestId('library-tag-panel-name-hint');
   }
 
   get mergeSelect(): Locator {
-    return this.page.getByTestId("library-tag-panel-merge");
+    return this.page.getByTestId('library-tag-panel-merge');
   }
 
   get remove(): Locator {
-    return this.page.getByTestId("library-tag-panel-delete");
+    return this.page.getByTestId('library-tag-panel-delete');
   }
 
   get missing(): Locator {
-    return this.page.getByTestId("library-tag-panel-missing");
+    return this.page.getByTestId('library-tag-panel-missing');
   }
 }
 
@@ -947,7 +959,7 @@ export class LibraryTagsPage {
   }
 
   get search(): Locator {
-    return this.page.getByTestId("library-tag-search");
+    return this.page.getByTestId('library-tag-search');
   }
 
   get rows(): Locator {
@@ -955,15 +967,15 @@ export class LibraryTagsPage {
   }
 
   get names(): Locator {
-    return this.rows.locator(".tag");
+    return this.rows.locator('.tag');
   }
 
   get empty(): Locator {
-    return this.page.getByTestId("library-tags-pane").locator(".empty");
+    return this.page.getByTestId('library-tags-pane').locator('.empty');
   }
 
   get confirmMessage(): Locator {
-    return this.page.getByTestId("dialog-host-message");
+    return this.page.getByTestId('dialog-host-message');
   }
 
   row(tag: string): Locator {
@@ -971,10 +983,10 @@ export class LibraryTagsPage {
   }
 
   counts(tag: string): Locator {
-    return this.row(tag).locator(".lb-cnt b");
+    return this.row(tag).locator('.lb-cnt b');
   }
 
   total(tag: string): Locator {
-    return this.row(tag).locator("td.num");
+    return this.row(tag).locator('td.num');
   }
 }

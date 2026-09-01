@@ -1,33 +1,35 @@
-import type { Locator } from "@playwright/test";
+import type { Locator } from '@playwright/test';
 
 export class RecentList {
   constructor(private readonly root: Locator) {}
 
   get rows(): Locator {
-    return this.root.getByTestId("recent-row");
+    return this.root.getByTestId('recent-row');
   }
 
   rowAt(path: string): Locator {
-    return this.rows.filter({ has: this.root.page().getByTestId("recent-row-path").filter({ hasText: path }) });
+    return this.rows.filter({
+      has: this.root.page().getByTestId('recent-row-path').filter({ hasText: path }),
+    });
   }
 
   openAt(path: string): Locator {
-    return this.rowAt(path).getByTestId("recent-open");
+    return this.rowAt(path).getByTestId('recent-open');
   }
 
   deleteAt(path: string): Locator {
-    return this.rowAt(path).getByTestId("recent-delete");
+    return this.rowAt(path).getByTestId('recent-delete');
   }
 
   currentBadgeAt(path: string): Locator {
-    return this.rowAt(path).getByTestId("recent-current");
+    return this.rowAt(path).getByTestId('recent-current');
   }
 
   notFoundBadgeAt(path: string): Locator {
-    return this.rowAt(path).getByTestId("recent-not-found");
+    return this.rowAt(path).getByTestId('recent-not-found');
   }
 
   notFoundReasonAt(path: string): Locator {
-    return this.rowAt(path).getByTestId("recent-not-found-reason");
+    return this.rowAt(path).getByTestId('recent-not-found-reason');
   }
 }

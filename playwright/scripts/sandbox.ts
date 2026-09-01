@@ -1,6 +1,6 @@
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const REMOVE_ATTEMPTS = 5;
 const REMOVE_DELAY_MS = 300;
@@ -32,15 +32,15 @@ async function removeTree(root: string): Promise<void> {
 }
 
 export async function createSandbox(): Promise<Sandbox> {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "dreamy-playwright-")));
-  const workspacesDir = join(root, "workspaces");
-  const filesDir = join(root, "files");
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'dreamy-playwright-')));
+  const workspacesDir = join(root, 'workspaces');
+  const filesDir = join(root, 'files');
   await mkdir(workspacesDir, { recursive: true });
   await mkdir(filesDir, { recursive: true });
   return {
     root,
-    dataDir: join(root, "data"),
-    webviewDir: join(root, "webview"),
+    dataDir: join(root, 'data'),
+    webviewDir: join(root, 'webview'),
     workspacesDir,
     filesDir,
     workspace: (name) => join(workspacesDir, name),

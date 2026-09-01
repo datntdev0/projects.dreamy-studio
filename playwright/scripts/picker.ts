@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page } from '@playwright/test';
 
 export type PickerAnswer = string | string[] | null;
 
@@ -21,20 +21,25 @@ function wrapFetch(): void {
   scope.__dreamyPicks = state;
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
-    const target = new URL(input instanceof Request ? input.url : String(input), window.location.href);
-    const command = target.pathname.replace(/^\//, "");
-    const isPicker = command === "folder_pick" || command.endsWith("_pick");
-    if (target.hostname !== "ipc.localhost" || !isPicker) {
+    const target = new URL(
+      input instanceof Request ? input.url : String(input),
+      window.location.href,
+    );
+    const command = target.pathname.replace(/^\//, '');
+    const isPicker = command === 'folder_pick' || command.endsWith('_pick');
+    if (target.hostname !== 'ipc.localhost' || !isPicker) {
       return original(input, init);
     }
     state.calls[command] = (state.calls[command] ?? 0) + 1;
-    state.args[command] = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+    state.args[command] = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
     const queue = state.queues[command] ?? [];
     if (queue.length === 0) {
       const message = JSON.stringify(`unexpected native picker call: ${command}`);
-      return Promise.resolve(new Response(message, { headers: { "Content-Type": "application/json" } }));
+      return Promise.resolve(
+        new Response(message, { headers: { 'Content-Type': 'application/json' } }),
+      );
     }
-    const headers = { "Content-Type": "application/json", "Tauri-Response": "ok" };
+    const headers = { 'Content-Type': 'application/json', 'Tauri-Response': 'ok' };
     return Promise.resolve(new Response(JSON.stringify(queue.shift()), { headers }));
   };
 }
@@ -42,7 +47,7 @@ function wrapFetch(): void {
 function pushAnswer(request: { command: string; answer: PickerAnswer }): void {
   const state = (window as unknown as PickerWindow).__dreamyPicks;
   if (!state) {
-    throw new Error("the picker stub is not installed");
+    throw new Error('the picker stub is not installed');
   }
   const queue = state.queues[request.command] ?? [];
   queue.push(request.answer);

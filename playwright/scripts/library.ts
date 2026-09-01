@@ -1,33 +1,36 @@
-import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
-import { mkdir, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, extname, join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { promisify } from "node:util";
-import { crc32, deflateSync } from "node:zlib";
-import { expect, type Locator, type Page } from "@playwright/test";
-import type { Ui } from "./fixtures.ts";
-import { openFromSplash } from "./flows.ts";
-import { writeBytes } from "./novels.ts";
-import { appExecutable, repoRoot } from "./paths.ts";
-import type { PickerStub } from "./picker.ts";
-import type { Sandbox } from "./sandbox.ts";
-import { WORKSPACE_DB_FILE, seedWorkspace, type SeedOptions } from "./workspaces.ts";
-import { CollectionsPage, LibraryDeletionPage, LibraryInfoPanel, LibraryTagsPage, PreviewPages, PromptAuthoringPage, UploadDialog, type InfoKind, type LibrarySectionList, type SectionKind } from "../pages/library.ts";
+import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdir, open, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { dirname, extname, join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { promisify } from 'node:util';
+import { crc32, deflateSync } from 'node:zlib';
 
-export const LIBRARY_WORKSPACE_NAME = "library";
+import { expect, type Locator, type Page } from '@playwright/test';
 
-const DRAG_ENTER = "tauri://drag-enter";
-const DRAG_OVER = "tauri://drag-over";
-const DRAG_DROP = "tauri://drag-drop";
-const DRAG_LEAVE = "tauri://drag-leave";
+// prettier-ignore
+import { CollectionsPage, type InfoKind, LibraryDeletionPage, LibraryInfoPanel, type LibrarySectionList, LibraryTagsPage, PreviewPages, PromptAuthoringPage, type SectionKind,UploadDialog } from '../pages/library.ts';
+import type { Ui } from './fixtures.ts';
+import { openFromSplash } from './flows.ts';
+import { writeBytes } from './novels.ts';
+import { appExecutable, repoRoot } from './paths.ts';
+import type { PickerStub } from './picker.ts';
+import type { Sandbox } from './sandbox.ts';
+import { type SeedOptions, seedWorkspace, WORKSPACE_DB_FILE } from './workspaces.ts';
+
+export const LIBRARY_WORKSPACE_NAME = 'library';
+
+const DRAG_ENTER = 'tauri://drag-enter';
+const DRAG_OVER = 'tauri://drag-over';
+const DRAG_DROP = 'tauri://drag-drop';
+const DRAG_LEAVE = 'tauri://drag-leave';
 const DROP_POSITION = { x: 120, y: 160 };
 
-const SECTION_KINDS: Readonly<Record<Exclude<LibrarySection, "collections">, SectionKind>> = {
-  images: "image",
-  sounds: "sound",
-  videos: "video",
-  prompts: "prompt",
+const SECTION_KINDS: Readonly<Record<Exclude<LibrarySection, 'collections'>, SectionKind>> = {
+  images: 'image',
+  sounds: 'sound',
+  videos: 'video',
+  prompts: 'prompt',
 };
 
 export interface OpenedLibrary {
@@ -45,8 +48,9 @@ interface TauriEmit {
 }
 
 function emitTauriEvent(input: TauriEmit): Promise<unknown> {
-  const internals = (window as unknown as { __TAURI_INTERNALS__: TauriInternals }).__TAURI_INTERNALS__;
-  return internals.invoke("plugin:event|emit", { event: input.event, payload: input.payload });
+  const internals = (window as unknown as { __TAURI_INTERNALS__: TauriInternals })
+    .__TAURI_INTERNALS__;
+  return internals.invoke('plugin:event|emit', { event: input.event, payload: input.payload });
 }
 
 export async function openLibraryView(
@@ -76,7 +80,7 @@ export async function showLibrary(ui: Ui): Promise<void> {
 
 export async function showLibrarySection(ui: Ui, section: LibrarySection): Promise<void> {
   await showLibrary(ui);
-  if (section === "collections") {
+  if (section === 'collections') {
     await ui.main.library.explorer.taxonomy.click();
     await expect(ui.main.library.taxonomy.root).toBeVisible();
     return;
@@ -92,14 +96,21 @@ export async function showLibraryCollection(ui: Ui, id: number): Promise<void> {
   await expect(ui.main.library.collection.root).toBeVisible();
 }
 
-export async function expectLibraryCounts(ui: Ui, counts: Readonly<Record<LibraryKind, number>>): Promise<void> {
+export async function expectLibraryCounts(
+  ui: Ui,
+  counts: Readonly<Record<LibraryKind, number>>,
+): Promise<void> {
   await showLibrary(ui);
   for (const kind of Object.keys(counts) as LibraryKind[]) {
     await expect(ui.main.library.explorer.count(kind)).toHaveText(String(counts[kind]));
   }
 }
 
-export async function queuePick(picker: PickerStub, kind: LibraryKind, paths: readonly string[]): Promise<void> {
+export async function queuePick(
+  picker: PickerStub,
+  kind: LibraryKind,
+  paths: readonly string[],
+): Promise<void> {
   await picker.queue(PICK_COMMANDS[kind], [...paths]);
 }
 
@@ -123,15 +134,27 @@ export async function dropFiles(ui: Ui, paths: readonly string[]): Promise<void>
   await emitDrag(page, DRAG_DROP, { paths, position: DROP_POSITION });
 }
 
-export type UploadKind = "image" | "sound" | "video";
+export type UploadKind = 'image' | 'sound' | 'video';
 
-export const UPLOAD_KINDS: readonly UploadKind[] = ["image", "sound", "video"];
+export const UPLOAD_KINDS: readonly UploadKind[] = ['image', 'sound', 'video'];
 
-export const UPLOAD_EXTENSIONS: Readonly<Record<UploadKind, string>> = { image: "png", sound: "wav", video: "mp4" };
+export const UPLOAD_EXTENSIONS: Readonly<Record<UploadKind, string>> = {
+  image: 'png',
+  sound: 'wav',
+  video: 'mp4',
+};
 
-export const UNSUPPORTED_NAMES: Readonly<Record<UploadKind, string>> = { image: "photo.bmp", sound: "voice.flac", video: "movie.avi" };
+export const UNSUPPORTED_NAMES: Readonly<Record<UploadKind, string>> = {
+  image: 'photo.bmp',
+  sound: 'voice.flac',
+  video: 'movie.avi',
+};
 
-const SECTIONS: Readonly<Record<UploadKind, LibrarySection>> = { image: "images", sound: "sounds", video: "videos" };
+const SECTIONS: Readonly<Record<UploadKind, LibrarySection>> = {
+  image: 'images',
+  sound: 'sounds',
+  video: 'videos',
+};
 
 export interface UploadForm {
   readonly rights: AssetRights;
@@ -163,7 +186,12 @@ export async function openUploadDialog(ui: Ui, kind: UploadKind): Promise<Upload
   return dialog;
 }
 
-export async function pickIntoDialog(ui: Ui, picker: PickerStub, kind: UploadKind, paths: readonly string[]): Promise<void> {
+export async function pickIntoDialog(
+  ui: Ui,
+  picker: PickerStub,
+  kind: UploadKind,
+  paths: readonly string[],
+): Promise<void> {
   const dialog = uploadDialog(ui);
   await queuePick(picker, kind, paths);
   await dialog.pick.click();
@@ -188,20 +216,28 @@ export async function fillUploadForm(dialog: UploadDialog, form: UploadForm): Pr
   }
 }
 
-export async function stageCheapAsset(sandbox: Sandbox, kind: UploadKind, name: string): Promise<string> {
-  if (kind === "sound") {
+export async function stageCheapAsset(
+  sandbox: Sandbox,
+  kind: UploadKind,
+  name: string,
+): Promise<string> {
+  if (kind === 'sound') {
     return stageSound(sandbox, name);
   }
-  return kind === "video" ? stageVideo(sandbox, name) : stageImage(sandbox, name);
+  return kind === 'video' ? stageVideo(sandbox, name) : stageImage(sandbox, name);
 }
 
-export async function stageRealAsset(sandbox: Sandbox, kind: UploadKind, name: string): Promise<string> {
+export async function stageRealAsset(
+  sandbox: Sandbox,
+  kind: UploadKind,
+  name: string,
+): Promise<string> {
   const path = sandbox.file(name);
-  if (kind === "sound") {
+  if (kind === 'sound') {
     await writeSampleSound(path, 1);
     return path;
   }
-  if (kind === "video") {
+  if (kind === 'video') {
     await writeSampleVideo(path, 1);
     return path;
   }
@@ -209,25 +245,32 @@ export async function stageRealAsset(sandbox: Sandbox, kind: UploadKind, name: s
 }
 
 export async function stageCorruptAsset(sandbox: Sandbox, name: string): Promise<string> {
-  return stageFile(sandbox, name, "this is not real media content, only a valid extension");
+  return stageFile(sandbox, name, 'this is not real media content, only a valid extension');
 }
 
 export async function stageEmptyAsset(sandbox: Sandbox, name: string): Promise<string> {
   return stageFile(sandbox, name, Buffer.alloc(0));
 }
 
-export async function stageSizedAsset(sandbox: Sandbox, kind: UploadKind, name: string, bytes: number): Promise<string> {
-  if (kind === "sound") {
+export async function stageSizedAsset(
+  sandbox: Sandbox,
+  kind: UploadKind,
+  name: string,
+  bytes: number,
+): Promise<string> {
+  if (kind === 'sound') {
     return stageSizedSound(sandbox, name, bytes);
   }
-  return kind === "video" ? stageSizedVideo(sandbox, name, bytes) : stageSizedImage(sandbox, name, bytes);
+  return kind === 'video'
+    ? stageSizedVideo(sandbox, name, bytes)
+    : stageSizedImage(sandbox, name, bytes);
 }
 
 export function assetRows(db: LibraryDb, kind: UploadKind): AssetSummary[] {
-  if (kind === "sound") {
+  if (kind === 'sound') {
     return db.sounds();
   }
-  return kind === "video" ? db.videos() : db.images();
+  return kind === 'video' ? db.videos() : db.images();
 }
 
 export function assetNames(db: LibraryDb, kind: UploadKind): string[] {
@@ -267,9 +310,13 @@ export async function openWriteDialog(ui: Ui): Promise<PromptAuthoringPage> {
   return page;
 }
 
-export async function openImportDialog(ui: Ui, picker: PickerStub, paths: readonly string[]): Promise<PromptAuthoringPage> {
+export async function openImportDialog(
+  ui: Ui,
+  picker: PickerStub,
+  paths: readonly string[],
+): Promise<PromptAuthoringPage> {
   const page = authoring(ui);
-  await queuePick(picker, "prompt", paths);
+  await queuePick(picker, 'prompt', paths);
   await page.upload.click();
   await expect(page.dialog.panel).toBeVisible();
   await page.dialog.pick.click();
@@ -301,17 +348,23 @@ export async function fillPromptForm(page: PromptAuthoringPage, form: PromptForm
 
 export async function snapshotPrompts(folder: string): Promise<PromptSnapshot> {
   const state = await readLibrary(folder, (db) => ({ counts: db.counts(), prompts: db.prompts() }));
-  return { ...state, storedFiles: await storedCount(folder, "prompt") };
+  return { ...state, storedFiles: await storedCount(folder, 'prompt') };
 }
 
-export async function readPrompt(folder: string, name: string): Promise<{ row: PromptRow; text: string }> {
+export async function readPrompt(
+  folder: string,
+  name: string,
+): Promise<{ row: PromptRow; text: string }> {
   const row = await readLibrary(folder, (db) => db.prompt(name));
   return { row, text: await storedText(folder, row.id) };
 }
 
-export type SortKey = "new" | "name" | "size";
+export type SortKey = 'new' | 'name' | 'size';
 
-export async function expectNames(list: LibrarySectionList, names: readonly string[]): Promise<void> {
+export async function expectNames(
+  list: LibrarySectionList,
+  names: readonly string[],
+): Promise<void> {
   await expect(list.cardNames).toHaveText([...names]);
 }
 
@@ -333,17 +386,17 @@ export async function chooseFilterCollection(ui: Ui, id: number): Promise<void> 
 
 export async function expectTagPressed(ui: Ui, tags: readonly string[]): Promise<void> {
   for (const tag of tags) {
-    await expect(ui.main.library.explorer.filterTag(tag)).toHaveAttribute("aria-pressed", "true");
+    await expect(ui.main.library.explorer.filterTag(tag)).toHaveAttribute('aria-pressed', 'true');
   }
 }
 
-export const RIGHTS_LICENSED = /^(Licensed for use|Có giấy phép sử dụng)$/;
-export const RIGHTS_FREE = /^(Royalty-free \(CC0, public domain\)|Miễn phí bản quyền \(CC0, public domain\))$/;
-export const RIGHTS_OWN = /^(I created or own it|Tôi tự tạo hoặc sở hữu)$/;
-export const ORIGIN_APP = /^(Created in app|Tạo trong app)$/;
-export const PLAY_LABEL = /^(Play|Phát)$/;
-export const PAUSE_LABEL = /^(Pause|Tạm dừng)$/;
-export const PROMPT_COPIED_TOAST = /đã sao chép prompt|prompt copied/i;
+export const RIGHTS_LICENSED = 'Licensed for use';
+export const RIGHTS_FREE = 'Royalty-free (CC0, public domain)';
+export const RIGHTS_OWN = 'I created or own it';
+export const ORIGIN_APP = 'Created in app';
+export const PLAY_LABEL = 'Play';
+export const PAUSE_LABEL = 'Pause';
+export const PROMPT_COPIED_TOAST = 'Prompt copied.';
 
 export interface AudioState {
   readonly paused: boolean;
@@ -356,21 +409,36 @@ export function previewPages(ui: Ui): PreviewPages {
 
 export async function openPreview(ui: Ui, kind: LibraryKind, name: string): Promise<void> {
   const library = ui.main.library;
-  const target = kind === "image" ? library.images.card(name) : kind === "sound" ? library.sounds.card(name) : kind === "video" ? library.videos.card(name) : library.prompts.card(name);
+  const target =
+    kind === 'image'
+      ? library.images.card(name)
+      : kind === 'sound'
+        ? library.sounds.card(name)
+        : kind === 'video'
+          ? library.videos.card(name)
+          : library.prompts.card(name);
   await target.dblclick();
 }
 
 export async function closePreview(ui: Ui): Promise<void> {
-  await ui.main.library.page.keyboard.press("Escape");
+  await ui.main.library.page.keyboard.press('Escape');
 }
 
-export async function sampleSoundBytes(sandbox: Sandbox, name: string, seconds: number): Promise<Buffer> {
+export async function sampleSoundBytes(
+  sandbox: Sandbox,
+  name: string,
+  seconds: number,
+): Promise<Buffer> {
   const path = sandbox.file(name);
   await writeSampleSound(path, seconds);
   return readFile(path);
 }
 
-export async function sampleVideoBytes(sandbox: Sandbox, name: string, seconds: number): Promise<Buffer> {
+export async function sampleVideoBytes(
+  sandbox: Sandbox,
+  name: string,
+  seconds: number,
+): Promise<Buffer> {
   const path = sandbox.file(name);
   await writeSampleVideo(path, seconds);
   return readFile(path);
@@ -403,7 +471,9 @@ export async function expectAudio(page: Page, paused: boolean): Promise<void> {
 }
 
 function readVideoState(): AudioState | null {
-  const video = document.querySelector<HTMLVideoElement>('[data-testid="library-video-preview-player"]');
+  const video = document.querySelector<HTMLVideoElement>(
+    '[data-testid="library-video-preview-player"]',
+  );
   return video ? { paused: video.paused, currentTime: video.currentTime } : null;
 }
 
@@ -420,19 +490,19 @@ export async function clipboardText(page: Page): Promise<string> {
 }
 
 export function normalizeLines(text: string): string {
-  return text.replace(/\r\n/g, "\n");
+  return text.replace(/\r\n/g, '\n');
 }
 
-export function variableText(name: string): RegExp {
-  return new RegExp(`^(\\{\\{)?${name}(\\}\\})?$`);
+export function variableText(name: string): string {
+  return name;
 }
 
 export function squash(text: string): string {
-  return text.replace(/\s+/g, "");
+  return text.replace(/\s+/g, '');
 }
 
 export function withoutBraces(text: string): string {
-  return text.replace(/[{}]/g, "");
+  return text.replace(/[{}]/g, '');
 }
 
 export function infoPanel(ui: Ui, kind: InfoKind): LibraryInfoPanel {
@@ -463,40 +533,39 @@ export interface LibrarySnapshot {
 }
 
 export const DELETION_TARGETS: readonly DeletionTarget[] = [
-  { kind: "image", name: "harbor-dawn.png", keep: "harbor-dusk.png" },
-  { kind: "sound", name: "tide-loop.wav", keep: "gull-calls.wav" },
-  { kind: "video", name: "pier-walk.mp4", keep: "lighthouse-spin.mp4" },
-  { kind: "prompt", name: "Fog opening", keep: "Storm opening" },
+  { kind: 'image', name: 'harbor-dawn.png', keep: 'harbor-dusk.png' },
+  { kind: 'sound', name: 'tide-loop.wav', keep: 'gull-calls.wav' },
+  { kind: 'video', name: 'pier-walk.mp4', keep: 'lighthouse-spin.mp4' },
+  { kind: 'prompt', name: 'Fog opening', keep: 'Storm opening' },
 ];
 
 export const DELETION_SEED: LibrarySeed = {
-  collections: [{ name: "Harbor" }],
+  collections: [{ name: 'Harbor' }],
   images: [
-    { name: "harbor-dawn.png", collection: "Harbor", tags: ["sea"] },
-    { name: "harbor-dusk.png", collection: "Harbor" },
+    { name: 'harbor-dawn.png', collection: 'Harbor', tags: ['sea'] },
+    { name: 'harbor-dusk.png', collection: 'Harbor' },
   ],
-  sounds: [{ name: "tide-loop.wav", tags: ["sea"] }, { name: "gull-calls.wav" }],
+  sounds: [{ name: 'tide-loop.wav', tags: ['sea'] }, { name: 'gull-calls.wav' }],
   videos: [
-    { name: "pier-walk.mp4", poster: true },
-    { name: "lighthouse-spin.mp4", poster: true },
+    { name: 'pier-walk.mp4', poster: true },
+    { name: 'lighthouse-spin.mp4', poster: true },
   ],
   prompts: [
-    { name: "Fog opening", text: "Open on fog over the harbor." },
-    { name: "Storm opening", text: "Open on a storm at sea." },
+    { name: 'Fog opening', text: 'Open on fog over the harbor.' },
+    { name: 'Storm opening', text: 'Open on a storm at sea.' },
   ],
 };
 
-export const UNDONE_WARNING = /cannot be undone|không thể hoàn tác/i;
+export const UNDONE_WARNING = 'This cannot be undone.';
 
-function escapePattern(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function deletedToast(target: DeletionTarget): RegExp {
-  if (target.kind === "prompt") {
-    return /đã xóa prompt|prompt deleted/i;
+export function deletedToast(target: DeletionTarget): string {
+  if (target.kind === 'prompt') {
+    return 'Prompt deleted.';
   }
-  return new RegExp(`(đã xóa|deleted).*${escapePattern(target.name)}`, "i");
+  if (target.kind === 'video') {
+    return `Deleted ${target.name}.`;
+  }
+  return `Deleted “${target.name}”.`;
 }
 
 export async function snapshotLibrary(folder: string): Promise<LibrarySnapshot> {
@@ -524,8 +593,8 @@ export async function openDeletionDialog(ui: Ui, kind: LibraryKind, name: string
   await library.explorer.row(kind).click();
   await expect(library.section(kind).root).toBeVisible();
   const card = library.section(kind).card(name);
-  const classes = (await card.getAttribute("class")) ?? "";
-  if (!classes.split(/\s+/).includes("is-selected")) {
+  const classes = (await card.getAttribute('class')) ?? '';
+  if (!classes.split(/\s+/).includes('is-selected')) {
     await card.click();
   }
   await new LibraryDeletionPage(library.page).deleteButton(kind).click();
@@ -535,7 +604,7 @@ export async function openDeletionDialog(ui: Ui, kind: LibraryKind, name: string
 export async function expectDeletionDialog(ui: Ui, name: string): Promise<void> {
   await expect(ui.main.confirm.names).toHaveCount(1);
   await expect(ui.main.confirm.names).toHaveText(name);
-  await expect(ui.main.confirm.warning).toHaveText(UNDONE_WARNING);
+  await expect(ui.main.confirm.warning).toContainText(UNDONE_WARNING);
 }
 
 export async function cancelDeletionDialog(ui: Ui): Promise<void> {
@@ -564,8 +633,13 @@ function assignValue(element: HTMLInputElement | HTMLTextAreaElement, forced: Fo
   }
 }
 
-export async function openCollectionsView(ui: Ui, picker: PickerStub, sandbox: Sandbox, seed: LibrarySeed): Promise<OpenedCollections> {
-  const opened = await openLibraryView(ui, picker, sandbox, seed, "collections");
+export async function openCollectionsView(
+  ui: Ui,
+  picker: PickerStub,
+  sandbox: Sandbox,
+  seed: LibrarySeed,
+): Promise<OpenedCollections> {
+  const opened = await openLibraryView(ui, picker, sandbox, seed, 'collections');
   return { ...opened, view: new CollectionsPage(ui.main.library.page) };
 }
 
@@ -578,7 +652,7 @@ export async function collectionNamesInDb(folder: string): Promise<string[]> {
 }
 
 export async function showCollections(ui: Ui): Promise<void> {
-  await showLibrarySection(ui, "collections");
+  await showLibrarySection(ui, 'collections');
 }
 
 export async function openCreateDialog(ui: Ui, view: CollectionsPage): Promise<void> {
@@ -586,13 +660,21 @@ export async function openCreateDialog(ui: Ui, view: CollectionsPage): Promise<v
   await expect(view.dialog.panel).toBeVisible();
 }
 
-export async function submitCollection(view: CollectionsPage, name: string, description: string): Promise<void> {
+export async function submitCollection(
+  view: CollectionsPage,
+  name: string,
+  description: string,
+): Promise<void> {
   await view.dialog.name.fill(name);
   await view.dialog.description.fill(description);
   await view.dialog.submit.click();
 }
 
-export async function forceValue(field: Locator, value: string, events: readonly string[]): Promise<void> {
+export async function forceValue(
+  field: Locator,
+  value: string,
+  events: readonly string[],
+): Promise<void> {
   await field.evaluate(assignValue, { value, events });
 }
 
@@ -604,11 +686,17 @@ export async function selectCollectionRow(view: CollectionsPage, name: string): 
 
 export async function commitField(field: Locator, value: string): Promise<void> {
   await field.fill(value);
-  await field.press("Tab");
+  await field.press('Tab');
 }
 
-export async function expectRowCounts(view: CollectionsPage, name: string, counts: Readonly<Record<LibraryKind, number>>): Promise<void> {
-  await expect(view.countsOf(view.row(name))).toHaveText(LIBRARY_KINDS.map((kind) => String(counts[kind])));
+export async function expectRowCounts(
+  view: CollectionsPage,
+  name: string,
+  counts: Readonly<Record<LibraryKind, number>>,
+): Promise<void> {
+  await expect(view.countsOf(view.row(name))).toHaveText(
+    LIBRARY_KINDS.map((kind) => String(counts[kind])),
+  );
 }
 
 export async function deleteSelectedCollection(ui: Ui, view: CollectionsPage): Promise<void> {
@@ -624,71 +712,76 @@ export interface OpenedTags extends OpenedLibrary {
 
 export const TAG_SEED: LibrarySeed = {
   images: [
-    { name: "img-a.png", tags: ["forest", "city"] },
-    { name: "img-b.png", tags: ["forest", "ocean"] },
-    { name: "img-c.png", tags: ["city", "forest-night"] },
+    { name: 'img-a.png', tags: ['forest', 'city'] },
+    { name: 'img-b.png', tags: ['forest', 'ocean'] },
+    { name: 'img-c.png', tags: ['city', 'forest-night'] },
   ],
-  sounds: [{ name: "snd-a.wav", tags: ["forest", "city", "ocean"] }],
+  sounds: [{ name: 'snd-a.wav', tags: ['forest', 'city', 'ocean'] }],
   videos: [
-    { name: "vid-a.mp4", tags: ["forest", "city"] },
-    { name: "vid-b.mp4", tags: ["forest-night"] },
+    { name: 'vid-a.mp4', tags: ['forest', 'city'] },
+    { name: 'vid-b.mp4', tags: ['forest-night'] },
   ],
   prompts: [
-    { name: "pr-a", tags: ["forest", "ocean"] },
-    { name: "pr-b", tags: ["zen"] },
+    { name: 'pr-a', tags: ['forest', 'ocean'] },
+    { name: 'pr-b', tags: ['zen'] },
   ],
 };
 
 export async function openTags(ui: Ui, picker: PickerStub, sandbox: Sandbox): Promise<OpenedTags> {
-  const opened = await openLibraryView(ui, picker, sandbox, TAG_SEED, "collections");
+  const opened = await openLibraryView(ui, picker, sandbox, TAG_SEED, 'collections');
   return { ...opened, tags: new LibraryTagsPage(ui.main.library.page) };
 }
 
 export async function selectTag(ui: Ui, tags: LibraryTagsPage, tag: string): Promise<void> {
-  await showLibrarySection(ui, "collections");
+  await showLibrarySection(ui, 'collections');
   await tags.row(tag).click();
   await expect(tags.panel.name).toHaveValue(tag);
 }
 
 export async function renameTagTo(tags: LibraryTagsPage, name: string): Promise<void> {
   await tags.panel.name.fill(name);
-  await tags.panel.name.press("Enter");
+  await tags.panel.name.press('Enter');
 }
 
-export type LibraryKind = "image" | "sound" | "video" | "prompt";
-export type AssetRights = "own" | "licensed" | "free" | "other";
-export type PromptKind = "image" | "video" | "voice" | "general";
-export type LibrarySection = "images" | "sounds" | "videos" | "prompts" | "collections";
+export type LibraryKind = 'image' | 'sound' | 'video' | 'prompt';
+export type AssetRights = 'own' | 'licensed' | 'free' | 'other';
+export type PromptKind = 'image' | 'video' | 'voice' | 'general';
+export type LibrarySection = 'images' | 'sounds' | 'videos' | 'prompts' | 'collections';
 
-export const LIBRARY_KINDS: readonly LibraryKind[] = ["image", "sound", "video", "prompt"];
+export const LIBRARY_KINDS: readonly LibraryKind[] = ['image', 'sound', 'video', 'prompt'];
 
-export const KIND_DIRS: Readonly<Record<LibraryKind, string>> = { image: "images", sound: "sounds", video: "videos", prompt: "prompts" };
+export const KIND_DIRS: Readonly<Record<LibraryKind, string>> = {
+  image: 'images',
+  sound: 'sounds',
+  video: 'videos',
+  prompt: 'prompts',
+};
 
 export const KIND_TABLES: Readonly<Record<LibraryKind, string>> = {
-  image: "ws_library_images",
-  sound: "ws_library_sounds",
-  video: "ws_library_videos",
-  prompt: "ws_library_prompts",
+  image: 'ws_library_images',
+  sound: 'ws_library_sounds',
+  video: 'ws_library_videos',
+  prompt: 'ws_library_prompts',
 };
 
 export const KIND_TAG_TYPES: Readonly<Record<LibraryKind, string>> = {
-  image: "library_image",
-  sound: "library_sound",
-  video: "library_video",
-  prompt: "library_prompt",
+  image: 'library_image',
+  sound: 'library_sound',
+  video: 'library_video',
+  prompt: 'library_prompt',
 };
 
 export const PICK_COMMANDS: Readonly<Record<LibraryKind, string>> = {
-  image: "library_image_pick",
-  sound: "library_sound_pick",
-  video: "library_video_pick",
-  prompt: "library_prompt_pick",
+  image: 'library_image_pick',
+  sound: 'library_sound_pick',
+  video: 'library_video_pick',
+  prompt: 'library_prompt_pick',
 };
 
-export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"] as const;
-export const SOUND_EXTENSIONS = ["mp3", "wav", "aac"] as const;
-export const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "mkv"] as const;
-export const PROMPT_EXTENSIONS = ["txt", "md"] as const;
+export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif'] as const;
+export const SOUND_EXTENSIONS = ['mp3', 'wav', 'aac'] as const;
+export const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'mkv'] as const;
+export const PROMPT_EXTENSIONS = ['txt', 'md'] as const;
 
 export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 export const SOUND_MAX_BYTES = 200 * 1024 * 1024;
@@ -703,16 +796,24 @@ export const IMAGE_MAX_PIXELS = 100_000_000;
 export const PEAK_RATE = 12;
 
 export function normalizeTag(raw: string): string {
-  const lowered = raw.toLowerCase().replace(/[,#]/g, " ");
-  return lowered.split(/\s+/).filter((part) => part.length > 0).join("-").slice(0, MAX_TAG_CHARS);
+  const lowered = raw.toLowerCase().replace(/[,#]/g, ' ');
+  return lowered
+    .split(/\s+/)
+    .filter((part) => part.length > 0)
+    .join('-')
+    .slice(0, MAX_TAG_CHARS);
 }
 
-export const MAX_BYTES: Readonly<Record<UploadKind, number>> = { image: IMAGE_MAX_BYTES, sound: SOUND_MAX_BYTES, video: VIDEO_MAX_BYTES };
+export const MAX_BYTES: Readonly<Record<UploadKind, number>> = {
+  image: IMAGE_MAX_BYTES,
+  sound: SOUND_MAX_BYTES,
+  video: VIDEO_MAX_BYTES,
+};
 
 const run = promisify(execFile);
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const WEBP_LOSSLESS_1X1 = Buffer.from("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "base64");
+const WEBP_LOSSLESS_1X1 = Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==', 'base64');
 const WEBP_HEADER_OFFSET = 21;
 const SPARSE_THRESHOLD = 64 * 1024 * 1024;
 const MP3_FRAME_BYTES = 417;
@@ -747,7 +848,7 @@ export interface DurationSpec {
   readonly channels?: number;
 }
 
-export type VideoFormatName = "mp4" | "mov" | "webm" | "mkv";
+export type VideoFormatName = 'mp4' | 'mov' | 'webm' | 'mkv';
 
 export interface VideoSpec {
   readonly format?: VideoFormatName;
@@ -757,10 +858,10 @@ export interface VideoSpec {
   readonly fps?: number;
 }
 
-export type SizedImageExt = "png" | "jpg" | "gif" | "webp";
+export type SizedImageExt = 'png' | 'jpg' | 'gif' | 'webp';
 
 function chunk(type: string, data: Buffer): Buffer {
-  const name = Buffer.from(type, "ascii");
+  const name = Buffer.from(type, 'ascii');
   const head = Buffer.alloc(4);
   head.writeUInt32BE(data.length, 0);
   const tail = Buffer.alloc(4);
@@ -774,7 +875,7 @@ function pngHeader(width: number, height: number): Buffer {
   header.writeUInt32BE(height, 4);
   header[8] = 8;
   header[9] = 2;
-  return chunk("IHDR", header);
+  return chunk('IHDR', header);
 }
 
 export function pngBytes(spec: PngSpec = {}): Buffer {
@@ -788,11 +889,16 @@ export function pngBytes(spec: PngSpec = {}): Buffer {
     row[3 + column * 3] = blue;
   }
   const raw = Buffer.concat(Array.from({ length: height }, () => row));
-  return Buffer.concat([PNG_SIGNATURE, pngHeader(width, height), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    pngHeader(width, height),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 export function pngHeaderOnlyBytes(width: number, height: number): Buffer {
-  return Buffer.concat([PNG_SIGNATURE, pngHeader(width, height), chunk("IEND", Buffer.alloc(0))]);
+  return Buffer.concat([PNG_SIGNATURE, pngHeader(width, height), chunk('IEND', Buffer.alloc(0))]);
 }
 
 class BitWriter {
@@ -841,8 +947,10 @@ const JPEG_DC_BITS = [0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0];
 const JPEG_DC_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const JPEG_AC_BITS = [0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125];
 const JPEG_AC_HEAD = [
-  0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06, 0x13, 0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08, 0x23, 0x42, 0xb1, 0xc1, 0x15, 0x52, 0xd1, 0xf0, 0x24, 0x33,
-  0x62, 0x72, 0x82, 0x09, 0x0a, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a,
+  0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06, 0x13, 0x51, 0x61, 0x07,
+  0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08, 0x23, 0x42, 0xb1, 0xc1, 0x15, 0x52, 0xd1, 0xf0,
+  0x24, 0x33, 0x62, 0x72, 0x82, 0x09, 0x0a, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x25, 0x26, 0x27, 0x28,
+  0x29, 0x2a,
 ];
 const JPEG_AC_RANGES: readonly (readonly [number, number])[] = [
   [0x34, 0x3a],
@@ -878,7 +986,11 @@ function jpegSegment(marker: number, payload: Buffer): Buffer {
   return Buffer.concat([head, payload]);
 }
 
-function jpegTable(kind: number, bits: readonly number[], values: Buffer | readonly number[]): Buffer {
+function jpegTable(
+  kind: number,
+  bits: readonly number[],
+  values: Buffer | readonly number[],
+): Buffer {
   return jpegSegment(0xc4, Buffer.concat([Buffer.from([kind, ...bits]), Buffer.from(values)]));
 }
 
@@ -1006,7 +1118,7 @@ export function gifBytes(spec: PngSpec = {}): Buffer {
   descriptor.writeUInt16LE(width, 5);
   descriptor.writeUInt16LE(height, 7);
   return Buffer.concat([
-    Buffer.from("GIF89a", "ascii"),
+    Buffer.from('GIF89a', 'ascii'),
     screen,
     Buffer.from([red, green, blue, 255, 255, 255]),
     descriptor,
@@ -1016,7 +1128,9 @@ export function gifBytes(spec: PngSpec = {}): Buffer {
   ]);
 }
 
-export function webpBytes(spec: { readonly width?: number; readonly height?: number } = {}): Buffer {
+export function webpBytes(
+  spec: { readonly width?: number; readonly height?: number } = {},
+): Buffer {
   const bytes = Buffer.from(WEBP_LOSSLESS_1X1);
   const width = spec.width ?? 1;
   const height = spec.height ?? 1;
@@ -1026,13 +1140,13 @@ export function webpBytes(spec: { readonly width?: number; readonly height?: num
 
 export function imageBytes(ext: string, spec: PngSpec = {}): Buffer {
   const kind = ext.toLowerCase();
-  if (kind === "jpg" || kind === "jpeg") {
+  if (kind === 'jpg' || kind === 'jpeg') {
     return jpegBytes(spec);
   }
-  if (kind === "gif") {
+  if (kind === 'gif') {
     return gifBytes(spec);
   }
-  if (kind === "webp") {
+  if (kind === 'webp') {
     return webpBytes(spec);
   }
   return pngBytes(spec);
@@ -1040,7 +1154,11 @@ export function imageBytes(ext: string, spec: PngSpec = {}): Buffer {
 
 function padPng(bytes: Buffer, total: number): Buffer {
   const end = bytes.length - 12;
-  return Buffer.concat([bytes.subarray(0, end), chunk("dsPd", Buffer.alloc(total - bytes.length - 12)), bytes.subarray(end)]);
+  return Buffer.concat([
+    bytes.subarray(0, end),
+    chunk('dsPd', Buffer.alloc(total - bytes.length - 12)),
+    bytes.subarray(end),
+  ]);
 }
 
 function padJpeg(bytes: Buffer, total: number): Buffer {
@@ -1074,7 +1192,11 @@ function gifCommentBlocks(room: number): Buffer[] {
 
 function padGif(bytes: Buffer, total: number): Buffer {
   const end = bytes.length - 1;
-  const comment = Buffer.concat([Buffer.from([0x21, 0xfe]), ...gifCommentBlocks(total - bytes.length - 3), Buffer.from([0])]);
+  const comment = Buffer.concat([
+    Buffer.from([0x21, 0xfe]),
+    ...gifCommentBlocks(total - bytes.length - 3),
+    Buffer.from([0]),
+  ]);
   return Buffer.concat([bytes.subarray(0, end), comment, bytes.subarray(end)]);
 }
 
@@ -1082,7 +1204,7 @@ function padWebp(bytes: Buffer, total: number): Buffer {
   const space = total - bytes.length - 8;
   const size = space % 2 === 0 ? space : space - 1;
   const head = Buffer.alloc(8);
-  head.write("JUNK", 0, "ascii");
+  head.write('JUNK', 0, 'ascii');
   head.writeUInt32LE(size, 4);
   const padded = Buffer.concat([bytes, head, Buffer.alloc(space)]);
   padded.writeUInt32LE(padded.length - 8, 4);
@@ -1094,13 +1216,13 @@ export function imageOfSize(ext: SizedImageExt, total: number, spec: PngSpec = {
   if (total < base.length + 16) {
     throw new Error(`an ${ext} image needs at least ${base.length + 16} bytes`);
   }
-  if (ext === "jpg") {
+  if (ext === 'jpg') {
     return padJpeg(base, total);
   }
-  if (ext === "gif") {
+  if (ext === 'gif') {
     return padGif(base, total);
   }
-  return ext === "webp" ? padWebp(base, total) : padPng(base, total);
+  return ext === 'webp' ? padWebp(base, total) : padPng(base, total);
 }
 
 export function wavBytes(spec: WavSpec = {}): Buffer {
@@ -1121,9 +1243,9 @@ export function wavBytes(spec: WavSpec = {}): Buffer {
 
 function wavHeader(sampleRate: number, channels: number, dataLength: number): Buffer {
   const header = Buffer.alloc(44);
-  header.write("RIFF", 0, "ascii");
+  header.write('RIFF', 0, 'ascii');
   header.writeUInt32LE(36 + dataLength, 4);
-  header.write("WAVEfmt ", 8, "ascii");
+  header.write('WAVEfmt ', 8, 'ascii');
   header.writeUInt32LE(16, 16);
   header.writeUInt16LE(1, 20);
   header.writeUInt16LE(channels, 22);
@@ -1131,39 +1253,45 @@ function wavHeader(sampleRate: number, channels: number, dataLength: number): Bu
   header.writeUInt32LE(sampleRate * channels * 2, 28);
   header.writeUInt16LE(channels * 2, 32);
   header.writeUInt16LE(16, 34);
-  header.write("data", 36, "ascii");
+  header.write('data', 36, 'ascii');
   header.writeUInt32LE(dataLength, 40);
   return header;
 }
 
 export function mp3Bytes(spec: DurationSpec = {}): Buffer {
-  const frames = Math.max(1, Math.ceil(((spec.durationMs ?? 1000) * MP3_SAMPLE_RATE) / 1000 / MP3_FRAME_SAMPLES));
+  const frames = Math.max(
+    1,
+    Math.ceil(((spec.durationMs ?? 1000) * MP3_SAMPLE_RATE) / 1000 / MP3_FRAME_SAMPLES),
+  );
   const frame = Buffer.alloc(MP3_FRAME_BYTES);
   frame.set([0xff, 0xfb, 0x90, (spec.channels ?? 2) === 1 ? 0xc0 : 0x00]);
   return Buffer.concat(Array.from({ length: frames }, () => frame));
 }
 
 export function aacBytes(spec: DurationSpec = {}): Buffer {
-  const frames = Math.max(1, Math.ceil(((spec.durationMs ?? 1000) * AAC_SAMPLE_RATE) / 1000 / AAC_FRAME_SAMPLES));
+  const frames = Math.max(
+    1,
+    Math.ceil(((spec.durationMs ?? 1000) * AAC_SAMPLE_RATE) / 1000 / AAC_FRAME_SAMPLES),
+  );
   return Buffer.concat(Array.from({ length: frames }, () => Buffer.from(AAC_FRAME)));
 }
 
 export function soundBytes(ext: string, spec: WavSpec = {}): Buffer {
   const kind = ext.toLowerCase();
-  if (kind === "mp3") {
+  if (kind === 'mp3') {
     return mp3Bytes(spec);
   }
-  return kind === "aac" ? aacBytes(spec) : wavBytes(spec);
+  return kind === 'aac' ? aacBytes(spec) : wavBytes(spec);
 }
 
 function isoBox(kind: string, payload: Buffer): Buffer {
   const head = Buffer.alloc(8);
   head.writeUInt32BE(payload.length + 8, 0);
-  head.write(kind, 4, "ascii");
+  head.write(kind, 4, 'ascii');
   return Buffer.concat([head, payload]);
 }
 
-function isoHeaders(spec: Required<Omit<VideoSpec, "format">>): Buffer {
+function isoHeaders(spec: Required<Omit<VideoSpec, 'format'>>): Buffer {
   const mvhd = Buffer.alloc(20);
   mvhd.writeUInt32BE(1000, 12);
   mvhd.writeUInt32BE(spec.durationMs, 16);
@@ -1173,7 +1301,7 @@ function isoHeaders(spec: Required<Omit<VideoSpec, "format">>): Buffer {
   tkhd.writeUInt32BE(spec.width * 65536, 76);
   tkhd.writeUInt32BE(spec.height * 65536, 80);
   const hdlr = Buffer.alloc(12);
-  hdlr.write("vide", 8, "ascii");
+  hdlr.write('vide', 8, 'ascii');
   const mdhd = Buffer.alloc(20);
   mdhd.writeUInt32BE(1000, 12);
   mdhd.writeUInt32BE(spec.durationMs, 16);
@@ -1181,11 +1309,11 @@ function isoHeaders(spec: Required<Omit<VideoSpec, "format">>): Buffer {
   stts.writeUInt32BE(1, 4);
   stts.writeUInt32BE(Math.max(1, Math.round((spec.fps * spec.durationMs) / 1000)), 8);
   stts.writeUInt32BE(1, 12);
-  const minf = isoBox("minf", isoBox("stbl", isoBox("stts", stts)));
-  const mdia = isoBox("mdia", Buffer.concat([isoBox("hdlr", hdlr), isoBox("mdhd", mdhd), minf]));
-  const track = isoBox("trak", Buffer.concat([isoBox("tkhd", tkhd), mdia]));
-  const ftyp = isoBox("ftyp", Buffer.from("isom", "ascii"));
-  return Buffer.concat([ftyp, isoBox("moov", Buffer.concat([isoBox("mvhd", mvhd), track]))]);
+  const minf = isoBox('minf', isoBox('stbl', isoBox('stts', stts)));
+  const mdia = isoBox('mdia', Buffer.concat([isoBox('hdlr', hdlr), isoBox('mdhd', mdhd), minf]));
+  const track = isoBox('trak', Buffer.concat([isoBox('tkhd', tkhd), mdia]));
+  const ftyp = isoBox('ftyp', Buffer.from('isom', 'ascii'));
+  return Buffer.concat([ftyp, isoBox('moov', Buffer.concat([isoBox('mvhd', mvhd), track]))]);
 }
 
 function ebml(id: readonly number[], payload: Buffer): Buffer {
@@ -1200,43 +1328,62 @@ function ebmlUint(id: readonly number[], value: number): Buffer {
   return ebml(id, payload);
 }
 
-function ebmlHeaders(spec: Required<Omit<VideoSpec, "format">>, cluster: boolean): Buffer {
+function ebmlHeaders(spec: Required<Omit<VideoSpec, 'format'>>, cluster: boolean): Buffer {
   const duration = Buffer.alloc(8);
   duration.writeDoubleBE(spec.durationMs, 0);
-  const info = Buffer.concat([ebmlUint([0x2a, 0xd7, 0xb1], 1_000_000), ebml([0x44, 0x89], duration)]);
+  const info = Buffer.concat([
+    ebmlUint([0x2a, 0xd7, 0xb1], 1_000_000),
+    ebml([0x44, 0x89], duration),
+  ]);
   const video = Buffer.concat([ebmlUint([0xb0], spec.width), ebmlUint([0xba], spec.height)]);
-  const track = Buffer.concat([ebmlUint([0x83], 1), ebml([0xe0], video), ebmlUint([0x23, 0xe3, 0x83], Math.round(1_000_000_000 / spec.fps))]);
+  const track = Buffer.concat([
+    ebmlUint([0x83], 1),
+    ebml([0xe0], video),
+    ebmlUint([0x23, 0xe3, 0x83], Math.round(1_000_000_000 / spec.fps)),
+  ]);
   const tracks = ebml([0x16, 0x54, 0xae, 0x6b], ebml([0xae], track));
   const open = Buffer.from([0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
-  const tail = cluster ? Buffer.concat([Buffer.from([0x1f, 0x43, 0xb6, 0x75]), open]) : Buffer.alloc(0);
+  const tail = cluster
+    ? Buffer.concat([Buffer.from([0x1f, 0x43, 0xb6, 0x75]), open])
+    : Buffer.alloc(0);
   const segment = Buffer.concat([ebml([0x15, 0x49, 0xa9, 0x66], info), tracks, tail]);
   const size = cluster ? open : Buffer.from([0x10, 0, 0, 0]);
   if (!cluster) {
     size.writeUInt32BE(0x10000000 + segment.length, 0);
   }
-  return Buffer.concat([ebml([0x1a, 0x45, 0xdf, 0xa3], Buffer.alloc(0)), Buffer.from([0x18, 0x53, 0x80, 0x67]), size, segment]);
+  return Buffer.concat([
+    ebml([0x1a, 0x45, 0xdf, 0xa3], Buffer.alloc(0)),
+    Buffer.from([0x18, 0x53, 0x80, 0x67]),
+    size,
+    segment,
+  ]);
 }
 
-function videoSpec(spec: VideoSpec): Required<Omit<VideoSpec, "format">> {
-  return { width: spec.width ?? 1280, height: spec.height ?? 720, durationMs: spec.durationMs ?? 2000, fps: spec.fps ?? 30 };
+function videoSpec(spec: VideoSpec): Required<Omit<VideoSpec, 'format'>> {
+  return {
+    width: spec.width ?? 1280,
+    height: spec.height ?? 720,
+    durationMs: spec.durationMs ?? 2000,
+    fps: spec.fps ?? 30,
+  };
 }
 
 export function videoBytes(spec: VideoSpec = {}): Buffer {
   const full = videoSpec(spec);
-  const format = spec.format ?? "mp4";
-  return format === "webm" || format === "mkv" ? ebmlHeaders(full, false) : isoHeaders(full);
+  const format = spec.format ?? 'mp4';
+  return format === 'webm' || format === 'mkv' ? ebmlHeaders(full, false) : isoHeaders(full);
 }
 
 export function videoHeadForSize(spec: VideoSpec, total: number): Buffer {
   const full = videoSpec(spec);
-  const format = spec.format ?? "mp4";
-  if (format === "webm" || format === "mkv") {
+  const format = spec.format ?? 'mp4';
+  if (format === 'webm' || format === 'mkv') {
     return ebmlHeaders(full, true);
   }
   const headers = isoHeaders(full);
   const mdat = Buffer.alloc(8);
   mdat.writeUInt32BE(total - headers.length, 0);
-  mdat.write("mdat", 4, "ascii");
+  mdat.write('mdat', 4, 'ascii');
   return Buffer.concat([headers, mdat]);
 }
 
@@ -1246,19 +1393,23 @@ export function wavHeadForSize(total: number, spec: WavSpec = {}): Buffer {
 
 async function markSparse(path: string): Promise<void> {
   try {
-    await run("fsutil", ["sparse", "setflag", path]);
+    await run('fsutil', ['sparse', 'setflag', path]);
   } catch {
     return;
   }
 }
 
-export async function writeSizedFile(path: string, total: number, head: Buffer = Buffer.alloc(0)): Promise<void> {
+export async function writeSizedFile(
+  path: string,
+  total: number,
+  head: Buffer = Buffer.alloc(0),
+): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, head);
   if (total > SPARSE_THRESHOLD) {
     await markSparse(path);
   }
-  const handle = await open(path, "r+");
+  const handle = await open(path, 'r+');
   try {
     await handle.truncate(total);
   } finally {
@@ -1267,59 +1418,90 @@ export async function writeSizedFile(path: string, total: number, head: Buffer =
 }
 
 export function mediaExtension(name: string): string {
-  return extname(name).replace(/^\./, "").toLowerCase();
+  return extname(name).replace(/^\./, '').toLowerCase();
 }
 
 function ffmpegExecutable(): string {
-  const beside = join(dirname(appExecutable()), "ffmpeg.exe");
-  const bundled = join(repoRoot, "desktop", "binaries", "ffmpeg-x86_64-pc-windows-msvc.exe");
+  const beside = join(dirname(appExecutable()), 'ffmpeg.exe');
+  const bundled = join(repoRoot, 'desktop', 'binaries', 'ffmpeg-x86_64-pc-windows-msvc.exe');
   return [beside, bundled].find((candidate) => existsSync(candidate)) ?? beside;
 }
 
 async function ffmpeg(args: readonly string[]): Promise<void> {
-  await run(ffmpegExecutable(), ["-v", "error", "-y", ...args], { windowsHide: true });
+  await run(ffmpegExecutable(), ['-v', 'error', '-y', ...args], { windowsHide: true });
 }
 
-export async function writeSampleVideo(path: string, seconds = 1, size = "320x180"): Promise<void> {
+export async function writeSampleVideo(path: string, seconds = 1, size = '320x180'): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  const codec = mediaExtension(path) === "webm" ? ["-c:v", "libvpx"] : ["-c:v", "libopenh264", "-pix_fmt", "yuv420p"];
-  await ffmpeg(["-f", "lavfi", "-i", `testsrc=size=${size}:rate=10:duration=${seconds}`, ...codec, path]);
+  const codec =
+    mediaExtension(path) === 'webm'
+      ? ['-c:v', 'libvpx']
+      : ['-c:v', 'libopenh264', '-pix_fmt', 'yuv420p'];
+  await ffmpeg([
+    '-f',
+    'lavfi',
+    '-i',
+    `testsrc=size=${size}:rate=10:duration=${seconds}`,
+    ...codec,
+    path,
+  ]);
 }
 
 export async function writeSampleSound(path: string, seconds = 1): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const extension = mediaExtension(path);
-  const codec = extension === "aac" ? ["-c:a", "aac", "-f", "adts"] : extension === "mp3" ? ["-c:a", "libmp3lame"] : [];
-  await ffmpeg(["-f", "lavfi", "-i", `sine=frequency=440:duration=${seconds}`, ...codec, path]);
+  const codec =
+    extension === 'aac'
+      ? ['-c:a', 'aac', '-f', 'adts']
+      : extension === 'mp3'
+        ? ['-c:a', 'libmp3lame']
+        : [];
+  await ffmpeg(['-f', 'lavfi', '-i', `sine=frequency=440:duration=${seconds}`, ...codec, path]);
 }
 
-const VIDEO_FORMATS: readonly string[] = ["mp4", "mov", "webm", "mkv"];
+const VIDEO_FORMATS: readonly string[] = ['mp4', 'mov', 'webm', 'mkv'];
 
 function videoFormatOf(name: string): VideoFormatName {
   const extension = mediaExtension(name);
-  return VIDEO_FORMATS.includes(extension) ? (extension as VideoFormatName) : "mp4";
+  return VIDEO_FORMATS.includes(extension) ? (extension as VideoFormatName) : 'mp4';
 }
 
 function sizedImageExt(name: string): SizedImageExt {
   const extension = mediaExtension(name);
-  return extension === "jpeg" ? "jpg" : (extension as SizedImageExt);
+  return extension === 'jpeg' ? 'jpg' : (extension as SizedImageExt);
 }
 
-export async function stageFile(sandbox: Sandbox, name: string, data: Buffer | string): Promise<string> {
+export async function stageFile(
+  sandbox: Sandbox,
+  name: string,
+  data: Buffer | string,
+): Promise<string> {
   const path = sandbox.file(name);
-  await writeBytes(path, Buffer.isBuffer(data) ? data : Buffer.from(data, "utf8"));
+  await writeBytes(path, Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8'));
   return path;
 }
 
-export async function stageImage(sandbox: Sandbox, name: string, spec: PngSpec = {}): Promise<string> {
+export async function stageImage(
+  sandbox: Sandbox,
+  name: string,
+  spec: PngSpec = {},
+): Promise<string> {
   return stageFile(sandbox, name, imageBytes(mediaExtension(name), spec));
 }
 
-export async function stageSound(sandbox: Sandbox, name: string, spec: WavSpec = {}): Promise<string> {
+export async function stageSound(
+  sandbox: Sandbox,
+  name: string,
+  spec: WavSpec = {},
+): Promise<string> {
   return stageFile(sandbox, name, soundBytes(mediaExtension(name), spec));
 }
 
-export async function stageVideo(sandbox: Sandbox, name: string, spec: Omit<VideoSpec, "format"> = {}): Promise<string> {
+export async function stageVideo(
+  sandbox: Sandbox,
+  name: string,
+  spec: Omit<VideoSpec, 'format'> = {},
+): Promise<string> {
   return stageFile(sandbox, name, videoBytes({ ...spec, format: videoFormatOf(name) }));
 }
 
@@ -1327,25 +1509,48 @@ export async function stagePrompt(sandbox: Sandbox, name: string, text: string):
   return stageFile(sandbox, name, text);
 }
 
-export async function stageSizedFile(sandbox: Sandbox, name: string, bytes: number): Promise<string> {
+export async function stageSizedFile(
+  sandbox: Sandbox,
+  name: string,
+  bytes: number,
+): Promise<string> {
   const path = sandbox.file(name);
   await writeSizedFile(path, bytes);
   return path;
 }
 
-export async function stageSizedImage(sandbox: Sandbox, name: string, bytes: number, spec: PngSpec = {}): Promise<string> {
+export async function stageSizedImage(
+  sandbox: Sandbox,
+  name: string,
+  bytes: number,
+  spec: PngSpec = {},
+): Promise<string> {
   return stageFile(sandbox, name, imageOfSize(sizedImageExt(name), bytes, spec));
 }
 
-export async function stageSizedSound(sandbox: Sandbox, name: string, bytes: number, spec: WavSpec = {}): Promise<string> {
+export async function stageSizedSound(
+  sandbox: Sandbox,
+  name: string,
+  bytes: number,
+  spec: WavSpec = {},
+): Promise<string> {
   const path = sandbox.file(name);
   await writeSizedFile(path, bytes, wavHeadForSize(bytes, spec));
   return path;
 }
 
-export async function stageSizedVideo(sandbox: Sandbox, name: string, bytes: number, spec: Omit<VideoSpec, "format"> = {}): Promise<string> {
+export async function stageSizedVideo(
+  sandbox: Sandbox,
+  name: string,
+  bytes: number,
+  spec: Omit<VideoSpec, 'format'> = {},
+): Promise<string> {
   const path = sandbox.file(name);
-  await writeSizedFile(path, bytes, videoHeadForSize({ ...spec, format: videoFormatOf(name) }, bytes));
+  await writeSizedFile(
+    path,
+    bytes,
+    videoHeadForSize({ ...spec, format: videoFormatOf(name) }, bytes),
+  );
   return path;
 }
 
@@ -1454,13 +1659,17 @@ class Seeder {
   addCollection(collection: SeedCollection): void {
     const now = this.stamp(undefined);
     const result = this.database
-      .prepare("INSERT INTO ws_library_collections (name, description, created_at, updated_at) VALUES (?, ?, ?, ?)")
-      .run(collection.name, collection.description ?? "", now, now);
+      .prepare(
+        'INSERT INTO ws_library_collections (name, description, created_at, updated_at) VALUES (?, ?, ?, ?)',
+      )
+      .run(collection.name, collection.description ?? '', now, now);
     this.collections[collection.name] = Number(result.lastInsertRowid);
   }
 
   addTags(kind: LibraryKind, id: number, tags: readonly string[] | undefined): void {
-    const insert = this.database.prepare("INSERT OR IGNORE INTO ws_tags (id, tag, type) VALUES (?, ?, ?)");
+    const insert = this.database.prepare(
+      'INSERT OR IGNORE INTO ws_tags (id, tag, type) VALUES (?, ?, ?)',
+    );
     for (const raw of tags ?? []) {
       const tag = normalizeTag(raw);
       if (tag.length > 0) {
@@ -1470,7 +1679,7 @@ class Seeder {
   }
 
   place(kind: LibraryKind, id: number, ext: string, data: Buffer | string): void {
-    this.files.push({ path: join(this.folder, "library", KIND_DIRS[kind], `${id}.${ext}`), data });
+    this.files.push({ path: join(this.folder, 'library', KIND_DIRS[kind], `${id}.${ext}`), data });
   }
 
   addImage(image: SeedImage): void {
@@ -1480,30 +1689,59 @@ class Seeder {
     const bytes = image.bytes ?? imageFixture(ext, width, height);
     const now = this.stamp(image.createdAt);
     const result = this.database
-      .prepare("INSERT INTO ws_library_images (name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(image.name, ext, image.size ?? bytes.length, width, height, image.rights ?? "own", image.origin ?? "upload", this.collectionId(image.collection), now, now);
+      .prepare(
+        'INSERT INTO ws_library_images (name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        image.name,
+        ext,
+        image.size ?? bytes.length,
+        width,
+        height,
+        image.rights ?? 'own',
+        image.origin ?? 'upload',
+        this.collectionId(image.collection),
+        now,
+        now,
+      );
     const id = Number(result.lastInsertRowid);
     this.images[image.name] = id;
-    this.addTags("image", id, image.tags);
-    this.place("image", id, ext, bytes);
+    this.addTags('image', id, image.tags);
+    this.place('image', id, ext, bytes);
   }
 
   addSound(sound: SeedSound): void {
     const ext = (sound.ext ?? mediaExtension(sound.name)).toLowerCase();
     const durationMs = sound.durationMs ?? 1000;
-    const sampleRate = sound.sampleRate ?? (ext === "wav" ? 8000 : 44100);
-    const channels = sound.channels ?? (ext === "mp3" ? 2 : 1);
+    const sampleRate = sound.sampleRate ?? (ext === 'wav' ? 8000 : 44100);
+    const channels = sound.channels ?? (ext === 'mp3' ? 2 : 1);
     const bytes = sound.bytes ?? soundBytes(ext, { durationMs, sampleRate, channels });
-    const level = Math.round((sound.peakLevel ?? (ext === "wav" ? 0.5 : 0)) * 255);
+    const level = Math.round((sound.peakLevel ?? (ext === 'wav' ? 0.5 : 0)) * 255);
     const peaks = Buffer.alloc(Math.max(1, Math.ceil((durationMs * PEAK_RATE) / 1000)), level);
     const now = this.stamp(sound.createdAt);
     const result = this.database
-      .prepare("INSERT INTO ws_library_sounds (name, ext, size, duration_ms, sample_rate, channels, peaks, overview, rights, origin, collection_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(sound.name, ext, sound.size ?? bytes.length, durationMs, sampleRate, channels, peaks, Buffer.alloc(OVERVIEW_SIZE, level), sound.rights ?? "own", sound.origin ?? "upload", this.collectionId(sound.collection), now, now);
+      .prepare(
+        'INSERT INTO ws_library_sounds (name, ext, size, duration_ms, sample_rate, channels, peaks, overview, rights, origin, collection_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        sound.name,
+        ext,
+        sound.size ?? bytes.length,
+        durationMs,
+        sampleRate,
+        channels,
+        peaks,
+        Buffer.alloc(OVERVIEW_SIZE, level),
+        sound.rights ?? 'own',
+        sound.origin ?? 'upload',
+        this.collectionId(sound.collection),
+        now,
+        now,
+      );
     const id = Number(result.lastInsertRowid);
     this.sounds[sound.name] = id;
-    this.addTags("sound", id, sound.tags);
-    this.place("sound", id, ext, bytes);
+    this.addTags('sound', id, sound.tags);
+    this.place('sound', id, ext, bytes);
   }
 
   addVideo(video: SeedVideo): void {
@@ -1512,17 +1750,38 @@ class Seeder {
     const height = video.height ?? 720;
     const durationMs = video.durationMs ?? 2000;
     const fps = video.fps === undefined ? 30 : video.fps;
-    const bytes = video.bytes ?? videoBytes({ format: videoFormat(ext), width, height, durationMs, fps: fps ?? 30 });
+    const bytes =
+      video.bytes ??
+      videoBytes({ format: videoFormat(ext), width, height, durationMs, fps: fps ?? 30 });
     const now = this.stamp(video.createdAt);
     const result = this.database
-      .prepare("INSERT INTO ws_library_videos (name, ext, size, duration_ms, width, height, fps, rights, origin, collection_id, has_poster, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(video.name, ext, video.size ?? bytes.length, durationMs, width, height, fps, video.rights ?? "own", video.origin ?? "upload", this.collectionId(video.collection), video.poster ? 1 : 0, now, now);
+      .prepare(
+        'INSERT INTO ws_library_videos (name, ext, size, duration_ms, width, height, fps, rights, origin, collection_id, has_poster, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        video.name,
+        ext,
+        video.size ?? bytes.length,
+        durationMs,
+        width,
+        height,
+        fps,
+        video.rights ?? 'own',
+        video.origin ?? 'upload',
+        this.collectionId(video.collection),
+        video.poster ? 1 : 0,
+        now,
+        now,
+      );
     const id = Number(result.lastInsertRowid);
     this.videos[video.name] = id;
-    this.addTags("video", id, video.tags);
-    this.place("video", id, ext, bytes);
+    this.addTags('video', id, video.tags);
+    this.place('video', id, ext, bytes);
     if (video.poster) {
-      this.files.push({ path: join(this.folder, "library", KIND_DIRS.video, "posters", `${id}.jpg`), data: jpegBytes({ width: 48, height: 27, gray: 90 }) });
+      this.files.push({
+        path: join(this.folder, 'library', KIND_DIRS.video, 'posters', `${id}.jpg`),
+        data: jpegBytes({ width: 48, height: 27, gray: 90 }),
+      });
     }
   }
 
@@ -1530,26 +1789,43 @@ class Seeder {
     const text = prompt.text ?? `Prompt text for ${prompt.name}`;
     const now = this.stamp(prompt.createdAt);
     const result = this.database
-      .prepare("INSERT INTO ws_library_prompts (name, kind, size, rights, origin, collection_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(prompt.name, prompt.kind ?? "general", Buffer.byteLength(text), prompt.rights ?? "own", prompt.origin ?? "app", this.collectionId(prompt.collection), now, now);
+      .prepare(
+        'INSERT INTO ws_library_prompts (name, kind, size, rights, origin, collection_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        prompt.name,
+        prompt.kind ?? 'general',
+        Buffer.byteLength(text),
+        prompt.rights ?? 'own',
+        prompt.origin ?? 'app',
+        this.collectionId(prompt.collection),
+        now,
+        now,
+      );
     const id = Number(result.lastInsertRowid);
     this.prompts[prompt.name] = id;
-    this.addTags("prompt", id, prompt.tags);
-    this.place("prompt", id, "txt", text);
+    this.addTags('prompt', id, prompt.tags);
+    this.place('prompt', id, 'txt', text);
   }
 
   result(): SeededLibrary {
-    return { collections: this.collections, images: this.images, sounds: this.sounds, videos: this.videos, prompts: this.prompts };
+    return {
+      collections: this.collections,
+      images: this.images,
+      sounds: this.sounds,
+      videos: this.videos,
+      prompts: this.prompts,
+    };
   }
 }
 
 function normalizeImageExt(ext: string): string {
   const lowered = ext.toLowerCase();
-  return lowered === "jpeg" ? "jpg" : lowered;
+  return lowered === 'jpeg' ? 'jpg' : lowered;
 }
 
 function videoFormat(ext: string): VideoFormatName {
-  return VIDEO_FORMATS.includes(ext) ? (ext as VideoFormatName) : "mp4";
+  return VIDEO_FORMATS.includes(ext) ? (ext as VideoFormatName) : 'mp4';
 }
 
 function imageFixture(ext: string, width: number, height: number): Buffer {
@@ -1589,9 +1865,9 @@ export async function seedLibrary(folder: string, seed: LibrarySeed): Promise<Se
   const database = openDatabase(folder);
   const seeder = new Seeder(database, folder);
   try {
-    database.exec("BEGIN");
+    database.exec('BEGIN');
     insertSeed(seeder, seed);
-    database.exec("COMMIT");
+    database.exec('COMMIT');
   } finally {
     database.close();
   }
@@ -1599,7 +1875,11 @@ export async function seedLibrary(folder: string, seed: LibrarySeed): Promise<Se
   return seeder.result();
 }
 
-export async function seedLibraryWorkspace(folder: string, seed: LibrarySeed, options: SeedOptions = {}): Promise<SeededLibrary> {
+export async function seedLibraryWorkspace(
+  folder: string,
+  seed: LibrarySeed,
+  options: SeedOptions = {},
+): Promise<SeededLibrary> {
   await seedWorkspace(folder, options);
   return seedLibrary(folder, seed);
 }
@@ -1683,96 +1963,135 @@ export class LibraryDb {
   private constructor(private readonly database: DatabaseSync) {}
 
   static open(folder: string): LibraryDb {
-    return new LibraryDb(new DatabaseSync(join(folder, WORKSPACE_DB_FILE), { readOnly: true }));
+    return new LibraryDb(
+      new DatabaseSync(join(folder, WORKSPACE_DB_FILE), { readOnly: true, timeout: 5000 }),
+    );
   }
 
   images(): ImageRow[] {
-    const rows = this.database.prepare("SELECT id, name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at FROM ws_library_images ORDER BY id").all();
-    return rows.map((row) => ({ ...this.asset("image", row), ext: String(row["ext"]), size: Number(row["size"]), width: Number(row["width"]), height: Number(row["height"]) }));
+    const rows = this.database
+      .prepare(
+        'SELECT id, name, ext, size, width, height, rights, origin, collection_id, created_at, updated_at FROM ws_library_images ORDER BY id',
+      )
+      .all();
+    return rows.map((row) => ({
+      ...this.asset('image', row),
+      ext: String(row['ext']),
+      size: Number(row['size']),
+      width: Number(row['width']),
+      height: Number(row['height']),
+    }));
   }
 
   sounds(): SoundRow[] {
-    const sql = "SELECT id, name, ext, size, duration_ms, sample_rate, channels, length(peaks) AS peaks_length, rights, origin, collection_id, created_at, updated_at FROM ws_library_sounds ORDER BY id";
+    const sql =
+      'SELECT id, name, ext, size, duration_ms, sample_rate, channels, length(peaks) AS peaks_length, rights, origin, collection_id, created_at, updated_at FROM ws_library_sounds ORDER BY id';
     return this.database
       .prepare(sql)
       .all()
       .map((row) => ({
-        ...this.asset("sound", row),
-        ext: String(row["ext"]),
-        size: Number(row["size"]),
-        durationMs: Number(row["duration_ms"]),
-        sampleRate: Number(row["sample_rate"]),
-        channels: Number(row["channels"]),
-        peaksLength: Number(row["peaks_length"]),
+        ...this.asset('sound', row),
+        ext: String(row['ext']),
+        size: Number(row['size']),
+        durationMs: Number(row['duration_ms']),
+        sampleRate: Number(row['sample_rate']),
+        channels: Number(row['channels']),
+        peaksLength: Number(row['peaks_length']),
       }));
   }
 
   videos(): VideoRow[] {
-    const sql = "SELECT id, name, ext, size, duration_ms, width, height, fps, rights, origin, collection_id, has_poster, created_at, updated_at FROM ws_library_videos ORDER BY id";
+    const sql =
+      'SELECT id, name, ext, size, duration_ms, width, height, fps, rights, origin, collection_id, has_poster, created_at, updated_at FROM ws_library_videos ORDER BY id';
     return this.database
       .prepare(sql)
       .all()
       .map((row) => ({
-        ...this.asset("video", row),
-        ext: String(row["ext"]),
-        size: Number(row["size"]),
-        durationMs: Number(row["duration_ms"]),
-        width: Number(row["width"]),
-        height: Number(row["height"]),
-        fps: nullableNumber(row["fps"]),
-        hasPoster: Number(row["has_poster"]) !== 0,
+        ...this.asset('video', row),
+        ext: String(row['ext']),
+        size: Number(row['size']),
+        durationMs: Number(row['duration_ms']),
+        width: Number(row['width']),
+        height: Number(row['height']),
+        fps: nullableNumber(row['fps']),
+        hasPoster: Number(row['has_poster']) !== 0,
       }));
   }
 
   prompts(): PromptRow[] {
-    const sql = "SELECT id, name, kind, size, rights, origin, collection_id, created_at, updated_at FROM ws_library_prompts ORDER BY id";
+    const sql =
+      'SELECT id, name, kind, size, rights, origin, collection_id, created_at, updated_at FROM ws_library_prompts ORDER BY id';
     return this.database
       .prepare(sql)
       .all()
-      .map((row) => ({ ...this.asset("prompt", row), kind: String(row["kind"]) as PromptKind, size: Number(row["size"]) }));
+      .map((row) => ({
+        ...this.asset('prompt', row),
+        kind: String(row['kind']) as PromptKind,
+        size: Number(row['size']),
+      }));
   }
 
   collections(): CollectionRow[] {
-    const rows = this.database.prepare("SELECT id, name, description, created_at, updated_at FROM ws_library_collections ORDER BY id").all();
+    const rows = this.database
+      .prepare(
+        'SELECT id, name, description, created_at, updated_at FROM ws_library_collections ORDER BY id',
+      )
+      .all();
     return rows.map((row) => ({
-      id: Number(row["id"]),
-      name: String(row["name"]),
-      description: String(row["description"]),
-      createdAt: String(row["created_at"]),
-      updatedAt: String(row["updated_at"]),
-      counts: this.collectionCounts(Number(row["id"])),
+      id: Number(row['id']),
+      name: String(row['name']),
+      description: String(row['description']),
+      createdAt: String(row['created_at']),
+      updatedAt: String(row['updated_at']),
+      counts: this.collectionCounts(Number(row['id'])),
     }));
   }
 
   tags(): TagRow[] {
-    const rows = this.database.prepare("SELECT tag, type, COUNT(*) AS total FROM ws_tags WHERE type LIKE 'library\\_%' ESCAPE '\\' GROUP BY tag, type ORDER BY tag COLLATE NOCASE").all();
+    const rows = this.database
+      .prepare(
+        "SELECT tag, type, COUNT(*) AS total FROM ws_tags WHERE type LIKE 'library\\_%' ESCAPE '\\' GROUP BY tag, type ORDER BY tag COLLATE NOCASE",
+      )
+      .all();
     const byTag = new Map<string, Record<LibraryKind, number>>();
     for (const row of rows) {
-      const kind = LIBRARY_KINDS.find((candidate) => KIND_TAG_TYPES[candidate] === String(row["type"]));
+      const kind = LIBRARY_KINDS.find(
+        (candidate) => KIND_TAG_TYPES[candidate] === String(row['type']),
+      );
       if (kind !== undefined) {
-        const counts = byTag.get(String(row["tag"])) ?? emptyCounts();
-        counts[kind] = Number(row["total"]);
-        byTag.set(String(row["tag"]), counts);
+        const counts = byTag.get(String(row['tag'])) ?? emptyCounts();
+        counts[kind] = Number(row['total']);
+        byTag.set(String(row['tag']), counts);
       }
     }
-    return [...byTag.entries()].map(([tag, counts]) => ({ tag, counts, total: LIBRARY_KINDS.reduce((sum, kind) => sum + counts[kind], 0) }));
+    return [...byTag.entries()].map(([tag, counts]) => ({
+      tag,
+      counts,
+      total: LIBRARY_KINDS.reduce((sum, kind) => sum + counts[kind], 0),
+    }));
   }
 
   tagsOf(kind: LibraryKind, id: number): string[] {
-    const rows = this.database.prepare("SELECT tag FROM ws_tags WHERE type = ? AND id = ? ORDER BY tag").all(KIND_TAG_TYPES[kind], String(id));
-    return rows.map((row) => String(row["tag"]));
+    const rows = this.database
+      .prepare('SELECT tag FROM ws_tags WHERE type = ? AND id = ? ORDER BY tag')
+      .all(KIND_TAG_TYPES[kind], String(id));
+    return rows.map((row) => String(row['tag']));
   }
 
   tagCount(tag: string): number {
-    const row = this.database.prepare("SELECT COUNT(*) AS total FROM ws_tags WHERE tag = ? AND type LIKE 'library\\_%' ESCAPE '\\'").get(tag);
-    return Number(row?.["total"] ?? 0);
+    const row = this.database
+      .prepare(
+        "SELECT COUNT(*) AS total FROM ws_tags WHERE tag = ? AND type LIKE 'library\\_%' ESCAPE '\\'",
+      )
+      .get(tag);
+    return Number(row?.['total'] ?? 0);
   }
 
   counts(): KindCounts {
     const counts = emptyCounts();
     for (const kind of LIBRARY_KINDS) {
       const row = this.database.prepare(`SELECT COUNT(*) AS total FROM ${KIND_TABLES[kind]}`).get();
-      counts[kind] = Number(row?.["total"] ?? 0);
+      counts[kind] = Number(row?.['total'] ?? 0);
     }
     return counts;
   }
@@ -1780,8 +2099,10 @@ export class LibraryDb {
   unfiled(): KindCounts {
     const counts = emptyCounts();
     for (const kind of LIBRARY_KINDS) {
-      const row = this.database.prepare(`SELECT COUNT(*) AS total FROM ${KIND_TABLES[kind]} WHERE collection_id IS NULL`).get();
-      counts[kind] = Number(row?.["total"] ?? 0);
+      const row = this.database
+        .prepare(`SELECT COUNT(*) AS total FROM ${KIND_TABLES[kind]} WHERE collection_id IS NULL`)
+        .get();
+      counts[kind] = Number(row?.['total'] ?? 0);
     }
     return counts;
   }
@@ -1789,34 +2110,39 @@ export class LibraryDb {
   collectionCounts(id: number): KindCounts {
     const counts = emptyCounts();
     for (const kind of LIBRARY_KINDS) {
-      const row = this.database.prepare(`SELECT COUNT(*) AS total FROM ${KIND_TABLES[kind]} WHERE collection_id = ?`).get(id);
-      counts[kind] = Number(row?.["total"] ?? 0);
+      const row = this.database
+        .prepare(`SELECT COUNT(*) AS total FROM ${KIND_TABLES[kind]} WHERE collection_id = ?`)
+        .get(id);
+      counts[kind] = Number(row?.['total'] ?? 0);
     }
     return counts;
   }
 
   orphanTagCount(): number {
-    const sql = LIBRARY_KINDS.map((kind) => `SELECT COUNT(*) AS total FROM ws_tags WHERE type = '${KIND_TAG_TYPES[kind]}' AND CAST(id AS INTEGER) NOT IN (SELECT id FROM ${KIND_TABLES[kind]})`).join(" UNION ALL ");
+    const sql = LIBRARY_KINDS.map(
+      (kind) =>
+        `SELECT COUNT(*) AS total FROM ws_tags WHERE type = '${KIND_TAG_TYPES[kind]}' AND CAST(id AS INTEGER) NOT IN (SELECT id FROM ${KIND_TABLES[kind]})`,
+    ).join(' UNION ALL ');
     return this.database
       .prepare(sql)
       .all()
-      .reduce((sum, row) => sum + Number(row["total"]), 0);
+      .reduce((sum, row) => sum + Number(row['total']), 0);
   }
 
   image(name: string): ImageRow {
-    return this.find(this.images(), name, "image");
+    return this.find(this.images(), name, 'image');
   }
 
   sound(name: string): SoundRow {
-    return this.find(this.sounds(), name, "sound");
+    return this.find(this.sounds(), name, 'sound');
   }
 
   video(name: string): VideoRow {
-    return this.find(this.videos(), name, "video");
+    return this.find(this.videos(), name, 'video');
   }
 
   prompt(name: string): PromptRow {
-    return this.find(this.prompts(), name, "prompt");
+    return this.find(this.prompts(), name, 'prompt');
   }
 
   collection(name: string): CollectionRow {
@@ -1831,7 +2157,11 @@ export class LibraryDb {
     this.database.close();
   }
 
-  private find<T extends { readonly name: string }>(rows: readonly T[], name: string, kind: LibraryKind): T {
+  private find<T extends { readonly name: string }>(
+    rows: readonly T[],
+    name: string,
+    kind: LibraryKind,
+  ): T {
     const found = rows.find((row) => row.name === name);
     if (found === undefined) {
       throw new Error(`no ${kind} named ${name}`);
@@ -1840,16 +2170,16 @@ export class LibraryDb {
   }
 
   private asset(kind: LibraryKind, row: Row): AssetRow {
-    const id = Number(row["id"]);
+    const id = Number(row['id']);
     return {
       id,
-      name: String(row["name"]),
-      rights: String(row["rights"]) as AssetRights,
-      origin: String(row["origin"]),
-      collectionId: nullableNumber(row["collection_id"]),
+      name: String(row['name']),
+      rights: String(row['rights']) as AssetRights,
+      origin: String(row['origin']),
+      collectionId: nullableNumber(row['collection_id']),
       tags: this.tagsOf(kind, id),
-      createdAt: String(row["created_at"]),
-      updatedAt: String(row["updated_at"]),
+      createdAt: String(row['created_at']),
+      updatedAt: String(row['updated_at']),
     };
   }
 }
@@ -1863,8 +2193,26 @@ export async function readLibrary<T>(folder: string, read: (db: LibraryDb) => T)
   }
 }
 
+export function readImageRow(
+  folder: string,
+  id: number | undefined,
+): Promise<ImageRow | undefined> {
+  return readLibrary(folder, (db) => db.images().find((row) => row.id === id));
+}
+
+export function readPromptRow(
+  folder: string,
+  id: number | undefined,
+): Promise<PromptRow | undefined> {
+  return readLibrary(folder, (db) => db.prompts().find((row) => row.id === id));
+}
+
+export function readImageTags(folder: string, id: number): Promise<string[]> {
+  return readLibrary(folder, (db) => db.tagsOf('image', id));
+}
+
 export function libraryDir(folder: string, kind: LibraryKind): string {
-  return join(folder, "library", KIND_DIRS[kind]);
+  return join(folder, 'library', KIND_DIRS[kind]);
 }
 
 export function storedPath(folder: string, kind: LibraryKind, id: number, ext: string): string {
@@ -1872,13 +2220,16 @@ export function storedPath(folder: string, kind: LibraryKind, id: number, ext: s
 }
 
 export function derivedDir(folder: string, kind: LibraryKind): string {
-  return join(libraryDir(folder, kind), kind === "video" ? "posters" : "thumbs");
+  return join(libraryDir(folder, kind), kind === 'video' ? 'posters' : 'thumbs');
 }
 
 async function listFiles(dir: string): Promise<string[]> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
-    return entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
+    return entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .sort();
   } catch {
     return [];
   }
@@ -1886,11 +2237,12 @@ async function listFiles(dir: string): Promise<string[]> {
 
 export async function storedFiles(folder: string, kind: LibraryKind): Promise<StoredFiles> {
   const own = await listFiles(libraryDir(folder, kind));
-  const derived = kind === "image" || kind === "video" ? await listFiles(derivedDir(folder, kind)) : [];
+  const derived =
+    kind === 'image' || kind === 'video' ? await listFiles(derivedDir(folder, kind)) : [];
   return {
-    originals: own.filter((name) => !name.startsWith(".")),
-    derived: derived.filter((name) => !name.startsWith(".")),
-    temporary: [...own, ...derived].filter((name) => name.startsWith(".")),
+    originals: own.filter((name) => !name.startsWith('.')),
+    derived: derived.filter((name) => !name.startsWith('.')),
+    temporary: [...own, ...derived].filter((name) => name.startsWith('.')),
   };
 }
 
@@ -1898,153 +2250,170 @@ export async function storedCount(folder: string, kind: LibraryKind): Promise<nu
   return (await storedFiles(folder, kind)).originals.length;
 }
 
-export async function storedOriginal(folder: string, kind: LibraryKind, id: number, ext: string): Promise<Buffer> {
+export async function storedOriginal(
+  folder: string,
+  kind: LibraryKind,
+  id: number,
+  ext: string,
+): Promise<Buffer> {
   return readFile(storedPath(folder, kind, id, ext));
 }
 
-export async function storedSize(folder: string, kind: LibraryKind, id: number, ext: string): Promise<number> {
+export async function storedSize(
+  folder: string,
+  kind: LibraryKind,
+  id: number,
+  ext: string,
+): Promise<number> {
   return (await stat(storedPath(folder, kind, id, ext))).size;
 }
 
 export async function storedText(folder: string, id: number): Promise<string> {
-  return readFile(storedPath(folder, "prompt", id, "txt"), "utf8");
+  return readFile(storedPath(folder, 'prompt', id, 'txt'), 'utf8');
 }
 
-export const UPLOAD_SUCCESS = /đã upload \d+ ảnh vào thư viện|uploaded \d+ images to the library/i;
-export const UPLOAD_PARTIAL = /đã upload \d+\/\d+ ảnh, \d+ file lỗi|uploaded \d+\/\d+ images; \d+ files failed/i;
-export const UPLOAD_SUCCESS_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
+const UPLOAD_NOUN_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+  image: 'images',
+  sound: 'sounds',
+  video: 'videos',
+  prompt: 'prompts',
+};
+
+export const UPLOAD_SUCCESS = 'images to the library.';
+export const UPLOAD_PARTIAL = 'Uploaded 2/4 images; 2 files failed.';
+export const UPLOAD_SUCCESS_BY_KIND: Readonly<Record<LibraryKind, string>> = {
   image: UPLOAD_SUCCESS,
-  sound: /đã upload \d+ âm thanh vào thư viện|uploaded \d+ sounds to the library/i,
-  video: /đã upload \d+ video vào thư viện|uploaded \d+ videos to the library/i,
-  prompt: /đã upload \d+ prompt vào thư viện|uploaded \d+ prompts to the library/i,
+  sound: 'sounds to the library.',
+  video: 'videos to the library.',
+  prompt: 'prompts to the library.',
 };
-export const UPLOAD_PARTIAL_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
+export const UPLOAD_PARTIAL_BY_KIND: Readonly<Record<LibraryKind, string>> = {
   image: UPLOAD_PARTIAL,
-  sound: /đã upload \d+\/\d+ âm thanh, \d+ file lỗi|uploaded \d+\/\d+ sounds; \d+ files failed/i,
-  video: /đã upload \d+\/\d+ video, \d+ file lỗi|uploaded \d+\/\d+ videos; \d+ files failed/i,
-  prompt: /đã upload \d+\/\d+ prompt, \d+ file lỗi|uploaded \d+\/\d+ prompts; \d+ files failed/i,
+  sound: 'Uploaded 2/4 sounds; 2 files failed.',
+  video: 'Uploaded 2/4 videos; 2 files failed.',
+  prompt: 'Uploaded 2/4 prompts; 2 files failed.',
 };
-export const UPLOAD_TITLE_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
-  image: /^(upload ảnh|upload images)$/i,
-  sound: /^(upload âm thanh|upload sounds)$/i,
-  video: /^(upload video|upload videos)$/i,
-  prompt: /^(upload prompt|upload prompts)$/i,
+export const UPLOAD_TITLE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+  image: 'Upload images',
+  sound: 'Upload sounds',
+  video: 'Upload videos',
+  prompt: 'Upload prompts',
 };
-export const UPLOAD_CLOSE_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
-  image: /^(đóng hộp thoại upload ảnh|close upload images dialog)$/i,
-  sound: /^(đóng hộp thoại upload âm thanh|close upload sounds dialog)$/i,
-  video: /^(đóng hộp thoại upload video|close upload videos dialog)$/i,
-  prompt: /^(đóng hộp thoại upload prompt|close upload prompts dialog)$/i,
+export const UPLOAD_CLOSE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+  image: 'Close upload images dialog',
+  sound: 'Close upload sounds dialog',
+  video: 'Close upload videos dialog',
+  prompt: 'Close upload prompts dialog',
 };
-export const UPLOAD_SUBMIT_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
-  image: /^\s*upload \d+ (ảnh|images)\s*$/i,
-  sound: /^\s*upload \d+ (âm thanh|sounds)\s*$/i,
-  video: /^\s*upload \d+ (video|videos)\s*$/i,
-  prompt: /^\s*upload \d+ (prompt|prompts)\s*$/i,
-};
-export const DROPZONE_LABEL_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
-  image: /^(vùng chọn file ảnh|image file selection area)$/i,
-  sound: /^(vùng chọn file âm thanh|sound file selection area)$/i,
-  video: /^(vùng chọn file video|video file selection area)$/i,
-  prompt: /^(vùng chọn file prompt|prompt file selection area)$/i,
-};
-export const DROP_TITLE_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
-  image: /^(kéo thả ảnh vào đây|drag and drop images here)$/i,
-  sound: /^(kéo thả âm thanh vào đây|drag and drop sounds here)$/i,
-  video: /^(kéo thả video vào đây|drag and drop videos here)$/i,
-  prompt: /^(kéo thả file prompt vào đây|drag and drop prompt files here)$/i,
-};
-export const UPLOAD_SKIPPED = /bỏ qua \d+ file đã có trong danh sách|skipped \d+ files already in the list/i;
 
-export const CHECK_EMPTY = /file rỗng|file is empty/i;
-export const CHECK_UNSUPPORTED = /không được hỗ trợ cho ảnh|is not a supported image format/i;
-export const CHECK_TOO_LARGE = /lớn hơn giới hạn 25 MB của ảnh|larger than the 25 MB image limit/i;
-export const CHECK_NOT_FOUND = /không tìm thấy file|file not found/i;
-export const CHECK_DUPLICATE = /đã có ảnh cùng tên|an image with the same name already exists/i;
-export const CHECK_UNSUPPORTED_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
+export function uploadSubmitLabel(kind: LibraryKind, count: number): string {
+  return `Upload ${count} ${UPLOAD_NOUN_BY_KIND[kind]}`;
+}
+
+export const DROPZONE_LABEL_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+  image: 'Image file selection area',
+  sound: 'Sound file selection area',
+  video: 'Video file selection area',
+  prompt: 'Prompt file selection area',
+};
+export const DROP_TITLE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+  image: 'Drag and drop images here',
+  sound: 'Drag and drop sounds here',
+  video: 'Drag and drop videos here',
+  prompt: 'Drag and drop prompt files here',
+};
+export const UPLOAD_SKIPPED = 'files already in the list.';
+
+export const CHECK_EMPTY = 'File is empty.';
+export const CHECK_UNSUPPORTED = 'is not a supported image format.';
+export const CHECK_TOO_LARGE = 'Larger than the 25 MB image limit.';
+export const CHECK_NOT_FOUND = 'File not found.';
+export const CHECK_DUPLICATE =
+  'An image with the same name already exists; its name will be changed automatically.';
+export const CHECK_UNSUPPORTED_BY_KIND: Readonly<Record<LibraryKind, string>> = {
   image: CHECK_UNSUPPORTED,
-  sound: /định dạng \.\w+ không được hỗ trợ cho âm thanh|\.\w+ is not a supported sound format/i,
-  video: /định dạng \.\w+ không được hỗ trợ cho video|\.\w+ is not a supported video format/i,
-  prompt: /định dạng \.\w+ không được hỗ trợ cho prompt \(chỉ txt hoặc md\)|\.\w+ is not a supported prompt format \(txt or md only\)/i,
+  sound: 'is not a supported sound format.',
+  video: 'is not a supported video format.',
+  prompt: 'is not a supported prompt format (TXT or MD only).',
 };
-export const CHECK_TOO_LARGE_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
+export const CHECK_TOO_LARGE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
   image: CHECK_TOO_LARGE,
-  sound: /lớn hơn giới hạn 200 mb của âm thanh|larger than the 200 mb sound limit/i,
-  video: /lớn hơn giới hạn 2 gb của video|larger than the 2 gb video limit/i,
-  prompt: /lớn hơn giới hạn 256 kb của prompt|larger than the 256 kb prompt limit/i,
+  sound: 'Larger than the 200 MB sound limit.',
+  video: 'Larger than the 2 GB video limit.',
+  prompt: 'Larger than the 256 KB prompt limit.',
 };
-export const CHECK_DUPLICATE_BY_KIND: Readonly<Record<LibraryKind, RegExp>> = {
+export const CHECK_DUPLICATE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
   image: CHECK_DUPLICATE,
-  sound: /đã có âm thanh cùng tên, sẽ tự đổi tên khi thêm|a sound with the same name already exists; its name will be changed automatically/i,
-  video: /đã có video cùng tên, sẽ tự đổi tên khi thêm|a video with the same name already exists; its name will be changed automatically/i,
-  prompt: /đã có prompt cùng tên, sẽ tự đổi tên khi thêm|a prompt with the same name already exists; its name will be changed automatically/i,
+  sound: 'A sound with the same name already exists; its name will be changed automatically.',
+  video: 'A video with the same name already exists; its name will be changed automatically.',
+  prompt: 'A prompt with the same name already exists; its name will be changed automatically.',
 };
-export const CHECK_UNREADABLE = /không thể đọc nội dung|content cannot be read/i;
+export const CHECK_UNREADABLE = 'Content cannot be read';
 
-export const BADGE_VALID = /^(hợp lệ|valid)$/i;
-export const BADGE_RENAME = /^(đổi tên|rename)$/i;
-export const BADGE_INVALID = /^(không hợp lệ|invalid)$/i;
-export const BADGE_DONE = /^(xong|done)$/i;
-export const BADGE_ERROR = /^(lỗi|error)$/i;
+export const BADGE_VALID = 'VALID';
+export const BADGE_RENAME = 'RENAME';
+export const BADGE_INVALID = 'INVALID';
+export const BADGE_DONE = 'DONE';
+export const BADGE_ERROR = 'ERROR';
 
-export const IMAGE_UPDATED = /đã cập nhật ảnh|image updated/i;
-export const IMAGE_RENAMED = /tên ảnh đã được đổi thành|image renamed to/i;
-export const IMAGE_DELETED_ONE = /đã xóa “.+”|deleted “.+”/i;
-export const IMAGE_DELETED_MANY = /đã xóa \d+ ảnh|deleted \d+ images/i;
-export const IMAGE_TAG_EXISTS = /tag “.+” đã có|tag “.+” already exists/i;
-export const IMAGE_TAG_LIMIT = /tối đa 12 tag cho mỗi ảnh|at most 12 tags per image/i;
+export const IMAGE_UPDATED = 'Image updated.';
+export const IMAGE_RENAMED = 'Image renamed to';
+export const IMAGE_DELETED_ONE = 'Deleted “';
+export const IMAGE_DELETED_MANY = 'images.';
+export const IMAGE_TAG_EXISTS = 'already exists.';
+export const IMAGE_TAG_LIMIT = 'At most 12 tags per image.';
 
-export const SOUND_UPDATED = /đã cập nhật âm thanh|sound updated/i;
-export const SOUND_RENAMED = /đã đổi tên thành|renamed to/i;
-export const SOUND_DELETED_ONE = /đã xóa .+|deleted “.+”/i;
-export const SOUND_DELETED_MANY = /đã xóa \d+ âm thanh|deleted \d+ sounds/i;
-export const SOUND_TAG_EXISTS = /tag .+ đã được thêm|the tag .+ is already added/i;
-export const SOUND_TAG_LIMIT = /mỗi âm thanh có tối đa 12 tag|a sound can have up to 12 tags/i;
-export const SOUND_PLAY_FAILED = /không thể phát âm thanh này|could not play this sound/i;
+export const SOUND_UPDATED = 'Sound updated.';
+export const SOUND_RENAMED = 'Renamed to';
+export const SOUND_DELETED_ONE = 'Deleted “';
+export const SOUND_DELETED_MANY = 'sounds.';
+export const SOUND_TAG_EXISTS = 'is already added.';
+export const SOUND_TAG_LIMIT = 'A sound can have up to 12 tags.';
+export const SOUND_PLAY_FAILED = 'Could not play this sound.';
 
-export const VIDEO_UPDATED = /đã cập nhật video|video updated/i;
-export const VIDEO_RENAMED = /đã đổi tên thành|renamed to/i;
-export const VIDEO_DELETED_ONE = /đã xóa .+|deleted .+/i;
-export const VIDEO_DELETED_MANY = /đã xóa \d+ video|deleted \d+ videos/i;
-export const VIDEO_TAG_EXISTS = /tag .+ đã được thêm|the tag .+ is already added/i;
-export const VIDEO_TAG_LIMIT = /mỗi video có tối đa 12 tag|a video can have up to 12 tags/i;
-export const VIDEO_UNSUPPORTED_PREVIEW = /không thể phát video này trong ứng dụng|this video cannot be played in this app/i;
+export const VIDEO_UPDATED = 'Video updated.';
+export const VIDEO_RENAMED = 'Renamed to';
+export const VIDEO_DELETED_ONE = 'Deleted';
+export const VIDEO_DELETED_MANY = 'videos.';
+export const VIDEO_TAG_EXISTS = 'is already added.';
+export const VIDEO_TAG_LIMIT = 'A video can have up to 12 tags.';
+export const VIDEO_UNSUPPORTED_PREVIEW = 'This video cannot be played in this app.';
 
-export const PROMPT_SAVED = /đã lưu prompt|saved prompt/i;
-export const PROMPT_COPIED = /đã sao chép prompt|prompt copied/i;
-export const PROMPT_COPY_FAILED = /không sao chép được prompt|could not copy prompt/i;
-export const PROMPT_EMPTY_TEXT = /nội dung prompt không được để trống|prompt content cannot be empty/i;
-export const PROMPT_DELETED_ONE = /đã xóa prompt|prompt deleted/i;
-export const PROMPT_DELETED_MANY = /đã xóa \d+ prompt|deleted \d+ prompts/i;
-export const PROMPT_NAME_REQUIRED = /nhập tên prompt|enter a prompt name/i;
-export const PROMPT_TEXT_REQUIRED = /nhập nội dung prompt|enter prompt content/i;
+export const PROMPT_SAVED = 'Saved prompt';
+export const PROMPT_COPIED = 'Prompt copied.';
+export const PROMPT_COPY_FAILED = 'Could not copy prompt.';
+export const PROMPT_EMPTY_TEXT = 'Prompt content cannot be empty.';
+export const PROMPT_DELETED_ONE = 'Prompt deleted.';
+export const PROMPT_DELETED_MANY = 'prompts.';
+export const PROMPT_NAME_REQUIRED = 'Enter a prompt name.';
+export const PROMPT_TEXT_REQUIRED = 'Enter prompt content.';
 
-export const COLLECTION_NAME_REQUIRED = /nhập tên collection|enter a collection name/i;
-export const COLLECTION_EXISTS = /đã có collection trùng tên này|a collection with this name already exists/i;
-export const COLLECTION_INVALID = /hãy nhập tên và mô tả collection hợp lệ|enter a valid collection name and description/i;
-export const ORIGIN_LABEL = /^(nguồn|source)$/i;
-export const ORIGIN_UPLOAD = /^(đã tải lên từ thiết bị|uploaded from device)$/i;
-export const COLLECTION_DELETE_WARNING = /được giữ lại trong thư viện|will remain in the library/i;
-export const COLLECTION_EMPTY_WARNING = /collection này đang trống|this collection is empty/i;
-export const TAG_NAME_EXISTS = /tag này đã tồn tại|that tag already exists/i;
-export const TAG_NAME_INVALID = /nhập tên tag hợp lệ|enter a valid tag name/i;
-export const TAG_MERGE_WARNING = /sẽ chuyển sang|will use .+ instead/i;
-export const TAG_DELETE_WARNING = /bản thân tài nguyên không bị xóa|the resources themselves will remain/i;
+export const COLLECTION_NAME_REQUIRED = 'Enter a collection name.';
+export const COLLECTION_EXISTS = 'A collection with this name already exists.';
+export const COLLECTION_INVALID = 'Enter a valid collection name and description.';
+export const ORIGIN_LABEL = 'Source';
+export const ORIGIN_UPLOAD = 'Uploaded from device';
+export const COLLECTION_DELETE_WARNING = 'will remain in the library';
+export const COLLECTION_EMPTY_WARNING = 'This collection is empty.';
+export const TAG_NAME_EXISTS = 'That tag already exists.';
+export const TAG_NAME_INVALID = 'Enter a valid tag name.';
+export const TAG_MERGE_WARNING = 'The original tag will disappear.';
+export const TAG_DELETE_WARNING = 'The resources themselves will remain.';
 
-export const IMAGE_UNSUPPORTED = /định dạng ảnh không được hỗ trợ|the image format is not supported/i;
-export const IMAGE_TOO_LARGE_ERROR = /ảnh lớn hơn giới hạn 25 MB|the image is larger than the 25 MB limit/i;
-export const IMAGE_UNREADABLE = /không thể đọc ảnh|the image could not be read/i;
-export const SOUND_UNSUPPORTED = /định dạng âm thanh không được hỗ trợ|this sound format is not supported/i;
-export const SOUND_TOO_LARGE_ERROR = /âm thanh vượt quá 200 MB|sound exceeds the 200 MB limit/i;
-export const SOUND_UNREADABLE = /không thể đọc âm thanh|this sound could not be read/i;
-export const VIDEO_UNSUPPORTED = /định dạng video không được hỗ trợ|this video format is not supported/i;
-export const VIDEO_TOO_LARGE_ERROR = /video vượt quá giới hạn 2 GB|video exceeds the 2 GB limit/i;
-export const VIDEO_UNREADABLE = /không thể đọc video|this video could not be read/i;
-export const PROMPT_UNSUPPORTED = /chỉ hỗ trợ file txt hoặc md|only txt and md files are supported/i;
-export const PROMPT_TOO_LARGE_ERROR = /prompt vượt quá giới hạn 256 KB|prompt exceeds the 256 KB limit/i;
-export const PROMPT_UNREADABLE = /không thể đọc nội dung prompt|prompt content could not be read/i;
-export const PROMPT_NAME_INVALID = /tên prompt không hợp lệ|prompt name is invalid/i;
-export const PROMPT_NAME_TOO_LONG = /tên prompt tối đa 120 ký tự|prompt name must be at most 120 characters/i;
-export const PROMPT_TEXT_TOO_LARGE = /nội dung prompt tối đa 256 kb|prompt content must be at most 256 kb/i;
-export const GENERIC_ERROR = /không thể hoàn tất thao tác|the operation could not be completed/i;
-export const FILE_IO_ERROR = /không thể đọc hoặc ghi file ảnh|the image file could not be read or written/i;
+export const IMAGE_UNSUPPORTED = 'The image format is not supported.';
+export const IMAGE_TOO_LARGE_ERROR = 'The image is larger than the 25 MB limit.';
+export const IMAGE_UNREADABLE = 'The image could not be read.';
+export const SOUND_UNSUPPORTED = 'This sound format is not supported.';
+export const SOUND_TOO_LARGE_ERROR = 'Sound exceeds the 200 MB limit.';
+export const SOUND_UNREADABLE = 'This sound could not be read.';
+export const VIDEO_UNSUPPORTED = 'This video format is not supported.';
+export const VIDEO_TOO_LARGE_ERROR = 'Video exceeds the 2 GB limit.';
+export const VIDEO_UNREADABLE = 'This video could not be read.';
+export const PROMPT_UNSUPPORTED = 'Only TXT and MD files are supported.';
+export const PROMPT_TOO_LARGE_ERROR = 'Prompt exceeds the 256 KB limit.';
+export const PROMPT_UNREADABLE = 'Prompt content could not be read.';
+export const PROMPT_NAME_INVALID = 'Prompt name is invalid.';
+export const PROMPT_NAME_TOO_LONG = 'Prompt name must be at most 120 characters.';
+export const PROMPT_TEXT_TOO_LARGE = 'Prompt content must be at most 256 KB.';
+export const GENERIC_ERROR = 'The operation could not be completed.';
+export const FILE_IO_ERROR = 'The image file could not be read or written.';

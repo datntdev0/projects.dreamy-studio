@@ -1,54 +1,59 @@
-import { access, mkdir, readFile, writeFile, readdir } from "node:fs/promises";
-import { expect, type Locator, type Page } from "@playwright/test";
-import { DatabaseSync } from "node:sqlite";
-import { createHash } from "node:crypto";
-import { dirname, join } from "node:path";
-import { GuidelinesPage, passageLabel, TranslationDictionaryPage, TranslationReviewPage, TranslationRunPage, TranslationWarningsView, TranslationWorkspacePage, type DictionaryColumn, type TranslationStep, type WarningFilterKind } from "../pages/translation.ts";
-import type { AppSession } from "./app.ts";
-import type { Ui } from "./fixtures.ts";
-import { openFromSplash } from "./flows.ts";
-import type { PickerStub } from "./picker.ts";
-import { showPipelineHistory, seedPipelines, openReadOnly, AZURE, HARBOR, EMBER, type SeedPipeline } from "./pipeline.ts";
-import type { Sandbox } from "./sandbox.ts";
-import { readWorkspace, WORKSPACE_DB_FILE, chapterFileName, novelDir, readParagraphs, seedWorkspace, readChapterFile, type ChapterRecord, type SeedOptions, type SeedChapter, type SeedNovel } from "./workspaces.ts";
+import { createHash } from 'node:crypto';
+import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
-export const SAMPLE_TITLE = "Azure Chronicle";
+import { expect, type Locator, type Page } from '@playwright/test';
+
+// prettier-ignore
+import { type DictionaryColumn, GuidelinesPage, passageLabel, TranslationDictionaryPage, TranslationReviewPage, TranslationRunPage, type TranslationStep, TranslationWarningsView, TranslationWorkspacePage, type WarningFilterKind } from '../pages/translation.ts';
+import type { AppSession } from './app.ts';
+import type { Ui } from './fixtures.ts';
+import { openFromSplash } from './flows.ts';
+import type { PickerStub } from './picker.ts';
+// prettier-ignore
+import { AZURE, EMBER, HARBOR, openReadOnly, type SeedPipeline,seedPipelines, showPipelineHistory } from './pipeline.ts';
+import type { Sandbox } from './sandbox.ts';
+// prettier-ignore
+import { chapterFileName, type ChapterRecord, novelDir, readChapterFile, readParagraphs, readWorkspace, type SeedChapter, type SeedNovel,type SeedOptions, seedWorkspace, WORKSPACE_DB_FILE } from './workspaces.ts';
+
+export const SAMPLE_TITLE = 'Azure Chronicle';
 
 export const SAMPLE_TERMS = {
-  hero: "Lin Feng",
-  healer: "Su Yan",
-  master: "Master Chen",
-  sect: "Sky Sword Sect",
-  city: "Azure City",
-  blade: "Frost Blade",
+  hero: 'Lin Feng',
+  healer: 'Su Yan',
+  master: 'Master Chen',
+  sect: 'Sky Sword Sect',
+  city: 'Azure City',
+  blade: 'Frost Blade',
 } as const;
 
 const STORY: readonly SeedChapter[] = [
   {
-    title: "The Arrival",
+    title: 'The Arrival',
     paragraphs: [
-      "Lin Feng arrived at the gates of Azure City at dawn.",
-      "Master Chen, the leader of the Sky Sword Sect, watched him from the tower.",
-      "Lin Feng carried the Frost Blade, a relic left by his late father.",
-      "He was twenty years old and worked as a blacksmith.",
+      'Lin Feng arrived at the gates of Azure City at dawn.',
+      'Master Chen, the leader of the Sky Sword Sect, watched him from the tower.',
+      'Lin Feng carried the Frost Blade, a relic left by his late father.',
+      'He was twenty years old and worked as a blacksmith.',
     ],
   },
   {
-    title: "The Trial",
+    title: 'The Trial',
     paragraphs: [
-      "The Sky Sword Sect held its trial in the courtyard of Azure City.",
-      "Master Chen asked Lin Feng to show the Frost Blade to the elders.",
-      "Su Yan, a healer of the sect, whispered that the blade was cursed.",
-      "Lin Feng ignored her warning and stepped forward.",
+      'The Sky Sword Sect held its trial in the courtyard of Azure City.',
+      'Master Chen asked Lin Feng to show the Frost Blade to the elders.',
+      'Su Yan, a healer of the sect, whispered that the blade was cursed.',
+      'Lin Feng ignored her warning and stepped forward.',
     ],
   },
   {
-    title: "The Duel",
+    title: 'The Duel',
     paragraphs: [
-      "Su Yan, also known as the White Lotus, joined the duel at noon.",
-      "Lin Feng fought Master Chen beneath the tower of Azure City.",
-      "The Frost Blade shattered the sect banner of the Sky Sword Sect.",
-      "Master Chen conceded and Lin Feng became a disciple.",
+      'Su Yan, also known as the White Lotus, joined the duel at noon.',
+      'Lin Feng fought Master Chen beneath the tower of Azure City.',
+      'The Frost Blade shattered the sect banner of the Sky Sword Sect.',
+      'Master Chen conceded and Lin Feng became a disciple.',
     ],
   },
 ];
@@ -64,7 +69,10 @@ export function sampleChapters(count = 3): SeedChapter[] {
     const seq = index + 1;
     chapters.push({
       title: `Chapter ${seq}`,
-      paragraphs: [`Chapter ${seq} opens with Lin Feng on the road.`, `Chapter ${seq} closes at Azure City.`],
+      paragraphs: [
+        `Chapter ${seq} opens with Lin Feng on the road.`,
+        `Chapter ${seq} closes at Azure City.`,
+      ],
     });
   }
   return chapters;
@@ -78,16 +86,19 @@ export interface SampleNovelOptions {
 }
 
 export function sampleNovel(options: SampleNovelOptions = {}): SeedNovel {
-  const chapters = typeof options.chapters === "number" || options.chapters === undefined ? sampleChapters(options.chapters ?? 3) : options.chapters;
+  const chapters =
+    typeof options.chapters === 'number' || options.chapters === undefined
+      ? sampleChapters(options.chapters ?? 3)
+      : options.chapters;
   return {
     title: options.title ?? SAMPLE_TITLE,
-    lang: options.lang ?? "ZH",
+    lang: options.lang ?? 'ZH',
     tags: options.tags,
     chapters,
   };
 }
 
-export const TRANSLATION_WORKSPACE_NAME = "translation";
+export const TRANSLATION_WORKSPACE_NAME = 'translation';
 
 export interface TranslationOpenOptions {
   readonly novel?: string;
@@ -100,7 +111,7 @@ export interface OpenedTranslation {
   readonly seeded: SeededTranslationWorkspace;
   readonly novel: string;
   readonly novelId: number;
-  readonly chapters: SeededNovel["chapters"];
+  readonly chapters: SeededNovel['chapters'];
 }
 
 export const DEFAULT_TRANSLATION_SEED: TranslationWorkspaceSeed = { novels: [sampleNovel()] };
@@ -110,13 +121,15 @@ export async function showNovelTree(ui: Ui, novel: string): Promise<void> {
     await ui.main.showNovels();
   }
   await expect(ui.main.explorer.novel(novel)).toBeVisible();
-  if (!(await ui.main.explorer.group(novel).getByTestId("novel-explorer-translation").isVisible())) {
+  if (
+    !(await ui.main.explorer.group(novel).getByTestId('novel-explorer-translation').isVisible())
+  ) {
     await ui.main.explorer.novel(novel).click();
   }
 }
 
 export function translationEntry(ui: Ui, novel: string): Locator {
-  return ui.main.explorer.group(novel).getByTestId("novel-explorer-translation");
+  return ui.main.explorer.group(novel).getByTestId('novel-explorer-translation');
 }
 
 export async function showTranslation(ui: Ui, novel: string): Promise<void> {
@@ -133,7 +146,7 @@ export async function selectTarget(ui: Ui, target: TranslationTarget): Promise<v
 
 export async function goToStep(ui: Ui, step: TranslationStep): Promise<void> {
   await ui.main.translation.step(step).click();
-  await expect(ui.main.translation.step(step)).toHaveAttribute("aria-current", "true");
+  await expect(ui.main.translation.step(step)).toHaveAttribute('aria-current', 'true');
   await expect(ui.main.translation.stepRoot(step)).toBeVisible();
 }
 
@@ -148,7 +161,7 @@ export async function openTranslation(
   const folder = sandbox.workspace(TRANSLATION_WORKSPACE_NAME);
   const seeded = await seedTranslationWorkspace(folder, seed, options.seedOptions);
   await openFromSplash(ui, picker, folder);
-  const novel = options.novel ?? seed.novels[0]?.title ?? "";
+  const novel = options.novel ?? seed.novels[0]?.title ?? '';
   const place = seeded.novels[novel];
   if (place === undefined) {
     throw new Error(`the seed has no novel titled ${novel}`);
@@ -157,26 +170,35 @@ export async function openTranslation(
   if (options.target !== undefined) {
     await selectTarget(ui, options.target);
   }
-  if (step !== undefined && (seed.novels.find((item) => item.title === novel)?.chapters?.length ?? 0) > 0) {
+  if (
+    step !== undefined &&
+    (seed.novels.find((item) => item.title === novel)?.chapters?.length ?? 0) > 0
+  ) {
     await goToStep(ui, step);
   }
   return { folder, seeded, novel, novelId: place.id, chapters: place.chapters };
 }
 
 export async function openRunDialog(ui: Ui): Promise<void> {
-  await goToStep(ui, "trans");
-  const start = ui.main.translation.root.getByTestId("novel-translation-pipeline-start");
+  await goToStep(ui, 'trans');
+  const start = ui.main.translation.root.getByTestId('novel-translation-pipeline-start');
   await expect(start).toBeEnabled();
   await start.click();
   await expect(ui.main.translation.runDialog.panel).toBeVisible();
 }
 
-export async function reopenRunStep(ui: Ui, app: AppSession, picker: PickerStub, folder: string, novel: string): Promise<void> {
+export async function reopenRunStep(
+  ui: Ui,
+  app: AppSession,
+  picker: PickerStub,
+  folder: string,
+  novel: string,
+): Promise<void> {
   await app.restart();
   await expect(ui.splash.root).toBeVisible();
   await openFromSplash(ui, picker, folder);
   await showTranslation(ui, novel);
-  await goToStep(ui, "trans");
+  await goToStep(ui, 'trans');
 }
 
 export async function translateChapters(ui: Ui, seqs: readonly number[]): Promise<void> {
@@ -184,11 +206,11 @@ export async function translateChapters(ui: Ui, seqs: readonly number[]): Promis
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
   if (first === undefined || last === undefined || last - first + 1 !== sorted.length) {
-    throw new Error("translateChapters needs a contiguous range of chapters");
+    throw new Error('translateChapters needs a contiguous range of chapters');
   }
   const dialog = ui.main.translation.runDialog;
   await openRunDialog(ui);
-  await dialog.mode("range").click();
+  await dialog.mode('range').click();
   await dialog.from.fill(String(first));
   await dialog.from.blur();
   await dialog.to.fill(String(last));
@@ -200,39 +222,39 @@ export async function translateChapters(ui: Ui, seqs: readonly number[]): Promis
 }
 
 export function chapterRow(ui: Ui, seq: number): Locator {
-  return ui.main.translation.root.getByTestId("novel-translation-pipeline-row").nth(seq - 1);
+  return ui.main.translation.root.getByTestId('novel-translation-pipeline-row').nth(seq - 1);
 }
 
 export function chapterStatus(ui: Ui, seq: number): Locator {
-  return chapterRow(ui, seq).getByTestId("novel-translation-pipeline-status");
+  return chapterRow(ui, seq).getByTestId('novel-translation-pipeline-status');
 }
 
-export const ZH_NOVEL = "Azure Chronicle";
-export const VI_NOVEL = "Bến Cảng Sớm";
-export const EN_NOVEL = "Harbor Lights";
-export const EMPTY_NOVEL = "Blank Scroll";
+export const ZH_NOVEL = 'Azure Chronicle';
+export const VI_NOVEL = 'Bến Cảng Sớm';
+export const EN_NOVEL = 'Harbor Lights';
+export const EMPTY_NOVEL = 'Blank Scroll';
 
-export const STEP_LABELS: Readonly<Record<TranslationStep, RegExp>> = {
-  dict: /^(từ điển|dictionary)$/i,
-  guide: /^(hướng dẫn dịch|guidelines)$/i,
-  trans: /^(dịch|translate)$/i,
-  result: /^(kết quả|results)$/i,
-  warn: /^(cảnh báo|warnings)$/i,
+export const STEP_LABELS: Readonly<Record<TranslationStep, string>> = {
+  dict: 'Dictionary',
+  guide: 'Guidelines',
+  trans: 'Translate',
+  result: 'Results',
+  warn: 'Warnings',
 };
 
 export const TARGET_LABELS = {
-  VI: /^(tiếng việt|vietnamese)$/i,
-  EN: /^(tiếng anh|english)$/i,
+  VI: 'Vietnamese',
+  EN: 'English',
 } as const;
 
-export const SUMMARY_DICT_TWO = /^(2 mục|2 entries)$/i;
-export const SUMMARY_DICT_ONE = /^(1 mục|1 entries|1 entry)$/i;
-export const SUMMARY_GUIDE_WRITTEN = /^(đã viết|written)$/i;
-export const SUMMARY_GUIDE_EMPTY = /^(trống|empty)$/i;
-export const SUMMARY_TRANS = /^\d+\/3 (chương|chapters)$/i;
-export const SUMMARY_REVIEWED = /^(đã rà soát hết|all reviewed)$/i;
-export const SUMMARY_WARN_NONE = /^(không có|none)$/i;
-export const EMPTY_TITLE = /chưa có chương nào để dịch|no chapters to translate yet/i;
+export const SUMMARY_DICT_TWO = '2 entries';
+export const SUMMARY_DICT_ONE = '1 entries';
+export const SUMMARY_GUIDE_WRITTEN = 'Written';
+export const SUMMARY_GUIDE_EMPTY = 'Empty';
+export const SUMMARY_TRANS = '0/3 chapters';
+export const SUMMARY_REVIEWED = 'All reviewed';
+export const SUMMARY_WARN_NONE = 'None';
+export const EMPTY_TITLE = 'No chapters to translate yet';
 
 export function workspacePage(ui: Ui): TranslationWorkspacePage {
   return new TranslationWorkspacePage(ui.main.translation.root.page());
@@ -241,31 +263,31 @@ export function workspacePage(ui: Ui): TranslationWorkspacePage {
 export function workspaceSeed(): TranslationWorkspaceSeed {
   return {
     novels: [
-      sampleNovel({ title: ZH_NOVEL, lang: "ZH" }),
-      sampleNovel({ title: VI_NOVEL, lang: "VI", chapters: 1 }),
-      sampleNovel({ title: EN_NOVEL, lang: "EN", chapters: 1 }),
-      { title: EMPTY_NOVEL, lang: "ZH" },
+      sampleNovel({ title: ZH_NOVEL, lang: 'ZH' }),
+      sampleNovel({ title: VI_NOVEL, lang: 'VI', chapters: 1 }),
+      sampleNovel({ title: EN_NOVEL, lang: 'EN', chapters: 1 }),
+      { title: EMPTY_NOVEL, lang: 'ZH' },
     ],
     translations: [
       {
         novel: ZH_NOVEL,
-        target: "VI",
-        guidelines: "Keep a formal, archaic tone.",
+        target: 'VI',
+        guidelines: 'Keep a formal, archaic tone.',
         dictionary: [
-          { src: "Lin Feng", dst: "Lâm Phong", type: "name" },
-          { src: "Azure City", dst: "Thành Thanh Lam", type: "place" },
+          { src: 'Lin Feng', dst: 'Lâm Phong', type: 'name' },
+          { src: 'Azure City', dst: 'Thành Thanh Lam', type: 'place' },
         ],
       },
       {
         novel: ZH_NOVEL,
-        target: "EN",
-        dictionary: [{ src: "Lin Feng", dst: "Lin Feng", type: "name" }],
+        target: 'EN',
+        dictionary: [{ src: 'Lin Feng', dst: 'Lin Feng', type: 'name' }],
       },
     ],
   };
 }
 
-export const DICT_NO_MATCH_HINT = /thử từ khóa khác|try another keyword/i;
+export const DICT_NO_MATCH_HINT = 'Try another keyword.';
 
 export interface OpenedDictionary {
   readonly folder: string;
@@ -280,8 +302,8 @@ export interface DictionaryDraft {
   readonly note?: string;
 }
 
-export function dictionaryCount(shown: number, total: number): RegExp {
-  return new RegExp(`^\\s*${shown}/${total}\\s`);
+export function dictionaryCount(shown: number, total: number): string {
+  return `${shown}/${total} entries`;
 }
 
 export async function openDictionary(
@@ -289,17 +311,31 @@ export async function openDictionary(
   picker: PickerStub,
   sandbox: Sandbox,
   entries: Readonly<Partial<Record<TranslationTarget, readonly SeedDictEntry[]>>>,
-  target: TranslationTarget = "VI",
+  target: TranslationTarget = 'VI',
 ): Promise<OpenedDictionary> {
   const novel = sampleNovel();
-  const translations = (Object.keys(entries) as TranslationTarget[]).map((key) => ({ novel: novel.title, target: key, dictionary: entries[key] }));
-  const opened = await openTranslation(ui, picker, sandbox, { novels: [novel], translations }, "dict", { target });
+  const translations = (Object.keys(entries) as TranslationTarget[]).map((key) => ({
+    novel: novel.title,
+    target: key,
+    dictionary: entries[key],
+  }));
+  const opened = await openTranslation(
+    ui,
+    picker,
+    sandbox,
+    { novels: [novel], translations },
+    'dict',
+    { target },
+  );
   const dictionary = new TranslationDictionaryPage(ui.main.translation.host.page());
   await expect(dictionary.root).toBeVisible();
   return { folder: opened.folder, novel: opened.novel, dictionary };
 }
 
-export async function fillDraft(dictionary: TranslationDictionaryPage, draft: Partial<DictionaryDraft>): Promise<void> {
+export async function fillDraft(
+  dictionary: TranslationDictionaryPage,
+  draft: Partial<DictionaryDraft>,
+): Promise<void> {
   if (draft.src !== undefined) {
     await dictionary.draftSrc.fill(draft.src);
   }
@@ -314,34 +350,48 @@ export async function fillDraft(dictionary: TranslationDictionaryPage, draft: Pa
   }
 }
 
-export async function startDraft(dictionary: TranslationDictionaryPage, draft: Partial<DictionaryDraft>): Promise<void> {
+export async function startDraft(
+  dictionary: TranslationDictionaryPage,
+  draft: Partial<DictionaryDraft>,
+): Promise<void> {
   await dictionary.create.click();
   await expect(dictionary.draftSrc).toBeVisible();
   await fillDraft(dictionary, draft);
 }
 
-export async function addEntry(dictionary: TranslationDictionaryPage, draft: Partial<DictionaryDraft>): Promise<void> {
+export async function addEntry(
+  dictionary: TranslationDictionaryPage,
+  draft: Partial<DictionaryDraft>,
+): Promise<void> {
   await startDraft(dictionary, draft);
   await dictionary.add.click();
 }
 
-export async function editCell(dictionary: TranslationDictionaryPage, row: Locator, column: DictionaryColumn, value: string): Promise<void> {
+export async function editCell(
+  dictionary: TranslationDictionaryPage,
+  row: Locator,
+  column: DictionaryColumn,
+  value: string,
+): Promise<void> {
   await dictionary.cell(row, column).dblclick();
   await expect(dictionary.cellInput).toBeVisible();
-  if (column === "type") {
+  if (column === 'type') {
     await dictionary.cellInput.selectOption(value);
     return;
   }
   await dictionary.cellInput.fill(value);
-  await dictionary.cellInput.press("Enter");
+  await dictionary.cellInput.press('Enter');
 }
 
-export async function removeEntry(dictionary: TranslationDictionaryPage, row: Locator): Promise<void> {
+export async function removeEntry(
+  dictionary: TranslationDictionaryPage,
+  row: Locator,
+): Promise<void> {
   await dictionary.menu(row).click();
   await dictionary.deleteAction.click();
 }
 
-export const GUIDELINES_SAVED = /đã lưu hướng dẫn|saved guidelines/i;
+export const GUIDELINES_SAVED = 'Saved guidelines.';
 
 export function guidelinesOf(page: Page): GuidelinesPage {
   return new GuidelinesPage(page);
@@ -354,18 +404,25 @@ export async function saveGuidelines(guide: GuidelinesPage, text?: string): Prom
   await guide.save.click();
 }
 
-export async function reopenGuidelines(ui: Ui, app: AppSession, picker: PickerStub, folder: string, novel: string, target: TranslationTarget): Promise<GuidelinesPage> {
+export async function reopenGuidelines(
+  ui: Ui,
+  app: AppSession,
+  picker: PickerStub,
+  folder: string,
+  novel: string,
+  target: TranslationTarget,
+): Promise<GuidelinesPage> {
   await app.restart();
   await expect(ui.splash.root).toBeVisible();
   await openFromSplash(ui, picker, folder);
   await showTranslation(ui, novel);
   await selectTarget(ui, target);
-  await goToStep(ui, "guide");
+  await goToStep(ui, 'guide');
   return guidelinesOf(app.page);
 }
 
-export const RUN_NOVEL = "Azure Chronicle";
-export const RUN_TARGET: TranslationTarget = "VI";
+export const RUN_NOVEL = 'Azure Chronicle';
+export const RUN_TARGET: TranslationTarget = 'VI';
 export const RUN_CHAPTER_COUNT = 5;
 
 export function runSeed(translated: readonly SeedTranslatedChapter[]): TranslationWorkspaceSeed {
@@ -383,11 +440,19 @@ export function chapterRecords(folder: string): Promise<ChapterRecord[]> {
   return readWorkspace(folder, (db) => db.chapters(RUN_NOVEL));
 }
 
-export function savedChapter(folder: string, novelId: number, chapterId: string): Promise<TranslatedChapterRecord | null> {
+export function savedChapter(
+  folder: string,
+  novelId: number,
+  chapterId: string,
+): Promise<TranslatedChapterRecord | null> {
   return readTranslatedChapter(folder, novelId, RUN_TARGET, chapterId);
 }
 
-export async function hasTranslationFile(folder: string, novelId: number, chapterId: string): Promise<boolean> {
+export async function hasTranslationFile(
+  folder: string,
+  novelId: number,
+  chapterId: string,
+): Promise<boolean> {
   try {
     await access(translationChapterPath(folder, novelId, RUN_TARGET, chapterId));
     return true;
@@ -406,29 +471,29 @@ export async function backToTranslation(ui: Ui): Promise<void> {
   await showTranslation(ui, RUN_NOVEL);
 }
 
-export const REVIEW_TARGET = "VI";
+export const REVIEW_TARGET = 'VI';
 
 export const FIRST_CHAPTER = [
-  "Lam Phong den cong Thanh Lam luc binh minh.",
-  "Truong lao Tran, thu linh cua mon phai, nhin cau tu thap canh.",
-  "Mot thanh kiem bang la di vat cua cha cau.",
-  "Cau hai muoi tuoi va lam nghe ren.",
+  'Lam Phong den cong Thanh Lam luc binh minh.',
+  'Truong lao Tran, thu linh cua mon phai, nhin cau tu thap canh.',
+  'Mot thanh kiem bang la di vat cua cha cau.',
+  'Cau hai muoi tuoi va lam nghe ren.',
 ] as const;
 
 export const SECOND_CHAPTER = [
-  "Mon phai to chuc thu thach tai san dinh.",
-  "Truong lao Tran bao Lam Phong trinh kiem cho cac truong lao.",
-  "Tu Yen thi tham rang thanh kiem bi nguyen rua.",
-  "Lam Phong lo loi canh bao va buoc toi.",
+  'Mon phai to chuc thu thach tai san dinh.',
+  'Truong lao Tran bao Lam Phong trinh kiem cho cac truong lao.',
+  'Tu Yen thi tham rang thanh kiem bi nguyen rua.',
+  'Lam Phong lo loi canh bao va buoc toi.',
 ] as const;
 
 export const REVIEW_SEED: TranslationWorkspaceSeed = {
   novels: [sampleNovel()],
   translations: [
     {
-      novel: "Azure Chronicle",
+      novel: 'Azure Chronicle',
       target: REVIEW_TARGET,
-      dictionary: [{ src: "Lin Feng", dst: "Lam Phong", type: "name" }],
+      dictionary: [{ src: 'Lin Feng', dst: 'Lam Phong', type: 'name' }],
       chapters: [
         { chapter: 1, paragraphs: FIRST_CHAPTER, staleSource: [2] },
         { chapter: 2, paragraphs: SECOND_CHAPTER },
@@ -441,9 +506,9 @@ export const NOTE_SEED: TranslationWorkspaceSeed = {
   novels: [sampleNovel()],
   translations: [
     {
-      novel: "Azure Chronicle",
+      novel: 'Azure Chronicle',
       target: REVIEW_TARGET,
-      chapters: [{ chapter: 1, paragraphs: FIRST_CHAPTER, notes: { 2: "Check the sect title" } }],
+      chapters: [{ chapter: 1, paragraphs: FIRST_CHAPTER, notes: { 2: 'Check the sect title' } }],
     },
   ],
 };
@@ -456,11 +521,14 @@ export function review(app: AppSession): TranslationReviewPage {
 }
 
 export async function openResult(ui: Ui, app: AppSession): Promise<TranslationReviewPage> {
-  await goToStep(ui, "result");
+  await goToStep(ui, 'result');
   return review(app);
 }
 
-export async function storedParagraphs(opened: OpenedTranslation, chapter: number): Promise<readonly TranslatedParagraphRecord[]> {
+export async function storedParagraphs(
+  opened: OpenedTranslation,
+  chapter: number,
+): Promise<readonly TranslatedParagraphRecord[]> {
   const id = opened.chapters[chapter];
   if (id === undefined) {
     throw new Error(`the seed has no chapter ${chapter}`);
@@ -471,19 +539,19 @@ export async function storedParagraphs(opened: OpenedTranslation, chapter: numbe
 }
 
 export async function reopenResult(ui: Ui, app: AppSession): Promise<TranslationReviewPage> {
-  await goToStep(ui, "dict");
+  await goToStep(ui, 'dict');
   return openResult(ui, app);
 }
 
 export const WARNINGS_NOVEL = SAMPLE_TITLE;
-export const WARNINGS_TARGET = "VI";
+export const WARNINGS_TARGET = 'VI';
 
 export const FILTER_LABELS: Readonly<Record<WarningFilterKind, string>> = {
-  all: "(Tất cả|All)",
-  dict: "(Từ điển|Dictionary)",
+  all: 'All',
+  dict: 'Dictionary',
 };
 
-export const HERO_TEXT = "Lâm Phong mang thanh Kiếm Băng, di vật của người cha quá cố.";
+export const HERO_TEXT = 'Lâm Phong mang thanh Kiếm Băng, di vật của người cha quá cố.';
 
 export const DICTIONARY_SEED: TranslationWorkspaceSeed = {
   novels: [sampleNovel()],
@@ -491,15 +559,15 @@ export const DICTIONARY_SEED: TranslationWorkspaceSeed = {
     {
       novel: WARNINGS_NOVEL,
       target: WARNINGS_TARGET,
-      dictionary: [{ src: "Lin Feng", dst: "Lâm Phong", type: "name" }],
+      dictionary: [{ src: 'Lin Feng', dst: 'Lâm Phong', type: 'name' }],
       chapters: [
         {
           chapter: 1,
           paragraphs: [
-            "Lâm Phong đến cổng thành Azure vào lúc bình minh.",
-            "Thầy Trần, thủ lĩnh của Tông Thiên Kiếm, quan sát hắn từ tháp.",
-            "Hắn mang thanh Kiếm Băng, di vật của người cha quá cố.",
-            "Hắn hai mươi tuổi và làm nghề thợ rèn.",
+            'Lâm Phong đến cổng thành Azure vào lúc bình minh.',
+            'Thầy Trần, thủ lĩnh của Tông Thiên Kiếm, quan sát hắn từ tháp.',
+            'Hắn mang thanh Kiếm Băng, di vật của người cha quá cố.',
+            'Hắn hai mươi tuổi và làm nghề thợ rèn.',
           ],
         },
       ],
@@ -513,24 +581,24 @@ export const FILTER_SEED: TranslationWorkspaceSeed = {
     {
       novel: WARNINGS_NOVEL,
       target: WARNINGS_TARGET,
-      dictionary: [{ src: "Lin Feng", dst: "Lâm Phong", type: "name" }],
+      dictionary: [{ src: 'Lin Feng', dst: 'Lâm Phong', type: 'name' }],
       chapters: [
         {
           chapter: 1,
           paragraphs: [
-            "Lâm Phong đến cổng thành Azure lúc bình minh.",
-            "Thầy Trần quan sát hắn từ trên tháp.",
-            "Hắn mang thanh Kiếm Băng.",
-            "Hắn hai mươi tuổi.",
+            'Lâm Phong đến cổng thành Azure lúc bình minh.',
+            'Thầy Trần quan sát hắn từ trên tháp.',
+            'Hắn mang thanh Kiếm Băng.',
+            'Hắn hai mươi tuổi.',
           ],
         },
         {
           chapter: 2,
           paragraphs: [
-            "Tông môn tổ chức thử thách ở sân.",
-            "Thầy Trần yêu cầu hắn trình kiếm.",
-            "Tô Yến thì thầm rằng thanh kiếm bị nguyền.",
-            "Hắn phớt lờ lời cảnh báo.",
+            'Tông môn tổ chức thử thách ở sân.',
+            'Thầy Trần yêu cầu hắn trình kiếm.',
+            'Tô Yến thì thầm rằng thanh kiếm bị nguyền.',
+            'Hắn phớt lờ lời cảnh báo.',
           ],
         },
       ],
@@ -542,20 +610,22 @@ export function warningsView(ui: Ui): TranslationWarningsView {
   return new TranslationWarningsView(ui.main.translation.root.page());
 }
 
-export function filterText(kind: WarningFilterKind, count: number): RegExp {
-  return new RegExp(`^${FILTER_LABELS[kind]}\\s*${count}$`, "i");
+export function filterText(kind: WarningFilterKind, count: number): string {
+  return `${FILTER_LABELS[kind]} ${count}`;
 }
 
-export function flaggedToast(count: number): RegExp {
-  return new RegExp(`(đã thêm vào từ điển\\. ${count} đoạn cần rà soát|added to the dictionary\\. ${count} passages need review)`, "i");
+export function flaggedToast(count: number): string {
+  return `Added to the dictionary. ${count} passages need review.`;
 }
 
 export function expectedLabels(warnings: readonly ExpectedWarning[]): string[] {
-  return warnings.map((warning) => `${warning.kind}|${passageLabel(warning.seq, warning.n)}`).sort();
+  return warnings
+    .map((warning) => `${warning.kind}|${passageLabel(warning.seq, warning.n)}`)
+    .sort();
 }
 
 function readLabels(cards: Element[]): string[] {
-  return cards.map((card) => card.querySelector(".chip")?.textContent?.trim() ?? "");
+  return cards.map((card) => card.querySelector('.chip')?.textContent?.trim() ?? '');
 }
 
 export async function shownLabels(view: TranslationWarningsView): Promise<string[]> {
@@ -565,7 +635,7 @@ export async function shownLabels(view: TranslationWarningsView): Promise<string
 
 export async function addDictionaryEntry(ui: Ui, src: string, dst: string): Promise<void> {
   const view = warningsView(ui);
-  await goToStep(ui, "dict");
+  await goToStep(ui, 'dict');
   await view.dictNew.click();
   await view.dictSource.fill(src);
   await view.dictTranslation.fill(dst);
@@ -574,15 +644,20 @@ export async function addDictionaryEntry(ui: Ui, src: string, dst: string): Prom
 
 export async function deleteFirstDictionaryEntry(ui: Ui): Promise<void> {
   const view = warningsView(ui);
-  await goToStep(ui, "dict");
-  await view.dictRows.first().getByTestId("datatable-row-menu").click();
+  await goToStep(ui, 'dict');
+  await view.dictRows.first().getByTestId('datatable-row-menu').click();
   await view.deleteAction.click();
   await expect(ui.main.toast(DICT_DELETED)).toBeVisible();
 }
 
-export async function editTranslatedParagraph(ui: Ui, seq: number, n: number, text: string): Promise<void> {
+export async function editTranslatedParagraph(
+  ui: Ui,
+  seq: number,
+  n: number,
+  text: string,
+): Promise<void> {
   const view = warningsView(ui);
-  await goToStep(ui, "result");
+  await goToStep(ui, 'result');
   await view.resultJump.selectOption(String(seq));
   await expect(view.resultPairs.first()).toBeVisible();
   await view.resultText(n).click();
@@ -594,7 +669,7 @@ export async function editTranslatedParagraph(ui: Ui, seq: number, n: number, te
 
 const TRANSLATION_BASE_TIME = Date.UTC(2026, 0, 3, 9, 0, 0);
 
-export type DictKind = "name" | "place" | "org" | "title" | "term";
+export type DictKind = 'name' | 'place' | 'org' | 'title' | 'term';
 
 export interface SeedDictEntry {
   readonly src: string;
@@ -644,7 +719,7 @@ export interface SeededTranslationWorkspace {
 }
 
 export function paragraphHash(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
+  return createHash('sha256').update(text).digest('hex');
 }
 
 export function staleHash(text: string): string {
@@ -670,38 +745,65 @@ async function writeJson(path: string, value: unknown): Promise<void> {
   await writeFile(path, JSON.stringify(value, null, 2));
 }
 
-async function writeGuidelines(folder: string, novelId: number, target: TranslationTarget, text: string): Promise<void> {
+async function writeGuidelines(
+  folder: string,
+  novelId: number,
+  target: TranslationTarget,
+  text: string,
+): Promise<void> {
   const path = guidelinesPath(folder, novelId);
   let current: { guidelines?: Record<string, string> } = {};
   try {
-    current = JSON.parse(await readFile(path, "utf8")) as { guidelines?: Record<string, string> };
+    current = JSON.parse(await readFile(path, 'utf8')) as { guidelines?: Record<string, string> };
   } catch {
     current = {};
   }
   await writeJson(path, { guidelines: { ...(current.guidelines ?? {}), [target]: text } });
 }
 
-function insertDictionary(database: DatabaseSync, novelId: number, target: TranslationTarget, entries: readonly SeedDictEntry[]): Record<string, number> {
+function insertDictionary(
+  database: DatabaseSync,
+  novelId: number,
+  target: TranslationTarget,
+  entries: readonly SeedDictEntry[],
+): Record<string, number> {
   const ids: Record<string, number> = {};
   const insert = database.prepare(
-    "INSERT INTO ws_novel_translation_dictionary (novel_id, target, src, dst, type, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    'INSERT INTO ws_novel_translation_dictionary (novel_id, target, src, dst, type, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   );
   for (const [index, entry] of entries.entries()) {
     const stamp = new Date(TRANSLATION_BASE_TIME + index * 1000).toISOString();
-    const result = insert.run(novelId, target, entry.src, entry.dst, entry.type ?? "term", entry.note ?? "", stamp, stamp);
+    const result = insert.run(
+      novelId,
+      target,
+      entry.src,
+      entry.dst,
+      entry.type ?? 'term',
+      entry.note ?? '',
+      stamp,
+      stamp,
+    );
     ids[entry.src] = Number(result.lastInsertRowid);
   }
   return ids;
 }
 
 function markTranslated(database: DatabaseSync, chapterIds: readonly string[]): void {
-  const update = database.prepare("UPDATE ws_novel_chapters SET translation_status = 'done' WHERE id = ?");
+  const update = database.prepare(
+    "UPDATE ws_novel_chapters SET translation_status = 'done' WHERE id = ?",
+  );
   for (const id of chapterIds) {
     update.run(id);
   }
 }
 
-async function chapterRecord(folder: string, place: SeededNovel, target: TranslationTarget, seed: SeedTranslatedChapter, chapterTitle: string): Promise<TranslatedChapterRecord> {
+async function chapterRecord(
+  folder: string,
+  place: SeededNovel,
+  target: TranslationTarget,
+  seed: SeedTranslatedChapter,
+  chapterTitle: string,
+): Promise<TranslatedChapterRecord> {
   const chapterId = place.chapters[seed.chapter];
   if (chapterId === undefined) {
     throw new Error(`translation seed references an unknown chapter ${seed.chapter}`);
@@ -711,17 +813,28 @@ async function chapterRecord(folder: string, place: SeededNovel, target: Transla
   const paragraphs = source.map((text, index) => ({
     originalHashcheck: stale.has(index + 1) ? staleHash(text) : paragraphHash(text),
     text: seed.paragraphs?.[index] ?? taggedCopy(target, text),
-    note: seed.notes?.[index + 1] ?? "",
+    note: seed.notes?.[index + 1] ?? '',
   }));
   return { title: seed.title ?? taggedCopy(target, chapterTitle), paragraphs };
 }
 
-export async function seedTranslation(folder: string, seed: TranslationSeed): Promise<SeededTranslation> {
+export async function seedTranslation(
+  folder: string,
+  seed: TranslationSeed,
+): Promise<SeededTranslation> {
   const place = await placeOf(folder, seed.novel);
-  const titles = await readWorkspace(folder, (db) => db.chapters(seed.novel).map((chapter) => chapter.title));
+  const titles = await readWorkspace(folder, (db) =>
+    db.chapters(seed.novel).map((chapter) => chapter.title),
+  );
   const translatedIds: string[] = [];
   for (const chapter of seed.chapters ?? []) {
-    const record = await chapterRecord(folder, place, seed.target, chapter, titles[chapter.chapter - 1] ?? "");
+    const record = await chapterRecord(
+      folder,
+      place,
+      seed.target,
+      chapter,
+      titles[chapter.chapter - 1] ?? '',
+    );
     const chapterId = place.chapters[chapter.chapter];
     if (chapterId === undefined) {
       continue;
@@ -737,19 +850,27 @@ export async function seedTranslation(folder: string, seed: TranslationSeed): Pr
   const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
   let dictionary: Record<string, number> = {};
   try {
-    database.exec("BEGIN");
+    database.exec('BEGIN');
     dictionary = insertDictionary(database, place.id, seed.target, seed.dictionary ?? []);
     markTranslated(database, translatedIds);
-    database.exec("COMMIT");
+    database.exec('COMMIT');
   } finally {
     database.close();
   }
   return { novelId: place.id, target: seed.target, dictionary };
 }
 
-export async function editSourceParagraph(folder: string, novelId: number, chapterId: string, n: number, text: string): Promise<void> {
+export async function editSourceParagraph(
+  folder: string,
+  novelId: number,
+  chapterId: string,
+  n: number,
+  text: string,
+): Promise<void> {
   const path = join(novelDir(folder, novelId), chapterFileName(chapterId));
-  const file = JSON.parse(await readFile(path, "utf8")) as { paragraphs: { text: string; hashcheck: string }[] };
+  const file = JSON.parse(await readFile(path, 'utf8')) as {
+    paragraphs: { text: string; hashcheck: string }[];
+  };
   const paragraph = file.paragraphs[n - 1];
   if (paragraph === undefined) {
     throw new Error(`chapter has no paragraph ${n}`);
@@ -759,7 +880,11 @@ export async function editSourceParagraph(folder: string, novelId: number, chapt
   await writeFile(path, JSON.stringify(file, null, 2));
 }
 
-export async function seedTranslationWorkspace(folder: string, seed: TranslationWorkspaceSeed, options: SeedOptions = {}): Promise<SeededTranslationWorkspace> {
+export async function seedTranslationWorkspace(
+  folder: string,
+  seed: TranslationWorkspaceSeed,
+  options: SeedOptions = {},
+): Promise<SeededTranslationWorkspace> {
   await seedWorkspace(folder, { ...options, novels: seed.novels });
   const translations: SeededTranslation[] = [];
   for (const translation of seed.translations ?? []) {
@@ -773,8 +898,8 @@ export async function seedTranslationWorkspace(folder: string, seed: Translation
   return { novels, translations, pipelines };
 }
 
-export type TranslationTarget = "VI" | "EN";
-export type WarningKind = "source" | "dict";
+export type TranslationTarget = 'VI' | 'EN';
+export type WarningKind = 'source' | 'dict';
 
 export interface DictionaryRow {
   readonly id: number;
@@ -817,19 +942,32 @@ export interface NovelTranslationState {
 
 export interface NovelPlace {
   readonly novelId: number;
-  readonly chapters: readonly { readonly id: string; readonly seq: number; readonly title: string }[];
+  readonly chapters: readonly {
+    readonly id: string;
+    readonly seq: number;
+    readonly title: string;
+  }[];
 }
 
 export function readNovelPlace(folder: string, novel: string): NovelPlace {
   const database = openReadOnly(folder);
   try {
-    const row = database.prepare("SELECT id FROM ws_novels WHERE title = ?").get(novel);
+    const row = database.prepare('SELECT id FROM ws_novels WHERE title = ?').get(novel);
     if (row === undefined) {
       throw new Error(`no novel titled ${novel}`);
     }
-    const novelId = Number(row["id"]);
-    const rows = database.prepare("SELECT id, seq, title FROM ws_novel_chapters WHERE novel_id = ? ORDER BY seq").all(novelId);
-    return { novelId, chapters: rows.map((item) => ({ id: String(item["id"]), seq: Number(item["seq"]), title: String(item["title"]) })) };
+    const novelId = Number(row['id']);
+    const rows = database
+      .prepare('SELECT id, seq, title FROM ws_novel_chapters WHERE novel_id = ? ORDER BY seq')
+      .all(novelId);
+    return {
+      novelId,
+      chapters: rows.map((item) => ({
+        id: String(item['id']),
+        seq: Number(item['seq']),
+        title: String(item['title']),
+      })),
+    };
   } finally {
     database.close();
   }
@@ -839,25 +977,39 @@ export function translationDirName(target: TranslationTarget): string {
   return `translation_${target.toLowerCase()}`;
 }
 
-export function translationChapterPath(folder: string, novelId: number, target: TranslationTarget, chapterId: string): string {
+export function translationChapterPath(
+  folder: string,
+  novelId: number,
+  target: TranslationTarget,
+  chapterId: string,
+): string {
   return join(novelDir(folder, novelId), translationDirName(target), `chapter_${chapterId}.json`);
 }
 
 export function guidelinesPath(folder: string, novelId: number): string {
-  return join(novelDir(folder, novelId), "translation.json");
+  return join(novelDir(folder, novelId), 'translation.json');
 }
 
-export async function readTranslatedChapter(folder: string, novelId: number, target: TranslationTarget, chapterId: string): Promise<TranslatedChapterRecord | null> {
+export async function readTranslatedChapter(
+  folder: string,
+  novelId: number,
+  target: TranslationTarget,
+  chapterId: string,
+): Promise<TranslatedChapterRecord | null> {
   try {
-    const text = await readFile(translationChapterPath(folder, novelId, target, chapterId), "utf8");
+    const text = await readFile(translationChapterPath(folder, novelId, target, chapterId), 'utf8');
     const parsed = JSON.parse(text) as Partial<TranslatedChapterRecord>;
-    return { title: parsed.title ?? "", paragraphs: parsed.paragraphs ?? [] };
+    return { title: parsed.title ?? '', paragraphs: parsed.paragraphs ?? [] };
   } catch {
     return null;
   }
 }
 
-export async function listTranslatedChapterIds(folder: string, novelId: number, target: TranslationTarget): Promise<string[]> {
+export async function listTranslatedChapterIds(
+  folder: string,
+  novelId: number,
+  target: TranslationTarget,
+): Promise<string[]> {
   try {
     const names = await readdir(join(novelDir(folder, novelId), translationDirName(target)));
     return names
@@ -869,43 +1021,63 @@ export async function listTranslatedChapterIds(folder: string, novelId: number, 
   }
 }
 
-export async function readGuidelines(folder: string, novelId: number, target: TranslationTarget): Promise<string> {
+export async function readGuidelines(
+  folder: string,
+  novelId: number,
+  target: TranslationTarget,
+): Promise<string> {
   try {
-    const parsed = JSON.parse(await readFile(guidelinesPath(folder, novelId), "utf8")) as { guidelines?: Record<string, string> };
-    return parsed.guidelines?.[target] ?? "";
+    const parsed = JSON.parse(await readFile(guidelinesPath(folder, novelId), 'utf8')) as {
+      guidelines?: Record<string, string>;
+    };
+    return parsed.guidelines?.[target] ?? '';
   } catch {
-    return "";
+    return '';
   }
 }
 
 function toDictionary(row: Record<string, unknown>): DictionaryRow {
   return {
-    id: Number(row["id"]),
-    novelId: Number(row["novel_id"]),
-    target: String(row["target"]),
-    src: String(row["src"]),
-    dst: String(row["dst"]),
-    type: String(row["type"]),
-    note: String(row["note"]),
-    createdAt: String(row["created_at"]),
-    updatedAt: String(row["updated_at"]),
+    id: Number(row['id']),
+    novelId: Number(row['novel_id']),
+    target: String(row['target']),
+    src: String(row['src']),
+    dst: String(row['dst']),
+    type: String(row['type']),
+    note: String(row['note']),
+    createdAt: String(row['created_at']),
+    updatedAt: String(row['updated_at']),
   };
 }
 
-export function readDictionaryById(folder: string, novelId: number, target?: TranslationTarget): DictionaryRow[] {
+export function readDictionaryById(
+  folder: string,
+  novelId: number,
+  target?: TranslationTarget,
+): DictionaryRow[] {
   const database = openReadOnly(folder);
   try {
     const rows =
       target === undefined
-        ? database.prepare("SELECT * FROM ws_novel_translation_dictionary WHERE novel_id = ? ORDER BY id").all(novelId)
-        : database.prepare("SELECT * FROM ws_novel_translation_dictionary WHERE novel_id = ? AND target = ? ORDER BY id").all(novelId, target);
+        ? database
+            .prepare('SELECT * FROM ws_novel_translation_dictionary WHERE novel_id = ? ORDER BY id')
+            .all(novelId)
+        : database
+            .prepare(
+              'SELECT * FROM ws_novel_translation_dictionary WHERE novel_id = ? AND target = ? ORDER BY id',
+            )
+            .all(novelId, target);
     return rows.map(toDictionary);
   } finally {
     database.close();
   }
 }
 
-export async function readDictionary(folder: string, novel: string, target?: TranslationTarget): Promise<DictionaryRow[]> {
+export async function readDictionary(
+  folder: string,
+  novel: string,
+  target?: TranslationTarget,
+): Promise<DictionaryRow[]> {
   return readDictionaryById(folder, readNovelPlace(folder, novel).novelId, target);
 }
 
@@ -926,21 +1098,29 @@ export function warningsOf(
     }
     const n = index + 1;
     if (source.hashcheck !== target.originalHashcheck) {
-      warnings.push({ kind: "source", chapterId, seq, n, entryId: null });
+      warnings.push({ kind: 'source', chapterId, seq, n, entryId: null });
     }
     const sourceText = source.text.toLowerCase();
     const targetText = target.text.toLowerCase();
     for (const entry of dictionary) {
       const term = entry.src.trim();
-      if (term !== "" && sourceText.includes(term.toLowerCase()) && !targetText.includes(entry.dst.toLowerCase())) {
-        warnings.push({ kind: "dict", chapterId, seq, n, entryId: entry.id });
+      if (
+        term !== '' &&
+        sourceText.includes(term.toLowerCase()) &&
+        !targetText.includes(entry.dst.toLowerCase())
+      ) {
+        warnings.push({ kind: 'dict', chapterId, seq, n, entryId: entry.id });
       }
     }
   }
   return warnings;
 }
 
-export async function readTranslationState(folder: string, novel: string, target: TranslationTarget): Promise<NovelTranslationState> {
+export async function readTranslationState(
+  folder: string,
+  novel: string,
+  target: TranslationTarget,
+): Promise<NovelTranslationState> {
   const placed = readNovelPlace(folder, novel);
   const dictionary = readDictionaryById(folder, placed.novelId, target);
   const chapters: Record<string, TranslatedChapterRecord> = {};
@@ -954,96 +1134,115 @@ export async function readTranslationState(folder: string, novel: string, target
     const original = (await readChapterFile(folder, placed.novelId, chapter.id)).paragraphs;
     warnings.push(...warningsOf(chapter.id, chapter.seq, original, translated, dictionary));
   }
-  return { novelId: placed.novelId, guidelines: await readGuidelines(folder, placed.novelId, target), dictionary, chapters, warnings };
+  return {
+    novelId: placed.novelId,
+    guidelines: await readGuidelines(folder, placed.novelId, target),
+    dictionary,
+    chapters,
+    warnings,
+  };
 }
 
-export async function expectedWarnings(folder: string, novel: string, target: TranslationTarget): Promise<readonly ExpectedWarning[]> {
+export async function expectedWarnings(
+  folder: string,
+  novel: string,
+  target: TranslationTarget,
+): Promise<readonly ExpectedWarning[]> {
   return (await readTranslationState(folder, novel, target)).warnings;
 }
 
-export const DICT_ADDED = /^(đã thêm vào từ điển\.|added to the dictionary\.)$/i;
-export const DICT_ADDED_FLAGGED = /đã thêm vào từ điển\. \d+ đoạn cần rà soát|added to the dictionary\. \d+ passages need review/i;
-export const DICT_SAVED = /^(đã lưu mục từ điển\.|saved the dictionary entry\.)$/i;
-export const DICT_SAVED_FLAGGED = /đã lưu mục từ điển\. \d+ đoạn cần rà soát|saved the dictionary entry\. \d+ passages need review/i;
-export const DICT_DELETED = /đã xóa mục từ điển|dictionary entry deleted/i;
-export const DICT_REQUIRED = /hãy nhập cả thuật ngữ gốc và bản dịch|enter both the source term and the translation/i;
-export const DICT_EMPTY_FIELD = /thuật ngữ gốc và bản dịch không được để trống|the source term and translation cannot be empty/i;
-export const DICT_DUPLICATE = /từ điển đã có mục với từ gốc này|the dictionary already has an entry with this source term/i;
+export const DICT_ADDED = 'Added to the dictionary.';
+export const DICT_SAVED = 'Saved the dictionary entry.';
+export const DICT_DELETED = 'Dictionary entry deleted.';
+export const DICT_REQUIRED = 'Enter both the source term and the translation.';
+export const DICT_EMPTY_FIELD = 'The source term and translation cannot be empty.';
+export const DICT_DUPLICATE = 'The dictionary already has an entry with this source term.';
 
-export const GUIDE_SAVED = /đã lưu hướng dẫn\. \d+ chương có cảnh báo mới|saved guidelines\. \d+ chapters have new warnings/i;
-export const GUIDE_UNCHANGED = /^(không có thay đổi\.|no changes\.)$/i;
+export const GUIDE_UNCHANGED = 'No changes.';
 
-export const RESULT_SAVED = /đã lưu bản dịch|translation saved/i;
-export const RESULT_EMPTY = /đoạn văn không được để trống|the paragraph cannot be empty/i;
-export const RESULT_UNCHANGED = /^(không có thay đổi\.|no changes\.)$/i;
+export const RESULT_SAVED = 'Translation saved.';
+export const RESULT_EMPTY = 'The paragraph cannot be empty.';
+export const RESULT_UNCHANGED = 'No changes.';
 
-export const STATUS_NONE = /^(chưa dịch|not translated)$/i;
-export const STATUS_DONE = /^(đã dịch|translated)$/i;
-export const STATUS_QUEUED = /^(hàng đợi|queued)$/i;
-export const STATUS_RUNNING =/^(đang dịch|translating)$/i;
+export const STATUS_NONE = 'Not translated';
+export const STATUS_DONE = 'Translated';
+export const STATUS_QUEUED = 'Queued';
+export const STATUS_RUNNING = 'Translating';
 
-export const SUMMARY_NONE = /^(không có|none)$/i;
-export const SUMMARY_RUNNING = /đang chạy|running/i;
-export const SUMMARY_REVIEWED_LOOSE = /đã rà soát|reviewed/i;
+export const SUMMARY_NONE = 'None';
+export const SUMMARY_RUNNING = 'Translating…';
+export const SUMMARY_REVIEWED_LOOSE = 'All reviewed';
 
-export const WARN_KIND_DICT = /từ điển|dictionary/i;
-export const WARN_FILTER_DICT = /từ điển|dictionary/i;
-export const WARN_EMPTY = /không có cảnh báo|no warnings/i;
-export const WARN_REASON_DICT = /đoạn gốc có “.+”, nhưng đoạn đã dịch không chứa “.+” theo từ điển|the source passage uses “.+”, but the translated passage does not contain “.+” from the dictionary/i;
+export const WARN_KIND_DICT = 'Dictionary';
+export const WARN_FILTER_DICT = 'Dictionary';
+export const WARN_EMPTY = 'No warnings';
+export const WARN_REASON_DICT =
+  'The source passage uses “Lin Feng”, but the translated passage does not contain “Lâm Phong” from the dictionary.';
 
-export const RESULT_NONE_TITLE = /chưa có bản dịch|has no translation yet/i;
-export const RESULT_NONE_ACTION = /dịch chương này|translate this chapter/i;
+export const RESULT_NONE_TITLE = 'Ch.3 has no translation yet';
+export const RESULT_NONE_ACTION = 'Translate this chapter';
 
-export const TRANSLATION_EMPTY_TITLE = /chưa có chương nào để dịch|no chapters to translate yet/i;
+export const TRANSLATION_EMPTY_TITLE = 'No chapters to translate yet';
 
-export const PIPELINE_STATUS_QUEUED = /^(đang chờ|queued)$/i;
-export const PIPELINE_STATUS_RUNNING = /^(đang chạy|running)$/i;
-export const PIPELINE_STATUS_COMPLETED = /^(hoàn tất|completed)$/i;
-export const PIPELINE_STATUS_FAILED = /^(lỗi|failed)$/i;
-export const PIPELINE_STATUS_CANCELLED = /^(đã hủy|cancelled)$/i;
+export const PIPELINE_STATUS_QUEUED = 'Queued';
+export const PIPELINE_STATUS_RUNNING = 'Running';
+export const PIPELINE_STATUS_COMPLETED = 'Completed';
+export const PIPELINE_STATUS_FAILED = 'Failed';
+export const PIPELINE_STATUS_CANCELLED = 'Cancelled';
 
-export const PIPELINE_KIND_TRANSLATION = /^(dịch|translation)$/i;
-export const PIPELINE_KIND_ANALYSIS = /^(phân tích|analysis)$/i;
+export const PIPELINE_KIND_TRANSLATION = 'Translation';
+export const PIPELINE_KIND_ANALYSIS = 'Analysis';
 
-export const PIPELINE_EMPTY_TITLE = /chưa có pipeline nào chạy|no pipeline has run yet/i;
-export const PIPELINE_NO_MATCH_TITLE = /không có pipeline phù hợp|no pipeline matches/i;
-export const PIPELINE_BOTTOM_EMPTY = /chưa có pipeline nào chạy|no pipelines running/i;
-export const PIPELINE_LOG_EMPTY_TITLE = /chưa chọn pipeline nào|no pipeline selected/i;
-export const PIPELINE_LOG_STARTED = /pipeline #\d+ (bắt đầu|started)/i;
-export const PIPELINE_LOG_TASK_STARTED = /(bắt đầu|started)$/i;
-export const PIPELINE_LOG_TASK_DONE = /(hoàn tất|completed)$/i;
-export const PIPELINE_LOG_TASK_FAILED = /(lỗi|failed): /i;
-export const PIPELINE_LOG_TASK_CANCELLED = /(đã hủy|cancelled)$/i;
-export const PIPELINE_LOG_FINISHED = /pipeline .+ · \d+\/\d+ (xong|done) · \d+ (lỗi|failed)/i;
-export const PIPELINE_FAILED_COUNT = /\d+ lỗi|\d+ failed/i;
-export const PIPELINE_QUEUED_COUNT = /\+\d+ (đang chờ|queued)/i;
-export const PIPELINE_PROGRESS = /\d+\/\d+ (xong|done)/i;
+export const PIPELINE_EMPTY_TITLE = 'No pipeline has run yet';
+export const PIPELINE_NO_MATCH_TITLE = 'No pipeline matches';
+export const PIPELINE_BOTTOM_EMPTY = 'No pipelines running';
+export const PIPELINE_LOG_EMPTY_TITLE = 'No pipeline selected';
+export const PIPELINE_LOG_STARTED = 'started · Translation VI · 3 tasks';
+export const PIPELINE_LOG_TASK_STARTED = 'Ch.1 · The Arrival started';
+export const PIPELINE_LOG_TASK_FAILED = 'Ch.1 · The Arrival failed:';
+export const PIPELINE_LOG_TASK_CANCELLED = 'Ch.2 · The Trial cancelled';
+export const PIPELINE_FAILED_COUNT = '1 failed';
+export const PIPELINE_QUEUED_COUNT = '+1 queued';
+export const PIPELINE_PROGRESS = '0/3 done';
 
-export const STATUSBAR_IDLE = /pipelines · idle/i;
-export const STATUSBAR_RUNNING = /pipelines · \d+ (đang chạy|running) · \d+\/\d+/i;
+export const STATUSBAR_IDLE = 'Pipelines · Idle';
+export const STATUSBAR_RUNNING = 'Pipelines · 1 running';
 
-export const PROVIDER_FAILED_EXIT = /exited with|stub provider failed/i;
-export const PROVIDER_NOT_JSON = /did not return a json result|unreadable result/i;
-export const PROVIDER_WRONG_COUNT = /returned \d+ paragraphs but \d+ were expected/i;
-export const PROVIDER_NOT_FOUND = /was not found\. check its path in settings/i;
-export const PROVIDER_NOT_SET = /no llm provider is set for/i;
+export const PROVIDER_NOT_JSON = 'The model did not return a JSON result.';
+export const PROVIDER_WRONG_COUNT = 'The model returned 3 paragraphs but 4 were expected.';
+export const PROVIDER_NOT_SET = 'No LLM provider is set for';
 
 const SEEDED: readonly SeedPipeline[] = [
-  { novel: AZURE, kind: "translation", status: "completed", tasks: [1, 2, 3] },
+  { novel: AZURE, kind: 'translation', status: 'completed', tasks: [1, 2, 3] },
   {
     novel: HARBOR,
-    kind: "translation",
-    status: "failed",
-    tasks: [{ chapter: 1, status: "completed" }, { chapter: 2, status: "failed", error: "provider exited with code 1" }],
+    kind: 'translation',
+    status: 'failed',
+    tasks: [
+      { chapter: 1, status: 'completed' },
+      { chapter: 2, status: 'failed', error: 'provider exited with code 1' },
+    ],
   },
-  { novel: EMBER, kind: "analysis", status: "cancelled", tasks: [{ chapter: 1, status: "completed" }, { chapter: 2, status: "cancelled" }] },
-  { novel: AZURE, kind: "analysis", status: "completed", tasks: [1, 2, 3] },
-  { novel: HARBOR, kind: "translation", status: "completed", tasks: [1, 2] },
+  {
+    novel: EMBER,
+    kind: 'analysis',
+    status: 'cancelled',
+    tasks: [
+      { chapter: 1, status: 'completed' },
+      { chapter: 2, status: 'cancelled' },
+    ],
+  },
+  { novel: AZURE, kind: 'analysis', status: 'completed', tasks: [1, 2, 3] },
+  { novel: HARBOR, kind: 'translation', status: 'completed', tasks: [1, 2] },
 ];
 
 export function historySeed(): TranslationWorkspaceSeed {
   return {
-    novels: [sampleNovel(), sampleNovel({ title: HARBOR, chapters: 2 }), sampleNovel({ title: EMBER, chapters: 2 })],
+    novels: [
+      sampleNovel(),
+      sampleNovel({ title: HARBOR, chapters: 2 }),
+      sampleNovel({ title: EMBER, chapters: 2 }),
+    ],
     pipelines: SEEDED,
   };
 }
@@ -1052,7 +1251,13 @@ export function quietSeed(): TranslationWorkspaceSeed {
   return { novels: [sampleNovel(), sampleNovel({ title: HARBOR, chapters: 2 })] };
 }
 
-export async function openHistory(ui: Ui, picker: PickerStub, sandbox: Sandbox, seed: TranslationWorkspaceSeed, name = "history"): Promise<string> {
+export async function openHistory(
+  ui: Ui,
+  picker: PickerStub,
+  sandbox: Sandbox,
+  seed: TranslationWorkspaceSeed,
+  name = 'history',
+): Promise<string> {
   const folder = sandbox.workspace(name);
   await seedTranslationWorkspace(folder, seed);
   await openFromSplash(ui, picker, folder);

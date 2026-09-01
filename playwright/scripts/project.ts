@@ -1,45 +1,54 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { expect, type Page } from "@playwright/test";
-import type { Ui } from "./fixtures.ts";
-import { openFromSplash } from "./flows.ts";
-import { seedLibrary, type LibrarySeed } from "./library.ts";
-import type { PickerStub } from "./picker.ts";
-import type { Sandbox } from "./sandbox.ts";
-import { WORKSPACE_DB_FILE, seedWorkspace, type SeedNovel } from "./workspaces.ts";
-import type { TemplateId } from "../pages/project.ts";
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
-export const PROJECT_WORKSPACE_NAME = "projects";
+import { expect, type Page } from '@playwright/test';
 
-export const PROJECT_NAME_REQUIRED = /nhập tên project|enter a project name/i;
-export const PROJECT_CREATED = /đã tạo project|created project/i;
-export const PROJECT_DELETED = /đã xóa project|deleted project/i;
-export const RANGE_INVALID = /phạm vi chương không hợp lệ|chapter range is invalid/i;
-export const SOURCE_NOVEL_NOT_FOUND = /không tìm thấy novel nguồn|source novel could not be found/i;
-export const DELETE_NOTE = /không bị ảnh hưởng|not affected/i;
-export const AUDIOBOOK = /Audiobook/;
-export const FILMSERIES = /Filmseries/;
-export const BLANK = /Dự án trống|Blank project/;
-export const AUDIOBOOK_BLURB = /audio có người dẫn chuyện|with a narrator/;
-export const FILMSERIES_BLURB = /Dựng phim nhiều tập|multi-episode film/;
-export const BLANK_BLURB = /Bắt đầu từ trống|Start empty/;
-export const ACTIVE = /Active|Đang làm/;
-export const ARCHIVED = /Archived|Lưu trữ/;
-export const ORIGINAL = /Bản gốc|Original/;
-export const NO_NOVEL = /Không gắn novel|No novel linked/;
-export const NOVEL_DELETED = /Novel nguồn đã bị xóa|Source novel deleted/;
-export const SOURCE_NOTE = /đúng phiên bản văn bản|tied to the text version/i;
-export const COLUMN_PROJECT = /^Project$/;
-export const COLUMN_TYPE = /^(Type|Loại)$/;
-export const COLUMN_STATUS = /^(Status|Trạng thái)$/;
-export const COLUMN_UPDATED = /^(Updated|Cập nhật)$/;
+import type { TemplateId } from '../pages/project.ts';
+import type { Ui } from './fixtures.ts';
+import { openFromSplash } from './flows.ts';
+import { type LibrarySeed, seedLibrary } from './library.ts';
+import type { PickerStub } from './picker.ts';
+import type { Sandbox } from './sandbox.ts';
+import { type SeedNovel, seedWorkspace, WORKSPACE_DB_FILE } from './workspaces.ts';
 
-export const HARBOR_CHAPTERS = [{ title: "One" }, { title: "Two" }, { title: "Three" }, { title: "Four" }, { title: "Five" }];
+export const PROJECT_WORKSPACE_NAME = 'projects';
 
-const DEFAULT_STAMP = "2026-01-01T12:00:00.000Z";
+export const PROJECT_NAME_REQUIRED = 'Enter a project name.';
+export const PROJECT_CREATED = 'Created project';
+export const PROJECT_DELETED = 'Deleted project';
+export const RANGE_INVALID = 'The chapter range is invalid.';
+export const SOURCE_NOVEL_NOT_FOUND =
+  'The selected source novel could not be found. Choose a novel again.';
+export const DELETE_NOTE = 'Library resources and source novels are not affected.';
+export const AUDIOBOOK = 'Audiobook';
+export const FILMSERIES = 'Filmseries';
+export const BLANK = 'Blank project';
+export const AUDIOBOOK_BLURB = 'Turn chapters into audio with a narrator.';
+export const FILMSERIES_BLURB = 'Build a multi-episode film from scripts, characters and worlds.';
+export const BLANK_BLURB = 'Start empty and add what you need.';
+export const ACTIVE = 'Active';
+export const ARCHIVED = 'Archived';
+export const ORIGINAL = 'Original';
+export const NO_NOVEL = 'No novel linked';
+export const NOVEL_DELETED = 'Source novel deleted';
+export const SOURCE_NOTE = 'A project is tied to the text version chosen when it was created.';
+export const COLUMN_PROJECT = 'Project';
+export const COLUMN_TYPE = 'Type';
+export const COLUMN_STATUS = 'Status';
+export const COLUMN_UPDATED = 'Updated';
+
+export const HARBOR_CHAPTERS = [
+  { title: 'One' },
+  { title: 'Two' },
+  { title: 'Three' },
+  { title: 'Four' },
+  { title: 'Five' },
+];
+
+const DEFAULT_STAMP = '2026-01-01T12:00:00.000Z';
 const MISSING_NOVEL_ID = 999;
-const FOLDER_OPEN_COMMAND = "project_folder_open";
+const FOLDER_OPEN_COMMAND = 'project_folder_open';
 
 export interface SeedProject {
   readonly name: string;
@@ -78,21 +87,24 @@ interface FolderOpenWindow {
 }
 
 export function projectFolder(workspace: string, id: number): string {
-  return join(workspace, "projects", String(id));
+  return join(workspace, 'projects', String(id));
 }
 
-function novelRef(database: DatabaseSync, project: SeedProject): { id: number | null; lang: string | null } {
+function novelRef(
+  database: DatabaseSync,
+  project: SeedProject,
+): { id: number | null; lang: string | null } {
   if (project.missingNovel) {
-    return { id: MISSING_NOVEL_ID, lang: "VI" };
+    return { id: MISSING_NOVEL_ID, lang: 'VI' };
   }
   if (project.novel === undefined) {
     return { id: null, lang: null };
   }
-  const row = database.prepare("SELECT id, lang FROM ws_novels WHERE title = ?").get(project.novel);
+  const row = database.prepare('SELECT id, lang FROM ws_novels WHERE title = ?').get(project.novel);
   if (row === undefined) {
     throw new Error(`no novel titled ${project.novel}`);
   }
-  return { id: Number(row["id"]), lang: String(row["lang"]) };
+  return { id: Number(row['id']), lang: String(row['lang']) };
 }
 
 async function writeProjectFiles(dir: string, project: SeedProject): Promise<void> {
@@ -106,19 +118,36 @@ async function writeProjectFiles(dir: string, project: SeedProject): Promise<voi
   }
 }
 
-export async function seedProjects(workspace: string, projects: readonly SeedProject[]): Promise<void> {
+export async function seedProjects(
+  workspace: string,
+  projects: readonly SeedProject[],
+): Promise<void> {
   const database = new DatabaseSync(join(workspace, WORKSPACE_DB_FILE));
   const ids: number[] = [];
   try {
     const insert = database.prepare(
-      "INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived, created_at, updated_at, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      'INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived, created_at, updated_at, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const project of projects) {
       const novel = novelRef(database, project);
       const stamp = project.updatedAt ?? DEFAULT_STAMP;
-      const kind = novel.id === null ? null : "original";
-      const [from, to] = novel.id === null || project.range === undefined ? [null, null] : project.range;
-      const result = insert.run(project.name, project.template ?? "audiobook", project.description ?? "", novel.id, kind, novel.lang, from, to, project.archived ? 1 : 0, DEFAULT_STAMP, stamp, stamp);
+      const kind = novel.id === null ? null : 'original';
+      const [from, to] =
+        novel.id === null || project.range === undefined ? [null, null] : project.range;
+      const result = insert.run(
+        project.name,
+        project.template ?? 'audiobook',
+        project.description ?? '',
+        novel.id,
+        kind,
+        novel.lang,
+        from,
+        to,
+        project.archived ? 1 : 0,
+        DEFAULT_STAMP,
+        stamp,
+        stamp,
+      );
       ids.push(Number(result.lastInsertRowid));
     }
   } finally {
@@ -129,7 +158,10 @@ export async function seedProjects(workspace: string, projects: readonly SeedPro
   }
 }
 
-export async function seedProjectsWorkspace(workspace: string, options: ProjectsOptions): Promise<void> {
+export async function seedProjectsWorkspace(
+  workspace: string,
+  options: ProjectsOptions,
+): Promise<void> {
   await seedWorkspace(workspace, { novels: options.novels ?? [] });
   await seedProjects(workspace, options.projects ?? []);
   if (options.library !== undefined) {
@@ -146,7 +178,12 @@ export async function showCatalog(ui: Ui): Promise<void> {
   await expect(project.catalog.root).toBeVisible();
 }
 
-export async function openProjectsView(ui: Ui, picker: PickerStub, sandbox: Sandbox, options: ProjectsOptions = {}): Promise<string> {
+export async function openProjectsView(
+  ui: Ui,
+  picker: PickerStub,
+  sandbox: Sandbox,
+  options: ProjectsOptions = {},
+): Promise<string> {
   const workspace = sandbox.workspace(PROJECT_WORKSPACE_NAME);
   await seedProjectsWorkspace(workspace, options);
   await openFromSplash(ui, picker, workspace);
@@ -183,19 +220,23 @@ export async function openProjectFiles(ui: Ui, name: string): Promise<void> {
 export function readProjects(workspace: string): ProjectRecord[] {
   const database = new DatabaseSync(join(workspace, WORKSPACE_DB_FILE), { readOnly: true });
   try {
-    const sql = "SELECT id, name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived FROM ws_projects ORDER BY id";
-    return database.prepare(sql).all().map((row) => ({
-      id: Number(row["id"]),
-      name: String(row["name"]),
-      template: String(row["template"]),
-      description: String(row["description"]),
-      novelId: row["novel_id"] === null ? null : Number(row["novel_id"]),
-      srcKind: row["src_kind"] === null ? null : String(row["src_kind"]),
-      srcLang: row["src_lang"] === null ? null : String(row["src_lang"]),
-      rangeFrom: row["range_from"] === null ? null : Number(row["range_from"]),
-      rangeTo: row["range_to"] === null ? null : Number(row["range_to"]),
-      archived: Number(row["archived"]) === 1,
-    }));
+    const sql =
+      'SELECT id, name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived FROM ws_projects ORDER BY id';
+    return database
+      .prepare(sql)
+      .all()
+      .map((row) => ({
+        id: Number(row['id']),
+        name: String(row['name']),
+        template: String(row['template']),
+        description: String(row['description']),
+        novelId: row['novel_id'] === null ? null : Number(row['novel_id']),
+        srcKind: row['src_kind'] === null ? null : String(row['src_kind']),
+        srcLang: row['src_lang'] === null ? null : String(row['src_lang']),
+        rangeFrom: row['range_from'] === null ? null : Number(row['range_from']),
+        rangeTo: row['range_to'] === null ? null : Number(row['range_to']),
+        archived: Number(row['archived']) === 1,
+      }));
   } finally {
     database.close();
   }
@@ -204,13 +245,13 @@ export function readProjects(workspace: string): ProjectRecord[] {
 export function removeNovel(workspace: string, title: string): void {
   const database = new DatabaseSync(join(workspace, WORKSPACE_DB_FILE));
   try {
-    database.exec("PRAGMA busy_timeout = 5000");
-    const row = database.prepare("SELECT id FROM ws_novels WHERE title = ?").get(title);
+    database.exec('PRAGMA busy_timeout = 5000');
+    const row = database.prepare('SELECT id FROM ws_novels WHERE title = ?').get(title);
     if (row === undefined) {
       throw new Error(`no novel titled ${title}`);
     }
-    database.prepare("DELETE FROM ws_novel_chapters WHERE novel_id = ?").run(Number(row["id"]));
-    database.prepare("DELETE FROM ws_novels WHERE id = ?").run(Number(row["id"]));
+    database.prepare('DELETE FROM ws_novel_chapters WHERE novel_id = ?').run(Number(row['id']));
+    database.prepare('DELETE FROM ws_novels WHERE id = ?').run(Number(row['id']));
   } finally {
     database.close();
   }
@@ -225,13 +266,16 @@ function wrapFolderOpen(command: string): void {
   scope.__dreamyFolderOpens = calls;
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
-    const target = new URL(input instanceof Request ? input.url : String(input), window.location.href);
-    if (target.hostname !== "ipc.localhost" || target.pathname !== `/${command}`) {
+    const target = new URL(
+      input instanceof Request ? input.url : String(input),
+      window.location.href,
+    );
+    if (target.hostname !== 'ipc.localhost' || target.pathname !== `/${command}`) {
       return original(input, init);
     }
-    calls.push(typeof init?.body === "string" ? JSON.parse(init.body) : null);
-    const headers = { "Content-Type": "application/json", "Tauri-Response": "ok" };
-    return Promise.resolve(new Response("null", { headers }));
+    calls.push(typeof init?.body === 'string' ? JSON.parse(init.body) : null);
+    const headers = { 'Content-Type': 'application/json', 'Tauri-Response': 'ok' };
+    return Promise.resolve(new Response('null', { headers }));
   };
 }
 

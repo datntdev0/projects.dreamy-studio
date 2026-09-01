@@ -1,10 +1,11 @@
-import { type ChildProcess, execFile, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { createServer } from "node:net";
-import { join } from "node:path";
-import { chromium, type Browser, type Page } from "@playwright/test";
-import { appExecutable } from "./paths.ts";
+import { type ChildProcess, execFile, spawn } from 'node:child_process';
+import { mkdir } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import { join } from 'node:path';
+
+import { type Browser, chromium, type Page } from '@playwright/test';
+
+import { appExecutable, appLanguage } from './paths.ts';
 
 const CONNECT_TIMEOUT_MS = 60_000;
 const CONNECT_RETRY_MS = 500;
@@ -23,10 +24,10 @@ export interface LaunchOptions {
 export function freePort(): Promise<number> {
   return new Promise((resolvePort, reject) => {
     const server = createServer();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
       const address = server.address();
-      const port = typeof address === "object" && address !== null ? address.port : 0;
+      const port = typeof address === 'object' && address !== null ? address.port : 0;
       server.close(() => resolvePort(port));
     });
   });
@@ -42,7 +43,7 @@ function killTree(child: ChildProcess): Promise<void> {
       done();
       return;
     }
-    execFile("taskkill", ["/pid", String(child.pid), "/T", "/F"], () => done());
+    execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], () => done());
   });
 }
 
@@ -67,13 +68,13 @@ async function firstPage(browser: Browser): Promise<Page> {
   const deadline = Date.now() + CONNECT_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const pages = browser.contexts().flatMap((context) => context.pages());
-    const page = pages.find((candidate) => candidate.url().startsWith("http"));
+    const page = pages.find((candidate) => candidate.url().startsWith('http'));
     if (page) {
       return page;
     }
     await pause(CONNECT_RETRY_MS);
   }
-  throw new Error("the app did not open a page");
+  throw new Error('the app did not open a page');
 }
 
 export async function launchApp(options: LaunchOptions): Promise<RunningApp> {
@@ -81,13 +82,13 @@ export async function launchApp(options: LaunchOptions): Promise<RunningApp> {
   await mkdir(options.webviewDir, { recursive: true });
   const port = await freePort();
   const child = spawn(executable, [], {
-    stdio: "ignore",
+    stdio: 'ignore',
     windowsHide: false,
     env: {
       ...process.env,
       DREAMYSTUDIO_DATA_DIR: options.dataDir,
       WEBVIEW2_USER_DATA_FOLDER: join(options.webviewDir),
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --lang=${appLanguage()}`,
     },
   });
   try {

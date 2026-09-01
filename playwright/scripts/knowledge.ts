@@ -1,111 +1,155 @@
-import { expect, type Locator, type Page } from "@playwright/test";
-import { DatabaseSync } from "node:sqlite";
-import { createHash } from "node:crypto";
-import { mkdir, writeFile, readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
-import type { Ui } from "./fixtures.ts";
-import { openFromSplash } from "./flows.ts";
-import type { PickerStub } from "./picker.ts";
-import type { Sandbox } from "./sandbox.ts";
-import { sampleNovel, SAMPLE_TITLE, seedTranslation, readTranslatedChapter, readNovelPlace, type SeededNovel, type TranslationSeed } from "./translation.ts";
-import { countWords, WORKSPACE_DB_FILE, novelDir, readParagraphs, readWorkspace, seedWorkspace, type SeedOptions, type SeedNovel } from "./workspaces.ts";
-import { KnowledgeEditingPage, KnowledgeReviewPage, type AnalyzeMode, type KnowledgeTab, type ExtractionDialog, type GraphGroupKey, type PreviewState } from "../pages/knowledge.ts";
-import type { ProviderAnalysis, ProviderBehavior } from "./provider.ts";
-import { seedPipelines, type SeedPipeline } from "./pipeline.ts";
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+
+import { expect, type Locator, type Page } from '@playwright/test';
+
+// prettier-ignore
+import { type AnalyzeMode, type ExtractionDialog, type GraphGroupKey, KnowledgeEditingPage, KnowledgeReviewPage, type KnowledgeTab, type PreviewState } from '../pages/knowledge.ts';
+import type { Ui } from './fixtures.ts';
+import { openFromSplash } from './flows.ts';
+import type { PickerStub } from './picker.ts';
+import { type SeedPipeline, seedPipelines } from './pipeline.ts';
+import type { ProviderAnalysis, ProviderBehavior } from './provider.ts';
+import type { Sandbox } from './sandbox.ts';
+// prettier-ignore
+import { readNovelPlace, readTranslatedChapter, SAMPLE_TITLE, sampleNovel, type SeededNovel, seedTranslation, type TranslationSeed } from './translation.ts';
+// prettier-ignore
+import { countWords, novelDir, readParagraphs, readWorkspace, type SeedNovel,type SeedOptions, seedWorkspace, WORKSPACE_DB_FILE } from './workspaces.ts';
 
 export const CLEAN_ANALYSES: readonly SeedAnalysis[] = [
   {
     chapter: 1,
-    personas: [{ name: "Lin Feng" }, { name: "Master Chen" }],
+    personas: [{ name: 'Lin Feng' }, { name: 'Master Chen' }],
     entities: [
-      { type: "organization", name: "Sky Sword Sect" },
-      { type: "location", name: "Azure City" },
-      { type: "artifact", name: "Frost Blade" },
+      { type: 'organization', name: 'Sky Sword Sect' },
+      { type: 'location', name: 'Azure City' },
+      { type: 'artifact', name: 'Frost Blade' },
     ],
     facts: [
-      { pred: "leader_of", subject: "Master Chen", object: "Sky Sword Sect" },
-      { pred: "owns", subject: "Lin Feng", object: "Frost Blade" },
-      { pred: "age", subject: "Lin Feng", p: 4, quote: "He was twenty years old and worked as a blacksmith." },
-      { pred: "occupation", subject: "Lin Feng", p: 4, quote: "He was twenty years old and worked as a blacksmith." },
+      { pred: 'leader_of', subject: 'Master Chen', object: 'Sky Sword Sect' },
+      { pred: 'owns', subject: 'Lin Feng', object: 'Frost Blade' },
+      {
+        pred: 'age',
+        subject: 'Lin Feng',
+        p: 4,
+        quote: 'He was twenty years old and worked as a blacksmith.',
+      },
+      {
+        pred: 'occupation',
+        subject: 'Lin Feng',
+        p: 4,
+        quote: 'He was twenty years old and worked as a blacksmith.',
+      },
     ],
   },
   {
     chapter: 2,
-    personas: [{ name: "Lin Feng" }, { name: "Master Chen" }, { name: "Su Yan" }],
+    personas: [{ name: 'Lin Feng' }, { name: 'Master Chen' }, { name: 'Su Yan' }],
     entities: [
-      { type: "organization", name: "Sky Sword Sect" },
-      { type: "location", name: "Azure City" },
-      { type: "artifact", name: "Frost Blade" },
+      { type: 'organization', name: 'Sky Sword Sect' },
+      { type: 'location', name: 'Azure City' },
+      { type: 'artifact', name: 'Frost Blade' },
     ],
     facts: [
-      { pred: "member_of", subject: "Su Yan", object: "Sky Sword Sect", p: 3, quote: "Su Yan, a healer of the sect, whispered that the blade was cursed." },
-      { pred: "occupation", subject: "Su Yan", p: 3, quote: "Su Yan, a healer of the sect, whispered that the blade was cursed." },
+      {
+        pred: 'member_of',
+        subject: 'Su Yan',
+        object: 'Sky Sword Sect',
+        p: 3,
+        quote: 'Su Yan, a healer of the sect, whispered that the blade was cursed.',
+      },
+      {
+        pred: 'occupation',
+        subject: 'Su Yan',
+        p: 3,
+        quote: 'Su Yan, a healer of the sect, whispered that the blade was cursed.',
+      },
     ],
   },
   {
     chapter: 3,
-    personas: [{ name: "Lin Feng" }, { name: "Master Chen" }, { name: "Su Yan", aliases: ["White Lotus"] }],
-    entities: [
-      { type: "organization", name: "Sky Sword Sect" },
-      { type: "location", name: "Azure City" },
-      { type: "artifact", name: "Frost Blade" },
+    personas: [
+      { name: 'Lin Feng' },
+      { name: 'Master Chen' },
+      { name: 'Su Yan', aliases: ['White Lotus'] },
     ],
-    facts: [{ pred: "enemy_of", subject: "Lin Feng", object: "Master Chen", p: 2 }],
+    entities: [
+      { type: 'organization', name: 'Sky Sword Sect' },
+      { type: 'location', name: 'Azure City' },
+      { type: 'artifact', name: 'Frost Blade' },
+    ],
+    facts: [{ pred: 'enemy_of', subject: 'Lin Feng', object: 'Master Chen', p: 2 }],
   },
 ];
 
 export const RULE_FIXTURES: Readonly<Record<RuleName, readonly SeedAnalysis[]>> = {
   entity_duplicate: [
-    { chapter: 1, personas: [{ name: "Lin Feng" }] },
-    { chapter: 2, personas: [{ name: "Feng", character: "Lin Feng" }] },
+    { chapter: 1, personas: [{ name: 'Lin Feng' }] },
+    { chapter: 2, personas: [{ name: 'Feng', character: 'Lin Feng' }] },
   ],
-  source_stale: [{ chapter: 1, stale: true, personas: [{ name: "Lin Feng" }] }],
+  source_stale: [{ chapter: 1, stale: true, personas: [{ name: 'Lin Feng' }] }],
   evidence: [
     {
       chapter: 1,
-      personas: [{ name: "Lin Feng" }],
+      personas: [{ name: 'Lin Feng' }],
       entities: [
-        { type: "location", name: "Azure City", ev: [] },
-        { type: "artifact", name: "Frost Blade", ev: [{ p: 3, q: "a sword that appears nowhere in this paragraph" }] },
+        { type: 'location', name: 'Azure City', ev: [] },
+        {
+          type: 'artifact',
+          name: 'Frost Blade',
+          ev: [{ p: 3, q: 'a sword that appears nowhere in this paragraph' }],
+        },
       ],
     },
   ],
   relation_signature: [
     {
       chapter: 2,
-      personas: [{ name: "Lin Feng" }, { name: "Master Chen" }],
-      facts: [{ pred: "member_of", subject: "Lin Feng", object: "Master Chen", p: 2 }],
+      personas: [{ name: 'Lin Feng' }, { name: 'Master Chen' }],
+      facts: [{ pred: 'member_of', subject: 'Lin Feng', object: 'Master Chen', p: 2 }],
     },
   ],
   relation_unique: [
     {
       chapter: 1,
-      personas: [{ name: "Lin Feng" }, { name: "Master Chen" }],
-      entities: [{ type: "organization", name: "Sky Sword Sect" }],
+      personas: [{ name: 'Lin Feng' }, { name: 'Master Chen' }],
+      entities: [{ type: 'organization', name: 'Sky Sword Sect' }],
       facts: [
-        { pred: "leader_of", subject: "Master Chen", object: "Sky Sword Sect" },
-        { pred: "leader_of", subject: "Lin Feng", object: "Sky Sword Sect", p: 3, quote: "Lin Feng carried the Frost Blade, a relic left by his late father." },
+        { pred: 'leader_of', subject: 'Master Chen', object: 'Sky Sword Sect' },
+        {
+          pred: 'leader_of',
+          subject: 'Lin Feng',
+          object: 'Sky Sword Sect',
+          p: 3,
+          quote: 'Lin Feng carried the Frost Blade, a relic left by his late father.',
+        },
       ],
     },
   ],
   character_predicate: [
     {
       chapter: 1,
-      personas: [{ name: "Lin Feng" }],
-      entities: [{ type: "artifact", name: "Frost Blade" }],
-      facts: [{ pred: "owns", subject: "character:Lin Feng", object: "Frost Blade", p: 3 }],
+      personas: [{ name: 'Lin Feng' }],
+      entities: [{ type: 'artifact', name: 'Frost Blade' }],
+      facts: [{ pred: 'owns', subject: 'character:Lin Feng', object: 'Frost Blade', p: 3 }],
     },
   ],
   persona_link: [
     {
       chapter: 1,
-      personas: [{ name: "Lin Feng" }],
-      entities: [{ type: "persona", name: "Master Chen" }],
+      personas: [{ name: 'Lin Feng' }],
+      entities: [{ type: 'persona', name: 'Master Chen' }],
     },
   ],
 };
 
-export async function seedKnowledgeWorkspace(folder: string, seed: KnowledgeWorkspaceSeed, options: SeedOptions = {}): Promise<SeededKnowledgeWorkspace> {
+export async function seedKnowledgeWorkspace(
+  folder: string,
+  seed: KnowledgeWorkspaceSeed,
+  options: SeedOptions = {},
+): Promise<SeededKnowledgeWorkspace> {
   await seedWorkspace(folder, { ...options, novels: seed.novels });
   for (const translation of seed.translations ?? []) {
     await seedTranslation(folder, translation);
@@ -128,11 +172,11 @@ export async function seedKnowledgeWorkspace(folder: string, seed: KnowledgeWork
   return { novels, knowledge, pipelines };
 }
 
-export const KNOWLEDGE_WORKSPACE_NAME = "knowledge";
+export const KNOWLEDGE_WORKSPACE_NAME = 'knowledge';
 
 export interface KnowledgeOpenOptions {
   readonly novel?: string;
-  readonly lang?: "src" | "VI" | "EN";
+  readonly lang?: 'src' | 'VI' | 'EN';
   readonly seedOptions?: SeedOptions;
 }
 
@@ -148,14 +192,18 @@ export interface OpenedKnowledge {
 
 export const DEFAULT_KNOWLEDGE_SEED: KnowledgeWorkspaceSeed = {
   novels: [sampleNovel()],
-  knowledge: [{ novel: "Azure Chronicle", analyses: CLEAN_ANALYSES }],
+  knowledge: [{ novel: 'Azure Chronicle', analyses: CLEAN_ANALYSES }],
 };
 
 export function knowledgeEntry(ui: Ui, novel: string): Locator {
-  return ui.main.explorer.group(novel).getByTestId("novel-explorer-knowledge");
+  return ui.main.explorer.group(novel).getByTestId('novel-explorer-knowledge');
 }
 
-export async function showKnowledge(ui: Ui, novel: string, lang?: "src" | "VI" | "EN"): Promise<void> {
+export async function showKnowledge(
+  ui: Ui,
+  novel: string,
+  lang?: 'src' | 'VI' | 'EN',
+): Promise<void> {
   if (!(await ui.main.explorer.management.isVisible())) {
     await ui.main.showNovels();
   }
@@ -164,7 +212,10 @@ export async function showKnowledge(ui: Ui, novel: string, lang?: "src" | "VI" |
     await ui.main.explorer.novel(novel).click();
   }
   await knowledgeEntry(ui, novel).click();
-  await expect(ui.main.knowledge.tab.filter({ hasText: novel })).toHaveAttribute("aria-selected", "true");
+  await expect(ui.main.knowledge.tab.filter({ hasText: novel })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(ui.main.knowledge.host).toBeVisible();
   await expect(ui.main.knowledge.root).toBeVisible();
   if (lang !== undefined) {
@@ -174,11 +225,11 @@ export async function showKnowledge(ui: Ui, novel: string, lang?: "src" | "VI" |
 
 export async function goToTab(ui: Ui, tab: KnowledgeTab): Promise<void> {
   await ui.main.knowledge.tabButton(tab).click();
-  await expect(ui.main.knowledge.tabButton(tab)).toHaveAttribute("aria-pressed", "true");
+  await expect(ui.main.knowledge.tabButton(tab)).toHaveAttribute('aria-pressed', 'true');
   await expect(ui.main.knowledge.tabRoot(tab)).toBeVisible();
 }
 
-export async function selectLang(ui: Ui, lang: "src" | "VI" | "EN"): Promise<void> {
+export async function selectLang(ui: Ui, lang: 'src' | 'VI' | 'EN'): Promise<void> {
   await ui.main.knowledge.lang.selectOption(lang);
   await expect(ui.main.knowledge.lang).toHaveValue(lang);
 }
@@ -194,7 +245,7 @@ export async function openKnowledge(
   const folder = sandbox.workspace(KNOWLEDGE_WORKSPACE_NAME);
   const seeded = await seedKnowledgeWorkspace(folder, seed, options.seedOptions);
   await openFromSplash(ui, picker, folder);
-  const novel = options.novel ?? seed.novels[0]?.title ?? "";
+  const novel = options.novel ?? seed.novels[0]?.title ?? '';
   const place = seeded.novels[novel];
   if (place === undefined) {
     throw new Error(`the seed has no novel titled ${novel}`);
@@ -203,24 +254,36 @@ export async function openKnowledge(
   const own = seed.knowledge?.find((item) => item.novel === novel);
   const hasKnowledge = own !== undefined && own.analyses.length > 0;
   if (hasKnowledge) {
-    await selectLang(ui, options.lang ?? own.analyses[0]?.lang ?? "src");
+    await selectLang(ui, options.lang ?? own.analyses[0]?.lang ?? 'src');
   }
   if (tab !== undefined && hasKnowledge) {
     await goToTab(ui, tab);
   }
-  const first = seeded.knowledge[(seed.knowledge ?? []).findIndex((item) => item.novel === novel)] ?? seeded.knowledge[0];
-  return { folder, seeded, novel, novelId: place.id, chapters: place.chapters, entityIds: first?.entityIds ?? {}, factIds: first?.factIds ?? {} };
+  const first =
+    seeded.knowledge[(seed.knowledge ?? []).findIndex((item) => item.novel === novel)] ??
+    seeded.knowledge[0];
+  return {
+    folder,
+    seeded,
+    novel,
+    novelId: place.id,
+    chapters: place.chapters,
+    entityIds: first?.entityIds ?? {},
+    factIds: first?.factIds ?? {},
+  };
 }
 
 export async function openAnalyzeDialog(ui: Ui): Promise<void> {
   const knowledge = ui.main.knowledge;
-  const trigger = (await knowledge.analyze.isVisible()) ? knowledge.analyze : knowledge.emptyAnalyze;
+  const trigger = (await knowledge.analyze.isVisible())
+    ? knowledge.analyze
+    : knowledge.emptyAnalyze;
   await expect(trigger).toBeEnabled();
   await trigger.click();
   await expect(knowledge.analyzeDialog.panel).toBeVisible();
 }
 
-export async function startAnalysis(ui: Ui, mode: AnalyzeMode = "missing"): Promise<void> {
+export async function startAnalysis(ui: Ui, mode: AnalyzeMode = 'missing'): Promise<void> {
   const dialog = ui.main.knowledge.analyzeDialog;
   await openAnalyzeDialog(ui);
   await dialog.mode(mode).click();
@@ -229,8 +292,8 @@ export async function startAnalysis(ui: Ui, mode: AnalyzeMode = "missing"): Prom
   await expect(dialog.panel).toBeHidden();
 }
 
-export const EXTRACTION_NOVEL = "Azure Chronicle";
-export const EMPTY_NOVEL = "Empty Novel";
+export const EXTRACTION_NOVEL = 'Azure Chronicle';
+export const EMPTY_NOVEL = 'Empty Novel';
 export const CHAPTER_COUNT = 7;
 export const TRANSLATED_COUNT = 5;
 export const ANALYZED_COUNT = 2;
@@ -239,21 +302,29 @@ export const SLOW_MS = 2500;
 
 export const EXTRACTION_ANALYSIS: ProviderAnalysis = {
   entities: [
-    { type: "persona", name: "Lin Feng" },
-    { type: "persona", name: "Master Chen" },
-    { type: "persona", name: "Su Yan" },
-    { type: "organization", name: "Sky Sword Sect" },
-    { type: "location", name: "Azure City" },
-    { type: "artifact", name: "Frost Blade" },
+    { type: 'persona', name: 'Lin Feng' },
+    { type: 'persona', name: 'Master Chen' },
+    { type: 'persona', name: 'Su Yan' },
+    { type: 'organization', name: 'Sky Sword Sect' },
+    { type: 'location', name: 'Azure City' },
+    { type: 'artifact', name: 'Frost Blade' },
   ],
   facts: [
-    { pred: "leader_of", subject: "Master Chen", object: "Sky Sword Sect" },
-    { pred: "owns", subject: "Lin Feng", object: "Frost Blade" },
-    { pred: "occupation", subject: "Lin Feng", quote: "He was twenty years old and worked as a blacksmith." },
+    { pred: 'leader_of', subject: 'Master Chen', object: 'Sky Sword Sect' },
+    { pred: 'owns', subject: 'Lin Feng', object: 'Frost Blade' },
+    {
+      pred: 'occupation',
+      subject: 'Lin Feng',
+      quote: 'He was twenty years old and worked as a blacksmith.',
+    },
   ],
 };
 
-export const SLOW_BEHAVIOR: ProviderBehavior = { mode: "slow", delayMs: SLOW_MS, analysis: EXTRACTION_ANALYSIS };
+export const SLOW_BEHAVIOR: ProviderBehavior = {
+  mode: 'slow',
+  delayMs: SLOW_MS,
+  analysis: EXTRACTION_ANALYSIS,
+};
 export const FAST_BEHAVIOR: ProviderBehavior = { analysis: EXTRACTION_ANALYSIS };
 
 export function seededNovel(): SeedNovel {
@@ -261,7 +332,7 @@ export function seededNovel(): SeedNovel {
 }
 
 export function plainSeed(): KnowledgeWorkspaceSeed {
-  return { novels: [seededNovel(), { title: EMPTY_NOVEL, lang: "ZH" }] };
+  return { novels: [seededNovel(), { title: EMPTY_NOVEL, lang: 'ZH' }] };
 }
 
 export function smallSeed(): KnowledgeWorkspaceSeed {
@@ -272,68 +343,91 @@ export function partialSeed(): KnowledgeWorkspaceSeed {
   const chapters = Array.from({ length: TRANSLATED_COUNT }, (_, index) => ({ chapter: index + 1 }));
   return {
     novels: [seededNovel()],
-    translations: [{ novel: EXTRACTION_NOVEL, target: "VI", chapters }],
+    translations: [{ novel: EXTRACTION_NOVEL, target: 'VI', chapters }],
     knowledge: [{ novel: EXTRACTION_NOVEL, analyses: CLEAN_ANALYSES.slice(0, ANALYZED_COUNT) }],
   };
 }
 
 export function wordsOf(seqs: readonly number[]): number {
   const chapters = seededNovel().chapters ?? [];
-  return seqs.reduce((sum, seq) => sum + countWords((chapters[seq - 1]?.paragraphs ?? []).join("\n")), 0);
+  return seqs.reduce(
+    (sum, seq) => sum + countWords((chapters[seq - 1]?.paragraphs ?? []).join('\n')),
+    0,
+  );
 }
 
 export function range(from: number, to: number): number[] {
   return Array.from({ length: to - from + 1 }, (_, index) => from + index);
 }
 
-export async function reopenKnowledge(ui: Ui, picker: PickerStub, folder: string, novel: string): Promise<void> {
+export async function reopenKnowledge(
+  ui: Ui,
+  picker: PickerStub,
+  folder: string,
+  novel: string,
+): Promise<void> {
   await openFromSplash(ui, picker, folder);
   await showKnowledge(ui, novel);
 }
 
-function rangeRegex(seqs: readonly number[]): RegExp {
+export function rangeLabel(seqs: readonly number[]): string {
   const first = seqs[0];
   const last = seqs[seqs.length - 1];
-  return new RegExp(seqs.length > 1 ? `Ch\\.${first}[-–]${last}` : `Ch\\.${first}\\b`);
+  return seqs.length > 1 ? `Ch.${first}–${last}` : `Ch.${first}`;
 }
 
-export async function expectSummary(ui: Ui, extraction: ExtractionDialog, run: readonly number[], batches: number, keep: readonly number[]): Promise<void> {
+export async function expectSummary(
+  ui: Ui,
+  extraction: ExtractionDialog,
+  run: readonly number[],
+  batches: number,
+  keep: readonly number[],
+): Promise<void> {
   const dialog = ui.main.knowledge.analyzeDialog;
-  await expect(dialog.run).toContainText(new RegExp(`\\b${run.length} (chapters|chương)`));
-  await expect(dialog.run).toContainText(rangeRegex(run));
-  await expect(dialog.pipeline).toContainText(new RegExp(`^${batches} (batches|lô)`));
+  await expect(dialog.run).toContainText(`${run.length} chapters`);
+  await expect(dialog.run).toContainText(rangeLabel(run));
+  await expect(dialog.pipeline).toContainText(analyzeBatches(batches));
   if (keep.length === 0) {
-    await expect(extraction.keep).toHaveText("—");
+    await expect(extraction.keep).toHaveText('—');
   } else {
-    await expect(extraction.keep).toContainText(new RegExp(`\\b${keep.length} (chapters|chương)`));
-    await expect(extraction.keep).toContainText(rangeRegex(keep));
+    await expect(extraction.keep).toContainText(`${keep.length} chapters`);
+    await expect(extraction.keep).toContainText(rangeLabel(keep));
   }
   await expect(extraction.words).toHaveText(String(wordsOf(run)));
 }
 
-export const GRAPH_GROUPS: readonly GraphGroupKey[] = ["character", "persona", "location", "organization", "artifact", "skill", "term", "event"];
+export const GRAPH_GROUPS: readonly GraphGroupKey[] = [
+  'character',
+  'persona',
+  'location',
+  'organization',
+  'artifact',
+  'skill',
+  'term',
+  'event',
+];
 
 const FLAG_CLASS = GRAPH_GROUPS.length + 1;
 const MIN_NODE_AREA = 5;
 const MIN_FILL_RATIO = 0.6;
 
 export const VI_PARAGRAPHS: readonly string[] = [
-  "Lâm Phong đến cổng Thanh Thành lúc bình minh.",
-  "Sư phụ Trần, chưởng môn Thiên Kiếm Tông, quan sát hắn từ trên tháp.",
-  "Lâm Phong mang theo Băng Kiếm, di vật của người cha quá cố.",
-  "Hắn hai mươi tuổi và làm nghề thợ rèn.",
+  'Lâm Phong đến cổng Thanh Thành lúc bình minh.',
+  'Sư phụ Trần, chưởng môn Thiên Kiếm Tông, quan sát hắn từ trên tháp.',
+  'Lâm Phong mang theo Băng Kiếm, di vật của người cha quá cố.',
+  'Hắn hai mươi tuổi và làm nghề thợ rèn.',
 ];
 
 export const VI_ANALYSES: readonly SeedAnalysis[] = [
   {
     chapter: 1,
-    lang: "VI",
-    personas: [{ name: "Lâm Phong" }],
+    lang: 'VI',
+    personas: [{ name: 'Lâm Phong' }],
     entities: [
-      { type: "location", name: "Thanh Thành" },
-      { type: "artifact", name: "Băng Kiếm" },
+      { type: 'location', name: 'Thanh Thành' },
+      { type: 'artifact', name: 'Băng Kiếm' },
     ],
-    facts: [{ pred: "owns", subject: "Lâm Phong", object: "Băng Kiếm" }],
+    facts: [{ pred: 'owns', subject: 'Lâm Phong', object: 'Băng Kiếm' }],
   },
 ];
 
@@ -344,20 +438,26 @@ const THIRD = CLEAN_ANALYSES[2] as SeedAnalysis;
 export const BROWSE_ANALYSES: readonly SeedAnalysis[] = [
   {
     ...FIRST,
-    personas: [{ name: "Lin Feng" }, { name: "Master Chen", titles: ["Sect Leader"] }],
-    entities: [...(FIRST.entities ?? []), { type: "term", name: "relic", at: 3 }, { type: "skill", name: "blacksmith", at: 4 }],
+    personas: [{ name: 'Lin Feng' }, { name: 'Master Chen', titles: ['Sect Leader'] }],
+    entities: [
+      ...(FIRST.entities ?? []),
+      { type: 'term', name: 'relic', at: 3 },
+      { type: 'skill', name: 'blacksmith', at: 4 },
+    ],
   },
   {
     ...SECOND,
-    personas: [...(SECOND.personas ?? []), { name: "Feng", character: "Lin Feng" }],
-    entities: [...(SECOND.entities ?? []), { type: "event", name: "trial", at: 1 }],
+    personas: [...(SECOND.personas ?? []), { name: 'Feng', character: 'Lin Feng' }],
+    entities: [...(SECOND.entities ?? []), { type: 'event', name: 'trial', at: 1 }],
   },
   THIRD,
 ];
 
 export const BROWSE_SEED: KnowledgeWorkspaceSeed = {
   novels: [sampleNovel()],
-  translations: [{ novel: SAMPLE_TITLE, target: "VI", chapters: [{ chapter: 1, paragraphs: VI_PARAGRAPHS }] }],
+  translations: [
+    { novel: SAMPLE_TITLE, target: 'VI', chapters: [{ chapter: 1, paragraphs: VI_PARAGRAPHS }] },
+  ],
   knowledge: [{ novel: SAMPLE_TITLE, analyses: [...BROWSE_ANALYSES, ...VI_ANALYSES] }],
 };
 
@@ -388,50 +488,57 @@ export function groupCounts(reading: GraphReading): Partial<Record<GraphGroupKey
 }
 
 async function captureGraph(page: Page): Promise<RawGraph> {
-  return page.evaluate((groups) => {
-    const canvas = document.querySelector("[data-testid=graph-canvas]") as HTMLCanvasElement;
-    const context = canvas.getContext("2d") as CanvasRenderingContext2D;
-    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const probe = document.createElement("span");
-    document.body.append(probe);
-    const palette: number[][] = [];
-    for (const color of groups) {
-      probe.style.color = color;
-      palette.push((getComputedStyle(probe).color.match(/\d+/g) as string[]).map(Number));
-    }
-    probe.remove();
-    const classes = new Uint8Array(canvas.width * canvas.height);
-    for (let index = 0; index < classes.length; index += 1) {
-      const offset = index * 4;
-      if (pixels[offset + 3] !== 255) {
-        continue;
+  return page.evaluate(
+    (groups) => {
+      const canvas = document.querySelector('[data-testid=graph-canvas]') as HTMLCanvasElement;
+      const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const probe = document.createElement('span');
+      document.body.append(probe);
+      const palette: number[][] = [];
+      for (const color of groups) {
+        probe.style.color = color;
+        palette.push((getComputedStyle(probe).color.match(/\d+/g) as string[]).map(Number));
       }
-      for (let kind = 0; kind < palette.length; kind += 1) {
-        const rgb = palette[kind] as number[];
-        if (pixels[offset] === rgb[0] && pixels[offset + 1] === rgb[1] && pixels[offset + 2] === rgb[2]) {
-          classes[index] = kind + 1;
-          break;
+      probe.remove();
+      const classes = new Uint8Array(canvas.width * canvas.height);
+      for (let index = 0; index < classes.length; index += 1) {
+        const offset = index * 4;
+        if (pixels[offset + 3] !== 255) {
+          continue;
+        }
+        for (let kind = 0; kind < palette.length; kind += 1) {
+          const rgb = palette[kind] as number[];
+          if (
+            pixels[offset] === rgb[0] &&
+            pixels[offset + 1] === rgb[1] &&
+            pixels[offset + 2] === rgb[2]
+          ) {
+            classes[index] = kind + 1;
+            break;
+          }
         }
       }
-    }
-    let text = "";
-    for (let index = 0; index < classes.length; index += 8192) {
-      text += String.fromCharCode(...classes.subarray(index, index + 8192));
-    }
-    return { width: canvas.width, height: canvas.height, data: btoa(text) };
-  }, [...GRAPH_GROUPS.map((key) => legendColor(key)), "var(--danger)"]);
+      let text = '';
+      for (let index = 0; index < classes.length; index += 8192) {
+        text += String.fromCharCode(...classes.subarray(index, index + 8192));
+      }
+      return { width: canvas.width, height: canvas.height, data: btoa(text) };
+    },
+    [...GRAPH_GROUPS.map((key) => legendColor(key)), 'var(--danger)'],
+  );
 }
 
 function legendColor(key: GraphGroupKey): string {
   const tokens: Readonly<Record<GraphGroupKey, string>> = {
-    character: "var(--acc-twilight)",
-    persona: "var(--primary)",
-    location: "var(--info)",
-    organization: "var(--secondary)",
-    artifact: "var(--warning)",
-    skill: "var(--success)",
-    term: "var(--acc-sunset)",
-    event: "var(--acc-breeze)",
+    character: 'var(--acc-twilight)',
+    persona: 'var(--primary)',
+    location: 'var(--info)',
+    organization: 'var(--secondary)',
+    artifact: 'var(--warning)',
+    skill: 'var(--success)',
+    term: 'var(--acc-sunset)',
+    event: 'var(--acc-breeze)',
   };
   return tokens[key];
 }
@@ -467,7 +574,12 @@ function components(raw: RawGraph, classes: Uint8Array): Blob[] {
       x1 = Math.max(x1, x);
       y0 = Math.min(y0, y);
       y1 = Math.max(y1, y);
-      const around = [x > 0 ? index - 1 : -1, x < raw.width - 1 ? index + 1 : -1, y > 0 ? index - raw.width : -1, y < raw.height - 1 ? index + raw.width : -1];
+      const around = [
+        x > 0 ? index - 1 : -1,
+        x < raw.width - 1 ? index + 1 : -1,
+        y > 0 ? index - raw.width : -1,
+        y < raw.height - 1 ? index + raw.width : -1,
+      ];
       for (const next of around) {
         if (next >= 0 && seen[next] === 0 && classes[next] === kind) {
           seen[next] = 1;
@@ -485,27 +597,39 @@ function components(raw: RawGraph, classes: Uint8Array): Blob[] {
 
 export async function readGraph(page: Page): Promise<GraphReading> {
   const raw = await captureGraph(page);
-  const blobs = components(raw, new Uint8Array(Buffer.from(raw.data, "base64")));
-  const nodes = blobs.filter((blob) => blob.kind !== FLAG_CLASS).map((blob) => ({ group: GRAPH_GROUPS[blob.kind - 1] as GraphGroupKey, x: blob.x, y: blob.y, area: blob.area }));
+  const blobs = components(raw, new Uint8Array(Buffer.from(raw.data, 'base64')));
+  const nodes = blobs
+    .filter((blob) => blob.kind !== FLAG_CLASS)
+    .map((blob) => ({
+      group: GRAPH_GROUPS[blob.kind - 1] as GraphGroupKey,
+      x: blob.x,
+      y: blob.y,
+      area: blob.area,
+    }));
   return { nodes, flags: blobs.filter((blob) => blob.kind === FLAG_CLASS).length };
 }
 
-export const TYPE_LABEL: Readonly<Record<GraphGroupKey, RegExp>> = {
-  character: /character|nhân vật/i,
-  persona: /persona|nhân dạng/i,
-  location: /location|địa điểm/i,
-  organization: /organization|tổ chức/i,
-  artifact: /artifact|vật phẩm/i,
-  skill: /skill|kỹ năng/i,
-  term: /term|thuật ngữ/i,
-  event: /event|sự kiện/i,
+export const TYPE_LABEL: Readonly<Record<GraphGroupKey, string>> = {
+  character: 'Character',
+  persona: 'Persona',
+  location: 'Location',
+  organization: 'Organization',
+  artifact: 'Artifact',
+  skill: 'Skill',
+  term: 'Term',
+  event: 'Event',
 };
 
-export function listCount(count: number): RegExp {
-  return new RegExp(`(Entities|Thực thể) ${count}$`, "i");
+export function listCount(count: number): string {
+  return `Entities ${count}`;
 }
 
-export async function openBrowseWorkspace(ui: Ui, picker: PickerStub, sandbox: Sandbox, seed: KnowledgeWorkspaceSeed = BROWSE_SEED): Promise<void> {
+export async function openBrowseWorkspace(
+  ui: Ui,
+  picker: PickerStub,
+  sandbox: Sandbox,
+  seed: KnowledgeWorkspaceSeed = BROWSE_SEED,
+): Promise<void> {
   const folder = sandbox.workspace(KNOWLEDGE_WORKSPACE_NAME);
   await seedKnowledgeWorkspace(folder, seed);
   await openFromSplash(ui, picker, folder);
@@ -517,18 +641,18 @@ export interface EvidenceInput {
   readonly quote: string;
 }
 
-export const EDITING_NOVEL = "Azure Chronicle";
+export const EDITING_NOVEL = 'Azure Chronicle';
 
 export const EDITING_SEED: KnowledgeWorkspaceSeed = DEFAULT_KNOWLEDGE_SEED;
 
 export const MERGE_ANALYSES: readonly SeedAnalysis[] = [
   {
     chapter: 1,
-    personas: [{ name: "Lin Feng" }],
-    entities: [{ type: "artifact", name: "Frost Blade" }],
-    facts: [{ pred: "owns", subject: "character:Lin Feng", object: "Frost Blade", p: 3 }],
+    personas: [{ name: 'Lin Feng' }],
+    entities: [{ type: 'artifact', name: 'Frost Blade' }],
+    facts: [{ pred: 'owns', subject: 'character:Lin Feng', object: 'Frost Blade', p: 3 }],
   },
-  { chapter: 2, personas: [{ name: "Feng", character: "Lin Feng" }] },
+  { chapter: 2, personas: [{ name: 'Feng', character: 'Lin Feng' }] },
 ];
 
 export const MERGE_SEED: KnowledgeWorkspaceSeed = {
@@ -539,14 +663,14 @@ export const MERGE_SEED: KnowledgeWorkspaceSeed = {
 export const PREVIEW_ANALYSES: readonly SeedAnalysis[] = [
   {
     chapter: 1,
-    personas: [{ name: "Lin Feng" }, { name: "Master Chen" }],
+    personas: [{ name: 'Lin Feng' }, { name: 'Master Chen' }],
     entities: [
-      { type: "organization", name: "Sky Sword Sect" },
-      { type: "location", name: "Azure City" },
+      { type: 'organization', name: 'Sky Sword Sect' },
+      { type: 'location', name: 'Azure City' },
     ],
-    facts: [{ pred: "leader_of", subject: "Master Chen", object: "Sky Sword Sect" }],
+    facts: [{ pred: 'leader_of', subject: 'Master Chen', object: 'Sky Sword Sect' }],
   },
-  { chapter: 2, personas: [{ name: "Feng", character: "Lin Feng" }] },
+  { chapter: 2, personas: [{ name: 'Feng', character: 'Lin Feng' }] },
 ];
 
 export const PREVIEW_SEED: KnowledgeWorkspaceSeed = {
@@ -562,7 +686,7 @@ export const BASELINE_SEED: KnowledgeWorkspaceSeed = {
 export const TOWER_EVIDENCE: EvidenceInput = {
   chapter: 1,
   p: 2,
-  quote: "Master Chen, the leader of the Sky Sword Sect, watched him from the tower.",
+  quote: 'Master Chen, the leader of the Sky Sword Sect, watched him from the tower.',
 };
 
 export function editingOf(ui: Ui): KnowledgeEditingPage {
@@ -570,15 +694,15 @@ export function editingOf(ui: Ui): KnowledgeEditingPage {
 }
 
 export function readState(folder: string): Promise<KnowledgeState> {
-  return readKnowledgeState(folder, EDITING_NOVEL, "src");
+  return readKnowledgeState(folder, EDITING_NOVEL, 'src');
 }
 
-export function appliedCount(count: number): RegExp {
-  return new RegExp(`(đã áp dụng|applied) ${count} (thay đổi|changes)`, "i");
+export function appliedCount(count: number): string {
+  return `Applied ${count} changes`;
 }
 
-export function leftCount(count: number): RegExp {
-  return new RegExp(`(còn|\\.) ?${count} (xung đột|conflicts)`, "i");
+export function leftCount(count: number): string {
+  return `${count} conflicts still need review`;
 }
 
 export async function openEditFromList(ui: Ui, name: string, type?: string): Promise<void> {
@@ -602,7 +726,7 @@ export async function openIssueEdit(ui: Ui, rule: string): Promise<void> {
 }
 
 export async function expectPreview(ui: Ui, state: PreviewState): Promise<void> {
-  await expect(editingOf(ui).preview).toHaveAttribute("data-state", state);
+  await expect(editingOf(ui).preview).toHaveAttribute('data-state', state);
 }
 
 export async function fillEvidence(ui: Ui, index: number, evidence: EvidenceInput): Promise<void> {
@@ -643,47 +767,52 @@ export interface ReviewCase {
   readonly analyses: readonly SeedAnalysis[];
 }
 
-export const CLEAN_NOVEL = "Clean Chronicle";
-export const MIXED_NOVEL = "Mixed Chronicle";
+export const CLEAN_NOVEL = 'Clean Chronicle';
+export const MIXED_NOVEL = 'Mixed Chronicle';
 
 export const MIXED_ANALYSES: readonly SeedAnalysis[] = [
   ...(RULE_FIXTURES.evidence as readonly SeedAnalysis[]),
-  { chapter: 2, personas: [{ name: "Feng", character: "Lin Feng" }] },
-  { chapter: 3, stale: true, personas: [{ name: "Su Yan" }] },
+  { chapter: 2, personas: [{ name: 'Feng', character: 'Lin Feng' }] },
+  { chapter: 3, stale: true, personas: [{ name: 'Su Yan' }] },
 ];
 
-export const STALE_RULES: readonly string[] = ["source_stale", "source_stale", "source_stale"];
+export const STALE_RULES: readonly string[] = ['source_stale', 'source_stale', 'source_stale'];
 
-export const MIXED_RULES: readonly string[] = ["evidence", "evidence", "entity_duplicate", ...STALE_RULES];
+export const MIXED_RULES: readonly string[] = [
+  'evidence',
+  'evidence',
+  'entity_duplicate',
+  ...STALE_RULES,
+];
 
 export const FIX_ANALYSES: readonly SeedAnalysis[] = [
   {
     chapter: 1,
-    personas: [{ name: "Lin Feng" }],
+    personas: [{ name: 'Lin Feng' }],
     entities: [
-      { type: "artifact", name: "Frost Blade" },
-      { type: "persona", name: "Master Chen" },
+      { type: 'artifact', name: 'Frost Blade' },
+      { type: 'persona', name: 'Master Chen' },
     ],
-    facts: [{ pred: "owns", subject: "character:Lin Feng", object: "Frost Blade", p: 3 }],
+    facts: [{ pred: 'owns', subject: 'character:Lin Feng', object: 'Frost Blade', p: 3 }],
   },
   {
     chapter: 2,
-    personas: [{ name: "Feng", character: "Lin Feng" }],
-    entities: [{ type: "location", name: "Azure City", ev: [] }],
+    personas: [{ name: 'Feng', character: 'Lin Feng' }],
+    entities: [{ type: 'location', name: 'Azure City', ev: [] }],
   },
-  { chapter: 3, stale: true, personas: [{ name: "Su Yan" }] },
+  { chapter: 3, stale: true, personas: [{ name: 'Su Yan' }] },
 ];
 
 export const STALE_ANALYSES: readonly SeedAnalysis[] = [
-  { chapter: 1, personas: [{ name: "Lin Feng" }] },
-  { chapter: 2, stale: true, personas: [{ name: "Su Yan" }] },
+  { chapter: 1, personas: [{ name: 'Lin Feng' }] },
+  { chapter: 2, stale: true, personas: [{ name: 'Su Yan' }] },
 ];
 
 export const RULE_NOVELS: Readonly<Record<string, RuleName>> = {
-  "Duplicate Chronicle": "entity_duplicate",
-  "Stale Chronicle": "source_stale",
-  "Evidence Chronicle": "evidence",
-  "Signature Chronicle": "relation_signature",
+  'Duplicate Chronicle': 'entity_duplicate',
+  'Stale Chronicle': 'source_stale',
+  'Evidence Chronicle': 'evidence',
+  'Signature Chronicle': 'relation_signature',
 };
 
 export function reviewSeed(cases: readonly ReviewCase[]): KnowledgeWorkspaceSeed {
@@ -694,7 +823,10 @@ export function reviewSeed(cases: readonly ReviewCase[]): KnowledgeWorkspaceSeed
 }
 
 export function ruleCases(): ReviewCase[] {
-  return Object.entries(RULE_NOVELS).map(([novel, rule]) => ({ novel, analyses: RULE_FIXTURES[rule] }));
+  return Object.entries(RULE_NOVELS).map(([novel, rule]) => ({
+    novel,
+    analyses: RULE_FIXTURES[rule],
+  }));
 }
 
 export function cleanCase(): ReviewCase {
@@ -707,37 +839,43 @@ export function reviewPage(ui: Ui): KnowledgeReviewPage {
 
 export async function reviewNovel(ui: Ui, novel: string): Promise<KnowledgeReviewPage> {
   await showKnowledge(ui, novel);
-  await selectLang(ui, "src");
-  await goToTab(ui, "review");
+  await selectLang(ui, 'src');
+  await goToTab(ui, 'review');
   return reviewPage(ui);
 }
 
 export async function issueRules(review: KnowledgeReviewPage): Promise<string[]> {
-  return review.issues.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-rule") ?? ""));
+  return review.issues.evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute('data-rule') ?? ''),
+  );
 }
 
-export async function expectIssueRules(review: KnowledgeReviewPage, rules: readonly string[]): Promise<void> {
+export async function expectIssueRules(
+  review: KnowledgeReviewPage,
+  rules: readonly string[],
+): Promise<void> {
   await expect.poll(async () => (await issueRules(review)).sort()).toEqual([...rules].sort());
 }
 
 const ONTOLOGY_VERSION = 1;
 const KNOWLEDGE_BASE_TIME = Date.UTC(2026, 0, 4, 10, 0, 0);
-const CHARACTER = "character";
-const PERSONA = "persona";
-const PERSONA_OF = "persona_of";
+const CHARACTER = 'character';
+const PERSONA = 'persona';
+const PERSONA_OF = 'persona_of';
 
-export type KnowledgeLang = "src" | "VI" | "EN";
+export type KnowledgeLang = 'src' | 'VI' | 'EN';
 
-export type EntityKind = "character" | "persona" | "location" | "organization" | "artifact" | "skill" | "term" | "event";
+export type EntityKind =
+  'character' | 'persona' | 'location' | 'organization' | 'artifact' | 'skill' | 'term' | 'event';
 
 export type RuleName =
-  | "character_predicate"
-  | "persona_link"
-  | "relation_signature"
-  | "relation_unique"
-  | "entity_duplicate"
-  | "evidence"
-  | "source_stale";
+  | 'character_predicate'
+  | 'persona_link'
+  | 'relation_signature'
+  | 'relation_unique'
+  | 'entity_duplicate'
+  | 'evidence'
+  | 'source_stale';
 
 export interface SeedEvidence {
   readonly p: number;
@@ -839,11 +977,11 @@ export interface SeededKnowledgeWorkspace {
 }
 
 export function norm(text: string): string {
-  return text.normalize("NFC").split(/\s+/).filter(Boolean).join(" ").toLowerCase();
+  return text.normalize('NFC').split(/\s+/).filter(Boolean).join(' ').toLowerCase();
 }
 
 function shortHash(parts: readonly string[]): string {
-  return createHash("sha256").update(parts.join("\0")).digest("hex").slice(0, 12);
+  return createHash('sha256').update(parts.join('\0')).digest('hex').slice(0, 12);
 }
 
 export function entityId(type: string, name: string): string {
@@ -851,11 +989,11 @@ export function entityId(type: string, name: string): string {
 }
 
 export function factId(pred: string, subject: string, object: string | null): string {
-  return `F${shortHash([pred, subject, object ?? ""])}`;
+  return `F${shortHash([pred, subject, object ?? ''])}`;
 }
 
 export function textHash(paragraphs: readonly string[]): string {
-  return createHash("sha256").update(paragraphs.join("\n")).digest("hex");
+  return createHash('sha256').update(paragraphs.join('\n')).digest('hex');
 }
 
 export function entityKey(type: string, name: string): string {
@@ -863,26 +1001,43 @@ export function entityKey(type: string, name: string): string {
 }
 
 export function analysisDir(folder: string, novelId: number, lang: KnowledgeLang): string {
-  return join(novelDir(folder, novelId), `knowledgebase_${lang === "src" ? "src" : lang.toLowerCase()}`);
+  return join(
+    novelDir(folder, novelId),
+    `knowledgebase_${lang === 'src' ? 'src' : lang.toLowerCase()}`,
+  );
 }
 
-export function analysisPath(folder: string, novelId: number, lang: KnowledgeLang, chapterId: string): string {
+export function analysisPath(
+  folder: string,
+  novelId: number,
+  lang: KnowledgeLang,
+  chapterId: string,
+): string {
   return join(analysisDir(folder, novelId, lang), `chapter_${chapterId}.json`);
 }
 
 function sentencesOf(paragraph: string): string[] {
-  return paragraph.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim() !== "");
+  return paragraph.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim() !== '');
 }
 
-function evidenceFor(paragraphs: readonly string[], needles: readonly string[], at: number | undefined): FileEvidence {
+function evidenceFor(
+  paragraphs: readonly string[],
+  needles: readonly string[],
+  at: number | undefined,
+): FileEvidence {
   const wanted = needles.map(norm);
-  const matches = (paragraph: string): boolean => wanted.every((needle) => norm(paragraph).includes(needle));
+  const matches = (paragraph: string): boolean =>
+    wanted.every((needle) => norm(paragraph).includes(needle));
   const index = at !== undefined ? at - 1 : paragraphs.findIndex(matches);
   const paragraph = paragraphs[index];
   if (paragraph === undefined) {
-    throw new Error(`knowledge seed cannot find evidence for ${needles.join(" + ")} in the chapter text`);
+    throw new Error(
+      `knowledge seed cannot find evidence for ${needles.join(' + ')} in the chapter text`,
+    );
   }
-  const sentence = sentencesOf(paragraph).find((candidate) => wanted.every((needle) => norm(candidate).includes(needle)));
+  const sentence = sentencesOf(paragraph).find((candidate) =>
+    wanted.every((needle) => norm(candidate).includes(needle)),
+  );
   return { p: index + 1, q: sentence ?? paragraph };
 }
 
@@ -901,12 +1056,21 @@ class ChapterBuilder {
   }
 
   addEntity(entity: SeedEntity): FileEntity {
-    const found = this.entities.find((item) => item.type === entity.type && norm(item.name) === norm(entity.name));
+    const found = this.entities.find(
+      (item) => item.type === entity.type && norm(item.name) === norm(entity.name),
+    );
     if (found) {
       return found;
     }
-    const ev = entity.ev ? entity.ev.map((item) => ({ ...item })) : [this.nameEvidence(entity.name, entity.at)];
-    const created: FileEntity = { id: this.nextEntityId(), type: entity.type, name: entity.name, ev };
+    const ev = entity.ev
+      ? entity.ev.map((item) => ({ ...item }))
+      : [this.nameEvidence(entity.name, entity.at)];
+    const created: FileEntity = {
+      id: this.nextEntityId(),
+      type: entity.type,
+      name: entity.name,
+      ev,
+    };
     if (entity.titles && entity.titles.length > 0) {
       created.titles = [...entity.titles];
     }
@@ -922,16 +1086,35 @@ class ChapterBuilder {
   }
 
   addPersona(persona: SeedPersona): void {
-    const created = this.addEntity({ type: PERSONA, name: persona.name, titles: persona.titles, aliases: persona.aliases, at: persona.at, ev: persona.ev });
-    const character = this.addEntity({ type: CHARACTER, name: persona.character ?? persona.name, ev: created.ev });
-    this.facts.push({ id: this.nextFactId(), pred: PERSONA_OF, subject: created.id, object: character.id, ev: created.ev.map((item) => ({ ...item })) });
+    const created = this.addEntity({
+      type: PERSONA,
+      name: persona.name,
+      titles: persona.titles,
+      aliases: persona.aliases,
+      at: persona.at,
+      ev: persona.ev,
+    });
+    const character = this.addEntity({
+      type: CHARACTER,
+      name: persona.character ?? persona.name,
+      ev: created.ev,
+    });
+    this.facts.push({
+      id: this.nextFactId(),
+      pred: PERSONA_OF,
+      subject: created.id,
+      object: character.id,
+      ev: created.ev.map((item) => ({ ...item })),
+    });
   }
 
   private resolve(ref: string): FileEntity {
-    const colon = ref.indexOf(":");
-    const typed = colon > 0 ? ref.slice(0, colon) : "";
-    const name = typed === "" ? ref : ref.slice(colon + 1);
-    const matches = this.entities.filter((item) => norm(item.name) === norm(name) && (typed === "" || item.type === typed));
+    const colon = ref.indexOf(':');
+    const typed = colon > 0 ? ref.slice(0, colon) : '';
+    const name = typed === '' ? ref : ref.slice(colon + 1);
+    const matches = this.entities.filter(
+      (item) => norm(item.name) === norm(name) && (typed === '' || item.type === typed),
+    );
     const preferred = matches.find((item) => item.type !== CHARACTER) ?? matches[0];
     if (!preferred) {
       throw new Error(`knowledge seed references an unknown entity ${ref}`);
@@ -942,7 +1125,8 @@ class ChapterBuilder {
   addFact(fact: SeedFact): void {
     const subject = this.resolve(fact.subject);
     const object = fact.object === undefined ? undefined : this.resolve(fact.object);
-    const needles = fact.quote !== undefined ? [fact.quote] : [subject.name, ...(object ? [object.name] : [])];
+    const needles =
+      fact.quote !== undefined ? [fact.quote] : [subject.name, ...(object ? [object.name] : [])];
     const ev = fact.ev ? fact.ev.map((item) => ({ ...item })) : [this.factEvidence(needles, fact)];
     const created: FileFact = { id: this.nextFactId(), pred: fact.pred, subject: subject.id, ev };
     if (object) {
@@ -953,7 +1137,9 @@ class ChapterBuilder {
 
   private factEvidence(needles: readonly string[], fact: SeedFact): FileEvidence {
     if (fact.quote !== undefined && fact.p === undefined) {
-      const found = this.paragraphs.findIndex((paragraph) => norm(paragraph).includes(norm(fact.quote ?? "")));
+      const found = this.paragraphs.findIndex((paragraph) =>
+        norm(paragraph).includes(norm(fact.quote ?? '')),
+      );
       return { p: found + 1, q: fact.quote };
     }
     if (fact.quote !== undefined) {
@@ -963,18 +1149,29 @@ class ChapterBuilder {
   }
 }
 
-async function sourceTextOf(folder: string, novelId: number, chapterId: string, lang: KnowledgeLang): Promise<string[]> {
-  if (lang === "src") {
+async function sourceTextOf(
+  folder: string,
+  novelId: number,
+  chapterId: string,
+  lang: KnowledgeLang,
+): Promise<string[]> {
+  if (lang === 'src') {
     return readParagraphs(folder, novelId, chapterId);
   }
   const translated = await readTranslatedChapter(folder, novelId, lang, chapterId);
   if (translated === null) {
-    throw new Error(`knowledge seed for ${lang} needs a ${lang} translation of chapter ${chapterId}`);
+    throw new Error(
+      `knowledge seed for ${lang} needs a ${lang} translation of chapter ${chapterId}`,
+    );
   }
   return translated.paragraphs.map((paragraph) => paragraph.text);
 }
 
-export function buildAnalysis(paragraphs: readonly string[], seed: SeedAnalysis, position: number): FileAnalysis {
+export function buildAnalysis(
+  paragraphs: readonly string[],
+  seed: SeedAnalysis,
+  position: number,
+): FileAnalysis {
   const builder = new ChapterBuilder(paragraphs);
   for (const entity of seed.entities ?? []) {
     builder.addEntity(entity);
@@ -986,7 +1183,8 @@ export function buildAnalysis(paragraphs: readonly string[], seed: SeedAnalysis,
     builder.addFact(fact);
   }
   const real = textHash(paragraphs);
-  const sourceHash = seed.sourceHash ?? (seed.stale ? textHash([...paragraphs, "an earlier version"]) : real);
+  const sourceHash =
+    seed.sourceHash ?? (seed.stale ? textHash([...paragraphs, 'an earlier version']) : real);
   return {
     ontology: ONTOLOGY_VERSION,
     sourceHash,
@@ -996,9 +1194,18 @@ export function buildAnalysis(paragraphs: readonly string[], seed: SeedAnalysis,
   };
 }
 
-export async function writeAnalysis(folder: string, novelId: number, lang: KnowledgeLang, chapterId: string, analysis: FileAnalysis): Promise<void> {
+export async function writeAnalysis(
+  folder: string,
+  novelId: number,
+  lang: KnowledgeLang,
+  chapterId: string,
+  analysis: FileAnalysis,
+): Promise<void> {
   await mkdir(analysisDir(folder, novelId, lang), { recursive: true });
-  await writeFile(analysisPath(folder, novelId, lang, chapterId), JSON.stringify(analysis, null, 2));
+  await writeFile(
+    analysisPath(folder, novelId, lang, chapterId),
+    JSON.stringify(analysis, null, 2),
+  );
 }
 
 function cleanRecord(analysis: FileAnalysis): FileAnalysis {
@@ -1006,12 +1213,20 @@ function cleanRecord(analysis: FileAnalysis): FileAnalysis {
     ...analysis,
     entities: analysis.entities.map((entity) => {
       const { titles, aliases, ...rest } = entity;
-      return { ...rest, ...(titles && titles.length > 0 ? { titles } : {}), ...(aliases && aliases.length > 0 ? { aliases } : {}) };
+      return {
+        ...rest,
+        ...(titles && titles.length > 0 ? { titles } : {}),
+        ...(aliases && aliases.length > 0 ? { aliases } : {}),
+      };
     }),
   };
 }
 
-function globalIds(analysis: FileAnalysis, entityIds: Record<string, string>, factIds: Record<string, string>): void {
+function globalIds(
+  analysis: FileAnalysis,
+  entityIds: Record<string, string>,
+  factIds: Record<string, string>,
+): void {
   const local = new Map<string, string>();
   for (const entity of analysis.entities) {
     const id = entityId(entity.type, entity.name);
@@ -1025,13 +1240,16 @@ function globalIds(analysis: FileAnalysis, entityIds: Record<string, string>, fa
     if (subject === undefined) {
       continue;
     }
-    const key = `${fact.pred}:${names.get(fact.subject) ?? fact.subject}${fact.object === undefined ? "" : `>${names.get(fact.object) ?? fact.object}`}`;
+    const key = `${fact.pred}:${names.get(fact.subject) ?? fact.subject}${fact.object === undefined ? '' : `>${names.get(fact.object) ?? fact.object}`}`;
     factIds[key] = factId(fact.pred, subject, object);
   }
 }
 
 export async function seedKnowledge(folder: string, seed: KnowledgeSeed): Promise<SeededKnowledge> {
-  const placed = await readWorkspace(folder, (db) => ({ novelId: db.novelId(seed.novel), chapters: db.chapters(seed.novel) }));
+  const placed = await readWorkspace(folder, (db) => ({
+    novelId: db.novelId(seed.novel),
+    chapters: db.chapters(seed.novel),
+  }));
   const chapters: Record<number, string> = {};
   for (const chapter of placed.chapters) {
     chapters[chapter.seq] = chapter.id;
@@ -1044,7 +1262,7 @@ export async function seedKnowledge(folder: string, seed: KnowledgeSeed): Promis
     if (chapterId === undefined) {
       throw new Error(`knowledge seed references an unknown chapter ${analysis.chapter}`);
     }
-    const lang = analysis.lang ?? "src";
+    const lang = analysis.lang ?? 'src';
     const paragraphs = await sourceTextOf(folder, placed.novelId, chapterId, lang);
     const built = cleanRecord(buildAnalysis(paragraphs, analysis, position));
     await writeAnalysis(folder, placed.novelId, lang, chapterId, built);
@@ -1055,7 +1273,9 @@ export async function seedKnowledge(folder: string, seed: KnowledgeSeed): Promis
   }
   const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
   try {
-    const update = database.prepare("UPDATE ws_novel_chapters SET analysis_status = 'done' WHERE id = ?");
+    const update = database.prepare(
+      "UPDATE ws_novel_chapters SET analysis_status = 'done' WHERE id = ?",
+    );
     for (const id of analyzed) {
       update.run(id);
     }
@@ -1093,15 +1313,26 @@ export interface KnowledgeState {
   readonly facts: readonly MergedFact[];
 }
 
-export async function readAnalysis(folder: string, novelId: number, lang: KnowledgeLang, chapterId: string): Promise<FileAnalysis | null> {
+export async function readAnalysis(
+  folder: string,
+  novelId: number,
+  lang: KnowledgeLang,
+  chapterId: string,
+): Promise<FileAnalysis | null> {
   try {
-    return JSON.parse(await readFile(analysisPath(folder, novelId, lang, chapterId), "utf8")) as FileAnalysis;
+    return JSON.parse(
+      await readFile(analysisPath(folder, novelId, lang, chapterId), 'utf8'),
+    ) as FileAnalysis;
   } catch {
     return null;
   }
 }
 
-export async function listAnalysisIds(folder: string, novelId: number, lang: KnowledgeLang): Promise<string[]> {
+export async function listAnalysisIds(
+  folder: string,
+  novelId: number,
+  lang: KnowledgeLang,
+): Promise<string[]> {
   try {
     const names = await readdir(analysisDir(folder, novelId, lang));
     return names
@@ -1113,8 +1344,13 @@ export async function listAnalysisIds(folder: string, novelId: number, lang: Kno
   }
 }
 
-async function currentText(folder: string, novelId: number, lang: KnowledgeLang, chapterId: string): Promise<string[] | null> {
-  if (lang === "src") {
+async function currentText(
+  folder: string,
+  novelId: number,
+  lang: KnowledgeLang,
+  chapterId: string,
+): Promise<string[] | null> {
+  if (lang === 'src') {
     return readParagraphs(folder, novelId, chapterId);
   }
   const translated = await readTranslatedChapter(folder, novelId, lang, chapterId);
@@ -1132,11 +1368,28 @@ function union(into: string[], values: readonly string[] | undefined): void {
 }
 
 function mergeEntities(files: Readonly<Record<number, FileAnalysis>>): MergedEntity[] {
-  const merged = new Map<string, { type: string; name: string; chapters: Set<number>; titles: string[]; aliases: string[]; evidence: (FileEvidence & { chapter: number })[] }>();
+  const merged = new Map<
+    string,
+    {
+      type: string;
+      name: string;
+      chapters: Set<number>;
+      titles: string[];
+      aliases: string[];
+      evidence: (FileEvidence & { chapter: number })[];
+    }
+  >();
   for (const [seq, file] of Object.entries(files)) {
     for (const entity of file.entities) {
       const id = entityId(entity.type, entity.name);
-      const current = merged.get(id) ?? { type: entity.type, name: entity.name, chapters: new Set<number>(), titles: [], aliases: [], evidence: [] };
+      const current = merged.get(id) ?? {
+        type: entity.type,
+        name: entity.name,
+        chapters: new Set<number>(),
+        titles: [],
+        aliases: [],
+        evidence: [],
+      };
       current.chapters.add(Number(seq));
       union(current.titles, entity.titles);
       union(current.aliases, entity.aliases);
@@ -1144,30 +1397,70 @@ function mergeEntities(files: Readonly<Record<number, FileAnalysis>>): MergedEnt
       merged.set(id, current);
     }
   }
-  return [...merged.entries()].map(([id, item]) => ({ id, type: item.type, name: item.name, chapters: [...item.chapters].sort((a, b) => a - b), titles: item.titles, aliases: item.aliases, evidence: item.evidence }));
+  return [...merged.entries()].map(([id, item]) => ({
+    id,
+    type: item.type,
+    name: item.name,
+    chapters: [...item.chapters].sort((a, b) => a - b),
+    titles: item.titles,
+    aliases: item.aliases,
+    evidence: item.evidence,
+  }));
 }
 
 function mergeFacts(files: Readonly<Record<number, FileAnalysis>>): MergedFact[] {
-  const merged = new Map<string, { pred: string; subject: string; object: string | null; chapters: Set<number>; evidence: (FileEvidence & { chapter: number })[] }>();
+  const merged = new Map<
+    string,
+    {
+      pred: string;
+      subject: string;
+      object: string | null;
+      chapters: Set<number>;
+      evidence: (FileEvidence & { chapter: number })[];
+    }
+  >();
   for (const [seq, file] of Object.entries(files)) {
-    const ids = new Map(file.entities.map((entity) => [entity.id, entityId(entity.type, entity.name)]));
+    const ids = new Map(
+      file.entities.map((entity) => [entity.id, entityId(entity.type, entity.name)]),
+    );
     for (const fact of file.facts) {
       const subject = ids.get(fact.subject);
       const object = fact.object === undefined ? null : (ids.get(fact.object) ?? null);
-      if (subject === undefined || (fact.object !== undefined && object === null) || object === subject) {
+      if (
+        subject === undefined ||
+        (fact.object !== undefined && object === null) ||
+        object === subject
+      ) {
         continue;
       }
       const id = factId(fact.pred, subject, object);
-      const current = merged.get(id) ?? { pred: fact.pred, subject, object, chapters: new Set<number>(), evidence: [] };
+      const current = merged.get(id) ?? {
+        pred: fact.pred,
+        subject,
+        object,
+        chapters: new Set<number>(),
+        evidence: [],
+      };
       current.chapters.add(Number(seq));
       current.evidence.push(...fact.ev.map((item) => ({ ...item, chapter: Number(seq) })));
       merged.set(id, current);
     }
   }
-  return [...merged.entries()].map(([id, item]) => ({ id, pred: item.pred, subject: item.subject, object: item.object, chapters: [...item.chapters].sort((a, b) => a - b), evidence: item.evidence }));
+  return [...merged.entries()].map(([id, item]) => ({
+    id,
+    pred: item.pred,
+    subject: item.subject,
+    object: item.object,
+    chapters: [...item.chapters].sort((a, b) => a - b),
+    evidence: item.evidence,
+  }));
 }
 
-export async function readKnowledgeState(folder: string, novel: string, lang: KnowledgeLang = "src"): Promise<KnowledgeState> {
+export async function readKnowledgeState(
+  folder: string,
+  novel: string,
+  lang: KnowledgeLang = 'src',
+): Promise<KnowledgeState> {
   const placed = readNovelPlace(folder, novel);
   const files: Record<number, FileAnalysis> = {};
   const stale: number[] = [];
@@ -1182,128 +1475,164 @@ export async function readKnowledgeState(folder: string, novel: string, lang: Kn
       stale.push(chapter.seq);
     }
   }
-  return { novelId: placed.novelId, lang, files, stale, entities: mergeEntities(files), facts: mergeFacts(files) };
+  return {
+    novelId: placed.novelId,
+    lang,
+    files,
+    stale,
+    entities: mergeEntities(files),
+    facts: mergeFacts(files),
+  };
 }
 
-export function findEntity(state: KnowledgeState, name: string, type?: string): MergedEntity | undefined {
-  return state.entities.find((entity) => norm(entity.name) === norm(name) && (type === undefined || entity.type === type));
+export function findEntity(
+  state: KnowledgeState,
+  name: string,
+  type?: string,
+): MergedEntity | undefined {
+  return state.entities.find(
+    (entity) => norm(entity.name) === norm(name) && (type === undefined || entity.type === type),
+  );
 }
 
 export function entityNames(state: KnowledgeState, type?: string): string[] {
-  return state.entities.filter((entity) => type === undefined || entity.type === type).map((entity) => entity.name);
+  return state.entities
+    .filter((entity) => type === undefined || entity.type === type)
+    .map((entity) => entity.name);
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const ANALYZE_BATCH_SIZE = 5;
+
+export function analyzeStarted(count: number): string {
+  return `Started analyzing ${count} chapters.`;
 }
 
-export const ANALYZE_STARTED = /đã bắt đầu phân tích \d+ chương|started analyzing \d+ chapters/i;
-export const ANALYZE_WARN_NO_SOURCE = /\d+ chương không có nội dung ở phiên bản này nên bị bỏ qua|\d+ chapters have no content in this version and are skipped/i;
-export const ANALYZE_WARN_OVERWRITE = /\d+ chương đã có kết quả sẽ bị ghi đè|\d+ chapters that already have results will be overwritten/i;
-export const ANALYZE_MODE_MISSING_NONE = /mọi chương đều đã có kết quả|every chapter has results/i;
-export const ANALYZE_BATCHES = /\d+ (lô|batches), (tối đa|of up to)|\d+ batches of up to \d+ chapters/i;
-export const PROVIDER_UNSET = /chưa chọn provider cho tính năng tri thức|no provider is set for the knowledge feature/i;
-export const PROVIDER_UNREADY = /provider chưa sẵn sàng|the provider is not ready/i;
-export const PROVIDER_HINT = /cấu hình ở cài đặt|set in settings/i;
-
-export const EDIT_APPLIED = /đã áp dụng \d+ thay đổi\. không còn xung đột|applied \d+ changes\. no conflicts remain/i;
-export const EDIT_APPLIED_LEFT = /đã áp dụng \d+ thay đổi\. còn \d+ xung đột cần xem xét|applied \d+ changes\. \d+ conflicts still need review/i;
-export const EDIT_EVIDENCE_INVALID = /hãy nhập chương, đoạn và trích dẫn|enter the chapter, the paragraph and the quote/i;
-export const EDIT_EVIDENCE_REQUIRED = /hãy thêm ít nhất một trích dẫn làm bằng chứng|add at least one evidence quote/i;
-export const EDIT_NAME_REQUIRED = /hãy nhập tên\.|enter a name\./i;
-export const EDIT_MERGE_TYPE = /chỉ gộp được các thực thể cùng loại|only entities of the same type can be merged/i;
-export const EDIT_PREVIEW_IDLE = /chưa có thay đổi\. khi bạn sửa|no changes yet\. once you edit/i;
-export const EDIT_PREVIEW_INVALID = /có mục chưa đầy đủ|some items are incomplete/i;
-export const EDIT_PREVIEW_CLEAN = /không phát hiện xung đột mới|no new conflicts detected/i;
-export const EDIT_PREVIEW_WARN = /thay đổi sẽ tạo xung đột mới|the change will create new conflicts/i;
-export const EDIT_PREVIEW_RESOLVED = /xung đột này sẽ được giải quyết|this conflict will be resolved/i;
-export const EDIT_PREVIEW_OPEN = /xung đột này vẫn còn sau khi sửa|this conflict remains after the edit/i;
-export const EDIT_STATE_SAME = /^(không đổi|unchanged)$/i;
-export const EDIT_STATE_EDITED = /^(đã sửa|edited)$/i;
-export const EDIT_STATE_NEW = /^(mới|new)$/i;
-export const EDIT_STATE_DELETED = /^(đã xoá|deleted)$/i;
-export const EDIT_STATE_MERGED = /^(đã gộp|merged)$/i;
-export const EDIT_STATE_REMOVED = /^(đã gỡ|removed)$/i;
-export const EDIT_TYPE_REFUSED = /nhân dạng có danh xưng hoặc biệt danh không thể đổi kiểu\. hãy xóa danh xưng và biệt danh trước|a persona with titles or aliases cannot change type\. remove its titles and aliases first/i;
-export const EDIT_EVIDENCE_EMPTY = /chưa có bằng chứng\. claim thiếu bằng chứng|no evidence yet\. a claim without evidence/i;
-
-export function addChange(name: string): RegExp {
-  return new RegExp(`^(thêm|add) “${escapeRegExp(name)}”$`, "i");
+export function analyzeWarnNoSource(skipped: readonly number[]): string {
+  return `${skipped.length} chapters have no content in this version and are skipped · ${rangeLabel(skipped)}.`;
 }
 
-export function editChange(name: string, fields: readonly string[]): RegExp {
-  return new RegExp(`^(sửa|edit) “${escapeRegExp(name)}”: (${fields.map((field) => EDIT_FIELD_LABELS[field].vi).join(", ")}|${fields.map((field) => EDIT_FIELD_LABELS[field].en).join(", ")})$`, "i");
+export function analyzeWarnOverwrite(count: number): string {
+  return `${count} chapters that already have results will be overwritten.`;
 }
 
-export function mergeChange(names: readonly string[], target: string): RegExp {
-  return new RegExp(`^(gộp|merge) ${escapeRegExp(names.join(", "))} (vào|into) “${escapeRegExp(target)}”$`, "i");
+export function analyzeBatches(batches: number): string {
+  return `${batches} batches of up to ${ANALYZE_BATCH_SIZE} chapters`;
 }
 
-export const REMOVE_TITLE = /xoá khỏi tri thức|delete from knowledge/i;
-export const REMOVE_WARNING = /các fact trỏ tới nó cũng bị xoá\. không thể hoàn tác|facts that point to it are deleted too\. this cannot be undone/i;
+export const ANALYZE_MODE_MISSING_NONE = 'Every chapter has results';
+export const PROVIDER_UNSET = 'No provider is set for the knowledge feature.';
+export const PROVIDER_UNREADY = 'The provider is not ready. Check it in Settings → LLM.';
+export const PROVIDER_HINT = 'Set in Settings → LLM for the knowledge feature.';
 
-const EDIT_FIELD_LABELS: Readonly<Record<string, { readonly en: string; readonly vi: string }>> = {
-  name: { en: "Name", vi: "Tên" },
-  type: { en: "Type", vi: "Kiểu" },
-  titles: { en: "Titles", vi: "Danh xưng" },
-  aliases: { en: "Aliases", vi: "Biệt danh" },
+export const EDIT_APPLIED = 'No conflicts remain.';
+export const EDIT_APPLIED_LEFT = 'conflicts still need review';
+export const EDIT_EVIDENCE_INVALID = 'Enter the chapter, the paragraph and the quote.';
+export const EDIT_EVIDENCE_REQUIRED = 'Add at least one evidence quote.';
+export const EDIT_NAME_REQUIRED = 'Enter a name.';
+export const EDIT_MERGE_TYPE = 'Only entities of the same type can be merged.';
+export const EDIT_PREVIEW_IDLE =
+  'No changes yet. Once you edit, the conflict check result appears here.';
+export const EDIT_PREVIEW_INVALID =
+  'Some items are incomplete: a name is empty, a fact is missing an endpoint, or a new item has no evidence.';
+export const EDIT_PREVIEW_CLEAN = 'No new conflicts detected.';
+export const EDIT_PREVIEW_WARN = 'The change will create new conflicts:';
+export const EDIT_PREVIEW_RESOLVED = 'This conflict will be resolved.';
+export const EDIT_PREVIEW_OPEN = 'This conflict remains after the edit.';
+export const EDIT_STATE_SAME = 'Unchanged';
+export const EDIT_STATE_EDITED = 'Edited';
+export const EDIT_STATE_NEW = 'New';
+export const EDIT_STATE_DELETED = 'Deleted';
+export const EDIT_STATE_MERGED = 'Merged';
+export const EDIT_STATE_REMOVED = 'Removed';
+export const EDIT_TYPE_REFUSED =
+  'A persona with titles or aliases cannot change type. Remove its titles and aliases first.';
+export const EDIT_EVIDENCE_EMPTY =
+  'No evidence yet. A claim without evidence is flagged in Review.';
+
+export function addChange(name: string): string {
+  return `Add “${name}”`;
+}
+
+export function editChange(name: string, fields: readonly string[]): string {
+  return `Edit “${name}”: ${fields.map((field) => EDIT_FIELD_LABELS[field]).join(', ')}`;
+}
+
+export function mergeChange(names: readonly string[], target: string): string {
+  return `Merge ${names.join(', ')} into “${target}”`;
+}
+
+export const REMOVE_TITLE = 'Delete from knowledge';
+export const REMOVE_WARNING = 'Facts that point to it are deleted too. This cannot be undone.';
+
+const EDIT_FIELD_LABELS: Readonly<Record<string, string>> = {
+  name: 'Name',
+  type: 'Type',
+  titles: 'Titles',
+  aliases: 'Aliases',
 };
 
-export function removeMessage(name: string): RegExp {
-  return new RegExp(`(xoá|delete) “${escapeRegExp(name)}”\\?`, "i");
+export function removeMessage(name: string): string {
+  return `Delete “${name}”?`;
 }
 
-export const REVIEW_DONE_MOVED = /đã chuyển sang nhân dạng|moved to the persona/i;
-export const REVIEW_DONE_CREATED = /đã tạo nhân vật và liên kết|character created and linked/i;
-export const REVIEW_DONE_KEPT = /^(đã xong\.|done\.)$/i;
-export const REVIEW_DONE_MERGED = /đã gộp thực thể|entities merged/i;
-export const REVIEW_DONE_REMOVED = /^(đã xoá\.|deleted\.)$/i;
-export const REVIEW_EMPTY = /^(không có xung đột|no conflicts)$/i;
-export const REVIEW_HINT = /việc kiểm tra chạy bằng code|checks run in code/i;
-export const REVIEW_SEVERITY_ERROR = /^(lỗi|error)$/i;
-export const REVIEW_SEVERITY_WARNING = /^(cảnh báo|warning)$/i;
-export const REVIEW_ACTION_KEEP = /giữ nguyên|keep as is/i;
-export const REVIEW_ACTION_REANALYZE = /phân tích lại|re-analyze/i;
-export const REVIEW_ACTION_CREATE_CHARACTER = /tạo nhân vật từ nhân dạng|create character from persona/i;
-export const REVIEW_ACTION_MOVE = /chuyển sang “.+”|move to “.+”/i;
-export const REVIEW_ACTION_MERGE = /gộp “.+” vào “.+”|merge “.+” into “.+”/i;
-export const REVIEW_ACTION_ASK = /nhờ trợ lý đề xuất sửa|ask assistant for fixes/i;
+export const REVIEW_DONE_MOVED = 'Moved to the persona.';
+export const REVIEW_DONE_CREATED = 'Character created and linked.';
+export const REVIEW_DONE_KEPT = 'Done.';
+export const REVIEW_DONE_MERGED = 'Entities merged.';
+export const REVIEW_DONE_REMOVED = 'Deleted.';
+export const REVIEW_EMPTY = 'No conflicts';
+export const REVIEW_HINT = 'Checks run in code, not in an LLM.';
+export const REVIEW_SEVERITY_ERROR = 'Error';
+export const REVIEW_SEVERITY_WARNING = 'Warning';
+export const REVIEW_ACTION_KEEP = 'Keep as is';
+export const REVIEW_ACTION_REANALYZE = 'Re-analyze…';
+export const REVIEW_ACTION_CREATE_CHARACTER = 'Create character from persona';
+export const REVIEW_ACTION_ASK = 'Ask Assistant for fixes';
+
+export function reviewActionMove(name: string): string {
+  return `Move to “${name}”`;
+}
+
+export function reviewActionMerge(from: string, to: string): string {
+  return `Merge “${from}” into “${to}”`;
+}
 
 export const RULE_LABELS = {
-  character_predicate: /predicate trên nhân vật|character predicate/i,
-  persona_link: /nhân dạng thiếu nhân vật|persona without character/i,
-  relation_signature: /sai kiểu thực thể|wrong entity types/i,
-  dangling_ref: /thiếu thực thể|missing entity/i,
-  relation_unique: /trùng vai trò|duplicate role/i,
-  entity_duplicate: /có thể trùng|possible duplicate/i,
-  evidence: /^(bằng chứng|evidence)$/i,
-  source_stale: /nguồn đã đổi|source changed/i,
+  character_predicate: 'Character predicate',
+  persona_link: 'Persona without character',
+  relation_signature: 'Wrong entity types',
+  dangling_ref: 'Missing entity',
+  relation_unique: 'Duplicate role',
+  entity_duplicate: 'Possible duplicate',
+  evidence: 'Evidence',
+  source_stale: 'Source changed',
 } as const;
 
-export const CHECK_CHARACTER_PREDICATE = /đang gắn vào nhân vật|is set on the character/i;
-export const CHECK_PERSONA_NONE = /chưa thuộc nhân vật nào|does not belong to any character/i;
-export const CHECK_PERSONA_MANY = /thuộc nhiều nhân vật|belongs to several characters/i;
-export const CHECK_SIGNATURE = /yêu cầu .+, nhưng đây là|requires .+, but this is/i;
-export const CHECK_DANGLING = /trỏ tới thực thể đã bị loại hoặc không còn|points to an entity that was rejected or no longer exists/i;
-export const CHECK_RELATION_UNIQUE = /trong khi chỉ cho phép một|but only one is allowed/i;
-export const CHECK_DUPLICATE = /có thể là một|may be the same/i;
-export const CHECK_EVIDENCE_NONE = /chưa có bằng chứng nào|no evidence is attached to/i;
-export const CHECK_EVIDENCE_QUOTE = /không tìm thấy trong đoạn nguồn|was not found in its source paragraph/i;
-export const CHECK_STALE = /đã thay đổi sau khi mục này được phân tích|changed after this item was analyzed/i;
+export const CHECK_CHARACTER_PREDICATE = 'is set on the character';
+export const CHECK_PERSONA_NONE = 'does not belong to any character';
+export const CHECK_PERSONA_MANY = 'belongs to several characters';
+export const CHECK_SIGNATURE = 'requires Persona → Organization, but this is Persona → Persona.';
+export const CHECK_DANGLING = 'points to an entity that was rejected or no longer exists';
+export const CHECK_RELATION_UNIQUE = 'but only one is allowed';
+export const CHECK_DUPLICATE = 'may be the same';
+export const CHECK_EVIDENCE_NONE = 'No evidence is attached to';
+export const CHECK_EVIDENCE_QUOTE = 'was not found in its source paragraph';
+export const CHECK_STALE = 'changed after this item was analyzed';
 
-export const KNOWLEDGE_EMPTY_TITLE = /chưa có tri thức|no knowledge yet/i;
-export const KNOWLEDGE_EMPTY_CHAPTERS = /novel này chưa có chương nào|this novel has no chapters/i;
-export const LIST_EMPTY_TITLE = /không có mục phù hợp|no items match/i;
-export const GRAPH_EMPTY = /chưa có tri thức để hiển thị|no knowledge to show/i;
-export const DETAIL_EMPTY = /chọn một thực thể ở graph hoặc list|select an entity in the graph or the list/i;
-export const OMNISCIENT_EMPTY_TITLE = /chưa mở tri thức nào|no knowledgebase in focus/i;
-export const OMNISCIENT_MODE_OMNISCIENT = /^omniscient$/i;
-export const OMNISCIENT_MODE_CHAPTER = /^(chống spoiler|spoiler-safe)$/i;
+export const KNOWLEDGE_EMPTY_TITLE = 'No knowledge yet';
+export const KNOWLEDGE_EMPTY_CHAPTERS = 'This novel has no chapters';
+export const LIST_EMPTY_TITLE = 'No items match';
+export const GRAPH_EMPTY = 'No knowledge to show';
+export const DETAIL_EMPTY = 'Select an entity in the Graph or the List to see its details.';
+export const OMNISCIENT_EMPTY_TITLE = 'No knowledgebase in focus';
+export const OMNISCIENT_MODE_OMNISCIENT = 'Omniscient';
+export const OMNISCIENT_MODE_CHAPTER = 'Spoiler-safe';
 
-export const BACKEND_NAME_NOT_FOUND = /name not found in chapters/i;
-export const BACKEND_QUOTE_NOT_FOUND = /quote not found in/i;
-export const BACKEND_VALUE_NOT_FOUND = /not found in the text of the chapters containing the persona/i;
-export const BACKEND_MERGE_TYPE = /merged entities must share a type/i;
-export const BACKEND_NAME_EMPTY = /name must not be empty/i;
-export const BACKEND_ENTITY_EVIDENCE = /an entity needs evidence/i;
-export const GENERIC_ERROR = /không thể hoàn tất thao tác|the operation could not be completed/i;
+export const BACKEND_NAME_NOT_FOUND = 'name not found in chapters';
+export const BACKEND_QUOTE_NOT_FOUND = 'quote not found in';
+export const BACKEND_VALUE_NOT_FOUND =
+  'not found in the text of the chapters containing the persona';
+export const BACKEND_MERGE_TYPE = 'merged entities must share a type';
+export const BACKEND_NAME_EMPTY = 'name must not be empty';
+export const BACKEND_ENTITY_EVIDENCE = 'an entity needs evidence';
+export const GENERIC_ERROR = 'The operation could not be completed.';

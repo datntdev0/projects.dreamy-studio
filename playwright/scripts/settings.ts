@@ -1,105 +1,136 @@
-import { existsSync } from "node:fs";
-import { copyFile, readFile, writeFile } from "node:fs/promises";
-import { delimiter, join } from "node:path";
-import { expect, type Locator, type Page } from "@playwright/test";
-import type { GeneralTab, LlmTab, SettingsSectionId } from "../pages/settings.ts";
-import type { AppSession } from "./app.ts";
-import type { Ui } from "./fixtures.ts";
-import { openFromSplash } from "./flows.ts";
-import type { PickerStub } from "./picker.ts";
-import { currentBehavior, installProvider, providerDir, providerExecutable, setBehavior, settingsFile, test as providerTest, type ProviderId } from "./provider.ts";
-import type { Sandbox } from "./sandbox.ts";
+import { existsSync } from 'node:fs';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
+import { delimiter, join } from 'node:path';
 
-export { expect } from "./provider.ts";
+import { expect, type Locator, type Page } from '@playwright/test';
 
-const CLI_COMMANDS = ["claude", "codex", "agy"];
-const EXECUTABLE_SUFFIXES = [".cmd", ".exe", ".bat", ".com", ""];
-const SETTINGS_WORKSPACE = "settings";
+import type { GeneralTab, LlmTab, SettingsSectionId } from '../pages/settings.ts';
+import type { AppSession } from './app.ts';
+import type { Ui } from './fixtures.ts';
+import { openFromSplash } from './flows.ts';
+import type { PickerStub } from './picker.ts';
+// prettier-ignore
+import { currentBehavior, installProvider, providerDir, providerExecutable, type ProviderId,setBehavior, settingsFile, test as providerTest } from './provider.ts';
+import type { Sandbox } from './sandbox.ts';
+
+export { expect } from './provider.ts';
+
+const CLI_COMMANDS = ['claude', 'codex', 'agy'];
+const EXECUTABLE_SUFFIXES = ['.cmd', '.exe', '.bat', '.com', ''];
+const SETTINGS_WORKSPACE = 'settings';
 
 function hasCli(folder: string): boolean {
-  return CLI_COMMANDS.some((command) => EXECUTABLE_SUFFIXES.some((suffix) => existsSync(join(folder, `${command}${suffix}`))));
+  return CLI_COMMANDS.some((command) =>
+    EXECUTABLE_SUFFIXES.some((suffix) => existsSync(join(folder, `${command}${suffix}`))),
+  );
 }
 
 export function isolatedPath(path: string): string {
   return path
     .split(delimiter)
-    .filter((folder) => folder !== "" && !hasCli(folder))
+    .filter((folder) => folder !== '' && !hasCli(folder))
     .join(delimiter);
 }
 
 export const test = providerTest.extend({
   sandbox: async ({ sandbox }, use) => {
-    const original = process.env["PATH"];
-    process.env["PATH"] = isolatedPath(original ?? "");
+    const original = process.env['PATH'];
+    process.env['PATH'] = isolatedPath(original ?? '');
     await use(sandbox);
     if (original === undefined) {
-      delete process.env["PATH"];
+      delete process.env['PATH'];
     } else {
-      process.env["PATH"] = original;
+      process.env['PATH'] = original;
     }
   },
 });
 
-export const NAV_LABELS = ["General", "LLM providers", "Python backend", "Local TTS models", "Speech providers"];
-export const SECTION_PENDING = /sẽ được bổ sung trong phiên bản sau|added in a later version/i;
-export const OPEN_FAILED = /không mở được thư mục|could not open the folder/i;
-export const TITLE_EN = "Settings";
-export const TITLE_VI = "Cài đặt";
-export const SWITCH_THEME_EN = "Switch theme";
+export const NAV_LABELS = [
+  'General',
+  'LLM providers',
+  'Python backend',
+  'Local TTS models',
+  'Speech providers',
+];
+export const SECTION_PENDING =
+  'There is nothing to configure here yet. It will be added in a later version.';
+export const OPEN_FAILED = 'Could not open the folder.';
+export const TITLE_EN = 'Settings';
+export const TITLE_VI = 'Cài đặt';
+export const SWITCH_THEME_EN = 'Switch theme';
 
-export const BADGE_READY = /^(sẵn sàng|ready)$/i;
-export const BADGE_NOT_INSTALLED = /^(chưa cài|not installed)$/i;
-export const BADGE_NOT_SIGNED_IN = /^(chưa đăng nhập|not signed in)$/i;
-export const BADGE_NOT_CHECKED = /^(chưa kiểm tra|not checked)$/i;
-export const BADGE_ERROR = /^(lỗi|error)$/i;
-export const BADGE_CHECKING = /^(đang kiểm tra|checking)$/i;
-export const BADGE_FOUND = /^(đã tìm thấy|found)$/i;
-export const BADGE_NOT_FOUND = /^(không tìm thấy|not found)$/i;
-export const BADGE_SIGNED_IN = /^(đã đăng nhập|signed in)$/i;
-export const BADGE_WAITING = /^(đang chờ|waiting)$/i;
-export const BADGE_SOON = /^(sắp ra mắt|coming soon)$/i;
+export const BADGE_READY = 'Ready';
+export const BADGE_NOT_INSTALLED = 'Not installed';
+export const BADGE_NOT_SIGNED_IN = 'Not signed in';
+export const BADGE_NOT_CHECKED = 'Not checked';
+export const BADGE_ERROR = 'Error';
+export const BADGE_CHECKING = 'Checking';
+export const BADGE_FOUND = 'Found';
+export const BADGE_NOT_FOUND = 'Not found';
+export const BADGE_SIGNED_IN = 'Signed in';
+export const BADGE_WAITING = 'Waiting';
+export const BADGE_SOON = 'Coming soon';
 
-export const MSG_CHECKING = /đang chạy lệnh|running the command/i;
-export const MSG_OK = /(kiểm tra thành công|check succeeded) · (\d+) ms · \d{1,2}:\d{2}/i;
-export const MSG_FAILED = /kiểm tra thất bại|the check failed/i;
-export const MSG_UNCHECKED = /chưa kiểm tra\. bấm kiểm tra|not checked yet\. click check/i;
-export const MSG_NOT_INSTALLED = /chưa cài trên máy này|not installed on this machine/i;
-export const MSG_NEED_SIGNIN = /hãy đăng nhập vào profile của app|sign in to the app's profile/i;
-export const MSG_WAITING = /đang chờ bạn đăng nhập|waiting for you to finish signing in/i;
+export const MSG_CHECKING = 'Running the command…';
+export const MSG_OK = 'Check succeeded';
+export const MSG_FAILED = 'The check failed.';
+export const MSG_UNCHECKED = 'Not checked yet. Click Check to try running the command.';
+export const MSG_NOT_INSTALLED = 'Not installed on this machine.';
+export const MSG_NEED_SIGNIN = "Sign in to the app's profile before using this CLI.";
+export const MSG_WAITING = 'Waiting for you to finish signing in on the terminal…';
 
-export const INSTALL_GUIDE = /cài cli rồi bấm quét lại|install the cli then click rescan/i;
-export const INSTALL_NOT_IN_PATH = /không có trong path|is not in path/i;
-export const SIGNIN_LOCKED = /hãy cài cli trước|install the cli first/i;
-export const SIGNIN_GUIDE = /bấm đăng nhập để mở terminal chạy|click sign in to open a terminal running/i;
-export const SIGNIN_APP_PROFILE = /profile của app chưa đăng nhập|the app's profile is not signed in/i;
-export const CLOUD_INTRO = /api key sẽ được hỗ trợ ở phiên bản sau|api key will be supported in a later version/i;
+export const INSTALL_GUIDE =
+  'Install the CLI then click Rescan, or enter the executable path by hand.';
+export const INSTALL_NOT_IN_PATH = 'is not in PATH';
+export const SIGNIN_LOCKED = 'Install the CLI first.';
+export const SIGNIN_GUIDE = 'Click Sign in to open a terminal running';
+export const SIGNIN_APP_PROFILE = "The app's profile is not signed in.";
+export const CLOUD_INTRO = 'Calling an LLM with an API key will be supported in a later version.';
 
-export const FEATURE_NAMES = [/^(dịch thuật|translation)$/i, /^(tri thức|knowledge base)$/i, /^(trợ lý|assistant)$/i];
-export const FEATURE_HINTS = [/dịch chương truyện sang ngôn ngữ đích|translate novel chapters into the target language/i, /phân tích truyện để xây dựng cơ sở tri thức|analyze a novel to build its knowledge base/i, /trợ lý hỗ trợ ngay trong ứng dụng|the assistant built into the app/i];
-export const FEATURE_UNSET = /chưa chọn|not selected/i;
-export const FEATURE_NO_CLI = /chưa có cli nào hỗ trợ chức năng này|no installed cli supports this feature/i;
-export const CLAUDE_MODELS = ["opus", "sonnet", "haiku"];
+export const FEATURE_NAMES = ['Translation', 'Knowledge base', 'Assistant'];
+export const FEATURE_HINTS = [
+  'Translate novel chapters into the target language.',
+  'Analyze a novel to build its knowledge base: characters, places and relations.',
+  'The assistant built into the app.',
+];
+export const FEATURE_UNSET = 'Not selected';
+export const FEATURE_NO_CLI = 'No installed CLI supports this feature yet.';
+
+export function checkDurationMs(statusText: string): number {
+  return Number(/ · (\d+) ms · /.exec(statusText)?.[1]);
+}
+export const CLAUDE_MODELS = ['opus', 'sonnet', 'haiku'];
 
 export interface SettingsJson {
-  general?: { language?: string; theme?: string; pipelines?: { maxPipelines?: number; maxTasks?: number } };
+  general?: {
+    language?: string;
+    theme?: string;
+    pipelines?: { maxPipelines?: number; maxTasks?: number };
+  };
   llm?: {
     providers?: Record<string, { path?: string }>;
-    features?: Record<string, { provider?: string; model?: string; effort?: string; args?: string }>;
+    features?: Record<
+      string,
+      { provider?: string; model?: string; effort?: string; args?: string }
+    >;
   };
 }
 
 export async function readSettingsJson(sandbox: Sandbox): Promise<SettingsJson> {
   try {
-    return JSON.parse(await readFile(settingsFile(sandbox), "utf8")) as SettingsJson;
+    return JSON.parse(await readFile(settingsFile(sandbox), 'utf8')) as SettingsJson;
   } catch {
     return {};
   }
 }
 
-export async function patchGeneral(sandbox: Sandbox, patch: Record<string, unknown>): Promise<void> {
+export async function patchGeneral(
+  sandbox: Sandbox,
+  patch: Record<string, unknown>,
+): Promise<void> {
   const settings = (await readSettingsJson(sandbox)) as Record<string, unknown>;
-  const general = (settings["general"] ?? {}) as Record<string, unknown>;
-  settings["general"] = { ...general, ...patch };
+  const general = (settings['general'] ?? {}) as Record<string, unknown>;
+  settings['general'] = { ...general, ...patch };
   await writeFile(settingsFile(sandbox), JSON.stringify(settings, null, 2));
 }
 
@@ -107,7 +138,10 @@ export async function removeCliPath(sandbox: Sandbox, id: ProviderId): Promise<v
   const settings = await readSettingsJson(sandbox);
   const providers = { ...(settings.llm?.providers ?? {}) };
   delete providers[id];
-  await writeFile(settingsFile(sandbox), JSON.stringify({ ...settings, llm: { ...settings.llm, providers } }, null, 2));
+  await writeFile(
+    settingsFile(sandbox),
+    JSON.stringify({ ...settings, llm: { ...settings.llm, providers } }, null, 2),
+  );
 }
 
 export async function installCli(sandbox: Sandbox, id: ProviderId): Promise<void> {
@@ -121,7 +155,7 @@ export async function copyCliStub(sandbox: Sandbox, name: string): Promise<strin
 }
 
 export interface ProbeBehavior {
-  readonly probe?: "ok" | "signed-out" | "broken";
+  readonly probe?: 'ok' | 'signed-out' | 'broken';
   readonly probeDelayMs?: number;
 }
 
@@ -130,17 +164,17 @@ export async function setProbe(sandbox: Sandbox, patch: ProbeBehavior): Promise<
 }
 
 export interface AuthEntry {
-  readonly action: "login" | "logout";
+  readonly action: 'login' | 'logout';
   readonly profile: string;
   readonly at: string;
 }
 
 export async function authLog(sandbox: Sandbox): Promise<AuthEntry[]> {
   try {
-    const text = await readFile(join(providerDir(sandbox), "auth.jsonl"), "utf8");
+    const text = await readFile(join(providerDir(sandbox), 'auth.jsonl'), 'utf8');
     return text
-      .split("\n")
-      .filter((line) => line.trim() !== "")
+      .split('\n')
+      .filter((line) => line.trim() !== '')
       .map((line) => JSON.parse(line) as AuthEntry);
   } catch {
     return [];
@@ -148,10 +182,10 @@ export async function authLog(sandbox: Sandbox): Promise<AuthEntry[]> {
 }
 
 export async function finishLogin(sandbox: Sandbox): Promise<void> {
-  await writeFile(join(providerDir(sandbox), "login.release"), "");
+  await writeFile(join(providerDir(sandbox), 'login.release'), '');
 }
 
-export type IpcMode = "ok" | "fail" | "hold" | "pass";
+export type IpcMode = 'ok' | 'fail' | 'hold' | 'pass';
 
 interface IpcState {
   modes: Record<string, IpcMode>;
@@ -172,23 +206,35 @@ function wrapIpc(): void {
   scope.__dreamyIpc = state;
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
-    const target = new URL(input instanceof Request ? input.url : String(input), window.location.href);
-    const command = target.pathname.replace(/^\//, "");
+    const target = new URL(
+      input instanceof Request ? input.url : String(input),
+      window.location.href,
+    );
+    const command = target.pathname.replace(/^\//, '');
     const mode = state.modes[command];
-    if (target.hostname !== "ipc.localhost" || mode === undefined) {
+    if (target.hostname !== 'ipc.localhost' || mode === undefined) {
       return original(input, init);
     }
-    state.calls[command] = [...(state.calls[command] ?? []), typeof init?.body === "string" ? JSON.parse(init.body) : null];
-    if (mode === "pass") {
+    state.calls[command] = [
+      ...(state.calls[command] ?? []),
+      typeof init?.body === 'string' ? JSON.parse(init.body) : null,
+    ];
+    if (mode === 'pass') {
       return original(input, init);
     }
-    if (mode === "hold") {
+    if (mode === 'hold') {
       return new Promise((resolve) => {
-        state.held[command] = [...(state.held[command] ?? []), () => resolve(original(input, init))];
+        state.held[command] = [
+          ...(state.held[command] ?? []),
+          () => resolve(original(input, init)),
+        ];
       });
     }
-    const body = mode === "ok" ? "null" : JSON.stringify("the stub refused the command");
-    const headers = { "Content-Type": "application/json", "Tauri-Response": mode === "ok" ? "ok" : "error" };
+    const body = mode === 'ok' ? 'null' : JSON.stringify('the stub refused the command');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Tauri-Response': mode === 'ok' ? 'ok' : 'error',
+    };
     return Promise.resolve(new Response(body, { headers }));
   };
 }
@@ -196,7 +242,7 @@ function wrapIpc(): void {
 function setIpcMode(request: { command: string; mode: IpcMode }): void {
   const state = (window as unknown as IpcWindow).__dreamyIpc;
   if (!state) {
-    throw new Error("the ipc spy is not installed");
+    throw new Error('the ipc spy is not installed');
   }
   state.modes[request.command] = request.mode;
 }
@@ -236,7 +282,7 @@ export class IpcSpy {
   }
 }
 
-export async function openSettings(ui: Ui, section: SettingsSectionId = "general"): Promise<void> {
+export async function openSettings(ui: Ui, section: SettingsSectionId = 'general'): Promise<void> {
   const settings = ui.main.settings;
   await settings.rail.click();
   await expect(settings.dialog.panel).toBeVisible();
@@ -251,26 +297,26 @@ export async function closeSettings(ui: Ui): Promise<void> {
 }
 
 export async function openGeneralTab(ui: Ui, tab: GeneralTab): Promise<void> {
-  await openSettings(ui, "general");
+  await openSettings(ui, 'general');
   await ui.main.settings.general.tab(tab).click();
-  await expect(ui.main.settings.general.tab(tab)).toHaveAttribute("aria-selected", "true");
+  await expect(ui.main.settings.general.tab(tab)).toHaveAttribute('aria-selected', 'true');
 }
 
 export async function openLlmTab(ui: Ui, tab: LlmTab): Promise<void> {
-  await openSettings(ui, "llm");
+  await openSettings(ui, 'llm');
   await selectLlmTab(ui, tab);
 }
 
 export async function selectLlmTab(ui: Ui, tab: LlmTab): Promise<void> {
   await ui.main.settings.llm.tab(tab).click();
-  await expect(ui.main.settings.llm.tab(tab)).toHaveAttribute("aria-selected", "true");
+  await expect(ui.main.settings.llm.tab(tab)).toHaveAttribute('aria-selected', 'true');
 }
 
 export async function setSlider(slider: Locator, value: number): Promise<void> {
   await slider.evaluate((element, next) => {
     const input = element as HTMLInputElement;
     input.value = String(next);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
 }
 
@@ -280,7 +326,13 @@ export async function openWorkspace(ui: Ui, picker: PickerStub, sandbox: Sandbox
   return folder;
 }
 
-export async function relaunch(ui: Ui, app: AppSession, picker: PickerStub, folder: string, beforeStart?: () => Promise<void>): Promise<void> {
+export async function relaunch(
+  ui: Ui,
+  app: AppSession,
+  picker: PickerStub,
+  folder: string,
+  beforeStart?: () => Promise<void>,
+): Promise<void> {
   await app.stop();
   await beforeStart?.();
   await app.start();
@@ -288,7 +340,11 @@ export async function relaunch(ui: Ui, app: AppSession, picker: PickerStub, fold
   await openFromSplash(ui, picker, folder);
 }
 
-export async function useCliPath(ui: Ui, id: "claude" | "codex" | "antigravity", path: string): Promise<void> {
+export async function useCliPath(
+  ui: Ui,
+  id: 'claude' | 'codex' | 'antigravity',
+  path: string,
+): Promise<void> {
   const card = ui.main.settings.llm.cli(id);
   await card.manual.fill(path);
   await card.usePath.click();
@@ -299,7 +355,9 @@ interface TauriWindow {
 }
 
 function invokeGeneralSave(general: Record<string, unknown>): Promise<unknown> {
-  return (window as unknown as TauriWindow).__TAURI_INTERNALS__.invoke("settings_general_save", { general });
+  return (window as unknown as TauriWindow).__TAURI_INTERNALS__.invoke('settings_general_save', {
+    general,
+  });
 }
 
 export function saveGeneralRaw(page: Page, general: Record<string, unknown>): Promise<unknown> {

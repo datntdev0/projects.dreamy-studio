@@ -1,31 +1,32 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { test as base } from "./fixtures.ts";
-import type { Sandbox } from "./sandbox.ts";
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { test as base } from './fixtures.ts';
+import type { Sandbox } from './sandbox.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const STUB_SCRIPT = join(here, "provider-stub.mjs");
-const SETTINGS_FILE = "settings.json";
+const STUB_SCRIPT = join(here, 'provider-stub.mjs');
+const SETTINGS_FILE = 'settings.json';
 const POLL_MS = 100;
 
-export type ProviderId = "claude" | "codex";
-export type ProviderFeature = "translation" | "knowledge" | "assistant";
-export type ProviderPurpose = "translation" | "candidates" | "facts" | "assistant" | "unknown";
+export type ProviderId = 'claude' | 'codex';
+export type ProviderFeature = 'translation' | 'knowledge' | 'assistant';
+export type ProviderPurpose = 'translation' | 'candidates' | 'facts' | 'assistant' | 'unknown';
 
 export type ProviderMode =
-  | "ok"
-  | "slow"
-  | "hang"
-  | "fail-exit"
-  | "invalid-json"
-  | "no-json"
-  | "empty"
-  | "raw"
-  | "wrong-count"
-  | "bad-evidence"
-  | "bad-entity"
-  | "no-link";
+  | 'ok'
+  | 'slow'
+  | 'hang'
+  | 'fail-exit'
+  | 'invalid-json'
+  | 'no-json'
+  | 'empty'
+  | 'raw'
+  | 'wrong-count'
+  | 'bad-evidence'
+  | 'bad-entity'
+  | 'no-link';
 
 export interface ProviderAction {
   readonly mode: ProviderMode;
@@ -88,7 +89,7 @@ export interface ProviderBehavior {
   readonly modes?: Partial<Readonly<Record<ProviderPurpose, ProviderStep>>>;
   readonly chapters?: Readonly<Record<string, ProviderStep>>;
   readonly sequence?: readonly ProviderStep[];
-  readonly probe?: "ok" | "signed-out" | "broken";
+  readonly probe?: 'ok' | 'signed-out' | 'broken';
   readonly translation?: { readonly tag?: boolean; readonly dictionary?: boolean };
   readonly analysis?: ProviderAnalysis;
   readonly assistant?: ProviderAssistant;
@@ -96,7 +97,7 @@ export interface ProviderBehavior {
 
 export interface FeatureOptions {
   readonly model?: string;
-  readonly effort?: "low" | "medium" | "high";
+  readonly effort?: 'low' | 'medium' | 'high';
   readonly args?: string;
 }
 
@@ -118,7 +119,7 @@ export interface ProviderInstall {
 
 export interface ProviderCall {
   readonly index: number;
-  readonly kind: "run" | "probe";
+  readonly kind: 'run' | 'probe';
   readonly at: string;
   readonly args: readonly string[];
   readonly prompt: string;
@@ -141,8 +142,8 @@ export interface ProviderToolResult {
 }
 
 interface RawEntry {
-  readonly event: "start" | "end";
-  readonly kind?: "run" | "probe";
+  readonly event: 'start' | 'end';
+  readonly kind?: 'run' | 'probe';
   readonly probe?: string;
   readonly index?: number;
   readonly at?: string;
@@ -157,13 +158,13 @@ interface RawEntry {
   readonly aborted?: boolean;
 }
 
-const DEFAULT_FEATURES: readonly ProviderFeature[] = ["translation", "knowledge"];
+const DEFAULT_FEATURES: readonly ProviderFeature[] = ['translation', 'knowledge'];
 
 export function providerDir(sandbox: Sandbox): string {
-  return join(sandbox.root, "provider");
+  return join(sandbox.root, 'provider');
 }
 
-export function providerExecutable(sandbox: Sandbox, id: ProviderId = "claude"): string {
+export function providerExecutable(sandbox: Sandbox, id: ProviderId = 'claude'): string {
   return join(providerDir(sandbox), `${id}.cmd`);
 }
 
@@ -177,7 +178,7 @@ function wrapper(stateDir: string): string {
 
 async function readSettings(path: string): Promise<Record<string, unknown>> {
   try {
-    return JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
+    return JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -185,52 +186,64 @@ async function readSettings(path: string): Promise<Record<string, unknown>> {
 
 function section(settings: Record<string, unknown>, key: string): Record<string, unknown> {
   const value = settings[key];
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
 
-export async function writeProviderSettings(sandbox: Sandbox, options: ProviderOptions = {}): Promise<void> {
-  const id = options.id ?? "claude";
+export async function writeProviderSettings(
+  sandbox: Sandbox,
+  options: ProviderOptions = {},
+): Promise<void> {
+  const id = options.id ?? 'claude';
   const path = settingsFile(sandbox);
   const settings = await readSettings(path);
-  const llm = section(settings, "llm");
-  const providers = { ...section(llm, "providers"), [id]: { path: providerExecutable(sandbox, id) } };
-  const features: Record<string, unknown> = { ...section(llm, "features") };
+  const llm = section(settings, 'llm');
+  const providers = {
+    ...section(llm, 'providers'),
+    [id]: { path: providerExecutable(sandbox, id) },
+  };
+  const features: Record<string, unknown> = { ...section(llm, 'features') };
   for (const feature of options.features ?? DEFAULT_FEATURES) {
     features[feature] = { provider: id, ...(options.featureOptions?.[feature] ?? {}) };
   }
-  settings["llm"] = { ...llm, providers, features };
+  settings['llm'] = { ...llm, providers, features };
   if (options.maxPipelines !== undefined || options.maxTasks !== undefined) {
-    const general = section(settings, "general");
-    const pipelines = { ...section(general, "pipelines") };
+    const general = section(settings, 'general');
+    const pipelines = { ...section(general, 'pipelines') };
     if (options.maxPipelines !== undefined) {
-      pipelines["maxPipelines"] = options.maxPipelines;
+      pipelines['maxPipelines'] = options.maxPipelines;
     }
     if (options.maxTasks !== undefined) {
-      pipelines["maxTasks"] = options.maxTasks;
+      pipelines['maxTasks'] = options.maxTasks;
     }
-    settings["general"] = { ...general, pipelines };
+    settings['general'] = { ...general, pipelines };
   }
   if (options.bottomOpen !== undefined) {
-    settings["layout"] = { ...section(settings, "layout"), bottomOpen: options.bottomOpen };
+    settings['layout'] = { ...section(settings, 'layout'), bottomOpen: options.bottomOpen };
   }
   await mkdir(sandbox.dataDir, { recursive: true });
   await writeFile(path, JSON.stringify(settings, null, 2));
 }
 
-export async function clearProviderSelection(sandbox: Sandbox, features: readonly ProviderFeature[] = DEFAULT_FEATURES): Promise<void> {
+export async function clearProviderSelection(
+  sandbox: Sandbox,
+  features: readonly ProviderFeature[] = DEFAULT_FEATURES,
+): Promise<void> {
   const path = settingsFile(sandbox);
   const settings = await readSettings(path);
-  const llm = section(settings, "llm");
-  const kept: Record<string, unknown> = { ...section(llm, "features") };
+  const llm = section(settings, 'llm');
+  const kept: Record<string, unknown> = { ...section(llm, 'features') };
   for (const feature of features) {
     delete kept[feature];
   }
-  settings["llm"] = { ...llm, features: kept };
+  settings['llm'] = { ...llm, features: kept };
   await writeFile(path, JSON.stringify(settings, null, 2));
 }
 
-export async function installProvider(sandbox: Sandbox, options: ProviderOptions = {}): Promise<ProviderInstall> {
-  const id = options.id ?? "claude";
+export async function installProvider(
+  sandbox: Sandbox,
+  options: ProviderOptions = {},
+): Promise<ProviderInstall> {
+  const id = options.id ?? 'claude';
   const stateDir = providerDir(sandbox);
   const executable = providerExecutable(sandbox, id);
   await mkdir(stateDir, { recursive: true });
@@ -242,12 +255,14 @@ export async function installProvider(sandbox: Sandbox, options: ProviderOptions
 
 export async function setBehavior(sandbox: Sandbox, behavior: ProviderBehavior): Promise<void> {
   await mkdir(providerDir(sandbox), { recursive: true });
-  await writeFile(join(providerDir(sandbox), "behavior.json"), JSON.stringify(behavior, null, 2));
+  await writeFile(join(providerDir(sandbox), 'behavior.json'), JSON.stringify(behavior, null, 2));
 }
 
 export async function currentBehavior(sandbox: Sandbox): Promise<ProviderBehavior> {
   try {
-    return JSON.parse(await readFile(join(providerDir(sandbox), "behavior.json"), "utf8")) as ProviderBehavior;
+    return JSON.parse(
+      await readFile(join(providerDir(sandbox), 'behavior.json'), 'utf8'),
+    ) as ProviderBehavior;
   } catch {
     return {};
   }
@@ -259,16 +274,16 @@ export async function patchBehavior(sandbox: Sandbox, patch: ProviderBehavior): 
 
 export async function resetProviderCalls(sandbox: Sandbox): Promise<void> {
   const dir = providerDir(sandbox);
-  await rm(join(dir, "calls.jsonl"), { force: true });
-  await rm(join(dir, "runs.count"), { force: true });
-  await rm(join(dir, "tools.jsonl"), { force: true });
-  await rm(join(dir, "sessions"), { recursive: true, force: true });
+  await rm(join(dir, 'calls.jsonl'), { force: true });
+  await rm(join(dir, 'runs.count'), { force: true });
+  await rm(join(dir, 'tools.jsonl'), { force: true });
+  await rm(join(dir, 'sessions'), { recursive: true, force: true });
 }
 
 function parseEntries(text: string): RawEntry[] {
   return text
-    .split("\n")
-    .filter((line) => line.trim() !== "")
+    .split('\n')
+    .filter((line) => line.trim() !== '')
     .map((line) => JSON.parse(line) as RawEntry);
 }
 
@@ -276,15 +291,15 @@ function toCall(entry: RawEntry, ends: Map<number, RawEntry>, position: number):
   const end = entry.index === undefined ? undefined : ends.get(entry.index);
   return {
     index: entry.index ?? -1 - position,
-    kind: entry.kind ?? "run",
-    at: entry.at ?? "",
+    kind: entry.kind ?? 'run',
+    at: entry.at ?? '',
     args: entry.args ?? [],
-    prompt: entry.prompt ?? "",
-    purpose: entry.purpose ?? "unknown",
+    prompt: entry.prompt ?? '',
+    purpose: entry.purpose ?? 'unknown',
     session: entry.session ?? null,
     resume: entry.resume ?? false,
     chapters: entry.chapters ?? [],
-    mode: entry.mode ?? "ok",
+    mode: entry.mode ?? 'ok',
     finished: end !== undefined,
     exitCode: end?.exitCode ?? null,
     aborted: end?.aborted ?? false,
@@ -292,40 +307,52 @@ function toCall(entry: RawEntry, ends: Map<number, RawEntry>, position: number):
 }
 
 export async function providerCalls(sandbox: Sandbox): Promise<ProviderCall[]> {
-  let text = "";
+  let text = '';
   try {
-    text = await readFile(join(providerDir(sandbox), "calls.jsonl"), "utf8");
+    text = await readFile(join(providerDir(sandbox), 'calls.jsonl'), 'utf8');
   } catch {
     return [];
   }
   const entries = parseEntries(text);
   const ends = new Map<number, RawEntry>();
   for (const entry of entries) {
-    if (entry.event === "end" && entry.index !== undefined) {
+    if (entry.event === 'end' && entry.index !== undefined) {
       ends.set(entry.index, entry);
     }
   }
-  return entries.filter((entry) => entry.event === "start").map((entry, position) => toCall(entry, ends, position));
+  return entries
+    .filter((entry) => entry.event === 'start')
+    .map((entry, position) => toCall(entry, ends, position));
 }
 
 export async function providerTools(sandbox: Sandbox): Promise<ProviderToolResult[]> {
   try {
-    const text = await readFile(join(providerDir(sandbox), "tools.jsonl"), "utf8");
+    const text = await readFile(join(providerDir(sandbox), 'tools.jsonl'), 'utf8');
     return text
-      .split("\n")
-      .filter((line) => line.trim() !== "")
+      .split('\n')
+      .filter((line) => line.trim() !== '')
       .map((line) => JSON.parse(line) as ProviderToolResult);
   } catch {
     return [];
   }
 }
 
-export async function runCalls(sandbox: Sandbox, purpose?: ProviderPurpose): Promise<ProviderCall[]> {
+export async function runCalls(
+  sandbox: Sandbox,
+  purpose?: ProviderPurpose,
+): Promise<ProviderCall[]> {
   const calls = await providerCalls(sandbox);
-  return calls.filter((call) => call.kind === "run" && (purpose === undefined || call.purpose === purpose));
+  return calls.filter(
+    (call) => call.kind === 'run' && (purpose === undefined || call.purpose === purpose),
+  );
 }
 
-export async function waitForRunCalls(sandbox: Sandbox, count: number, purpose?: ProviderPurpose, timeoutMs = 30_000): Promise<ProviderCall[]> {
+export async function waitForRunCalls(
+  sandbox: Sandbox,
+  count: number,
+  purpose?: ProviderPurpose,
+  timeoutMs = 30_000,
+): Promise<ProviderCall[]> {
   const deadline = Date.now() + timeoutMs;
   let calls = await runCalls(sandbox, purpose);
   while (calls.length < count && Date.now() < deadline) {
@@ -369,7 +396,11 @@ export class ProviderStub {
     return runCalls(this.sandbox, purpose);
   }
 
-  waitForRuns(count: number, purpose?: ProviderPurpose, timeoutMs?: number): Promise<ProviderCall[]> {
+  waitForRuns(
+    count: number,
+    purpose?: ProviderPurpose,
+    timeoutMs?: number,
+  ): Promise<ProviderCall[]> {
     return waitForRunCalls(this.sandbox, count, purpose, timeoutMs);
   }
 
@@ -398,4 +429,4 @@ export const test = base.extend<ProviderFixtures>({
   },
 });
 
-export { expect } from "./fixtures.ts";
+export { expect } from './fixtures.ts';

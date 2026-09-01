@@ -1,12 +1,13 @@
-import { DatabaseSync } from "node:sqlite";
-import { createHash, randomBytes } from "node:crypto";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { workspaceMigrationsDir } from "./paths.ts";
+import { createHash, randomBytes } from 'node:crypto';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
-export const WORKSPACE_DB_FILE = "workspace.dreamydb";
+import { workspaceMigrationsDir } from './paths.ts';
 
-const FUTURE_VERSION = "99.0.0";
+export const WORKSPACE_DB_FILE = 'workspace.dreamydb';
+
+const FUTURE_VERSION = '99.0.0';
 
 export interface MigrationScript {
   readonly version: string;
@@ -70,7 +71,7 @@ export interface SeedOptions {
 }
 
 function parseVersion(text: string): number[] {
-  return text.split(".").map((part) => Number.parseInt(part, 10));
+  return text.split('.').map((part) => Number.parseInt(part, 10));
 }
 
 function compareScripts(left: MigrationScript, right: MigrationScript): number {
@@ -86,17 +87,17 @@ function compareScripts(left: MigrationScript, right: MigrationScript): number {
 }
 
 function toScript(fileName: string, sql: string): MigrationScript {
-  const stem = fileName.replace(/\.sql$/, "");
-  const [head = "", name = ""] = stem.split("__");
-  const [version = "", seq = ""] = head.split("_");
+  const stem = fileName.replace(/\.sql$/, '');
+  const [head = '', name = ''] = stem.split('__');
+  const [version = '', seq = ''] = head.split('_');
   return { version, seq: Number.parseInt(seq, 10), name, key: head, sql };
 }
 
 export async function migrationScripts(): Promise<MigrationScript[]> {
-  const files = (await readdir(workspaceMigrationsDir)).filter((file) => file.endsWith(".sql"));
+  const files = (await readdir(workspaceMigrationsDir)).filter((file) => file.endsWith('.sql'));
   const scripts: MigrationScript[] = [];
   for (const file of files) {
-    scripts.push(toScript(file, await readFile(join(workspaceMigrationsDir, file), "utf8")));
+    scripts.push(toScript(file, await readFile(join(workspaceMigrationsDir, file), 'utf8')));
   }
   return scripts.sort(compareScripts);
 }
@@ -121,7 +122,9 @@ function applyScripts(database: DatabaseSync, scripts: MigrationScript[]): void 
   for (const script of scripts) {
     database.exec(script.sql);
     database
-      .prepare("INSERT INTO sys_migration_history (version, seq, name, applied_at) VALUES (?, ?, ?, ?)")
+      .prepare(
+        'INSERT INTO sys_migration_history (version, seq, name, applied_at) VALUES (?, ?, ?, ?)',
+      )
       .run(script.version, script.seq, script.name, appliedAt);
   }
 }
@@ -134,21 +137,25 @@ function chapterParagraphs(chapter: SeedChapter): readonly string[] {
   return chapter.paragraphs ?? [`${chapter.title} begins here.`, `${chapter.title} goes on.`];
 }
 
-function insertChapters(database: DatabaseSync, novelId: number, chapters: readonly SeedChapter[]): PlacedChapter[] {
+function insertChapters(
+  database: DatabaseSync,
+  novelId: number,
+  chapters: readonly SeedChapter[],
+): PlacedChapter[] {
   if (chapters.length === 0) {
     return [];
   }
   const insert = database.prepare(
-    "INSERT INTO ws_novel_chapters (id, novel_id, seq, title, word_count, translation_status, analysis_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    'INSERT INTO ws_novel_chapters (id, novel_id, seq, title, word_count, translation_status, analysis_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
   );
   const now = new Date().toISOString();
   const placed: PlacedChapter[] = [];
   for (const [index, chapter] of chapters.entries()) {
-    const id = randomBytes(16).toString("hex");
+    const id = randomBytes(16).toString('hex');
     const paragraphs = chapterParagraphs(chapter);
-    const words = countWords(paragraphs.join("\n"));
-    const translation = chapter.translated ? "done" : "none";
-    const analysis = chapter.analyzed ? "done" : "none";
+    const words = countWords(paragraphs.join('\n'));
+    const translation = chapter.translated ? 'done' : 'none';
+    const analysis = chapter.analyzed ? 'done' : 'none';
     insert.run(id, novelId, index + 1, chapter.title, words, translation, analysis, now, now);
     placed.push({ novelId, id, paragraphs });
   }
@@ -172,7 +179,15 @@ function insertNovels(database: DatabaseSync, novels: readonly SeedNovel[]): Pla
   const now = new Date().toISOString();
   const placed: PlacedChapter[] = [];
   for (const novel of novels) {
-    const result = insert.run(novel.title, novel.name ?? novel.title, novel.author ?? "", novel.lang ?? "VI", novel.description ?? "", now, now);
+    const result = insert.run(
+      novel.title,
+      novel.name ?? novel.title,
+      novel.author ?? '',
+      novel.lang ?? 'VI',
+      novel.description ?? '',
+      now,
+      now,
+    );
     const novelId = Number(result.lastInsertRowid);
     insertTags(database, novelId, novel.tags ?? []);
     placed.push(...insertChapters(database, novelId, novel.chapters ?? []));
@@ -185,15 +200,21 @@ export function chapterFileName(chapterId: string): string {
 }
 
 export function novelDir(folder: string, novelId: number): string {
-  return join(folder, "novels", String(novelId));
+  return join(folder, 'novels', String(novelId));
 }
 
 async function writeChapterFiles(folder: string, placed: readonly PlacedChapter[]): Promise<void> {
   for (const chapter of placed) {
     const dir = novelDir(folder, chapter.novelId);
     await mkdir(dir, { recursive: true });
-    const paragraphs = chapter.paragraphs.map((text) => ({ text, hashcheck: createHash("sha256").update(text).digest("hex") }));
-    await writeFile(join(dir, chapterFileName(chapter.id)), JSON.stringify({ paragraphs }, null, 2));
+    const paragraphs = chapter.paragraphs.map((text) => ({
+      text,
+      hashcheck: createHash('sha256').update(text).digest('hex'),
+    }));
+    await writeFile(
+      join(dir, chapterFileName(chapter.id)),
+      JSON.stringify({ paragraphs }, null, 2),
+    );
   }
 }
 
@@ -202,14 +223,16 @@ async function writeCovers(folder: string, novels: readonly SeedNovel[]): Promis
     if (novel.cover) {
       const dir = novelDir(folder, index + 1);
       await mkdir(dir, { recursive: true });
-      await writeFile(join(dir, "cover.png"), novel.cover);
+      await writeFile(join(dir, 'cover.png'), novel.cover);
     }
   }
 }
 
 function markNewer(database: DatabaseSync): void {
   database
-    .prepare("INSERT INTO sys_migration_history (version, seq, name, applied_at) VALUES (?, 1, 'from_the_future', ?)")
+    .prepare(
+      "INSERT INTO sys_migration_history (version, seq, name, applied_at) VALUES (?, 1, 'from_the_future', ?)",
+    )
     .run(FUTURE_VERSION, new Date().toISOString());
 }
 
@@ -219,13 +242,13 @@ export async function seedWorkspace(folder: string, options: SeedOptions = {}): 
   const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
   let placed: PlacedChapter[] = [];
   try {
-    database.exec("BEGIN");
+    database.exec('BEGIN');
     applyScripts(database, scripts);
     placed = insertNovels(database, options.novels ?? []);
     if (options.newer) {
       markNewer(database);
     }
-    database.exec("COMMIT");
+    database.exec('COMMIT');
   } finally {
     database.close();
   }
@@ -235,17 +258,17 @@ export async function seedWorkspace(folder: string, options: SeedOptions = {}): 
 
 export async function writeCorruptDatabase(folder: string): Promise<void> {
   await mkdir(folder, { recursive: true });
-  await writeFile(join(folder, WORKSPACE_DB_FILE), "this is not a sqlite database ".repeat(200));
+  await writeFile(join(folder, WORKSPACE_DB_FILE), 'this is not a sqlite database '.repeat(200));
 }
 
 export async function seedBlockedUpgrade(folder: string): Promise<void> {
   const keys = await migrationKeys();
-  const blocking = (await migrationScripts()).find((script) => script.version !== "0.0.0");
+  const blocking = (await migrationScripts()).find((script) => script.version !== '0.0.0');
   if (blocking === undefined) {
-    throw new Error("no migration beyond the base schema to block");
+    throw new Error('no migration beyond the base schema to block');
   }
   const previous = keys[keys.indexOf(blocking.key) - 1];
-  await seedWorkspace(folder, { upTo: previous, novels: [{ title: "Before Upgrade" }] });
+  await seedWorkspace(folder, { upTo: previous, novels: [{ title: 'Before Upgrade' }] });
   const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
   try {
     database.exec(blocking.sql);
@@ -258,68 +281,77 @@ export class WorkspaceDb {
   private constructor(private readonly database: DatabaseSync) {}
 
   static open(folder: string): WorkspaceDb {
-    return new WorkspaceDb(new DatabaseSync(join(folder, WORKSPACE_DB_FILE), { readOnly: true }));
+    return new WorkspaceDb(
+      new DatabaseSync(join(folder, WORKSPACE_DB_FILE), { readOnly: true, timeout: 5000 }),
+    );
   }
 
   migrations(): string[] {
-    const rows = this.database.prepare("SELECT version, seq FROM sys_migration_history").all();
+    const rows = this.database.prepare('SELECT version, seq FROM sys_migration_history').all();
     return rows
-      .map((row) => `${String(row["version"])}_${String(row["seq"])}`)
+      .map((row) => `${String(row['version'])}_${String(row['seq'])}`)
       .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
   }
 
   tables(): string[] {
     const rows = this.database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
-    return rows.map((row) => String(row["name"]));
+    return rows.map((row) => String(row['name']));
   }
 
   novelTitles(): string[] {
-    const rows = this.database.prepare("SELECT title FROM ws_novels ORDER BY id").all();
-    return rows.map((row) => String(row["title"]));
+    const rows = this.database.prepare('SELECT title FROM ws_novels ORDER BY id').all();
+    return rows.map((row) => String(row['title']));
   }
 
   novels(): NovelRecord[] {
-    const rows = this.database.prepare("SELECT id, title, name, author, lang, description, origin FROM ws_novels ORDER BY id").all();
+    const rows = this.database
+      .prepare(
+        'SELECT id, title, name, author, lang, description, origin FROM ws_novels ORDER BY id',
+      )
+      .all();
     return rows.map((row) => ({
-      id: Number(row["id"]),
-      title: String(row["title"]),
-      name: String(row["name"]),
-      author: String(row["author"]),
-      lang: String(row["lang"]),
-      description: String(row["description"]),
-      origin: String(row["origin"]),
+      id: Number(row['id']),
+      title: String(row['title']),
+      name: String(row['name']),
+      author: String(row['author']),
+      lang: String(row['lang']),
+      description: String(row['description']),
+      origin: String(row['origin']),
     }));
   }
 
   novelId(title: string): number {
-    const row = this.database.prepare("SELECT id FROM ws_novels WHERE title = ?").get(title);
+    const row = this.database.prepare('SELECT id FROM ws_novels WHERE title = ?').get(title);
     if (row === undefined) {
       throw new Error(`no novel titled ${title}`);
     }
-    return Number(row["id"]);
+    return Number(row['id']);
   }
 
   tags(title: string): string[] {
-    const rows = this.database.prepare("SELECT tag FROM ws_tags WHERE type = 'novel' AND id = ? ORDER BY tag").all(String(this.novelId(title)));
-    return rows.map((row) => String(row["tag"]));
+    const rows = this.database
+      .prepare("SELECT tag FROM ws_tags WHERE type = 'novel' AND id = ? ORDER BY tag")
+      .all(String(this.novelId(title)));
+    return rows.map((row) => String(row['tag']));
   }
 
   chapters(title: string): ChapterRecord[] {
-    const sql = "SELECT id, seq, title, word_count, translation_status, analysis_status FROM ws_novel_chapters WHERE novel_id = ? ORDER BY seq";
+    const sql =
+      'SELECT id, seq, title, word_count, translation_status, analysis_status FROM ws_novel_chapters WHERE novel_id = ? ORDER BY seq';
     const rows = this.database.prepare(sql).all(this.novelId(title));
     return rows.map((row) => ({
-      id: String(row["id"]),
-      seq: Number(row["seq"]),
-      title: String(row["title"]),
-      wordCount: Number(row["word_count"]),
-      translationStatus: String(row["translation_status"]),
-      analysisStatus: String(row["analysis_status"]),
+      id: String(row['id']),
+      seq: Number(row['seq']),
+      title: String(row['title']),
+      wordCount: Number(row['word_count']),
+      translationStatus: String(row['translation_status']),
+      analysisStatus: String(row['analysis_status']),
     }));
   }
 
   chapterCount(): number {
-    const row = this.database.prepare("SELECT COUNT(*) AS total FROM ws_novel_chapters").get();
-    return Number(row?.["total"] ?? 0);
+    const row = this.database.prepare('SELECT COUNT(*) AS total FROM ws_novel_chapters').get();
+    return Number(row?.['total'] ?? 0);
   }
 
   close(): void {
@@ -327,12 +359,20 @@ export class WorkspaceDb {
   }
 }
 
-export async function readChapterFile(folder: string, novelId: number, chapterId: string): Promise<ChapterFile> {
-  const text = await readFile(join(novelDir(folder, novelId), chapterFileName(chapterId)), "utf8");
+export async function readChapterFile(
+  folder: string,
+  novelId: number,
+  chapterId: string,
+): Promise<ChapterFile> {
+  const text = await readFile(join(novelDir(folder, novelId), chapterFileName(chapterId)), 'utf8');
   return JSON.parse(text) as ChapterFile;
 }
 
-export async function readParagraphs(folder: string, novelId: number, chapterId: string): Promise<string[]> {
+export async function readParagraphs(
+  folder: string,
+  novelId: number,
+  chapterId: string,
+): Promise<string[]> {
   const file = await readChapterFile(folder, novelId, chapterId);
   return file.paragraphs.map((paragraph) => paragraph.text);
 }

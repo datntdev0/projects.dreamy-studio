@@ -1,6 +1,7 @@
-import type { Locator, Page } from "@playwright/test";
-import { ConfirmDialog } from "./dialogs.ts";
-import { RecentList } from "./recent.ts";
+import type { Locator, Page } from '@playwright/test';
+
+import { ConfirmDialog } from './dialogs.ts';
+import { RecentList } from './recent.ts';
 
 export class SplashPage {
   readonly confirm: ConfirmDialog;
@@ -10,30 +11,30 @@ export class SplashPage {
   }
 
   get root(): Locator {
-    return this.page.getByTestId("splash-page");
+    return this.page.getByTestId('splash-page');
   }
 
   get loading(): Locator {
-    return this.page.getByTestId("loading-page");
+    return this.page.getByTestId('loading-page');
   }
 
   get openWorkspace(): Locator {
-    return this.page.getByTestId("splash-open-workspace");
+    return this.page.getByTestId('splash-open-workspace');
   }
 
   get firstRun(): Locator {
-    return this.page.getByTestId("splash-first-run");
+    return this.page.getByTestId('splash-first-run');
   }
 
   get version(): Locator {
-    return this.page.getByTestId("splash-version");
+    return this.page.getByTestId('splash-version');
   }
 
   get notice(): Locator {
-    return this.page.getByTestId("splash-notice");
+    return this.page.getByTestId('splash-notice');
   }
 
   get recent(): RecentList {
-    return new RecentList(this.page.getByTestId("splash-recent"));
+    return new RecentList(this.page.getByTestId('splash-recent'));
   }
 }

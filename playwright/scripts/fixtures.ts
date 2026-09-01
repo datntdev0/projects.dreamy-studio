@@ -1,9 +1,10 @@
-import { test as base } from "@playwright/test";
-import { MainPage } from "../pages/main.ts";
-import { SplashPage } from "../pages/splash.ts";
-import { AppSession, startApp } from "./app.ts";
-import { PickerStub } from "./picker.ts";
-import { createSandbox, type Sandbox } from "./sandbox.ts";
+import { test as base } from '@playwright/test';
+
+import { MainPage } from '../pages/main.ts';
+import { SplashPage } from '../pages/splash.ts';
+import { AppSession, startApp } from './app.ts';
+import { PickerStub } from './picker.ts';
+import { createSandbox, type Sandbox } from './sandbox.ts';
 
 export interface Ui {
   readonly splash: SplashPage;
@@ -18,6 +19,7 @@ interface Fixtures {
 }
 
 export const test = base.extend<Fixtures>({
+  // eslint-disable-next-line no-empty-pattern
   sandbox: async ({}, use) => {
     const sandbox = await createSandbox();
     await use(sandbox);
@@ -29,7 +31,7 @@ export const test = base.extend<Fixtures>({
     if (testInfo.status !== testInfo.expectedStatus && session.isRunning) {
       const body = await session.page.screenshot().catch(() => null);
       if (body) {
-        await testInfo.attach("failure", { body, contentType: "image/png" });
+        await testInfo.attach('failure', { body, contentType: 'image/png' });
       }
     }
     await session.stop();
@@ -49,4 +51,4 @@ export const test = base.extend<Fixtures>({
   },
 });
 
-export { expect } from "@playwright/test";
+export { expect } from '@playwright/test';

@@ -1,7 +1,8 @@
-import type { Page } from "@playwright/test";
-import { launchApp, type RunningApp } from "./launch.ts";
-import { installPicker } from "./picker.ts";
-import type { Sandbox } from "./sandbox.ts";
+import type { Page } from '@playwright/test';
+
+import { launchApp, type RunningApp } from './launch.ts';
+import { installPicker } from './picker.ts';
+import type { Sandbox } from './sandbox.ts';
 
 export class AppSession {
   private running: RunningApp | null = null;
@@ -10,7 +11,7 @@ export class AppSession {
 
   get page(): Page {
     if (this.running === null) {
-      throw new Error("the app is not running");
+      throw new Error('the app is not running');
     }
     return this.running.page;
   }
@@ -23,7 +24,10 @@ export class AppSession {
     if (this.running !== null) {
       return;
     }
-    const running = await launchApp({ dataDir: this.sandbox.dataDir, webviewDir: this.sandbox.webviewDir });
+    const running = await launchApp({
+      dataDir: this.sandbox.dataDir,
+      webviewDir: this.sandbox.webviewDir,
+    });
     this.running = running;
     await installPicker(running.page);
   }

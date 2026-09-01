@@ -1,16 +1,27 @@
-import { expect } from "@playwright/test";
-import type { Ui } from "./fixtures.ts";
-import { openFromSplash } from "./flows.ts";
-import type { PickerStub } from "./picker.ts";
-import type { Sandbox } from "./sandbox.ts";
-import { seedWorkspace, type SeedNovel } from "./workspaces.ts";
-import { crc32, inflateRawSync } from "node:zlib";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { crc32, inflateRawSync } from 'node:zlib';
 
-export const WORKSPACE_NAME = "library";
+import { expect } from '@playwright/test';
 
-export async function openLibrary(ui: Ui, picker: PickerStub, sandbox: Sandbox, novels: readonly SeedNovel[] = []): Promise<string> {
+import type { Ui } from './fixtures.ts';
+import { openFromSplash } from './flows.ts';
+import type { PickerStub } from './picker.ts';
+import type { Sandbox } from './sandbox.ts';
+import { type SeedNovel, seedWorkspace } from './workspaces.ts';
+
+export const WORKSPACE_NAME = 'library';
+
+export function fraction(done: number, total: number): string {
+  return `${done} /${total}`;
+}
+
+export async function openLibrary(
+  ui: Ui,
+  picker: PickerStub,
+  sandbox: Sandbox,
+  novels: readonly SeedNovel[] = [],
+): Promise<string> {
   const folder = sandbox.workspace(WORKSPACE_NAME);
   await seedWorkspace(folder, { novels });
   await openFromSplash(ui, picker, folder);
@@ -52,7 +63,7 @@ export async function selectNovel(ui: Ui, name: string): Promise<void> {
 }
 
 export async function pickPackage(ui: Ui, picker: PickerStub, path: string): Promise<void> {
-  await picker.queue("novel_package_pick", path);
+  await picker.queue('novel_package_pick', path);
   await ui.main.importDialog.pick.click();
 }
 
@@ -71,8 +82,8 @@ export async function previewPackage(ui: Ui, picker: PickerStub, path: string): 
 }
 
 export const PNG_BYTES = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-  "base64",
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
 );
 
 export interface PackageManifest {
@@ -159,7 +170,7 @@ export function zipBytes(entries: readonly ZipEntry[]): Buffer {
   const centrals: Buffer[] = [];
   let offset = 0;
   for (const entry of entries) {
-    const name = Buffer.from(entry.name, "utf8");
+    const name = Buffer.from(entry.name, 'utf8');
     const local = Buffer.concat([localHeader(entry, name), name, entry.data]);
     centrals.push(Buffer.concat([centralHeader(entry, name, offset), name]));
     locals.push(local);
@@ -171,7 +182,7 @@ export function zipBytes(entries: readonly ZipEntry[]): Buffer {
 
 function chapterFile(index: number, count: number): string {
   const width = Math.max(3, String(count).length);
-  return `chapters/${String(index + 1).padStart(width, "0")}.md`;
+  return `chapters/${String(index + 1).padStart(width, '0')}.md`;
 }
 
 export function packageEntries(spec: PackageSpec): ZipEntry[] {
@@ -180,16 +191,24 @@ export function packageEntries(spec: PackageSpec): ZipEntry[] {
     title: spec.title,
     ...(spec.name === undefined ? {} : { name: spec.name }),
     ...(spec.author === undefined ? {} : { author: spec.author }),
-    lang: spec.lang ?? "en",
-    ...(spec.cover === undefined ? {} : { cover: "cover.png" }),
-    chapters: spec.chapters.map((chapter, index) => ({ file: chapterFile(index, spec.chapters.length), title: chapter.title })),
+    lang: spec.lang ?? 'en',
+    ...(spec.cover === undefined ? {} : { cover: 'cover.png' }),
+    chapters: spec.chapters.map((chapter, index) => ({
+      file: chapterFile(index, spec.chapters.length),
+      title: chapter.title,
+    })),
   };
-  const entries: ZipEntry[] = [{ name: "manifest.json", data: Buffer.from(JSON.stringify(manifest, null, 2)) }];
+  const entries: ZipEntry[] = [
+    { name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest, null, 2)) },
+  ];
   if (spec.cover !== undefined) {
-    entries.push({ name: "cover.png", data: spec.cover });
+    entries.push({ name: 'cover.png', data: spec.cover });
   }
   for (const [index, chapter] of spec.chapters.entries()) {
-    entries.push({ name: chapterFile(index, spec.chapters.length), data: Buffer.from(chapter.text, "utf8") });
+    entries.push({
+      name: chapterFile(index, spec.chapters.length),
+      data: Buffer.from(chapter.text, 'utf8'),
+    });
   }
   return entries;
 }
@@ -203,10 +222,16 @@ export async function writePackage(path: string, spec: PackageSpec): Promise<voi
   await writeBytes(path, zipBytes(packageEntries(spec)));
 }
 
-export async function writeRawPackage(path: string, manifest: PackageManifest, files: Readonly<Record<string, string>> = {}): Promise<void> {
-  const entries: ZipEntry[] = [{ name: "manifest.json", data: Buffer.from(JSON.stringify(manifest)) }];
+export async function writeRawPackage(
+  path: string,
+  manifest: PackageManifest,
+  files: Readonly<Record<string, string>> = {},
+): Promise<void> {
+  const entries: ZipEntry[] = [
+    { name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest)) },
+  ];
   for (const [name, text] of Object.entries(files)) {
-    entries.push({ name, data: Buffer.from(text, "utf8") });
+    entries.push({ name, data: Buffer.from(text, 'utf8') });
   }
   await writeBytes(path, zipBytes(entries));
 }
@@ -217,7 +242,7 @@ function findEnd(bytes: Buffer): number {
       return index;
     }
   }
-  throw new Error("not a zip archive");
+  throw new Error('not a zip archive');
 }
 
 function entryData(bytes: Buffer, method: number, size: number, localOffset: number): Buffer {
@@ -248,12 +273,14 @@ export async function readPackage(path: string): Promise<ReadPackage> {
     const extraLength = bytes.readUInt16LE(cursor + 30);
     const commentLength = bytes.readUInt16LE(cursor + 32);
     const localOffset = bytes.readUInt32LE(cursor + 42);
-    const name = bytes.toString("utf8", cursor + 46, cursor + 46 + nameLength);
+    const name = bytes.toString('utf8', cursor + 46, cursor + 46 + nameLength);
     entries.set(name, entryData(bytes, method, size, localOffset));
     names.push(name);
     cursor += 46 + nameLength + extraLength + commentLength;
   }
-  const manifest = JSON.parse((entries.get("manifest.json") ?? Buffer.from("{}")).toString("utf8")) as PackageManifest;
+  const manifest = JSON.parse(
+    (entries.get('manifest.json') ?? Buffer.from('{}')).toString('utf8'),
+  ) as PackageManifest;
   return { manifest, entries, names };
 }
 
@@ -262,5 +289,5 @@ export function entryText(archive: ReadPackage, name: string): string {
   if (data === undefined) {
     throw new Error(`the package has no entry ${name}`);
   }
-  return data.toString("utf8");
+  return data.toString('utf8');
 }

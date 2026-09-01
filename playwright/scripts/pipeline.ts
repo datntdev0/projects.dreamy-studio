@@ -1,20 +1,22 @@
-import { expect } from "@playwright/test";
-import { DatabaseSync } from "node:sqlite";
-import { join } from "node:path";
-import { readdir, readFile } from "node:fs/promises";
-import type { Ui } from "./fixtures.ts";
-import type { BottomTab } from "../pages/pipeline.ts";
-import type { Sandbox } from "./sandbox.ts";
-import { WORKSPACE_DB_FILE, readWorkspace } from "./workspaces.ts";
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
-export async function showBottomPanel(ui: Ui, tab: BottomTab = "pipelines"): Promise<void> {
+import { expect } from '@playwright/test';
+
+import type { BottomTab } from '../pages/pipeline.ts';
+import type { Ui } from './fixtures.ts';
+import type { Sandbox } from './sandbox.ts';
+import { readWorkspace, WORKSPACE_DB_FILE } from './workspaces.ts';
+
+export async function showBottomPanel(ui: Ui, tab: BottomTab = 'pipelines'): Promise<void> {
   const bottom = ui.main.pipelines.bottom;
   if (!(await bottom.root.isVisible())) {
     await ui.main.pipelines.statusbar.button.click();
   }
   await expect(bottom.root).toBeVisible();
   await bottom.tab(tab).click();
-  await expect(bottom.tab(tab)).toHaveAttribute("aria-pressed", "true");
+  await expect(bottom.tab(tab)).toHaveAttribute('aria-pressed', 'true');
   await expect(bottom.body(tab)).toBeVisible();
 }
 
@@ -39,33 +41,33 @@ export async function expectStatusRunning(ui: Ui): Promise<void> {
   await expect(ui.main.pipelines.statusbar.running).toBeVisible();
 }
 
-export const AZURE = "Azure Chronicle";
-export const HARBOR = "Harbor Lights";
-export const EMBER = "Ember Vale";
+export const AZURE = 'Azure Chronicle';
+export const HARBOR = 'Harbor Lights';
+export const EMBER = 'Ember Vale';
 
 export const KIND_TEXT = {
-  translation: /(translation|dịch)\s*·\s*VI/i,
-  analysis: /(analysis|phân tích)\s*·\s*src/i,
+  translation: 'Translation ·VI',
+  analysis: 'Analysis ·src',
 } as const;
 
 export interface HistoryExpectation {
   readonly novel: string;
   readonly kind: keyof typeof KIND_TEXT;
-  readonly status: "completed" | "failed" | "cancelled";
+  readonly status: 'completed' | 'failed' | 'cancelled';
   readonly done: string;
   readonly failed: number;
 }
 
 export const NEWEST_FIRST: readonly HistoryExpectation[] = [
-  { novel: HARBOR, kind: "translation", status: "completed", done: "2/2", failed: 0 },
-  { novel: AZURE, kind: "analysis", status: "completed", done: "3/3", failed: 0 },
-  { novel: EMBER, kind: "analysis", status: "cancelled", done: "1/2", failed: 0 },
-  { novel: HARBOR, kind: "translation", status: "failed", done: "1/2", failed: 1 },
-  { novel: AZURE, kind: "translation", status: "completed", done: "3/3", failed: 0 },
+  { novel: HARBOR, kind: 'translation', status: 'completed', done: '2/2', failed: 0 },
+  { novel: AZURE, kind: 'analysis', status: 'completed', done: '3/3', failed: 0 },
+  { novel: EMBER, kind: 'analysis', status: 'cancelled', done: '1/2', failed: 0 },
+  { novel: HARBOR, kind: 'translation', status: 'failed', done: '1/2', failed: 1 },
+  { novel: AZURE, kind: 'translation', status: 'completed', done: '3/3', failed: 0 },
 ];
 
 function pad(value: number): string {
-  return String(value).padStart(2, "0");
+  return String(value).padStart(2, '0');
 }
 
 export function stampOf(iso: string): string {
@@ -91,8 +93,8 @@ const PIPELINE_BASE_TIME = Date.UTC(2026, 0, 2, 8, 0, 0);
 const PIPELINE_GAP_MS = 10 * 60_000;
 const TASK_GAP_MS = 20_000;
 
-export type PipelineKind = "translation" | "analysis";
-export type FinishedState = "completed" | "failed" | "cancelled";
+export type PipelineKind = 'translation' | 'analysis';
+export type FinishedState = 'completed' | 'failed' | 'cancelled';
 
 export interface SeedPipelineTask {
   readonly chapter: number;
@@ -120,31 +122,52 @@ export function pipelineTime(offsetMs: number): string {
 }
 
 function normalizeTask(task: number | SeedPipelineTask, fallback: FinishedState): SeedPipelineTask {
-  return typeof task === "number" ? { chapter: task, status: fallback } : { status: fallback, ...task };
+  return typeof task === 'number'
+    ? { chapter: task, status: fallback }
+    : { status: fallback, ...task };
 }
 
 function defaultTarget(kind: PipelineKind): string {
-  return kind === "analysis" ? "src" : "VI";
+  return kind === 'analysis' ? 'src' : 'VI';
 }
 
-function insertTasks(database: DatabaseSync, pipelineId: number, chapters: Readonly<Record<number, string>>, tasks: readonly SeedPipelineTask[], startMs: number): void {
+function insertTasks(
+  database: DatabaseSync,
+  pipelineId: number,
+  chapters: Readonly<Record<number, string>>,
+  tasks: readonly SeedPipelineTask[],
+  startMs: number,
+): void {
   const insert = database.prepare(
-    "INSERT INTO ws_pipeline_tasks (pipeline_id, chapter_id, passage, status, progress, error, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    'INSERT INTO ws_pipeline_tasks (pipeline_id, chapter_id, passage, status, progress, error, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   );
   for (const [index, task] of tasks.entries()) {
     const chapterId = chapters[task.chapter];
     if (chapterId === undefined) {
       throw new Error(`pipeline seed references an unknown chapter ${task.chapter}`);
     }
-    const status = task.status ?? "completed";
+    const status = task.status ?? 'completed';
     const started = task.startedAt ?? pipelineTime(startMs + index * TASK_GAP_MS);
-    const finished = task.finishedAt ?? pipelineTime(startMs + index * TASK_GAP_MS + TASK_GAP_MS / 2);
-    const progress = task.progress ?? (status === "completed" ? 100 : 0);
-    insert.run(pipelineId, chapterId, task.passage ?? null, status, progress, task.error ?? "", started, finished);
+    const finished =
+      task.finishedAt ?? pipelineTime(startMs + index * TASK_GAP_MS + TASK_GAP_MS / 2);
+    const progress = task.progress ?? (status === 'completed' ? 100 : 0);
+    insert.run(
+      pipelineId,
+      chapterId,
+      task.passage ?? null,
+      status,
+      progress,
+      task.error ?? '',
+      started,
+      finished,
+    );
   }
 }
 
-export async function seedPipelines(folder: string, pipelines: readonly SeedPipeline[]): Promise<number[]> {
+export async function seedPipelines(
+  folder: string,
+  pipelines: readonly SeedPipeline[],
+): Promise<number[]> {
   if (pipelines.length === 0) {
     return [];
   }
@@ -160,29 +183,41 @@ export async function seedPipelines(folder: string, pipelines: readonly SeedPipe
   const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
   const ids: number[] = [];
   try {
-    database.exec("BEGIN");
+    database.exec('BEGIN');
     const insert = database.prepare(
-      "INSERT INTO ws_pipeline_history (novel_id, kind, target, status, total, done, failed, created_at, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      'INSERT INTO ws_pipeline_history (novel_id, kind, target, status, total, done, failed, created_at, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const [index, pipeline] of pipelines.entries()) {
       const place = resolved[index];
       if (place === undefined) {
         continue;
       }
-      const kind = pipeline.kind ?? "translation";
+      const kind = pipeline.kind ?? 'translation';
       const tasks = pipeline.tasks.map((task) => normalizeTask(task, pipeline.status));
-      const done = tasks.filter((task) => task.status === "completed").length;
-      const failed = tasks.filter((task) => task.status === "failed").length;
+      const done = tasks.filter((task) => task.status === 'completed').length;
+      const failed = tasks.filter((task) => task.status === 'failed').length;
       const startMs = index * PIPELINE_GAP_MS;
       const created = pipeline.createdAt ?? pipelineTime(startMs);
       const started = pipeline.startedAt ?? pipelineTime(startMs + 1000);
-      const finished = pipeline.finishedAt ?? pipelineTime(startMs + 1000 + tasks.length * TASK_GAP_MS);
-      const result = insert.run(place.novelId, kind, pipeline.target ?? defaultTarget(kind), pipeline.status, tasks.length, done, failed, created, started, finished);
+      const finished =
+        pipeline.finishedAt ?? pipelineTime(startMs + 1000 + tasks.length * TASK_GAP_MS);
+      const result = insert.run(
+        place.novelId,
+        kind,
+        pipeline.target ?? defaultTarget(kind),
+        pipeline.status,
+        tasks.length,
+        done,
+        failed,
+        created,
+        started,
+        finished,
+      );
       const pipelineId = Number(result.lastInsertRowid);
       insertTasks(database, pipelineId, place.chapters, tasks, startMs + 1000);
       ids.push(pipelineId);
     }
-    database.exec("COMMIT");
+    database.exec('COMMIT');
   } finally {
     database.close();
   }
@@ -230,30 +265,31 @@ function nullableText(value: unknown): string | null {
 
 function toTask(row: Row): PipelineTaskRecord {
   return {
-    id: Number(row["id"]),
-    chapterId: String(row["chapter_id"]),
-    passage: row["passage"] === null || row["passage"] === undefined ? null : Number(row["passage"]),
-    status: String(row["status"]),
-    progress: Number(row["progress"]),
-    error: String(row["error"]),
-    startedAt: nullableText(row["started_at"]),
-    finishedAt: nullableText(row["finished_at"]),
+    id: Number(row['id']),
+    chapterId: String(row['chapter_id']),
+    passage:
+      row['passage'] === null || row['passage'] === undefined ? null : Number(row['passage']),
+    status: String(row['status']),
+    progress: Number(row['progress']),
+    error: String(row['error']),
+    startedAt: nullableText(row['started_at']),
+    finishedAt: nullableText(row['finished_at']),
   };
 }
 
 function toPipeline(row: Row, tasks: readonly PipelineTaskRecord[]): PipelineRecord {
   return {
-    id: Number(row["id"]),
-    novelId: Number(row["novel_id"]),
-    kind: String(row["kind"]),
-    target: String(row["target"]),
-    status: String(row["status"]),
-    total: Number(row["total"]),
-    done: Number(row["done"]),
-    failed: Number(row["failed"]),
-    createdAt: String(row["created_at"]),
-    startedAt: nullableText(row["started_at"]),
-    finishedAt: nullableText(row["finished_at"]),
+    id: Number(row['id']),
+    novelId: Number(row['novel_id']),
+    kind: String(row['kind']),
+    target: String(row['target']),
+    status: String(row['status']),
+    total: Number(row['total']),
+    done: Number(row['done']),
+    failed: Number(row['failed']),
+    createdAt: String(row['created_at']),
+    startedAt: nullableText(row['started_at']),
+    finishedAt: nullableText(row['finished_at']),
     tasks,
   };
 }
@@ -261,9 +297,16 @@ function toPipeline(row: Row, tasks: readonly PipelineTaskRecord[]): PipelineRec
 export function readPipelines(folder: string, novelId?: number): PipelineRecord[] {
   const database = openReadOnly(folder);
   try {
-    const rows = novelId === undefined ? database.prepare("SELECT * FROM ws_pipeline_history ORDER BY id").all() : database.prepare("SELECT * FROM ws_pipeline_history WHERE novel_id = ? ORDER BY id").all(novelId);
+    const rows =
+      novelId === undefined
+        ? database.prepare('SELECT * FROM ws_pipeline_history ORDER BY id').all()
+        : database
+            .prepare('SELECT * FROM ws_pipeline_history WHERE novel_id = ? ORDER BY id')
+            .all(novelId);
     return rows.map((row) => {
-      const tasks = database.prepare("SELECT * FROM ws_pipeline_tasks WHERE pipeline_id = ? ORDER BY id").all(Number(row["id"]));
+      const tasks = database
+        .prepare('SELECT * FROM ws_pipeline_tasks WHERE pipeline_id = ? ORDER BY id')
+        .all(Number(row['id']));
       return toPipeline(row, tasks.map(toTask));
     });
   } finally {
@@ -276,10 +319,12 @@ export function pipelineCount(folder: string): number {
 }
 
 export async function readPipelineLogs(sandbox: Sandbox): Promise<PipelineRunLog[]> {
-  const root = join(sandbox.dataDir, "logs");
+  const root = join(sandbox.dataDir, 'logs');
   let names: string[] = [];
   try {
-    names = (await readdir(root, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+    names = (await readdir(root, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
   } catch {
     return [];
   }
@@ -287,15 +332,15 @@ export async function readPipelineLogs(sandbox: Sandbox): Promise<PipelineRunLog
   for (const name of names.sort()) {
     const dir = join(root, name);
     const files = await readdir(dir);
-    if (!files.includes("pipeline.log")) {
+    if (!files.includes('pipeline.log')) {
       continue;
     }
-    runs.push({ name, dir, log: await readFile(join(dir, "pipeline.log"), "utf8"), files });
+    runs.push({ name, dir, log: await readFile(join(dir, 'pipeline.log'), 'utf8'), files });
   }
   return runs;
 }
 
-const FINISHED_STATES: readonly string[] = ["completed", "failed", "cancelled"];
+const FINISHED_STATES: readonly string[] = ['completed', 'failed', 'cancelled'];
 const WAIT_POLL_MS = 150;
 
 export interface WaitOptions {
@@ -305,18 +350,24 @@ export interface WaitOptions {
   readonly timeoutMs?: number;
 }
 
-export async function waitForPipeline(folder: string, options: WaitOptions = {}): Promise<PipelineRecord> {
+export async function waitForPipeline(
+  folder: string,
+  options: WaitOptions = {},
+): Promise<PipelineRecord> {
   const states = options.states ?? FINISHED_STATES;
   const deadline = Date.now() + (options.timeoutMs ?? 60_000);
   let last: PipelineRecord | undefined;
   while (Date.now() < deadline) {
     const all = readPipelines(folder);
     const enough = options.count === undefined || all.length >= options.count;
-    last = options.id === undefined ? all.at(-1) : all.find((pipeline) => pipeline.id === options.id);
+    last =
+      options.id === undefined ? all.at(-1) : all.find((pipeline) => pipeline.id === options.id);
     if (enough && last !== undefined && states.includes(last.status)) {
       return last;
     }
     await new Promise((done) => setTimeout(done, WAIT_POLL_MS));
   }
-  throw new Error(`pipeline did not reach ${states.join("/")}; last status ${last?.status ?? "none"}`);
+  throw new Error(
+    `pipeline did not reach ${states.join('/')}; last status ${last?.status ?? 'none'}`,
+  );
 }

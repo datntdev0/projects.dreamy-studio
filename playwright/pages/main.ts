@@ -1,13 +1,15 @@
-import type { Locator, Page } from "@playwright/test";
-import { AssistantPage } from "./assistant.ts";
-import { ConfirmDialog, SwitchDialog } from "./dialogs.ts";
-import { KnowledgePage } from "./knowledge.ts";
-import { LibraryNav } from "./library.ts";
-import { PipelinesNav } from "./pipeline.ts";
-import { ProjectPages } from "./project.ts";
-import { SettingsPage } from "./settings.ts";
-import { TranslationPage } from "./translation.ts";
-import { AddChapterDialog, DisplayPanel, NovelChapters, NovelCreateDialog, NovelExplorer, NovelImportDialog, NovelList, NovelPanel, NovelReader } from "./novels.ts";
+import type { Locator, Page } from '@playwright/test';
+
+import { AssistantPage } from './assistant.ts';
+import { ConfirmDialog, SwitchDialog } from './dialogs.ts';
+import { KnowledgePage } from './knowledge.ts';
+import { LibraryNav } from './library.ts';
+// prettier-ignore
+import { AddChapterDialog, DisplayPanel, NovelChapters, NovelCreateDialog, NovelExplorer, NovelImportDialog, NovelList, NovelPanel, NovelReader } from './novels.ts';
+import { PipelinesNav } from './pipeline.ts';
+import { ProjectPages } from './project.ts';
+import { SettingsPage } from './settings.ts';
+import { TranslationPage } from './translation.ts';
 
 export class MainPage {
   readonly switchDialog: SwitchDialog;
@@ -51,38 +53,38 @@ export class MainPage {
   }
 
   get root(): Locator {
-    return this.page.getByTestId("main-page");
+    return this.page.getByTestId('main-page');
   }
 
   get workspaceButton(): Locator {
-    return this.page.getByTestId("main-workspace");
+    return this.page.getByTestId('main-workspace');
   }
 
   get workspaceName(): Locator {
-    return this.page.getByTestId("main-workspace-name");
+    return this.page.getByTestId('main-workspace-name');
   }
 
   get statusPath(): Locator {
-    return this.page.getByTestId("statusbar-workspace");
+    return this.page.getByTestId('statusbar-workspace');
   }
 
   get switchNotice(): Locator {
-    return this.page.getByTestId("main-switch-notice");
+    return this.page.getByTestId('main-switch-notice');
   }
 
   get novelRail(): Locator {
-    return this.page.locator("[data-testid=railbar-item][data-rail=novels]");
+    return this.page.locator('[data-testid=railbar-item][data-rail=novels]');
   }
 
   get novelRows(): Locator {
-    return this.page.getByTestId("novel-explorer-novel");
+    return this.page.getByTestId('novel-explorer-novel');
   }
 
   get toasts(): Locator {
-    return this.page.getByTestId("toast");
+    return this.page.getByTestId('toast');
   }
 
-  toast(text: string | RegExp): Locator {
+  toast(text: string): Locator {
     return this.toasts.filter({ hasText: text });
   }
 

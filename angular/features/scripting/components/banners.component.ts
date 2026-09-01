@@ -7,7 +7,6 @@ import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
 
 import { ScriptContext } from '../scripting.models';
-import { ScriptingLabels } from './scripting.labels';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -16,14 +15,11 @@ import { ScriptingLabels } from './scripting.labels';
   templateUrl: './banners.component.html',
 })
 export class ScriptingBanners {
-  protected readonly labels = inject(ScriptingLabels);
   private readonly projects = inject(ProjectService);
   private readonly novels = inject(NovelService);
   private readonly tabs = inject(TabsService);
 
   readonly ctx = input.required<ScriptContext>();
-  readonly unitLower = computed(this.buildUnitLower.bind(this));
-  readonly staleCount = computed(this.buildStaleCount.bind(this));
   readonly showKb = computed(this.buildShowKb.bind(this));
   readonly missing = computed(this.buildMissing.bind(this));
 
@@ -35,18 +31,9 @@ export class ScriptingBanners {
     }
   }
 
-  private buildUnitLower(): string {
-    return this.labels.unitLower(this.ctx().config);
-  }
-
-  private buildStaleCount(): number {
-    const ctx = this.ctx();
-    return !ctx.config.source || !ctx.source ? ctx.staleRefs.length : 0;
-  }
-
   private buildShowKb(): boolean {
     const ctx = this.ctx();
-    return ctx.config.ranges && !!ctx.unit && !ctx.unit.meta && !ctx.locked;
+    return ctx.config.ranges && !!ctx.unit && !ctx.unit.meta;
   }
 
   private buildMissing(): string {

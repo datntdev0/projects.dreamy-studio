@@ -10,7 +10,6 @@ import { ProjectStatus, ProjectSummary, ProjectTemplateId } from '../project.mod
 import { ProjectService } from '../project.service';
 import { ProjectModules } from './modules.component';
 import { ProjectThumb } from './thumb.component';
-import { ProjectTree } from './tree.component';
 
 function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
   return (
@@ -22,7 +21,7 @@ function compareExplorerProjects(a: ProjectSummary, b: ProjectSummary): number {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-project-explorer',
-  imports: [Icon, CoreModule, ProjectModules, ProjectTree, ProjectThumb],
+  imports: [Icon, CoreModule, ProjectModules, ProjectThumb],
   templateUrl: './explorer.component.html',
 })
 export class ProjectExplorer {
@@ -65,11 +64,7 @@ export class ProjectExplorer {
   }
 
   toggle(project: ProjectSummary): void {
-    const key = this.projectRootKey(project);
-    this.projects.toggleExpanded(key);
-    if (this.projects.isExpanded(key)) {
-      void this.projects.ensureDir(project.id, '');
-    }
+    this.projects.toggleExpanded(this.projectRootKey(project));
   }
 
   toggleFromChevron(project: ProjectSummary, event: Event): void {

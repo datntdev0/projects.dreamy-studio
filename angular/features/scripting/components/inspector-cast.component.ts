@@ -8,8 +8,8 @@ import { fieldValue, setFieldValue } from '@shared/utils/dom';
 import { ScriptContext } from '../scripting.models';
 import { speakerClass } from '../scripting.rules';
 import { ScriptingService } from '../scripting.service';
-import { ScriptingInspectorLabels } from './inspector.labels';
 import { CastRow, castRowsOf } from './inspector.rules';
+import { ScriptingLabels } from './scripting.labels';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,7 +22,7 @@ export class ScriptingInspectorCast {
   private readonly scripting = inject(ScriptingService);
   private readonly toasts = inject(ToastService);
   private readonly language = inject(LanguageService);
-  readonly labels = inject(ScriptingInspectorLabels);
+  readonly labels = inject(ScriptingLabels);
   readonly classOf = speakerClass;
 
   readonly ctx = input.required<ScriptContext>();

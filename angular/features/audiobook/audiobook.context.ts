@@ -11,17 +11,13 @@ import {
   ChapterPanel,
   EngineSummary,
   GenerationJob,
-  LexRow,
   ListRow,
   RailRow,
   RailSummary,
-  SegmentFilter,
-  SegmentPanel,
   SegmentRow,
   SpeakerDeleteBlock,
   SpeakerRow,
   SpeakerStatus,
-  SymbolRow,
   UnitAudio,
   UnitStat,
   VoiceAvailability,
@@ -29,30 +25,21 @@ import {
   VoiceOptionGroup,
 } from './audiobook.models';
 import {
-  affectedCount,
   blockersOf,
   countLostDialogues,
   defaultUnitOf,
-  highlightParts,
   isUsable,
   isVoiced,
-  lexHits,
-  occurrencesOf,
-  readText,
   segmentInfo,
   speakerUseCount,
   speakerVoiceOf,
   summaryOf,
-  SYMBOL_DEFS,
   todoBlocks,
   unitAudioOf,
   unitStat,
   voiceIssueOf,
   voicingOf,
 } from './audiobook.rules';
-
-export const DEFAULT_TEST_TEXT =
-  'Wren Aldous climbs three hundred twelve steps of the Lantern Tower at Harrowmere.';
 
 export interface ContextInput {
   projectId: number;
@@ -84,8 +71,6 @@ function segmentRowOf(
     state: running.includes(block.id) ? 'running' : info.state,
     record: info.record,
     reasons: info.reasons,
-    parts: highlightParts(env.book.lex, block.text),
-    readText: readText(env.book.lex, block.text),
   };
 }
 
@@ -95,24 +80,13 @@ export function segmentRowsOf(env: AudioEnv, unit: ScriptUnit, running: string[]
     .map((block, index) => segmentRowOf(env, unit, running, block, index + 1));
 }
 
-export function passesFilter(filter: SegmentFilter, row: SegmentRow): boolean {
-  if (filter === 'todo') {
-    return row.state !== 'done';
-  }
-  return filter === 'all' || row.state === filter;
-}
-
-export function listRowsOf(
-  unit: ScriptUnit | null,
-  segments: SegmentRow[],
-  filter: SegmentFilter,
-): ListRow[] {
+export function listRowsOf(unit: ScriptUnit | null, segments: SegmentRow[]): ListRow[] {
   const rows: ListRow[] = [];
   for (const block of unit?.blocks ?? []) {
     const segment = segments.find((row) => row.block.id === block.id);
-    if (segment && passesFilter(filter, segment)) {
+    if (segment) {
       rows.push({ kind: 'segment', segment });
-    } else if (!segment && filter === 'all' && block.type === 'pause') {
+    } else if (block.type === 'pause') {
       rows.push({ kind: 'pause', pause: { block, seconds: block.ms / 1000 } });
     }
   }
@@ -189,24 +163,10 @@ function speakerRowOf(input: ContextInput, member: CastMember): SpeakerRow {
   };
 }
 
-function lexRowsOf(script: Script, book: Audiobook): LexRow[] {
-  return book.lex.map((rule) => ({ rule, occurrences: occurrencesOf(script, rule.term) }));
-}
-
-function symbolRowsOf(book: Audiobook): SymbolRow[] {
-  return SYMBOL_DEFS.map((def) => ({
-    id: def.id,
-    sym: def.sym,
-    ruleKey: def.ruleKey,
-    on: book.symbols.find((item) => item.id === def.id)?.on ?? false,
-  }));
-}
-
 function railOf(script: Script, stats: UnitStat[], activeId: string | null): RailRow[] {
   return script.units.map((unit, index) => ({
     unit,
     active: unit.id === activeId,
-    locked: unit.status === 'locked',
     stat: stats[index],
   }));
 }
@@ -225,37 +185,12 @@ function engineSummaryOf(availability: VoiceAvailability): EngineSummary {
   };
 }
 
-function inspectorOf(view: AudiobookView, selected: SegmentRow | null): AudiobookInspector {
-  if (view.mode !== 'prod') {
-    return view.mode;
-  }
-  return selected ? 'segment' : 'chapter';
+function inspectorOf(view: AudiobookView): AudiobookInspector {
+  return view.mode === 'voices' ? 'voices' : 'chapter';
 }
 
-function testTextOf(view: AudiobookView, unit: ScriptUnit | null, book: Audiobook): string {
-  if (view.test) {
-    return view.test;
-  }
-  const sample = (unit?.blocks ?? []).find(
-    (block) => block.type === 'narration' && lexHits(book.lex, block.text).length > 0,
-  );
-  return sample ? sample.text : DEFAULT_TEST_TEXT;
-}
-
-function segmentPanelOf(row: SegmentRow | null, input: ContextInput): SegmentPanel | null {
-  if (!row) {
-    return null;
-  }
-  const issue = row.voice ? voiceIssueOf(row.voice, input.availability) : null;
-  return {
-    row,
-    changed: row.readText !== row.block.text,
-    engineName: row.voice ? engineName(input.availability.engines, row.voice.engine) : null,
-    usable: isUsable(row.voice, input.availability),
-    issue,
-    canFlag: row.record !== null && !row.record.flag,
-    canClearFlag: row.record !== null && row.record.flag !== '',
-  };
+function canExportOf(segments: SegmentRow[]): boolean {
+  return segments.length > 0 && segments.every((row) => row.state === 'done');
 }
 
 function chapterPanelOf(
@@ -263,15 +198,16 @@ function chapterPanelOf(
   audio: UnitAudio | null,
   unit: ScriptUnit | null,
   blockers: AudiobookContext['blockers'],
+  segments: SegmentRow[],
 ): ChapterPanel {
   return {
-    locked: unit?.status === 'locked',
     total: stat ? stat.total : 0,
     generated: stat ? stat.done : 0,
     attention: stat ? stat.stale + stat.none : 0,
     duration: stat ? stat.dur : 0,
     mix: unit?.blocks && audio ? audio.mix : null,
     blockers,
+    canExport: canExportOf(segments),
   };
 }
 
@@ -286,23 +222,19 @@ export function buildContext(input: ContextInput): AudiobookContext {
   const hasBlocks = !!unit && unit.blocks !== null;
   const segments = unit && hasBlocks ? segmentRowsOf(env, unit, running) : [];
   const todo = unit && hasBlocks ? todoBlocks(env, unit) : [];
-  const blockers = unit && hasBlocks ? blockersOf(env, availability, unit, script.cfg.unit) : [];
-  const selected = segments.find((row) => row.block.id === view.sel) ?? null;
-  const testText = testTextOf(view, unit, book);
-  const affected = affectedCount(env, script);
+  const blockers = unit && hasBlocks ? blockersOf(env, availability, unit) : [];
   return {
     projectId,
     script,
     config: script.cfg,
     unitKind: script.cfg.unit,
     view,
-    inspector: inspectorOf(view, selected),
+    inspector: inspectorOf(view),
     cast,
     book,
     voices,
     availability,
     unit,
-    locked: unit?.status === 'locked',
     audio,
     running,
     generating: running.length > 0,
@@ -311,27 +243,16 @@ export function buildContext(input: ContextInput): AudiobookContext {
     rail: railOf(script, stats, unit ? unit.id : null),
     railSummary: railSummaryOf(script, stats),
     segments,
-    rows: listRowsOf(unit, segments, view.filter),
+    rows: listRowsOf(unit, segments),
+    changed: segments.filter((row) => row.state === 'stale').length,
     todo,
     blockers,
     canGenerate: hasBlocks && blockers.length === 0 && todo.length > 0 && running.length === 0,
     canPlay: segments.some((row) => row.record !== null),
-    selected,
     speakers: cast.map((member) => speakerRowOf(input, member)),
     lostDialogues: countLostDialogues(script, cast),
     voiceGroups: voiceGroupsOf(voices, availability),
-    lexicon: lexRowsOf(script, book),
-    symbols: symbolRowsOf(book),
-    testText,
-    testOutput: readText(book.lex, testText),
-    affected,
     engines: engineSummaryOf(availability),
-    chapterPanel: chapterPanelOf(stat, audio, unit, blockers),
-    segmentPanel: segmentPanelOf(selected, input),
-    rulesPanel: {
-      pronunciations: book.lex.length,
-      activeSymbols: book.symbols.filter((item) => item.on).length,
-      affected,
-    },
+    chapterPanel: chapterPanelOf(stat, audio, unit, blockers, segments),
   };
 }

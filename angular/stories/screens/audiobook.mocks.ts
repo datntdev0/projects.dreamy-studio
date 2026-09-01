@@ -2,6 +2,7 @@ import {
   Audiobook,
   AudiobookConfig,
   AudioRecord,
+  ExportReply,
   PreviewReply,
   SegmentRequest,
   UnitAudio,
@@ -61,9 +62,9 @@ function saveUnit(state: AudiobookState, args: Record<string, unknown>): void {
 function recordOf(request: SegmentRequest): AudioRecord {
   return {
     text: request.text,
+    speaker: request.speaker,
     voice: request.voice,
     speed: request.speed,
-    rules: request.rules,
     paren: request.paren,
     dur: estimateDuration(request.text, request.speed),
     at: stampNow(),
@@ -87,6 +88,12 @@ async function generateSegment(
   const audio = book.units[unit.id] ?? emptyUnitAudio();
   book.units[unit.id] = { ...audio, audio: { ...audio.audio, [String(args['blockId'])]: record } };
   return clone(record);
+}
+
+function exportUnit(state: AudiobookState, args: Record<string, unknown>): ExportReply {
+  bookOf(state, args);
+  const projectId = numberArg(args, 'projectId');
+  return { path: `exports/${projectId}/${String(args['unitId'])}.${String(args['format'])}` };
 }
 
 function previewVoice(args: Record<string, unknown>): PreviewReply {
@@ -130,6 +137,7 @@ export function audiobookHandlers(
     audiobook_unit_save: (args) => saveUnit(state, args),
     audiobook_segment_generate: (args) => generateSegment(state, scripting, args),
     audiobook_voice_preview: previewVoice,
+    audiobook_export: (args) => exportUnit(state, args),
     project_modules: (args) => modulesOf(state, scripting, base, args),
     library_voice_list: audiobookVoices,
   };

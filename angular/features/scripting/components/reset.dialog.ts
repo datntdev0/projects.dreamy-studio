@@ -40,18 +40,6 @@ export class ScriptingResetDialog extends ScriptingDialogBase {
     this.announce(ctx, count);
   }
 
-  protected override reject(ctx: ScriptContext | null): void {
-    if (ctx?.locked) {
-      this.toasts.show(
-        this.languageService.translate('scripting.dialog.reset.locked', {
-          unit: this.unitWord(ctx.config.unit),
-        }),
-        'warning',
-      );
-    }
-    super.reject(ctx);
-  }
-
   private announce(ctx: ScriptContext, count: number): void {
     if (count === 0) {
       this.toasts.show(this.languageService.translate('scripting.dialog.reset.none'), 'warning');

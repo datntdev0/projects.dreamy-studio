@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type ScriptingDialogKind = 'check' | 'unlock' | 'reset' | 'default' | 'draft';
+export type ScriptingDialogKind = 'reset' | 'default';
 
 export interface ScriptingDialogRequest {
   kind: ScriptingDialogKind;
@@ -11,24 +11,12 @@ export interface ScriptingDialogRequest {
 export class ScriptingDialogsService {
   readonly request = signal<ScriptingDialogRequest | null>(null);
 
-  openCheck(projectId: number): void {
-    this.open('check', projectId);
-  }
-
-  openUnlock(projectId: number): void {
-    this.open('unlock', projectId);
-  }
-
   openReset(projectId: number): void {
     this.open('reset', projectId);
   }
 
   openDefault(projectId: number): void {
     this.open('default', projectId);
-  }
-
-  openDraft(projectId: number): void {
-    this.open('draft', projectId);
   }
 
   close(): void {

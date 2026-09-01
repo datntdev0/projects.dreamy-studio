@@ -23,7 +23,6 @@ const SHELL_HANDLERS: IpcHandlers = {
 
 export interface ProjectScenario {
   empty?: boolean;
-  stale?: boolean;
 }
 
 function findProject(projects: ProjectSummary[], id: number): ProjectSummary | undefined {
@@ -66,8 +65,8 @@ function knowledgeHandlers(source: IpcHandlers): IpcHandlers {
 export function projectScreenHandlers(scenario: ProjectScenario = {}): IpcHandlers {
   const empty = scenario.empty === true;
   const base = knowledgeScreenHandlers({ chapters: !empty });
-  const scriptingState = createScriptingState(scenario.stale === true);
-  const scripting = scriptingHandlers(base, scenario.stale === true, scriptingState);
+  const scriptingState = createScriptingState();
+  const scripting = scriptingHandlers(base, scriptingState);
   const audiobook = audiobookHandlers(scriptingState, scripting['project_modules']);
   return {
     ...base,

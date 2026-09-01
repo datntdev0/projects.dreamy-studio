@@ -12,10 +12,7 @@ import { libraryVoice } from '@testing/fixtures';
 import { script, scriptBlock, scriptUnit } from '@testing/scripting';
 import { describe, expect, it } from 'vitest';
 
-import { LexRule } from './audiobook.models';
 import * as rules from './audiobook.rules';
-
-const lex = (term: string, say: string, id = 'L01'): LexRule => ({ id, term, say, kind: 'names' });
 
 const narration = (id: string, text: string, paren = '') =>
   scriptBlock({ id, type: 'narration', text, paren });
@@ -23,8 +20,8 @@ const narration = (id: string, text: string, paren = '') =>
 const dialogue = (id: string, text: string, who = 'E1') =>
   scriptBlock({ id, type: 'dialogue', text, who });
 
-function lockedUnit(blocks = [narration('B1', 'Hello world.')], id = 'U01') {
-  return scriptUnit({ id, status: 'locked', blocks });
+function unitWith(blocks = [narration('B1', 'Hello world.')], id = 'U01') {
+  return scriptUnit({ id, blocks });
 }
 
 describe('audiobook defaults', () => {
@@ -32,14 +29,10 @@ describe('audiobook defaults', () => {
     expect(rules.emptyView()).toEqual({
       unit: null,
       mode: 'prod',
-      sel: null,
-      filter: 'all',
-      test: '',
       goto: null,
     });
     const book = rules.emptyBook();
-    expect(book.symbols.map((item) => item.id)).toEqual(['S1', 'S2', 'S3', 'S4']);
-    expect(book.symbols.every((item) => item.on)).toBe(true);
+    expect(book).toEqual({ voices: {}, units: {} });
     expect(rules.unitAudioOf(book, 'U01')).toEqual(rules.emptyUnitAudio());
     expect(rules.emptyUnitAudio().mix).toEqual(rules.DEFAULT_MIX);
     expect(rules.emptyUnitAudio().mix).not.toBe(rules.DEFAULT_MIX);
@@ -48,7 +41,7 @@ describe('audiobook defaults', () => {
 
 describe('voiced blocks and speakers', () => {
   it('keeps only non-empty voiced blocks', () => {
-    const unit = lockedUnit([
+    const unit = unitWith([
       scriptBlock({ id: 'h', type: 'heading', text: 'Title' }),
       narration('n', '  '),
       narration('m', 'Text'),
@@ -114,53 +107,9 @@ describe('voice usability', () => {
   });
 });
 
-describe('reading rules', () => {
-  const rulesList = [lex('Wren', 'Ren'), lex('a.b', 'dot', 'L02'), lex('', 'x', 'L03')];
-
-  it('finds hits, reads text and builds a stable signature', () => {
-    const text = 'Wren and a.b met Wren';
-    expect(rules.lexHits(rulesList, text).map((item) => item.id)).toEqual(['L01', 'L02']);
-    expect(rules.readText(rulesList, text)).toBe('Ren and dot met Ren');
-    expect(rules.rulesSignature(rulesList, text)).toBe('Wren>Ren|a.b>dot');
-    expect(rules.rulesSignature(rulesList, 'nothing')).toBe('');
-  });
-
-  it('splits text into highlighted parts', () => {
-    expect(rules.highlightParts(rulesList, 'plain')).toEqual([{ text: 'plain', say: null }]);
-    expect(rules.highlightParts(rulesList, 'Wren, a.b!')).toEqual([
-      { text: 'Wren', say: 'Ren' },
-      { text: ', ', say: null },
-      { text: 'a.b', say: 'dot' },
-      { text: '!', say: null },
-    ]);
-    expect(rules.highlightParts(rulesList, 'axb Wren')).toEqual([
-      { text: 'axb ', say: null },
-      { text: 'Wren', say: 'Ren' },
-    ]);
-  });
-
-  it('counts occurrences in voiced blocks only', () => {
-    const doc = script([
-      lockedUnit([
-        narration('n', 'Wren met Wren'),
-        scriptBlock({ id: 'x', type: 'note', text: 'Wren' }),
-      ]),
-      scriptUnit({ id: 'U02', blocks: null }),
-    ]);
-    expect(rules.occurrencesOf(doc, 'Wren')).toBe(2);
-    expect(rules.occurrencesOf(doc, '')).toBe(0);
-  });
-
-  it('allocates sequential rule ids', () => {
-    expect(rules.nextLexId([])).toBe('L01');
-    expect(rules.nextLexId([lex('a', 'b', 'L05'), lex('c', 'd', 'Lxx')])).toBe('L06');
-    expect(rules.lexValue(lex('a', 'b'), 'say')).toBe('b');
-  });
-});
-
 describe('segment state', () => {
   const block = narration('B1', 'Hello world.');
-  const unit = lockedUnit([block]);
+  const unit = unitWith([block]);
 
   function envWith(record: ReturnType<typeof audioRecord> | null, extra = {}) {
     const book = audiobook({
@@ -192,12 +141,15 @@ describe('segment state', () => {
   });
 
   it('collects every stale reason in order', () => {
-    const record = audioRecord({ text: 'old', voice: 9, speed: 2, rules: 'x>y', paren: 'soft' });
+    const record = audioRecord({ text: 'old', voice: 9, speed: 2, paren: 'soft' });
     const info = rules.segmentInfo(envWith(record), unit, block);
     expect(info.state).toBe('stale');
-    expect(info.reasons).toEqual(['script', 'voice', 'rule', 'tone']);
+    expect(info.reasons).toEqual(['text', 'voice', 'speed', 'tone']);
     expect(rules.staleReasons(envWith(null), block, audioRecord({ voice: null }))).toEqual([
       'voice',
+    ]);
+    expect(rules.staleReasons(envWith(null), block, audioRecord({ speaker: 'E1' }))).toEqual([
+      'speaker',
     ]);
   });
 
@@ -209,7 +161,7 @@ describe('segment state', () => {
   it('sums unit statistics and derives the unit state', () => {
     const second = narration('B2', 'Second line.');
     const third = narration('B3', 'Third line.');
-    const wide = lockedUnit([block, second, third]);
+    const wide = unitWith([block, second, third]);
     const audio = (records: Record<string, ReturnType<typeof audioRecord>>) =>
       envOf({
         book: audiobook({
@@ -234,7 +186,7 @@ describe('segment state', () => {
       wide,
     );
     expect(done).toMatchObject({ done: 3, state: 'done', dur: 6 });
-    expect(rules.unitStat(audio({}), lockedUnit([]))).toMatchObject({ total: 0, state: 'none' });
+    expect(rules.unitStat(audio({}), unitWith([]))).toMatchObject({ total: 0, state: 'none' });
   });
 
   it('reads meta units from the stored meta state', () => {
@@ -282,25 +234,20 @@ describe('segment state', () => {
 describe('blockers', () => {
   const ok = availability();
 
-  it('has none for a locked unit with usable voices', () => {
-    expect(rules.blockersOf(envOf(), ok, lockedUnit(), 'chapter')).toEqual([]);
+  it('has none for a unit with usable voices', () => {
+    expect(rules.blockersOf(envOf(), ok, unitWith())).toEqual([]);
   });
 
-  it('reports the lock, lost dialogue, missing voice and engine problems', () => {
+  it('reports lost dialogue, missing voice and engine problems', () => {
     const unit = scriptUnit({
       id: 'U01',
-      status: 'review',
       blocks: [dialogue('d1', 'x', 'ghost'), dialogue('d2', 'y', 'ghost'), narration('n', 'z')],
     });
     const env = envOf({ book: audiobook() });
-    const blockers = rules.blockersOf(env, ok, unit, 'chapter');
-    expect(blockers.map((item) => item.kind)).toEqual(['lock', 'who', 'voice']);
-    expect(blockers[0].message).toEqual({
-      key: 'audiobook.blocker.lock',
-      params: { unit: 'chapter' },
-    });
-    expect(blockers[1]).toMatchObject({ blockId: 'd1', message: { params: { count: 2 } } });
-    expect(blockers[2]).toMatchObject({ speakerId: 'narr' });
+    const blockers = rules.blockersOf(env, ok, unit);
+    expect(blockers.map((item) => item.kind)).toEqual(['who', 'voice']);
+    expect(blockers[0]).toMatchObject({ blockId: 'd1', message: { params: { count: 2 } } });
+    expect(blockers[1]).toMatchObject({ speakerId: 'narr' });
   });
 
   it('reports engine blockers per speaker once', () => {
@@ -315,8 +262,8 @@ describe('blockers', () => {
         voices: { narr: { voice: 1, speed: 1 }, E1: { voice: 2, speed: 1 } },
       }),
     });
-    const unit = lockedUnit([narration('n1', 'a'), narration('n2', 'b'), dialogue('d', 'c')]);
-    const blockers = rules.blockersOf(env, ok, unit, 'chapter');
+    const unit = unitWith([narration('n1', 'a'), narration('n2', 'b'), dialogue('d', 'c')]);
+    const blockers = rules.blockersOf(env, ok, unit);
     expect(blockers.map((item) => item.message.key)).toEqual([
       'audiobook.blocker.engine.model',
       'audiobook.blocker.engine.cloud',
@@ -326,20 +273,15 @@ describe('blockers', () => {
       voice: 'Slow',
       engine: 'VieNeu Nano',
     });
-    const off = rules.blockersOf(
-      envOf(),
-      availability({ backendRunning: false }),
-      lockedUnit(),
-      'chapter',
-    );
+    const off = rules.blockersOf(envOf(), availability({ backendRunning: false }), unitWith());
     expect(off[0].message.key).toBe('audiobook.blocker.engine.backend');
   });
 
   it('counts dialogues without a speaker across units', () => {
     const doc = script([
-      lockedUnit([dialogue('a', 'x', 'ghost'), dialogue('b', 'x')]),
+      unitWith([dialogue('a', 'x', 'ghost'), dialogue('b', 'x')]),
       scriptUnit({ id: 'U02', blocks: null }),
-      lockedUnit([dialogue('c', 'x', '')], 'U03'),
+      unitWith([dialogue('c', 'x', '')], 'U03'),
     ]);
     expect(rules.countLostDialogues(doc, cast())).toBe(2);
   });
@@ -348,7 +290,7 @@ describe('blockers', () => {
 describe('speakers and progress', () => {
   it('counts uses per speaker kind', () => {
     const doc = script([
-      lockedUnit([
+      unitWith([
         scriptBlock({ id: 'h', type: 'heading', text: 'T' }),
         narration('n', 'x'),
         dialogue('d', 'y'),
@@ -358,19 +300,6 @@ describe('speakers and progress', () => {
     expect(rules.speakerUseCount(doc, NARRATOR_CAST)).toBe(2);
     expect(rules.speakerUseCount(doc, HERO_CAST)).toBe(1);
     expect(rules.speakerUseCount(doc, EXTRA_CAST)).toBe(0);
-  });
-
-  it('counts segments affected by a reading rule change', () => {
-    const doc = script([lockedUnit([narration('B1', 'Wren walks.')]), scriptUnit({ id: 'U02' })]);
-    const record = audioRecord({ text: 'Wren walks.', rules: '' });
-    const env = envOf({
-      book: audiobook({
-        voices: { narr: { voice: 1, speed: 1 } },
-        lex: [lex('Wren', 'Ren')],
-        units: { U01: { ...rules.emptyUnitAudio(), audio: { B1: record } } },
-      }),
-    });
-    expect(rules.affectedCount(env, doc)).toBe(1);
   });
 
   it('clamps speed and mix values', () => {
@@ -390,7 +319,7 @@ describe('speakers and progress', () => {
   });
 
   it('derives the module progress', () => {
-    const doc = script([lockedUnit(), lockedUnit([narration('B2', 'Two.')], 'U02')]);
+    const doc = script([unitWith(), unitWith([narration('B2', 'Two.')], 'U02')]);
     const make = (units: Record<string, ReturnType<typeof rules.emptyUnitAudio>>) =>
       envOf({ book: audiobook({ voices: { narr: { voice: 1, speed: 1 } }, units }) });
     const withAudio = (text: string, id: string) => ({
@@ -422,8 +351,8 @@ describe('speakers and progress', () => {
 
   it('chooses the default unit', () => {
     const doc = script([
-      lockedUnit(),
-      lockedUnit([narration('B2', 'Two.')], 'U02'),
+      unitWith(),
+      unitWith([narration('B2', 'Two.')], 'U02'),
       scriptUnit({ id: 'U03', blocks: null }),
     ]);
     const stat = (state: string) => ({ state }) as never;

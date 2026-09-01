@@ -30,11 +30,7 @@ export abstract class ScriptingDialogBase {
   }
 
   protected admits(ctx: ScriptContext): boolean {
-    return ctx.unit !== null && !ctx.locked;
-  }
-
-  protected pending(): boolean {
-    return false;
+    return ctx.unit !== null;
   }
 
   protected unitWord(kind: ScriptUnitKind, plural = false): string {
@@ -60,7 +56,7 @@ export abstract class ScriptingDialogBase {
 
   private buildOpen(): boolean {
     const ctx = this.ctx();
-    return ctx !== null && this.admits(ctx) && !this.pending();
+    return ctx !== null && this.admits(ctx);
   }
 
   private buildUnitName(): string {
@@ -84,11 +80,6 @@ export abstract class ScriptingDialogBase {
     if (ctx !== null && this.admits(ctx)) {
       return;
     }
-    untracked(this.reject.bind(this, ctx));
-  }
-
-  protected reject(ctx: ScriptContext | null): void {
-    void ctx;
-    this.close();
+    untracked(this.close.bind(this));
   }
 }

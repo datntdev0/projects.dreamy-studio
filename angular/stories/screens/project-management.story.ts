@@ -37,11 +37,6 @@ export const Default: Story = {
   },
 };
 
-export const Stale: Story = {
-  ...withProjects({ stale: true }),
-  play: Default.play,
-};
-
 export const NoProject: Story = {
   ...withProjects({ empty: true }),
   play: async ({ canvasElement }) => {

@@ -113,9 +113,9 @@ describe('project.rules', () => {
   });
 
   it('builds module rows and state presentation', () => {
-    const rows = moduleRows([projectModuleState({ id: 'scripting', state: 'stale' })]);
+    const rows = moduleRows([projectModuleState({ id: 'scripting', state: 'doing' })]);
     expect(rows).toHaveLength(PROJECT_MODULES.length);
-    expect(rows[0].state.state).toBe('stale');
+    expect(rows[0].state.state).toBe('doing');
     expect(rows[1].state.state).toBe('idle');
     expect(moduleStateKey('doing')).toBe('project.module.state.doing');
     expect(moduleBadgeClass('idle')).toBe('');

@@ -20,41 +20,6 @@
           }
         </span>
       </div>
-      <span class="spacer"></span>
-      <div class="nv-bar-r" data-testid="scripting-bar-right">
-        @if (!c.choose) {
-          @if (!c.locked) {
-            <button
-              type="button"
-              class="btn btn-sm"
-              data-testid="sc-draft-btn"
-              (click)="dialogs.openDraft(c.projectId)"
-            >
-              <ds-icon name="spark" [size]="16" />
-              {{ 'scripting.editor.bar.draft' | t }}
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-primary"
-              data-testid="sc-lock-btn"
-              (click)="dialogs.openCheck(c.projectId)"
-            >
-              <ds-icon name="shield" [size]="16" />
-              {{ 'scripting.editor.bar.lock' | t }}
-            </button>
-          } @else {
-            <button
-              type="button"
-              class="btn btn-sm"
-              data-testid="sc-unlock-btn"
-              (click)="dialogs.openUnlock(c.projectId)"
-            >
-              <ds-icon name="unlock" [size]="16" />
-              {{ 'scripting.editor.bar.unlock' | t }}
-            </button>
-          }
-        }
-      </div>
     </div>
     <div class="nv-body" data-testid="scripting-body">
       @if (c.choose) {

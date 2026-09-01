@@ -2,7 +2,7 @@ import { kbCharactersOf, kbPlaceNames, kbStatusOf } from './scripting.knowledge'
 // prettier-ignore
 import { CastMember, KbSnapshot, RailRow, RailSummary, Script, ScriptContext, ScriptSource, ScriptUnit, ScriptView, SourceParagraph } from './scripting.models';
 // prettier-ignore
-import { activeUnit, castOf, chaptersOf, checkRowsOf, checkSummaryOf, DEFAULT_CHAPTER_MAX, findBlock, hasDefaultFor, issuesOf, metricsOf, railMarkOf, scenesOf, sourceRowsOf, staleRefsOf, uncoveredOf, unitStatsOf } from './scripting.rules';
+import { activeUnit, castOf, chaptersOf, DEFAULT_CHAPTER_MAX, hasContent, hasDefaultFor, metricsOf, scenesOf, unitStatsOf } from './scripting.rules';
 import { unitSource } from './scripting.source';
 
 export interface ContextInput {
@@ -13,7 +13,6 @@ export interface ContextInput {
   hasNovel: boolean;
   chapters: Record<number, SourceParagraph[] | null>;
   novelChapters: number;
-  generating: string[];
 }
 
 const EMPTY_STATS = null;
@@ -33,41 +32,24 @@ export function castFor(script: Script, kb: KbSnapshot | null): CastMember[] {
   return castOf(script.cfg.preset, kbCharactersOf(kb), script.extraCast);
 }
 
-function railRowOf(
-  cast: CastMember[],
-  unit: ScriptUnit,
-  activeId: string | null,
-  source: ScriptSource | null,
-  generating: boolean,
-): RailRow {
-  const stale = staleRefsOf(unit, source).length;
+function railRowOf(cast: CastMember[], unit: ScriptUnit, activeId: string | null): RailRow {
   return {
     unit,
     active: unit.id === activeId,
-    mark: railMarkOf(unit, stale),
-    stale,
-    generating,
     metrics: unit.blocks ? metricsOf(cast, unit.blocks) : null,
     meta: unit.meta,
     chapters: chaptersOf(unit),
   };
 }
 
-export function railSummaryOf(script: Script): RailSummary {
-  const locked = script.units.filter((unit) => unit.status === 'locked').length;
-  const total = script.units.length;
-  return { locked, total, percent: total ? Math.round((locked / total) * 100) : 0 };
+export function railSummaryOf(rows: RailRow[]): RailSummary {
+  const done = rows.filter((row) => hasContent(row.unit)).length;
+  const total = rows.length;
+  return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
 }
 
-function railOf(
-  input: ContextInput,
-  cast: CastMember[],
-  activeId: string | null,
-  sources: Record<string, ScriptSource | null>,
-): RailRow[] {
-  return input.script.units.map((unit) =>
-    railRowOf(cast, unit, activeId, sources[unit.id] ?? null, input.generating.includes(unit.id)),
-  );
+function railOf(script: Script, cast: CastMember[], activeId: string | null): RailRow[] {
+  return script.units.map((unit) => railRowOf(cast, unit, activeId));
 }
 
 export function buildContext(input: ContextInput): ScriptContext {
@@ -79,11 +61,7 @@ export function buildContext(input: ContextInput): ScriptContext {
   const source = unit ? (sources[unit.id] ?? null) : null;
   const blocks = unit?.blocks ?? null;
   const metrics = blocks ? metricsOf(cast, blocks) : null;
-  const issues = unit ? issuesOf(config, unit, source) : [];
-  const checks = checkRowsOf(config, issues, source !== null);
-  const checkSummary = checkSummaryOf(checks);
-  const locked = unit?.status === 'locked';
-  const uncovered = unit ? uncoveredOf(unit, source) : [];
+  const rail = railOf(script, cast, unit ? unit.id : null);
   return {
     projectId: input.projectId,
     script,
@@ -93,24 +71,14 @@ export function buildContext(input: ContextInput): ScriptContext {
     cast,
     places: kbPlaceNames(kb),
     unit,
-    locked,
-    generating: unit ? input.generating.includes(unit.id) : false,
     source,
     hasDefault: hasDefaultFor(config, source),
     metrics,
-    stats: metrics ? unitStatsOf(config, metrics, source, uncovered) : EMPTY_STATS,
-    issues,
-    checks,
-    checkSummary,
-    canLock: !!unit && !locked && checkSummary.errors === 0,
+    stats: metrics ? unitStatsOf(config, metrics) : EMPTY_STATS,
     scenes: scenesOf(blocks),
-    staleRefs: unit ? staleRefsOf(unit, source) : [],
-    uncovered,
-    rows: config.source && source && unit && blocks ? sourceRowsOf(unit, source) : null,
-    rail: railOf(input, cast, unit ? unit.id : null, sources),
-    railSummary: railSummaryOf(script),
+    rail,
+    railSummary: railSummaryOf(rail),
     kb: kbStatusOf(kb, input.hasNovel, unit ? chaptersOf(unit) : []),
-    selected: findBlock(unit, view.sel) ?? null,
     chapterMax: input.novelChapters || DEFAULT_CHAPTER_MAX,
   };
 }

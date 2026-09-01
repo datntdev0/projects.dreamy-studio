@@ -127,7 +127,7 @@ describe('audiobook generate dialog', () => {
     vi.spyOn(audiobook(), 'generatePlanOf').mockReturnValue(PLAN);
     await open(mounted, () => dialogs().openGenerate(PROJECT));
     expect(textOf(mounted, 'audiobook-generate-intro')).toContain(
-      'Will generate 3 segments, of which 2 segments are regenerated because the script, voice or reading rules changed.',
+      'Will generate 3 segments, of which 2 segments are regenerated because the script or voice changed.',
     );
     expect(textOf(mounted, 'ab-gen-group-local')).toContain('1,200 characters');
     const paid = textOf(mounted, 'ab-gen-group-elevenlabs');

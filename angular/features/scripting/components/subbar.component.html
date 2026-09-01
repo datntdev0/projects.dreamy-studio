@@ -13,16 +13,10 @@
         [value]="unit.title"
         [attr.placeholder]="'scripting.editor.sub.name' | t: { unit: unitLower() }"
         [attr.aria-label]="'scripting.editor.sub.name' | t: { unit: unitLower() }"
-        [disabled]="ctx().locked"
         data-testid="sc-unit-title"
         (change)="setTitle($event)"
       />
     }
-    <span data-testid="scripting-subbar-status">
-      <span [class]="statusClass()" [attr.data-testid]="'sc-status-' + unit.id">
-        {{ statusKey() | t }}
-      </span>
-    </span>
     @if (ctx().config.ranges) {
       <span class="sc-chs" data-testid="sc-chs">
         {{ 'scripting.editor.sub.chapters' | t }}
@@ -32,7 +26,7 @@
           min="1"
           [attr.max]="ctx().chapterMax"
           [value]="unit.chs ? unit.chs[0] : ''"
-          [disabled]="ctx().locked || !ctx().kb.novel"
+          [disabled]="!ctx().kb.novel"
           [attr.aria-label]="'scripting.editor.sub.from' | t"
           data-testid="sc-chs-from"
           (change)="setChapter($event, 0)"
@@ -44,7 +38,7 @@
           min="1"
           [attr.max]="ctx().chapterMax"
           [value]="unit.chs ? unit.chs[1] : ''"
-          [disabled]="ctx().locked || !ctx().kb.novel"
+          [disabled]="!ctx().kb.novel"
           [attr.aria-label]="'scripting.editor.sub.to' | t"
           data-testid="sc-chs-to"
           (change)="setChapter($event, 1)"
@@ -57,27 +51,25 @@
       }
     </span>
     <span class="spacer"></span>
-    @if (grouped()) {
-      <button type="button" class="btn btn-sm" data-testid="sc-grp-all-btn" (click)="toggleAll()">
-        <ds-icon [name]="anyOpen() ? 'chev-r' : 'chev-d'" [size]="16" />
-        {{ (anyOpen() ? 'scripting.editor.sub.collapse' : 'scripting.editor.sub.expand') | t }}
-      </button>
-    }
-    @if (ctx().config.ranges && ctx().source) {
+    @if (unit.blocks) {
+      @if (ctx().hasDefault) {
+        <button type="button" class="btn btn-sm" data-testid="sc-reset-btn" (click)="reset()">
+          <ds-icon name="refresh" [size]="16" />
+          {{ 'scripting.editor.sub.reset' | t }}
+        </button>
+      }
       <button
         type="button"
-        class="btn btn-sm"
-        [class.is-active]="ctx().view.drawer"
-        [attr.aria-pressed]="ctx().view.drawer"
-        data-testid="sc-drawer-btn"
-        (click)="toggleDrawer()"
+        class="btn btn-sm btn-primary"
+        aria-haspopup="menu"
+        [attr.title]="'scripting.editor.add.shortcuts' | t"
+        data-testid="sc-add-btn"
+        (click)="openAddMenu($event)"
       >
-        <ds-icon name="book" [size]="16" />
-        {{ 'scripting.editor.sub.source' | t }}
+        <ds-icon name="plus" [size]="16" />
+        {{ 'scripting.editor.add.label' | t }}
+        <ds-icon name="chev-d" [size]="14" />
       </button>
-    }
-    @if (unit.blocks && !ctx().locked) {
-      <app-scripting-add-bar [ctx]="ctx()" />
     }
   </div>
 }

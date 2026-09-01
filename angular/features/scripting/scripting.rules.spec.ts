@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CastMember, ScriptBlock } from './scripting.models';
 // prettier-ignore
-import { activeUnit, anyGroupOpen, appendUnit, BLOCK_TYPES, castOf, chaptersOf, checkRowsOf, checkSummaryOf, configOf, countWords, emptyView, findBlock, findUnit, firstSpeaker, hasDefaultFor, headingText, isStale, issuesOf, makeBlock, makeSource, makeUnit, metricsOf, narratorMember, newScript, nextChapterRange, nextUnitChapters, numberWord, pad2, paragraphChapter, paragraphNumber, placeholderMeta, presetDef, presetOfTemplate, railMarkOf, replaceUnit, scenesOf, scriptProgress, sourceRowsOf,speakerClass, speakerOf, splitQuotes, staleRefsOf, toggledAllGroups, toggledGroup, uncoveredOf, unitStatsOf, withoutGroup } from './scripting.rules';
+import { activeUnit, appendUnit, BLOCK_TYPES, castOf, chaptersOf, configOf, countWords, emptyView, findBlock, findUnit, firstSpeaker, hasContent, hasDefaultFor, headingText, makeBlock, makeSource, makeUnit, metricsOf, narratorMember, newScript, nextChapterRange, nextUnitChapters, numberWord, pad2, paragraphChapter, paragraphNumber, placeholderMeta, presetDef, presetOfTemplate, replaceUnit, scenesOf, scriptProgress,speakerClass, speakerOf, unitStatsOf } from './scripting.rules';
 
 function blocks(...overrides: Partial<ScriptBlock>[]): ScriptBlock[] {
   return overrides.map((item, index) => scriptBlock({ id: `B${index + 1}`, ...item }));
@@ -19,18 +19,6 @@ describe('scripting rules: text helpers', () => {
     expect(countWords(null)).toBe(0);
     expect(headingText(3, 'Tide')).toBe('Chapter three. Tide.');
     expect(headingText(3, '')).toBe('Chapter three.');
-  });
-
-  it('splits quoted and narrated segments', () => {
-    const parts = splitQuotes('“Go,” she said. "Stay." He left, .');
-    expect(parts).toEqual([
-      { quoted: true, text: 'Go,' },
-      { quoted: false, text: 'she said.' },
-      { quoted: true, text: 'Stay.' },
-      { quoted: false, text: 'He left, .' },
-    ]);
-    expect(splitQuotes('“...” — “”')).toEqual([]);
-    expect(splitQuotes('plain')).toEqual([{ quoted: false, text: 'plain' }]);
   });
 
   it('parses paragraph references', () => {
@@ -87,14 +75,10 @@ describe('scripting rules: configuration', () => {
   });
 
   it('picks the active unit', () => {
-    const model = script([
-      scriptUnit({ id: 'U01', status: 'locked' }),
-      scriptUnit({ id: 'U02', no: 2 }),
-    ]);
-    expect(activeUnit(model, 'U01')?.id).toBe('U01');
-    expect(activeUnit(model, null)?.id).toBe('U02');
-    expect(activeUnit(model, 'zzz')?.id).toBe('U02');
-    expect(activeUnit(script([scriptUnit({ status: 'locked' })]), null)?.id).toBe('U01');
+    const model = script([scriptUnit({ id: 'U01' }), scriptUnit({ id: 'U02', no: 2 })]);
+    expect(activeUnit(model, 'U02')?.id).toBe('U02');
+    expect(activeUnit(model, null)?.id).toBe('U01');
+    expect(activeUnit(model, 'zzz')?.id).toBe('U01');
     expect(activeUnit(script(), null)).toBeNull();
   });
 
@@ -145,72 +129,23 @@ describe('scripting rules: cast', () => {
   });
 });
 
-describe('scripting rules: source comparison', () => {
+describe('scripting rules: source rows', () => {
   const src = source('A one.', 'B two.', 'C three.');
 
-  it('detects stale and uncovered paragraphs', () => {
-    const unit = scriptUnit({
-      blocks: blocks(
-        { ref: '1.1', snap: 'A one.' },
-        { ref: '1.2', snap: 'old' },
-        { ref: '1.2', snap: 'old' },
-        { ref: null },
-        { ref: '1.9', snap: 'x' },
-      ),
-    });
-    expect(isStale(src, unit.blocks![1])).toBe(true);
-    expect(isStale(src, unit.blocks![0])).toBe(false);
-    expect(isStale(src, unit.blocks![3])).toBe(false);
-    expect(isStale(src, unit.blocks![4])).toBe(false);
-    expect(isStale(null, unit.blocks![1])).toBe(false);
-    expect(isStale(src, scriptBlock({ ref: '1.1', snap: null }))).toBe(false);
-    expect(staleRefsOf(unit, src)).toEqual(['1.2']);
-    expect(staleRefsOf(unit, null)).toEqual([]);
-    expect(staleRefsOf(scriptUnit(), src)).toEqual([]);
-    expect(uncoveredOf(unit, src).map((item) => item.id)).toEqual(['1.3']);
-    expect(uncoveredOf(unit, null)).toEqual([]);
-    expect(uncoveredOf(scriptUnit(), src)).toEqual([]);
+  it('indexes source paragraphs by id', () => {
     expect(makeSource([{ id: '1.1', text: 'x' }]).map).toEqual({ '1.1': 'x' });
+    expect(src.list.map((item) => item.id)).toEqual(['1.1', '1.2', '1.3']);
   });
 
-  it('groups blocks by source paragraph', () => {
-    const unit = scriptUnit({
-      blocks: blocks(
-        { type: 'heading' },
-        { ref: '1.3', snap: 'C three.' },
-        { ref: '1.3', snap: 'C three.' },
-        { ref: '1.2' },
-      ),
-    });
-    const rows = sourceRowsOf(unit, src);
-    expect(rows.map((row) => [row.ref, row.blocks?.length ?? 0])).toEqual([
-      [null, 1],
-      ['1.1', 0],
-      ['1.3', 2],
-      ['1.2', 1],
-    ]);
-    expect(rows[1].para?.id).toBe('1.1');
-    expect(rows[1].blocks).toBeNull();
-    const tail = sourceRowsOf(scriptUnit({ blocks: blocks({ ref: '1.1' }) }), src);
-    expect(tail.map((row) => row.ref)).toEqual(['1.1', '1.2', '1.3']);
-  });
-
-  it('computes stats and rail marks', () => {
+  it('computes stats and the default availability', () => {
     const metrics = metricsOf([], blocks({ text: 'a b c' }));
-    expect(unitStatsOf(configOf('audiobook'), metrics, src, [src.list[2]])).toEqual({
+    expect(unitStatsOf(configOf('audiobook'), metrics)).toEqual({
       blocks: 1,
       words: 3,
       secs: 1.2,
       scenes: null,
-      paragraphs: 3,
-      covered: 2,
     });
-    expect(unitStatsOf(configOf('film'), metrics, null, []).scenes).toBe(0);
-    expect(unitStatsOf(configOf('film'), metrics, null, []).covered).toBeNull();
-    expect(railMarkOf(scriptUnit({ status: 'locked' }), 3)).toBe('locked');
-    expect(railMarkOf(scriptUnit(), 1)).toBe('stale');
-    expect(railMarkOf(scriptUnit({ status: 'review' }), 0)).toBe('review');
-    expect(railMarkOf(scriptUnit(), 0)).toBe('draft');
+    expect(unitStatsOf(configOf('film'), metrics).scenes).toBe(0);
     expect(hasDefaultFor(configOf('audiobook'), src)).toBe(true);
     expect(hasDefaultFor(configOf('audiobook'), null)).toBe(false);
     expect(hasDefaultFor(configOf('film'), src)).toBe(false);
@@ -264,102 +199,40 @@ describe('scripting rules: scenes and metrics', () => {
   });
 });
 
-describe('scripting rules: issues and checks', () => {
-  const audio = configOf('audiobook');
-  const src = source('One.', 'Two.');
-
-  it('reports an empty unit', () => {
-    const issues = issuesOf(audio, scriptUnit(), null);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ kind: 'none', level: 'error', params: { unit: 'chapter' } });
-    expect(issuesOf(audio, scriptUnit({ blocks: [] }), null)[0].kind).toBe('none');
-  });
-
-  it('reports block problems once per stale paragraph', () => {
-    const unit = scriptUnit({
-      blocks: blocks(
-        { type: 'narration', text: ' ' },
-        { type: 'note', text: '' },
-        { type: 'dialogue', text: 'hi', who: '' },
-        { type: 'narration', text: 'x', ref: '1.1', snap: 'old' },
-        { type: 'narration', text: 'y', ref: '1.1', snap: 'old' },
-      ),
-    });
-    const issues = issuesOf(audio, unit, src);
-    expect(issues.map((item) => item.kind)).toEqual(['empty', 'who', 'stale', 'uncovered']);
-    expect(issues[0]).toMatchObject({ blockId: 'B1', params: { type: 'narration' } });
-    expect(issues[2]).toMatchObject({ blockId: 'B4', ref: '1.1', params: { n: 1 } });
-    expect(issues[3]).toMatchObject({ ref: '1.2', messageKey: 'scripting.issue.uncovered' });
-  });
-
-  it('checks film scenes', () => {
-    const film = configOf('film');
-    const missing = issuesOf(
-      film,
-      scriptUnit({ blocks: blocks({ type: 'action', text: 'x' }) }),
-      null,
-    );
-    expect(missing.map((item) => item.kind)).toEqual(['noscene']);
-    const blank = issuesOf(film, scriptUnit({ blocks: blocks({ type: 'scene', loc: ' ' }) }), null);
-    expect(blank.map((item) => item.kind)).toEqual(['scene']);
-    const speakers = issuesOf(
-      { ...film, speakers: false },
-      scriptUnit({ blocks: blocks({ type: 'scene', loc: 'X' }, { type: 'dialogue', text: 'a' }) }),
-      null,
-    );
-    expect(speakers).toEqual([]);
-  });
-
-  it('builds the lock checklist', () => {
-    const issues = issuesOf(
-      audio,
-      scriptUnit({ blocks: blocks({ type: 'narration', text: '' }, { ref: '1.1', snap: 'old' }) }),
-      src,
-    );
-    const rows = checkRowsOf(audio, issues, true);
-    expect(rows.map((row) => row.kind)).toEqual(['none', 'empty', 'who', 'stale', 'uncovered']);
-    expect(rows.find((row) => row.kind === 'empty')).toMatchObject({ count: 1, level: 'error' });
-    expect(rows.find((row) => row.kind === 'stale')?.first?.blockId).toBe('B2');
-    expect(checkSummaryOf(rows)).toEqual({ errors: 1, warnings: 2 });
-    const film = checkRowsOf(configOf('film'), [], false);
-    expect(film.map((row) => row.kind)).toEqual(['none', 'empty', 'who', 'scene', 'noscene']);
-    expect(checkRowsOf(audio, [], false).map((row) => row.kind)).toEqual(['none', 'empty', 'who']);
-    expect(checkSummaryOf(film)).toEqual({ errors: 0, warnings: 0 });
-  });
-});
-
 describe('scripting rules: progress and view', () => {
+  it('detects unit content', () => {
+    const written = scriptUnit({ blocks: blocks({}) });
+    const placeholder = scriptUnit({ id: 'U02', no: 2, meta: { blocks: 8, words: 1 } });
+    const empty = scriptUnit({ id: 'U03', no: 3, blocks: [] });
+    expect([hasContent(written), hasContent(placeholder), hasContent(empty)]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+
   it('derives the module progress', () => {
-    const locked = scriptUnit({ status: 'locked' });
-    const draft = scriptUnit({ id: 'U02', no: 2 });
-    expect(scriptProgress(script([locked, locked]), 0)).toEqual({
+    const written = scriptUnit({ blocks: blocks({}) });
+    const placeholder = scriptUnit({ id: 'U02', no: 2, meta: { blocks: 8, words: 1 } });
+    const empty = scriptUnit({ id: 'U03', no: 3 });
+    expect(scriptProgress(script([written, placeholder]))).toEqual({
       id: 'scripting',
       state: 'done',
       done: 2,
       total: 2,
       note: '2/2 chapters',
     });
-    expect(scriptProgress(script([locked, draft]), 0).state).toBe('doing');
-    expect(scriptProgress(script([locked, draft]), 1)).toMatchObject({
-      state: 'stale',
-      note: '1/2 chapters · 1 need review',
+    expect(scriptProgress(script([written, empty]))).toMatchObject({
+      state: 'doing',
+      done: 1,
+      note: '1/2 chapters',
     });
-    expect(scriptProgress(script([draft, draft]), 0).state).toBe('idle');
-    const writing = scriptUnit({ blocks: blocks({}) });
-    expect(scriptProgress(script([writing, draft]), 0).state).toBe('doing');
-    const film = script([draft], { cfg: configOf('film') });
-    expect(scriptProgress(film, 0).note).toBe('0/1 episodes');
+    expect(scriptProgress(script([empty, empty])).state).toBe('idle');
+    const film = script([empty], { cfg: configOf('film') });
+    expect(scriptProgress(film).note).toBe('0/1 episodes');
   });
 
-  it('toggles collapsed groups', () => {
-    const src = source('a', 'b');
-    expect(emptyView().collapsed).toEqual({});
-    expect(toggledGroup({}, '1.1')).toEqual({ '1.1': true });
-    expect(toggledGroup({ '1.1': true }, '1.1')).toEqual({});
-    expect(withoutGroup({ '1.1': true, '1.2': true }, '1.1')).toEqual({ '1.2': true });
-    expect(anyGroupOpen({ '1.1': true }, src)).toBe(true);
-    expect(anyGroupOpen({ '1.1': true, '1.2': true }, src)).toBe(false);
-    expect(toggledAllGroups({}, src)).toEqual({ '1.1': true, '1.2': true });
-    expect(toggledAllGroups({ '1.1': true, '1.2': true }, src)).toEqual({});
+  it('starts with an empty view', () => {
+    expect(emptyView()).toEqual({ unit: null, sel: null, focus: null, goto: null });
   });
 });

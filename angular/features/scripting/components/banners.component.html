@@ -1,21 +1,3 @@
-@if (ctx().generating) {
-  <div class="sc-ban is-run" data-testid="sc-ban-run">
-    <span class="dot dot-running"></span>
-    <span>{{ 'scripting.editor.ban.running' | t: { unit: unitLower() } }}</span>
-  </div>
-}
-@if (ctx().locked) {
-  <div class="sc-ban is-ok" data-testid="sc-ban-locked">
-    <ds-icon name="lock" [size]="16" />
-    <span>{{ 'scripting.editor.ban.locked' | t }}</span>
-  </div>
-}
-@if (staleCount() > 0) {
-  <div class="sc-ban is-warn" data-testid="sc-ban-stale">
-    <ds-icon name="alert" [size]="16" />
-    <span>{{ 'scripting.editor.ban.stale' | t: { count: staleCount() } }}</span>
-  </div>
-}
 @if (showKb()) {
   @if (!ctx().kb.novel) {
     <div class="sc-ban is-info" data-testid="sc-ban-kb">

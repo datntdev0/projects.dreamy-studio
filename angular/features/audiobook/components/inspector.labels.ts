@@ -1,11 +1,11 @@
 import { inject, Injectable } from '@angular/core';
 import { durationText } from '@features/library/library.rules';
-import { formatCount, formatStamp } from '@features/novel/novel.rules';
+import { formatCount } from '@features/novel/novel.rules';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
 import { capitalize } from '../../scripting/scripting.dialogs.rules';
-import { CastMember, ScriptConfig, ScriptUnit } from '../../scripting/scripting.models';
+import { ScriptConfig, ScriptUnit } from '../../scripting/scripting.models';
 
 export const EMPTY_VALUE = '—';
 
@@ -22,21 +22,8 @@ export class AudiobookInspectorLabels {
     return `${capitalize(this.unit(config))} ${unit.no}${title}`;
   }
 
-  speakerName(member: CastMember | null): string {
-    if (!member) {
-      return EMPTY_VALUE;
-    }
-    return member.kind === 'narrator'
-      ? this.language.translate('scripting.inspector.narrator')
-      : member.name;
-  }
-
   duration(seconds: number): string {
     return durationText(Math.round(seconds) * 1000);
-  }
-
-  stamp(value: string): string {
-    return formatStamp(value);
   }
 
   count(value: number): string {

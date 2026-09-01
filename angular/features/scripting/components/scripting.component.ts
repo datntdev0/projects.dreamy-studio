@@ -8,7 +8,6 @@ import { ProjectService } from '@features/project/project.service';
 import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
 
-import { ScriptingDialogsService } from '../scripting.dialogs.service';
 import { ScriptContext, ScriptPresetDef, ViewFocus } from '../scripting.models';
 import { presetDef } from '../scripting.rules';
 import { ScriptingService } from '../scripting.service';
@@ -36,7 +35,6 @@ import { ScriptingSubbar } from './subbar.component';
   templateUrl: './scripting.component.html',
 })
 export class Scripting {
-  protected readonly dialogs = inject(ScriptingDialogsService);
   private readonly scripting = inject(ScriptingService);
   private readonly projects = inject(ProjectService);
   private readonly projectLabels = inject(ProjectLabels);
@@ -86,7 +84,7 @@ export class Scripting {
 
   private watchFocus(): void {
     const view = this.ctx()?.view;
-    if (view && (view.focus || view.goto || view.ref)) {
+    if (view && (view.focus || view.goto)) {
       untracked(this.scheduleFocus.bind(this));
     }
   }
@@ -101,8 +99,6 @@ export class Scripting {
     const id = pending.focus ?? pending.goto;
     if (id) {
       this.focusBlock(root, id, pending.goto !== null);
-    } else if (pending.ref) {
-      root.querySelector(`.sc-grp[data-ref="${pending.ref}"]`)?.scrollIntoView({ block: 'center' });
     }
   }
 

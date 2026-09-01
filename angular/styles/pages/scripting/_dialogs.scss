@@ -98,21 +98,9 @@ ds-dialog[data-testid^='sc-'] .dialog-title {
   flex: 1;
   min-width: 0;
 }
-.modal .sc-ban.is-ok {
-  background: var(--success-soft);
-}
-.modal .sc-ban.is-ok .ic {
-  color: var(--success);
-}
 .modal .sc-ban.is-warn {
   background: var(--warning-soft);
 }
 .modal .sc-ban.is-warn .ic {
   color: var(--warning);
-}
-.modal .sc-ban.is-err {
-  background: var(--danger-soft);
-}
-.modal .sc-ban.is-err .ic {
-  color: var(--danger);
 }

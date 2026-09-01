@@ -1,12 +1,12 @@
 import { KnowledgeEntity, KnowledgeItem } from '@features/novel/novel.knowledge.models';
 import { ProjectSummary } from '@features/project/project.models';
 import { castFor } from '@features/scripting/scripting.context';
-import { defaultAudioBlocks, draftAudioBlocks } from '@features/scripting/scripting.draft';
+import { defaultAudioBlocks, titleBlocks } from '@features/scripting/scripting.default';
 import { kbSnapshotOf } from '@features/scripting/scripting.knowledge';
 // prettier-ignore
-import { BlockIds, CastMember, Script, ScriptBlock, ScriptUnit, SourceParagraph, UnitStatus } from '@features/scripting/scripting.models';
+import { BlockIds, CastMember, Script, ScriptBlock, ScriptUnit, SourceParagraph } from '@features/scripting/scripting.models';
 // prettier-ignore
-import { appendUnit, chaptersOf, makeBlock, makeUnit, newScript, placeholderMeta, presetOfTemplate } from '@features/scripting/scripting.rules';
+import { appendUnit, chaptersOf, firstSpeaker, makeBlock, makeUnit, newScript, placeholderMeta, presetOfTemplate } from '@features/scripting/scripting.rules';
 import { unitSource } from '@features/scripting/scripting.source';
 
 import { evidence, KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS } from './novel-knowledge.fixtures';
@@ -68,11 +68,7 @@ export const MOCK_KB = kbSnapshotOf({
   analyzed: KNOWLEDGE_ANALYZED,
 });
 
-const MODIFIED_REFS = ['3.2', '3.3'];
-
-const OLDER_WORDING_CUT = 12;
-
-const OLDER_WORDING = ' (older wording).';
+const QUOTE_PATTERN = /“([^”]*)”|"([^"]*)"/g;
 
 function paragraphsOf(chapter: number, translated: boolean): SourceParagraph[] | null {
   const original = LANTERN_CHAPTERS[chapter - 1];
@@ -115,6 +111,66 @@ function chapterTitle(project: ProjectSummary, chapter: number): string {
   return translated ?? ENGLISH_TITLES[chapter - 1] ?? `Chapter ${chapter}`;
 }
 
+interface QuoteSegment {
+  quoted: boolean;
+  text: string;
+}
+
+function trimSegment(segment: QuoteSegment): QuoteSegment {
+  return { quoted: segment.quoted, text: segment.text.trim().replace(/^[\s,;:.]+/, '') };
+}
+
+function hasLetters(segment: QuoteSegment): boolean {
+  return /[\p{L}\p{N}]/u.test(segment.text);
+}
+
+function splitQuotes(text: string): QuoteSegment[] {
+  const raw: QuoteSegment[] = [];
+  let last = 0;
+  for (const match of text.matchAll(QUOTE_PATTERN)) {
+    const index = match.index ?? 0;
+    if (index > last) {
+      raw.push({ quoted: false, text: text.slice(last, index) });
+    }
+    raw.push({ quoted: true, text: match[1] ?? match[2] ?? '' });
+    last = index + match[0].length;
+  }
+  if (last < text.length) {
+    raw.push({ quoted: false, text: text.slice(last) });
+  }
+  return raw.map(trimSegment).filter(hasLetters);
+}
+
+function segmentBlock(
+  ids: BlockIds,
+  paragraph: SourceParagraph,
+  segment: QuoteSegment,
+  cast: CastMember[],
+): ScriptBlock {
+  if (!segment.quoted) {
+    return makeBlock(ids, 'narration', { text: segment.text, ref: paragraph.id });
+  }
+  return makeBlock(ids, 'dialogue', {
+    who: SPEAKER_HINTS[paragraph.id] || firstSpeaker(cast),
+    text: segment.text.replace(/[,;]$/, '.'),
+    ref: paragraph.id,
+  });
+}
+
+function splitAudioBlocks(
+  ids: BlockIds,
+  unit: ScriptUnit,
+  paragraphs: SourceParagraph[],
+  cast: CastMember[],
+): ScriptBlock[] {
+  return [
+    ...titleBlocks(ids, unit),
+    ...paragraphs.flatMap((paragraph) =>
+      splitQuotes(paragraph.text).map((segment) => segmentBlock(ids, paragraph, segment, cast)),
+    ),
+  ];
+}
+
 function audioBlocks(
   ids: BlockIds,
   unit: ScriptUnit,
@@ -123,20 +179,11 @@ function audioBlocks(
   cast: CastMember[],
 ): ScriptBlock[] {
   return split
-    ? draftAudioBlocks(ids, unit, paragraphs, {
-        split: true,
-        guess: true,
-        cast,
-        hints: SPEAKER_HINTS,
-      })
-    : defaultAudioBlocks(ids, unit, paragraphs);
+    ? splitAudioBlocks(ids, unit, paragraphs, cast)
+    : defaultAudioBlocks(ids, paragraphs);
 }
 
-function seedAudio(
-  project: ProjectSummary,
-  statuses: Record<number, UnitStatus>,
-  split: boolean,
-): Script {
+function seedAudio(project: ProjectSummary, split: boolean): Script {
   const base = newScript('audiobook');
   const cast = castFor(base, MOCK_KB);
   const ids: BlockIds = { seq: 0 };
@@ -146,7 +193,6 @@ function seedAudio(
       no: chapter,
       ch: chapter,
       title: chapterTitle(project, chapter),
-      status: statuses[chapter] ?? 'locked',
     });
     const paragraphs = mockSourceOf(project, chapter);
     if (paragraphs) {
@@ -175,13 +221,8 @@ function withParen(unit: ScriptUnit, ref: string, paren: string): void {
   blockAt(unit, ref, 'dialogue').paren = paren;
 }
 
-function withSnapshotEdit(unit: ScriptUnit, ref: string): void {
-  const block = blockAt(unit, ref, 'narration');
-  block.snap = (block.snap ?? '').slice(0, -OLDER_WORDING_CUT) + OLDER_WORDING;
-}
-
-function tuneAudio(script: Script, stale: boolean): Script {
-  const [first, second, third] = script.units;
+function tuneAudio(script: Script): Script {
+  const [first, second] = script.units;
   const ids: BlockIds = { seq: script.seq };
   withParen(first, '1.3', 'dry, curt');
   withParen(first, '1.4', 'cold, does not turn back');
@@ -195,9 +236,6 @@ function tuneAudio(script: Script, stale: boolean): Script {
       text: 'Keep a slow pace, with a long breath as Maro walks down the empty street.',
     }),
   );
-  for (const ref of stale ? MODIFIED_REFS : []) {
-    withSnapshotEdit(third, ref);
-  }
   return { ...script, seq: ids.seq };
 }
 
@@ -310,7 +348,12 @@ function seedFilm(): Script {
   return appendUnit(withFirst, { no: 2, chs: [3, 3], title: VI_TITLES[3] });
 }
 
-function seedLocked(project: ProjectSummary, units: number, label: string, words: number): Script {
+function seedPlaceholders(
+  project: ProjectSummary,
+  units: number,
+  label: string,
+  words: number,
+): Script {
   const preset = presetOfTemplate(project.template) ?? 'audiobook';
   let script = newScript(preset);
   for (let no = 1; no <= units; no += 1) {
@@ -319,19 +362,18 @@ function seedLocked(project: ProjectSummary, units: number, label: string, words
       ch: preset === 'film' ? null : no,
       chs: preset === 'film' ? [no, no] : null,
       title: `${label} ${no}`,
-      status: 'locked',
       meta: placeholderMeta(words),
     });
   }
   return script;
 }
 
-export function seedScripts(stale = true): Record<number, Script> {
+export function seedScripts(): Record<number, Script> {
   return {
-    1: tuneAudio(seedAudio(projectOf(1), { 3: 'review' }, true), stale),
+    1: tuneAudio(seedAudio(projectOf(1), true)),
     3: seedFilm(),
-    4: seedLocked(projectOf(4), 8, 'Chapters', 2230),
-    5: seedAudio(projectOf(5), {}, false),
-    6: seedLocked(projectOf(6), 2, 'Episode', 2400),
+    4: seedPlaceholders(projectOf(4), 8, 'Chapters', 2230),
+    5: seedAudio(projectOf(5), false),
+    6: seedPlaceholders(projectOf(6), 2, 'Episode', 2400),
   };
 }

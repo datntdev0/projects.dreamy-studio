@@ -3,7 +3,7 @@ import { Directive, effect, ElementRef, inject, input, output } from '@angular/c
 @Directive({
   selector: '[appScriptingText]',
   host: {
-    '[attr.contenteditable]': 'editable() ? "plaintext-only" : null',
+    contenteditable: 'plaintext-only',
     '(input)': 'emitText()',
   },
 })
@@ -11,7 +11,6 @@ export class ScriptingText {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   readonly value = input.required<string>({ alias: 'appScriptingText' });
-  readonly editable = input(true);
   readonly edited = output<string>();
 
   constructor() {

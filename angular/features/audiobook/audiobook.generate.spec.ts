@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 
 import { CloudAccount } from '../settings/cloud.models';
 import * as generate from './audiobook.generate';
-import { LexRule } from './audiobook.models';
 import { emptyUnitAudio } from './audiobook.rules';
 
 const accounts = [
@@ -19,14 +18,11 @@ const voices = [
   libraryVoice({ id: 3, engine: 'elevenlabs', engineKind: 'cloud' }),
 ];
 
-const lex: LexRule[] = [{ id: 'L01', term: 'Wren', say: 'Ren', kind: 'names' }];
-
 function setup(narrator: number | null, hero: number | null) {
   return envOf({
     voices,
     cast: cast(NARRATOR_CAST, HERO_CAST),
     book: audiobook({
-      lex,
       voices: { narr: { voice: narrator, speed: 1 }, E1: { voice: hero, speed: 1.1 } },
     }),
   });
@@ -75,7 +71,7 @@ describe('generation plan', () => {
 
   it('plans the not-done blocks of a unit', () => {
     const env = setup(1, 2);
-    const unit = scriptUnit({ id: 'U01', no: 2, status: 'locked', blocks: [narration, line] });
+    const unit = scriptUnit({ id: 'U01', no: 2, blocks: [narration, line] });
     const noAudio = generate.generatePlanOf(env, availability(), accounts, unit);
     expect(noAudio).toMatchObject({
       unitId: 'U01',
@@ -95,9 +91,9 @@ describe('generation plan', () => {
             audio: {
               d: {
                 text: 'old',
+                speaker: 'E1',
                 voice: 2,
                 speed: 1.1,
-                rules: '',
                 paren: 'soft',
                 dur: 1,
                 at: '',
@@ -113,19 +109,17 @@ describe('generation plan', () => {
 });
 
 describe('requests', () => {
-  it('builds a segment request with read text and signature', () => {
+  it('builds a segment request from the script text and voicing', () => {
     const env = setup(1, 2);
-    expect(generate.segmentRequestOf(env, narration, ['S1'])).toEqual({
+    expect(generate.segmentRequestOf(env, narration)).toEqual({
       text: 'Wren walks home.',
-      readText: 'Ren walks home.',
+      speaker: 'narr',
       voice: 1,
       speed: 1,
-      rules: 'Wren>Ren',
       paren: '',
-      symbols: ['S1'],
     });
-    expect(generate.segmentRequestOf(env, line, [])?.speed).toBe(1.1);
-    expect(generate.segmentRequestOf(setup(null, 2), narration, [])).toBeNull();
+    expect(generate.segmentRequestOf(env, line)?.speed).toBe(1.1);
+    expect(generate.segmentRequestOf(setup(null, 2), narration)).toBeNull();
   });
 
   it('builds a preview request with a fallback sample text', () => {

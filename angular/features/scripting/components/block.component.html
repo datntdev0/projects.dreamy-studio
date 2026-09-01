@@ -2,7 +2,6 @@
   class="sc-blk"
   [class]="'is-' + block().type"
   [class.is-sel]="selected()"
-  [class.is-stale]="stale()"
   [attr.data-id]="block().id"
   [attr.data-testid]="'sc-blk-' + block().id"
   (focusin)="select()"
@@ -10,7 +9,6 @@
   <button
     type="button"
     class="sc-gut"
-    [disabled]="ctx().locked"
     [attr.title]="'scripting.editor.block.typeTitle' | t: { type: (typeLabel() | t) }"
     [attr.aria-label]="'scripting.editor.block.typeLabel' | t: { type: (typeLabel() | t) }"
     [attr.data-testid]="'sc-type-btn-' + block().id"
@@ -31,7 +29,6 @@
             max="30"
             step="0.1"
             [value]="seconds()"
-            [disabled]="ctx().locked"
             [attr.aria-label]="'scripting.editor.block.pause.label' | t"
             [attr.data-testid]="'sc-pause-input-' + block().id"
             (change)="editSeconds($event)"
@@ -47,14 +44,12 @@
             [value]="block().loc"
             [attr.placeholder]="'scripting.editor.block.setting.placeholder' | t"
             [attr.aria-label]="'scripting.editor.block.setting' | t"
-            [disabled]="ctx().locked"
             [attr.data-testid]="'sc-loc-' + block().id"
             (change)="editLocation($event)"
           />
           <span class="sc-dash">—</span>
           <select
             class="select sc-sel"
-            [disabled]="ctx().locked"
             [attr.aria-label]="'scripting.editor.block.time' | t"
             [attr.data-testid]="'sc-time-' + block().id"
             (change)="editTime($event)"
@@ -72,7 +67,6 @@
               type="button"
               class="sc-who"
               [class]="speakerClass()"
-              [disabled]="ctx().locked"
               [attr.data-testid]="'sc-who-btn-' + block().id"
               (click)="openWhoMenu($event)"
             >
@@ -85,7 +79,6 @@
               [value]="block().paren"
               [attr.placeholder]="'scripting.editor.block.tone.placeholder' | t"
               [attr.aria-label]="'scripting.editor.block.tone' | t"
-              [disabled]="ctx().locked"
               [attr.data-testid]="'sc-paren-' + block().id"
               (change)="editParen($event)"
             />
@@ -97,7 +90,6 @@
           role="textbox"
           aria-multiline="true"
           [appScriptingText]="block().text"
-          [editable]="!ctx().locked"
           [id]="'sc-t-' + block().id"
           [attr.data-id]="block().id"
           [attr.data-ph]="
@@ -111,48 +103,46 @@
       }
     }
   </div>
-  @if (!ctx().locked) {
-    <div class="sc-tools" [attr.data-testid]="'sc-tools-' + block().id">
-      <button
-        type="button"
-        class="btn btn-icon btn-sm"
-        [attr.title]="'scripting.editor.block.up' | t"
-        [attr.aria-label]="'scripting.editor.block.up' | t"
-        [attr.data-testid]="'sc-up-' + block().id"
-        (click)="move('up')"
-      >
-        <ds-icon name="arrow-up" [size]="17" />
-      </button>
-      <button
-        type="button"
-        class="btn btn-icon btn-sm"
-        [attr.title]="'scripting.editor.block.down' | t"
-        [attr.aria-label]="'scripting.editor.block.down' | t"
-        [attr.data-testid]="'sc-down-' + block().id"
-        (click)="move('down')"
-      >
-        <ds-icon name="arrow-down" [size]="17" />
-      </button>
-      <button
-        type="button"
-        class="btn btn-icon btn-sm"
-        [attr.title]="'scripting.editor.block.duplicate' | t"
-        [attr.aria-label]="'scripting.editor.block.duplicate' | t"
-        [attr.data-testid]="'sc-dup-' + block().id"
-        (click)="duplicate()"
-      >
-        <ds-icon name="copy" [size]="17" />
-      </button>
-      <button
-        type="button"
-        class="btn btn-icon btn-sm"
-        [attr.title]="'scripting.editor.block.delete' | t"
-        [attr.aria-label]="'scripting.editor.block.delete' | t"
-        [attr.data-testid]="'sc-del-' + block().id"
-        (click)="remove()"
-      >
-        <ds-icon name="trash" [size]="17" />
-      </button>
-    </div>
-  }
+  <div class="sc-tools" [attr.data-testid]="'sc-tools-' + block().id">
+    <button
+      type="button"
+      class="btn btn-icon btn-sm"
+      [attr.title]="'scripting.editor.block.up' | t"
+      [attr.aria-label]="'scripting.editor.block.up' | t"
+      [attr.data-testid]="'sc-up-' + block().id"
+      (click)="move('up')"
+    >
+      <ds-icon name="arrow-up" [size]="17" />
+    </button>
+    <button
+      type="button"
+      class="btn btn-icon btn-sm"
+      [attr.title]="'scripting.editor.block.down' | t"
+      [attr.aria-label]="'scripting.editor.block.down' | t"
+      [attr.data-testid]="'sc-down-' + block().id"
+      (click)="move('down')"
+    >
+      <ds-icon name="arrow-down" [size]="17" />
+    </button>
+    <button
+      type="button"
+      class="btn btn-icon btn-sm"
+      [attr.title]="'scripting.editor.block.duplicate' | t"
+      [attr.aria-label]="'scripting.editor.block.duplicate' | t"
+      [attr.data-testid]="'sc-dup-' + block().id"
+      (click)="duplicate()"
+    >
+      <ds-icon name="copy" [size]="17" />
+    </button>
+    <button
+      type="button"
+      class="btn btn-icon btn-sm"
+      [attr.title]="'scripting.editor.block.delete' | t"
+      [attr.aria-label]="'scripting.editor.block.delete' | t"
+      [attr.data-testid]="'sc-del-' + block().id"
+      (click)="remove()"
+    >
+      <ds-icon name="trash" [size]="17" />
+    </button>
+  </div>
 </div>

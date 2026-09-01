@@ -27,21 +27,18 @@ import { AudiobookBanners } from './banners.component';
 import { AudiobookList } from './list.component';
 import { AudiobookPlayer } from './player.component';
 import { AudiobookRail } from './rail.component';
-import { AudiobookRules } from './rules.component';
 import { AudiobookSubbar } from './subbar.component';
 import { AudiobookVoices } from './voices.component';
 
 interface ViewOption {
   mode: AudiobookMode;
   icon: string;
-  labelKey:
-    'audiobook.editor.view.prod' | 'audiobook.editor.view.voices' | 'audiobook.editor.view.rules';
+  labelKey: 'audiobook.editor.view.prod' | 'audiobook.editor.view.voices';
 }
 
 const VIEWS: ViewOption[] = [
   { mode: 'prod', icon: 'mic', labelKey: 'audiobook.editor.view.prod' },
   { mode: 'voices', icon: 'voice', labelKey: 'audiobook.editor.view.voices' },
-  { mode: 'rules', icon: 'lang', labelKey: 'audiobook.editor.view.rules' },
 ];
 
 @Component({
@@ -56,15 +53,14 @@ const VIEWS: ViewOption[] = [
     AudiobookList,
     AudiobookPlayer,
     AudiobookVoices,
-    AudiobookRules,
   ],
   templateUrl: './audiobook.component.html',
 })
 export class Audiobook {
   protected readonly navigation = inject(AudiobookNavigation);
   private readonly audiobook = inject(AudiobookService);
-  private readonly player = inject(AudiobookPlayerService);
   private readonly dialogs = inject(AudiobookDialogsService);
+  private readonly player = inject(AudiobookPlayerService);
   private readonly projects = inject(ProjectService);
   private readonly toasts = inject(ToastService);
   private readonly languageService = inject(LanguageService);
@@ -92,7 +88,7 @@ export class Audiobook {
     }
   }
 
-  generate(): void {
+  generateAll(): void {
     this.dialogs.openGenerate(this.projectId());
   }
 

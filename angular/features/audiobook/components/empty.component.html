@@ -2,9 +2,9 @@
   <div class="empty-inner">
     <div class="illus"></div>
     @switch (variant()) {
-      @case ('filter') {
-        <h3 class="t-display-xs">{{ 'audiobook.editor.empty.filter.title' | t }}</h3>
-        <p class="t-sm t-mute">{{ 'audiobook.editor.empty.filter.text' | t }}</p>
+      @case ('blank') {
+        <h3 class="t-display-xs">{{ 'audiobook.editor.empty.blank.title' | t }}</h3>
+        <p class="t-sm t-mute">{{ 'audiobook.editor.empty.blank.text' | t }}</p>
       }
       @case ('meta') {
         <h3 class="t-display-xs">

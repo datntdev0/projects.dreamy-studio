@@ -58,17 +58,6 @@
   height: 24px;
   padding: 0 var(--sp-sm);
 }
-.sc-add {
-  flex: 1 0 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-xs);
-  padding: var(--sp-xs) 0 2px;
-}
-.sc-add .eyebrow {
-  margin-right: var(--sp-xs);
-}
 .sc-ban {
   flex: none;
   display: flex;
@@ -89,26 +78,11 @@
   flex: 1;
   min-width: 0;
 }
-.sc-ban.is-ok {
-  background: var(--success-soft);
-}
-.sc-ban.is-ok .ic {
-  color: var(--success);
-}
 .sc-ban.is-warn {
   background: var(--warning-soft);
 }
 .sc-ban.is-warn .ic {
   color: var(--warning);
-}
-.sc-ban.is-err {
-  background: var(--danger-soft);
-}
-.sc-ban.is-err .ic {
-  color: var(--danger);
-}
-.sc-ban.is-run {
-  background: var(--secondary-soft);
 }
 .modal .sc-ban {
   border: 0;

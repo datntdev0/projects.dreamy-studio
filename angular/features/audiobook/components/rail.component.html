@@ -2,6 +2,7 @@
   class="sc-rail"
   [attr.aria-label]="'scripting.editor.rail.label' | t: { unit: unitLower() }"
   data-testid="ab-rail"
+  [style.width.px]="rail.width()"
 >
   <div class="sc-rail-h" data-testid="audiobook-rail-head">
     <span class="eyebrow">{{ unit() }}</span>
@@ -35,15 +36,6 @@
           </div>
           <div class="t-sm t-mute ellip">{{ labels.railMeta(row) }}</div>
         </div>
-        @if (!row.locked) {
-          <span
-            class="sc-mk"
-            [attr.title]="'audiobook.editor.rail.unlocked' | t"
-            data-testid="audiobook-rail-unlocked"
-          >
-            <ds-icon name="unlock" [size]="14" />
-          </span>
-        }
         @switch (row.stat.state) {
           @case ('done') {
             <span
@@ -81,4 +73,11 @@
       </div>
     }
   </div>
+  <ds-resizer
+    [(size)]="rail.width"
+    [min]="rail.limits.min"
+    [max]="rail.limits.max"
+    [initial]="rail.limits.initial"
+    [label]="'scripting.editor.rail.resize' | t: { unit: unitLower() }"
+  />
 </aside>

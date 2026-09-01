@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Icon } from '@components/icon';
+import { Resizer } from '@components/resizer';
+import { UnitRailService } from '@layout/unit-rail.service';
 import { CoreModule } from '@shared/core.module';
 
 import { AudiobookContext, RailRow } from '../audiobook.models';
@@ -9,10 +11,11 @@ import { AudiobookLabels } from './audiobook.labels';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-audiobook-rail',
-  imports: [Icon, CoreModule],
+  imports: [Icon, Resizer, CoreModule],
   templateUrl: './rail.component.html',
 })
 export class AudiobookRail {
+  protected readonly rail = inject(UnitRailService);
   protected readonly labels = inject(AudiobookLabels);
   private readonly audiobook = inject(AudiobookService);
 

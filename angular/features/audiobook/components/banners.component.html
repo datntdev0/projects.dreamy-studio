@@ -3,16 +3,6 @@
     <ds-icon name="alert" [size]="16" />
     <span>{{ labels.blocker(blocker) }}</span>
     @switch (blocker.kind) {
-      @case ('lock') {
-        <button
-          type="button"
-          class="btn btn-sm"
-          data-testid="ab-open-script-btn"
-          (click)="openScripting()"
-        >
-          {{ 'audiobook.editor.ban.openScript' | t }}
-        </button>
-      }
       @case ('who') {
         <button
           type="button"
@@ -44,5 +34,11 @@
         </button>
       }
     }
+  </div>
+}
+@if (ctx().changed > 0) {
+  <div class="sc-ban is-warn" data-testid="ab-ban-changed">
+    <ds-icon name="alert" [size]="16" />
+    <span>{{ 'audiobook.editor.ban.changed' | t: { count: ctx().changed } }}</span>
   </div>
 }

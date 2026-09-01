@@ -67,10 +67,6 @@ export class AudiobookLabels {
     return row.speed === 1 ? row.voice.name : `${row.voice.name} · ${row.speed}×`;
   }
 
-  reasons(row: SegmentRow): string {
-    return row.reasons.map(this.audiobook.reasonText.bind(this.audiobook)).join(' · ');
-  }
-
   blocker(blocker: Blocker): string {
     return this.audiobook.messageText(blocker.message);
   }

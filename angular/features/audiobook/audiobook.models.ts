@@ -4,9 +4,7 @@ import { LibraryVoice, VoiceEngine, VoiceEngineKind } from '../library/library.v
 // prettier-ignore
 import { CastMember, Script, ScriptBlock, ScriptConfig, ScriptUnit, ScriptUnitKind, SpeakerClass } from '../scripting/scripting.models';
 
-export type AudiobookMode = 'prod' | 'voices' | 'rules';
-
-export type SegmentFilter = 'all' | 'todo' | 'stale' | 'flag';
+export type AudiobookMode = 'prod' | 'voices';
 
 export type SegmentState = 'none' | 'done' | 'stale' | 'flag';
 
@@ -16,21 +14,15 @@ export type UnitAudioState = 'none' | 'doing' | 'stale' | 'done';
 
 export type MetaState = 'none' | 'stale' | 'done';
 
-export type StaleReason = 'script' | 'voice' | 'rule' | 'tone';
+export type StaleReason = 'text' | 'speaker' | 'voice' | 'speed' | 'tone';
 
 export type MixField = 'gap' | 'intro' | 'outro' | 'vol';
 
-export type LexKind = 'names' | 'number' | 'abbreviation' | 'terms';
-
-export type LexField = 'term' | 'say';
-
 export type VoiceIssueKind = 'backend' | 'model' | 'cloud';
 
-export type BlockerKind = 'lock' | 'who' | 'voice' | 'engine';
+export type BlockerKind = 'who' | 'voice' | 'engine';
 
 export type RegenerateResult = 'started' | 'blocked' | 'running' | 'noop';
-
-export type LexAddResult = 'added' | 'empty';
 
 export type SpeakerStatus = 'ready' | 'noVoice' | 'unused' | 'engine';
 
@@ -44,7 +36,9 @@ export type CloudBilling = 'free' | 'paid';
 
 export type GroupBilling = 'local' | CloudBilling;
 
-export type AudiobookInspector = 'chapter' | 'segment' | 'voices' | 'rules';
+export type AudiobookInspector = 'chapter' | 'voices';
+
+export type ExportFormat = 'wav' | 'srt';
 
 export interface AudiobookMessage {
   key: LanguageKey;
@@ -56,24 +50,6 @@ export interface SpeakerVoice {
   speed: number;
 }
 
-export interface LexRule {
-  id: string;
-  term: string;
-  say: string;
-  kind: LexKind;
-}
-
-export interface SymbolRule {
-  id: string;
-  on: boolean;
-}
-
-export interface SymbolDef {
-  id: string;
-  sym: string;
-  ruleKey: LanguageKey;
-}
-
 export interface MixSettings {
   gap: number;
   intro: number;
@@ -83,9 +59,9 @@ export interface MixSettings {
 
 export interface AudioRecord {
   text: string;
+  speaker: string | null;
   voice: number | null;
   speed: number;
-  rules: string;
   paren: string;
   dur: number;
   at: string;
@@ -100,8 +76,6 @@ export interface UnitAudio {
 
 export interface AudiobookConfig {
   voices: Record<string, SpeakerVoice>;
-  lex: LexRule[];
-  symbols: SymbolRule[];
 }
 
 export interface Audiobook extends AudiobookConfig {
@@ -111,9 +85,6 @@ export interface Audiobook extends AudiobookConfig {
 export interface AudiobookView {
   unit: string | null;
   mode: AudiobookMode;
-  sel: string | null;
-  filter: SegmentFilter;
-  test: string;
   goto: string | null;
 }
 
@@ -162,11 +133,6 @@ export interface Blocker {
   message: AudiobookMessage;
 }
 
-export interface HighlightPart {
-  text: string;
-  say: string | null;
-}
-
 export interface SegmentRow {
   block: ScriptBlock;
   n: number;
@@ -177,8 +143,6 @@ export interface SegmentRow {
   state: SegmentDisplayState;
   record: AudioRecord | null;
   reasons: StaleReason[];
-  parts: HighlightPart[];
-  readText: string;
 }
 
 export interface PauseRow {
@@ -199,7 +163,6 @@ export interface UnitSummary {
 export interface RailRow {
   unit: ScriptUnit;
   active: boolean;
-  locked: boolean;
   stat: UnitStat;
 }
 
@@ -237,47 +200,19 @@ export interface SpeakerRow {
   deleteBlock: SpeakerDeleteBlock | null;
 }
 
-export interface LexRow {
-  rule: LexRule;
-  occurrences: number;
-}
-
-export interface SymbolRow {
-  id: string;
-  sym: string;
-  ruleKey: LanguageKey;
-  on: boolean;
-}
-
 export interface EngineSummary {
   localModels: number;
   cloudProviders: number;
 }
 
 export interface ChapterPanel {
-  locked: boolean;
   total: number;
   generated: number;
   attention: number;
   duration: number;
   mix: MixSettings | null;
   blockers: Blocker[];
-}
-
-export interface SegmentPanel {
-  row: SegmentRow;
-  changed: boolean;
-  engineName: string | null;
-  usable: boolean;
-  issue: VoiceIssue | null;
-  canFlag: boolean;
-  canClearFlag: boolean;
-}
-
-export interface RulesPanel {
-  pronunciations: number;
-  activeSymbols: number;
-  affected: number;
+  canExport: boolean;
 }
 
 export interface AudiobookContext {
@@ -292,7 +227,6 @@ export interface AudiobookContext {
   voices: LibraryVoice[];
   availability: VoiceAvailability;
   unit: ScriptUnit | null;
-  locked: boolean;
   audio: UnitAudio | null;
   running: string[];
   generating: boolean;
@@ -302,23 +236,16 @@ export interface AudiobookContext {
   railSummary: RailSummary;
   segments: SegmentRow[];
   rows: ListRow[];
+  changed: number;
   todo: ScriptBlock[];
   blockers: Blocker[];
   canGenerate: boolean;
   canPlay: boolean;
-  selected: SegmentRow | null;
   speakers: SpeakerRow[];
   lostDialogues: number;
   voiceGroups: VoiceOptionGroup[];
-  lexicon: LexRow[];
-  symbols: SymbolRow[];
-  testText: string;
-  testOutput: string;
-  affected: number;
   engines: EngineSummary;
   chapterPanel: ChapterPanel;
-  segmentPanel: SegmentPanel | null;
-  rulesPanel: RulesPanel;
 }
 
 export interface GenerateGroup {
@@ -342,12 +269,10 @@ export interface GeneratePlan {
 
 export interface SegmentRequest {
   text: string;
-  readText: string;
+  speaker: string | null;
   voice: number;
   speed: number;
-  rules: string;
   paren: string;
-  symbols: string[];
 }
 
 export interface PreviewRequest {
@@ -358,6 +283,10 @@ export interface PreviewRequest {
 
 export interface PreviewReply {
   dur: number;
+}
+
+export interface ExportReply {
+  path: string;
 }
 
 export interface PlayItem {

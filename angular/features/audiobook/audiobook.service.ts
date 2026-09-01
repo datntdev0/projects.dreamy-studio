@@ -1,6 +1,5 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
-import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { noop } from '@shared/utils/noop';
 
@@ -18,7 +17,7 @@ import { buildContext } from './audiobook.context';
 import * as edit from './audiobook.edit';
 import { generatePlanOf, segmentRequestOf } from './audiobook.generate';
 // prettier-ignore
-import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, GeneratePlan, GenerationJob, LexAddResult, LexField, LexKind, MixField, RegenerateResult, SegmentFilter, StaleReason, VoiceAvailability, VoiceIssue } from './audiobook.models';
+import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportFormat, ExportReply, GeneratePlan, GenerationJob, MixField, RegenerateResult, StaleReason, VoiceAvailability, VoiceIssue } from './audiobook.models';
 import { emptyBook, emptyView, REASON_KEYS } from './audiobook.rules';
 
 type Persist = { kind: 'config' } | { kind: 'unit'; unitId: string };
@@ -28,7 +27,7 @@ function normalizeBook(stored: Partial<Audiobook> | null): Audiobook {
 }
 
 function configOf(book: Audiobook): AudiobookConfig {
-  return { voices: book.voices, lex: book.lex, symbols: book.symbols };
+  return { voices: book.voices };
 }
 
 function sameJob(left: GenerationJob, right: GenerationJob): boolean {
@@ -109,13 +108,7 @@ export class AudiobookService {
   }
 
   messageText(message: AudiobookMessage): string {
-    const params = { ...message.params };
-    if (typeof params['unit'] === 'string') {
-      params['unit'] = this.languageService.translate(
-        `scripting.unit.${params['unit']}` as LanguageKey,
-      );
-    }
-    return this.languageService.translate(message.key, params);
+    return this.languageService.translate(message.key, message.params);
   }
 
   reasonText(reason: StaleReason): string {
@@ -163,34 +156,22 @@ export class AudiobookService {
   selectUnit(projectId: number, unitId: string): void {
     const script = this.scripting.scriptOf(projectId);
     if (script && findUnit(script, unitId)) {
-      this.patchView(projectId, { unit: unitId, sel: null });
+      this.patchView(projectId, { unit: unitId });
     }
   }
 
   setMode(projectId: number, mode: AudiobookMode): void {
-    this.patchView(projectId, { mode, sel: null });
-  }
-
-  setFilter(projectId: number, filter: SegmentFilter): void {
-    this.patchView(projectId, { filter });
-  }
-
-  selectSegment(projectId: number, blockId: string | null): void {
-    this.patchView(projectId, { sel: blockId });
+    this.patchView(projectId, { mode });
   }
 
   gotoSegment(projectId: number, blockId: string): void {
-    this.patchView(projectId, { mode: 'prod', sel: blockId, goto: blockId });
+    this.patchView(projectId, { mode: 'prod', goto: blockId });
   }
 
   consumeGoto(projectId: number): string | null {
     const pending = this.viewOf(projectId).goto;
     this.patchView(projectId, { goto: null });
     return pending;
-  }
-
-  setTestText(projectId: number, text: string): void {
-    this.patchView(projectId, { test: text });
   }
 
   setSpeakerVoice(projectId: number, speakerId: string, voiceId: number | null): void {
@@ -229,41 +210,6 @@ export class AudiobookService {
       progress: false,
     });
     return true;
-  }
-
-  addLexRule(projectId: number, term: string, say: string, kind: LexKind): LexAddResult {
-    let result: LexAddResult = 'empty';
-    this.mutate(
-      projectId,
-      (book) => {
-        const added = edit.addLexRule(book, term, say, kind);
-        result = added.result;
-        return added.book;
-      },
-      { persist: { kind: 'config' }, progress: true },
-    );
-    return result;
-  }
-
-  editLexRule(projectId: number, id: string, field: LexField, value: string): void {
-    this.mutate(projectId, (book) => edit.editLexRule(book, id, field, value), {
-      persist: { kind: 'config' },
-      progress: true,
-    });
-  }
-
-  removeLexRule(projectId: number, id: string): void {
-    this.mutate(projectId, (book) => edit.removeLexRule(book, id), {
-      persist: { kind: 'config' },
-      progress: true,
-    });
-  }
-
-  setSymbol(projectId: number, id: string, on: boolean): void {
-    this.mutate(projectId, (book) => edit.setSymbol(book, id, on), {
-      persist: { kind: 'config' },
-      progress: false,
-    });
   }
 
   setMix(projectId: number, field: MixField, value: number): void {
@@ -314,6 +260,24 @@ export class AudiobookService {
     }
     void this.startJobs(projectId, ctx.unit.id, [blockId]);
     return 'started';
+  }
+
+  async exportUnit(projectId: number, format: ExportFormat): Promise<string | null> {
+    const ctx = this.contextOf(projectId);
+    if (!ctx || !ctx.unit || !ctx.chapterPanel.canExport) {
+      return null;
+    }
+    try {
+      const reply = await this.ipc.invoke<ExportReply>('audiobook_export', {
+        projectId,
+        unitId: ctx.unit.id,
+        format,
+      });
+      return reply.path;
+    } catch (cause) {
+      this.error.set(toProjectError(cause));
+      return null;
+    }
   }
 
   reset(): void {
@@ -424,8 +388,7 @@ export class AudiobookService {
     const ctx = this.contextOf(projectId);
     const unit = ctx ? findUnit(ctx.script, job.unitId) : undefined;
     const block = findBlock(unit, job.blockId);
-    const symbols = ctx ? ctx.book.symbols.filter((item) => item.on).map((item) => item.id) : [];
-    const request = ctx && block ? segmentRequestOf(envOf(ctx), block, symbols) : null;
+    const request = ctx && block ? segmentRequestOf(envOf(ctx), block) : null;
     if (!ctx || !request) {
       return false;
     }

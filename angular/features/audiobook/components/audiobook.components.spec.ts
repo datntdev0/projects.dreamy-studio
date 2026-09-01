@@ -9,6 +9,7 @@ import { mount, Mounted, settle } from '@testing/exercise';
 import { setupApp } from '@testing/service';
 import { describe, expect, it } from 'vitest';
 
+import { ScriptingState } from '../../../stories/screens/scripting.mocks';
 import { ScriptingService } from '../../scripting/scripting.service';
 import { AudiobookDialogsService } from '../audiobook.dialogs.service';
 import { AudiobookContext, SegmentRow } from '../audiobook.models';
@@ -42,13 +43,14 @@ async function load(): Promise<void> {
   await audiobook.flush(PROJECT);
 }
 
-async function open(): Promise<Mounted<Audiobook>> {
+async function open(prepare?: (state: ScriptingState) => void): Promise<Mounted<Audiobook>> {
   TestBed.configureTestingModule({
     providers: [{ provide: AUDIOBOOK_CLOCK, useValue: new ManualClock() }],
   });
   const ipc = setupApp();
   ipc.on('workspace_current', null);
-  installAudiobookBackend(ipc);
+  const backend = installAudiobookBackend(ipc);
+  prepare?.(backend.scripting);
   return mount(Audiobook, { projectId: PROJECT }, load);
 }
 
@@ -99,7 +101,8 @@ describe('Audiobook production editor', () => {
     expect(textOf(mounted, 'audiobook-title')).toBe('Audiobook');
     expect(byId(mounted.root, 'ab-views-prod')?.classList.contains('is-active')).toBe(true);
     expect(textOf(mounted, 'ab-views-voices')).toBe('Voices');
-    expect(textOf(mounted, 'ab-views-rules')).toBe('Reading rules');
+    expect(allById(mounted.root, 'ab-views')[0].querySelectorAll('button')).toHaveLength(2);
+    expect(byId(mounted.root, 'ab-views-rules')).toBeNull();
     expect(textOf(mounted, 'ab-rail-count')).toBe(
       `${ctx.railSummary.done}/${ctx.railSummary.total} generated`,
     );
@@ -108,12 +111,16 @@ describe('Audiobook production editor', () => {
     expect(textOf(mounted, 'ab-unit-U02')).toContain('8/12 segments');
     expect(textOf(mounted, 'ab-unit-U10')).toContain('Not generated');
     expect(textOf(mounted, 'audiobook-subbar-number')).toBe('CHAPTERS 02');
-    expect(textOf(mounted, 'audiobook-subbar-lock')).toBe('Script locked');
+    expect(byId(mounted.root, 'audiobook-subbar-lock')).toBeNull();
+    expect(byId(mounted.root, 'audiobook-rail-unlocked')).toBeNull();
     expect(textOf(mounted, 'ab-stats')).toMatch(/^12 segments8 generated4 to generate≈ \d+:\d{2}$/);
     expect(allById(mounted.root, 'ab-list')).toHaveLength(1);
     expect(segmentIds(mounted)).toEqual(ctx.segments.map((row) => row.block.id));
     expect(textOf(mounted, 'ab-play-all-btn')).toBe('Listen to the whole chapter');
-    expect(textOf(mounted, 'ab-generate-btn')).toBe('Generate 4 segments');
+    expect(byId(mounted.root, 'ab-play-all-btn')?.classList.contains('btn-primary')).toBe(false);
+    expect(textOf(mounted, 'ab-generate-btn')).toBe('Generate all');
+    expect(byId(mounted.root, 'ab-generate-btn')?.classList.contains('btn-primary')).toBe(true);
+    expect(byId(mounted.root, 'ab-filters')).toBeNull();
     expect(byId(mounted.root, 'ab-player')).toBeNull();
   });
 
@@ -130,7 +137,15 @@ describe('Audiobook production editor', () => {
     expect(byId(mounted.root, `ab-play-${none.block.id}`)?.hasAttribute('disabled')).toBe(true);
     expect(byId(mounted.root, `ab-play-${done.block.id}`)?.hasAttribute('disabled')).toBe(false);
     const staleRow = byId(mounted.root, `ab-seg-${stale.block.id}`) as HTMLElement;
-    expect(staleRow.querySelector('.ab-why')?.textContent).toContain('Reading rule changed');
+    expect(staleRow.querySelector('.ab-why')?.textContent).toContain('Voice settings changed');
+    expect(byId(mounted.root, 'audiobook-segment-reason-speed')).not.toBeNull();
+    expect(textOf(mounted, 'ab-ban-changed')).toBe(
+      '1 segments changed since their audio was generated',
+    );
+    expect(
+      allById(mounted.root, 'audiobook-segment-actions')[0].querySelectorAll('button'),
+    ).toHaveLength(3);
+    expect(byId(mounted.root, `ab-flag-${none.block.id}`)?.hasAttribute('disabled')).toBe(true);
     expect(mounted.root.querySelector('.ab-seg-h .type-tag')?.textContent).toContain('Title');
     expect(allById(mounted.root, 'audiobook-segment-speaker')[0].textContent?.trim()).toBe(
       'Narrator',
@@ -143,52 +158,10 @@ describe('Audiobook production editor', () => {
     );
   });
 
-  it('highlights lexicon hits without changing the text', async () => {
-    const mounted = await open();
-    const hit = rowWhere((row) => row.parts.some((part) => part.say !== null));
-    const text = byId(mounted.root, `ab-seg-${hit.block.id}`)?.querySelector('.ab-text');
-    expect(text?.textContent).toBe(hit.block.text);
-    const mark = text?.querySelector('mark.ab-hit') as HTMLElement;
-    expect(mark.title).toMatch(/^Read as: /);
-    expect(mark.textContent).toBe(hit.parts.find((part) => part.say !== null)?.text);
-  });
-
-  it('filters the list and shows the empty state when nothing matches', async () => {
-    const mounted = await open();
-    const all = segmentIds(mounted).length;
-    await clickAndSettle(mounted, 'ab-filters-todo');
-    expect(byId(mounted.root, 'ab-filters-todo')?.classList.contains('is-active')).toBe(true);
-    expect(segmentIds(mounted)).toHaveLength(4);
-    expect(mounted.root.querySelectorAll('.ab-gap')).toHaveLength(0);
-    await clickAndSettle(mounted, 'ab-filters-stale');
-    expect(segmentIds(mounted)).toHaveLength(1);
-    await clickAndSettle(mounted, 'ab-filters-flag');
-    expect(segmentIds(mounted)).toHaveLength(0);
-    expect(textOf(mounted, 'audiobook-empty')).toContain('No segments match the filters');
-    await clickAndSettle(mounted, 'ab-filters-all');
-    expect(segmentIds(mounted)).toHaveLength(all);
-    expect(byId(mounted.root, 'audiobook-empty')).toBeNull();
-  });
-
-  it('selects a segment on click and on Enter', async () => {
-    const mounted = await open();
-    const [first, second] = context().segments;
-    await clickAndSettle(mounted, `ab-seg-${first.block.id}`);
-    expect(context().view.sel).toBe(first.block.id);
-    expect(byId(mounted.root, `ab-seg-${first.block.id}`)?.classList.contains('is-sel')).toBe(true);
-    byId(mounted.root, `ab-seg-${second.block.id}`)?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
-    );
-    await settle(mounted.fixture);
-    expect(context().view.sel).toBe(second.block.id);
-    expect(mounted.root.querySelectorAll('.ab-seg.is-sel')).toHaveLength(1);
-  });
-
   it('plays one segment, toggles the player and stops it', async () => {
     const mounted = await open();
     const id = rowWhere((row) => row.state === 'done').block.id;
     await clickAndSettle(mounted, `ab-play-${id}`);
-    expect(context().view.sel).toBeNull();
     expect(byId(mounted.root, 'ab-player')).not.toBeNull();
     expect(textOf(mounted, 'ab-pl-title')).toContain(' · ');
     expect(byId(mounted.root, 'ab-pl-toggle')?.getAttribute('aria-label')).toBe('Pause');
@@ -221,30 +194,33 @@ describe('Audiobook production editor', () => {
     expect(byId(mounted.root, 'ab-player')).not.toBeNull();
   });
 
-  it('shows the blockers, disables Generate and routes the banner buttons', async () => {
+  it('disables Generate all while the chapter has blockers', async () => {
+    const mounted = await open();
+    expect((byId(mounted.root, 'ab-generate-btn') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('opens Generate from the toolbar once the blockers are cleared', async () => {
+    const mounted = await open();
+    service().setSpeakerVoice(PROJECT, TEA_WOMAN, 1);
+    await settle(mounted.fixture);
+    expect((byId(mounted.root, 'ab-generate-btn') as HTMLButtonElement).disabled).toBe(false);
+    await clickAndSettle(mounted, 'ab-generate-btn');
+    expect(TestBed.inject(AudiobookDialogsService).request()).toEqual({
+      kind: 'generate',
+      projectId: PROJECT,
+    });
+  });
+
+  it('shows the blockers and routes the banner buttons', async () => {
     const mounted = await open();
     expect(textOf(mounted, 'ab-ban-voice')).toContain('Tea-selling old woman has no voice yet.');
-    expect(byId(mounted.root, 'ab-generate-btn')?.hasAttribute('disabled')).toBe(true);
     expect(byId(mounted.root, 'ab-pick-voice-btn')).not.toBeNull();
     await clickAndSettle(mounted, 'ab-pick-voice-btn');
     expect(context().view.mode).toBe('voices');
     expect(byId(mounted.root, 'ab-views-voices')?.classList.contains('is-active')).toBe(true);
     expect(mounted.root.querySelector('app-audiobook-voices')).not.toBeNull();
     expect(byId(mounted.root, 'ab-rail')).toBeNull();
-    expect(byId(mounted.root, 'ab-generate-btn')).toBeNull();
-  });
-
-  it('opens Generate once the blockers are cleared', async () => {
-    const mounted = await open();
-    service().setSpeakerVoice(PROJECT, TEA_WOMAN, 1);
-    await settle(mounted.fixture);
-    expect(byId(mounted.root, 'ab-ban-voice')).toBeNull();
-    expect(byId(mounted.root, 'ab-generate-btn')?.hasAttribute('disabled')).toBe(false);
-    await clickAndSettle(mounted, 'ab-generate-btn');
-    expect(TestBed.inject(AudiobookDialogsService).request()).toEqual({
-      kind: 'generate',
-      projectId: PROJECT,
-    });
+    expect(byId(mounted.root, 'ab-play-all-btn')).toBeNull();
   });
 
   it('toasts the first blocker instead of regenerating', async () => {
@@ -256,7 +232,25 @@ describe('Audiobook production editor', () => {
     expect(toasts[0]).toMatchObject({ tone: 'warning' });
     expect(toasts[0].message).toContain('Tea-selling old woman has no voice yet.');
     expect(context().running).toEqual([]);
-    expect(context().view.sel).toBeNull();
+  });
+
+  it('flags a generated segment through the dialog and clears the flag inline', async () => {
+    const mounted = await open();
+    const id = rowWhere((row) => row.state === 'done').block.id;
+    expect(byId(mounted.root, `ab-flag-${id}`)?.getAttribute('aria-pressed')).toBe('false');
+    await clickAndSettle(mounted, `ab-flag-${id}`);
+    expect(TestBed.inject(AudiobookDialogsService).request()).toEqual({
+      kind: 'flag',
+      projectId: PROJECT,
+      blockId: id,
+    });
+    service().flagSegment(PROJECT, id, 'Wrong stress');
+    await settle(mounted.fixture);
+    expect(textOf(mounted, 'audiobook-segment-flag')).toBe('Failed: Wrong stress');
+    expect(byId(mounted.root, `ab-flag-${id}`)?.getAttribute('aria-pressed')).toBe('true');
+    expect(byId(mounted.root, `ab-flag-${id}`)?.getAttribute('aria-label')).toBe('Clear flag');
+    await clickAndSettle(mounted, `ab-flag-${id}`);
+    expect(context().segments.find((row) => row.block.id === id)?.state).toBe('done');
   });
 
   it('regenerates a segment and shows it as generating', async () => {
@@ -268,6 +262,7 @@ describe('Audiobook production editor', () => {
     expect(context().running).toEqual([id]);
     expect(textOf(mounted, `audiobook-segment-state-${id}`)).toBe('Generating');
     expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-running')).toBe(true);
+    expect(byId(mounted.root, `ab-regen-${id}`)?.hasAttribute('disabled')).toBe(true);
     expect(textOf(mounted, 'ab-stats')).toContain('1 generating');
     await service().settled(PROJECT);
     await settle(mounted.fixture);
@@ -275,22 +270,24 @@ describe('Audiobook production editor', () => {
     expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-done')).toBe(true);
   });
 
-  it('selects another chapter from the rail and shows its lock blocker', async () => {
+  it('selects another chapter from the rail without any lock state', async () => {
     const mounted = await open();
     await clickAndSettle(mounted, 'ab-unit-U03');
     expect(byId(mounted.root, 'ab-unit-U03')?.classList.contains('is-active')).toBe(true);
-    expect(textOf(mounted, 'audiobook-subbar-lock')).toBe('Script not locked');
-    expect(textOf(mounted, 'ab-ban-lock')).toContain('is not locked yet.');
-    expect(byId(mounted.root, 'ab-open-script-btn')).not.toBeNull();
-    expect(byId(mounted.root, 'ab-unit-U03')?.querySelector('.sc-mk')).not.toBeNull();
+    expect(byId(mounted.root, 'audiobook-subbar-lock')).toBeNull();
+    expect(byId(mounted.root, 'audiobook-rail-unlocked')).toBeNull();
+    expect(mounted.root.querySelectorAll('[data-testid^="ab-ban-"]')).toHaveLength(0);
   });
 
-  it('opens Scripting on the chapter from the lock banner', async () => {
-    const mounted = await open();
-    await clickAndSettle(mounted, 'ab-unit-U03');
-    await clickAndSettle(mounted, 'ab-open-script-btn');
+  it('opens Scripting on the chapter from the empty script state', async () => {
+    const mounted = await open((state) => {
+      state.scripts[PROJECT].units[3].meta = null;
+    });
+    await clickAndSettle(mounted, 'ab-unit-U04');
+    expect(textOf(mounted, 'audiobook-empty')).toContain('Write the narration script');
+    await clickAndSettle(mounted, 'ab-empty-script-btn');
     expect(TestBed.inject(TabsService).activeId()).toBe(moduleTabId(PROJECT, 'scripting'));
-    expect(TestBed.inject(ScriptingService).viewOf(PROJECT).unit).toBe('U03');
+    expect(TestBed.inject(ScriptingService).viewOf(PROJECT).unit).toBe('U04');
   });
 
   it('opens Scripting at the segment from the edit button', async () => {
@@ -301,7 +298,6 @@ describe('Audiobook production editor', () => {
     const view = TestBed.inject(ScriptingService).viewOf(PROJECT);
     expect(view.sel).toBe(id);
     expect(view.goto).toBe(id);
-    expect(context().view.sel).toBeNull();
   });
 
   it('shows the placeholder state for a chapter without sample content', async () => {
@@ -309,33 +305,28 @@ describe('Audiobook production editor', () => {
     await clickAndSettle(mounted, 'ab-unit-U05');
     expect(textOf(mounted, 'audiobook-empty')).toContain('has audio that needs regeneration');
     expect(byId(mounted.root, 'ab-play-all-btn')).toBeNull();
-    expect(byId(mounted.root, 'ab-generate-btn')).toBeNull();
     expect(textOf(mounted, 'ab-stats')).toContain('0 segments');
   });
 
-  it('hosts the voices and rules views and returns to production', async () => {
+  it('hosts the voices view and returns to production', async () => {
     const mounted = await open();
-    await clickAndSettle(mounted, 'ab-views-rules');
-    expect(mounted.root.querySelector('app-audiobook-rules')).not.toBeNull();
-    expect(byId(mounted.root, 'ab-sub')).toBeNull();
     await clickAndSettle(mounted, 'ab-views-voices');
     expect(mounted.root.querySelector('app-audiobook-voices')).not.toBeNull();
-    expect(mounted.root.querySelector('app-audiobook-rules')).toBeNull();
+    expect(byId(mounted.root, 'ab-sub')).toBeNull();
     await clickAndSettle(mounted, 'ab-views-prod');
     expect(byId(mounted.root, 'ab-rail')).not.toBeNull();
     expect(byId(mounted.root, 'ab-list')).not.toBeNull();
   });
 
-  it('jumps to a requested segment from another view and selects it', async () => {
+  it('jumps to a requested segment from another view', async () => {
     const mounted = await open();
-    await clickAndSettle(mounted, 'ab-views-rules');
+    await clickAndSettle(mounted, 'ab-views-voices');
     const id = context().segments[2].block.id;
     service().gotoSegment(PROJECT, id);
     await settle(mounted.fixture);
     expect(context().view.mode).toBe('prod');
-    expect(context().view.sel).toBe(id);
     expect(context().view.goto).toBeNull();
-    expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-sel')).toBe(true);
+    expect(byId(mounted.root, `ab-seg-${id}`)).not.toBeNull();
   });
 
   it('renders nothing until the audiobook is loaded', async () => {

@@ -11,14 +11,7 @@ import {
   SegmentRequest,
   VoiceAvailability,
 } from './audiobook.models';
-import {
-  COST_PER_CHAR,
-  readText,
-  rulesSignature,
-  segmentInfo,
-  todoBlocks,
-  voicingOf,
-} from './audiobook.rules';
+import { COST_PER_CHAR, segmentInfo, todoBlocks, voicingOf } from './audiobook.rules';
 
 export const LOCAL_GROUP = 'local';
 
@@ -89,23 +82,17 @@ export function generatePlanOf(
   };
 }
 
-export function segmentRequestOf(
-  env: AudioEnv,
-  block: ScriptBlock,
-  activeSymbols: string[],
-): SegmentRequest | null {
-  const { voice, speed } = voicingOf(env, block);
+export function segmentRequestOf(env: AudioEnv, block: ScriptBlock): SegmentRequest | null {
+  const { speaker, voice, speed } = voicingOf(env, block);
   if (!voice) {
     return null;
   }
   return {
     text: block.text,
-    readText: readText(env.book.lex, block.text),
+    speaker: speaker ? speaker.id : null,
     voice: voice.id,
     speed,
-    rules: rulesSignature(env.book.lex, block.text),
     paren: block.paren,
-    symbols: activeSymbols,
   };
 }
 

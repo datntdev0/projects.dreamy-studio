@@ -16,22 +16,31 @@ const AUDIOBOOK = 1;
 const BLANK = 2;
 const FILM = 3;
 
-async function loadScripting(projectId: number): Promise<void> {
+const INITIAL_UNITS: Record<number, string> = { [AUDIOBOOK]: 'U03' };
+
+async function loadScripting(projectId: number, unitId: string | null): Promise<void> {
   TestBed.inject(LanguageService).setLanguage('en');
   const scripting = TestBed.inject(ScriptingService);
   TestBed.tick();
   await scripting.load(projectId);
   await scripting.flush(projectId);
+  if (unitId) {
+    scripting.selectUnit(projectId, unitId);
+  }
 }
 
-async function open(projectId: number, blank = false): Promise<Mounted<Scripting>> {
+async function open(
+  projectId: number,
+  blank = false,
+  unitId: string | null = INITIAL_UNITS[projectId] ?? null,
+): Promise<Mounted<Scripting>> {
   const ipc = setupApp();
   ipc.on('workspace_current', null);
   installScriptingBackend(ipc);
   if (blank) {
     ipc.on('scripting_get', null);
   }
-  return mount(Scripting, { projectId }, loadScripting.bind(null, projectId));
+  return mount(Scripting, { projectId }, loadScripting.bind(null, projectId, unitId));
 }
 
 function service(): ScriptingService {
@@ -81,6 +90,15 @@ async function writeText(mounted: Mounted<unknown>, id: string, text: string): P
   await settle(mounted.fixture);
 }
 
+async function addBlock(mounted: Mounted<unknown>, label: string): Promise<void> {
+  await clickAndSettle(mounted, 'sc-add-btn');
+  const item = allById(mounted.root, 'scripting-menu-item').find(
+    (row) => row.textContent?.trim() === label,
+  );
+  item?.click();
+  await settle(mounted.fixture);
+}
+
 function change(mounted: Mounted<unknown>, id: string, value: string): Promise<void> {
   const element = byId(mounted.root, id) as HTMLInputElement | HTMLSelectElement;
   element.value = value;
@@ -89,33 +107,47 @@ function change(mounted: Mounted<unknown>, id: string, value: string): Promise<v
 }
 
 describe('Scripting audiobook editor', () => {
-  it('renders the bar, the rail, the sub bar and the grouped source page', async () => {
+  it('opens on the first chapter without any status marks', async () => {
+    const mounted = await open(AUDIOBOOK, false, null);
+    expect(byId(mounted.root, 'sc-unit-U01')?.classList.contains('is-active')).toBe(true);
+    expect(textOf(mounted, 'sc-unit-title')).toBe('Ngọn đèn cuối cùng');
+    expect(textOf(mounted, 'sc-rail-count')).toBe('12/12 done');
+    expect(mounted.root.querySelectorAll('[data-testid="scripting-rail-mark"]')).toHaveLength(0);
+    expect(byId(mounted.root, 'sc-status-U01')).toBeNull();
+  });
+
+  it('renders the bar, the rail, the sub bar and the flat source page', async () => {
     const mounted = await open(AUDIOBOOK);
     expect(textOf(mounted, 'sc-preset-badge')).toBe('AUDIOBOOK');
     expect(textOf(mounted, 'sc-back-btn')).toBe('Harrowmere — Audiobook');
-    expect(byId(mounted.root, 'sc-draft-btn')).not.toBeNull();
-    expect(byId(mounted.root, 'sc-lock-btn')?.classList.contains('btn-primary')).toBe(true);
+    expect(byId(mounted.root, 'sc-draft-btn')).toBeNull();
+    expect(byId(mounted.root, 'sc-lock-btn')).toBeNull();
     expect(byId(mounted.root, 'sc-unlock-btn')).toBeNull();
-    expect(textOf(mounted, 'sc-rail-count')).toBe('11/12 locked');
+    expect(textOf(mounted, 'sc-rail-count')).toBe('12/12 done');
     expect(allById(mounted.root, 'sc-units')).toHaveLength(1);
     expect(mounted.root.querySelectorAll('.sc-unit')).toHaveLength(12);
     expect(byId(mounted.root, 'sc-unit-U03')?.classList.contains('is-active')).toBe(true);
     expect(textOf(mounted, 'sc-unit-U01')).toContain('13 blocks · 192 words');
     expect(byId(mounted.root, 'sc-unit-add-btn')).toBeNull();
     expect(textOf(mounted, 'sc-unit-title')).toBe('Điều thủy triều trả lại');
-    expect(textOf(mounted, 'sc-status-U03')).toBe('NEEDS REVIEW');
-    expect(textOf(mounted, 'sc-stats')).toBe('6 blocks114 words≈ 0:464/4 source paragraphs');
+    expect(byId(mounted.root, 'sc-status-U03')).toBeNull();
+    expect(textOf(mounted, 'sc-stats')).toBe('6 blocks114 words≈ 0:46');
     expect(textOf(mounted, 'scripting-subbar-number')).toBe('CHAPTERS 03');
     expect(byId(mounted.root, 'sc-chs')).toBeNull();
     expect(byId(mounted.root, 'sc-drawer-btn')).toBeNull();
-    expect(allById(mounted.root, 'sc-add-bar')).toHaveLength(1);
-    expect(mounted.root.querySelectorAll('[data-testid^="sc-add-"][data-tip]')).toHaveLength(5);
+    expect(allById(mounted.root, 'sc-add-btn')).toHaveLength(1);
+    expect(byId(mounted.root, 'sc-add-bar')).toBeNull();
+    expect(byId(mounted.root, 'sc-reset-btn')).not.toBeNull();
+    expect(byId(mounted.root, 'sc-grp-all-btn')).toBeNull();
     expect(allById(mounted.root, 'sc-page-title')).toHaveLength(1);
-    expect(mounted.root.querySelectorAll('.sc-grp')).toHaveLength(4);
-    expect(byId(mounted.root, 'sc-ban-locked')).toBeNull();
-    expect(byId(mounted.root, 'sc-stale-3.2')).not.toBeNull();
-    expect(byId(mounted.root, 'sc-grp-3.2')?.classList.contains('is-stale')).toBe(true);
-    expect(byId(mounted.root, 'sc-blk-B30')?.classList.contains('is-stale')).toBe(true);
+    expect(mounted.root.querySelectorAll('.sc-grp')).toHaveLength(0);
+    expect(mounted.root.querySelectorAll('.sc-blk')).toHaveLength(6);
+    expect(byId(mounted.root, 'sc-ban-stale')).toBeNull();
+    expect(byId(mounted.root, 'sc-stale-3.2')).toBeNull();
+    expect(byId(mounted.root, 'sc-regen-3.2')).toBeNull();
+    expect(byId(mounted.root, 'sc-keep-3.2')).toBeNull();
+    expect(byId(mounted.root, 'sc-grp-src-3.2')).toBeNull();
+    expect(mounted.root.querySelectorAll('.is-stale')).toHaveLength(0);
   });
 
   it('selects a block when it receives focus', async () => {
@@ -138,7 +170,7 @@ describe('Scripting audiobook editor', () => {
   it('adds a block of the chosen type after the selection and focuses it', async () => {
     const mounted = await open(AUDIOBOOK);
     byId(mounted.root, 'sc-text-B29')?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-    await clickAndSettle(mounted, 'sc-add-dialogue');
+    await addBlock(mounted, 'Dialogue');
     const blocks = blocksOf(AUDIOBOOK);
     const added = blocks[blocks.findIndex((block) => block.id === 'B29') + 1];
     expect(added.type).toBe('dialogue');
@@ -225,7 +257,7 @@ describe('Scripting audiobook editor', () => {
 
   it('opens the speaker menu, assigns a character and offers the cast manager', async () => {
     const mounted = await open(AUDIOBOOK);
-    await clickAndSettle(mounted, 'sc-add-dialogue');
+    await addBlock(mounted, 'Dialogue');
     const added = blocksOf(AUDIOBOOK).find((block) => block.type === 'dialogue') as ScriptBlock;
     await clickAndSettle(mounted, `sc-who-btn-${added.id}`);
     const items = allById(mounted.root, 'scripting-menu-item');
@@ -248,20 +280,9 @@ describe('Scripting audiobook editor', () => {
     expect(layout.inspectorOpen()).toBe(true);
   });
 
-  it('offers to generate narration for a paragraph without blocks', async () => {
-    const mounted = await open(AUDIOBOOK);
-    await clickAndSettle(mounted, 'sc-del-B29');
-    expect(textOf(mounted, 'sc-grp-h-3.1')).toContain('NO NARRATION');
-    expect(byId(mounted.root, 'sc-miss-3.1')).not.toBeNull();
-    await clickAndSettle(mounted, 'sc-cover-3.1');
-    expect(byId(mounted.root, 'sc-miss-3.1')).toBeNull();
-    expect(blocksOf(AUDIOBOOK).filter((block) => block.ref === '3.1')).toHaveLength(1);
-    expect(textOf(mounted, 'sc-grp-h-3.1')).toContain('1 BLOCKS');
-  });
-
   it('edits the tone and the pause length and normalises the pause value', async () => {
     const mounted = await open(AUDIOBOOK);
-    await clickAndSettle(mounted, 'sc-add-dialogue');
+    await addBlock(mounted, 'Dialogue');
     const added = blocksOf(AUDIOBOOK).find((block) => block.type === 'dialogue') as ScriptBlock;
     await change(mounted, `sc-paren-${added.id}`, 'softly');
     expect(blocksOf(AUDIOBOOK).find((block) => block.id === added.id)?.paren).toBe('softly');
@@ -282,79 +303,73 @@ describe('Scripting audiobook editor', () => {
     expect(blocksOf(AUDIOBOOK).map((block) => block.id)).not.toContain('B28');
   });
 
-  it('collapses and expands the source groups', async () => {
+  it('lists the block types in the add menu', async () => {
     const mounted = await open(AUDIOBOOK);
-    expect(textOf(mounted, 'sc-grp-all-btn')).toBe('Collapse all');
-    await clickAndSettle(mounted, 'sc-grp-h-3.1');
-    expect(byId(mounted.root, 'sc-grp-3.1')?.classList.contains('is-collapsed')).toBe(true);
-    expect(byId(mounted.root, 'sc-grp-h-3.1')?.getAttribute('aria-expanded')).toBe('false');
-    expect(byId(mounted.root, 'sc-blk-B29')).toBeNull();
-    expect(textOf(mounted, 'sc-grp-h-3.1')).toContain('Vào đêm thứ bảy');
-    await clickAndSettle(mounted, 'sc-grp-all-btn');
-    expect(mounted.root.querySelectorAll('.sc-grp.is-collapsed')).toHaveLength(4);
-    expect(textOf(mounted, 'sc-grp-all-btn')).toBe('Expand all');
-    await clickAndSettle(mounted, 'sc-grp-all-btn');
-    expect(mounted.root.querySelectorAll('.sc-grp.is-collapsed')).toHaveLength(0);
+    await clickAndSettle(mounted, 'sc-add-btn');
+    const items = allById(mounted.root, 'scripting-menu-item');
+    expect(items.map((item) => item.textContent?.trim())).toEqual([
+      'Title',
+      'Narration',
+      'Dialogue',
+      'Pauses',
+      'Note',
+    ]);
+    expect(items.some((item) => item.hasAttribute('disabled'))).toBe(false);
+    items[3].click();
+    await settle(mounted.fixture);
+    expect(blocksOf(AUDIOBOOK).filter((block) => block.type === 'pause')).toHaveLength(2);
+    expect(byId(mounted.root, 'scripting-menu')).toBeNull();
   });
 
-  it('keeps or regenerates a stale paragraph', async () => {
+  it('opens the reset dialog from the sub bar', async () => {
     const mounted = await open(AUDIOBOOK);
-    await clickAndSettle(mounted, 'sc-keep-3.2');
-    expect(byId(mounted.root, 'sc-stale-3.2')).toBeNull();
-    expect(byId(mounted.root, 'sc-stale-3.3')).not.toBeNull();
-    await clickAndSettle(mounted, 'sc-regen-3.3');
-    expect(byId(mounted.root, 'sc-stale-3.3')).toBeNull();
-    expect(service().contextOf(AUDIOBOOK)?.staleRefs).toEqual([]);
+    await clickAndSettle(mounted, 'sc-reset-btn');
+    expect(TestBed.inject(ScriptingDialogsService).request()).toEqual({
+      kind: 'reset',
+      projectId: AUDIOBOOK,
+    });
   });
 
-  it('switches the unit and shows the locked state read-only', async () => {
+  it('switches the unit and keeps it editable', async () => {
     const mounted = await open(AUDIOBOOK);
     await clickAndSettle(mounted, 'sc-unit-U01');
     expect(byId(mounted.root, 'sc-unit-U01')?.classList.contains('is-active')).toBe(true);
-    expect(byId(mounted.root, 'sc-ban-locked')).not.toBeNull();
-    expect(byId(mounted.root, 'sc-draft-btn')).toBeNull();
-    expect(byId(mounted.root, 'sc-lock-btn')).toBeNull();
-    expect(byId(mounted.root, 'sc-unlock-btn')).not.toBeNull();
-    expect(byId(mounted.root, 'sc-add-bar')).toBeNull();
-    expect(mounted.root.querySelector('.sc-tools')).toBeNull();
+    expect(byId(mounted.root, 'sc-add-btn')).not.toBeNull();
+    expect(mounted.root.querySelector('.sc-tools')).not.toBeNull();
     const field = mounted.root.querySelector('.sc-t') as HTMLElement;
-    expect(field.hasAttribute('contenteditable')).toBe(false);
-    expect(mounted.root.querySelector<HTMLButtonElement>('.sc-gut')?.disabled).toBe(true);
-    const locked = await press(mounted, field.dataset['testid'] ?? 'sc-text-B1', 'Enter');
-    expect(locked.defaultPrevented).toBe(false);
-    expect(textOf(mounted, 'sc-status-U01')).toBe('LOCKED');
+    expect(field.getAttribute('contenteditable')).toBe('plaintext-only');
+    expect(mounted.root.querySelector<HTMLButtonElement>('.sc-gut')?.disabled).toBe(false);
+    const entered = await press(mounted, field.dataset['testid'] ?? 'sc-text-B1', 'Enter');
+    expect(entered.defaultPrevented).toBe(true);
   });
 
-  it('opens the lock check and unlock dialogs from the bar', async () => {
-    const mounted = await open(AUDIOBOOK);
-    const dialogs = TestBed.inject(ScriptingDialogsService);
-    await clickAndSettle(mounted, 'sc-lock-btn');
-    expect(dialogs.request()).toEqual({ kind: 'check', projectId: AUDIOBOOK });
-    await clickAndSettle(mounted, 'sc-draft-btn');
-    expect(dialogs.request()).toEqual({ kind: 'draft', projectId: AUDIOBOOK });
-    await clickAndSettle(mounted, 'sc-unit-U01');
-    await clickAndSettle(mounted, 'sc-unlock-btn');
-    expect(dialogs.request()).toEqual({ kind: 'unlock', projectId: AUDIOBOOK });
-  });
-
-  it('shows the placeholder state of a unit that only has a locked version', async () => {
+  it('shows the placeholder state of a unit without loaded content and starts rewriting', async () => {
     const mounted = await open(AUDIOBOOK);
     await clickAndSettle(mounted, 'sc-unit-U04');
-    expect(textOf(mounted, 'scripting-empty')).toContain(
-      'The prototype has no sample content for this chapters yet',
-    );
     expect(textOf(mounted, 'scripting-empty')).toContain('8 blocks, 128 words');
+    expect(byId(mounted.root, 'sc-empty-unlock-btn')).toBeNull();
+    expect(byId(mounted.root, 'sc-empty-draft-btn')).toBeNull();
+    await clickAndSettle(mounted, 'sc-empty-start-btn');
+    expect(blocksOf(AUDIOBOOK)).toHaveLength(1);
+    expect(blocksOf(AUDIOBOOK)[0].type).toBe('heading');
+  });
+
+  it('offers the default and scratch actions for an empty chapter', async () => {
+    const mounted = await open(5, true);
+    await clickAndSettle(mounted, 'sc-unit-U02');
+    expect(byId(mounted.root, 'sc-empty-draft-btn')).toBeNull();
+    expect(byId(mounted.root, 'sc-empty-start-btn')).not.toBeNull();
     const dialogs = TestBed.inject(ScriptingDialogsService);
-    await clickAndSettle(mounted, 'sc-empty-unlock-btn');
-    expect(dialogs.request()?.kind).toBe('unlock');
+    await clickAndSettle(mounted, 'sc-empty-default-btn');
+    expect(dialogs.request()).toEqual({ kind: 'default', projectId: 5 });
   });
 });
 
 describe('Scripting film editor', () => {
-  it('renders the film bar, the chapter range, the scene blocks and toggles the drawer', async () => {
+  it('renders the film bar, the chapter range and the scene blocks in one column', async () => {
     const mounted = await open(FILM);
     expect(textOf(mounted, 'sc-preset-badge')).toBe('FILMSERIES');
-    expect(textOf(mounted, 'sc-rail-count')).toBe('0/2 locked');
+    expect(textOf(mounted, 'sc-rail-count')).toBe('1/2 done');
     expect(byId(mounted.root, 'sc-unit-add-btn')).not.toBeNull();
     expect(textOf(mounted, 'sc-unit-add-btn')).toBe('Add episode');
     expect(byId(mounted.root, 'sc-chs')).not.toBeNull();
@@ -363,17 +378,12 @@ describe('Scripting film editor', () => {
     expect(byId(mounted.root, 'sc-unit-title')?.tagName).toBe('INPUT');
     expect(textOf(mounted, 'scripting-subbar-number')).toBe('EPISODE 01');
     expect(textOf(mounted, 'sc-page-title')).toContain('EPISODE 01 · Ch.1–2');
-    expect(byId(mounted.root, 'sc-grp-all-btn')).toBeNull();
+    expect(byId(mounted.root, 'sc-reset-btn')).toBeNull();
     expect(byId(mounted.root, 'sc-drawer')).toBeNull();
+    expect(byId(mounted.root, 'sc-drawer-btn')).toBeNull();
+    expect(byId(mounted.root, 'scripting-split')).toBeNull();
+    expect(allById(mounted.root, 'sc-page')).toHaveLength(1);
     expect(byId(mounted.root, 'sc-places')).not.toBeNull();
-    await clickAndSettle(mounted, 'sc-drawer-btn');
-    expect(byId(mounted.root, 'sc-drawer')).not.toBeNull();
-    expect(byId(mounted.root, 'sc-drawer-btn')?.getAttribute('aria-pressed')).toBe('true');
-    expect(textOf(mounted, 'sc-drawer')).toContain('Source reference');
-    expect(mounted.root.querySelectorAll('.sc-drawer-g')).toHaveLength(2);
-    expect(byId(mounted.root, 'sc-src-1.1')).not.toBeNull();
-    await clickAndSettle(mounted, 'sc-drawer-btn');
-    expect(byId(mounted.root, 'sc-drawer')).toBeNull();
   });
 
   it('edits the setting, the time and the chapter range of the episode', async () => {
@@ -408,7 +418,6 @@ describe('Scripting film editor', () => {
     expect(textOf(mounted, 'sc-ban-kb')).toContain('Chapter 7 have no knowledge analysis yet');
     expect(byId(mounted.root, 'sc-open-kb-btn')).not.toBeNull();
     expect(textOf(mounted, 'sc-empty-start-btn')).toBe('Start writing');
-    expect(byId(mounted.root, 'sc-empty-draft-btn')).toBeNull();
   });
 
   it('adds an episode from the rail and starts writing in an empty one', async () => {
@@ -432,7 +441,6 @@ describe('Scripting preset chooser', () => {
     const mounted = await open(BLANK, true);
     expect(byId(mounted.root, 'sc-pick')).not.toBeNull();
     expect(byId(mounted.root, 'sc-preset-badge')).toBeNull();
-    expect(byId(mounted.root, 'sc-draft-btn')).toBeNull();
     expect(allById(mounted.root, 'scripting-presets')).toHaveLength(1);
     expect(textOf(mounted, 'sc-pick-film')).toContain('Film script');
     await clickAndSettle(mounted, 'sc-pick-film');

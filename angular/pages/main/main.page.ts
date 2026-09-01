@@ -16,11 +16,8 @@ import { NovelKnowledgeAnalyzeDialog } from '@features/novel/components/knowledg
 import { NovelKnowledgeEditDialog } from '@features/novel/components/knowledge-edit.dialog';
 import { NovelTranslationRunDialog } from '@features/novel/components/translation-run.dialog';
 import { ProjectCreateDialog } from '@features/project/components/create.dialog';
-import { ScriptingCheckDialog } from '@features/scripting/components/check.dialog';
 import { ScriptingDefaultDialog } from '@features/scripting/components/default.dialog';
-import { ScriptingDraftDialog } from '@features/scripting/components/draft.dialog';
 import { ScriptingResetDialog } from '@features/scripting/components/reset.dialog';
-import { ScriptingUnlockDialog } from '@features/scripting/components/unlock.dialog';
 import { SettingsDialog } from '@features/settings/components/settings.dialog';
 import { SettingsService } from '@features/settings/settings.service';
 import { SwitchWorkspaceDialog } from '@features/workspace/components/switch.dialog';
@@ -47,11 +44,8 @@ const APP_TITLE = 'Dreamy Studio';
     NovelTranslationRunDialog,
     NovelKnowledgeEditDialog,
     ProjectCreateDialog,
-    ScriptingCheckDialog,
-    ScriptingUnlockDialog,
     ScriptingResetDialog,
     ScriptingDefaultDialog,
-    ScriptingDraftDialog,
     AudiobookGenerateDialog,
     AudiobookFlagDialog,
     LibraryCollectionDialog,

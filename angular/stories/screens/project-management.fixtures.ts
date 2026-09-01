@@ -181,7 +181,7 @@ const SEEDS: ProjectSeed[] = [
 
 const MODULE_SEEDS: Record<number, ModuleSeed[]> = {
   1: [
-    ['scripting', 'doing', 11, 12, '11/12 chapters locked · chapter 3 needs review'],
+    ['scripting', 'done', 12, 12, '12/12 chapters'],
     ['character', 'done', 4, 4, '4 characters'],
     ['world', 'idle', 0, 0, ''],
     ['storyboard', 'doing', 5, 12, '5/12 chapters'],
@@ -191,7 +191,7 @@ const MODULE_SEEDS: Record<number, ModuleSeed[]> = {
   ],
   2: [['video', 'done', 1, 1, '1 timeline · 1 export']],
   3: [
-    ['scripting', 'doing', 0, 2, '0/2 episodes locked · episode 1 in writing'],
+    ['scripting', 'doing', 1, 2, '1/2 episodes'],
     ['character', 'doing', 1, 3, '1/3 characters'],
   ],
   4: [

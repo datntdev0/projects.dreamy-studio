@@ -1,8 +1,8 @@
-import { defaultAudioBlocks, narrationBlock, rowBlocks } from './scripting.draft';
+import { defaultAudioBlocks } from './scripting.default';
 // prettier-ignore
-import { BlockIds, BlockPatch, BlockType, CastAddResult, CastMember, ChapterRange, MoveDirection, ResetResult, Script, ScriptBlock, ScriptChange, ScriptConfig, ScriptPreset, ScriptSource, ScriptUnit, SourceParagraph } from './scripting.models';
+import { BlockIds, BlockPatch, BlockType, CastAddResult, CastMember, ChapterRange, MoveDirection, ResetResult, Script, ScriptBlock, ScriptChange, ScriptConfig, ScriptPreset, ScriptSource, ScriptUnit } from './scripting.models';
 // prettier-ignore
-import { appendUnit, BLOCK_TYPES, configOf, DEFAULT_PAUSE_MS, findBlock, findUnit, firstSpeaker, makeBlock, MAX_PAUSE_MS, NEXT_BLOCK_TYPE, replaceUnit, staleRefsOf } from './scripting.rules';
+import { appendUnit, BLOCK_TYPES, configOf, DEFAULT_PAUSE_MS, findBlock, findUnit, firstSpeaker, makeBlock, MAX_PAUSE_MS, NEXT_BLOCK_TYPE, replaceUnit } from './scripting.rules';
 
 const NO_VIEW = {};
 
@@ -57,7 +57,6 @@ export function insertBlock(
   const block = makeBlock(ids, type, {
     who,
     ref: row && after ? after.ref : null,
-    snap: row && after ? after.snap : null,
     ...extra,
   });
   const at = after ? unit.blocks.indexOf(after) + 1 : unit.blocks.length;
@@ -223,27 +222,8 @@ export function startUnit(
   if (!unit) {
     return unchanged(script);
   }
-  const emptied: Script = replaceUnit(script, { ...unit, blocks: [], meta: null, status: 'draft' });
+  const emptied: Script = replaceUnit(script, { ...unit, blocks: [], meta: null });
   return insertBlock(emptied, unitId, null, script.cfg.types[0], cast, stamp);
-}
-
-export function lockUnit(script: Script, unitId: string, stamp: string): Script {
-  const unit = findUnit(script, unitId);
-  return unit ? replaceUnit(script, { ...unit, status: 'locked', updated: stamp }) : script;
-}
-
-export function unlockUnit(
-  script: Script,
-  unitId: string,
-  source: ScriptSource | null,
-  stamp: string,
-): Script {
-  const unit = findUnit(script, unitId);
-  if (!unit) {
-    return script;
-  }
-  const status = staleRefsOf(unit, source).length ? 'review' : 'draft';
-  return replaceUnit(script, { ...unit, status, updated: stamp });
 }
 
 export function setUnitTitle(script: Script, unitId: string, title: string, stamp: string): Script {
@@ -305,12 +285,11 @@ export function applyDefault(
     return null;
   }
   const ids = idsOf(script);
-  const fresh = defaultAudioBlocks(ids, unit, source.list);
+  const fresh = defaultAudioBlocks(ids, source.list);
   const next: ScriptUnit = {
     ...unit,
     blocks: reuseIds(fresh, unit.blocks ?? []),
     meta: null,
-    status: unit.status === 'review' ? 'draft' : unit.status,
     updated: stamp,
   };
   return { ...replaceUnit(script, next), seq: ids.seq };
@@ -320,9 +299,7 @@ export function resettableUnits(
   script: Script,
   sources: Record<string, ScriptSource | null>,
 ): ScriptUnit[] {
-  return script.units.filter(
-    (unit) => unit.status !== 'locked' && !unit.meta && (sources[unit.id] ?? null) !== null,
-  );
+  return script.units.filter((unit) => !unit.meta && (sources[unit.id] ?? null) !== null);
 }
 
 export function resetUnits(
@@ -341,79 +318,6 @@ export function resetUnits(
     }
   }
   return { script: current, count };
-}
-
-export function keepRef(
-  script: Script,
-  unitId: string,
-  ref: string,
-  source: ScriptSource | null,
-  stamp: string,
-): Script {
-  const unit = findUnit(script, unitId);
-  if (!unit?.blocks || !source || source.map[ref] === undefined) {
-    return script;
-  }
-  const blocks = unit.blocks.map((block) =>
-    block.ref === ref ? { ...block, snap: source.map[ref] } : block,
-  );
-  return withBlocks(script, unit, blocks, idsOf(script), stamp);
-}
-
-function regeneratedBlocks(
-  ids: BlockIds,
-  old: ScriptBlock[],
-  paragraph: SourceParagraph,
-): ScriptBlock[] {
-  const dialogue = old.find((block) => block.type === 'dialogue');
-  return old.length > 1 || dialogue
-    ? rowBlocks(ids, paragraph, dialogue ? dialogue.who : '', false, [], {})
-    : [narrationBlock(ids, paragraph)];
-}
-
-export function regenerateRef(
-  script: Script,
-  unitId: string,
-  ref: string,
-  source: ScriptSource | null,
-  stamp: string,
-): Script {
-  const unit = findUnit(script, unitId);
-  const text = source?.map[ref];
-  const old = unit?.blocks?.filter((block) => block.ref === ref) ?? [];
-  if (!unit?.blocks || text === undefined || old.length === 0) {
-    return script;
-  }
-  const ids = idsOf(script);
-  const at = unit.blocks.indexOf(old[0]);
-  const fresh = regeneratedBlocks(ids, old, { id: ref, text });
-  const rest = unit.blocks.filter((block) => block.ref !== ref);
-  const blocks = [...rest.slice(0, at), ...fresh, ...rest.slice(at)];
-  return withBlocks(script, unit, blocks, ids, stamp);
-}
-
-export function coverRef(
-  script: Script,
-  unitId: string,
-  ref: string,
-  source: ScriptSource | null,
-  stamp: string,
-): Script {
-  const unit = findUnit(script, unitId);
-  const text = source?.map[ref];
-  if (!unit?.blocks || !source || text === undefined) {
-    return script;
-  }
-  const position = source.list.findIndex((paragraph) => paragraph.id === ref);
-  const nextRef = source.list
-    .slice(position + 1)
-    .find((paragraph) => unit.blocks?.some((block) => block.ref === paragraph.id));
-  const nextBlock = nextRef ? unit.blocks.find((block) => block.ref === nextRef.id) : undefined;
-  const at = nextBlock ? unit.blocks.indexOf(nextBlock) : unit.blocks.length;
-  const ids = idsOf(script);
-  const block = narrationBlock(ids, { id: ref, text });
-  const blocks = [...unit.blocks.slice(0, at), block, ...unit.blocks.slice(at)];
-  return withBlocks(script, unit, blocks, ids, stamp);
 }
 
 export function addExtraMember(

@@ -24,11 +24,11 @@ function idsOf(model: Script): string[] {
 
 describe('scripting edit: blocks', () => {
   it('inserts after a block and inherits its source row', () => {
-    const model = withBlocks({ ref: '1.1', snap: 'x' }, { type: 'dialogue', who: 'E1' });
+    const model = withBlocks({ ref: '1.1' }, { type: 'dialogue', who: 'E1' });
     const change = edit.insertBlock(model, 'U01', 'B1', 'narration', cast, STAMP);
     expect(idsOf(change.script)).toEqual(['B1', 'B3', 'B2']);
     const added = findUnit(change.script, 'U01')?.blocks?.[1];
-    expect(added).toMatchObject({ ref: '1.1', snap: 'x', who: '' });
+    expect(added).toMatchObject({ ref: '1.1', who: '' });
     expect(change.view).toEqual({ sel: 'B3', focus: 'B3' });
     expect(change.script.seq).toBe(3);
     expect(findUnit(change.script, 'U01')?.updated).toBe(STAMP);
@@ -36,11 +36,11 @@ describe('scripting edit: blocks', () => {
   });
 
   it('inserts dialogue with the latest speaker and headings outside source rows', () => {
-    const model = withBlocks({ type: 'dialogue', who: 'E9' }, { ref: '1.1', snap: 'x' });
+    const model = withBlocks({ type: 'dialogue', who: 'E9' }, { ref: '1.1' });
     const dialogue = edit.insertBlock(model, 'U01', null, 'dialogue', cast, STAMP);
     expect(findUnit(dialogue.script, 'U01')?.blocks?.[2].who).toBe('E9');
     const heading = edit.insertBlock(model, 'U01', 'B2', 'pause', cast, STAMP);
-    expect(findUnit(heading.script, 'U01')?.blocks?.[2]).toMatchObject({ ref: null, snap: null });
+    expect(findUnit(heading.script, 'U01')?.blocks?.[2]).toMatchObject({ ref: null });
     const fresh = edit.insertBlock(withBlocks({}), 'U01', null, 'dialogue', cast, STAMP);
     expect(findUnit(fresh.script, 'U01')?.blocks?.[1].who).toBe('E1');
     const extra = edit.insertBlock(model, 'U01', null, 'scene', cast, STAMP, { loc: 'X' });
@@ -156,33 +156,14 @@ describe('scripting edit: blocks', () => {
 
 describe('scripting edit: units', () => {
   it('starts writing from scratch', () => {
-    const model = script([scriptUnit({ status: 'review', meta: { blocks: 8, words: 1 } })]);
+    const model = script([scriptUnit({ meta: { blocks: 8, words: 1 } })]);
     const change = edit.startUnit(model, 'U01', cast, STAMP);
     const unit = findUnit(change.script, 'U01');
-    expect(unit).toMatchObject({ status: 'draft', meta: null });
+    expect(unit?.meta).toBeNull();
     expect(unit?.blocks).toHaveLength(1);
     expect(unit?.blocks?.[0].type).toBe('heading');
     expect(change.view.sel).toBe('B1');
     expect(edit.startUnit(model, 'zz', cast, STAMP).script).toBe(model);
-  });
-
-  it('locks and unlocks with stale detection', () => {
-    const unit = scriptUnit({ blocks: listOf({ ref: '1.1', snap: 'old' }) });
-    const model = script([unit]);
-    expect(findUnit(edit.lockUnit(model, 'U01', STAMP), 'U01')).toMatchObject({
-      status: 'locked',
-      updated: STAMP,
-    });
-    expect(edit.lockUnit(model, 'zz', STAMP)).toBe(model);
-    const locked = edit.lockUnit(model, 'U01', STAMP);
-    expect(findUnit(edit.unlockUnit(locked, 'U01', source('new'), STAMP), 'U01')?.status).toBe(
-      'review',
-    );
-    expect(findUnit(edit.unlockUnit(locked, 'U01', source('old'), STAMP), 'U01')?.status).toBe(
-      'draft',
-    );
-    expect(findUnit(edit.unlockUnit(locked, 'U01', null, STAMP), 'U01')?.status).toBe('draft');
-    expect(edit.unlockUnit(locked, 'zz', null, STAMP)).toBe(locked);
   });
 
   it('edits the unit title and chapters', () => {
@@ -206,15 +187,14 @@ describe('scripting edit: units', () => {
   });
 });
 
-describe('scripting edit: source repair', () => {
+describe('scripting edit: defaults', () => {
   const src = source('Alpha.', 'Beta.', 'Gamma.');
 
   it('resets a unit to the default and keeps matching ids', () => {
     const unit = scriptUnit({
-      status: 'review',
+      meta: { blocks: 8, words: 1 },
       blocks: [
         scriptBlock({ id: 'B7', type: 'heading', text: 'Chapter one. First.' }),
-        scriptBlock({ id: 'B8', type: 'pause', ms: 800 }),
         scriptBlock({ id: 'B9', type: 'narration', text: 'Alpha.', ref: '1.1' }),
         scriptBlock({ id: 'B10', type: 'narration', text: 'edited', ref: '1.2' }),
       ],
@@ -222,81 +202,33 @@ describe('scripting edit: source repair', () => {
     const model = script([unit], { seq: 10 });
     const next = edit.applyDefault(model, 'U01', src, STAMP);
     const blocks = findUnit(next ?? model, 'U01')?.blocks ?? [];
-    expect(blocks.map((item) => item.id)).toEqual(['B7', 'B8', 'B9', 'B14', 'B15']);
-    expect(blocks[3].text).toBe('Beta.');
-    expect(next?.seq).toBe(15);
-    expect(findUnit(next ?? model, 'U01')).toMatchObject({ status: 'draft', meta: null });
+    expect(blocks.map((item) => [item.id, item.type])).toEqual([
+      ['B9', 'narration'],
+      ['B12', 'narration'],
+      ['B13', 'narration'],
+    ]);
+    expect(blocks[1].text).toBe('Beta.');
+    expect(next?.seq).toBe(13);
+    expect(findUnit(next ?? model, 'U01')?.meta).toBeNull();
     expect(edit.applyDefault(model, 'U01', null, STAMP)).toBeNull();
     expect(edit.applyDefault(model, 'zz', src, STAMP)).toBeNull();
-    const locked = edit.applyDefault(script([scriptUnit({ status: 'draft' })]), 'U01', src, STAMP);
-    expect(findUnit(locked ?? model, 'U01')?.blocks).toHaveLength(5);
+    const fresh = edit.applyDefault(script([scriptUnit()]), 'U01', src, STAMP);
+    expect(findUnit(fresh ?? model, 'U01')?.blocks).toHaveLength(3);
   });
 
   it('resets many units and lists the resettable ones', () => {
     const model = script([
       scriptUnit({ id: 'U01' }),
-      scriptUnit({ id: 'U02', no: 2, status: 'locked' }),
+      scriptUnit({ id: 'U02', no: 2 }),
       scriptUnit({ id: 'U03', no: 3, meta: { blocks: 8, words: 1 } }),
       scriptUnit({ id: 'U04', no: 4 }),
     ]);
     const sources = { U01: src, U02: src, U03: src, U04: null };
-    expect(edit.resettableUnits(model, sources).map((item) => item.id)).toEqual(['U01']);
-    const result = edit.resetUnits(model, ['U01', 'U04'], sources, STAMP);
+    expect(edit.resettableUnits(model, sources).map((item) => item.id)).toEqual(['U01', 'U02']);
+    const result = edit.resetUnits(model, ['U02', 'U04'], sources, STAMP);
     expect(result.count).toBe(1);
-    expect(findUnit(result.script, 'U01')?.blocks).toHaveLength(5);
+    expect(findUnit(result.script, 'U02')?.blocks).toHaveLength(3);
     expect(edit.resetUnits(model, [], sources, STAMP)).toEqual({ script: model, count: 0 });
-  });
-
-  it('keeps the narration when the source changed', () => {
-    const unit = scriptUnit({
-      blocks: listOf({ ref: '1.2', snap: 'old' }, { ref: '1.3', snap: 'old' }),
-    });
-    const next = edit.keepRef(script([unit]), 'U01', '1.2', src, STAMP);
-    expect(findUnit(next, 'U01')?.blocks?.map((item) => item.snap)).toEqual(['Beta.', 'old']);
-    const model = script([unit]);
-    expect(edit.keepRef(model, 'U01', '1.2', null, STAMP)).toBe(model);
-    expect(edit.keepRef(model, 'U01', '9.9', src, STAMP)).toBe(model);
-    expect(edit.keepRef(model, 'zz', '1.2', src, STAMP)).toBe(model);
-  });
-
-  it('regenerates a paragraph', () => {
-    const quoted = source('Plain.', '“Go,” she said.');
-    const unit = scriptUnit({
-      blocks: listOf(
-        { id: 'B1', ref: '1.1', text: 'old', snap: 'old' },
-        { type: 'dialogue', who: 'E4', ref: '1.2', text: 'old', snap: 'old' },
-        { type: 'narration', ref: '1.2', text: 'old', snap: 'old' },
-        { type: 'note', text: 'tail' },
-      ),
-    });
-    const model = script([unit], { seq: 4 });
-    const one = edit.regenerateRef(model, 'U01', '1.1', quoted, STAMP);
-    expect(findUnit(one, 'U01')?.blocks?.[0]).toMatchObject({
-      id: 'B5',
-      text: 'Plain.',
-      snap: 'Plain.',
-    });
-    const two = edit.regenerateRef(model, 'U01', '1.2', quoted, STAMP);
-    const blocks = findUnit(two, 'U01')?.blocks ?? [];
-    expect(blocks.map((item) => [item.type, item.who, item.text])).toEqual([
-      ['narration', '', 'old'],
-      ['dialogue', 'E4', 'Go.'],
-      ['narration', '', 'she said.'],
-      ['note', '', 'tail'],
-    ]);
-    expect(edit.regenerateRef(model, 'U01', '1.9', quoted, STAMP)).toBe(model);
-    expect(edit.regenerateRef(model, 'U01', '1.1', null, STAMP)).toBe(model);
-  });
-
-  it('adds narration for an uncovered paragraph in order', () => {
-    const unit = scriptUnit({ blocks: listOf({ ref: '1.3', snap: 'Gamma.' }) });
-    const model = script([unit], { seq: 1 });
-    const next = edit.coverRef(model, 'U01', '1.2', src, STAMP);
-    expect(findUnit(next, 'U01')?.blocks?.map((item) => item.ref)).toEqual(['1.2', '1.3']);
-    const tail = edit.coverRef(model, 'U01', '1.3', src, STAMP);
-    expect(findUnit(tail, 'U01')?.blocks?.map((item) => item.ref)).toEqual(['1.3', '1.3']);
-    expect(edit.coverRef(model, 'U01', '9.9', src, STAMP)).toBe(model);
-    expect(edit.coverRef(model, 'U01', '1.2', null, STAMP)).toBe(model);
   });
 });
 

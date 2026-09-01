@@ -47,14 +47,10 @@
             class="btn btn-sm btn-primary"
             [disabled]="!c.canGenerate"
             data-testid="ab-generate-btn"
-            (click)="generate()"
+            (click)="generateAll()"
           >
             <ds-icon name="spark" [size]="16" />
-            {{
-              c.todo.length
-                ? ('audiobook.editor.bar.generate' | t: { count: c.todo.length })
-                : ('audiobook.editor.bar.complete' | t)
-            }}
+            {{ 'audiobook.editor.bar.generateAll' | t }}
           </button>
         }
       </div>
@@ -64,11 +60,6 @@
         @case ('voices') {
           <div class="ab-main" data-testid="ab-main">
             <app-audiobook-voices [projectId]="c.projectId" />
-          </div>
-        }
-        @case ('rules') {
-          <div class="ab-main" data-testid="ab-main">
-            <app-audiobook-rules [projectId]="c.projectId" />
           </div>
         }
         @default {

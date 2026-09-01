@@ -10,7 +10,6 @@ import { describe, expect, it } from 'vitest';
 import { AudiobookContext } from '../audiobook.models';
 import { AudiobookPlayerService } from '../audiobook.player.service';
 import { AudiobookService } from '../audiobook.service';
-import { AudiobookRules } from './rules.component';
 import { AudiobookVoices } from './voices.component';
 
 const PROJECT = 1;
@@ -233,105 +232,5 @@ describe('AudiobookVoices', () => {
     await press(mounted, `ab-spk-preview-${MARO}`);
     await settle(mounted.fixture);
     expect(toasts()).toEqual([`Preview sends a sample sentence to ${cloud.engineName}.`]);
-  });
-});
-
-describe('AudiobookRules', () => {
-  it('lists the lexicon with occurrences and the kind label', async () => {
-    const mounted = await open(AudiobookRules);
-    expect(allById(mounted.root, 'ab-rules')).toHaveLength(1);
-    for (const row of context().lexicon) {
-      expect(field(mounted, `ab-lex-term-${row.rule.id}`).value).toBe(row.rule.term);
-      expect(field(mounted, `ab-lex-say-${row.rule.id}`).value).toBe(row.rule.say);
-    }
-    const first = byId(mounted.root, 'ab-lex-L01');
-    expect(first?.querySelector('.type-tag')?.textContent?.trim()).toBe('Proper names');
-    expect(first?.querySelector('.num')?.textContent?.trim()).toBe(
-      `${context().lexicon[0].occurrences}×`,
-    );
-    expect(textOf(mounted, 'audiobook-rules-intro')).toContain('every chapters');
-  });
-
-  it('edits a rule and restores a blank value', async () => {
-    const mounted = await open(AudiobookRules);
-    await enter(mounted, 'ab-lex-say-L02', ' Wrenn ');
-    expect(context().lexicon[1].rule.say).toBe('Wrenn');
-    expect(field(mounted, 'ab-lex-say-L02').value).toBe('Wrenn');
-    await enter(mounted, 'ab-lex-term-L02', '  ');
-    expect(context().lexicon[1].rule.term).toBe('Wren');
-    expect(field(mounted, 'ab-lex-term-L02').value).toBe('Wren');
-  });
-
-  it('removes a rule', async () => {
-    const mounted = await open(AudiobookRules);
-    const count = context().lexicon.length;
-    await press(mounted, 'ab-lex-del-L05');
-    expect(context().lexicon).toHaveLength(count - 1);
-    expect(byId(mounted.root, 'ab-lex-L05')).toBeNull();
-  });
-
-  it('adds a rule and resets the form, focusing the missing field otherwise', async () => {
-    const mounted = await open(AudiobookRules);
-    const count = context().lexicon.length;
-    await press(mounted, 'ab-lex-add-btn');
-    expect(document.activeElement).toBe(field(mounted, 'ab-lex-term-input'));
-    await enter(mounted, 'ab-lex-term-input', 'Maro');
-    await press(mounted, 'ab-lex-add-btn');
-    expect(context().lexicon).toHaveLength(count);
-    expect(document.activeElement).toBe(field(mounted, 'ab-lex-say-input'));
-    await enter(mounted, 'ab-lex-say-input', 'MAH-ro');
-    await pick(mounted, 'ab-lex-kind-select', 'terms');
-    await press(mounted, 'ab-lex-add-btn');
-    expect(context().lexicon).toHaveLength(count + 1);
-    expect(context().lexicon.at(-1)?.rule).toMatchObject({
-      term: 'Maro',
-      say: 'MAH-ro',
-      kind: 'terms',
-    });
-    expect(field(mounted, 'ab-lex-term-input').value).toBe('');
-    expect(field(mounted, 'ab-lex-say-input').value).toBe('');
-    expect(field(mounted, 'ab-lex-kind-select').value).toBe('names');
-    expect(byId(mounted.root, 'ab-lex-L06')).not.toBeNull();
-  });
-
-  it('toggles a symbol', async () => {
-    const mounted = await open(AudiobookRules);
-    const box = field(mounted, 'ab-sym-input-S2');
-    expect(box.checked).toBe(true);
-    box.checked = false;
-    box.dispatchEvent(new Event('change', { bubbles: true }));
-    await settle(mounted.fixture);
-    expect(context().symbols.find((item) => item.id === 'S2')?.on).toBe(false);
-    expect(allById(mounted.root, 'ab-sym-input-S1')).toHaveLength(1);
-  });
-
-  it('applies the rules to the quick test sentence live', async () => {
-    const mounted = await open(AudiobookRules);
-    await enter(mounted, 'ab-test-input', 'Wren climbs 312 steps.');
-    expect(textOf(mounted, 'ab-test-out')).toBe('Ren climbs three hundred twelve steps.');
-    expect(context().testText).toBe('Wren climbs 312 steps.');
-    await enter(mounted, 'ab-test-input', '');
-    expect(textOf(mounted, 'ab-test-out')).toBe('');
-    expect(field(mounted, 'ab-test-input').value).toBe('');
-  });
-
-  it('reacts to a rule edit in the quick test output', async () => {
-    const mounted = await open(AudiobookRules);
-    await enter(mounted, 'ab-test-input', 'Wren');
-    await enter(mounted, 'ab-lex-say-L02', 'Rinn');
-    expect(textOf(mounted, 'ab-test-out')).toBe('Rinn');
-  });
-
-  it('reports affected segments and jumps to production', async () => {
-    const mounted = await open(AudiobookRules);
-    const affected = context().affected;
-    if (affected === 0) {
-      await enter(mounted, 'ab-lex-say-L02', 'Rinn');
-    }
-    expect(textOf(mounted, 'audiobook-rules-affected')).toBe(
-      `${context().affected} audio segments use the old rule and need regeneration.`,
-    );
-    await press(mounted, 'ab-rules-go-btn');
-    expect(context().view.mode).toBe('prod');
   });
 });

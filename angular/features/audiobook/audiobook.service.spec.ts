@@ -63,13 +63,7 @@ describe('AudiobookService', () => {
   describe('loading', () => {
     it('loads the stored book and pins the first unfinished unit', () => {
       expect(service.isLoaded(PROJECT)).toBe(true);
-      expect(service.bookOf(PROJECT)?.lex.map((rule) => rule.id)).toEqual([
-        'L01',
-        'L02',
-        'L03',
-        'L04',
-        'L05',
-      ]);
+      expect(service.bookOf(PROJECT)?.voices['narr']).toEqual({ voice: 1, speed: 0.95 });
       expect(service.viewOf(PROJECT).unit).toBe(context().unit?.id);
       expect(context().unit?.no).toBe(2);
       expect(service.contextOf(99)).toBeNull();
@@ -89,8 +83,7 @@ describe('AudiobookService', () => {
       expect(service.bookOf(4)?.units).not.toEqual({});
       ipc.on('audiobook_get', null);
       await service.load(5);
-      expect(service.bookOf(5)?.lex).toEqual([]);
-      expect(service.bookOf(5)?.symbols).toHaveLength(4);
+      expect(service.bookOf(5)).toEqual({ voices: {}, units: {} });
     });
 
     it('records a failed load', async () => {
@@ -115,53 +108,34 @@ describe('AudiobookService', () => {
       expect(ctx.rail).toHaveLength(12);
       expect(ctx.rail[0].stat.state).toBe('done');
       expect(ctx.rail[2].stat.state).toBe('done');
-      expect(ctx.rail[2].locked).toBe(false);
       expect(ctx.rail[3].stat.meta).toBe(true);
       expect(ctx.railSummary.total).toBe(12);
       expect(ctx.canPlay).toBe(true);
       expect(ctx.availability.backendRunning).toBe(true);
       expect(ctx.engines).toEqual({ localModels: 1, cloudProviders: 2 });
-      expect(ctx.lexicon).toHaveLength(5);
-      expect(ctx.symbols.every((item) => item.on)).toBe(true);
       expect(ctx.speakers[0].member.kind).toBe('narrator');
     });
 
-    it('navigates modes, units, filters and segments', () => {
+    it('navigates modes and units', () => {
       service.setMode(PROJECT, 'voices');
       expect(context().inspector).toBe('voices');
-      service.setMode(PROJECT, 'rules');
-      expect(context().inspector).toBe('rules');
       service.setMode(PROJECT, 'prod');
       expect(context().inspector).toBe('chapter');
       service.selectUnit(PROJECT, 'nope');
       expect(context().unit?.no).toBe(2);
       service.selectUnit(PROJECT, context().rail[0].unit.id);
       expect(context().unit?.no).toBe(1);
-      const first = context().segments[0].block.id;
-      service.selectSegment(PROJECT, first);
-      expect(context().inspector).toBe('segment');
-      expect(context().segmentPanel?.row.block.id).toBe(first);
-      service.setFilter(PROJECT, 'flag');
-      expect(context().rows).toEqual([]);
-      service.setFilter(PROJECT, 'all');
-      service.setMode(PROJECT, 'voices');
-      expect(service.viewOf(PROJECT).sel).toBeNull();
+      expect(context().rows.length).toBeGreaterThanOrEqual(context().segments.length);
+      expect(context().inspector).toBe('chapter');
     });
 
     it('jumps to a segment once', () => {
       const id = context().segments[1].block.id;
-      service.setMode(PROJECT, 'rules');
+      service.setMode(PROJECT, 'voices');
       service.gotoSegment(PROJECT, id);
-      expect(service.viewOf(PROJECT)).toMatchObject({ mode: 'prod', sel: id, goto: id });
+      expect(service.viewOf(PROJECT)).toMatchObject({ mode: 'prod', goto: id });
       expect(service.consumeGoto(PROJECT)).toBe(id);
       expect(service.consumeGoto(PROJECT)).toBeNull();
-    });
-
-    it('keeps a custom test sentence', () => {
-      service.setTestText(PROJECT, 'Wren at Harrowmere');
-      const ctx = context();
-      expect(ctx.testText).toBe('Wren at Harrowmere');
-      expect(ctx.testOutput).toBe('Ren at HAIR-oh-meer');
     });
   });
 
@@ -226,34 +200,6 @@ describe('AudiobookService', () => {
     });
   });
 
-  describe('reading rules', () => {
-    it('adds, edits and removes lexicon rules and marks segments stale', async () => {
-      const before = context().affected;
-      expect(service.addLexRule(PROJECT, '', 'x', 'terms')).toBe('empty');
-      expect(service.addLexRule(PROJECT, 'Maro', 'MAH-ro', 'names')).toBe('added');
-      expect(context().affected).toBeGreaterThan(before);
-      expect(context().lexicon.at(-1)?.rule.id).toBe('L06');
-      service.editLexRule(PROJECT, 'L06', 'say', 'Mah-roh');
-      expect(context().lexicon.at(-1)?.rule.say).toBe('Mah-roh');
-      service.editLexRule(PROJECT, 'L06', 'say', ' ');
-      expect(context().lexicon.at(-1)?.rule.say).toBe('Mah-roh');
-      service.removeLexRule(PROJECT, 'L06');
-      expect(context().affected).toBe(before);
-      service.removeLexRule(PROJECT, 'L06');
-      await settle();
-      expect(ipc.called('audiobook_config_save')).toBe(3);
-    });
-
-    it('toggles symbols without touching progress', async () => {
-      const calls = ipc.called('project_modules');
-      service.setSymbol(PROJECT, 'S2', false);
-      expect(context().symbols.find((item) => item.id === 'S2')?.on).toBe(false);
-      expect(context().rulesPanel.activeSymbols).toBe(3);
-      await settle();
-      expect(ipc.called('project_modules')).toBe(calls);
-    });
-  });
-
   describe('chapter assembly and flags', () => {
     it('stores mix settings for chapters with a script only', async () => {
       service.setMix(PROJECT, 'gap', 2);
@@ -274,8 +220,6 @@ describe('AudiobookService', () => {
       const row = context().segments.find((item) => item.block.id === id);
       expect(row).toMatchObject({ state: 'flag' });
       expect(row?.record?.flag).toBe('wrong stress');
-      service.selectSegment(PROJECT, id);
-      expect(context().segmentPanel).toMatchObject({ canFlag: false, canClearFlag: true });
       expect(service.clearFlag(PROJECT, id)).toBe(true);
       expect(service.clearFlag(PROJECT, id)).toBe(false);
       expect(context().segments.find((item) => item.block.id === id)?.state).not.toBe('flag');
@@ -342,8 +286,8 @@ describe('AudiobookService', () => {
       await drain();
       await settle();
       expect(ipc.called('audiobook_segment_generate')).toBe(1);
-      service.selectUnit(PROJECT, context().rail[2].unit.id);
-      expect(service.regenerate(PROJECT, context().segments[0].block.id)).toBe('blocked');
+      service.setSpeakerVoice(PROJECT, 'narr', null);
+      expect(service.regenerate(PROJECT, id)).toBe('blocked');
     });
 
     it('skips segments that lost their voice and records backend failures', async () => {
@@ -366,14 +310,32 @@ describe('AudiobookService', () => {
     });
   });
 
+  describe('export', () => {
+    it('exports a fully generated chapter and refuses an incomplete one', async () => {
+      expect(await service.exportUnit(PROJECT, 'wav')).toBeNull();
+      service.selectUnit(PROJECT, context().rail[0].unit.id);
+      const unitId = context().unit?.id;
+      expect(await service.exportUnit(PROJECT, 'srt')).toBe(`exports/${PROJECT}/${unitId}.srt`);
+      expect(ipc.called('audiobook_export')).toBe(1);
+    });
+
+    it('reports a failed export', async () => {
+      service.selectUnit(PROJECT, context().rail[0].unit.id);
+      ipc.fail('audiobook_export', { code: 'io', detail: 'disk full' });
+      expect(await service.exportUnit(PROJECT, 'wav')).toBeNull();
+      expect(service.error()).not.toBeNull();
+    });
+  });
+
   describe('messages', () => {
     it('translates blockers, reasons and engine issues', () => {
-      service.selectUnit(PROJECT, context().rail[2].unit.id);
-      const lock = context().blockers.find((item) => item.kind === 'lock');
-      expect(service.messageText(lock?.message ?? ({} as never))).toBe(
-        'The script of this chapter is not locked yet.',
+      const voice = context().blockers.find((item) => item.kind === 'voice');
+      expect(service.messageText(voice?.message ?? ({} as never))).toBe(
+        'Tea-selling old woman has no voice yet.',
       );
-      expect(service.reasonText('script')).toBe('Script changed');
+      expect(service.reasonText('text')).toBe('Speech content changed');
+      expect(service.reasonText('speaker')).toBe('Character changed');
+      expect(service.reasonText('speed')).toBe('Voice settings changed');
       expect(service.reasonText('tone')).toBe('Tone changed');
       expect(service.issueText({ kind: 'model', engine: 'Nano' })).toBe(
         'Requires installing the Nano model',

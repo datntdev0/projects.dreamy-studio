@@ -6,7 +6,7 @@ import { PlayerState, UnitAudio } from './audiobook.models';
 import * as playback from './audiobook.playback';
 import { emptyUnitAudio } from './audiobook.rules';
 
-const unit = scriptUnit({ id: 'U01', status: 'locked' });
+const unit = scriptUnit({ id: 'U01' });
 
 const audio: UnitAudio = {
   ...emptyUnitAudio(),

@@ -2,13 +2,14 @@
   class="sc-rail"
   [attr.aria-label]="'scripting.editor.rail.label' | t: { unit: unitLower() }"
   data-testid="sc-rail"
+  [style.width.px]="rail.width()"
 >
   <div class="sc-rail-h" data-testid="scripting-rail-head">
     <span class="eyebrow">{{ unit() }}</span>
     <span class="mono t-mute" data-testid="sc-rail-count">
       {{
         'scripting.editor.rail.count'
-          | t: { locked: ctx().railSummary.locked, total: ctx().railSummary.total }
+          | t: { done: ctx().railSummary.done, total: ctx().railSummary.total }
       }}
     </span>
   </div>
@@ -35,40 +36,6 @@
           </div>
           <div class="t-sm t-mute ellip">{{ labels.railMeta(row, ctx().config) }}</div>
         </div>
-        @switch (row.mark) {
-          @case ('locked') {
-            <span
-              class="sc-mk is-ok"
-              [attr.title]="markKey(row) | t"
-              data-testid="scripting-rail-mark"
-            >
-              <ds-icon name="lock" [size]="14" />
-            </span>
-          }
-          @case ('stale') {
-            <span
-              class="sc-mk is-warn"
-              [attr.title]="markKey(row) | t"
-              data-testid="scripting-rail-mark"
-            >
-              <ds-icon name="alert" [size]="14" />
-            </span>
-          }
-          @case ('review') {
-            <span
-              class="dot dot-warning"
-              [attr.title]="markKey(row) | t"
-              data-testid="scripting-rail-mark"
-            ></span>
-          }
-          @default {
-            <span
-              class="dot-o"
-              [attr.title]="markKey(row) | t"
-              data-testid="scripting-rail-mark"
-            ></span>
-          }
-        }
       </div>
     }
   </div>
@@ -83,4 +50,11 @@
       {{ 'scripting.editor.rail.add' | t: { unit: unitLower() } }}
     </button>
   }
+  <ds-resizer
+    [(size)]="rail.width"
+    [min]="rail.limits.min"
+    [max]="rail.limits.max"
+    [initial]="rail.limits.initial"
+    [label]="'scripting.editor.rail.resize' | t: { unit: unitLower() }"
+  />
 </aside>

@@ -12,10 +12,6 @@
 .ab-seg:hover {
   background: var(--canvas-soft);
 }
-.ab-seg.is-sel {
-  background: var(--canvas-soft);
-  box-shadow: inset 0 0 0 1px var(--primary);
-}
 .ab-seg.is-done {
   --st: transparent;
 }
@@ -96,14 +92,9 @@
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.ab-hit {
-  padding: 0 2px;
-  border-radius: var(--r-xs);
-  background: var(--primary-soft);
-  color: var(--primary-text);
-}
 .ab-why {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-sm);
   font-size: 12.5px;
@@ -111,6 +102,9 @@
 }
 .ab-why.is-flag {
   color: var(--danger);
+}
+.ab-why-tag:not(:last-child)::after {
+  content: ' ·';
 }
 .ab-why .ic {
   width: 14px;
@@ -124,12 +118,9 @@
 }
 .ab-act {
   display: flex;
-  opacity: 0;
 }
-.ab-seg:hover .ab-act,
-.ab-seg.is-sel .ab-act,
-.ab-act:focus-within {
-  opacity: 1;
+.ab-act .btn.is-active {
+  color: var(--danger);
 }
 .ab-gap {
   display: flex;

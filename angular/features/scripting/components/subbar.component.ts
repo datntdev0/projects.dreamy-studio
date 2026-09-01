@@ -1,37 +1,31 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Icon } from '@components/icon';
 import { CoreModule } from '@shared/core.module';
-import { LanguageKey } from '@shared/language/language.models';
+import { LanguageService } from '@shared/language/language.service';
 
-import { ScriptContext, ScriptUnit, UnitStatus } from '../scripting.models';
-import { anyGroupOpen } from '../scripting.rules';
+import { ScriptingDialogsService } from '../scripting.dialogs.service';
+import { BlockType, ScriptContext } from '../scripting.models';
+import { BLOCK_TYPES } from '../scripting.rules';
 import { ScriptingService } from '../scripting.service';
-import { ScriptingAddBar } from './add-bar.component';
 import { ScriptingLabels } from './scripting.labels';
-
-const STATUS_CLASSES: Record<UnitStatus, string> = {
-  locked: 'badge badge-success',
-  review: 'badge badge-warning',
-  draft: 'badge',
-};
+import { menuItem, ScriptingMenuRow, ScriptingMenuService } from './scripting.menu.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-scripting-subbar',
-  imports: [Icon, CoreModule, ScriptingAddBar],
+  imports: [Icon, CoreModule],
   templateUrl: './subbar.component.html',
 })
 export class ScriptingSubbar {
   protected readonly labels = inject(ScriptingLabels);
   private readonly scripting = inject(ScriptingService);
+  private readonly dialogs = inject(ScriptingDialogsService);
+  private readonly menus = inject(ScriptingMenuService);
+  private readonly languageService = inject(LanguageService);
 
   readonly ctx = input.required<ScriptContext>();
   readonly unitLower = computed(this.buildUnitLower.bind(this));
-  readonly grouped = computed(this.buildGrouped.bind(this));
-  readonly anyOpen = computed(this.buildAnyOpen.bind(this));
   readonly stats = computed(this.buildStats.bind(this));
-  readonly statusKey = computed(this.buildStatusKey.bind(this));
-  readonly statusClass = computed(this.buildStatusClass.bind(this));
 
   setTitle(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -45,47 +39,37 @@ export class ScriptingSubbar {
     input.value = String(this.scripting.contextOf(this.ctx().projectId)?.unit?.chs?.[index] ?? '');
   }
 
-  toggleAll(): void {
-    this.scripting.toggleAllGroups(this.ctx().projectId);
+  reset(): void {
+    this.dialogs.openReset(this.ctx().projectId);
   }
 
-  toggleDrawer(): void {
-    this.scripting.toggleDrawer(this.ctx().projectId);
+  openAddMenu(event: Event): void {
+    this.menus.open(event.currentTarget as HTMLElement, this.addRows());
   }
 
-  private currentUnit(): ScriptUnit | null {
-    return this.ctx().unit;
+  add(type: BlockType): void {
+    this.scripting.addBlock(this.ctx().projectId, type);
+  }
+
+  private addRows(): ScriptingMenuRow[] {
+    return this.ctx().config.types.map(this.addRow.bind(this));
+  }
+
+  private addRow(type: BlockType): ScriptingMenuRow {
+    const definition = BLOCK_TYPES[type];
+    return menuItem(
+      this.languageService.translate(definition.labelKey),
+      definition.icon,
+      false,
+      this.add.bind(this, type),
+    );
   }
 
   private buildUnitLower(): string {
     return this.labels.unitLower(this.ctx().config);
   }
 
-  private buildGrouped(): boolean {
-    const ctx = this.ctx();
-    return ctx.config.source && ctx.source !== null && !!this.currentUnit()?.blocks;
-  }
-
-  private buildAnyOpen(): boolean {
-    const ctx = this.ctx();
-    return ctx.source ? anyGroupOpen(ctx.view.collapsed, ctx.source) : false;
-  }
-
   private buildStats(): string[] {
     return this.labels.stats(this.ctx());
-  }
-
-  private buildStatusKey(): LanguageKey {
-    const ctx = this.ctx();
-    return ctx.generating
-      ? 'scripting.status.generating'
-      : (`scripting.status.${this.currentUnit()?.status ?? 'draft'}` as LanguageKey);
-  }
-
-  private buildStatusClass(): string {
-    const ctx = this.ctx();
-    return ctx.generating
-      ? 'badge badge-running'
-      : STATUS_CLASSES[this.currentUnit()?.status ?? 'draft'];
   }
 }

@@ -11,10 +11,6 @@ import {
   AudioEnv,
   AudioRecord,
   Blocker,
-  HighlightPart,
-  LexField,
-  LexKind,
-  LexRule,
   MetaState,
   MixField,
   MixSettings,
@@ -22,8 +18,6 @@ import {
   SegmentState,
   SpeakerVoice,
   StaleReason,
-  SymbolDef,
-  SymbolRule,
   UnitAudio,
   UnitAudioState,
   UnitStat,
@@ -64,32 +58,20 @@ export const MIX_LIMITS: Record<MixField, [number, number]> = {
   vol: [-12, 6],
 };
 
-export const SYMBOL_DEFS: SymbolDef[] = [
-  { id: 'S1', sym: '* * *', ruleKey: 'audiobook.symbol.S1' },
-  { id: 'S2', sym: '…', ruleKey: 'audiobook.symbol.S2' },
-  { id: 'S3', sym: '—', ruleKey: 'audiobook.symbol.S3' },
-  { id: 'S4', sym: '“ ”', ruleKey: 'audiobook.symbol.S4' },
-];
-
-export const LEX_KINDS: LexKind[] = ['names', 'number', 'abbreviation', 'terms'];
-
 export const REASON_KEYS: Record<StaleReason, AudiobookMessage['key']> = {
-  script: 'audiobook.reason.script',
+  text: 'audiobook.reason.text',
+  speaker: 'audiobook.reason.speaker',
   voice: 'audiobook.reason.voice',
-  rule: 'audiobook.reason.rule',
+  speed: 'audiobook.reason.speed',
   tone: 'audiobook.reason.tone',
 };
 
 export function emptyView(): AudiobookView {
-  return { unit: null, mode: 'prod', sel: null, filter: 'all', test: '', goto: null };
-}
-
-export function defaultSymbols(): SymbolRule[] {
-  return SYMBOL_DEFS.map((def) => ({ id: def.id, on: true }));
+  return { unit: null, mode: 'prod', goto: null };
 }
 
 export function emptyBook(): Audiobook {
-  return { voices: {}, lex: [], symbols: defaultSymbols(), units: {} };
+  return { voices: {}, units: {} };
 }
 
 export function emptyUnitAudio(): UnitAudio {
@@ -147,59 +129,6 @@ export function voicingOf(env: AudioEnv, block: ScriptBlock): Voicing {
   return { speaker, voice, speed: config ? config.speed : SPEED_DEFAULT };
 }
 
-function hasTerm(text: string, rule: LexRule): boolean {
-  return rule.term !== '' && text.includes(rule.term);
-}
-
-export function lexHits(lex: LexRule[], text: string): LexRule[] {
-  return lex.filter((rule) => hasTerm(text, rule));
-}
-
-export function readText(lex: LexRule[], text: string): string {
-  return lexHits(lex, text).reduce((out, rule) => out.split(rule.term).join(rule.say), text);
-}
-
-export function rulesSignature(lex: LexRule[], text: string): string {
-  return lexHits(lex, text)
-    .map((rule) => `${rule.term}>${rule.say}`)
-    .sort()
-    .join('|');
-}
-
-function escapePattern(text: string): string {
-  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-}
-
-function partOf(hits: LexRule[], part: string, index: number): HighlightPart {
-  const rule = index % 2 === 1 ? hits.find((item) => item.term === part) : undefined;
-  return { text: part, say: rule ? rule.say : null };
-}
-
-export function highlightParts(lex: LexRule[], text: string): HighlightPart[] {
-  const hits = lexHits(lex, text);
-  if (hits.length === 0) {
-    return [{ text, say: null }];
-  }
-  const pattern = new RegExp(`(${hits.map((rule) => escapePattern(rule.term)).join('|')})`, 'g');
-  return text
-    .split(pattern)
-    .map((part, index) => partOf(hits, part, index))
-    .filter((part) => part.text !== '');
-}
-
-export function occurrencesOf(script: Script, term: string): number {
-  if (!term) {
-    return 0;
-  }
-  let count = 0;
-  for (const unit of script.units) {
-    for (const block of unit.blocks ?? []) {
-      count += VOICED_TYPES.includes(block.type) ? block.text.split(term).length - 1 : 0;
-    }
-  }
-  return count;
-}
-
 export function estimateDuration(text: string, speed: number): number {
   const seconds = countWords(text) / WORDS_PER_SECOND / (speed || SPEED_DEFAULT);
   return Math.max(MIN_SEGMENT_SECONDS, seconds + SEGMENT_PADDING_SECONDS);
@@ -210,21 +139,15 @@ export function staleReasons(
   block: ScriptBlock,
   record: AudioRecord,
 ): StaleReason[] {
-  const { voice, speed } = voicingOf(env, block);
-  const reasons: StaleReason[] = [];
-  if (record.text !== block.text) {
-    reasons.push('script');
-  }
-  if (record.voice !== (voice ? voice.id : null) || record.speed !== speed) {
-    reasons.push('voice');
-  }
-  if (record.rules !== rulesSignature(env.book.lex, block.text)) {
-    reasons.push('rule');
-  }
-  if ((record.paren || '') !== (block.paren || '')) {
-    reasons.push('tone');
-  }
-  return reasons;
+  const { speaker, voice, speed } = voicingOf(env, block);
+  const changes: [StaleReason, boolean][] = [
+    ['text', record.text !== block.text],
+    ['speaker', record.speaker !== (speaker ? speaker.id : null)],
+    ['voice', record.voice !== (voice ? voice.id : null)],
+    ['speed', record.speed !== speed],
+    ['tone', (record.paren || '') !== (block.paren || '')],
+  ];
+  return changes.filter(([, changed]) => changed).map(([reason]) => reason);
 }
 
 export function segmentInfo(env: AudioEnv, unit: ScriptUnit, block: ScriptBlock): SegmentInfo {
@@ -341,17 +264,8 @@ export function blockersOf(
   env: AudioEnv,
   availability: VoiceAvailability,
   unit: ScriptUnit,
-  unitKind: string,
 ): Blocker[] {
   const out: Blocker[] = [];
-  if (unit.status !== 'locked') {
-    out.push({
-      kind: 'lock',
-      speakerId: null,
-      blockId: null,
-      message: { key: 'audiobook.blocker.lock', params: { unit: unitKind } },
-    });
-  }
   const segments = voicedBlocks(unit);
   const lost = lostDialogues(env.cast, segments);
   if (lost.length > 0) {
@@ -393,16 +307,6 @@ function belongsTo(speaker: CastMember, block: ScriptBlock): boolean {
   return block.type === 'dialogue' && block.who === speaker.id;
 }
 
-export function affectedCount(env: AudioEnv, script: Script): number {
-  let count = 0;
-  for (const unit of script.units) {
-    for (const block of unit.blocks ? voicedBlocks(unit) : []) {
-      count += segmentInfo(env, unit, block).reasons.includes('rule') ? 1 : 0;
-    }
-  }
-  return count;
-}
-
 export function clampSpeed(value: number): number {
   const parsed = Number.isFinite(value) && value !== 0 ? value : SPEED_DEFAULT;
   return Math.max(SPEED_MIN, Math.min(SPEED_MAX, parsed));
@@ -415,19 +319,6 @@ export function clampMix(field: MixField, value: number): number {
 
 export function speakerVoiceOf(book: Audiobook, speakerId: string): SpeakerVoice {
   return book.voices[speakerId] ?? { voice: null, speed: SPEED_DEFAULT };
-}
-
-export function nextLexId(lex: LexRule[]): string {
-  let highest = 0;
-  for (const rule of lex) {
-    const number = Number(rule.id.slice(1));
-    highest = Number.isFinite(number) ? Math.max(highest, number) : highest;
-  }
-  return `L${String(highest + 1).padStart(2, '0')}`;
-}
-
-export function lexValue(rule: LexRule, field: LexField): string {
-  return rule[field];
 }
 
 export function audiobookProgress(env: AudioEnv, script: Script): ProjectModuleState {

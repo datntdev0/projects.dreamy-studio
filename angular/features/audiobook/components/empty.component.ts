@@ -7,7 +7,7 @@ import { AudiobookContext } from '../audiobook.models';
 import { AudiobookLabels } from './audiobook.labels';
 import { AudiobookNavigation } from './audiobook.navigation';
 
-export type AudiobookEmptyVariant = 'filter' | 'script' | 'meta';
+export type AudiobookEmptyVariant = 'blank' | 'script' | 'meta';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,7 +32,7 @@ export class AudiobookEmpty {
   private buildVariant(): AudiobookEmptyVariant {
     const unit = this.ctx().unit;
     if (unit?.blocks) {
-      return 'filter';
+      return 'blank';
     }
     return unit?.meta ? 'meta' : 'script';
   }

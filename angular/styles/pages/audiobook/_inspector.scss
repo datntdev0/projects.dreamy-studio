@@ -1,8 +1,6 @@
 app-audiobook-inspector,
 app-audiobook-inspector-chapter,
-app-audiobook-inspector-segment,
-app-audiobook-inspector-voices,
-app-audiobook-inspector-rules {
+app-audiobook-inspector-voices {
   display: contents;
 }
 
@@ -13,18 +11,4 @@ app-audiobook-inspector-rules {
 }
 .ab-mix .input {
   width: 110px;
-}
-.ab-ro {
-  max-height: 180px;
-  overflow: auto;
-  padding: var(--sp-sm) var(--sp-md);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
-  background: var(--canvas-soft);
-  font-size: 13px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
-.ab-ro.is-read {
-  border-color: var(--primary);
 }

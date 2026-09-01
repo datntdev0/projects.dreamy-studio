@@ -1,15 +1,12 @@
 import { FakeIpc } from '@testing/fake-ipc';
 import { ONTOLOGY_VIEW } from '@testing/knowledge';
 
-import { draftBlocksFor } from '../features/scripting/scripting.draft';
-import { DraftRequest } from '../features/scripting/scripting.models';
 // prettier-ignore
 import { KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS } from '../stories/screens/novel-knowledge.fixtures';
 // prettier-ignore
 import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from '../stories/screens/novel-translation.fixtures';
 // prettier-ignore
 import { PROJECT_FIXTURES, projectModuleStatesFor } from '../stories/screens/project-management.fixtures';
-import { SPEAKER_HINTS } from '../stories/screens/scripting.fixtures';
 import { scriptingHandlers, ScriptingState } from '../stories/screens/scripting.mocks';
 
 const STAMP = '2026-11-09T09:15:00Z';
@@ -70,7 +67,6 @@ export function installScriptingBackend(ipc: FakeIpc, state?: ScriptingState): v
       translation_get: () => translationWire(),
       knowledge_get: knowledgeWire,
     },
-    true,
     state,
   );
   ipc.on('project_list', PROJECT_FIXTURES);
@@ -80,27 +76,5 @@ export function installScriptingBackend(ipc: FakeIpc, state?: ScriptingState): v
   for (const [command, handler] of Object.entries(backend)) {
     ipc.on(command, (args) => handler(args ?? {}));
   }
-  ipc.on('scripting_draft_generate', draftHandler);
   ipc.on('project_modules', (args) => projectModuleStatesFor(Number(args?.['projectId'])));
-}
-
-function draftHandler(args: Record<string, unknown> | undefined): unknown {
-  const request = args?.['request'] as DraftRequest;
-  const ids = { seq: 100 };
-  const blocks = draftBlocksFor(ids, request, SPEAKER_HINTS);
-  if (!blocks) {
-    throw { code: 'no_source', detail: 'none' };
-  }
-  const unit = {
-    id: request.unit.id,
-    no: request.unit.no,
-    ch: request.unit.ch,
-    chs: request.unit.chs,
-    title: request.unit.title,
-    status: 'draft',
-    blocks,
-    meta: null,
-    updated: STAMP,
-  };
-  return { unit, seq: ids.seq };
 }

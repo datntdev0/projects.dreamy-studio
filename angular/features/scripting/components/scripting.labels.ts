@@ -102,14 +102,6 @@ export class ScriptingLabels {
     if (stats.scenes !== null) {
       parts.push(translate('scripting.editor.stats.scenes', { count: stats.scenes }));
     }
-    if (stats.paragraphs !== null && stats.covered !== null) {
-      parts.push(
-        translate('scripting.editor.stats.paragraphs', {
-          covered: stats.covered,
-          total: stats.paragraphs,
-        }),
-      );
-    }
     return parts;
   }
 }

@@ -32,9 +32,9 @@ export function cast(...members: CastMember[]): CastMember[] {
 export function audioRecord(overrides: Partial<AudioRecord> = {}): AudioRecord {
   return {
     text: 'Hello world.',
+    speaker: 'narr',
     voice: 1,
     speed: 1,
-    rules: '',
     paren: '',
     dur: 2,
     at: '2026-11-07T22:05:00Z',
@@ -74,7 +74,7 @@ export interface AudiobookBackend {
 }
 
 export function installAudiobookBackend(ipc: FakeIpc): AudiobookBackend {
-  const scripting = createScriptingState(false);
+  const scripting = createScriptingState();
   installScriptingBackend(ipc, scripting);
   const handlers = audiobookHandlers(scripting, (args) =>
     projectModuleStatesFor(Number(args['projectId'])),

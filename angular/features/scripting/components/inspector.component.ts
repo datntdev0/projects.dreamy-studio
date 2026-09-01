@@ -2,21 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 
 import { ScriptContext } from '../scripting.models';
 import { ScriptingService } from '../scripting.service';
-import { ScriptingInspectorBlock } from './inspector-block.component';
 import { ScriptingInspectorCast } from './inspector-cast.component';
-import { ScriptingInspectorScript } from './inspector-script.component';
-import { ScriptingInspectorSummary } from './inspector-summary.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-scripting-inspector',
   host: { 'data-testid': 'scripting-inspector' },
-  imports: [
-    ScriptingInspectorScript,
-    ScriptingInspectorBlock,
-    ScriptingInspectorSummary,
-    ScriptingInspectorCast,
-  ],
+  imports: [ScriptingInspectorCast],
   templateUrl: './inspector.component.html',
 })
 export class ScriptingInspector {

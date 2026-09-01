@@ -1,13 +1,5 @@
 @if (ctx(); as c) {
-  @if (c.unit) {
-    <app-scripting-inspector-script [ctx]="c" />
-    @if (c.selected; as block) {
-      <app-scripting-inspector-block [ctx]="c" [block]="block" />
-    } @else {
-      <app-scripting-inspector-summary [ctx]="c" />
-    }
-    @if (c.config.speakers) {
-      <app-scripting-inspector-cast [ctx]="c" />
-    }
+  @if (c.unit && c.config.speakers) {
+    <app-scripting-inspector-cast [ctx]="c" />
   }
 }

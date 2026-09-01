@@ -25,36 +25,6 @@ describe('speaker configuration', () => {
   });
 });
 
-describe('lexicon', () => {
-  it('adds trimmed rules and rejects empty ones', () => {
-    const book = audiobook();
-    expect(edit.addLexRule(book, ' ', 'x', 'names')).toEqual({ book, result: 'empty' });
-    expect(edit.addLexRule(book, 'x', '  ', 'names').result).toBe('empty');
-    const added = edit.addLexRule(book, ' Wren ', ' Ren ', 'names');
-    expect(added.result).toBe('added');
-    expect(added.book.lex).toEqual([{ id: 'L01', term: 'Wren', say: 'Ren', kind: 'names' }]);
-    expect(edit.addLexRule(added.book, 'a', 'b', 'terms').book.lex[1].id).toBe('L02');
-  });
-
-  it('edits and removes rules', () => {
-    const book = edit.addLexRule(audiobook(), 'Wren', 'Ren', 'names').book;
-    expect(edit.editLexRule(book, 'L01', 'say', ' Wrenn ').lex[0].say).toBe('Wrenn');
-    expect(edit.editLexRule(book, 'L01', 'term', '  ')).toBe(book);
-    expect(edit.editLexRule(book, 'L99', 'term', 'x')).toBe(book);
-    expect(edit.editLexRule(book, 'L01', 'term', 'Wren')).toBe(book);
-    expect(edit.removeLexRule(book, 'L01').lex).toEqual([]);
-    expect(edit.removeLexRule(book, 'L99')).toBe(book);
-  });
-
-  it('toggles symbols', () => {
-    const book = audiobook();
-    const off = edit.setSymbol(book, 'S1', false);
-    expect(off.symbols.find((item) => item.id === 'S1')?.on).toBe(false);
-    expect(edit.setSymbol(off, 'S1', false)).toBe(off);
-    expect(edit.setSymbol(book, 'S9', true)).toBe(book);
-  });
-});
-
 describe('unit audio', () => {
   it('stores clamped mix settings per unit', () => {
     const book = edit.setMix(audiobook(), 'U01', 'gap', 99);

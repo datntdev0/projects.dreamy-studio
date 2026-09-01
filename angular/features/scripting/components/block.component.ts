@@ -8,7 +8,7 @@ import { LanguageService } from '@shared/language/language.service';
 // prettier-ignore
 import { BlockPatch, BlockType, BlockTypeDef, CastMember, MoveDirection, ScriptBlock, ScriptContext } from '../scripting.models';
 // prettier-ignore
-import { BLOCK_TYPES, findBlock, isStale, SCENE_TIMES, speakerClass, speakerOf } from '../scripting.rules';
+import { BLOCK_TYPES, findBlock, SCENE_TIMES, speakerClass, speakerOf } from '../scripting.rules';
 import { ScriptingService } from '../scripting.service';
 import { arrowTarget, placeCaret, textFieldsIn } from './scripting.caret';
 import { ScriptingLabels } from './scripting.labels';
@@ -38,7 +38,6 @@ export class ScriptingBlock {
   readonly typeLabel = computed(this.buildTypeLabel.bind(this));
   readonly speaker = computed(this.buildSpeaker.bind(this));
   readonly speakerClass = computed(this.buildSpeakerClass.bind(this));
-  readonly stale = computed(this.buildStale.bind(this));
   readonly selected = computed(this.buildSelected.bind(this));
   readonly hasLine = computed(this.buildHasLine.bind(this));
   readonly seconds = computed(this.buildSeconds.bind(this));
@@ -109,7 +108,7 @@ export class ScriptingBlock {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    if (event.isComposing || this.ctx().locked) {
+    if (event.isComposing) {
       return;
     }
     const element = event.currentTarget as HTMLElement;
@@ -193,10 +192,6 @@ export class ScriptingBlock {
 
   private buildSpeakerClass(): string {
     return speakerClass(this.speaker());
-  }
-
-  private buildStale(): boolean {
-    return isStale(this.ctx().source, this.block());
   }
 
   private buildSelected(): boolean {

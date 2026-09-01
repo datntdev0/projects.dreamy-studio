@@ -7,18 +7,6 @@
         {{ labels.unitTitle(ctx().config, unit) }}
       }
     </dd>
-    <dt>{{ 'audiobook.inspector.script' | t }}</dt>
-    <dd>
-      @if (panel().locked) {
-        <span class="badge badge-success" data-testid="audiobook-inspector-chapter-locked">
-          {{ 'audiobook.inspector.locked' | t }}
-        </span>
-      } @else {
-        <span class="badge badge-warning" data-testid="audiobook-inspector-chapter-unlocked">
-          {{ 'audiobook.inspector.notLocked' | t }}
-        </span>
-      }
-    </dd>
     <dt>{{ 'audiobook.inspector.passage' | t }}</dt>
     <dd data-testid="audiobook-inspector-chapter-total">{{ panel().total || empty }}</dd>
     <dt>{{ 'audiobook.inspector.generated' | t }}</dt>
@@ -78,8 +66,23 @@
   </section>
 }
 <section class="ins-sec ins-actions" data-testid="ab-ins-actions">
-  <button type="button" class="btn" data-testid="ab-ins-script-btn" (click)="openScript()">
-    <ds-icon name="pen" [size]="16" />
-    {{ 'audiobook.inspector.openScript' | t }}
-  </button>
+  @if (ctx().unit?.blocks) {
+    @for (format of exportFormats; track format.format) {
+      <button
+        type="button"
+        class="btn"
+        [disabled]="!panel().canExport"
+        [attr.data-testid]="'ab-export-' + format.format"
+        (click)="exportAs(format.format)"
+      >
+        <ds-icon name="download" [size]="16" />
+        {{ format.labelKey | t }}
+      </button>
+    }
+    @if (!panel().canExport) {
+      <span class="field-hint" data-testid="ab-export-hint">
+        {{ 'audiobook.inspector.export.hint' | t }}
+      </span>
+    }
+  }
 </section>

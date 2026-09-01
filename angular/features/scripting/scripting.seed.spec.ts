@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { PROJECT_FIXTURES } from '../../stories/screens/project-management.fixtures';
 // prettier-ignore
-import { mockSourceOf, mockUnitSource, seedScripts, SPEAKER_HINTS, TEA_WOMAN } from '../../stories/screens/scripting.fixtures';
+import { mockSourceOf, seedScripts, SPEAKER_HINTS, TEA_WOMAN } from '../../stories/screens/scripting.fixtures';
 import { scriptingHandlers, withThirdChapter } from '../../stories/screens/scripting.mocks';
-import { DraftRequest, Script } from './scripting.models';
-import { findUnit, staleRefsOf } from './scripting.rules';
+import { Script } from './scripting.models';
+import { findUnit } from './scripting.rules';
 
 const WIRE_BASE = {
   translation_get: () => ({ guidelines: '', dict: [], chapters: {}, warnings: [] }),
@@ -30,12 +30,10 @@ function unitOf(script: Script, id: string) {
 describe('scripting seeds: Harrowmere audiobook', () => {
   const script = seedScripts()[1];
 
-  it('has one unit per chapter with the proto statuses', () => {
+  it('has one unit per chapter', () => {
     expect(script.cfg.preset).toBe('audiobook');
     expect(script.units).toHaveLength(12);
     expect(script.units.map((unit) => unit.id)[11]).toBe('U12');
-    expect(script.units.filter((unit) => unit.status === 'locked')).toHaveLength(11);
-    expect(unitOf(script, 'U03').status).toBe('review');
     expect(script.extraCast).toEqual([]);
     expect(script.units[0].title).toBe('Ngọn đèn cuối cùng');
     expect(script.units[3].title).toBe('The Ledger of Names');
@@ -89,17 +87,13 @@ describe('scripting seeds: Harrowmere audiobook', () => {
     expect(script.units[11].meta?.words).toBe(117);
   });
 
-  it('marks only chapter 3 blocks B30 and B31 as stale', () => {
+  it('writes chapter 3 from the current source text', () => {
     const owner = project(1);
-    const stale = script.units.map((unit) => staleRefsOf(unit, mockUnitSource(owner, unit)));
-    expect(stale.map((refs) => refs.length)).toEqual([0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    expect(stale[2]).toEqual(['3.2', '3.3']);
     const blocks = unitOf(script, 'U03').blocks ?? [];
     const source = mockSourceOf(owner, 3) ?? [];
-    for (const id of ['B30', 'B31']) {
-      const block = blocks.find((item) => item.id === id);
-      const current = source.find((item) => item.id === block?.ref);
-      expect(block?.snap).not.toBe(current?.text);
+    for (const block of blocks.filter((item) => item.ref !== null)) {
+      const paragraph = source.find((item) => item.id === block.ref);
+      expect(paragraph?.text).toContain(block.text);
     }
     expect(mockSourceOf(owner, 4)).toBeNull();
     expect(mockSourceOf(project(2), 1)).toBeNull();
@@ -139,14 +133,12 @@ describe('scripting seeds: other projects', () => {
     ]);
     expect(blocks[4]).toMatchObject({ type: 'dialogue', who: 'E3', paren: 'dry, curt' });
     expect(unitOf(film, 'U02').blocks).toBeNull();
-    expect(unitOf(film, 'U02').status).toBe('draft');
   });
 
-  it('seeds locked placeholder scripts', () => {
+  it('seeds placeholder scripts', () => {
     expect(scripts[4].units).toHaveLength(8);
     expect(scripts[4].units[0]).toMatchObject({
       title: 'Chapters 1',
-      status: 'locked',
       meta: { blocks: 59, words: 2230 },
     });
     expect(scripts[6].cfg.preset).toBe('film');
@@ -157,11 +149,10 @@ describe('scripting seeds: other projects', () => {
     expect(scripts[6].units[1].title).toBe('Episode 2');
   });
 
-  it('seeds the shorts with one narration per paragraph and locked chapters', () => {
+  it('seeds the shorts with one narration per paragraph', () => {
     const shorts = scripts[5];
-    expect(shorts.units.every((unit) => unit.status === 'locked')).toBe(true);
     const types = new Set((shorts.units[0].blocks ?? []).map((block) => block.type));
-    expect([...types]).toEqual(['heading', 'pause', 'narration']);
+    expect([...types]).toEqual(['narration']);
     expect(scripts[2]).toBeUndefined();
   });
 });
@@ -182,29 +173,41 @@ describe('scripting mock backend', () => {
   it('stores scripts, units and cast and derives the module progress', () => {
     const backend = handlers();
     const initial = backend['project_modules']({ projectId: 1 }) as { id: string; note: string }[];
-    expect(initial.find((row) => row.id === 'scripting')?.note).toBe(
-      '11/12 chapters locked · chapter 3 needs review',
-    );
+    expect(initial.find((row) => row.id === 'scripting')?.note).toBe('12/12 chapters');
     const script = backend['scripting_get']({ projectId: 1 }) as Script;
-    const unit = { ...unitOf(script, 'U03'), status: 'locked' };
-    backend['scripting_unit_save']({ projectId: 1, unit, seq: 40 });
-    const stale = backend['project_modules']({ projectId: 1 }) as {
+    const original = unitOf(script, 'U03');
+    const cleared = { ...original, blocks: [], meta: null };
+    backend['scripting_unit_save']({ projectId: 1, unit: cleared, seq: 40 });
+    const reduced = backend['project_modules']({ projectId: 1 }) as {
       id: string;
       state: string;
       note: string;
     }[];
-    expect(stale.find((row) => row.id === 'scripting')).toMatchObject({
-      state: 'stale',
-      note: '12/12 chapters · 1 need review',
+    expect(reduced.find((row) => row.id === 'scripting')).toMatchObject({
+      state: 'doing',
+      note: '11/12 chapters',
     });
-    expect(stale.find((row) => row.id === 'audiobook')?.state).toBe('stale');
+    expect(reduced.find((row) => row.id === 'audiobook')?.state).toBe('stale');
     expect((backend['scripting_get']({ projectId: 1 }) as Script).seq).toBe(40);
-    backend['scripting_unit_save']({ projectId: 1, unit: { ...unit, status: 'draft' }, seq: 40 });
+    backend['scripting_unit_save']({ projectId: 1, unit: original, seq: 40 });
+    const again = backend['project_modules']({ projectId: 1 }) as {
+      id: string;
+      state: string;
+      note: string;
+    }[];
+    expect(again.find((row) => row.id === 'scripting')).toMatchObject({
+      state: 'done',
+      note: '12/12 chapters',
+    });
     backend['scripting_cast_save']({ projectId: 1, extraCast: [] });
     expect((backend['scripting_get']({ projectId: 1 }) as Script).extraCast).toEqual([]);
     backend['scripting_save']({ projectId: 2, script: { ...script, units: [] } });
     expect((backend['scripting_get']({ projectId: 2 }) as Script).units).toEqual([]);
     expect(backend['project_modules']({ projectId: 2 })).toHaveLength(1);
+  });
+
+  it('serves no AI draft command', () => {
+    expect(handlers()['scripting_draft_generate']).toBeUndefined();
   });
 
   it('rejects writes to unknown scripts and units', () => {
@@ -228,52 +231,5 @@ describe('scripting mock backend', () => {
     expect(withThirdChapter(wire, 'EN')).toBe(wire);
     const served = handlers()['translation_get']({ target: 'VI' }) as typeof wire;
     expect(Object.keys(served.chapters)).toEqual(['ch-3']);
-  });
-
-  it('generates drafts after a delay', async () => {
-    vi.useFakeTimers();
-    try {
-      const backend = handlers();
-      const request: DraftRequest = {
-        preset: 'audiobook',
-        unit: { id: 'U03', no: 3, title: 'Tide', ch: 3, chs: null },
-        source: mockSourceOf(project(1), 3),
-        beats: [],
-        cast: [],
-      };
-      const pending = backend['scripting_draft_generate']({
-        projectId: 1,
-        unitId: 'U03',
-        provider: 'claude',
-        request,
-      }) as Promise<{ unit: { status: string; blocks: unknown[] }; seq: number }>;
-      await vi.advanceTimersByTimeAsync(1000);
-      const result = await pending;
-      expect(result.unit.status).toBe('draft');
-      expect(result.unit.blocks).toHaveLength(6);
-      expect(result.seq).toBe(39);
-      const stored = backend['scripting_get']({ projectId: 1 }) as Script;
-      expect(stored.seq).toBe(39);
-      expect(unitOf(stored, 'U03').blocks?.[0].text).toBe('Chapter three. Tide.');
-      const locked = backend['scripting_draft_generate']({
-        projectId: 1,
-        unitId: 'U01',
-        provider: 'x',
-        request,
-      });
-      const missing = backend['scripting_draft_generate']({
-        projectId: 1,
-        unitId: 'U03',
-        provider: 'x',
-        request: { ...request, source: null },
-      });
-      const settled = Promise.allSettled([locked, missing]);
-      await vi.advanceTimersByTimeAsync(1000);
-      const [first, second] = await settled;
-      expect(first.status).toBe('rejected');
-      expect(second.status).toBe('rejected');
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });

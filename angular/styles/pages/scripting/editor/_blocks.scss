@@ -15,9 +15,6 @@
   background: var(--canvas-soft);
   border-left-color: var(--primary);
 }
-.sc-blk.is-stale {
-  border-left-color: var(--warning);
-}
 .sc-blk.is-off {
   opacity: 0.6;
 }

@@ -1,7 +1,5 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
-import { LanguageKey } from '@shared/language/language.models';
-import { LanguageService } from '@shared/language/language.service';
 
 import { NovelKnowledge } from '../novel/novel.knowledge.models';
 import { NovelKnowledgeService } from '../novel/novel.knowledge.service';
@@ -13,14 +11,12 @@ import { toProjectError } from '../project/project.rules';
 import { ProjectService } from '../project/project.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { buildContext, castFor, unitSources } from './scripting.context';
-import { capitalize } from './scripting.dialogs.rules';
-import { draftLoadOf, draftOptionOf, estimateDraft } from './scripting.draft';
 import * as edit from './scripting.edit';
-import { kbBeatsOf, kbSnapshotOf, kbStatusOf } from './scripting.knowledge';
+import { kbSnapshotOf } from './scripting.knowledge';
 // prettier-ignore
-import { BlockPatch, BlockType, CastAddResult, CastMember, DraftEstimate, DraftLoad, DraftOption, DraftRequest, DraftResult, KbSnapshot, LockResult, MoveDirection, ResetScope, Script, ScriptChange, ScriptContext, ScriptIssue, ScriptPreset, ScriptSource, ScriptUnit, ScriptView, SourceParagraph, ViewFocus } from './scripting.models';
+import { BlockPatch, BlockType, CastAddResult, CastMember, KbSnapshot, MoveDirection, ResetScope, Script, ScriptChange, ScriptContext, ScriptPreset, ScriptSource, ScriptUnit, ScriptView, SourceParagraph, ViewFocus } from './scripting.models';
 // prettier-ignore
-import { activeUnit, anyGroupOpen, chaptersOf, emptyView, findBlock, findUnit, issuesOf, nextChapterRange, nextUnitChapters, replaceUnit, toggledAllGroups, toggledGroup, withoutGroup } from './scripting.rules';
+import { activeUnit, chaptersOf, emptyView, findBlock, findUnit, nextChapterRange, nextUnitChapters } from './scripting.rules';
 // prettier-ignore
 import { chapterParagraphs, chapterTitleOf, initialScript, unitSource, usesTranslation } from './scripting.source';
 
@@ -67,10 +63,6 @@ function stampNow(): string {
   return new Date().toISOString();
 }
 
-function without(list: string[], id: string): string[] {
-  return list.filter((item) => item !== id);
-}
-
 @Injectable({ providedIn: 'root' })
 export class ScriptingService {
   private readonly ipc = inject(DesktopIpcService);
@@ -79,11 +71,9 @@ export class ScriptingService {
   private readonly translation = inject(NovelTranslationService);
   private readonly knowledge = inject(NovelKnowledgeService);
   private readonly workspace = inject(WorkspaceService);
-  private readonly languageService = inject(LanguageService);
   private readonly scripts = signal<Record<number, Script>>({});
   private readonly views = signal<Record<number, ScriptView>>({});
   private readonly originals = signal<Record<string, ParagraphRow[]>>({});
-  private readonly drafting = signal<Record<number, string[]>>({});
   private readonly loadedIds = signal<Record<number, true>>({});
   private readonly chains = new Map<number, Promise<void>>();
   private workspacePath: string | null | undefined = undefined;
@@ -121,28 +111,7 @@ export class ScriptingService {
       hasNovel: project.novelId !== null,
       chapters: this.chapterMap(project, script),
       novelChapters: project.novelId === null ? 0 : this.novels.chaptersOf(project.novelId).length,
-      generating: this.drafting()[projectId] ?? [],
     });
-  }
-
-  isGenerating(projectId: number, unitId?: string): boolean {
-    const running = this.drafting()[projectId] ?? [];
-    return unitId === undefined ? running.length > 0 : running.includes(unitId);
-  }
-
-  issueMessage(issue: ScriptIssue): string {
-    const params = { ...issue.params };
-    if (typeof params['unit'] === 'string') {
-      params['unit'] = capitalize(
-        this.languageService.translate(`scripting.unit.${params['unit']}` as LanguageKey),
-      );
-    }
-    if (typeof params['type'] === 'string') {
-      params['type'] = this.languageService
-        .translate(`scripting.type.${params['type']}` as LanguageKey)
-        .toLowerCase();
-    }
-    return this.languageService.translate(issue.messageKey, params);
   }
 
   resettableUnitsOf(projectId: number): ScriptUnit[] {
@@ -152,47 +121,6 @@ export class ScriptingService {
       return [];
     }
     return edit.resettableUnits(script, unitSources(script, this.chapterMap(project, script)));
-  }
-
-  draftOptionsOf(projectId: number): DraftOption[] {
-    const project = this.projects.projectById(projectId);
-    const script = this.scriptOf(projectId);
-    if (!project || !script) {
-      return [];
-    }
-    const chapters = this.chapterMap(project, script);
-    const kb = this.kbOf(project);
-    return script.units.map((unit) =>
-      draftOptionOf({
-        config: script.cfg,
-        unit,
-        source: unitSource(unit, chapters),
-        kb: kbStatusOf(kb, project.novelId !== null, chaptersOf(unit)),
-      }),
-    );
-  }
-
-  draftEstimateOf(projectId: number, unitIds: string[]): DraftEstimate {
-    return estimateDraft(this.draftLoadsOf(projectId, unitIds));
-  }
-
-  draftWordsOf(projectId: number, unitIds: string[]): number {
-    return this.draftLoadsOf(projectId, unitIds).reduce((sum, load) => sum + load.words, 0);
-  }
-
-  private draftLoadsOf(projectId: number, unitIds: string[]): DraftLoad[] {
-    const project = this.projects.projectById(projectId);
-    const script = this.scriptOf(projectId);
-    if (!project || !script) {
-      return [];
-    }
-    const chapters = this.chapterMap(project, script);
-    const kb = this.kbOf(project);
-    return script.units
-      .filter((unit) => unitIds.includes(unit.id))
-      .map((unit) =>
-        draftLoadOf(script.cfg, unitSource(unit, chapters), kbBeatsOf(kb, chaptersOf(unit)) ?? []),
-      );
   }
 
   async load(projectId: number): Promise<void> {
@@ -220,7 +148,7 @@ export class ScriptingService {
     }
   }
 
-  async ensureSources(projectId: number, everyUnit = false): Promise<void> {
+  async ensureSources(projectId: number): Promise<void> {
     const project = this.projects.projectById(projectId);
     const script = this.scriptOf(projectId);
     if (!project || !script || project.novelId === null) {
@@ -229,7 +157,7 @@ export class ScriptingService {
     const wanted = new Set<number>();
     const active = activeUnit(script, this.viewOf(projectId).unit);
     for (const unit of script.units) {
-      if (everyUnit || unit === active || (unit.blocks && unit.blocks.length > 0)) {
+      if (unit === active || (unit.blocks && unit.blocks.length > 0)) {
         for (const seq of chaptersOf(unit)) {
           wanted.add(seq);
         }
@@ -271,44 +199,14 @@ export class ScriptingService {
     this.patchView(projectId, { sel: blockId });
   }
 
-  toggleGroup(projectId: number, ref: string): void {
-    this.patchView(projectId, { collapsed: toggledGroup(this.viewOf(projectId).collapsed, ref) });
-  }
-
-  toggleAllGroups(projectId: number): void {
-    const source = this.contextOf(projectId)?.source;
-    if (source) {
-      this.patchView(projectId, {
-        collapsed: toggledAllGroups(this.viewOf(projectId).collapsed, source),
-      });
-    }
-  }
-
-  anyGroupOpen(projectId: number): boolean {
-    const source = this.contextOf(projectId)?.source;
-    return source ? anyGroupOpen(this.viewOf(projectId).collapsed, source) : false;
-  }
-
-  toggleDrawer(projectId: number): void {
-    this.patchView(projectId, { drawer: !this.viewOf(projectId).drawer });
-  }
-
   gotoBlock(projectId: number, blockId: string): void {
-    const unit = this.activeOf(projectId);
-    const block = findBlock(unit, blockId);
-    const view = this.viewOf(projectId);
-    const collapsed = block?.ref ? withoutGroup(view.collapsed, block.ref) : view.collapsed;
-    this.patchView(projectId, { collapsed, sel: blockId, goto: blockId });
-  }
-
-  gotoRef(projectId: number, ref: string): void {
-    this.patchView(projectId, { ref });
+    this.patchView(projectId, { sel: blockId, goto: blockId });
   }
 
   consumeFocus(projectId: number): ViewFocus {
     const view = this.viewOf(projectId);
-    const pending: ViewFocus = { focus: view.focus, goto: view.goto, ref: view.ref };
-    this.patchView(projectId, { focus: null, goto: null, ref: null });
+    const pending: ViewFocus = { focus: view.focus, goto: view.goto };
+    this.patchView(projectId, { focus: null, goto: null });
     return pending;
   }
 
@@ -341,7 +239,7 @@ export class ScriptingService {
   setUnitTitle(projectId: number, title: string): void {
     const target = this.activeOf(projectId);
     const script = this.scriptOf(projectId);
-    if (script && target && target.status !== 'locked' && script.cfg.preset === 'film') {
+    if (script && target && script.cfg.preset === 'film') {
       const next = edit.setUnitTitle(script, target.id, title, stampNow());
       this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id, false));
     }
@@ -351,7 +249,7 @@ export class ScriptingService {
     const target = this.activeOf(projectId);
     const script = this.scriptOf(projectId);
     const project = this.projects.projectById(projectId);
-    if (!script || !target || !project || target.status === 'locked' || !script.cfg.ranges) {
+    if (!script || !target || !project || !script.cfg.ranges) {
       return;
     }
     const max = this.chapterMax(project);
@@ -364,7 +262,7 @@ export class ScriptingService {
   startWriting(projectId: number): string | null {
     const target = this.activeOf(projectId);
     const script = this.scriptOf(projectId);
-    if (!script || !target || target.status === 'locked') {
+    if (!script || !target) {
       return null;
     }
     const change = edit.startUnit(script, target.id, this.castOf(projectId), stampNow());
@@ -450,33 +348,6 @@ export class ScriptingService {
     return change.view.sel ?? null;
   }
 
-  lockUnit(projectId: number): LockResult {
-    const target = this.activeOf(projectId);
-    const script = this.scriptOf(projectId);
-    const source = this.activeSource(projectId);
-    if (!script || !target || target.status === 'locked') {
-      return 'noop';
-    }
-    const errors = issuesOf(script.cfg, target, source).filter((item) => item.level === 'error');
-    if (errors.length > 0) {
-      return 'errors';
-    }
-    const next = edit.lockUnit(script, target.id, stampNow());
-    this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id, true));
-    return 'locked';
-  }
-
-  unlockUnit(projectId: number): boolean {
-    const target = this.activeOf(projectId);
-    const script = this.scriptOf(projectId);
-    if (!script || !target || target.status !== 'locked') {
-      return false;
-    }
-    const next = edit.unlockUnit(script, target.id, this.activeSource(projectId), stampNow());
-    this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id, true));
-    return true;
-  }
-
   applyDefault(projectId: number): boolean {
     const ctx = this.editable(projectId, false);
     if (!ctx) {
@@ -503,7 +374,7 @@ export class ScriptingService {
     const script = this.scriptOf(projectId);
     const project = this.projects.projectById(projectId);
     const target = this.activeOf(projectId);
-    if (!script || !project || !target || target.status === 'locked') {
+    if (!script || !project || !target) {
       return 0;
     }
     const sources = unitSources(script, this.chapterMap(project, script));
@@ -518,48 +389,6 @@ export class ScriptingService {
       );
     }
     return result.count;
-  }
-
-  keepStale(projectId: number, ref: string): void {
-    const ctx = this.editable(projectId, false);
-    if (ctx) {
-      const next = edit.keepRef(
-        ctx.script,
-        ctx.unit.id,
-        ref,
-        this.activeSource(projectId),
-        stampNow(),
-      );
-      this.commit(projectId, { script: next, view: {} }, this.unitPersist(ctx.unit.id, true));
-    }
-  }
-
-  regenerate(projectId: number, ref: string): void {
-    const ctx = this.editable(projectId, false);
-    if (ctx) {
-      const next = edit.regenerateRef(
-        ctx.script,
-        ctx.unit.id,
-        ref,
-        this.activeSource(projectId),
-        stampNow(),
-      );
-      this.commit(projectId, { script: next, view: {} }, this.unitPersist(ctx.unit.id, true));
-    }
-  }
-
-  coverParagraph(projectId: number, ref: string): void {
-    const ctx = this.editable(projectId, false);
-    if (ctx) {
-      const next = edit.coverRef(
-        ctx.script,
-        ctx.unit.id,
-        ref,
-        this.activeSource(projectId),
-        stampNow(),
-      );
-      this.commit(projectId, { script: next, view: {} }, this.unitPersist(ctx.unit.id, true));
-    }
   }
 
   addCastMember(projectId: number, name: string): CastAddResult {
@@ -602,88 +431,14 @@ export class ScriptingService {
     return next !== script;
   }
 
-  async generateDrafts(projectId: number, unitIds: string[], provider: string): Promise<number> {
-    let generated = 0;
-    for (const unitId of unitIds) {
-      if (await this.generateDraft(projectId, unitId, provider)) {
-        generated += 1;
-      }
-    }
-    return generated;
-  }
-
   reset(): void {
     this.scripts.set({});
     this.views.set({});
     this.originals.set({});
-    this.drafting.set({});
     this.loadedIds.set({});
     this.chains.clear();
     this.loading.set(false);
     this.error.set(null);
-  }
-
-  private async generateDraft(
-    projectId: number,
-    unitId: string,
-    provider: string,
-  ): Promise<boolean> {
-    await this.ensureSources(projectId, true);
-    const request = this.draftRequestOf(projectId, unitId);
-    if (!request) {
-      return false;
-    }
-    await this.flush(projectId);
-    this.setDrafting(projectId, unitId, true);
-    try {
-      const result = await this.ipc.invoke<DraftResult>('scripting_draft_generate', {
-        projectId,
-        unitId,
-        provider,
-        request,
-      });
-      this.applyDraft(projectId, result);
-      await this.projects.refreshModules(projectId);
-      return true;
-    } catch (cause) {
-      this.error.set(toProjectError(cause));
-      return false;
-    } finally {
-      this.setDrafting(projectId, unitId, false);
-    }
-  }
-
-  private applyDraft(projectId: number, result: DraftResult): void {
-    const script = this.scriptOf(projectId);
-    if (script) {
-      const next = { ...replaceUnit(script, result.unit), seq: Math.max(script.seq, result.seq) };
-      this.scripts.set({ ...this.scripts(), [projectId]: next });
-    }
-  }
-
-  private draftRequestOf(projectId: number, unitId: string): DraftRequest | null {
-    const project = this.projects.projectById(projectId);
-    const script = this.scriptOf(projectId);
-    const unit = script ? findUnit(script, unitId) : undefined;
-    const option = this.draftOptionsOf(projectId).find((item) => item.unit.id === unitId);
-    if (!project || !script || !unit || !option || option.reason) {
-      return null;
-    }
-    const kb = this.kbOf(project);
-    const source = unitSource(unit, this.chapterMap(project, script));
-    return {
-      preset: script.cfg.preset,
-      unit: { id: unit.id, no: unit.no, title: unit.title, ch: unit.ch, chs: unit.chs },
-      source: source ? source.list : null,
-      beats: kbBeatsOf(kb, chaptersOf(unit)) ?? [],
-      cast: castFor(script, kb),
-    };
-  }
-
-  private setDrafting(projectId: number, unitId: string, running: boolean): void {
-    const current = this.drafting()[projectId] ?? [];
-    const next = running ? [...without(current, unitId), unitId] : without(current, unitId);
-    this.drafting.set({ ...this.drafting(), [projectId]: next });
   }
 
   private applyInsert(
@@ -755,7 +510,7 @@ export class ScriptingService {
     const project = this.projects.projectById(projectId);
     const script = this.scriptOf(projectId);
     const unit = script ? activeUnit(script, this.viewOf(projectId).unit) : null;
-    if (!project || !script || !unit || unit.status === 'locked') {
+    if (!project || !script || !unit) {
       return null;
     }
     if (needBlocks && !unit.blocks) {

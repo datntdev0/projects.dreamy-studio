@@ -1,9 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { LanguageService } from '@shared/language/language.service';
 import { FakeIpc } from '@testing/fake-ipc';
 import { ONTOLOGY_VIEW } from '@testing/knowledge';
 import { setupApp } from '@testing/service';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 // prettier-ignore
 import { KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS } from '../../stories/screens/novel-knowledge.fixtures';
@@ -11,10 +10,8 @@ import { KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS } from '../../stories/screens/novel
 import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from '../../stories/screens/novel-translation.fixtures';
 // prettier-ignore
 import { PROJECT_FIXTURES, projectModuleStatesFor } from '../../stories/screens/project-management.fixtures';
-import { SPEAKER_HINTS, TEA_WOMAN } from '../../stories/screens/scripting.fixtures';
+import { TEA_WOMAN } from '../../stories/screens/scripting.fixtures';
 import { scriptingHandlers } from '../../stories/screens/scripting.mocks';
-import { draftBlocksFor } from './scripting.draft';
-import { DraftRequest } from './scripting.models';
 import { ScriptingService } from './scripting.service';
 
 const STAMP = '2026-11-09T09:15:00Z';
@@ -81,29 +78,7 @@ function installBackend(ipc: FakeIpc): void {
   for (const [command, handler] of Object.entries(backend)) {
     ipc.on(command, (args) => handler(args ?? {}));
   }
-  ipc.on('scripting_draft_generate', draftHandler);
   ipc.on('project_modules', (args) => projectModuleStatesFor(Number(args?.['projectId'])));
-}
-
-function draftHandler(args: Record<string, unknown> | undefined): unknown {
-  const request = args?.['request'] as DraftRequest;
-  const ids = { seq: 100 };
-  const blocks = draftBlocksFor(ids, request, SPEAKER_HINTS);
-  if (!blocks) {
-    throw { code: 'no_source', detail: 'none' };
-  }
-  const unit = {
-    id: request.unit.id,
-    no: request.unit.no,
-    ch: request.unit.ch,
-    chs: request.unit.chs,
-    title: request.unit.title,
-    status: 'draft',
-    blocks,
-    meta: null,
-    updated: STAMP,
-  };
-  return { unit, seq: ids.seq };
 }
 
 describe('ScriptingService', () => {
@@ -129,18 +104,13 @@ describe('ScriptingService', () => {
       await open(1);
       expect(scripting.isLoaded(1)).toBe(true);
       const ctx = scripting.contextOf(1);
-      expect(ctx?.unit?.id).toBe('U03');
-      expect(ctx?.unit?.status).toBe('review');
+      expect(ctx?.unit?.id).toBe('U01');
       expect(ctx?.cast.map((member) => member.id)).toEqual(['narr', 'E1', 'E3', 'E5', 'E16']);
-      expect(ctx?.railSummary).toEqual({ locked: 11, total: 12, percent: 92 });
-      expect(ctx?.rail[2]).toMatchObject({ mark: 'stale', stale: 2, active: true });
-      expect(ctx?.rail[0]).toMatchObject({ mark: 'locked', stale: 0 });
-      expect(ctx?.staleRefs).toEqual(['3.2', '3.3']);
-      expect(ctx?.issues.map((issue) => issue.kind)).toEqual(['stale', 'stale']);
-      expect(ctx?.canLock).toBe(true);
+      expect(ctx?.railSummary).toEqual({ done: 12, total: 12, percent: 100 });
+      expect(ctx?.rail[0].active).toBe(true);
+      expect(ctx?.rail[2].active).toBe(false);
       expect(ctx?.hasDefault).toBe(true);
-      expect(ctx?.rows?.some((row) => row.blocks === null)).toBe(false);
-      expect(ctx?.stats).toMatchObject({ paragraphs: 4, covered: 4 });
+      expect(ctx?.stats).toMatchObject({ blocks: 13, scenes: null });
       expect(ctx?.chapterMax).toBe(12);
       expect(ctx?.kb.available).toBe(true);
       expect(ctx?.places).toContain('Tháp Đèn');
@@ -201,18 +171,13 @@ describe('ScriptingService', () => {
   describe('unknown projects', () => {
     it('ignores operations before a script is loaded', async () => {
       expect(scripting.resettableUnitsOf(1)).toEqual([]);
-      expect(scripting.lockUnit(1)).toBe('noop');
-      expect(scripting.unlockUnit(1)).toBe(false);
       expect(scripting.removeCastMember(1, 'x')).toBe(false);
       expect(scripting.resetUnits(1, 'all')).toBe(0);
       expect(scripting.addUnit(1)).toBeNull();
       expect(scripting.startWriting(1)).toBeNull();
       scripting.setPreset(1, 'film');
       scripting.renameCastMember(1, 'x', 'y');
-      scripting.keepStale(1, '1.1');
-      scripting.toggleAllGroups(1);
-      expect(scripting.anyGroupOpen(1)).toBe(false);
-      expect(await scripting.generateDrafts(1, ['U01'], 'claude')).toBe(0);
+      expect(scripting.applyDefault(1)).toBe(false);
       await scripting.ensureSources(1);
       expect(ipc.called('scripting_save')).toBe(0);
     });
@@ -233,9 +198,8 @@ describe('ScriptingService', () => {
       await scripting.ensureSources(1);
       const ctx = scripting.contextOf(1);
       expect(ctx?.unit?.id).toBe('U01');
-      expect(ctx?.locked).toBe(true);
       scripting.selectBlock(1, 'B3');
-      expect(scripting.contextOf(1)?.selected?.id).toBe('B3');
+      expect(scripting.viewOf(1).sel).toBe('B3');
       scripting.selectUnit(1, 'zz');
       expect(scripting.viewOf(1).unit).toBe('U01');
       expect(scripting.viewOf(1).sel).toBe('B3');
@@ -243,26 +207,12 @@ describe('ScriptingService', () => {
       expect(scripting.viewOf(1).sel).toBeNull();
     });
 
-    it('toggles source groups and the drawer', () => {
-      scripting.toggleGroup(1, '3.1');
-      expect(scripting.viewOf(1).collapsed).toEqual({ '3.1': true });
-      expect(scripting.anyGroupOpen(1)).toBe(true);
-      scripting.toggleAllGroups(1);
-      expect(Object.keys(scripting.viewOf(1).collapsed)).toHaveLength(4);
-      expect(scripting.anyGroupOpen(1)).toBe(false);
-      scripting.toggleAllGroups(1);
-      expect(scripting.viewOf(1).collapsed).toEqual({});
-      scripting.toggleDrawer(1);
-      expect(scripting.viewOf(1).drawer).toBe(true);
-    });
-
-    it('jumps to blocks and references', () => {
-      scripting.toggleGroup(1, '3.2');
+    it('jumps to a block', () => {
+      scripting.selectUnit(1, 'U03');
       scripting.gotoBlock(1, 'B30');
-      expect(scripting.viewOf(1)).toMatchObject({ sel: 'B30', goto: 'B30', collapsed: {} });
-      scripting.gotoRef(1, '3.4');
-      expect(scripting.consumeFocus(1)).toEqual({ focus: null, goto: 'B30', ref: '3.4' });
-      expect(scripting.consumeFocus(1)).toEqual({ focus: null, goto: null, ref: null });
+      expect(scripting.viewOf(1)).toMatchObject({ sel: 'B30', goto: 'B30' });
+      expect(scripting.consumeFocus(1)).toEqual({ focus: null, goto: 'B30' });
+      expect(scripting.consumeFocus(1)).toEqual({ focus: null, goto: null });
     });
   });
 
@@ -320,25 +270,28 @@ describe('ScriptingService', () => {
       expect(ipc.called('scripting_unit_save')).toBe(7);
     });
 
-    it('ignores edits of a locked unit or a missing unit', async () => {
+    it('edits any unit without a lock', async () => {
       scripting.selectUnit(1, 'U01');
       scripting.patchBlock(1, 'B3', { text: 'x' });
+      expect(scripting.contextOf(1)?.unit?.blocks?.[2].text).toBe('x');
+      expect(scripting.addBlock(1, 'note')).not.toBeNull();
+      expect(scripting.duplicateBlock(1, 'B3')).not.toBeNull();
+      expect(scripting.insertAfter(1, 'B3')).not.toBeNull();
       scripting.removeBlock(1, 'B3');
-      expect(scripting.addBlock(1, 'note')).toBeNull();
-      expect(scripting.duplicateBlock(1, 'B3')).toBeNull();
-      expect(scripting.startWriting(1)).toBeNull();
-      expect(scripting.insertAfter(1, 'B3')).toBeNull();
       await scripting.flush(1);
-      expect(ipc.called('scripting_unit_save')).toBe(0);
+      expect(ipc.called('scripting_unit_save')).toBe(5);
+    });
+
+    it('ignores edits of a missing project', () => {
       scripting.patchBlock(9, 'B3', { text: 'x' });
       expect(scripting.addBlock(9, 'note')).toBeNull();
+      expect(scripting.duplicateBlock(9, 'B3')).toBeNull();
     });
 
     it('starts writing from scratch and refreshes the progress', async () => {
       const first = scripting.startWriting(1);
       expect(first).toBe('B34');
       expect(scripting.contextOf(1)?.unit?.blocks).toHaveLength(1);
-      expect(scripting.contextOf(1)?.unit?.status).toBe('draft');
       await scripting.flush(1);
       expect(ipc.called('project_modules')).toBe(1);
     });
@@ -351,79 +304,50 @@ describe('ScriptingService', () => {
     });
   });
 
-  describe('locking', () => {
+  describe('progress', () => {
     beforeEach(async () => {
       await open(1);
     });
 
-    it('locks a clean unit and refreshes the module progress', async () => {
-      expect(scripting.lockUnit(1)).toBe('locked');
-      expect(scripting.contextOf(1)?.locked).toBe(true);
-      expect(scripting.lockUnit(1)).toBe('noop');
+    it('counts a unit as done while it has content', async () => {
+      expect(scripting.contextOf(1)?.railSummary).toEqual({ done: 12, total: 12, percent: 100 });
+      scripting.selectUnit(1, 'U03');
+      for (const block of scripting.contextOf(1)?.unit?.blocks ?? []) {
+        scripting.removeBlock(1, block.id);
+      }
+      expect(scripting.contextOf(1)?.railSummary).toEqual({ done: 11, total: 12, percent: 92 });
+      scripting.startWriting(1);
+      expect(scripting.contextOf(1)?.railSummary).toEqual({ done: 12, total: 12, percent: 100 });
       await scripting.flush(1);
       expect(ipc.called('project_modules')).toBe(1);
-      expect(scripting.contextOf(1)?.railSummary.locked).toBe(12);
     });
 
-    it('keeps the unit open after locking the only unlocked one', () => {
-      expect(scripting.contextOf(1)?.unit?.id).toBe('U03');
-      scripting.lockUnit(1);
-      expect(scripting.contextOf(1)?.unit?.id).toBe('U03');
-    });
-
-    it('refuses to lock a unit with errors', () => {
-      scripting.selectUnit(1, 'U03');
-      scripting.patchBlock(1, 'B29', { text: ' ' });
-      expect(scripting.lockUnit(1)).toBe('errors');
-      expect(scripting.contextOf(1)?.canLock).toBe(false);
-      expect(scripting.contextOf(1)?.checkSummary.errors).toBe(1);
-    });
-
-    it('unlocks into review when the source changed', async () => {
-      scripting.selectUnit(1, 'U03');
-      expect(scripting.unlockUnit(1)).toBe(false);
-      scripting.lockUnit(1);
-      expect(scripting.unlockUnit(1)).toBe(true);
-      expect(scripting.contextOf(1)?.unit?.status).toBe('review');
-      scripting.keepStale(1, '3.2');
-      scripting.keepStale(1, '3.3');
-      expect(scripting.contextOf(1)?.staleRefs).toEqual([]);
-      scripting.lockUnit(1);
-      scripting.unlockUnit(1);
-      expect(scripting.contextOf(1)?.unit?.status).toBe('draft');
-      await scripting.flush(1);
+    it('opens the first unit and keeps every unit editable', () => {
+      expect(scripting.contextOf(1)?.unit?.id).toBe('U01');
+      scripting.selectUnit(1, 'U01');
+      scripting.patchBlock(1, 'B1', { text: 'Edited title.' });
+      expect(scripting.contextOf(1)?.unit?.blocks?.[0].text).toBe('Edited title.');
     });
   });
 
-  describe('source repair', () => {
+  describe('defaults', () => {
     beforeEach(async () => {
       await open(1);
       scripting.selectUnit(1, 'U03');
-    });
-
-    it('regenerates a changed paragraph', async () => {
-      scripting.regenerate(1, '3.2');
-      expect(scripting.contextOf(1)?.staleRefs).toEqual(['3.3']);
-      await scripting.flush(1);
-      expect(ipc.called('project_modules')).toBe(1);
-    });
-
-    it('covers a missing paragraph', () => {
-      scripting.removeBlock(1, 'B31');
-      expect(scripting.contextOf(1)?.uncovered.map((item) => item.id)).toEqual(['3.3']);
-      expect(scripting.contextOf(1)?.issues.map((issue) => issue.kind)).toContain('uncovered');
-      scripting.coverParagraph(1, '3.3');
-      expect(scripting.contextOf(1)?.uncovered).toEqual([]);
     });
 
     it('resets to the default for the unit or all units', async () => {
       expect(scripting.applyDefault(1)).toBe(true);
-      expect(scripting.contextOf(1)?.unit?.status).toBe('draft');
-      expect(scripting.contextOf(1)?.unit?.blocks?.length).toBe(6);
-      expect(scripting.resettableUnitsOf(1).map((unit) => unit.id)).toEqual(['U03']);
-      expect(scripting.resetUnits(1, 'all')).toBe(1);
+      expect(scripting.contextOf(1)?.unit?.blocks?.map((block) => block.type)).toEqual([
+        'narration',
+        'narration',
+        'narration',
+        'narration',
+      ]);
+      expect(scripting.resettableUnitsOf(1).map((unit) => unit.id)).toEqual(['U01', 'U02', 'U03']);
+      expect(scripting.resetUnits(1, 'all')).toBe(3);
       expect(scripting.resetUnits(1, 'unit')).toBe(1);
-      scripting.selectUnit(1, 'U01');
+      scripting.selectUnit(1, 'U04');
       expect(scripting.resetUnits(1, 'unit')).toBe(0);
       expect(scripting.applyDefault(1)).toBe(false);
       await scripting.flush(1);
@@ -462,81 +386,6 @@ describe('ScriptingService', () => {
       expect(scripting.addUnit(1)).toBeNull();
       expect(scripting.contextOf(1)?.unit?.title).toBe('Điều thủy triều trả lại');
     });
-
-    it('describes the drafting options and the estimate', () => {
-      const options = scripting.draftOptionsOf(3);
-      expect(options.map((option) => option.reason)).toEqual([null, null]);
-      const estimate = scripting.draftEstimateOf(3, ['U01', 'U02']);
-      expect(estimate.tin).toBeGreaterThan(700);
-      expect(scripting.draftEstimateOf(3, []).tin).toBe(0);
-      expect(scripting.draftOptionsOf(99)).toEqual([]);
-      expect(scripting.draftEstimateOf(99, ['U01']).tin).toBe(0);
-    });
-  });
-
-  describe('AI drafts', () => {
-    it('generates drafts sequentially and applies them', async () => {
-      await open(1);
-      expect(scripting.isGenerating(1)).toBe(false);
-      const count = await scripting.generateDrafts(1, ['U03', 'U01'], 'claude');
-      expect(count).toBe(1);
-      expect(scripting.isGenerating(1)).toBe(false);
-      const drafted = scripting.scriptOf(1)?.units[2];
-      expect(drafted?.status).toBe('draft');
-      expect(drafted?.blocks?.[0].text).toBe('Chapter three. Điều thủy triều trả lại.');
-      expect(scripting.scriptOf(1)?.seq).toBeGreaterThanOrEqual(100);
-      expect(ipc.lastArgs('scripting_draft_generate')).toMatchObject({
-        projectId: 1,
-        unitId: 'U03',
-        provider: 'claude',
-      });
-      expect(ipc.called('project_modules')).toBe(1);
-    });
-
-    it('marks the unit as generating while waiting', async () => {
-      await open(1);
-      let release: () => void = () => undefined;
-      ipc.on('scripting_draft_generate', async (args) => {
-        await new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        return draftHandler(args);
-      });
-      const pending = scripting.generateDrafts(1, ['U03'], 'claude');
-      await vi.waitFor(() => expect(scripting.isGenerating(1, 'U03')).toBe(true));
-      expect(scripting.isGenerating(1, 'U01')).toBe(false);
-      expect(scripting.contextOf(1)?.generating).toBe(true);
-      release();
-      await pending;
-      expect(scripting.isGenerating(1)).toBe(false);
-    });
-
-    it('reports a failed draft', async () => {
-      await open(1);
-      ipc.fail('scripting_draft_generate', { code: 'llm', detail: 'down' });
-      expect(await scripting.generateDrafts(1, ['U03'], 'claude')).toBe(0);
-      expect(scripting.error()).toEqual({ code: 'llm', detail: 'down' });
-      expect(scripting.isGenerating(1)).toBe(false);
-    });
-
-    it('skips locked and unknown units', async () => {
-      await open(1);
-      expect(await scripting.generateDrafts(1, ['U01', 'zz'], 'claude')).toBe(0);
-      expect(ipc.called('scripting_draft_generate')).toBe(0);
-    });
-
-    it('drafts an episode from the Knowledgebase', async () => {
-      await open(3);
-      scripting.selectUnit(3, 'U02');
-      expect(await scripting.generateDrafts(3, ['U02'], 'claude')).toBe(1);
-      const blocks = scripting.scriptOf(3)?.units[1].blocks ?? [];
-      expect(blocks[0].type).toBe('scene');
-      expect(blocks[0].loc).not.toBe('');
-      const request = ipc.lastArgs('scripting_draft_generate')?.['request'] as DraftRequest;
-      expect(request.preset).toBe('film');
-      expect(request.beats.length).toBeGreaterThan(0);
-      expect(request.source?.length).toBe(4);
-    });
   });
 
   describe('cast', () => {
@@ -559,31 +408,6 @@ describe('ScriptingService', () => {
       await scripting.flush(1);
       expect(ipc.called('scripting_cast_save')).toBe(3);
       expect(ipc.lastArgs('scripting_cast_save')?.['extraCast']).toHaveLength(0);
-    });
-  });
-
-  describe('messages', () => {
-    beforeEach(() => {
-      TestBed.inject(LanguageService).setLanguage('en');
-    });
-
-    it('renders issue messages with their parameters', async () => {
-      await open(1);
-      scripting.selectUnit(1, 'U03');
-      const [stale] = scripting.contextOf(1)?.issues ?? [];
-      expect(scripting.issueMessage(stale)).toBe(
-        'Source paragraph ¶2 changed after the script was made.',
-      );
-      scripting.patchBlock(1, 'B29', { text: '' });
-      const empty = scripting.contextOf(1)?.issues.find((item) => item.kind === 'empty');
-      expect(scripting.issueMessage(empty as never)).toBe('The narration block is empty.');
-      scripting.selectUnit(1, 'U04');
-      const none = {
-        kind: 'none',
-        params: { unit: 'chapter' },
-        messageKey: 'scripting.issue.none',
-      };
-      expect(scripting.issueMessage(none as never)).toBe('Chapter has no content.');
     });
   });
 });

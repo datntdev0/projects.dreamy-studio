@@ -20,10 +20,6 @@ export class AudiobookBanners {
 
   readonly ctx = input.required<AudiobookContext>();
 
-  openScripting(): void {
-    this.navigation.openScripting(this.ctx().projectId);
-  }
-
   editBlock(blocker: Blocker): void {
     if (blocker.blockId) {
       this.navigation.editBlock(this.ctx().projectId, blocker.blockId);

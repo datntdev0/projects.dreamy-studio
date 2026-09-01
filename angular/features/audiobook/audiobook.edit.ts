@@ -1,13 +1,5 @@
-import {
-  Audiobook,
-  AudioRecord,
-  LexAddResult,
-  LexField,
-  LexKind,
-  MixField,
-  UnitAudio,
-} from './audiobook.models';
-import { clampMix, clampSpeed, nextLexId, speakerVoiceOf, unitAudioOf } from './audiobook.rules';
+import { Audiobook, AudioRecord, MixField, UnitAudio } from './audiobook.models';
+import { clampMix, clampSpeed, speakerVoiceOf, unitAudioOf } from './audiobook.rules';
 
 export const DEFAULT_FLAG_NOTE = 'Needs re-listening';
 
@@ -39,54 +31,6 @@ export function removeSpeakerVoice(book: Audiobook, speakerId: string): Audioboo
   const voices = { ...book.voices };
   delete voices[speakerId];
   return { ...book, voices };
-}
-
-export function addLexRule(
-  book: Audiobook,
-  term: string,
-  say: string,
-  kind: LexKind,
-): { book: Audiobook; result: LexAddResult } {
-  const cleanTerm = term.trim();
-  const cleanSay = say.trim();
-  if (!cleanTerm || !cleanSay) {
-    return { book, result: 'empty' };
-  }
-  const rule = { id: nextLexId(book.lex), term: cleanTerm, say: cleanSay, kind };
-  return { book: { ...book, lex: [...book.lex, rule] }, result: 'added' };
-}
-
-export function editLexRule(
-  book: Audiobook,
-  id: string,
-  field: LexField,
-  value: string,
-): Audiobook {
-  const clean = value.trim();
-  const target = book.lex.find((rule) => rule.id === id);
-  if (!target || !clean || target[field] === clean) {
-    return book;
-  }
-  const lex = book.lex.map((rule) => (rule.id === id ? { ...rule, [field]: clean } : rule));
-  return { ...book, lex };
-}
-
-export function removeLexRule(book: Audiobook, id: string): Audiobook {
-  if (!book.lex.some((rule) => rule.id === id)) {
-    return book;
-  }
-  return { ...book, lex: book.lex.filter((rule) => rule.id !== id) };
-}
-
-export function setSymbol(book: Audiobook, id: string, on: boolean): Audiobook {
-  const target = book.symbols.find((symbol) => symbol.id === id);
-  if (!target || target.on === on) {
-    return book;
-  }
-  return {
-    ...book,
-    symbols: book.symbols.map((item) => (item.id === id ? { ...item, on } : item)),
-  };
 }
 
 export function setMix(book: Audiobook, unitId: string, field: MixField, value: number): Audiobook {

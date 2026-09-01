@@ -1,27 +1,20 @@
 import { WireKnowledge } from '@features/novel/novel.knowledge.models';
 import { WireChapter, WireTranslation } from '@features/novel/novel.translation.models';
 import { ProjectModuleState } from '@features/project/project.models';
-import { draftBlocksFor } from '@features/scripting/scripting.draft';
 // prettier-ignore
-import { CastMember, DraftRequest, DraftResult, Script, ScriptUnit } from '@features/scripting/scripting.models';
-// prettier-ignore
-import { findUnit, replaceUnit, scriptProgress, staleRefsOf } from '@features/scripting/scripting.rules';
+import { CastMember, Script, ScriptUnit } from '@features/scripting/scripting.models';
+import { findUnit, replaceUnit, scriptProgress } from '@features/scripting/scripting.rules';
 
 import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from './novel-translation.fixtures';
-import { PROJECT_FIXTURES, projectModuleStatesFor } from './project-management.fixtures';
+import { projectModuleStatesFor } from './project-management.fixtures';
 import { IpcHandlers } from './screen.mocks';
-import { mockUnitSource, seedScripts, SPEAKER_HINTS, TEA_WOMAN } from './scripting.fixtures';
+import { seedScripts, TEA_WOMAN } from './scripting.fixtures';
 
-const DRAFT_DELAY_MS = 700;
 const THIRD_CHAPTER = 3;
 
 export interface ScriptingState {
   scripts: Record<number, Script>;
   progress: Record<number, ProjectModuleState>;
-}
-
-function pause(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function clone<T>(value: T): T {
@@ -44,19 +37,10 @@ function hasScriptingModule(projectId: number): boolean {
   return projectModuleStatesFor(projectId).some((row) => row.id === 'scripting');
 }
 
-function staleUnits(projectId: number, script: Script): number {
-  const project = PROJECT_FIXTURES.find((item) => item.id === projectId);
-  if (!project) {
-    return 0;
-  }
-  return script.units.filter((unit) => staleRefsOf(unit, mockUnitSource(project, unit)).length > 0)
-    .length;
-}
-
 function refreshProgress(state: ScriptingState, projectId: number): void {
   const script = state.scripts[projectId];
   if (script && hasScriptingModule(projectId)) {
-    state.progress[projectId] = scriptProgress(script, staleUnits(projectId, script));
+    state.progress[projectId] = scriptProgress(script);
   }
 }
 
@@ -83,33 +67,6 @@ function saveCast(state: ScriptingState, args: Record<string, unknown>): void {
   const script = scriptOf(state, args);
   const extraCast = clone(args['extraCast'] as CastMember[]);
   store(state, numberArg(args, 'projectId'), { ...script, extraCast });
-}
-
-async function generateDraft(
-  state: ScriptingState,
-  args: Record<string, unknown>,
-): Promise<DraftResult> {
-  await pause(DRAFT_DELAY_MS);
-  const projectId = numberArg(args, 'projectId');
-  const script = scriptOf(state, args);
-  const unit = findUnit(script, String(args['unitId']));
-  if (!unit || unit.status === 'locked') {
-    throw { code: 'locked', detail: 'The unit is locked or missing.' };
-  }
-  const ids = { seq: script.seq };
-  const blocks = draftBlocksFor(ids, args['request'] as DraftRequest, SPEAKER_HINTS);
-  if (!blocks) {
-    throw { code: 'no_source', detail: 'The unit has no source content.' };
-  }
-  const drafted: ScriptUnit = {
-    ...unit,
-    blocks,
-    meta: null,
-    status: 'draft',
-    updated: new Date().toISOString(),
-  };
-  store(state, projectId, { ...replaceUnit(script, drafted), seq: ids.seq });
-  return clone({ unit: drafted, seq: ids.seq });
 }
 
 function modulesOf(state: ScriptingState, args: Record<string, unknown>): ProjectModuleState[] {
@@ -150,14 +107,13 @@ function knowledgeHandlers(base: IpcHandlers): IpcHandlers {
   return source ? { knowledge_get: (args) => withTeaWoman(source(args) as WireKnowledge) } : {};
 }
 
-export function createScriptingState(stale: boolean): ScriptingState {
-  return { scripts: seedScripts(stale), progress: {} };
+export function createScriptingState(): ScriptingState {
+  return { scripts: seedScripts(), progress: {} };
 }
 
 export function scriptingHandlers(
   base: IpcHandlers,
-  stale = true,
-  state: ScriptingState = createScriptingState(stale),
+  state: ScriptingState = createScriptingState(),
 ): IpcHandlers {
   return {
     scripting_get: (args) => {
@@ -167,7 +123,6 @@ export function scriptingHandlers(
     scripting_save: (args) => saveScript(state, args),
     scripting_unit_save: (args) => saveUnit(state, args),
     scripting_cast_save: (args) => saveCast(state, args),
-    scripting_draft_generate: (args) => generateDraft(state, args),
     project_modules: (args) => modulesOf(state, args),
     ...knowledgeHandlers(base),
     translation_get: (args) =>

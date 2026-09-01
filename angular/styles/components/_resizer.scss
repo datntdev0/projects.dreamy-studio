@@ -1,0 +1,14 @@
+ds-resizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  z-index: 3;
+  width: 3px;
+}
+.ds-resizer {
+  height: 100%;
+}
+.ds-resizer.is-active {
+  background: var(--primary);
+}

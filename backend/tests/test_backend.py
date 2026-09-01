@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import tempfile
 import unittest
@@ -7,48 +6,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import FastAPI
+from support import asgi_request
 
 from app.errors import register_error_handlers
 from app.log import DailyFileHandler, LineFormatter, delete_old_logs, setup_logging
 
 
 class BackendErrorTests(unittest.TestCase):
-    def request(self, app: FastAPI, path: str) -> tuple[int, dict]:
-        messages = []
-
-        async def receive():
-            return {"type": "http.request", "body": b"", "more_body": False}
-
-        async def send(message):
-            messages.append(message)
-
-        scope = {
-            "type": "http",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "method": "GET",
-            "scheme": "http",
-            "path": path,
-            "raw_path": path.encode(),
-            "query_string": b"",
-            "root_path": "",
-            "headers": [],
-            "server": ("localhost", 80),
-            "client": ("127.0.0.1", 1),
-        }
-
-        async def run():
-            try:
-                await app(scope, receive, send)
-            except RuntimeError:
-                # Starlette sends the 500 response and then re-raises for the server.
-                pass
-
-        asyncio.run(run())
-        import json
-
-        return messages[0]["status"], json.loads(messages[1]["body"])
-
     def test_http_and_unexpected_errors(self):
         app = FastAPI()
         register_error_handlers(app)
@@ -61,19 +25,19 @@ class BackendErrorTests(unittest.TestCase):
         def item(item_id: int):
             return {"item_id": item_id}
 
-        status, body = self.request(app, "/missing")
+        status, body = asgi_request(app, "GET", "/missing")
         self.assertEqual(
             (status, body), (404, {"code": "HTTP_404", "message": "Not Found", "details": None})
         )
 
-        status, body = self.request(app, "/items/invalid")
+        status, body = asgi_request(app, "GET", "/items/invalid")
         self.assertEqual(
             (status, body),
             (422, {"code": "HTTP_422", "message": "Invalid request", "details": None}),
         )
 
         with self.assertLogs("errors", level="ERROR") as captured:
-            status, body = self.request(app, "/fail")
+            status, body = asgi_request(app, "GET", "/fail")
         self.assertEqual(
             (status, body),
             (

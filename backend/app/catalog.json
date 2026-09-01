@@ -1,0 +1,40 @@
+{
+  "cuda": {
+    "version": "12.4",
+    "sizeBytes": 1077700558,
+    "packages": [
+      { "name": "nvidia-cuda-runtime-cu12", "version": "12.4.127" },
+      { "name": "nvidia-cublas-cu12", "version": "12.4.5.8" },
+      { "name": "nvidia-cudnn-cu12", "version": "9.1.0.70" }
+    ]
+  },
+  "models": [
+    {
+      "id": "vieneu-turbo",
+      "name": "VieNeu-TTS v3 Turbo",
+      "source": "pnnbao-ump/VieNeu-TTS-v3-Turbo",
+      "languages": ["vi", "en"],
+      "cloning": true,
+      "gpuRecommended": false,
+      "sizeBytes": 2157916899
+    },
+    {
+      "id": "vieneu-nano",
+      "name": "VieNeu-TTS v3 Nano",
+      "source": "pnnbao-ump/VieNeu-TTS-v3-Nano",
+      "languages": ["vi", "en"],
+      "cloning": true,
+      "gpuRecommended": false,
+      "sizeBytes": 419935807
+    },
+    {
+      "id": "omnivoice",
+      "name": "OmniVoice",
+      "source": "k2-fsa/OmniVoice",
+      "languages": ["mul"],
+      "cloning": true,
+      "gpuRecommended": true,
+      "sizeBytes": 3267465820
+    }
+  ]
+}

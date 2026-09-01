@@ -10,13 +10,27 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 logger = logging.getLogger("errors")
 
 
+class BackendError(Exception):
+    def __init__(self, status: int, code: str, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
+        self.message = message
+
+
 def error_response(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(
         status_code=status, content={"code": code, "message": message, "details": None}
     )
 
 
+async def on_backend_error(request: Request, error: BackendError) -> JSONResponse:
+    return error_response(error.status, error.code, error.message)
+
+
 def register_error_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(BackendError, on_backend_error)
+
     @app.exception_handler(StarletteHTTPException)
     async def on_http_error(request: Request, error: StarletteHTTPException) -> JSONResponse:
         return error_response(error.status_code, f"HTTP_{error.status_code}", str(error.detail))

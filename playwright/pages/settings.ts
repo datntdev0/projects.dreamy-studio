@@ -6,6 +6,8 @@ export type LlmTab = 'cli' | 'cloud' | 'features';
 export type LlmFeatureId = 'translation' | 'knowledge' | 'assistant';
 export type CliId = 'claude' | 'codex' | 'antigravity';
 export type CloudId = 'anthropic' | 'openai' | 'google' | 'openrouter' | 'custom';
+export type BackendTab = 'general' | 'models';
+export type BackendModelId = 'vieneu-turbo' | 'vieneu-nano' | 'omnivoice';
 
 export class SettingsDialogPage {
   constructor(private readonly page: Page) {}
@@ -265,6 +267,253 @@ export class SettingsLlmPage {
   }
 }
 
+export class SettingsBackendModelCard {
+  constructor(
+    private readonly page: Page,
+    private readonly id: BackendModelId,
+  ) {}
+
+  private part(name: string): Locator {
+    return this.page.getByTestId(`settings-backend-model-${this.id}-${name}`);
+  }
+
+  get root(): Locator {
+    return this.page.getByTestId(`settings-backend-model-${this.id}`);
+  }
+
+  get name(): Locator {
+    return this.part('name');
+  }
+
+  get badge(): Locator {
+    return this.part('badge');
+  }
+
+  get source(): Locator {
+    return this.part('source');
+  }
+
+  get note(): Locator {
+    return this.part('note');
+  }
+
+  get tags(): Locator {
+    return this.part('tags').locator('.tag');
+  }
+
+  get size(): Locator {
+    return this.part('size');
+  }
+
+  get cpuWarning(): Locator {
+    return this.part('cpu-warning');
+  }
+
+  get progress(): Locator {
+    return this.part('progress');
+  }
+
+  get progressBar(): Locator {
+    return this.part('progress-bar');
+  }
+
+  get progressText(): Locator {
+    return this.part('progress-text');
+  }
+
+  get error(): Locator {
+    return this.part('error');
+  }
+
+  get status(): Locator {
+    return this.part('status');
+  }
+
+  get download(): Locator {
+    return this.part('download');
+  }
+
+  get cancel(): Locator {
+    return this.part('cancel');
+  }
+
+  get retry(): Locator {
+    return this.part('retry');
+  }
+
+  get remove(): Locator {
+    return this.part('remove');
+  }
+}
+
+export class SettingsBackendPage {
+  constructor(private readonly page: Page) {}
+
+  private part(name: string): Locator {
+    return this.page.getByTestId(`settings-backend-${name}`);
+  }
+
+  tab(id: BackendTab): Locator {
+    return this.part('tabs').getByTestId(`tab-${id}`);
+  }
+
+  get server(): Locator {
+    return this.part('server');
+  }
+
+  get serverName(): Locator {
+    return this.part('server-name');
+  }
+
+  get serverBadge(): Locator {
+    return this.part('server-badge');
+  }
+
+  get facts(): Locator {
+    return this.part('facts').locator('dt');
+  }
+
+  get address(): Locator {
+    return this.part('address');
+  }
+
+  get version(): Locator {
+    return this.part('version');
+  }
+
+  get python(): Locator {
+    return this.part('python');
+  }
+
+  get uptime(): Locator {
+    return this.part('uptime');
+  }
+
+  get serverError(): Locator {
+    return this.part('server-error');
+  }
+
+  get status(): Locator {
+    return this.part('status');
+  }
+
+  get logs(): Locator {
+    return this.part('logs');
+  }
+
+  get check(): Locator {
+    return this.part('check');
+  }
+
+  get restart(): Locator {
+    return this.part('restart');
+  }
+
+  get gpuHint(): Locator {
+    return this.part('gpu-hint');
+  }
+
+  get gpuBadge(): Locator {
+    return this.part('gpu-badge');
+  }
+
+  get gpuRescan(): Locator {
+    return this.part('gpu-rescan');
+  }
+
+  get cudaRow(): Locator {
+    return this.part('cuda-row');
+  }
+
+  get cudaHint(): Locator {
+    return this.part('cuda-hint');
+  }
+
+  get cudaNeedGpu(): Locator {
+    return this.part('cuda-need-gpu');
+  }
+
+  get cudaDownload(): Locator {
+    return this.part('cuda-download');
+  }
+
+  get cudaProgress(): Locator {
+    return this.part('cuda-progress');
+  }
+
+  get cudaProgressBar(): Locator {
+    return this.part('cuda-progress-bar');
+  }
+
+  get cudaProgressText(): Locator {
+    return this.part('cuda-progress-text');
+  }
+
+  get cudaCancel(): Locator {
+    return this.part('cuda-cancel');
+  }
+
+  get cudaBadge(): Locator {
+    return this.part('cuda-badge');
+  }
+
+  get cudaRemove(): Locator {
+    return this.part('cuda-remove');
+  }
+
+  get cudaError(): Locator {
+    return this.part('cuda-error');
+  }
+
+  get cudaRetry(): Locator {
+    return this.part('cuda-retry');
+  }
+
+  get deviceHint(): Locator {
+    return this.part('device-hint');
+  }
+
+  get deviceOptions(): Locator {
+    return this.part('device').getByRole('button');
+  }
+
+  device(label: string): Locator {
+    return this.part('device').getByRole('button', { name: label, exact: true });
+  }
+
+  get note(): Locator {
+    return this.part('note');
+  }
+
+  get modelCards(): Locator {
+    return this.part('model-list').locator('article');
+  }
+
+  get modelsEmpty(): Locator {
+    return this.part('models-empty');
+  }
+
+  get folder(): Locator {
+    return this.part('folder');
+  }
+
+  get folderPath(): Locator {
+    return this.part('folder-path');
+  }
+
+  get folderOpen(): Locator {
+    return this.part('folder-open');
+  }
+
+  get folderHint(): Locator {
+    return this.part('folder-hint');
+  }
+
+  model(id: BackendModelId): SettingsBackendModelCard {
+    return new SettingsBackendModelCard(this.page, id);
+  }
+}
+
 export class TitlebarMenu {
   constructor(private readonly page: Page) {}
 
@@ -293,12 +542,14 @@ export class SettingsPage {
   readonly dialog: SettingsDialogPage;
   readonly general: SettingsGeneralPage;
   readonly llm: SettingsLlmPage;
+  readonly backend: SettingsBackendPage;
   readonly titlebar: TitlebarMenu;
 
   constructor(private readonly page: Page) {
     this.dialog = new SettingsDialogPage(page);
     this.general = new SettingsGeneralPage(page);
     this.llm = new SettingsLlmPage(page);
+    this.backend = new SettingsBackendPage(page);
     this.titlebar = new TitlebarMenu(page);
   }
 

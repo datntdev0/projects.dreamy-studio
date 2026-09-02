@@ -183,6 +183,7 @@ interface IpcState {
   modes: Record<string, IpcMode>;
   calls: Record<string, unknown[]>;
   held: Record<string, Array<() => void>>;
+  done: Record<string, number>;
 }
 
 interface IpcWindow {
@@ -194,7 +195,7 @@ function wrapIpc(): void {
   if (scope.__dreamyIpc) {
     return;
   }
-  const state: IpcState = { modes: {}, calls: {}, held: {} };
+  const state: IpcState = { modes: {}, calls: {}, held: {}, done: {} };
   scope.__dreamyIpc = state;
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
@@ -212,7 +213,9 @@ function wrapIpc(): void {
       typeof init?.body === 'string' ? JSON.parse(init.body) : null,
     ];
     if (mode === 'pass') {
-      return original(input, init);
+      return original(input, init).finally(() => {
+        state.done[command] = (state.done[command] ?? 0) + 1;
+      });
     }
     if (mode === 'hold') {
       return new Promise((resolve) => {
@@ -243,6 +246,10 @@ function readIpcCalls(command: string): unknown[] {
   return (window as unknown as IpcWindow).__dreamyIpc?.calls[command] ?? [];
 }
 
+function readIpcDone(command: string): number {
+  return (window as unknown as IpcWindow).__dreamyIpc?.done[command] ?? 0;
+}
+
 function releaseIpc(command: string): void {
   const state = (window as unknown as IpcWindow).__dreamyIpc;
   const waiting = state?.held[command] ?? [];
@@ -267,6 +274,10 @@ export class IpcSpy {
 
   calls(command: string): Promise<unknown[]> {
     return this.pageOf().evaluate(readIpcCalls, command);
+  }
+
+  done(command: string): Promise<number> {
+    return this.pageOf().evaluate(readIpcDone, command);
   }
 
   async release(command: string): Promise<void> {

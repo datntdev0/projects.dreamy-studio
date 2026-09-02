@@ -48,5 +48,4 @@ export interface TtsModel extends BackendDownload {
   languages: string[];
   cloning: boolean;
   gpuRecommended: boolean;
-  isDefault: boolean;
 }

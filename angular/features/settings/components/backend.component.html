@@ -77,13 +77,13 @@
           <div class="be-fact" data-testid="settings-backend-version-fact">
             <dt class="t-sm t-mute">{{ 'settings.backend.fact.version' | t }}</dt>
             <dd class="path" data-testid="settings-backend-version">
-              {{ server().version || '—' }}
+              {{ text(server().version) }}
             </dd>
           </div>
           <div class="be-fact" data-testid="settings-backend-python-fact">
             <dt class="t-sm t-mute">{{ 'settings.backend.fact.python' | t }}</dt>
             <dd class="path" data-testid="settings-backend-python">
-              {{ server().pythonVersion || '—' }}
+              {{ text(server().pythonVersion) }}
             </dd>
           </div>
           <div class="be-fact" data-testid="settings-backend-uptime-fact">
@@ -167,7 +167,7 @@
               <button
                 type="button"
                 class="btn btn-sm"
-                [disabled]="scanning()"
+                [disabled]="!canScan()"
                 data-testid="settings-backend-gpu-rescan"
                 (click)="scanGpu()"
               >
@@ -176,7 +176,12 @@
               </button>
             </div>
           </div>
-          <div class="st-row" data-testid="settings-backend-cuda-row">
+          <div
+            class="st-row"
+            [class.is-disabled]="!gpu().found"
+            [attr.aria-disabled]="!gpu().found"
+            data-testid="settings-backend-cuda-row"
+          >
             <div class="field">
               <span class="t-ink">{{ 'settings.backend.cuda' | t }}</span>
               <span class="field-hint" data-testid="settings-backend-cuda-hint">
@@ -313,14 +318,6 @@
                 >
                   {{ modelKey(m) | t }}
                 </ds-badge>
-                @if (m.isDefault) {
-                  <ds-badge
-                    tone="primary"
-                    [attr.data-testid]="'settings-backend-model-' + m.id + '-default'"
-                  >
-                    {{ 'settings.backend.model.default' | t }}
-                  </ds-badge>
-                }
               </div>
             </header>
             <div class="llm-meta">
@@ -338,7 +335,7 @@
             }
             <div class="tags" [attr.data-testid]="'settings-backend-model-' + m.id + '-tags'">
               @for (language of m.languages; track language) {
-                <span class="tag">{{ language }}</span>
+                <span class="tag">{{ languageLabel(language) }}</span>
               }
               @if (m.cloning) {
                 <span class="tag is-more">{{ 'settings.backend.model.cloning' | t }}</span>
@@ -346,14 +343,12 @@
               @if (m.gpuRecommended) {
                 <span class="tag is-more">{{ 'settings.backend.model.gpu' | t }}</span>
               }
-              @if (m.totalBytes > 0) {
-                <span
-                  class="tag is-more"
-                  [attr.data-testid]="'settings-backend-model-' + m.id + '-size'"
-                >
-                  {{ size(m) }}
-                </span>
-              }
+              <span
+                class="tag is-more"
+                [attr.data-testid]="'settings-backend-model-' + m.id + '-size'"
+              >
+                {{ size(m) }}
+              </span>
             </div>
             @if (warnsCpu(m)) {
               <div
@@ -403,17 +398,6 @@
                   </button>
                 }
                 @case ('installed') {
-                  @if (!m.isDefault) {
-                    <button
-                      type="button"
-                      class="btn btn-sm"
-                      [attr.data-testid]="'settings-backend-model-' + m.id + '-set-default'"
-                      (click)="setDefaultModel(m)"
-                    >
-                      <ds-icon name="check" [size]="16" />
-                      {{ 'settings.backend.model.setDefault' | t }}
-                    </button>
-                  }
                   <button
                     type="button"
                     class="btn btn-sm"
@@ -449,6 +433,10 @@
               }
             </footer>
           </article>
+        } @empty {
+          <p class="t-sm t-mute" data-testid="settings-backend-models-empty">
+            {{ 'settings.backend.models.empty' | t }}
+          </p>
         }
       </div>
       <div class="field" data-testid="settings-backend-folder-field">
@@ -462,7 +450,7 @@
           data-testid="settings-backend-folder"
         >
           <span class="path" [attr.title]="modelsDir()" data-testid="settings-backend-folder-path">
-            {{ modelsDir() }}
+            {{ text(modelsDir()) }}
           </span>
           <button
             type="button"
@@ -475,7 +463,9 @@
             {{ 'settings.general.open' | t }}
           </button>
         </div>
-        <span class="field-hint">{{ 'settings.backend.folder.hint' | t }}</span>
+        <span class="field-hint" data-testid="settings-backend-folder-hint">
+          {{ 'settings.backend.folder.hint' | t }}
+        </span>
       </div>
     </section>
   }

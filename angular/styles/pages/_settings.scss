@@ -69,6 +69,9 @@
   color: var(--ink);
   font-weight: 400;
 }
+.st-row.is-disabled .field {
+  opacity: 0.55;
+}
 .st-slider {
   display: flex;
   align-items: center;

@@ -22,7 +22,6 @@ const model = (id: string, state: TtsModel['state']): TtsModel => ({
   languages: [],
   cloning: false,
   gpuRecommended: false,
-  isDefault: false,
 });
 
 const account = (

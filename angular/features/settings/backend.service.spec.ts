@@ -34,7 +34,6 @@ function model(id: string, overrides: Partial<TtsModel> = {}): TtsModel {
     languages: ['vi'],
     cloning: true,
     gpuRecommended: false,
-    isDefault: false,
     state: 'none',
     receivedBytes: 0,
     totalBytes: 100,
@@ -56,7 +55,7 @@ describe('BackendService', () => {
   beforeEach(() => {
     ipc = setupIpc();
     ipc.on('backend_status', view());
-    ipc.on('backend_model_list', [model('a'), model('b', { state: 'installed', isDefault: true })]);
+    ipc.on('backend_model_list', [model('a'), model('b', { state: 'installed' })]);
     backend = TestBed.inject(BackendService);
   });
 
@@ -124,13 +123,16 @@ describe('BackendService', () => {
     expect(dangerToasts()).toBe(1);
   });
 
-  it('ignores a restart while the server is starting', async () => {
+  it('ignores a restart and a check while the server is starting', async () => {
     ipc.on('backend_status', view({ server: { ...view().server, status: 'starting' } }));
     ipc.on('backend_model_list', []);
     vi.useFakeTimers();
     await backend.load();
+    const calls = ipc.called('backend_status');
     await backend.restart();
+    await backend.check();
     expect(ipc.called('backend_restart')).toBe(0);
+    expect(ipc.called('backend_status')).toBe(calls);
   });
 
   it('rescans the GPU', async () => {
@@ -155,6 +157,19 @@ describe('BackendService', () => {
     expect(backend.device()).toBe('cuda');
     await backend.setDevice('cpu');
     expect(ipc.lastArgs('backend_device_set')).toEqual({ device: 'cpu' });
+  });
+
+  it('shows the server as starting while a device change restarts it', async () => {
+    await backend.load();
+    const pending = backend.setDevice('cpu');
+    expect(backend.server().status).toBe('starting');
+    await pending;
+    expect(backend.server().status).toBe('running');
+    ipc.on('backend_status', view({ server: { ...view().server, status: 'stopped' } }));
+    await backend.load();
+    const idle = backend.setDevice('cpu');
+    expect(backend.server().status).toBe('stopped');
+    await idle;
   });
 
   it('manages the CUDA runtime', async () => {
@@ -196,14 +211,12 @@ describe('BackendService', () => {
     expect(dangerToasts()).toBe(1);
   });
 
-  it('cancels, removes and defaults models', async () => {
+  it('cancels and removes models', async () => {
     await backend.load();
     await backend.cancelModel('a');
     await backend.removeModel('b');
-    await backend.setDefaultModel('a');
     expect(ipc.lastArgs('backend_model_cancel')).toEqual({ id: 'a' });
     expect(ipc.lastArgs('backend_model_remove')).toEqual({ id: 'b' });
-    expect(ipc.lastArgs('backend_model_default_set')).toEqual({ id: 'a' });
   });
 
   it('opens the logs and models folder and warns on failure', async () => {

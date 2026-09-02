@@ -10,13 +10,8 @@ import { LanguageKey, LanguageParams } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
 import { modelNoteKey } from '../backend.catalog';
-import {
-  BackendDevice,
-  BackendDownload,
-  BackendStatus,
-  DownloadState,
-  TtsModel,
-} from '../backend.models';
+// prettier-ignore
+import { BackendDevice, BackendDownload, BackendStatus, DownloadState, TtsModel } from '../backend.models';
 import { downloadPercent, formatUptime, formatVram } from '../backend.rules';
 import { BackendService } from '../backend.service';
 
@@ -92,6 +87,16 @@ const MODEL_MESSAGES: Record<DownloadState, BackendMessage> = {
   installed: message('settings.backend.model.msg.installed', 'ok'),
   error: message('settings.backend.model.msg.error', 'warn'),
 };
+
+const LANGUAGE_KEYS: Record<string, LanguageKey> = {
+  mul: 'settings.backend.model.lang.mul',
+};
+
+const MISSING = '—';
+
+function orMissing(value: string): string {
+  return value || MISSING;
+}
 
 function toDevice(value: string): BackendDevice {
   return DEVICES.find((device) => device === value) ?? 'cpu';
@@ -182,16 +187,20 @@ export class SettingsBackend {
     void this.backend.removeModel(model.id);
   }
 
-  setDefaultModel(model: TtsModel): void {
-    void this.backend.setDefaultModel(model.id);
-  }
-
   canRestart(): boolean {
     return this.server().status !== 'starting';
   }
 
   canCheck(): boolean {
     return this.server().status !== 'starting' && !this.checking();
+  }
+
+  canScan(): boolean {
+    return this.server().status !== 'starting' && !this.scanning();
+  }
+
+  text(value: string): string {
+    return orMissing(value);
   }
 
   percent(download: BackendDownload): number {
@@ -207,7 +216,12 @@ export class SettingsBackend {
   }
 
   size(download: BackendDownload): string {
-    return formatBytes(download.totalBytes);
+    return download.totalBytes > 0 ? formatBytes(download.totalBytes) : MISSING;
+  }
+
+  languageLabel(language: string): string {
+    const key = LANGUAGE_KEYS[language];
+    return key ? this.languageService.translate(key) : language;
   }
 
   modelMode(model: TtsModel): string {
@@ -294,26 +308,26 @@ export class SettingsBackend {
 
   private buildAddress(): string {
     const port = this.server().port;
-    return port === null ? '—' : `http://127.0.0.1:${port}`;
+    return port === null ? MISSING : `http://127.0.0.1:${port}`;
   }
 
   private buildUptime(): string {
     const server = this.server();
-    return server.status === 'running' ? formatUptime(server.startedAt, Date.now()) : '—';
+    return server.status === 'running' ? formatUptime(server.startedAt, Date.now()) : MISSING;
   }
 
   private buildGpuHint(): string {
     const gpu = this.gpu();
     return this.languageService.translate('settings.backend.gpu.found', {
-      name: gpu.name,
-      vram: formatVram(gpu.vramMb),
-      driver: gpu.driver,
+      name: orMissing(gpu.name),
+      vram: gpu.vramMb > 0 ? formatVram(gpu.vramMb) : MISSING,
+      driver: orMissing(gpu.driver),
     });
   }
 
   private buildCudaHint(): string {
     const cuda = this.cuda();
-    const size = formatBytes(cuda.totalBytes);
+    const size = this.size(cuda);
     return cuda.version
       ? this.languageService.translate('settings.backend.cuda.hintVersion', {
           version: cuda.version,

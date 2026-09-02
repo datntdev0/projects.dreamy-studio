@@ -1,12 +1,6 @@
 import { computed, Provider, signal, WritableSignal } from '@angular/core';
-import {
-  BackendCuda,
-  BackendDevice,
-  BackendDownload,
-  BackendGpu,
-  BackendServer,
-  TtsModel,
-} from '@features/settings/backend.models';
+// prettier-ignore
+import { BackendCuda, BackendDevice, BackendDownload, BackendGpu, BackendServer, TtsModel } from '@features/settings/backend.models';
 import { BackendService } from '@features/settings/backend.service';
 
 const GIB = 1024 * 1024 * 1024;
@@ -57,7 +51,6 @@ function model(overrides: Partial<TtsModel> & Pick<TtsModel, 'id' | 'name' | 'so
     languages: ['vi'],
     cloning: true,
     gpuRecommended: false,
-    isDefault: false,
     ...overrides,
   };
 }
@@ -65,24 +58,25 @@ function model(overrides: Partial<TtsModel> & Pick<TtsModel, 'id' | 'name' | 'so
 export const BACKEND_MODELS: TtsModel[] = [
   model({
     id: 'vieneu-turbo',
-    name: 'VieNeu Turbo',
-    source: 'huggingface.co/dreamy/vieneu-turbo',
+    name: 'VieNeu-TTS v3 Turbo',
+    source: 'pnnbao-ump/VieNeu-TTS-v3-Turbo',
+    languages: ['vi', 'en'],
     state: 'installed',
     totalBytes: Math.round(1.1 * GIB),
     receivedBytes: Math.round(1.1 * GIB),
-    isDefault: true,
   }),
   model({
     id: 'vieneu-nano',
-    name: 'VieNeu Nano',
-    source: 'huggingface.co/dreamy/vieneu-nano',
+    name: 'VieNeu-TTS v3 Nano',
+    source: 'pnnbao-ump/VieNeu-TTS-v3-Nano',
+    languages: ['vi', 'en'],
     totalBytes: 340 * MIB,
   }),
   model({
     id: 'omnivoice',
     name: 'OmniVoice',
-    source: 'huggingface.co/dreamy/omnivoice',
-    languages: ['vi', 'en', 'multilingual'],
+    source: 'k2-fsa/OmniVoice',
+    languages: ['mul'],
     gpuRecommended: true,
     totalBytes: Math.round(3.2 * GIB),
   }),
@@ -174,13 +168,7 @@ function cancelModel(state: BackendMockState, id: string): Promise<void> {
 }
 
 function removeModel(state: BackendMockState, id: string): Promise<void> {
-  patchModel(state, id, { isDefault: false });
   return resetDownload(state, modelTarget(state, id));
-}
-
-function setDefaultModel(state: BackendMockState, id: string): Promise<void> {
-  state.models.update((items) => items.map((item) => ({ ...item, isDefault: item.id === id })));
-  return Promise.resolve();
 }
 
 function finishRestart(state: BackendMockState): void {
@@ -245,7 +233,6 @@ export function backendServiceProvider(scenario: BackendScenario = {}): Provider
     downloadModel: downloadModel.bind(null, state),
     cancelModel: cancelModel.bind(null, state),
     removeModel: removeModel.bind(null, state),
-    setDefaultModel: setDefaultModel.bind(null, state),
   };
   return { provide: BackendService, useValue: mock };
 }

@@ -188,7 +188,6 @@ describe('LibraryVoiceService', () => {
         languages: [],
         cloning: false,
         gpuRecommended: false,
-        isDefault: false,
       },
     ]);
     const known = voices.items()[1];

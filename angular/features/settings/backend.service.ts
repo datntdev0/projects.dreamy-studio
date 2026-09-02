@@ -72,7 +72,7 @@ export class BackendService {
   }
 
   async check(): Promise<void> {
-    if (this.checking()) {
+    if (this.checking() || this.server().status === 'starting') {
       return;
     }
     this.checking.set(true);
@@ -84,8 +84,7 @@ export class BackendService {
     if (this.server().status === 'starting') {
       return;
     }
-    this.server.update((server) => ({ ...server, status: 'starting', error: '' }));
-    this.pollWhileBusy();
+    this.markStarting();
     await this.run('backend_restart');
   }
 
@@ -103,6 +102,9 @@ export class BackendService {
       return;
     }
     this.device.set(device);
+    if (this.server().status === 'running') {
+      this.markStarting();
+    }
     await this.run('backend_device_set', { device });
   }
 
@@ -142,11 +144,9 @@ export class BackendService {
     await this.run('backend_model_remove', { id });
   }
 
-  async setDefaultModel(id: string): Promise<void> {
-    this.models.update((models) =>
-      models.map((model) => ({ ...model, isDefault: model.id === id })),
-    );
-    await this.run('backend_model_default_set', { id });
+  private markStarting(): void {
+    this.server.update((server) => ({ ...server, status: 'starting', error: '' }));
+    this.pollWhileBusy();
   }
 
   private isGpuReady(): boolean {

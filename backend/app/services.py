@@ -1,12 +1,13 @@
 from importlib import metadata
 
-from app.catalog import cuda_catalog, model_catalog
+from app.catalog import Catalog, CatalogModel, RuntimeVariant, load_catalog
 from app.config import Settings
 from app.cuda import CudaInstaller, cuda_installed
 from app.downloads import DownloadBusy, utc_now
 from app.errors import BackendError
 from app.gpu import GpuDetector
 from app.models import ModelDownloader
+from app.runtimes import RuntimeInstaller
 from app.schemas import CudaResponse, GpuResponse, SystemResponse, TtsModelResponse
 
 PACKAGE_NAME = "dreamy-studio-backend"
@@ -26,17 +27,58 @@ def effective_device(settings: Settings) -> str:
 
 
 class Services:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, catalog: Catalog | None = None) -> None:
         self.settings = settings
+        self.catalog = catalog or load_catalog()
         self.started_at = utc_now()
         self.version = package_version()
         self.device = effective_device(settings)
         self.gpu = GpuDetector(settings.nvidia_smi)
-        self.cuda = CudaInstaller(settings.cuda_dir, settings.pypi_url, cuda_catalog())
+        self.cuda = CudaInstaller(settings.cuda_dir, settings.pypi_url, self.catalog.cuda)
+        self.runtimes = self.build_runtimes()
         self.models = {
-            model.id: ModelDownloader(model, settings.models_dir, settings.hf_endpoint)
-            for model in model_catalog()
+            model.id: ModelDownloader(
+                model, settings.models_dir, settings.hf_endpoint, self.runtime_of(model)
+            )
+            for model in self.catalog.models
         }
+
+    def installer(self, variant: RuntimeVariant) -> RuntimeInstaller:
+        return RuntimeInstaller(
+            variant,
+            self.settings.runtime_dir,
+            self.settings.worker_python,
+            self.settings.wheel_mirror,
+        )
+
+    def build_runtimes(self) -> dict[str, RuntimeInstaller]:
+        return {
+            runtime_id: self.installer(runtime.variant_for(self.device))
+            for runtime_id, runtime in self.catalog.runtimes.items()
+        }
+
+    def variant_installer(self, variant: RuntimeVariant) -> RuntimeInstaller:
+        active = self.runtimes[variant.runtime]
+        return active if active.key == variant.key else self.installer(variant)
+
+    def runtime_of(self, model: CatalogModel) -> RuntimeInstaller | None:
+        return self.runtimes.get(model.runtime) if model.runtime else None
+
+    def runtime_in_use(self, runtime_id: str) -> bool:
+        return any(
+            downloader.installed() or downloader.status().state == "downloading"
+            for downloader in self.models.values()
+            if downloader.model.runtime == runtime_id
+        )
+
+    def release_runtime(self, model: CatalogModel) -> None:
+        runtime_id = model.runtime
+        if runtime_id is None or runtime_id not in self.catalog.runtimes:
+            return
+        if self.runtime_in_use(runtime_id):
+            return
+        for variant in self.catalog.runtimes[runtime_id].variants.values():
+            self.variant_installer(variant).remove()
 
     def cuda_view(self) -> CudaResponse:
         return CudaResponse.of(self.cuda.slot.status(), self.cuda.version())
@@ -89,4 +131,5 @@ class Services:
             download = downloader.slot.remove()
         except DownloadBusy as error:
             raise BackendError(409, "MODEL_BUSY", f"Model '{model_id}' is downloading") from error
+        self.release_runtime(downloader.model)
         return TtsModelResponse.of(downloader.model, download)

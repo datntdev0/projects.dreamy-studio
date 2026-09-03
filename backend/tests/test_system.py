@@ -114,6 +114,8 @@ class RuntimeTests(unittest.TestCase):
                 directory,
                 "--device",
                 "cuda",
+                "--worker-python",
+                str(Path(directory) / "python.exe"),
             ]
             with (
                 patch.object(sys, "argv", argv),
@@ -125,6 +127,8 @@ class RuntimeTests(unittest.TestCase):
                 runtime.main()
                 data_dir = os.environ["DREAMY_BACKEND_DATA_DIR"]
                 device = os.environ["DREAMY_BACKEND_DEVICE"]
+                worker_python = os.environ["DREAMY_WORKER_PYTHON"]
             self.assertEqual(Path(data_dir), Path(directory).resolve())
             self.assertEqual(device, "cuda")
+            self.assertEqual(Path(worker_python), (Path(directory) / "python.exe").resolve())
             self.assertEqual(run.call_args.kwargs["port"], 5123)

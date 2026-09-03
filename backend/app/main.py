@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, Request
 
+from app.catalog import Catalog
 from app.config import Settings
 from app.cuda import configure_dll_search
 from app.errors import register_error_handlers
@@ -78,11 +79,11 @@ def model_remove(model_id: str, services: ServicesDep) -> TtsModelResponse:
     return services.remove_model(model_id)
 
 
-def create_app(settings: Settings) -> FastAPI:
+def create_app(settings: Settings, catalog: Catalog | None = None) -> FastAPI:
     application = FastAPI(title="Dreamy Studio Local Backend")
     register_error_handlers(application)
     application.include_router(router)
-    application.state.services = Services(settings)
+    application.state.services = Services(settings, catalog)
     return application
 
 

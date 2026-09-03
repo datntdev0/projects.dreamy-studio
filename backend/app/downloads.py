@@ -53,6 +53,10 @@ class DownloadJob:
 DownloadWorker = Callable[[DownloadJob], dict[str, Any]]
 
 
+def always_complete() -> bool:
+    return True
+
+
 def utc_now() -> str:
     return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
@@ -146,12 +150,14 @@ class DownloadSlot:
         estimate: int,
         worker: DownloadWorker,
         staging_dir: Path | None = None,
+        complete: Callable[[], bool] = always_complete,
     ) -> None:
         self.name = name
         self.target = target
         self.estimate = estimate
         self.worker = worker
         self.staging_dir = staging_dir
+        self.complete = complete
         self.lock = threading.Lock()
         self.job: DownloadJob | None = None
 
@@ -176,9 +182,11 @@ class DownloadSlot:
         if job is not None and job.error:
             return Download("error", directory_size(self.progress_dir), job.total_bytes, job.error)
         manifest = self.manifest()
-        if manifest is not None:
+        if manifest is not None and self.complete():
             size = int(manifest.get("totalBytes", self.estimate))
             return Download("installed", size, size)
+        if manifest is not None:
+            return Download("none", 0, self.estimate)
         if has_files(self.target):
             return Download(
                 "error", directory_size(self.progress_dir), self.estimate, INTERRUPTED_ERROR

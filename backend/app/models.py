@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -7,6 +8,7 @@ from huggingface_hub.utils import tqdm as hf_tqdm
 
 from app.catalog import CatalogModel
 from app.downloads import Download, DownloadCancelled, DownloadJob, DownloadSlot
+from app.runtimes import RuntimeInstaller
 
 REVISION = "main"
 
@@ -29,14 +31,54 @@ def progress_class(job: DownloadJob) -> type[CancellableProgress]:
 
 
 class ModelDownloader:
-    def __init__(self, model: CatalogModel, models_dir: Path, endpoint: str | None) -> None:
+    def __init__(
+        self,
+        model: CatalogModel,
+        models_dir: Path,
+        endpoint: str | None,
+        runtime: RuntimeInstaller | None = None,
+    ) -> None:
         self.model = model
         self.endpoint = endpoint
+        self.runtime = runtime
+        self.runtime_counted = False
         self.target = models_dir / model.id
-        self.slot = DownloadSlot(model.id, self.target, model.size_bytes, self.download)
+        self.slot = DownloadSlot(
+            model.id, self.target, model.size_bytes, self.download, complete=self.runtime_ready
+        )
+
+    def runtime_ready(self) -> bool:
+        return self.runtime is None or self.runtime.installed()
+
+    def counted_runtime_bytes(self) -> int:
+        if self.runtime is None or not self.runtime_counted:
+            return 0
+        return self.runtime.progress_bytes()
 
     def status(self) -> Download:
-        return self.slot.status()
+        download = self.slot.status()
+        if self.runtime is None or download.state == "installed":
+            return download
+        if download.state == "none":
+            return replace(
+                download, total_bytes=download.total_bytes + self.runtime.missing_bytes()
+            )
+        received = download.received_bytes + self.counted_runtime_bytes()
+        return replace(download, received_bytes=min(received, download.total_bytes))
+
+    def installed(self) -> bool:
+        return self.slot.manifest() is not None
+
+    def prepare_runtime(self, job: DownloadJob) -> int:
+        runtime = self.runtime
+        if runtime is None:
+            self.runtime_counted = False
+            return 0
+        missing = runtime.missing_bytes()
+        self.runtime_counted = missing > 0
+        job.total_bytes = self.model.size_bytes + missing
+        runtime.ensure(job)
+        return missing
 
     def list_files(self) -> list[RepoFile]:
         api = HfApi(endpoint=self.endpoint)
@@ -48,9 +90,12 @@ class ModelDownloader:
             stale.unlink(missing_ok=True)
 
     def download(self, job: DownloadJob) -> dict[str, Any]:
+        runtime_bytes = self.prepare_runtime(job)
         self.remove_stale_parts()
         files = self.list_files()
-        job.total_bytes = sum(item.size for item in files) or self.model.size_bytes
+        job.total_bytes = (
+            sum(item.size for item in files) or self.model.size_bytes
+        ) + runtime_bytes
         progress = progress_class(job)
         for item in files:
             job.check_cancelled()
@@ -66,4 +111,5 @@ class ModelDownloader:
             "id": self.model.id,
             "source": self.model.source,
             "files": [item.path for item in files],
+            "runtime": self.runtime.key if self.runtime else None,
         }

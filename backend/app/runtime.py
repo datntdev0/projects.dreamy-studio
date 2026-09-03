@@ -5,7 +5,7 @@ from pathlib import Path
 
 import uvicorn
 
-from app.config import DATA_DIR_ENV, DEVICE_ENV
+from app.config import DATA_DIR_ENV, DEVICE_ENV, WORKER_PYTHON_ENV
 from app.errors import install_excepthook
 from app.log import setup_logging
 
@@ -17,6 +17,7 @@ def main() -> None:
     parser.add_argument("--log-dir", type=Path, required=True)
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument("--worker-python", type=Path)
     parser.add_argument("--reload", action="store_true")
     args = parser.parse_args()
 
@@ -25,6 +26,8 @@ def main() -> None:
     os.environ["DREAMY_BACKEND_LOG_LEVEL"] = "INFO" if args.run_mode == "prod" else "DEBUG"
     os.environ[DATA_DIR_ENV] = str(args.data_dir.resolve())
     os.environ[DEVICE_ENV] = args.device
+    if args.worker_python:
+        os.environ[WORKER_PYTHON_ENV] = str(args.worker_python.resolve())
     os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
     setup_logging(args.log_dir, os.environ["DREAMY_BACKEND_LOG_LEVEL"])
     install_excepthook()

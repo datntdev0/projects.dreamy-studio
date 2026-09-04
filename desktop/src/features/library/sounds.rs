@@ -245,7 +245,7 @@ impl SoundFiles {
         self.workspace_dir.join("library").join("sounds")
     }
 
-    fn original_path(&self, id: i64, format: SoundFormat) -> PathBuf {
+    pub fn original_path(&self, id: i64, format: SoundFormat) -> PathBuf {
         self.sounds_dir()
             .join(format!("{id}.{}", format.extension()))
     }

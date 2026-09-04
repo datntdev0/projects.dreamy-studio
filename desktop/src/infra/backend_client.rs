@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::time::Duration;
@@ -9,6 +10,7 @@ use ureq::http::Response;
 const HOST: &str = "127.0.0.1";
 const HEALTH_PATH: &str = "/health";
 const HEALTH_OK: &str = "ok";
+const MAX_BINARY_BYTES: u64 = 256 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
@@ -50,6 +52,21 @@ pub struct Health {
     pub python_version: String,
     pub started_at: Option<String>,
     pub device: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryResponse {
+    pub bytes: Vec<u8>,
+    pub headers: Vec<(String, String)>,
+}
+
+impl BinaryResponse {
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_str())
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -100,6 +117,43 @@ impl BackendClient {
             Err(error) => Err(ClientError::Unreachable(error.to_string())),
         }
     }
+
+    pub fn post_for_bytes<B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<BinaryResponse, ClientError> {
+        let url = format!("{}{path}", self.base);
+        let payload =
+            serde_json::to_vec(body).map_err(|error| ClientError::Invalid(error.to_string()))?;
+        let request = self
+            .agent
+            .post(&url)
+            .header("Content-Type", "application/json");
+        match request.send(&payload[..]) {
+            Ok(response) => read_binary(response),
+            Err(error) => Err(ClientError::Unreachable(error.to_string())),
+        }
+    }
+}
+
+fn read_binary(mut response: Response<Body>) -> Result<BinaryResponse, ClientError> {
+    let status = response.status().as_u16();
+    let headers = response
+        .headers()
+        .iter()
+        .filter_map(|(name, value)| Some((name.to_string(), value.to_str().ok()?.to_string())))
+        .collect();
+    let bytes = response
+        .body_mut()
+        .with_config()
+        .limit(MAX_BINARY_BYTES)
+        .read_to_vec()
+        .map_err(|error| ClientError::Unreachable(error.to_string()))?;
+    if status >= 400 {
+        return Err(api_error(status, &String::from_utf8_lossy(&bytes)));
+    }
+    Ok(BinaryResponse { bytes, headers })
 }
 
 fn decode<T: DeserializeOwned>(mut response: Response<Body>) -> Result<T, ClientError> {

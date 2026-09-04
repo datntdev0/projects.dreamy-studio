@@ -5,6 +5,7 @@ pub mod blocking;
 pub mod knowledge;
 pub mod library;
 pub mod library_stream;
+pub mod library_voices;
 pub mod novel;
 pub mod pipeline;
 pub mod project;

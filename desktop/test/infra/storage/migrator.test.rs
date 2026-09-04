@@ -128,8 +128,9 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 17);
     for table in [
+        "ws_library_voices",
         "ws_assistant_sessions",
         "ws_assistant_messages",
         "ws_novels",
@@ -194,7 +195,7 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
             "local".to_string()
         )
     );
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 17);
     assert!(table_exists(
         db.connection(),
         "ws_novel_translation_dictionary"
@@ -213,7 +214,7 @@ fn workspace_upgrade_from_0_1_0_3_adds_assistant_tables() {
     let old_scripts: Vec<Script> = workspace_scripts()
         .unwrap()
         .into_iter()
-        .filter(|script| script.version.to_string() != "0.2.0")
+        .filter(|script| !["0.2.0", "0.3.0"].contains(&script.version.to_string().as_str()))
         .collect();
     Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
     assert_eq!(history_count(db.connection()), 13);
@@ -221,7 +222,7 @@ fn workspace_upgrade_from_0_1_0_3_adds_assistant_tables() {
 
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
 
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 17);
     assert!(table_exists(db.connection(), "ws_assistant_sessions"));
     assert!(table_exists(db.connection(), "ws_assistant_messages"));
     let conn = db.connection();
@@ -582,4 +583,23 @@ fn open_read_only_rejects_writes() {
             .is_err()
     );
     let _handle = db.interrupt_handle();
+}
+
+#[test]
+fn workspace_upgrade_from_0_2_0_3_adds_the_voice_library() {
+    let dir = TempDir::new().unwrap();
+    let (_, mut db) = open_new(&dir);
+    let cancel = AtomicBool::new(false);
+    let old_scripts: Vec<Script> = workspace_scripts()
+        .unwrap()
+        .into_iter()
+        .filter(|script| script.version.to_string() != "0.3.0")
+        .collect();
+    Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
+    assert!(!table_exists(db.connection(), "ws_library_voices"));
+
+    Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
+
+    assert_eq!(history_count(db.connection()), 17);
+    assert!(table_exists(db.connection(), "ws_library_voices"));
 }

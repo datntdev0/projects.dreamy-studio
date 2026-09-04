@@ -318,6 +318,153 @@ impl StreamKind {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VoiceSource {
+    Preset,
+    Clone,
+    Design,
+}
+
+impl VoiceSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Preset => "preset",
+            Self::Clone => "clone",
+            Self::Design => "design",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "preset" => Some(Self::Preset),
+            "clone" => Some(Self::Clone),
+            "design" => Some(Self::Design),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VoiceEngineKind {
+    Local,
+    Cloud,
+}
+
+impl VoiceEngineKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Local => "local",
+            Self::Cloud => "cloud",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "local" => Some(Self::Local),
+            "cloud" => Some(Self::Cloud),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VoiceGender {
+    Female,
+    Male,
+    Neutral,
+}
+
+impl VoiceGender {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Female => "female",
+            Self::Male => "male",
+            Self::Neutral => "neutral",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "female" => Some(Self::Female),
+            "male" => Some(Self::Male),
+            "neutral" => Some(Self::Neutral),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum VoiceReference {
+    Sound {
+        #[serde(rename = "soundId")]
+        sound_id: i64,
+    },
+    File {
+        path: String,
+        name: String,
+    },
+    Recording {
+        data: String,
+        mime: String,
+        #[serde(rename = "durationMs")]
+        duration_ms: i64,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceInput {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub engine: String,
+    pub engine_kind: VoiceEngineKind,
+    pub source: VoiceSource,
+    pub language: String,
+    pub gender: VoiceGender,
+    #[serde(default)]
+    pub preset: Option<String>,
+    #[serde(default)]
+    pub reference: Option<VoiceReference>,
+    #[serde(default)]
+    pub prompt: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoicePatch {
+    #[serde(default)]
+    pub sample_text: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryVoice {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub engine: String,
+    pub engine_kind: VoiceEngineKind,
+    pub source: VoiceSource,
+    pub language: String,
+    pub gender: VoiceGender,
+    pub preset: Option<String>,
+    pub reference_kind: Option<String>,
+    pub reference_sound_id: Option<i64>,
+    pub reference_name: String,
+    pub prompt: String,
+    pub sample_text: String,
+    pub sample_duration_ms: Option<i64>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LibraryErrorCode {
@@ -346,6 +493,12 @@ pub enum LibraryErrorCode {
     PromptUnreadable,
     PromptEmpty,
     PromptNameInvalid,
+    VoiceNotFound,
+    VoiceInvalid,
+    VoiceReferenceInvalid,
+    VoiceEngineUnavailable,
+    VoiceBackendOffline,
+    VoiceSynthesisFailed,
     TagLimit,
     Io,
     Db,
@@ -380,6 +533,12 @@ impl LibraryErrorCode {
             Self::PromptUnreadable => "prompt_unreadable",
             Self::PromptEmpty => "prompt_empty",
             Self::PromptNameInvalid => "prompt_name_invalid",
+            Self::VoiceNotFound => "voice_not_found",
+            Self::VoiceInvalid => "voice_invalid",
+            Self::VoiceReferenceInvalid => "voice_reference_invalid",
+            Self::VoiceEngineUnavailable => "voice_engine_unavailable",
+            Self::VoiceBackendOffline => "voice_backend_offline",
+            Self::VoiceSynthesisFailed => "voice_synthesis_failed",
             Self::TagLimit => "tag_limit",
             Self::Io => "io",
             Self::Db => "db",

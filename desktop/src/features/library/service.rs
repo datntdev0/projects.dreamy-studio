@@ -20,11 +20,16 @@ use crate::features::library::models::LibrarySound;
 use crate::features::library::models::LibrarySummary;
 use crate::features::library::models::LibraryTag;
 use crate::features::library::models::LibraryVideo;
+use crate::features::library::models::LibraryVoice;
 use crate::features::library::models::PromptCreateInput;
 use crate::features::library::models::PromptKind;
 use crate::features::library::models::PromptPatch;
 use crate::features::library::models::StreamChunk;
 use crate::features::library::models::StreamKind;
+use crate::features::library::models::VoiceInput;
+use crate::features::library::models::VoicePatch;
+use crate::features::library::models::VoiceReference;
+use crate::features::library::models::VoiceSource;
 use crate::features::library::prompts;
 use crate::features::library::prompts::NewPrompt;
 use crate::features::library::prompts::PromptFiles;
@@ -35,6 +40,9 @@ use crate::features::library::sounds::SoundFormat;
 use crate::features::library::videos;
 use crate::features::library::videos::NewVideo;
 use crate::features::library::videos::VideoFiles;
+use crate::features::library::voices;
+use crate::features::library::voices::NewVoice;
+use crate::features::library::voices::VoiceFiles;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
@@ -340,6 +348,8 @@ impl LibraryWorkspace {
             .connection_mut()
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let deleted = sounds::delete(&tx, ids)?;
+        let deleted_ids: Vec<i64> = deleted.iter().map(|(id, _)| *id).collect();
+        voices::detach_sounds(&tx, &deleted_ids)?;
         tx.commit()?;
         let files = SoundFiles::new(self.dir.clone());
         for (id, ext) in &deleted {
@@ -587,6 +597,138 @@ impl LibraryWorkspace {
         Ok(VideoFiles::new(self.dir.clone())
             .read_poster(id)?
             .map(|bytes| assets::data_url("image/jpeg", &bytes)))
+    }
+
+    pub fn voice_list(&self) -> LibraryResult<Vec<LibraryVoice>> {
+        voices::list(self.database()?.connection())
+    }
+
+    pub fn voice_create(&self, input: VoiceInput) -> LibraryResult<LibraryVoice> {
+        let mut voice = voices::validate_input(&input)?;
+        let files = VoiceFiles::new(self.dir.clone());
+        let staged = match input.reference.as_ref() {
+            Some(reference) if voice.source == VoiceSource::Clone => {
+                Some(self.stage_reference(&files, reference, &mut voice)?)
+            }
+            _ => None,
+        };
+        let created = self.voice_insert(&files, &voice, staged.as_deref());
+        if let Some(path) = staged.as_deref() {
+            voices::remove_staged(path);
+        }
+        created
+    }
+
+    fn stage_reference(
+        &self,
+        files: &VoiceFiles,
+        reference: &VoiceReference,
+        voice: &mut NewVoice,
+    ) -> LibraryResult<PathBuf> {
+        let target = files.staging_path("wav")?;
+        voice.reference_kind = Some(voices::reference_kind_of(reference));
+        match reference {
+            VoiceReference::Sound { sound_id } => {
+                let source = self.sound_source(*sound_id, voice)?;
+                voices::convert_reference(&source, &target)?;
+            }
+            VoiceReference::File { path, name } => {
+                let source = Path::new(path);
+                voices::upload_extension(source)?;
+                voice.reference_name = name.trim().to_string();
+                voices::convert_reference(source, &target)?;
+            }
+            VoiceReference::Recording {
+                data,
+                mime,
+                duration_ms,
+            } => {
+                let bytes = voices::decode_recording(data, *duration_ms)?;
+                let raw = files.staging_path(voices::recording_extension(mime))?;
+                fs::write(&raw, bytes)?;
+                let converted = voices::convert_reference(&raw, &target);
+                voices::remove_staged(&raw);
+                if converted? > voices::RECORDING_MAX_MS {
+                    voices::remove_staged(&target);
+                    return Err(voices::reference_invalid(
+                        "recordings must last up to 30 seconds",
+                    ));
+                }
+            }
+        }
+        Ok(target)
+    }
+
+    fn sound_source(&self, sound_id: i64, voice: &mut NewVoice) -> LibraryResult<PathBuf> {
+        let sound = sounds::get(self.database()?.connection(), sound_id)?;
+        let format = sound_format_from_extension(&sound.ext)?;
+        voice.reference_sound_id = Some(sound.id);
+        voice.reference_name = sound.name;
+        Ok(SoundFiles::new(self.dir.clone()).original_path(sound_id, format))
+    }
+
+    fn voice_insert(
+        &self,
+        files: &VoiceFiles,
+        voice: &NewVoice,
+        staged: Option<&Path>,
+    ) -> LibraryResult<LibraryVoice> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let id = voices::insert(&tx, voice, &format_timestamp(Utc::now()))?;
+        if let Some(path) = staged
+            && let Err(error) = files.adopt_reference(id, path)
+        {
+            let _ = files.remove(id);
+            return Err(error);
+        }
+        if let Err(error) = tx.commit() {
+            let _ = files.remove(id);
+            return Err(error.into());
+        }
+        voices::get(db.connection(), id)
+    }
+
+    pub fn voice_update(&self, id: i64, patch: VoicePatch) -> LibraryResult<LibraryVoice> {
+        let patch = voices::normalize_patch(&patch)?;
+        let _guard = self.lock();
+        let db = self.database()?;
+        voices::update(db.connection(), id, &patch, &format_timestamp(Utc::now()))
+    }
+
+    pub fn voice_delete(&self, ids: &[i64]) -> LibraryResult<usize> {
+        let _guard = self.lock();
+        let mut db = self.database()?;
+        let tx = db
+            .connection_mut()
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let deleted = voices::delete(&tx, ids)?;
+        tx.commit()?;
+        let files = VoiceFiles::new(self.dir.clone());
+        for id in &deleted {
+            let _ = files.remove(*id);
+        }
+        Ok(deleted.len())
+    }
+
+    pub fn voice_for_synthesis(&self, id: i64) -> LibraryResult<(LibraryVoice, Option<PathBuf>)> {
+        let voice = voices::get(self.database()?.connection(), id)?;
+        let reference = VoiceFiles::new(self.dir.clone()).existing_reference(id);
+        Ok((voice, reference))
+    }
+
+    pub fn voice_record_duration(
+        &self,
+        id: i64,
+        text: &str,
+        duration_ms: i64,
+    ) -> LibraryResult<()> {
+        let _guard = self.lock();
+        voices::record_sample_duration(self.database()?.connection(), id, text, duration_ms)?;
+        Ok(())
     }
 
     pub fn stream(

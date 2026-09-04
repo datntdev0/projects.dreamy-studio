@@ -6,6 +6,7 @@ use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibraryVideo;
 use crate::shared::files;
+use crate::shared::process::hide_window;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::params;
@@ -733,8 +734,6 @@ const JPEG_QUALITY: &str = "3";
 const SCALE_FILTER: &str =
     "scale=w='if(gt(iw,ih),min(480,iw),-2)':h='if(gt(iw,ih),-2,min(480,ih))'";
 const STDERR_DETAIL_LIMIT: usize = 400;
-#[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 pub fn extract_poster(video: &Path, duration_ms: i64) -> LibraryResult<Vec<u8>> {
     let ffmpeg = sidecar_path()?;
@@ -807,15 +806,6 @@ fn failure_detail(output: &Output) -> String {
         format!("ffmpeg failed: {detail}")
     }
 }
-
-#[cfg(windows)]
-fn hide_window(command: &mut Command) {
-    use std::os::windows::process::CommandExt;
-    command.creation_flags(CREATE_NO_WINDOW);
-}
-
-#[cfg(not(windows))]
-fn hide_window(_command: &mut Command) {}
 
 #[cfg(test)]
 #[path = "../../../test/features/library/videos.test.rs"]

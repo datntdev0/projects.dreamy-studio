@@ -1,3 +1,6 @@
+#[cfg(windows)]
+use crate::shared::process::CREATE_NO_WINDOW;
+use crate::shared::process::hide_window;
 use std::env::current_exe;
 use std::fmt;
 use std::fs::File;
@@ -24,10 +27,9 @@ const POLL_INTERVAL: Duration = Duration::from_millis(100);
 const PROBE_TIMEOUT: Duration = Duration::from_millis(300);
 const STDERR_FILE: &str = "backend-stderr.log";
 
-#[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const BACKEND_DIR: &str = "backend";
 const PYTHON_DIR: &str = "python";
+const RESOURCES_DIR: &str = "resources";
 pub const DEFAULT_DEVICE: &str = "cpu";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,7 +95,7 @@ impl BackendLaunch {
         let backend = root.join("backend");
         Self {
             program: venv_python(&backend),
-            args: vec!["-m".to_string(), "app".to_string()],
+            args: development_args(&bundled_python(&manifest.join(RESOURCES_DIR))),
             working_dir: Some(backend),
             run_mode: "dev",
             log_dir,
@@ -118,6 +120,15 @@ impl BackendLaunch {
     fn stderr_path(&self) -> PathBuf {
         self.log_dir.join(STDERR_FILE)
     }
+}
+
+fn development_args(worker_python: &Path) -> Vec<String> {
+    let mut args = vec!["-m".to_string(), "app".to_string()];
+    if worker_python.is_file() {
+        args.push("--worker-python".to_string());
+        args.push(worker_python.to_string_lossy().into_owned());
+    }
+    args
 }
 
 #[cfg(windows)]
@@ -334,15 +345,6 @@ fn terminate(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
 }
-
-#[cfg(windows)]
-fn hide_window(command: &mut Command) {
-    use std::os::windows::process::CommandExt;
-    command.creation_flags(CREATE_NO_WINDOW);
-}
-
-#[cfg(not(windows))]
-fn hide_window(_command: &mut Command) {}
 
 #[cfg(windows)]
 fn kill_tree(pid: u32) {

@@ -123,6 +123,28 @@ pub struct TtsModel {
     pub languages: Vec<String>,
     pub cloning: bool,
     pub gpu_recommended: bool,
+    #[serde(default)]
+    pub sources: Vec<String>,
+    #[serde(default)]
+    pub presets: Vec<VoicePreset>,
+    #[serde(default)]
+    pub license: String,
+    #[serde(default = "commercial_by_default")]
+    pub commercial_use: bool,
+}
+
+fn commercial_by_default() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct VoicePreset {
+    pub id: String,
+    pub name: String,
+    pub gender: String,
+    pub region: String,
+    pub style: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -133,4 +155,24 @@ pub struct BackendView {
     pub cuda: CudaView,
     pub device: Device,
     pub models_dir: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SynthesisRequest {
+    pub model: String,
+    pub text: String,
+    pub source: String,
+    pub language: String,
+    pub gender: String,
+    pub preset: String,
+    pub prompt: String,
+    pub reference_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SynthesizedAudio {
+    pub bytes: Vec<u8>,
+    pub duration_ms: Option<i64>,
+    pub cached: bool,
 }

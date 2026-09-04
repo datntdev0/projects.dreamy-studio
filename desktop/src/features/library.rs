@@ -7,3 +7,4 @@ pub mod service;
 pub mod sounds;
 pub mod tags;
 pub mod videos;
+pub mod voices;

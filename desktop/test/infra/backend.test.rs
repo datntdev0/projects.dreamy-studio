@@ -130,13 +130,30 @@ fn free_port_returns_a_bindable_port() {
 }
 
 #[test]
+fn development_args_pass_the_worker_python_when_present() {
+    let dir = tempdir().unwrap();
+    let python = dir.path().join("python.exe");
+    assert_eq!(development_args(&python), vec!["-m", "app"]);
+    std::fs::write(&python, b"").unwrap();
+    assert_eq!(
+        development_args(&python),
+        vec![
+            "-m".to_string(),
+            "app".to_string(),
+            "--worker-python".to_string(),
+            python.to_string_lossy().into_owned(),
+        ]
+    );
+}
+
+#[test]
 fn launch_resolves_to_the_expected_mode() {
     let launch = BackendLaunch::resolve(PathBuf::from("data"), PathBuf::from("logs"));
     assert_eq!(launch.data_dir, PathBuf::from("data"));
 
     if cfg!(debug_assertions) {
         assert_eq!(launch.run_mode, "dev");
-        assert_eq!(launch.args, vec!["-m".to_string(), "app".to_string()]);
+        assert_eq!(launch.args[..2], ["-m".to_string(), "app".to_string()]);
         assert!(launch.program.ends_with(venv_python(Path::new("backend"))));
     } else {
         assert_eq!(launch.run_mode, "prod");

@@ -1,5 +1,7 @@
 use crate::features::backend::models::BackendView;
 use crate::features::backend::models::ServerView;
+use crate::features::backend::models::SynthesisRequest;
+use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::models::SystemView;
 use crate::features::backend::models::TtsModel;
 use crate::features::backend::monitor::MonitorState;
@@ -24,6 +26,8 @@ use std::time::Instant;
 pub const MODELS_DIR: &str = "models";
 const STATUS_TIMEOUT: Duration = Duration::from_secs(3);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const SYNTHESIS_TIMEOUT: Duration = Duration::from_secs(1_200);
+const SYNTHESIS_PATH: &str = "/tts/synthesize";
 const NOT_RUNNING: &str = "The local backend is not running.";
 const CUDA_NOT_READY: &str =
     "CUDA needs an NVIDIA GPU and an installed CUDA runtime before it can be selected.";
@@ -148,6 +152,23 @@ impl BackendService {
 
     pub fn remove_model(&self, id: &str) -> Result<(), String> {
         self.proxy(Method::Delete, &model_path(id)?)
+    }
+
+    pub fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
+        let port = self
+            .supervisor
+            .monitor()
+            .port()
+            .ok_or_else(|| ClientError::Unreachable(NOT_RUNNING.to_string()))?;
+        let response =
+            BackendClient::new(port, SYNTHESIS_TIMEOUT).post_for_bytes(SYNTHESIS_PATH, request)?;
+        Ok(SynthesizedAudio {
+            duration_ms: response
+                .header("x-duration-ms")
+                .and_then(|value| value.parse().ok()),
+            cached: response.header("x-cache") == Some("hit"),
+            bytes: response.bytes,
+        })
     }
 
     pub fn logs_dir(&self) -> Result<PathBuf, String> {

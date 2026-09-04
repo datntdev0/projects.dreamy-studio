@@ -1,5 +1,6 @@
 use crate::features::settings::llm::CliSpec;
 use crate::shared::process::failure_snippet;
+use crate::shared::process::hide_window;
 use serde::Serialize;
 use std::ffi::OsStr;
 use std::io::Read;
@@ -16,8 +17,6 @@ use std::time::UNIX_EPOCH;
 const PROBE_TIMEOUT: Duration = Duration::from_secs(15);
 const POLL_INTERVAL: Duration = Duration::from_millis(25);
 const ACCOUNT_LIMIT: usize = 80;
-#[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(windows)]
 const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
 
@@ -299,15 +298,6 @@ pub fn parse_version(output: &str) -> String {
         .unwrap_or(line)
         .to_string()
 }
-
-#[cfg(windows)]
-pub fn hide_window(command: &mut Command) {
-    use std::os::windows::process::CommandExt;
-    command.creation_flags(CREATE_NO_WINDOW);
-}
-
-#[cfg(not(windows))]
-pub fn hide_window(_command: &mut Command) {}
 
 #[cfg(windows)]
 fn open_terminal(command: &mut Command) {

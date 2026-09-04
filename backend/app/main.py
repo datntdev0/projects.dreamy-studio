@@ -5,14 +5,20 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Request, Response
 
 from app.catalog import Catalog
 from app.config import Settings
 from app.cuda import configure_dll_search
 from app.errors import register_error_handlers
 from app.log import setup_logging
-from app.schemas import CudaResponse, HealthResponse, SystemResponse, TtsModelResponse
+from app.schemas import (
+    CudaResponse,
+    HealthResponse,
+    SynthesizeRequest,
+    SystemResponse,
+    TtsModelResponse,
+)
 from app.services import Services
 
 router = APIRouter()
@@ -79,6 +85,20 @@ def model_cancel(model_id: str, services: ServicesDep) -> TtsModelResponse:
 @router.delete("/models/{model_id}", response_model=TtsModelResponse)
 def model_remove(model_id: str, services: ServicesDep) -> TtsModelResponse:
     return services.remove_model(model_id)
+
+
+@router.post("/tts/synthesize", response_class=Response)
+def tts_synthesize(body: SynthesizeRequest, services: ServicesDep) -> Response:
+    result = services.synthesize(body.to_request())
+    return Response(
+        content=result.audio.path.read_bytes(),
+        media_type="audio/wav",
+        headers={
+            "X-Duration-Ms": str(result.audio.duration_ms),
+            "X-Sample-Rate": str(result.audio.sample_rate),
+            "X-Cache": "hit" if result.cached else "miss",
+        },
+    )
 
 
 @asynccontextmanager

@@ -6,7 +6,9 @@ from pydantic.alias_generators import to_camel
 from app.catalog import CatalogModel, VoicePreset
 from app.downloads import Download
 from app.gpu import Gpu
+from app.synthesis import SynthesisRequest
 
+VoiceSource = Literal["preset", "clone", "design"]
 DownloadState = Literal["none", "downloading", "installed", "error"]
 Device = Literal["cpu", "cuda"]
 
@@ -103,4 +105,27 @@ class TtsModelResponse(DownloadResponse):
             gpu_recommended=model.gpu_recommended,
             sources=list(model.sources),
             presets=[VoicePresetResponse.of(preset) for preset in model.presets],
+        )
+
+
+class SynthesizeRequest(CamelModel):
+    model: str
+    text: str
+    source: VoiceSource
+    language: str = ""
+    gender: str = ""
+    preset: str = ""
+    prompt: str = ""
+    reference_path: str = ""
+
+    def to_request(self) -> SynthesisRequest:
+        return SynthesisRequest(
+            model=self.model,
+            text=self.text,
+            source=self.source,
+            language=self.language,
+            gender=self.gender,
+            preset=self.preset,
+            prompt=self.prompt,
+            reference_path=self.reference_path,
         )

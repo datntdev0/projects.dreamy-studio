@@ -9,6 +9,8 @@ from app.gpu import GpuDetector
 from app.models import ModelDownloader
 from app.runtimes import RuntimeInstaller
 from app.schemas import CudaResponse, GpuResponse, SystemResponse, TtsModelResponse
+from app.synthesis import SynthesisRequest, SynthesisResult, Synthesizer
+from app.tts_cache import TtsCache
 from app.worker_host import WorkerHost
 
 PACKAGE_NAME = "dreamy-studio-backend"
@@ -38,6 +40,10 @@ class Services:
         self.cuda = CudaInstaller(settings.cuda_dir, settings.pypi_url, self.catalog.cuda)
         self.runtimes = self.build_runtimes()
         self.workers = WorkerHost(settings.worker_python, settings.log_dir)
+        self.tts_cache = TtsCache(settings.tts_cache_dir)
+        self.synthesizer = Synthesizer(
+            self.workers, self.tts_cache, self.device, settings.tts_engine
+        )
         self.models = {
             model.id: ModelDownloader(
                 model, settings.models_dir, settings.hf_endpoint, self.runtime_of(model)
@@ -136,5 +142,9 @@ class Services:
             download = downloader.slot.remove()
         except DownloadBusy as error:
             raise BackendError(409, "MODEL_BUSY", f"Model '{model_id}' is downloading") from error
+        self.tts_cache.clear(model_id)
         self.release_runtime(downloader.model)
         return TtsModelResponse.of(downloader.model, download)
+
+    def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
+        return self.synthesizer.synthesize(self.model(request.model), request)

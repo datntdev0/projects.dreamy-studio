@@ -22,7 +22,8 @@ WHEEL_PATH = re.compile(r"^/files/(?P<file>[^/?]+)$")
 
 
 class AsgiCall:
-    def __init__(self, method: str, path: str) -> None:
+    def __init__(self, method: str, path: str, body: bytes = b"") -> None:
+        self.body = body
         self.scope = {
             "type": "http",
             "asgi": {"version": "3.0"},
@@ -33,14 +34,14 @@ class AsgiCall:
             "raw_path": path.encode(),
             "query_string": b"",
             "root_path": "",
-            "headers": [],
+            "headers": [(b"content-type", b"application/json")] if body else [],
             "server": ("localhost", 80),
             "client": ("127.0.0.1", 1),
         }
         self.messages: list[dict] = []
 
     async def receive(self) -> dict:
-        return {"type": "http.request", "body": b"", "more_body": False}
+        return {"type": "http.request", "body": self.body, "more_body": False}
 
     async def send(self, message: dict) -> None:
         self.messages.append(message)
@@ -51,17 +52,38 @@ class AsgiCall:
         except RuntimeError:
             pass
 
-    def result(self) -> tuple[int, object]:
-        body = b"".join(
+    def content(self) -> bytes:
+        return b"".join(
             m.get("body", b"") for m in self.messages if m["type"] == "http.response.body"
         )
-        return self.messages[0]["status"], json.loads(body)
+
+    def headers(self) -> dict[str, str]:
+        return {
+            name.decode().lower(): value.decode() for name, value in self.messages[0]["headers"]
+        }
+
+    def result(self) -> tuple[int, object]:
+        return self.messages[0]["status"], json.loads(self.content())
 
 
-def asgi_request(app: FastAPI, method: str, path: str) -> tuple[int, object]:
-    call = AsgiCall(method, path)
+def run_call(app: FastAPI, method: str, path: str, payload: object | None) -> AsgiCall:
+    body = json.dumps(payload).encode() if payload is not None else b""
+    call = AsgiCall(method, path, body)
     asyncio.run(call.run(app))
-    return call.result()
+    return call
+
+
+def asgi_request(
+    app: FastAPI, method: str, path: str, payload: object | None = None
+) -> tuple[int, object]:
+    return run_call(app, method, path, payload).result()
+
+
+def asgi_raw(
+    app: FastAPI, method: str, path: str, payload: object | None = None
+) -> tuple[int, dict[str, str], bytes]:
+    call = run_call(app, method, path, payload)
+    return call.messages[0]["status"], call.headers(), call.content()
 
 
 def wait_until(condition: Callable[[], bool], timeout: float = 15) -> None:

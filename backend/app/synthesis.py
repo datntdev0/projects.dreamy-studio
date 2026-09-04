@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.catalog import CatalogModel
+from app.catalog import CatalogModel, VoicePreset
 from app.downloads import file_sha256
 from app.errors import BackendError
 from app.models import ModelDownloader
@@ -23,6 +23,8 @@ ERROR_STATUS = {
     "SOURCE_UNSUPPORTED": 422,
     "REFERENCE_MISSING": 422,
     "PROMPT_EMPTY": 422,
+    "PROMPT_INVALID": 422,
+    "REFERENCE_INVALID": 422,
     "MODEL_NOT_INSTALLED": 409,
     "WORKER_TIMEOUT": 504,
 }
@@ -70,6 +72,13 @@ def check_reference(path: str) -> Path:
     return reference
 
 
+def find_preset(model: CatalogModel, preset_id: str) -> VoicePreset:
+    for preset in model.presets:
+        if preset.id == preset_id:
+            return preset
+    raise reject("PRESET_UNKNOWN", f"Unknown preset voice '{preset_id}'")
+
+
 def check_voice(model: CatalogModel, request: SynthesisRequest) -> dict[str, Any]:
     if request.source not in model.sources:
         raise reject("SOURCE_UNSUPPORTED", f"{model.name} does not support {request.source} voices")
@@ -79,9 +88,10 @@ def check_voice(model: CatalogModel, request: SynthesisRequest) -> dict[str, Any
         "gender": request.gender,
     }
     if request.source == PRESET_SOURCE:
-        if request.preset not in {preset.id for preset in model.presets}:
-            raise reject("PRESET_UNKNOWN", f"Unknown preset voice '{request.preset}'")
-        voice["preset"] = request.preset
+        preset = find_preset(model, request.preset)
+        voice["preset"] = preset.id
+        if preset.prompt:
+            voice["prompt"] = preset.prompt
     if request.source == CLONE_SOURCE:
         voice["referencePath"] = str(check_reference(request.reference_path))
     if request.source == DESIGN_SOURCE:

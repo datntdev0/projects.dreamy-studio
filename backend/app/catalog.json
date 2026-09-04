@@ -221,7 +221,9 @@
           "region": "south",
           "style": "reading"
         }
-      ]
+      ],
+      "license": "Apache-2.0",
+      "commercialUse": true
     },
     {
       "id": "vieneu-nano",
@@ -321,7 +323,9 @@
           "region": "north",
           "style": "reading"
         }
-      ]
+      ],
+      "license": "Apache-2.0",
+      "commercialUse": true
     },
     {
       "id": "omnivoice",
@@ -332,7 +336,81 @@
       ],
       "cloning": true,
       "gpuRecommended": true,
-      "sizeBytes": 3267465820
+      "sizeBytes": 4889931874,
+      "runtime": "torch",
+      "engine": "engine_omnivoice",
+      "sources": [
+        "preset",
+        "clone",
+        "design"
+      ],
+      "extraSources": [
+        {
+          "source": "openai/whisper-large-v3-turbo",
+          "dir": "asr",
+          "sizeBytes": 1622466054
+        }
+      ],
+      "license": "CC-BY-NC",
+      "commercialUse": false,
+      "presets": [
+        {
+          "id": "young-woman",
+          "name": "Young woman",
+          "gender": "female",
+          "region": "",
+          "style": "natural",
+          "prompt": "female, young adult, moderate pitch"
+        },
+        {
+          "id": "young-man",
+          "name": "Young man",
+          "gender": "male",
+          "region": "",
+          "style": "natural",
+          "prompt": "male, young adult, moderate pitch"
+        },
+        {
+          "id": "mature-woman",
+          "name": "Mature woman",
+          "gender": "female",
+          "region": "",
+          "style": "natural",
+          "prompt": "female, middle-aged, low pitch"
+        },
+        {
+          "id": "mature-man",
+          "name": "Mature man",
+          "gender": "male",
+          "region": "",
+          "style": "natural",
+          "prompt": "male, middle-aged, low pitch"
+        },
+        {
+          "id": "elderly-woman",
+          "name": "Elderly woman",
+          "gender": "female",
+          "region": "",
+          "style": "natural",
+          "prompt": "female, elderly, moderate pitch"
+        },
+        {
+          "id": "elderly-man",
+          "name": "Elderly man",
+          "gender": "male",
+          "region": "",
+          "style": "natural",
+          "prompt": "male, elderly, low pitch"
+        },
+        {
+          "id": "child",
+          "name": "Child",
+          "gender": "neutral",
+          "region": "",
+          "style": "natural",
+          "prompt": "child, high pitch"
+        }
+      ]
     }
   ],
   "runtimes": [
@@ -340,6 +418,13 @@
       "id": "vieneu",
       "variants": {
         "cpu": "runtimes/vieneu-cpu.json"
+      }
+    },
+    {
+      "id": "torch",
+      "variants": {
+        "cpu": "runtimes/torch-cpu.json",
+        "cuda": "runtimes/torch-cuda.json"
       }
     }
   ]

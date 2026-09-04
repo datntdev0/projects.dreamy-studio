@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from functools import cache
 from importlib import resources
 from typing import Any
+from urllib.parse import unquote
 
 CPU_VARIANT = "cpu"
 CUDA_VARIANT = "cuda"
@@ -15,6 +16,7 @@ class VoicePreset:
     gender: str
     region: str = ""
     style: str = ""
+    prompt: str = ""
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,8 @@ class CatalogModel:
     sources: tuple[str, ...] = ()
     presets: tuple[VoicePreset, ...] = ()
     extra_sources: tuple[ExtraSource, ...] = ()
+    license: str = ""
+    commercial_use: bool = True
 
 
 @dataclass(frozen=True)
@@ -64,7 +68,7 @@ class RuntimeWheel:
 
     @property
     def filename(self) -> str:
-        return self.url.rsplit("/", 1)[-1].split("#", 1)[0]
+        return unquote(self.url.rsplit("/", 1)[-1].split("#", 1)[0])
 
 
 @dataclass(frozen=True)
@@ -117,6 +121,7 @@ def parse_preset(entry: dict[str, Any]) -> VoicePreset:
         gender=entry["gender"],
         region=entry.get("region", ""),
         style=entry.get("style", ""),
+        prompt=entry.get("prompt", ""),
     )
 
 
@@ -139,6 +144,8 @@ def parse_model(entry: dict[str, Any]) -> CatalogModel:
         sources=tuple(entry.get("sources", [])),
         presets=tuple(parse_preset(item) for item in entry.get("presets", [])),
         extra_sources=tuple(parse_extra_source(item) for item in entry.get("extraSources", [])),
+        license=entry.get("license", ""),
+        commercial_use=bool(entry.get("commercialUse", True)),
     )
 
 

@@ -18,7 +18,7 @@ from app.catalog import (
 from app.config import Settings
 from app.downloads import write_manifest
 from app.main import create_app
-from app.synthesis import worker_failure
+from app.synthesis import SynthesisRequest, check_voice, worker_failure
 from app.tts_cache import TtsCache
 from app.worker_host import WorkerTimeout
 
@@ -177,6 +177,21 @@ class SynthesisTests(unittest.TestCase):
         self.assertTrue(self.cached_files())
         self.assertEqual(asgi_request(self.app, "DELETE", "/models/tone")[0], 200)
         self.assertFalse((self.data / "cache" / "tts" / "tone").exists())
+
+    def test_preset_prompt_is_forwarded(self):
+        preset = VoicePreset("elderly-man", "Elderly man", "male", prompt="male, elderly")
+        model = tone_model("omni", presets=(preset,))
+        request = SynthesisRequest(model="omni", text="a", source="preset", preset="elderly-man")
+        self.assertEqual(
+            check_voice(model, request),
+            {
+                "source": "preset",
+                "language": "",
+                "gender": "",
+                "preset": "elderly-man",
+                "prompt": "male, elderly",
+            },
+        )
 
     def test_worker_failure_status(self):
         failure = worker_failure(WorkerTimeout("synthesize", 1))

@@ -80,7 +80,7 @@ class ModelDownloadTests(DownloadTestCase):
         self.assertEqual(
             [item["id"] for item in body], ["vieneu-turbo", "vieneu-nano", "omnivoice"]
         )
-        omnivoice = body[2]
+        omnivoice = {key: value for key, value in body[2].items() if key != "presets"}
         self.assertEqual(
             omnivoice,
             {
@@ -94,8 +94,19 @@ class ModelDownloadTests(DownloadTestCase):
                 "languages": ["mul"],
                 "cloning": True,
                 "gpuRecommended": True,
-                "sources": [],
-                "presets": [],
+                "sources": ["preset", "clone", "design"],
+                "license": "CC-BY-NC",
+                "commercialUse": False,
+            },
+        )
+        self.assertEqual(
+            body[2]["presets"][0],
+            {
+                "id": "young-woman",
+                "name": "Young woman",
+                "gender": "female",
+                "region": "",
+                "style": "natural",
             },
         )
         turbo = body[0]

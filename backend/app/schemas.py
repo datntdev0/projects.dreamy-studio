@@ -92,6 +92,8 @@ class TtsModelResponse(DownloadResponse):
     gpu_recommended: bool
     sources: list[str]
     presets: list[VoicePresetResponse]
+    license: str
+    commercial_use: bool
 
     @classmethod
     def of(cls, model: CatalogModel, download: Download) -> "TtsModelResponse":
@@ -105,6 +107,8 @@ class TtsModelResponse(DownloadResponse):
             gpu_recommended=model.gpu_recommended,
             sources=list(model.sources),
             presets=[VoicePresetResponse.of(preset) for preset in model.presets],
+            license=model.license,
+            commercial_use=model.commercial_use,
         )
 
 

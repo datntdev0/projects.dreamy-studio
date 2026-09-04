@@ -18,6 +18,7 @@ from app.downloads import (
     utc_now,
     write_manifest,
 )
+from app.processes import NO_WINDOW_FLAGS
 
 SITE_DIR = "site-packages"
 STAGING_NAME = ".wheels"
@@ -40,6 +41,7 @@ def python_version(executable: str) -> str:
         text=True,
         timeout=60,
         check=True,
+        creationflags=NO_WINDOW_FLAGS,
     )
     return result.stdout.strip()
 

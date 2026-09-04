@@ -1,14 +1,14 @@
 import logging
 import subprocess
-import sys
 import threading
 from dataclasses import dataclass
+
+from app.processes import NO_WINDOW_FLAGS
 
 QUERY_ARGS = (
     "--query-gpu=name,memory.total,driver_version",
     "--format=csv,noheader,nounits",
 )
-CREATE_NO_WINDOW = 0x08000000
 
 logger = logging.getLogger("gpu")
 
@@ -42,7 +42,7 @@ def query_nvidia_smi(executable: str) -> Gpu:
             text=True,
             timeout=15,
             check=False,
-            creationflags=CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            creationflags=NO_WINDOW_FLAGS,
         )
     except (OSError, subprocess.SubprocessError) as error:
         logger.info("nvidia-smi is not available: %s", error)

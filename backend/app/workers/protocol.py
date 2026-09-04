@@ -1,0 +1,23 @@
+from typing import Any
+
+ENGINE_FAILED = "ENGINE_FAILED"
+UNKNOWN_OP = "UNKNOWN_OP"
+INVALID_REQUEST = "INVALID_REQUEST"
+SHUTDOWN = "shutdown"
+PING = "ping"
+ENGINE_OPS = ("load", "synthesize", "unload")
+
+
+class EngineError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def success(request_id: Any, result: dict[str, Any]) -> dict[str, Any]:
+    return {"id": request_id, "ok": True, "result": result}
+
+
+def failure(request_id: Any, code: str, message: str) -> dict[str, Any]:
+    return {"id": request_id, "ok": False, "error": {"code": code, "message": message}}

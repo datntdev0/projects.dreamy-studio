@@ -1,5 +1,7 @@
 import os
 import platform
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -79,8 +81,14 @@ def model_remove(model_id: str, services: ServicesDep) -> TtsModelResponse:
     return services.remove_model(model_id)
 
 
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    yield
+    application.state.services.close()
+
+
 def create_app(settings: Settings, catalog: Catalog | None = None) -> FastAPI:
-    application = FastAPI(title="Dreamy Studio Local Backend")
+    application = FastAPI(title="Dreamy Studio Local Backend", lifespan=lifespan)
     register_error_handlers(application)
     application.include_router(router)
     application.state.services = Services(settings, catalog)

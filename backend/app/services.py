@@ -9,6 +9,7 @@ from app.gpu import GpuDetector
 from app.models import ModelDownloader
 from app.runtimes import RuntimeInstaller
 from app.schemas import CudaResponse, GpuResponse, SystemResponse, TtsModelResponse
+from app.worker_host import WorkerHost
 
 PACKAGE_NAME = "dreamy-studio-backend"
 
@@ -36,12 +37,16 @@ class Services:
         self.gpu = GpuDetector(settings.nvidia_smi)
         self.cuda = CudaInstaller(settings.cuda_dir, settings.pypi_url, self.catalog.cuda)
         self.runtimes = self.build_runtimes()
+        self.workers = WorkerHost(settings.worker_python, settings.log_dir)
         self.models = {
             model.id: ModelDownloader(
                 model, settings.models_dir, settings.hf_endpoint, self.runtime_of(model)
             )
             for model in self.catalog.models
         }
+
+    def close(self) -> None:
+        self.workers.close()
 
     def installer(self, variant: RuntimeVariant) -> RuntimeInstaller:
         return RuntimeInstaller(

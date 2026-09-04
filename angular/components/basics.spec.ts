@@ -168,7 +168,8 @@ describe('Segments, Slider and Tabs', () => {
     instance.valueChange.subscribe(changed);
     root.querySelectorAll('button')[1].click();
     expect(changed).toHaveBeenCalledWith('b');
-    expect(instance.value).toBe('b');
+    expect(instance.value()).toBe('a');
+    expect(root.querySelectorAll('button')[0].getAttribute('aria-pressed')).toBe('true');
   });
 
   it('slider emits numeric values', () => {

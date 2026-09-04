@@ -83,6 +83,21 @@ describe('LibraryVoiceDialog', () => {
     ]);
     mounted.instance.onSource('design');
     expect(mounted.instance.source()).toBe('preset');
+    mounted.instance.onEngine({ target: { value: 'omnivoice' } } as unknown as Event);
+    await settle(mounted.fixture, 2);
+    const design = Array.from(
+      mounted.root.querySelectorAll<HTMLButtonElement>(
+        "[data-testid='library-voice-dialog-source'] button",
+      ),
+    ).find((button) => button.textContent?.trim() === 'Design');
+    design?.click();
+    mounted.instance.onEngine({ target: { value: 'edge-read-aloud' } } as unknown as Event);
+    await settle(mounted.fixture, 2);
+    expect(mounted.instance.source()).toBe('preset');
+    const pressed = mounted.root.querySelector(
+      "[data-testid='library-voice-dialog-source'] button[aria-pressed='true']",
+    );
+    expect(pressed?.textContent?.trim()).toBe('Preset');
   });
 
   it('uses a picked file as the clone reference and lets it be removed', async () => {

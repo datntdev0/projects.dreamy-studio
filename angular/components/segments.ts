@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 export type SegmentOption = { value: string; label: string; disabled?: boolean };
 
@@ -10,11 +10,10 @@ export type SegmentOption = { value: string; label: string; disabled?: boolean }
 export class Segments {
   readonly label = input('Options');
   readonly options = input<SegmentOption[]>([]);
-  @Input() value = '';
+  readonly value = input('');
   readonly valueChange = output<string>();
 
   select(value: string): void {
-    this.value = value;
     this.valueChange.emit(value);
   }
 }

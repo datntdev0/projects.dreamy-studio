@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,13 @@ class CancellableProgress(hf_tqdm):
 
 def progress_class(job: DownloadJob) -> type[CancellableProgress]:
     return type("JobProgress", (CancellableProgress,), {"job": job})
+
+
+@dataclass(frozen=True)
+class Repository:
+    source: str
+    local_dir: Path
+    prefix: str
 
 
 class ModelDownloader:
@@ -80,36 +87,48 @@ class ModelDownloader:
         runtime.ensure(job)
         return missing
 
-    def list_files(self) -> list[RepoFile]:
+    def repositories(self) -> list[Repository]:
+        main = Repository(self.model.source, self.target, "")
+        extras = [
+            Repository(extra.source, self.target / extra.dir, f"{extra.dir}/")
+            for extra in self.model.extra_sources
+        ]
+        return [main, *extras]
+
+    def list_files(self, repository: Repository) -> list[RepoFile]:
         api = HfApi(endpoint=self.endpoint)
-        tree = api.list_repo_tree(self.model.source, recursive=True, revision=REVISION)
+        tree = api.list_repo_tree(repository.source, recursive=True, revision=REVISION)
         return [item for item in tree if isinstance(item, RepoFile)]
 
     def remove_stale_parts(self) -> None:
-        for stale in (self.target / ".cache").rglob("*.incomplete"):
+        for stale in self.target.rglob("*.incomplete"):
             stale.unlink(missing_ok=True)
+
+    def fetch(self, repository: Repository, item: RepoFile, job: DownloadJob) -> None:
+        job.check_cancelled()
+        hf_hub_download(
+            repository.source,
+            item.path,
+            revision=REVISION,
+            local_dir=repository.local_dir,
+            endpoint=self.endpoint,
+            tqdm_class=progress_class(job),
+        )
 
     def download(self, job: DownloadJob) -> dict[str, Any]:
         runtime_bytes = self.prepare_runtime(job)
         self.remove_stale_parts()
-        files = self.list_files()
-        job.total_bytes = (
-            sum(item.size for item in files) or self.model.size_bytes
-        ) + runtime_bytes
-        progress = progress_class(job)
-        for item in files:
-            job.check_cancelled()
-            hf_hub_download(
-                self.model.source,
-                item.path,
-                revision=REVISION,
-                local_dir=self.target,
-                endpoint=self.endpoint,
-                tqdm_class=progress,
-            )
+        listing = [(repository, self.list_files(repository)) for repository in self.repositories()]
+        files_bytes = sum(item.size for _, items in listing for item in items)
+        job.total_bytes = (files_bytes or self.model.size_bytes) + runtime_bytes
+        for repository, items in listing:
+            for item in items:
+                self.fetch(repository, item, job)
         return {
             "id": self.model.id,
             "source": self.model.source,
-            "files": [item.path for item in files],
+            "files": [
+                repository.prefix + item.path for repository, items in listing for item in items
+            ],
             "runtime": self.runtime.key if self.runtime else None,
         }

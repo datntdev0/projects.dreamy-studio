@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
-from app.catalog import CatalogModel
+from app.catalog import CatalogModel, VoicePreset
 from app.downloads import Download
 from app.gpu import Gpu
 
@@ -63,6 +63,24 @@ class SystemResponse(CamelModel):
     cuda: CudaResponse
 
 
+class VoicePresetResponse(CamelModel):
+    id: str
+    name: str
+    gender: str
+    region: str
+    style: str
+
+    @classmethod
+    def of(cls, preset: VoicePreset) -> "VoicePresetResponse":
+        return cls(
+            id=preset.id,
+            name=preset.name,
+            gender=preset.gender,
+            region=preset.region,
+            style=preset.style,
+        )
+
+
 class TtsModelResponse(DownloadResponse):
     id: str
     name: str
@@ -70,6 +88,8 @@ class TtsModelResponse(DownloadResponse):
     languages: list[str]
     cloning: bool
     gpu_recommended: bool
+    sources: list[str]
+    presets: list[VoicePresetResponse]
 
     @classmethod
     def of(cls, model: CatalogModel, download: Download) -> "TtsModelResponse":
@@ -81,4 +101,6 @@ class TtsModelResponse(DownloadResponse):
             languages=list(model.languages),
             cloning=model.cloning,
             gpu_recommended=model.gpu_recommended,
+            sources=list(model.sources),
+            presets=[VoicePresetResponse.of(preset) for preset in model.presets],
         )

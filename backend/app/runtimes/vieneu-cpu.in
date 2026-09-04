@@ -1,0 +1,9 @@
+sea-g2p==0.9.1
+onnxruntime>=1.20,<2
+numpy>=2,<3
+soundfile>=0.13,<1
+soxr>=0.5,<1
+kaldi-native-fbank>=1.20,<2
+tokenizers>=0.20,<1
+huggingface_hub>=0.30,<2
+PyYAML>=6,<7

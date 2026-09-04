@@ -9,6 +9,22 @@ CUDA_VARIANT = "cuda"
 
 
 @dataclass(frozen=True)
+class VoicePreset:
+    id: str
+    name: str
+    gender: str
+    region: str = ""
+    style: str = ""
+
+
+@dataclass(frozen=True)
+class ExtraSource:
+    source: str
+    dir: str
+    size_bytes: int
+
+
+@dataclass(frozen=True)
 class CatalogModel:
     id: str
     name: str
@@ -18,6 +34,11 @@ class CatalogModel:
     gpu_recommended: bool
     size_bytes: int
     runtime: str | None = None
+    engine: str | None = None
+    engine_options: dict[str, Any] = field(default_factory=dict)
+    sources: tuple[str, ...] = ()
+    presets: tuple[VoicePreset, ...] = ()
+    extra_sources: tuple[ExtraSource, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -89,6 +110,20 @@ def read_catalog() -> dict[str, Any]:
     return read_resource("catalog.json")
 
 
+def parse_preset(entry: dict[str, Any]) -> VoicePreset:
+    return VoicePreset(
+        id=entry["id"],
+        name=entry["name"],
+        gender=entry["gender"],
+        region=entry.get("region", ""),
+        style=entry.get("style", ""),
+    )
+
+
+def parse_extra_source(entry: dict[str, Any]) -> ExtraSource:
+    return ExtraSource(source=entry["source"], dir=entry["dir"], size_bytes=int(entry["sizeBytes"]))
+
+
 def parse_model(entry: dict[str, Any]) -> CatalogModel:
     return CatalogModel(
         id=entry["id"],
@@ -99,6 +134,11 @@ def parse_model(entry: dict[str, Any]) -> CatalogModel:
         gpu_recommended=bool(entry["gpuRecommended"]),
         size_bytes=int(entry["sizeBytes"]),
         runtime=entry.get("runtime"),
+        engine=entry.get("engine"),
+        engine_options=dict(entry.get("engineOptions", {})),
+        sources=tuple(entry.get("sources", [])),
+        presets=tuple(parse_preset(item) for item in entry.get("presets", [])),
+        extra_sources=tuple(parse_extra_source(item) for item in entry.get("extraSources", [])),
     )
 
 

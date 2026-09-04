@@ -13,7 +13,9 @@ PLATFORM = "win_amd64"
 USER_AGENT = "dreamy-studio-lock"
 
 
-def pip_report(requirements: Path, python: str, indexes: list[str], extras: list[str]) -> Any:
+def pip_report(
+    requirements: list[str], python: str, indexes: list[str], extras: list[str], no_deps: bool
+) -> Any:
     with tempfile.TemporaryDirectory() as work:
         report = Path(work) / "report.json"
         command = [
@@ -36,9 +38,10 @@ def pip_report(requirements: Path, python: str, indexes: list[str], extras: list
             str(Path(work) / "target"),
             "--report",
             str(report),
-            "-r",
-            str(requirements),
+            *requirements,
         ]
+        if no_deps:
+            command.append("--no-deps")
         for index in indexes:
             command += ["--index-url", index]
         for extra in extras:
@@ -75,11 +78,19 @@ def lock_entry(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def resolve(args: argparse.Namespace, requirements: list[str], no_deps: bool) -> list[Any]:
+    if not requirements:
+        return []
+    report = pip_report(requirements, args.python, args.index_url, args.extra_index_url, no_deps)
+    return report["install"]
+
+
 def build_lock(args: argparse.Namespace) -> dict[str, Any]:
-    report = pip_report(args.requirements, args.python, args.index_url, args.extra_index_url)
-    wheels = sorted(
-        (lock_entry(item) for item in report["install"]), key=operator.itemgetter("name")
-    )
+    items = [
+        *resolve(args, ["-r", str(args.requirements)], no_deps=False),
+        *resolve(args, args.standalone, no_deps=True),
+    ]
+    wheels = sorted((lock_entry(item) for item in items), key=operator.itemgetter("name"))
     return {
         "runtime": args.runtime,
         "variant": args.variant,
@@ -94,6 +105,7 @@ def main() -> None:
     parser.add_argument("runtime")
     parser.add_argument("variant", choices=("cpu", "cuda"))
     parser.add_argument("--requirements", type=Path, required=True)
+    parser.add_argument("--standalone", action="append", default=[])
     parser.add_argument("--python", default="3.12")
     parser.add_argument("--index-url", action="append", default=[])
     parser.add_argument("--extra-index-url", action="append", default=[])

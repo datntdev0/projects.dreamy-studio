@@ -3,9 +3,18 @@
     "version": "12.4",
     "sizeBytes": 1077700558,
     "packages": [
-      { "name": "nvidia-cuda-runtime-cu12", "version": "12.4.127" },
-      { "name": "nvidia-cublas-cu12", "version": "12.4.5.8" },
-      { "name": "nvidia-cudnn-cu12", "version": "9.1.0.70" }
+      {
+        "name": "nvidia-cuda-runtime-cu12",
+        "version": "12.4.127"
+      },
+      {
+        "name": "nvidia-cublas-cu12",
+        "version": "12.4.5.8"
+      },
+      {
+        "name": "nvidia-cudnn-cu12",
+        "version": "9.1.0.70"
+      }
     ]
   },
   "models": [
@@ -13,28 +22,325 @@
       "id": "vieneu-turbo",
       "name": "VieNeu-TTS v3 Turbo",
       "source": "pnnbao-ump/VieNeu-TTS-v3-Turbo",
-      "languages": ["vi", "en"],
+      "languages": [
+        "vi",
+        "en"
+      ],
       "cloning": true,
       "gpuRecommended": false,
-      "sizeBytes": 2157916899
+      "sizeBytes": 2248495734,
+      "runtime": "vieneu",
+      "engine": "engine_vieneu",
+      "engineOptions": {
+        "mode": "v3turbo"
+      },
+      "sources": [
+        "preset",
+        "clone"
+      ],
+      "extraSources": [
+        {
+          "source": "OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX",
+          "dir": "codec",
+          "sizeBytes": 90578835
+        }
+      ],
+      "presets": [
+        {
+          "id": "Hải Đăng",
+          "name": "Hải Đăng",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Adam",
+          "name": "Adam",
+          "gender": "male",
+          "region": "south",
+          "style": "natural"
+        },
+        {
+          "id": "Adam bựa",
+          "name": "Adam bựa",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Kim Thanh",
+          "name": "Kim Thanh",
+          "gender": "female",
+          "region": "south",
+          "style": "reading"
+        },
+        {
+          "id": "Mai Anh",
+          "name": "Mai Anh",
+          "gender": "female",
+          "region": "north",
+          "style": "news"
+        },
+        {
+          "id": "Minh Triết",
+          "name": "Minh Triết",
+          "gender": "male",
+          "region": "south",
+          "style": "news"
+        },
+        {
+          "id": "Minh Đức",
+          "name": "Minh Đức",
+          "gender": "male",
+          "region": "north",
+          "style": "news"
+        },
+        {
+          "id": "Mỹ Duyên",
+          "name": "Mỹ Duyên",
+          "gender": "female",
+          "region": "south",
+          "style": "reading"
+        },
+        {
+          "id": "Ngọc Huyền",
+          "name": "Ngọc Huyền",
+          "gender": "female",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Ngọc Linh",
+          "name": "Ngọc Linh",
+          "gender": "female",
+          "region": "north",
+          "style": "storytelling"
+        },
+        {
+          "id": "Ngọc Trân",
+          "name": "Ngọc Trân",
+          "gender": "female",
+          "region": "central",
+          "style": "natural"
+        },
+        {
+          "id": "Phạm Tuyên",
+          "name": "Phạm Tuyên",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Quang Sơn",
+          "name": "Quang Sơn",
+          "gender": "male",
+          "region": "central",
+          "style": "natural"
+        },
+        {
+          "id": "Quốc Tuấn",
+          "name": "Quốc Tuấn",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Quỳnh Anh",
+          "name": "Quỳnh Anh",
+          "gender": "female",
+          "region": "north",
+          "style": "reading"
+        },
+        {
+          "id": "Thanh Bình",
+          "name": "Thanh Bình",
+          "gender": "male",
+          "region": "north",
+          "style": "storytelling"
+        },
+        {
+          "id": "Thiền Tâm Đức",
+          "name": "Thiền Tâm Đức",
+          "gender": "male",
+          "region": "north",
+          "style": "storytelling"
+        },
+        {
+          "id": "Thiện Minh",
+          "name": "Thiện Minh",
+          "gender": "male",
+          "region": "north",
+          "style": "storytelling"
+        },
+        {
+          "id": "Thái Sơn",
+          "name": "Thái Sơn",
+          "gender": "male",
+          "region": "south",
+          "style": "storytelling"
+        },
+        {
+          "id": "Thùy Dung",
+          "name": "Thùy Dung",
+          "gender": "female",
+          "region": "south",
+          "style": "news"
+        },
+        {
+          "id": "Thục Đoan",
+          "name": "Thục Đoan",
+          "gender": "female",
+          "region": "south",
+          "style": "storytelling"
+        },
+        {
+          "id": "Trúc Ly",
+          "name": "Trúc Ly",
+          "gender": "female",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Xuân Vĩnh",
+          "name": "Xuân Vĩnh",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Đoan Trang",
+          "name": "Đoan Trang",
+          "gender": "female",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Đức Trí",
+          "name": "Đức Trí",
+          "gender": "male",
+          "region": "south",
+          "style": "reading"
+        }
+      ]
     },
     {
       "id": "vieneu-nano",
       "name": "VieNeu-TTS v3 Nano",
       "source": "pnnbao-ump/VieNeu-TTS-v3-Nano",
-      "languages": ["vi", "en"],
+      "languages": [
+        "vi",
+        "en"
+      ],
       "cloning": true,
       "gpuRecommended": false,
-      "sizeBytes": 419935807
+      "sizeBytes": 419935807,
+      "runtime": "vieneu",
+      "engine": "engine_vieneu",
+      "engineOptions": {
+        "mode": "v3nano"
+      },
+      "sources": [
+        "preset",
+        "clone"
+      ],
+      "presets": [
+        {
+          "id": "Minh Quân",
+          "name": "Minh Quân",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Adam",
+          "name": "Adam",
+          "gender": "male",
+          "region": "south",
+          "style": "natural"
+        },
+        {
+          "id": "Anh Khôi",
+          "name": "Anh Khôi",
+          "gender": "male",
+          "region": "north",
+          "style": "storytelling"
+        },
+        {
+          "id": "Hữu Quân",
+          "name": "Hữu Quân",
+          "gender": "male",
+          "region": "north",
+          "style": "news"
+        },
+        {
+          "id": "Mai Anh",
+          "name": "Mai Anh",
+          "gender": "female",
+          "region": "north",
+          "style": "news"
+        },
+        {
+          "id": "Mạnh Dũng",
+          "name": "Mạnh Dũng",
+          "gender": "male",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Mỹ Duyên",
+          "name": "Mỹ Duyên",
+          "gender": "female",
+          "region": "north",
+          "style": "reading"
+        },
+        {
+          "id": "Trúc Ly",
+          "name": "Trúc Ly",
+          "gender": "female",
+          "region": "north",
+          "style": "natural"
+        },
+        {
+          "id": "Xuân Tiên",
+          "name": "Xuân Tiên",
+          "gender": "female",
+          "region": "north",
+          "style": "news"
+        },
+        {
+          "id": "Ái Hân",
+          "name": "Ái Hân",
+          "gender": "female",
+          "region": "south",
+          "style": "news"
+        },
+        {
+          "id": "Đức Trí",
+          "name": "Đức Trí",
+          "gender": "male",
+          "region": "north",
+          "style": "reading"
+        }
+      ]
     },
     {
       "id": "omnivoice",
       "name": "OmniVoice",
       "source": "k2-fsa/OmniVoice",
-      "languages": ["mul"],
+      "languages": [
+        "mul"
+      ],
       "cloning": true,
       "gpuRecommended": true,
       "sizeBytes": 3267465820
+    }
+  ],
+  "runtimes": [
+    {
+      "id": "vieneu",
+      "variants": {
+        "cpu": "runtimes/vieneu-cpu.json"
+      }
     }
   ]
 }

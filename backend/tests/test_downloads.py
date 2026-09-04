@@ -2,17 +2,23 @@ import json
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
 from support import FakeRemote, FakeServer, asgi_request, wait_until, write_fake_smi
 
-from app.catalog import cuda_catalog, model_catalog
+from app.catalog import Catalog, ExtraSource, cuda_catalog, model_catalog
 from app.config import Settings
 from app.main import create_app
 
 TURBO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
 GPU_LINE = "NVIDIA GeForce RTX 4090, 24564, 566.03"
+
+
+def standalone_catalog() -> Catalog:
+    models = tuple(replace(model, runtime=None, extra_sources=()) for model in model_catalog())
+    return Catalog(models=models, cuda=cuda_catalog())
 
 
 class DownloadTestCase(unittest.TestCase):
@@ -35,15 +41,17 @@ class DownloadTestCase(unittest.TestCase):
         self.smi = write_fake_smi(self.root, GPU_LINE)
         self.app = self.make_app()
 
-    def make_app(self, device: str = "cpu", smi: Path | None = None):
-        settings = Settings(
+    def settings(self, device: str = "cpu", smi: Path | None = None) -> Settings:
+        return Settings(
             data_dir=self.root / "data",
             device=device,
             pypi_url=self.server.url,
             nvidia_smi=str(smi or self.smi),
             hf_endpoint=self.server.url,
         )
-        return create_app(settings)
+
+    def make_app(self, device: str = "cpu", smi: Path | None = None):
+        return create_app(self.settings(device, smi), standalone_catalog())
 
     def call(self, method: str, path: str, app=None) -> tuple[int, object]:
         return asgi_request(app or self.app, method, path)
@@ -86,6 +94,20 @@ class ModelDownloadTests(DownloadTestCase):
                 "languages": ["mul"],
                 "cloning": True,
                 "gpuRecommended": True,
+                "sources": [],
+                "presets": [],
+            },
+        )
+        turbo = body[0]
+        self.assertEqual(turbo["sources"], ["preset", "clone"])
+        self.assertEqual(
+            turbo["presets"][0],
+            {
+                "id": "Hải Đăng",
+                "name": "Hải Đăng",
+                "gender": "male",
+                "region": "north",
+                "style": "natural",
             },
         )
 
@@ -111,6 +133,26 @@ class ModelDownloadTests(DownloadTestCase):
         status, body = self.call("DELETE", "/models/vieneu-turbo")
         self.assertEqual((status, body["state"]), (200, "none"))
         self.assertFalse(target.exists())
+
+    def test_extra_sources_download_into_subfolders(self):
+        codec = "fake/codec"
+        self.remote.repos[codec] = {"decode.onnx": b"c" * 4_000, "meta.json": b"{}"}
+        model = replace(
+            model_catalog()[0],
+            runtime=None,
+            extra_sources=(ExtraSource(codec, "codec", 4_002),),
+        )
+        app = create_app(self.settings(), Catalog(models=(model,), cuda=cuda_catalog()))
+        self.call("POST", "/models/vieneu-turbo/download", app)
+        wait_until(lambda: self.model(app=app)["state"] == "installed")
+        installed = self.model(app=app)
+        total = 2 + 300_000 + 2000 + 4_002
+        self.assertEqual((installed["receivedBytes"], installed["totalBytes"]), (total, total))
+        target = self.root / "data" / "models" / "vieneu-turbo"
+        self.assertEqual((target / "codec" / "decode.onnx").stat().st_size, 4_000)
+        manifest = json.loads((target / "manifest.json").read_text())
+        self.assertIn("codec/decode.onnx", manifest["files"])
+        self.assertIn("onnx/model.onnx", manifest["files"])
 
     def test_unknown_model(self):
         for method, path in (

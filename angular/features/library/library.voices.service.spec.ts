@@ -126,11 +126,12 @@ describe('LibraryVoiceService', () => {
       patch: { description: 'z' },
     });
     expect(voices.items().find((item) => item.id === 7)?.name).toBe('z');
-    ipc.on('library_voice_create', libraryVoice({ id: 8, name: 'z copy' }));
+    ipc.on('library_voice_duplicate', libraryVoice({ id: 8, name: 'z (bản sao)' }));
     const copy = await voices.duplicate(7);
     expect(copy.id).toBe(8);
     expect(voices.selectedId()).toBe(8);
-    expect(ipc.lastArgs('library_voice_create')).toMatchObject({ input: { name: 'z (bản sao)' } });
+    expect(voices.items()[0].id).toBe(8);
+    expect(ipc.lastArgs('library_voice_duplicate')).toEqual({ id: 7, name: 'z (bản sao)' });
     await expect(voices.duplicate(99)).rejects.toThrow();
     ipc.on('library_voice_delete', 1);
     expect(await voices.remove(8)).toBe(1);
@@ -147,18 +148,9 @@ describe('LibraryVoiceService', () => {
     await expect(voices.update(1, { sampleText: 'q' })).rejects.toBe('x');
   });
 
-  it('duplicates the library sound reference of a cloned voice', async () => {
-    voices.items.set([
-      libraryVoice({ id: 5, source: 'clone', preset: null, referenceSoundId: 3 }),
-      libraryVoice({ id: 6, source: 'clone', preset: null, referenceName: 'a.wav' }),
-    ]);
-    ipc.on('library_voice_create', libraryVoice({ id: 7 }));
-    await voices.duplicate(5);
-    expect(ipc.lastArgs('library_voice_create')).toMatchObject({
-      input: { reference: { kind: 'sound', soundId: 3 } },
-    });
-    await voices.duplicate(6);
-    expect(ipc.lastArgs('library_voice_create')).toMatchObject({ input: { reference: null } });
+  it('rejects a duplicate that returns nothing', async () => {
+    ipc.on('library_voice_duplicate', undefined);
+    await expect(voices.duplicate(1)).rejects.toThrow();
   });
 
   it('picks a reference file and inspects it quietly', async () => {

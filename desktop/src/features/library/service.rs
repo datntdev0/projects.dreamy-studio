@@ -692,6 +692,25 @@ impl LibraryWorkspace {
         voices::get(db.connection(), id)
     }
 
+    pub fn voice_duplicate(&self, id: i64, name: &str) -> LibraryResult<LibraryVoice> {
+        let source = voices::get(self.database()?.connection(), id)?;
+        let copy = voices::copy_of(&source, name)?;
+        let files = VoiceFiles::new(self.dir.clone());
+        let staged = match (copy.reference_kind, files.existing_reference(id)) {
+            (Some(_), Some(_)) => {
+                let path = files.staging_path("wav")?;
+                files.copy_reference(id, &path)?;
+                Some(path)
+            }
+            _ => None,
+        };
+        let created = self.voice_insert(&files, &copy, staged.as_deref());
+        if let Some(path) = staged.as_deref() {
+            voices::remove_staged(path);
+        }
+        created
+    }
+
     pub fn voice_update(&self, id: i64, patch: VoicePatch) -> LibraryResult<LibraryVoice> {
         let patch = voices::normalize_patch(&patch)?;
         let _guard = self.lock();

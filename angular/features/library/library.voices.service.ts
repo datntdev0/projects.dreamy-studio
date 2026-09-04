@@ -17,7 +17,6 @@ import {
   VoiceEngineFilter,
   VoiceInput,
   VoicePatch,
-  VoiceReference,
   VoiceReferenceFile,
   VoiceSort,
 } from './library.voices.models';
@@ -39,12 +38,6 @@ function requireVoice(voice: LibraryVoice | null | undefined): LibraryVoice {
 
 function isDeleted(deleted: Set<number>, id: number | null): boolean {
   return id !== null && deleted.has(id);
-}
-
-function referenceOf(voice: LibraryVoice): VoiceReference | null {
-  return voice.referenceSoundId === null
-    ? null
-    : { kind: 'sound', soundId: voice.referenceSoundId };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -132,7 +125,10 @@ export class LibraryVoiceService {
     const source = voiceById(this.items(), id);
     if (!source) throw new Error('voice_unavailable');
     const name = this.languageService.translate('library.voice.copyName', { name: source.name });
-    const copy = await this.create({ ...this.inputOf(source), name });
+    const copy = requireVoice(
+      await this.ipc.invoke<LibraryVoice>('library_voice_duplicate', { id, name }),
+    );
+    this.items.set([copy, ...this.items()]);
     this.select(copy.id);
     return copy;
   }
@@ -216,21 +212,6 @@ export class LibraryVoiceService {
       this.loaded.set(true);
       this.loading.set(false);
     }
-  }
-
-  private inputOf(voice: LibraryVoice): VoiceInput {
-    return {
-      name: voice.name,
-      description: voice.description,
-      engine: voice.engine,
-      engineKind: voice.engineKind,
-      source: voice.source,
-      language: voice.language,
-      gender: voice.gender,
-      preset: voice.preset,
-      reference: referenceOf(voice),
-      prompt: voice.prompt,
-    };
   }
 
   private reset(): void {

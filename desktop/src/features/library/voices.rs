@@ -92,6 +92,11 @@ impl VoiceFiles {
         Ok(directory.join(format!("{STAGING_PREFIX}{}.{suffix}", uuid::Uuid::new_v4())))
     }
 
+    pub fn copy_reference(&self, from: i64, staged: &Path) -> LibraryResult<()> {
+        fs::copy(self.reference_path(from), staged)?;
+        Ok(())
+    }
+
     pub fn adopt_reference(&self, id: i64, staged: &Path) -> LibraryResult<()> {
         let directory = self.voice_dir(id);
         fs::create_dir_all(&directory)?;
@@ -201,6 +206,33 @@ pub fn validate_input(input: &VoiceInput) -> LibraryResult<NewVoice> {
         reference_sound_id: None,
         reference_name: String::new(),
         sample_text: default_sample_text(input.language.trim()).to_string(),
+    })
+}
+
+pub fn copy_of(voice: &LibraryVoice, name: &str) -> LibraryResult<NewVoice> {
+    let keeps_reference = voice.reference_kind.as_deref() == Some(ReferenceKind::Sound.as_str());
+    Ok(NewVoice {
+        name: normalize_name(name)?,
+        description: voice.description.clone(),
+        engine: voice.engine.clone(),
+        engine_kind: voice.engine_kind,
+        source: voice.source,
+        language: voice.language.clone(),
+        gender: voice.gender,
+        preset: voice.preset.clone(),
+        prompt: voice.prompt.clone(),
+        reference_kind: keeps_reference.then_some(ReferenceKind::Sound),
+        reference_sound_id: if keeps_reference {
+            voice.reference_sound_id
+        } else {
+            None
+        },
+        reference_name: if keeps_reference {
+            voice.reference_name.clone()
+        } else {
+            String::new()
+        },
+        sample_text: voice.sample_text.clone(),
     })
 }
 

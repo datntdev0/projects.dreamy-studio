@@ -650,6 +650,7 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
   ipc.on('library_voice_list', voices);
   ipc.on('library_voice_create', voices[0]);
   ipc.on('library_voice_update', voices[0]);
+  ipc.on('library_voice_duplicate', voices[0]);
   ipc.on('library_voice_delete', 1);
   ipc.on('library_voice_preview', null);
   ipc.on('assistant_session_list', [

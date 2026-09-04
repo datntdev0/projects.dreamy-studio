@@ -342,3 +342,68 @@ fn clone_rejects_unreadable_references() {
     );
     assert!(workspace.voice_list().unwrap().is_empty());
 }
+
+#[test]
+fn duplicates_keep_only_library_references() {
+    let (dir, workspace) = fixture();
+    let path = write_wav(&dir, "Narration.wav", 1);
+    let sound = workspace
+        .sound_upload(
+            path.to_str().unwrap(),
+            AssetUploadInput {
+                rights: AssetRights::Own,
+                collection_id: None,
+                tags: Vec::new(),
+            },
+        )
+        .unwrap();
+    let from_library = workspace
+        .voice_create(clone_input(VoiceReference::Sound { sound_id: sound.id }))
+        .unwrap();
+    let uploaded = workspace
+        .voice_create(clone_input(VoiceReference::File {
+            path: write_wav(&dir, "take.wav", 1)
+                .to_string_lossy()
+                .into_owned(),
+            name: "take.wav".to_string(),
+        }))
+        .unwrap();
+
+    let library_copy = workspace
+        .voice_duplicate(from_library.id, "Narrator copy")
+        .unwrap();
+    assert_eq!(library_copy.name, "Narrator copy");
+    assert_eq!(library_copy.source, VoiceSource::Clone);
+    assert_eq!(library_copy.reference_sound_id, Some(sound.id));
+    assert_eq!(library_copy.sample_text, from_library.sample_text);
+    assert!(
+        workspace
+            .voice_for_synthesis(library_copy.id)
+            .unwrap()
+            .1
+            .is_some()
+    );
+
+    let upload_copy = workspace.voice_duplicate(uploaded.id, "Take copy").unwrap();
+    assert_eq!(upload_copy.reference_kind, None);
+    assert_eq!(upload_copy.reference_name, "");
+    assert!(
+        workspace
+            .voice_for_synthesis(upload_copy.id)
+            .unwrap()
+            .1
+            .is_none()
+    );
+
+    let preset = workspace.voice_create(input(VoiceSource::Preset)).unwrap();
+    let preset_copy = workspace.voice_duplicate(preset.id, "Preset copy").unwrap();
+    assert_eq!(preset_copy.preset.as_deref(), Some("Mai Anh"));
+    assert_eq!(
+        error_code(workspace.voice_duplicate(preset.id, " ")),
+        LibraryErrorCode::VoiceInvalid
+    );
+    assert_eq!(
+        error_code(workspace.voice_duplicate(999, "x")),
+        LibraryErrorCode::VoiceNotFound
+    );
+}

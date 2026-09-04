@@ -50,10 +50,38 @@ export function audiobook(overrides: Partial<Audiobook> = {}): Audiobook {
 export function availability(overrides: Partial<VoiceAvailability> = {}): VoiceAvailability {
   return {
     engines: [
-      { id: 'vieneu-turbo', name: 'VieNeu Turbo', kind: 'local', ready: true },
-      { id: 'vieneu-nano', name: 'VieNeu Nano', kind: 'local', ready: false },
-      { id: 'edge-read-aloud', name: 'Edge Read Aloud', kind: 'cloud', ready: true },
-      { id: 'elevenlabs', name: 'ElevenLabs', kind: 'cloud', ready: false },
+      {
+        id: 'vieneu-turbo',
+        name: 'VieNeu Turbo',
+        kind: 'local',
+        ready: true,
+        sources: ['preset', 'clone', 'design'],
+        presets: [],
+      },
+      {
+        id: 'vieneu-nano',
+        name: 'VieNeu Nano',
+        kind: 'local',
+        ready: false,
+        sources: ['preset', 'clone', 'design'],
+        presets: [],
+      },
+      {
+        id: 'edge-read-aloud',
+        name: 'Edge Read Aloud',
+        kind: 'cloud',
+        ready: true,
+        sources: ['preset', 'clone', 'design'],
+        presets: [],
+      },
+      {
+        id: 'elevenlabs',
+        name: 'ElevenLabs',
+        kind: 'cloud',
+        ready: false,
+        sources: ['preset', 'clone', 'design'],
+        presets: [],
+      },
     ],
     backendRunning: true,
     ...overrides,

@@ -190,3 +190,12 @@ app-library-voices .nm-title {
     animation: none;
   }
 }
+
+.lb-pbtn.is-busy .ic {
+  animation: lb-vo-spin 1s linear infinite;
+}
+@keyframes lb-vo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,5 +1,5 @@
 import { SegmentOption } from '@components/segments';
-import { TtsModel } from '@features/settings/backend.models';
+import { TtsModel, TtsVoicePreset } from '@features/settings/backend.models';
 import { CloudAccount } from '@features/settings/cloud.models';
 import { SettingsSectionId } from '@features/settings/settings.models';
 import { LanguageKey, LanguageParams } from '@shared/language/language.models';
@@ -11,7 +11,6 @@ import {
   VOICE_ENGINE_KINDS,
   VOICE_GENDERS,
   VOICE_LANGUAGES,
-  VOICE_PRESETS,
   VOICE_SOURCES,
   VoiceEngine,
   VoiceEngineFilter,
@@ -52,7 +51,8 @@ export interface VoiceDraft {
   description: string;
 }
 
-const ENGINE_SOURCES = new Map<string, VoiceSource[]>([['edge-read-aloud', ['preset']]]);
+const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([['edge-read-aloud', ['preset']]]);
+const DEFAULT_GENDER: VoiceGender = 'female';
 
 const HUE_STEP = 137;
 const MONOGRAM_LENGTH = 2;
@@ -82,6 +82,19 @@ const SOURCE_NAME_KEYS: Record<VoiceSource, LanguageKey> = {
   preset: 'library.voice.sourceName.preset',
   clone: 'library.voice.sourceName.clone',
   design: 'library.voice.sourceName.design',
+};
+
+const REGION_KEYS: Record<string, LanguageKey> = {
+  north: 'library.voice.region.north',
+  central: 'library.voice.region.central',
+  south: 'library.voice.region.south',
+};
+
+const STYLE_KEYS: Record<string, LanguageKey> = {
+  natural: 'library.voice.style.natural',
+  storytelling: 'library.voice.style.storytelling',
+  news: 'library.voice.style.news',
+  reading: 'library.voice.style.reading',
 };
 
 const ENGINE_SECTIONS: Record<VoiceEngineKind, SettingsSectionId> = {
@@ -120,8 +133,33 @@ function isLocalReady(model: TtsModel): boolean {
   return model.state === 'installed';
 }
 
+function isVoiceSource(value: string): value is VoiceSource {
+  return (VOICE_SOURCES as string[]).includes(value);
+}
+
+function isVoiceGender(value: string): value is VoiceGender {
+  return (VOICE_GENDERS as string[]).includes(value);
+}
+
+function toVoicePreset(preset: TtsVoicePreset): VoicePreset {
+  return {
+    id: preset.id,
+    name: preset.name,
+    gender: isVoiceGender(preset.gender) ? preset.gender : 'neutral',
+    region: preset.region,
+    style: preset.style,
+  };
+}
+
 function toLocalEngine(model: TtsModel): VoiceEngine {
-  return { id: model.id, name: model.name, kind: 'local', ready: isLocalReady(model) };
+  return {
+    id: model.id,
+    name: model.name,
+    kind: 'local',
+    ready: isLocalReady(model),
+    sources: (model.sources ?? []).filter(isVoiceSource),
+    presets: (model.presets ?? []).map(toVoicePreset),
+  };
 }
 
 function hasSpeech(account: CloudAccount): boolean {
@@ -129,7 +167,14 @@ function hasSpeech(account: CloudAccount): boolean {
 }
 
 function toCloudEngine(account: CloudAccount): VoiceEngine {
-  return { id: account.id, name: account.name, kind: 'cloud', ready: account.connected };
+  return {
+    id: account.id,
+    name: account.name,
+    kind: 'cloud',
+    ready: account.connected,
+    sources: CLOUD_ENGINE_SOURCES.get(account.id) ?? VOICE_SOURCES,
+    presets: [],
+  };
 }
 
 function hasEngineId(id: string, engine: VoiceEngine): boolean {
@@ -146,6 +191,10 @@ function toEngineGroup(engines: VoiceEngine[], kind: VoiceEngineKind): VoiceEngi
 
 function hasPresetId(id: string | null, preset: VoicePreset): boolean {
   return preset.id === id;
+}
+
+function hasGender(gender: VoiceGender, preset: VoicePreset): boolean {
+  return preset.gender === gender;
 }
 
 function toGenderOption(translate: VoiceTranslate, gender: VoiceGender): SegmentOption {
@@ -191,6 +240,14 @@ export function voiceSourceNameKey(source: VoiceSource): LanguageKey {
 
 export function voiceDateText(value: string): string {
   return value.slice(0, 10);
+}
+
+export function normalizeSampleText(text: string): string {
+  return text.split(/\s+/).filter(Boolean).join(' ');
+}
+
+export function sameSampleText(stored: string, sample: string): boolean {
+  return normalizeSampleText(stored) === normalizeSampleText(sample);
 }
 
 export function voiceDurationText(voice: LibraryVoice): string {
@@ -252,21 +309,48 @@ export function buildVoiceReference(sources: VoiceReferenceSources): VoiceRefere
   return recording && { kind: 'recording', ...recording };
 }
 
-export function engineSources(engineId: string | null): VoiceSource[] {
-  return ENGINE_SOURCES.get(engineId ?? '') ?? VOICE_SOURCES;
+export function engineSources(engine: VoiceEngine | null): VoiceSource[] {
+  return engine?.sources.length ? engine.sources : VOICE_SOURCES;
 }
 
-export function engineSupportsSource(engineId: string | null, source: VoiceSource): boolean {
-  return engineSources(engineId).includes(source);
+export function engineSupportsSource(engine: VoiceEngine | null, source: VoiceSource): boolean {
+  return engineSources(engine).includes(source);
 }
 
-export function supportedVoiceSource(engineId: string | null, source: VoiceSource): VoiceSource {
-  return engineSupportsSource(engineId, source) ? source : engineSources(engineId)[0];
+export function supportedVoiceSource(engine: VoiceEngine | null, source: VoiceSource): VoiceSource {
+  return engineSupportsSource(engine, source) ? source : engineSources(engine)[0];
+}
+
+export function supportedPreset(engine: VoiceEngine | null, presetId: string): VoicePreset | null {
+  const presets = engine?.presets ?? [];
+  return (
+    presets.find(hasPresetId.bind(null, presetId)) ??
+    presets.find(hasGender.bind(null, DEFAULT_GENDER)) ??
+    presets[0] ??
+    null
+  );
+}
+
+export function voiceRegionKey(region: string): LanguageKey | null {
+  return REGION_KEYS[region] ?? null;
+}
+
+export function voiceStyleKey(style: string): LanguageKey | null {
+  return STYLE_KEYS[style] ?? null;
+}
+
+export function presetOptionText(preset: VoicePreset, translate: VoiceTranslate): string {
+  const region = voiceRegionKey(preset.region);
+  const style = voiceStyleKey(preset.style);
+  const parts = [preset.name, translate(voiceGenderKey(preset.gender))];
+  if (region) parts.push(translate(region));
+  if (style) parts.push(translate(style));
+  return parts.join(' · ');
 }
 
 export function isVoiceDraftValid(draft: VoiceDraft): boolean {
   if (!draft.name.trim() || !draft.engine?.ready) return false;
-  if (!engineSupportsSource(draft.engine.id, draft.source)) return false;
+  if (!engineSupportsSource(draft.engine, draft.source)) return false;
   if (draft.source === 'preset') return draft.preset !== '';
   if (draft.source === 'clone') return draft.reference !== null && draft.consent;
   return draft.prompt.trim() !== '';
@@ -301,8 +385,12 @@ export function voiceReferenceName(voice: LibraryVoice, translate: VoiceTranslat
   return voice.referenceName || translate('library.voice.reference.recording');
 }
 
-export function voiceSourceDetail(voice: LibraryVoice, translate: VoiceTranslate): string {
-  if (voice.source === 'preset') return presetName(voice.preset);
+export function voiceSourceDetail(
+  voice: LibraryVoice,
+  translate: VoiceTranslate,
+  engines: VoiceEngine[],
+): string {
+  if (voice.source === 'preset') return presetName(engines, voice);
   if (voice.source === 'design') return voice.prompt || '—';
   return voiceReferenceName(voice, translate);
 }
@@ -329,8 +417,9 @@ export function voiceLanguageCodes(current: string | null): string[] {
   return current === null || codes.includes(current) ? codes : [...codes, current];
 }
 
-export function presetName(id: string | null): string {
-  return VOICE_PRESETS.find(hasPresetId.bind(null, id))?.name ?? id ?? '—';
+export function presetName(engines: VoiceEngine[], voice: LibraryVoice): string {
+  const presets = findEngine(engines, voice.engine)?.presets ?? [];
+  return presets.find(hasPresetId.bind(null, voice.preset))?.name ?? voice.preset ?? '—';
 }
 
 export function voiceGenderOptions(translate: VoiceTranslate): SegmentOption[] {

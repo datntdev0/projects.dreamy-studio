@@ -41,6 +41,14 @@ export interface BackendView {
   modelsDir: string;
 }
 
+export interface TtsVoicePreset {
+  id: string;
+  name: string;
+  gender: string;
+  region: string;
+  style: string;
+}
+
 export interface TtsModel extends BackendDownload {
   id: string;
   name: string;
@@ -48,4 +56,8 @@ export interface TtsModel extends BackendDownload {
   languages: string[];
   cloning: boolean;
   gpuRecommended: boolean;
+  sources: string[];
+  presets: TtsVoicePreset[];
+  license: string;
+  commercialUse: boolean;
 }

@@ -64,7 +64,7 @@ export class LibraryVoices implements OnInit {
 
   play(voice: LibraryVoice): void {
     this.select(voice);
-    this.voices.togglePreview(voice.id);
+    void this.voices.togglePreview(voice.id);
   }
 
   openCreate(): void {

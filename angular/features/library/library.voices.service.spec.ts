@@ -1,20 +1,56 @@
 import { TestBed } from '@angular/core/testing';
 import { BackendService } from '@features/settings/backend.service';
+import { ToastService } from '@shared/toast/toast.service';
 import { FakeIpc } from '@testing/fake-ipc';
 import { libraryVoice } from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LibraryVoicePlayer } from './library.voices.player';
 import { LibraryVoiceService } from './library.voices.service';
+
+class FakeVoicePlayer {
+  ended: (() => void) | null = null;
+  readonly played: ArrayBuffer[] = [];
+  readonly play = vi.fn(this.start.bind(this));
+  readonly stop = vi.fn(this.halt.bind(this));
+  durationMs = 2_500;
+
+  private async start(data: ArrayBuffer, ended: () => void): Promise<number> {
+    this.played.push(data);
+    this.ended = ended;
+    return this.durationMs;
+  }
+
+  private halt(): void {
+    this.ended = null;
+  }
+}
+
+function dangerToasts(): string[] {
+  return TestBed.inject(ToastService)
+    .items()
+    .filter((item) => item.tone === 'danger')
+    .map((item) => item.message);
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => (resolve = done));
+  return { promise, resolve };
+}
 
 const counts = { image: 0, sound: 0, video: 0, prompt: 0 };
 
 describe('LibraryVoiceService', () => {
   let ipc: FakeIpc;
   let voices: LibraryVoiceService;
+  let player: FakeVoicePlayer;
 
   beforeEach(async () => {
     ipc = setupApp();
+    player = new FakeVoicePlayer();
+    TestBed.overrideProvider(LibraryVoicePlayer, { useValue: player });
     ipc.on('library_collection_list', []);
     ipc.on('library_tag_list', []);
     ipc.on('library_summary', { assets: counts, unfiled: counts });
@@ -151,27 +187,71 @@ describe('LibraryVoiceService', () => {
     expect(await voices.pickReferenceFile()).toBeNull();
   });
 
-  it('flips preview playback and clears it after the sample', async () => {
-    vi.useFakeTimers();
-    voices.togglePreview(1);
+  it('generates the sample, plays it and stops when it ends', async () => {
+    const sample = new ArrayBuffer(8);
+    const pending = deferred<ArrayBuffer>();
+    ipc.on('library_voice_preview', () => pending.promise);
+    const preview = voices.togglePreview(1);
+    expect(voices.preparingId()).toBe(1);
+    expect(voices.isPreviewActive(1)).toBe(true);
+    expect(ipc.lastArgs('library_voice_preview')).toEqual({ id: 1, text: 'Once upon a time.' });
+    pending.resolve(sample);
+    await preview;
+    expect(voices.preparingId()).toBeNull();
     expect(voices.playingId()).toBe(1);
-    voices.togglePreview(2);
+    expect(player.played).toEqual([sample]);
+    expect(voices.items().find((item) => item.id === 1)?.sampleDurationMs).toBe(2_500);
+    player.ended?.();
+    expect(voices.playingId()).toBeNull();
+  });
+
+  it('plays one sample at a time and toggles the active one off', async () => {
+    ipc.on('library_voice_preview', new ArrayBuffer(4));
+    await voices.togglePreview(1);
+    await voices.togglePreview(2, 'Một câu khác');
     expect(voices.playingId()).toBe(2);
+    expect(ipc.lastArgs('library_voice_preview')).toEqual({ id: 2, text: 'Một câu khác' });
+    expect(voices.items().find((item) => item.id === 2)?.sampleDurationMs).toBe(3000);
+    await voices.togglePreview(2);
+    expect(voices.playingId()).toBeNull();
+    expect(player.stop).toHaveBeenCalled();
+    await voices.togglePreview(99);
     expect(ipc.called('library_voice_preview')).toBe(2);
-    voices.togglePreview(2);
+  });
+
+  it('drops a sample that arrives after the preview was cancelled', async () => {
+    const pending = deferred<ArrayBuffer>();
+    ipc.on('library_voice_preview', () => pending.promise);
+    const preview = voices.togglePreview(1);
+    await voices.togglePreview(1);
+    expect(voices.preparingId()).toBeNull();
+    pending.resolve(new ArrayBuffer(4));
+    await preview;
     expect(voices.playingId()).toBeNull();
-    voices.togglePreview(1);
-    vi.advanceTimersByTime(3000);
+    expect(player.played).toEqual([]);
+  });
+
+  it('reports synthesis failures', async () => {
+    ipc.fail('library_voice_preview', {
+      code: 'voice_synthesis_failed',
+      detail: 'PROMPT_INVALID: sparkly',
+    });
+    await voices.togglePreview(1);
     expect(voices.playingId()).toBeNull();
-    voices.togglePreview(99);
-    expect(voices.playingId()).toBeNull();
-    ipc.fail('library_voice_preview', 'x');
-    voices.togglePreview(1);
-    await vi.advanceTimersByTimeAsync(10);
-    voices.select(1);
+    expect(voices.preparingId()).toBeNull();
+    expect(dangerToasts()).toEqual(['Không tạo được giọng mẫu: PROMPT_INVALID: sparkly']);
+    ipc.fail('library_voice_preview', { code: 'voice_backend_offline', detail: 'down' });
+    await voices.togglePreview(2);
+    expect(dangerToasts()).toContain('Local backend chưa chạy.');
+  });
+
+  it('stops the preview of a deleted voice', async () => {
+    ipc.on('library_voice_preview', new ArrayBuffer(4));
+    await voices.togglePreview(1);
     ipc.on('library_voice_delete', 1);
     await voices.remove(1);
     expect(voices.playingId()).toBeNull();
+    expect(player.stop).toHaveBeenCalled();
   });
 
   it('resolves engines from settings and tolerates unknown ones', () => {
@@ -188,6 +268,10 @@ describe('LibraryVoiceService', () => {
         languages: [],
         cloning: false,
         gpuRecommended: false,
+        sources: ['preset'],
+        presets: [],
+        license: '',
+        commercialUse: true,
       },
     ]);
     const known = voices.items()[1];

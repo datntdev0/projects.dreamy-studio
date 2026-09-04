@@ -73,22 +73,28 @@
     <label for="library-voice-dialog-preset" data-testid="library-voice-dialog-preset-label">
       {{ 'library.voice.dialog.preset' | t }}
     </label>
+    @if (presets().length) {
     <select
       id="library-voice-dialog-preset"
       class="select"
       data-testid="library-voice-dialog-preset"
       (change)="onPreset($event)"
     >
-      @for (item of presets; track item.id) {
+      @for (item of presets(); track item.id) {
       <option
         [value]="item.id"
         [selected]="preset() === item.id"
         data-testid="library-voice-dialog-preset-option"
       >
-        {{ item.name }}
+        {{ presetText(item) }}
       </option>
       }
     </select>
+    } @else {
+    <p class="t-sm t-mute" data-testid="library-voice-dialog-preset-empty">
+      {{ 'library.voice.dialog.noPresets' | t }}
+    </p>
+    }
   </div>
   } @case ('clone') {
   <div class="field" data-testid="library-voice-dialog-reference-field">
@@ -252,6 +258,9 @@
       data-testid="library-voice-dialog-prompt"
       (input)="onPrompt($event)"
     ></textarea>
+    <p class="t-sm t-mute" data-testid="library-voice-dialog-prompt-hint">
+      {{ 'library.voice.dialog.promptHint' | t }}
+    </p>
   </div>
   } }
   <div class="field" data-testid="library-voice-dialog-language-field">

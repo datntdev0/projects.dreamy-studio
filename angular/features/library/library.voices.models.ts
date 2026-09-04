@@ -4,6 +4,7 @@ export type VoiceGender = 'female' | 'male' | 'neutral';
 export type VoiceSort = 'new' | 'name';
 export type VoiceEngineFilter = 'all' | VoiceEngineKind;
 export type VoiceReferenceMode = 'library' | 'upload' | 'record';
+export type VoiceReferenceKind = 'sound' | 'file' | 'recording';
 
 export interface LibraryVoice {
   id: number;
@@ -15,6 +16,7 @@ export interface LibraryVoice {
   language: string;
   gender: VoiceGender;
   preset: string | null;
+  referenceKind: VoiceReferenceKind | null;
   referenceSoundId: number | null;
   referenceName: string;
   prompt: string;
@@ -48,16 +50,21 @@ export interface VoiceInput {
   prompt: string;
 }
 
+export interface VoicePreset {
+  id: string;
+  name: string;
+  gender: VoiceGender;
+  region: string;
+  style: string;
+}
+
 export interface VoiceEngine {
   id: string;
   name: string;
   kind: VoiceEngineKind;
   ready: boolean;
-}
-
-export interface VoicePreset {
-  id: string;
-  name: string;
+  sources: VoiceSource[];
+  presets: VoicePreset[];
 }
 
 export const VOICE_LANGUAGES = ['vi', 'en', 'ja', 'zh', 'ko', 'multi'] as const;
@@ -65,11 +72,6 @@ export const VOICE_GENDERS: VoiceGender[] = ['female', 'male', 'neutral'];
 export const VOICE_SOURCES: VoiceSource[] = ['preset', 'clone', 'design'];
 export const VOICE_REFERENCE_MODES: VoiceReferenceMode[] = ['library', 'upload', 'record'];
 export const VOICE_ENGINE_KINDS: VoiceEngineKind[] = ['local', 'cloud'];
-export const VOICE_PRESETS: VoicePreset[] = [
-  { id: 'narrator-warm', name: 'Narrator — warm' },
-  { id: 'narrator-bright', name: 'Narrator — bright' },
-  { id: 'storyteller-deep', name: 'Storyteller — deep' },
-];
 
 export interface VoicePatch {
   sampleText?: string;

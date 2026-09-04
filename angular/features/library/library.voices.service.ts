@@ -2,11 +2,13 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { BackendService } from '@features/settings/backend.service';
 import { CloudService } from '@features/settings/cloud.service';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
 import { replaceById, withoutIds } from '@shared/utils/collection';
 
 import { WorkspaceService } from '../workspace/workspace.service';
-import { fileNameOf } from './library.rules';
+import { fileNameOf, libraryErrorKey, toLibraryError } from './library.rules';
 import { LibraryService } from './library.service';
 import { LibrarySoundService } from './library.sounds.service';
 import {
@@ -19,11 +21,13 @@ import {
   VoiceReferenceFile,
   VoiceSort,
 } from './library.voices.models';
+import { LibraryVoicePlayer } from './library.voices.player';
 import {
   buildVoiceEngines,
   engineName,
   engineReady,
   filterVoices,
+  sameSampleText,
   voiceById,
 } from './library.voices.rules';
 import { LibraryWorkspaceSync } from './library.workspace-sync';
@@ -31,6 +35,10 @@ import { LibraryWorkspaceSync } from './library.workspace-sync';
 function requireVoice(voice: LibraryVoice | null | undefined): LibraryVoice {
   if (!voice) throw new Error('voice_unavailable');
   return voice;
+}
+
+function isDeleted(deleted: Set<number>, id: number | null): boolean {
+  return id !== null && deleted.has(id);
 }
 
 function referenceOf(voice: LibraryVoice): VoiceReference | null {
@@ -48,7 +56,9 @@ export class LibraryVoiceService {
   private readonly backend = inject(BackendService);
   private readonly cloud = inject(CloudService);
   private readonly languageService = inject(LanguageService);
-  private previewTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly toasts = inject(ToastService);
+  private readonly player = inject(LibraryVoicePlayer);
+  private previewToken = 0;
   private epoch = 0;
 
   readonly items = signal<LibraryVoice[]>([]);
@@ -56,6 +66,7 @@ export class LibraryVoiceService {
   readonly loading = signal(false);
   readonly selectedId = signal<number | null>(null);
   readonly playingId = signal<number | null>(null);
+  readonly preparingId = signal<number | null>(null);
   readonly query = signal('');
   readonly sort = signal<VoiceSort>('new');
   readonly engineFilter = signal<VoiceEngineFilter>('all');
@@ -134,33 +145,60 @@ export class LibraryVoiceService {
     if (this.selectedId() !== null && deleted.has(this.selectedId() as number)) {
       this.selectedId.set(null);
     }
-    if (this.playingId() !== null && deleted.has(this.playingId() as number)) {
+    if ([this.playingId(), this.preparingId()].some(isDeleted.bind(null, deleted))) {
       this.stopPreview();
     }
     return count ?? list.length;
   }
 
-  togglePreview(id: number): void {
-    const voice = voiceById(this.items(), id);
-    const wasPlaying = this.playingId() === id;
-    this.stopPreview();
-    if (!voice || wasPlaying) return;
-    this.playingId.set(id);
-    this.previewTimer = setTimeout(this.stopPreview.bind(this), voice.sampleDurationMs ?? 0);
-    void this.requestPreview(id);
+  isPreviewActive(id: number): boolean {
+    return this.playingId() === id || this.preparingId() === id;
   }
 
-  private async requestPreview(id: number): Promise<void> {
+  async togglePreview(id: number, text?: string): Promise<void> {
+    const voice = voiceById(this.items(), id);
+    const wasActive = this.isPreviewActive(id);
+    this.stopPreview();
+    if (!voice || wasActive) return;
+    const token = this.previewToken;
+    const sample = text ?? voice.sampleText;
+    this.preparingId.set(id);
     try {
-      await this.ipc.invoke<void>('library_voice_preview', { id });
-    } catch {
-      return;
+      const data = await this.ipc.invoke<ArrayBuffer>('library_voice_preview', {
+        id,
+        text: sample,
+      });
+      if (token !== this.previewToken) return;
+      this.preparingId.set(null);
+      this.playingId.set(id);
+      const durationMs = await this.player.play(data, this.endPreview.bind(this, token));
+      if (token === this.previewToken) this.rememberDuration(id, sample, durationMs);
+    } catch (error) {
+      if (token !== this.previewToken) return;
+      this.stopPreview();
+      this.toasts.show(this.previewErrorText(error), 'danger');
     }
   }
 
-  private stopPreview(): void {
-    if (this.previewTimer !== null) clearTimeout(this.previewTimer);
-    this.previewTimer = null;
+  private endPreview(token: number): void {
+    if (token === this.previewToken) this.stopPreview();
+  }
+
+  private rememberDuration(id: number, sample: string, durationMs: number): void {
+    const voice = voiceById(this.items(), id);
+    if (!voice || durationMs <= 0 || !sameSampleText(voice.sampleText, sample)) return;
+    this.items.set(replaceById(this.items(), { ...voice, sampleDurationMs: durationMs }));
+  }
+
+  private previewErrorText(error: unknown): string {
+    const key = libraryErrorKey(error) as LanguageKey;
+    return this.languageService.translate(key, { detail: toLibraryError(error).detail });
+  }
+
+  stopPreview(): void {
+    this.previewToken += 1;
+    this.player.stop();
+    this.preparingId.set(null);
     this.playingId.set(null);
   }
 

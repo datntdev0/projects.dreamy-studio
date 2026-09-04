@@ -61,6 +61,30 @@ describe('LibraryVoiceDialog', () => {
     expect(byId(mounted, 'library-voice-dialog-clone-help')).not.toBeNull();
   });
 
+  it('lists the presets of the selected engine and follows the preset gender', async () => {
+    const mounted = await open();
+    const options = mounted.root.querySelectorAll(
+      "[data-testid='library-voice-dialog-preset-option']",
+    );
+    expect(Array.from(options).map((option) => option.textContent?.trim())).toEqual([
+      'Hải Đăng · Male · Northern · Natural',
+      'Mai Anh · Female · Northern · News',
+    ]);
+    expect(mounted.instance.preset()).toBe('Mai Anh');
+    expect(mounted.instance.gender()).toBe('female');
+    mounted.instance.onPreset({ target: { value: 'Hải Đăng' } } as unknown as Event);
+    expect(mounted.instance.gender()).toBe('male');
+    mounted.instance.onGender('neutral');
+    expect(mounted.instance.gender()).toBe('neutral');
+    expect(mounted.instance.sourceOptions().map((option) => option.disabled)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    mounted.instance.onSource('design');
+    expect(mounted.instance.source()).toBe('preset');
+  });
+
   it('uses a picked file as the clone reference and lets it be removed', async () => {
     const mounted = await open();
     mounted.instance.onName({ target: { value: 'Clone' } } as unknown as Event);

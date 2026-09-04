@@ -3,6 +3,8 @@
   class="lb-pbtn"
   [class.is-sm]="size() === 'sm'"
   [class.is-lg]="size() === 'lg'"
+  [class.is-busy]="isPreparing()"
+  [attr.aria-busy]="isPreparing()"
   [disabled]="disabled()"
   [attr.title]="disabled() ? hint() : null"
   [attr.aria-label]="label() | t"
@@ -13,8 +15,8 @@
   (keydown.space)="isolate($event)"
 >
   <ds-icon
-    [class.is-solid]="!isPlaying()"
-    [name]="isPlaying() ? 'pause' : 'play'"
+    [class.is-solid]="!isPlaying() && !isPreparing()"
+    [name]="iconName()"
     [size]="iconSize()"
     data-testid="library-voice-play-icon"
   />

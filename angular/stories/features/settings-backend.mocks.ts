@@ -51,6 +51,10 @@ function model(overrides: Partial<TtsModel> & Pick<TtsModel, 'id' | 'name' | 'so
     languages: ['vi'],
     cloning: true,
     gpuRecommended: false,
+    sources: ['preset', 'clone'],
+    presets: [],
+    license: 'Apache-2.0',
+    commercialUse: true,
     ...overrides,
   };
 }

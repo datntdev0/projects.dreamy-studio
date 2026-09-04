@@ -41,6 +41,7 @@
         rows="3"
         [value]="item.sampleText"
         data-testid="library-voice-panel-sample-text"
+        (input)="sampleInput(item, $event)"
         (change)="sampleChange(item, $event)"
       ></textarea>
     </div>
@@ -50,6 +51,7 @@
         size="lg"
         [disabled]="!ready(item)"
         [hint]="notReadyHint()"
+        [text]="sampleText(item)"
         data-testid="library-voice-panel-play"
       />
       <span class="mono t-sm t-mute" data-testid="library-voice-panel-duration">

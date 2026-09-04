@@ -121,6 +121,19 @@ export function toLibraryError(error: unknown): LibraryError {
   const payload = error instanceof DesktopIpcError ? error.cause : error;
   return isLibraryError(payload) ? payload : { code: 'unknown', detail: String(payload) };
 }
+const VOICE_ERROR_KEYS: Record<string, string> = {
+  voice_not_found: 'library.error.voiceNotFound',
+  voice_invalid: 'library.error.voiceInvalid',
+  voice_reference_invalid: 'library.error.voiceReferenceInvalid',
+  voice_engine_unavailable: 'library.error.voiceEngineUnavailable',
+  voice_backend_offline: 'library.error.voiceBackendOffline',
+  voice_synthesis_failed: 'library.error.voiceSynthesisFailed',
+};
+
+function voiceErrorKey(code: string): string | null {
+  return VOICE_ERROR_KEYS[code] ?? null;
+}
+
 export function libraryErrorKey(error: unknown): string {
   const code = toLibraryError(error).code;
   if (code === 'collection_exists') return 'library.error.collectionExists';
@@ -147,7 +160,7 @@ export function libraryErrorKey(error: unknown): string {
   if (code === 'prompt_name_invalid') return 'library.error.promptNameInvalid';
   if (code === 'tag_limit') return 'library.error.tagLimit';
   if (code === 'io') return 'library.error.io';
-  return 'library.error.generic';
+  return voiceErrorKey(code) ?? 'library.error.generic';
 }
 export function durationText(milliseconds: number): string {
   const seconds = Math.max(0, Math.round(milliseconds / 1000));

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Icon } from '@components/icon';
 import { SettingsService } from '@features/settings/settings.service';
 import { CoreModule } from '@shared/core.module';
@@ -33,6 +33,7 @@ export class LibraryVoicePanel {
   private readonly toasts = inject(ToastService);
   private readonly translate = this.languageService.translate.bind(this.languageService);
   readonly voice = computed(this.resolveVoice.bind(this));
+  private readonly sampleDraft = signal<{ id: number; text: string } | null>(null);
 
   ready(voice: LibraryVoice): boolean {
     return this.voices.isReady(voice);
@@ -63,7 +64,7 @@ export class LibraryVoicePanel {
   }
 
   sourceDetail(voice: LibraryVoice): string {
-    return voiceSourceDetail(voice, this.translate);
+    return voiceSourceDetail(voice, this.translate, this.voices.engines());
   }
 
   createdAt(voice: LibraryVoice): string {
@@ -72,6 +73,15 @@ export class LibraryVoicePanel {
 
   updatedAt(voice: LibraryVoice): string {
     return formatIsoMinute(voice.updatedAt);
+  }
+
+  sampleText(voice: LibraryVoice): string {
+    const draft = this.sampleDraft();
+    return draft?.id === voice.id ? draft.text : voice.sampleText;
+  }
+
+  sampleInput(voice: LibraryVoice, event: Event): void {
+    this.sampleDraft.set({ id: voice.id, text: fieldValue(event) });
   }
 
   sampleChange(voice: LibraryVoice, event: Event): void {

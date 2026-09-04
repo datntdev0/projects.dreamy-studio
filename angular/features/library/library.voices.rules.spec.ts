@@ -3,15 +3,25 @@ import { CloudAccount } from '@features/settings/cloud.models';
 import { librarySound, libraryVoice } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
-import { VoiceEngine } from './library.voices.models';
+import { LibraryVoice, VoiceEngine } from './library.voices.models';
 // prettier-ignore
-import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetName, soundOptionText, supportedVoiceSource, toVoiceInput, voiceById, voiceDateText, voiceDurationText, voiceGenderKey, voiceGenderOptions, voiceHue, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey } from './library.voices.rules';
+import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, normalizeSampleText, presetName, presetOptionText, sameSampleText, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, voiceById, voiceDateText, voiceDurationText, voiceGenderKey, voiceGenderOptions, voiceHue, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey } from './library.voices.rules';
 
 function translate(key: string, params?: Record<string, string | number>): string {
   return params ? `${key}:${JSON.stringify(params)}` : key;
 }
 
-const model = (id: string, state: TtsModel['state']): TtsModel => ({
+const PRESETS: TtsModel['presets'] = [
+  { id: 'Hải Đăng', name: 'Hải Đăng', gender: 'male', region: 'north', style: 'natural' },
+  { id: 'Mai Anh', name: 'Mai Anh', gender: 'female', region: 'north', style: 'news' },
+  { id: 'Odd', name: 'Odd', gender: 'robot', region: 'mars', style: 'beeps' },
+];
+
+const model = (
+  id: string,
+  state: TtsModel['state'],
+  overrides: Partial<TtsModel> = {},
+): TtsModel => ({
   id,
   name: id.toUpperCase(),
   state,
@@ -22,6 +32,11 @@ const model = (id: string, state: TtsModel['state']): TtsModel => ({
   languages: [],
   cloning: false,
   gpuRecommended: false,
+  sources: ['preset', 'clone', 'unknown'],
+  presets: PRESETS,
+  license: 'Apache-2.0',
+  commercialUse: true,
+  ...overrides,
 });
 
 const account = (
@@ -43,11 +58,12 @@ const account = (
 
 describe('library.voices.rules', () => {
   const engines: VoiceEngine[] = buildVoiceEngines(
-    [model('a', 'installed'), model('b', 'none')],
+    [model('a', 'installed'), model('b', 'none', { sources: [], presets: [] })],
     [
       account('c', ['speech'], true),
       account('d', ['image'], true),
       account('e', ['speech'], false),
+      account('edge-read-aloud', ['speech'], true),
     ],
   );
 
@@ -57,7 +73,15 @@ describe('library.voices.rules', () => {
       ['b', 'local', false],
       ['c', 'cloud', true],
       ['e', 'cloud', false],
+      ['edge-read-aloud', 'cloud', true],
     ]);
+    expect(engines[0].sources).toEqual(['preset', 'clone']);
+    expect(engines[0].presets.map((preset) => preset.gender)).toEqual([
+      'male',
+      'female',
+      'neutral',
+    ]);
+    expect(engines[2].presets).toEqual([]);
     expect(findEngine(engines, 'c')?.name).toBe('c');
     expect(findEngine(engines, 'zz')).toBeNull();
     expect(engineName(engines, 'a')).toBe('A');
@@ -79,7 +103,7 @@ describe('library.voices.rules', () => {
     const groups = groupVoiceEngines(engines);
     expect(groups.map((group) => [group.kind, group.engines.length])).toEqual([
       ['local', 2],
-      ['cloud', 2],
+      ['cloud', 3],
     ]);
     expect(groupVoiceEngines(engines.slice(0, 2)).map((group) => group.kind)).toEqual(['local']);
     expect(engineGroupKey('cloud')).toBe('library.voice.engine.cloud');
@@ -114,23 +138,19 @@ describe('library.voices.rules', () => {
     expect(voiceDateText('2026-01-02T03:04:00Z')).toBe('2026-01-02');
     expect(voiceDurationText(libraryVoice({ sampleDurationMs: 65_000 }))).toBe('1:05');
     expect(voiceDurationText(libraryVoice({ sampleDurationMs: null }))).toBe('');
-    expect(presetName('narrator-warm')).toBe('Narrator — warm');
-    expect(presetName('custom')).toBe('custom');
-    expect(presetName(null)).toBe('—');
+    expect(presetName(engines, libraryVoice({ engine: 'a', preset: 'Mai Anh' }))).toBe('Mai Anh');
+    expect(presetName(engines, libraryVoice({ engine: 'a', preset: 'custom' }))).toBe('custom');
+    expect(presetName(engines, libraryVoice({ engine: 'z', preset: null }))).toBe('—');
     expect(voiceReferenceName(libraryVoice({ referenceName: 'a.mp3' }), translate)).toBe('a.mp3');
     expect(voiceReferenceName(libraryVoice({ referenceName: '' }), translate)).toBe(
       'library.voice.reference.recording',
     );
-    expect(voiceSourceDetail(libraryVoice({ preset: 'narrator-warm' }), translate)).toBe(
-      'Narrator — warm',
-    );
-    expect(voiceSourceDetail(libraryVoice({ source: 'design', prompt: 'calm' }), translate)).toBe(
-      'calm',
-    );
-    expect(voiceSourceDetail(libraryVoice({ source: 'design', prompt: '' }), translate)).toBe('—');
-    expect(
-      voiceSourceDetail(libraryVoice({ source: 'clone', referenceName: 'a.mp3' }), translate),
-    ).toBe('a.mp3');
+    const detail = (voice: Partial<LibraryVoice>): string =>
+      voiceSourceDetail(libraryVoice(voice), translate, engines);
+    expect(detail({ engine: 'a', preset: 'Hải Đăng' })).toBe('Hải Đăng');
+    expect(detail({ source: 'design', prompt: 'calm' })).toBe('calm');
+    expect(detail({ source: 'design', prompt: '' })).toBe('—');
+    expect(detail({ source: 'clone', referenceName: 'a.mp3' })).toBe('a.mp3');
     expect(soundOptionText(librarySound({ name: 'a.mp3', durationMs: 65_000 }))).toBe(
       'a.mp3 · 1:05',
     );
@@ -183,9 +203,10 @@ describe('library.voices.rules', () => {
     expect(isVoiceDraftValid(clone)).toBe(false);
     expect(isVoiceDraftValid({ ...clone, consent: true })).toBe(true);
     expect(isVoiceDraftValid({ ...clone, consent: true, reference: null })).toBe(false);
-    const design = { ...base, source: 'design' as const };
+    const design = { ...base, source: 'design' as const, engine: engines[2] };
     expect(isVoiceDraftValid(design)).toBe(false);
     expect(isVoiceDraftValid({ ...design, prompt: 'calm' })).toBe(true);
+    expect(isVoiceDraftValid({ ...design, prompt: 'calm', engine: ready })).toBe(false);
     const options = { language: 'vi', gender: 'male' as const };
     expect(toVoiceInput(base, options)).toMatchObject({
       name: 'Mira',
@@ -208,14 +229,17 @@ describe('library.voices.rules', () => {
   });
 
   it('restricts sources per engine', () => {
-    const edge = { ...engines[2], id: 'edge-read-aloud' };
-    expect(engineSources('edge-read-aloud')).toEqual(['preset']);
-    expect(engineSources('a')).toEqual(['preset', 'clone', 'design']);
+    const [local, empty, , , edge] = engines;
+    expect(engineSources(edge)).toEqual(['preset']);
+    expect(engineSources(local)).toEqual(['preset', 'clone']);
+    expect(engineSources(empty)).toEqual(['preset', 'clone', 'design']);
+    expect(engineSources(engines[2])).toEqual(['preset', 'clone', 'design']);
     expect(engineSources(null)).toHaveLength(3);
-    expect(engineSupportsSource('edge-read-aloud', 'clone')).toBe(false);
-    expect(engineSupportsSource('edge-read-aloud', 'preset')).toBe(true);
-    expect(supportedVoiceSource('edge-read-aloud', 'design')).toBe('preset');
-    expect(supportedVoiceSource('a', 'design')).toBe('design');
+    expect(engineSupportsSource(edge, 'clone')).toBe(false);
+    expect(engineSupportsSource(edge, 'preset')).toBe(true);
+    expect(supportedVoiceSource(edge, 'design')).toBe('preset');
+    expect(supportedVoiceSource(local, 'design')).toBe('preset');
+    expect(supportedVoiceSource(local, 'clone')).toBe('clone');
     const draft = {
       name: 'Mira',
       engine: edge,
@@ -228,6 +252,28 @@ describe('library.voices.rules', () => {
     };
     expect(isVoiceDraftValid(draft)).toBe(false);
     expect(isVoiceDraftValid({ ...draft, source: 'preset' })).toBe(true);
+  });
+
+  it('picks presets per engine and describes them', () => {
+    const [local, empty] = engines;
+    expect(supportedPreset(local, 'Hải Đăng')?.id).toBe('Hải Đăng');
+    expect(supportedPreset(local, 'missing')?.id).toBe('Mai Anh');
+    expect(supportedPreset(local, '')?.gender).toBe('female');
+    expect(supportedPreset({ ...local, presets: [local.presets[0]] }, '')?.id).toBe('Hải Đăng');
+    expect(supportedPreset(empty, 'Mai Anh')).toBeNull();
+    expect(supportedPreset(null, '')).toBeNull();
+    expect(presetOptionText(local.presets[1], translate)).toBe(
+      'Mai Anh · library.voice.gender.female · library.voice.region.north · library.voice.style.news',
+    );
+    expect(presetOptionText(local.presets[2], translate)).toBe(
+      'Odd · library.voice.gender.neutral',
+    );
+  });
+
+  it('compares sample texts by their words', () => {
+    expect(normalizeSampleText('  Xin \n  chào ')).toBe('Xin chào');
+    expect(sameSampleText('Xin chào', ' Xin   chào ')).toBe(true);
+    expect(sameSampleText('Xin chào', 'Xin chao')).toBe(false);
   });
 
   it('builds references from the selected way of providing audio', () => {

@@ -14,10 +14,10 @@ import { durationText, formatBytes } from '../library.rules';
 import { LibrarySound } from '../library.sounds.models';
 import { LibrarySoundService } from '../library.sounds.service';
 // prettier-ignore
-import { VOICE_LANGUAGES, VOICE_PRESETS, VOICE_REFERENCE_MODES, VOICE_SOURCES, VoiceEngine, VoiceEngineGroup, VoiceGender, VoiceReference, VoiceReferenceFile, VoiceReferenceMode, VoiceSource } from '../library.voices.models';
+import { VOICE_LANGUAGES, VOICE_REFERENCE_MODES, VOICE_SOURCES, VoiceEngine, VoiceEngineGroup, VoiceGender, VoicePreset, VoiceReference, VoiceReferenceFile, VoiceReferenceMode, VoiceSource } from '../library.voices.models';
 import { VOICE_RECORDING_MAX_MS, VoiceRecorder } from '../library.voices.recorder';
 // prettier-ignore
-import { buildVoiceReference, engineGroupKey, engineOptionText, engineSupportsSource, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, soundOptionText, supportedVoiceSource, toVoiceInput, VoiceDraft, voiceGenderOptions, voiceLanguageText, voiceSourceKey } from '../library.voices.rules';
+import { buildVoiceReference, engineGroupKey, engineOptionText, engineSupportsSource, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetOptionText, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, VoiceDraft, voiceGenderOptions, voiceLanguageText, voiceSourceKey } from '../library.voices.rules';
 import { LibraryVoiceService } from '../library.voices.service';
 import { LibraryVoiceNotice } from './voice-notice.component';
 
@@ -43,17 +43,20 @@ export class LibraryVoiceDialog {
   readonly engineId = signal('');
   readonly requestedSource = signal<VoiceSource>('preset');
   readonly referenceMode = signal<VoiceReferenceMode>('library');
-  readonly preset = signal(VOICE_PRESETS[0].id);
+  readonly requestedPreset = signal('');
   readonly referenceSoundId = signal<number | null>(null);
   readonly recorder = new VoiceRecorder();
   readonly consent = signal(false);
   readonly prompt = signal('');
   readonly language = signal<string>(DEFAULT_LANGUAGE);
-  readonly gender = signal<VoiceGender>(DEFAULT_GENDER);
+  readonly requestedGender = signal<VoiceGender | null>(null);
   readonly description = signal('');
   readonly referenceFile = signal<VoiceReferenceFile | null>(null);
   readonly busy = signal(false);
-  readonly presets = VOICE_PRESETS;
+  readonly presets = computed(this.buildPresets.bind(this));
+  readonly selectedPreset = computed(this.buildSelectedPreset.bind(this));
+  readonly preset = computed(this.buildPresetId.bind(this));
+  readonly gender = computed(this.buildGender.bind(this));
   readonly languages = VOICE_LANGUAGES;
   readonly recordingLimit = durationText(VOICE_RECORDING_MAX_MS);
   readonly engineGroups = computed(this.buildEngineGroups.bind(this));
@@ -82,6 +85,10 @@ export class LibraryVoiceDialog {
 
   languageText(code: string): string {
     return voiceLanguageText(code, this.translate);
+  }
+
+  presetText(preset: VoicePreset): string {
+    return presetOptionText(preset, this.translate);
   }
 
   soundText(sound: LibrarySound): string {
@@ -145,7 +152,8 @@ export class LibraryVoiceDialog {
   }
 
   onPreset(event: Event): void {
-    this.preset.set(fieldValue(event));
+    this.requestedPreset.set(fieldValue(event));
+    this.requestedGender.set(null);
   }
 
   onSound(event: Event): void {
@@ -166,7 +174,7 @@ export class LibraryVoiceDialog {
   }
 
   onGender(value: string): void {
-    this.gender.set(value as VoiceGender);
+    this.requestedGender.set(value as VoiceGender);
   }
 
   close(): void {
@@ -219,7 +227,26 @@ export class LibraryVoiceDialog {
   }
 
   private buildSource(): VoiceSource {
-    return supportedVoiceSource(this.engine()?.id ?? null, this.requestedSource());
+    return supportedVoiceSource(this.engine(), this.requestedSource());
+  }
+
+  private buildPresets(): VoicePreset[] {
+    return this.engine()?.presets ?? [];
+  }
+
+  private buildSelectedPreset(): VoicePreset | null {
+    return supportedPreset(this.engine(), this.requestedPreset());
+  }
+
+  private buildPresetId(): string {
+    return this.selectedPreset()?.id ?? '';
+  }
+
+  private buildGender(): VoiceGender {
+    const requested = this.requestedGender();
+    if (requested) return requested;
+    const preset = this.source() === 'preset' ? this.selectedPreset() : null;
+    return preset?.gender ?? DEFAULT_GENDER;
   }
 
   private buildReference(): VoiceReference | null {
@@ -248,18 +275,18 @@ export class LibraryVoiceDialog {
   }
 
   private buildSourceOptions(): SegmentOption[] {
-    return VOICE_SOURCES.map(this.toSourceOption.bind(this, this.engine()?.id ?? null));
+    return VOICE_SOURCES.map(this.toSourceOption.bind(this, this.engine()));
   }
 
   private buildGenderOptions(): SegmentOption[] {
     return voiceGenderOptions(this.translate);
   }
 
-  private toSourceOption(engineId: string | null, source: VoiceSource): SegmentOption {
+  private toSourceOption(engine: VoiceEngine | null, source: VoiceSource): SegmentOption {
     return {
       value: source,
       label: this.translate(voiceSourceKey(source)),
-      disabled: !engineSupportsSource(engineId, source),
+      disabled: !engineSupportsSource(engine, source),
     };
   }
 
@@ -281,12 +308,12 @@ export class LibraryVoiceDialog {
     this.referenceMode.set('library');
     this.referenceFile.set(null);
     this.description.set('');
-    this.preset.set(VOICE_PRESETS[0].id);
+    this.requestedPreset.set('');
     this.referenceSoundId.set(null);
     this.consent.set(false);
     this.prompt.set('');
     this.language.set(DEFAULT_LANGUAGE);
-    this.gender.set(DEFAULT_GENDER);
+    this.requestedGender.set(null);
     this.busy.set(false);
   }
 }

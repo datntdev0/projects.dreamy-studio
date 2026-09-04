@@ -343,6 +343,17 @@
               @if (m.gpuRecommended) {
                 <span class="tag is-more">{{ 'settings.backend.model.gpu' | t }}</span>
               }
+              @if (m.commercialUse === false) {
+                <span
+                  class="tag is-more"
+                  [attr.title]="
+                    'settings.backend.model.nonCommercialHint' | t: { license: m.license }
+                  "
+                  [attr.data-testid]="'settings-backend-model-' + m.id + '-non-commercial'"
+                >
+                  {{ 'settings.backend.model.nonCommercial' | t }}
+                </span>
+              }
               <span
                 class="tag is-more"
                 [attr.data-testid]="'settings-backend-model-' + m.id + '-size'"

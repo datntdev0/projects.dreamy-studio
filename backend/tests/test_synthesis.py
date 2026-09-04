@@ -171,6 +171,12 @@ class SynthesisTests(unittest.TestCase):
         self.addCleanup(app.state.services.close)
         status, headers, _ = self.synthesize(app, model="loose")
         self.assertEqual((status, headers["x-cache"]), (200, "miss"))
+        (self.data / "runtime" / "voice-cpu" / "manifest.json").unlink()
+        restarted = self.make_app(engine="engine_tone")
+        self.addCleanup(restarted.state.services.close)
+        models = asgi_request(restarted, "GET", "/models")[1]
+        self.assertEqual(next(m for m in models if m["id"] == "tone")["state"], "installed")
+        self.assertEqual(self.synthesize(restarted)[0], 200)
 
     def test_removing_model_clears_its_cache(self):
         self.synthesize()

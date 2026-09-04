@@ -73,7 +73,9 @@ class Services:
         return active if active.key == variant.key else self.installer(variant)
 
     def runtime_of(self, model: CatalogModel) -> RuntimeInstaller | None:
-        return self.runtimes.get(model.runtime) if model.runtime else None
+        if self.settings.tts_engine or not model.runtime:
+            return None
+        return self.runtimes.get(model.runtime)
 
     def runtime_in_use(self, runtime_id: str) -> bool:
         return any(

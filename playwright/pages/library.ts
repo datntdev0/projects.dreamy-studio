@@ -1,5 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { VoiceDialog, VoiceList, VoicePanel } from './voices.ts';
+
 export type SectionKind = 'image' | 'sound' | 'video' | 'prompt';
 
 const SECTION_ROOTS: Readonly<Record<SectionKind, string>> = {
@@ -264,6 +266,9 @@ export class LibraryNav {
   readonly prompts: LibrarySectionList;
   readonly taxonomy: LibraryTaxonomy;
   readonly collection: LibraryCollectionView;
+  readonly voices: VoiceList;
+  readonly voiceDialog: VoiceDialog;
+  readonly voicePanel: VoicePanel;
 
   constructor(readonly page: Page) {
     this.explorer = new LibraryExplorer(page);
@@ -273,6 +278,9 @@ export class LibraryNav {
     this.prompts = new LibrarySectionList(page, 'prompt');
     this.taxonomy = new LibraryTaxonomy(page);
     this.collection = new LibraryCollectionView(page);
+    this.voices = new VoiceList(page);
+    this.voiceDialog = new VoiceDialog(page);
+    this.voicePanel = new VoicePanel(page);
   }
 
   get rail(): Locator {

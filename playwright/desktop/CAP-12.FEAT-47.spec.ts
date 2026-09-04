@@ -20,7 +20,7 @@ const MODELS: readonly ModelRow[] = [
     id: 'vieneu-turbo',
     name: 'VieNeu-TTS v3 Turbo',
     note: 'Fast Vietnamese speech with voice cloning.',
-    tags: ['vi', 'en', 'Voice cloning', '2.0 GB'],
+    tags: ['vi', 'en', 'Voice cloning', '2.1 GB'],
   },
   {
     id: 'vieneu-nano',
@@ -32,7 +32,7 @@ const MODELS: readonly ModelRow[] = [
     id: 'omnivoice',
     name: 'OmniVoice',
     note: 'Multilingual speech with voice cloning and voice design.',
-    tags: ['Multilingual', 'Voice cloning', 'GPU recommended', '3.0 GB'],
+    tags: ['Multilingual', 'Voice cloning', 'GPU recommended', 'Non-commercial', '4.6 GB'],
   },
 ];
 

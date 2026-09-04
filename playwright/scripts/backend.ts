@@ -21,6 +21,7 @@ const GPU_FILE = 'gpu.csv';
 const FAIL_FILE = 'start.fail';
 const HOLD_FILE = 'start.hold';
 const DEVICE_COMMAND = 'backend_device_set';
+const TONE_ENGINE = 'engine_tone';
 
 export interface GpuInfo {
   readonly name: string;
@@ -56,9 +57,9 @@ export const CUDA_PACKAGES = [
 ];
 
 export const MODEL_SIZES: Readonly<Record<BackendModelId, number>> = {
-  'vieneu-turbo': 2_157_916_899,
+  'vieneu-turbo': 2_248_495_734,
   'vieneu-nano': 419_935_807,
-  omnivoice: 3_267_465_820,
+  omnivoice: 4_889_931_874,
 };
 
 export const STATUS_RUNNING = 'Running';
@@ -183,6 +184,7 @@ export class BackendStub {
       HF_HUB_DISABLE_TELEMETRY: '1',
       DREAMY_PYPI_URL: this.remote.baseUrl,
       DREAMY_NVIDIA_SMI: this.smi,
+      DREAMY_TTS_ENGINE: TONE_ENGINE,
       PYTHONPATH: this.hookDir,
     };
   }

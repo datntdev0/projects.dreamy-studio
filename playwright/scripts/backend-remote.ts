@@ -22,6 +22,11 @@ export const MODEL_REPOS: Readonly<Record<BackendModelId, string>> = {
   omnivoice: 'k2-fsa/OmniVoice',
 };
 
+export const EXTRA_REPOS: readonly string[] = [
+  'OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX',
+  'openai/whisper-large-v3-turbo',
+];
+
 export interface RemoteRequest {
   readonly method: string;
   readonly path: string;
@@ -114,6 +119,10 @@ function buildWheel(name: string, version: string): Buffer {
 
 function modelFile(repo: string, path: string): Buffer {
   return Buffer.alloc(MODEL_FILE_BYTES, `${repo}/${path}`);
+}
+
+function servedRepo(repo: string): boolean {
+  return Object.values(MODEL_REPOS).includes(repo) || EXTRA_REPOS.includes(repo);
 }
 
 function rangeOffset(request: IncomingMessage): number {
@@ -231,7 +240,7 @@ export class BackendRemote {
     const resolve = RESOLVE_PATH.exec(path);
     const pypi = PYPI_PATH.exec(path);
     const wheel = WHEEL_PATH.exec(path);
-    if (tree?.[1] !== undefined && Object.values(MODEL_REPOS).includes(tree[1])) {
+    if (tree?.[1] !== undefined && servedRepo(tree[1])) {
       this.sendJson(response, this.tree(tree[1]));
     } else if (resolve?.[1] !== undefined && resolve[2] !== undefined) {
       this.sendFile(request, response, path, modelFile(resolve[1], resolve[2]));

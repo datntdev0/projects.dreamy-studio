@@ -57,6 +57,28 @@ pub struct DirEntry {
     pub size: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectModuleState {
+    pub id: String,
+    pub state: String,
+    pub done: usize,
+    pub total: usize,
+    pub note: String,
+}
+
+impl ProjectModuleState {
+    pub fn idle(id: &str, total: usize) -> Self {
+        Self {
+            id: id.to_string(),
+            state: "idle".to_string(),
+            done: 0,
+            total,
+            note: String::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectErrorCode {

@@ -1,10 +1,14 @@
 use crate::features::novel::files::CoverKind;
 use crate::features::novel::files::read_first_cover;
+use crate::features::novel::files::write_atomic;
 use crate::features::project::models::DirEntry;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
 use crate::features::project::models::ProjectResult;
+use crate::shared::files::read_if_exists;
 use crate::shared::files::remove_if_exists;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::Component;
@@ -129,6 +133,32 @@ impl ProjectFiles {
         }
         read_entries(&canonical_target)
     }
+}
+
+pub fn read_json<T: DeserializeOwned>(path: &Path) -> ProjectResult<Option<T>> {
+    match read_if_exists(path)? {
+        Some(bytes) => serde_json::from_slice(&bytes).map(Some).map_err(|error| {
+            ProjectError::new(
+                ProjectErrorCode::Io,
+                format!("file {} is not valid: {error}", path.display()),
+            )
+        }),
+        None => Ok(None),
+    }
+}
+
+pub fn write_json<T: Serialize>(path: &Path, value: &T) -> ProjectResult<()> {
+    let bytes = serde_json::to_vec_pretty(value).map_err(|error| {
+        ProjectError::new(
+            ProjectErrorCode::Io,
+            format!("cannot encode {}: {error}", path.display()),
+        )
+    })?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    write_atomic(path, &bytes)?;
+    Ok(())
 }
 
 fn read_entries(path: &Path) -> ProjectResult<Vec<DirEntry>> {

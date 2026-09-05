@@ -3,10 +3,12 @@ use crate::features::project::models::DirEntry;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
 use crate::features::project::models::ProjectInput;
+use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectPatch;
 use crate::features::project::models::ProjectResult;
 use crate::features::project::models::ProjectSummary;
 use crate::features::project::service::ProjectService;
+use crate::features::scripting::service::ScriptingWorkspace;
 use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -96,11 +98,19 @@ pub fn clear_project_cover(
     service.open(session)?.cover_clear(id)
 }
 
+pub fn project_module_states(
+    service: &ProjectService,
+    session: &WorkspaceSession,
+    project_id: i64,
+) -> ProjectResult<Vec<ProjectModuleState>> {
+    ScriptingWorkspace::new(service.open(session)?).modules(project_id)
+}
+
 fn task_failure(error: tauri::Error) -> ProjectError {
     ProjectError::new(ProjectErrorCode::Task, error.to_string())
 }
 
-async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> ProjectResult<T>
+pub(crate) async fn run_blocking<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> ProjectResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&ProjectService, &WorkspaceSession) -> ProjectResult<T> + Send + 'static,
@@ -224,6 +234,17 @@ pub async fn project_folder_open<R: Runtime>(app: AppHandle<R>, id: i64) -> Proj
     app.opener()
         .reveal_item_in_dir(path)
         .map_err(|error| ProjectError::new(ProjectErrorCode::Io, error.to_string()))
+}
+
+#[tauri::command]
+pub async fn project_modules<R: Runtime>(
+    app: AppHandle<R>,
+    project_id: i64,
+) -> ProjectResult<Vec<ProjectModuleState>> {
+    run_blocking(app, move |service, session| {
+        project_module_states(service, session, project_id)
+    })
+    .await
 }
 
 #[cfg(test)]

@@ -19,6 +19,7 @@ use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
 use chrono::Utc;
 use rusqlite::TransactionBehavior;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -301,6 +302,16 @@ impl ProjectWorkspace {
         let db = self.database()?;
         let project = require_project(&ProjectRepository::new(db.connection()), id)?;
         Ok(self.files().project_dir(&project.folder))
+    }
+
+    pub fn with_project<T>(
+        &self,
+        id: i64,
+        job: impl FnOnce(&ProjectSummary, &Path) -> ProjectResult<T>,
+    ) -> ProjectResult<T> {
+        let _gate = lock(&self.gate);
+        let summary = require_summary(&ProjectRepository::new(self.database()?.connection()), id)?;
+        job(&summary, &self.files().project_dir(&summary.folder))
     }
 
     fn database(&self) -> ProjectResult<Database> {

@@ -1,5 +1,6 @@
 pub mod app;
 pub mod assistant;
+pub mod audiobook;
 pub mod backend;
 pub mod blocking;
 pub mod knowledge;
@@ -9,6 +10,7 @@ pub mod library_voices;
 pub mod novel;
 pub mod pipeline;
 pub mod project;
+pub mod scripting;
 pub mod settings;
 pub mod translation;
 pub mod workspace;

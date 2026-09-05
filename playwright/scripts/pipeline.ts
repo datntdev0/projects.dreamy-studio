@@ -230,6 +230,7 @@ export interface PipelineTaskRecord {
   readonly id: number;
   readonly chapterId: string;
   readonly passage: number | null;
+  readonly segmentId: string | null;
   readonly status: string;
   readonly progress: number;
   readonly error: string;
@@ -240,6 +241,7 @@ export interface PipelineTaskRecord {
 export interface PipelineRecord {
   readonly id: number;
   readonly novelId: number;
+  readonly projectId: number | null;
   readonly kind: string;
   readonly target: string;
   readonly status: string;
@@ -269,6 +271,7 @@ function toTask(row: Row): PipelineTaskRecord {
     chapterId: String(row['chapter_id']),
     passage:
       row['passage'] === null || row['passage'] === undefined ? null : Number(row['passage']),
+    segmentId: nullableText(row['segment_id']),
     status: String(row['status']),
     progress: Number(row['progress']),
     error: String(row['error']),
@@ -281,6 +284,10 @@ function toPipeline(row: Row, tasks: readonly PipelineTaskRecord[]): PipelineRec
   return {
     id: Number(row['id']),
     novelId: Number(row['novel_id']),
+    projectId:
+      row['project_id'] === null || row['project_id'] === undefined
+        ? null
+        : Number(row['project_id']),
     kind: String(row['kind']),
     target: String(row['target']),
     status: String(row['status']),

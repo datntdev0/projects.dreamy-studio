@@ -95,7 +95,11 @@ export const RAIL_MIN = 180;
 export const RAIL_MAX = 420;
 
 const SPEECH_WORDS_PER_SECOND = 2.5;
-const SAVE_COMMANDS = ['scripting_save', 'scripting_unit_save', 'scripting_cast_save'] as const;
+const SAVE_COMMANDS: readonly string[] = [
+  'scripting_save',
+  'scripting_unit_save',
+  'scripting_cast_save',
+];
 
 const NESTED_ENTITY: SeedEntity = { type: 'character', name: NESTED };
 
@@ -122,6 +126,7 @@ export interface ModuleStateRecord {
   readonly state: string;
   readonly done: number;
   readonly total: number;
+  readonly note?: string;
 }
 
 interface TauriWindow {
@@ -181,9 +186,11 @@ export async function openScriptingWorkspace(
   ui: Ui,
   picker: PickerStub,
   sandbox: Sandbox,
+  seed?: (folder: string) => Promise<void>,
 ): Promise<string> {
   const folder = sandbox.workspace(SCRIPTING_WORKSPACE_NAME);
   await seedScripting(folder);
+  await seed?.(folder);
   await openFromSplash(ui, picker, folder);
   await showProjectExplorer(ui);
   return folder;
@@ -234,26 +241,33 @@ export async function reopenScripting(
   return ui.main.scripting;
 }
 
-export async function trackSaves(app: AppSession): Promise<IpcSpy> {
+export async function trackSaves(
+  app: AppSession,
+  commands: readonly string[] = SAVE_COMMANDS,
+): Promise<IpcSpy> {
   const spy = new IpcSpy(() => app.page);
   await spy.install();
-  for (const command of SAVE_COMMANDS) {
+  for (const command of commands) {
     await spy.mode(command, 'pass');
   }
   return spy;
 }
 
-async function pendingSaves(spy: IpcSpy): Promise<number> {
+async function pendingSaves(spy: IpcSpy, commands: readonly string[]): Promise<number> {
   let pending = 0;
-  for (const command of SAVE_COMMANDS) {
+  for (const command of commands) {
     pending += (await spy.calls(command)).length - (await spy.done(command));
   }
   return pending;
 }
 
-export async function waitForSaves(page: Page, spy: IpcSpy): Promise<void> {
+export async function waitForSaves(
+  page: Page,
+  spy: IpcSpy,
+  commands: readonly string[] = SAVE_COMMANDS,
+): Promise<void> {
   await waitForFrames(page);
-  await expect.poll(() => pendingSaves(spy)).toBe(0);
+  await expect.poll(() => pendingSaves(spy, commands)).toBe(0);
 }
 
 function invokeModules(projectId: number): Promise<unknown> {
@@ -315,19 +329,28 @@ export async function showCast(ui: Ui): Promise<void> {
   await expect(scripting.cast.root).toBeVisible();
 }
 
-function castIdIn(list: Element, name: string): string {
+interface InputLookup {
+  readonly name: string;
+  readonly prefix: string;
+}
+
+function idOfInput(list: Element, lookup: InputLookup): string {
   const inputs = list.querySelectorAll('input');
   for (let index = 0; index < inputs.length; index += 1) {
     const input = inputs[index];
-    if (input?.value === name) {
-      return (input.getAttribute('data-testid') ?? '').replace('sc-cast-name-', '');
+    if (input?.value === lookup.name) {
+      return (input.getAttribute('data-testid') ?? '').replace(lookup.prefix, '');
     }
   }
   return '';
 }
 
+export function idByInputValue(list: Locator, name: string, prefix: string): Promise<string> {
+  return list.evaluate(idOfInput, { name, prefix });
+}
+
 export function castIdOf(ui: Ui, name: string): Promise<string> {
-  return ui.main.scripting.cast.list.evaluate(castIdIn, name);
+  return idByInputValue(ui.main.scripting.cast.list, name, 'sc-cast-name-');
 }
 
 export function dotClasses(ui: Ui): Promise<string[]> {
@@ -376,7 +399,7 @@ export function wordCount(texts: readonly string[]): number {
   return words;
 }
 
-function durationText(seconds: number): string {
+export function durationText(seconds: number): string {
   const rounded = Math.round(seconds);
   return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
 }

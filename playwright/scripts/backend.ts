@@ -20,6 +20,9 @@ const HOOK_SOURCE = join(here, 'sitecustomize.py');
 const GPU_FILE = 'gpu.csv';
 const FAIL_FILE = 'start.fail';
 const HOLD_FILE = 'start.hold';
+const SYNTH_HOLD_FILE = 'synth.hold';
+const SYNTH_FAIL_FILE = 'synth.fail';
+const RULE_REMOVAL = { force: true, maxRetries: 20, retryDelay: 50 };
 const DEVICE_COMMAND = 'backend_device_set';
 const TONE_ENGINE = 'engine_tone';
 
@@ -245,6 +248,22 @@ export class BackendStub {
     await rm(join(this.hookDir, FAIL_FILE), { force: true });
   }
 
+  async holdSynthesis(...fragments: string[]): Promise<void> {
+    await this.writeRule(SYNTH_HOLD_FILE, { fragments });
+  }
+
+  async releaseSynthesis(): Promise<void> {
+    await this.removeRule(SYNTH_HOLD_FILE);
+  }
+
+  async failSynthesis(message: string, ...fragments: string[]): Promise<void> {
+    await this.writeRule(SYNTH_FAIL_FILE, { fragments, message });
+  }
+
+  async recoverSynthesis(): Promise<void> {
+    await this.removeRule(SYNTH_FAIL_FILE);
+  }
+
   async kill(port: number): Promise<void> {
     const { stdout } = await run('netstat', ['-ano', '-p', 'TCP']);
     const pids = listeners(stdout, port);
@@ -265,6 +284,14 @@ export class BackendStub {
 
   hasCudaManifest(): boolean {
     return existsSync(join(this.cudaDir, 'manifest.json'));
+  }
+
+  private async removeRule(name: string): Promise<void> {
+    await rm(join(this.hookDir, name), RULE_REMOVAL);
+  }
+
+  private async writeRule(name: string, rule: Record<string, unknown>): Promise<void> {
+    await writeFile(join(this.hookDir, name), JSON.stringify(rule));
   }
 }
 

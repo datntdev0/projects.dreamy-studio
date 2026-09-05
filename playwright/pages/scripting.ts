@@ -4,6 +4,10 @@ export type ScriptPresetId = 'audiobook' | 'film';
 
 export type BlockTool = 'up' | 'down' | 'duplicate' | 'remove';
 
+export function unitKey(position: number): string {
+  return `U${String(position).padStart(2, '0')}`;
+}
+
 export class ScriptBlock {
   constructor(readonly root: Locator) {}
 
@@ -291,7 +295,7 @@ export class ScriptingPage {
   }
 
   unit(position: number): Locator {
-    return this.page.getByTestId(`sc-unit-U${String(position).padStart(2, '0')}`);
+    return this.page.getByTestId(`sc-unit-${unitKey(position)}`);
   }
 
   block(index: number): ScriptBlock {
@@ -300,29 +304,5 @@ export class ScriptingPage {
 
   menuItem(label: string): Locator {
     return this.menuItems.filter({ hasText: label });
-  }
-}
-
-export class AudiobookPage {
-  constructor(private readonly page: Page) {}
-
-  get root(): Locator {
-    return this.page.getByTestId('ab-root');
-  }
-
-  get back(): Locator {
-    return this.page.getByTestId('ab-back-btn');
-  }
-
-  get rail(): Locator {
-    return this.page.getByTestId('ab-rail');
-  }
-
-  get voicesView(): Locator {
-    return this.page.getByTestId('ab-views-voices');
-  }
-
-  speakerName(id: string): Locator {
-    return this.page.getByTestId(`ab-spk-name-${id}`);
   }
 }

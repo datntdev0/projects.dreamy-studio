@@ -94,6 +94,12 @@ export class PipelineList {
       has: this.page.getByTestId('pipeline-item-novel').filter({ hasText: novel }),
     });
   }
+
+  withStatus(status: string): Locator {
+    return this.items.filter({
+      has: this.page.getByTestId('pipeline-item-status').filter({ hasText: status }),
+    });
+  }
 }
 
 export class PipelineItem {

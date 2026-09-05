@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { AssistantPage } from './assistant.ts';
+import { AudiobookPage } from './audiobook.ts';
 import { ConfirmDialog, SwitchDialog } from './dialogs.ts';
 import { KnowledgePage } from './knowledge.ts';
 import { LibraryNav } from './library.ts';
@@ -8,7 +9,7 @@ import { LibraryNav } from './library.ts';
 import { AddChapterDialog, DisplayPanel, NovelChapters, NovelCreateDialog, NovelExplorer, NovelImportDialog, NovelList, NovelPanel, NovelReader } from './novels.ts';
 import { PipelinesNav } from './pipeline.ts';
 import { ProjectPages } from './project.ts';
-import { AudiobookPage, ScriptingPage } from './scripting.ts';
+import { ScriptingPage } from './scripting.ts';
 import { SettingsPage } from './settings.ts';
 import { TranslationPage } from './translation.ts';
 

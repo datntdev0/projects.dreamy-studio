@@ -41,6 +41,7 @@ export interface SeedVoice {
   readonly referenceKind?: 'sound' | 'file' | 'recording' | null;
   readonly referenceSoundId?: number | null;
   readonly referenceName?: string;
+  readonly sampleText?: string;
   readonly sampleDurationMs?: number | null;
   readonly createdAt: string;
 }
@@ -89,7 +90,7 @@ function insertVoice(database: DatabaseSync, voice: SeedVoice): number {
       voice.referenceKind ?? null,
       voice.referenceSoundId ?? null,
       voice.referenceName ?? '',
-      VOICE_SAMPLE_VI,
+      voice.sampleText ?? VOICE_SAMPLE_VI,
       voice.sampleDurationMs === undefined ? 3_500 : voice.sampleDurationMs,
       voice.createdAt,
       voice.createdAt,

@@ -1,8 +1,11 @@
-import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, COMING_SOON, expandProject, generateDefault, MODULE_LABELS, moduleState, openScripting, openScriptingWorkspace, PROJECT_IDS, startWriting, STATE_DOING, STATE_DONE, STATE_IDLE, UNSUPPORTED_MODULES } from '../scripts/scripting.ts';
+import { castVoices, generateChapter, NARRATOR_VOICE, openAudiobookOf, switchModule } from '../scripts/audiobook.ts';
+import { expect, test } from '../scripts/backend.ts';
+// prettier-ignore
+import { AUDIO_PROJECT, COMING_SOON, expandProject, generateDefault, MODULE_LABELS, moduleState, NARRATOR_ID, openScripting, openScriptingWorkspace, PROJECT_IDS, showProjectExplorer, startWriting, STATE_DOING, STATE_DONE, STATE_IDLE, UNSUPPORTED_MODULES } from '../scripts/scripting.ts';
 
 const AUDIO_ID = PROJECT_IDS[AUDIO_PROJECT] ?? 1;
+const EDITED = 'Lin Feng arrived late at the gates.';
 
 test.describe('CAP-06 Project Management', () => {
   test.describe('FEAT-53 Project Modules', () => {
@@ -120,6 +123,41 @@ test.describe('CAP-06 Project Management', () => {
       });
     });
 
-    test.fixme('US-0143 shows Audiobook as needing review with generated and stale chapter counts (needs CAP-08 audio generation)', async () => {});
+    test.describe('with a local TTS model', () => {
+      test.use({ backendOptions: { models: ['vieneu-turbo'] } });
+
+      test('US-0143 shows Audiobook as needing review with the generated and stale chapter counts', async ({
+        ui,
+        app,
+        picker,
+        sandbox,
+      }) => {
+        const { voices } = await openAudiobookOf(ui, picker, sandbox);
+        const row = ui.main.project.explorer.module(AUDIO_PROJECT, 'audiobook');
+        await castVoices(ui, { [NARRATOR_ID]: voices[NARRATOR_VOICE] ?? 0 });
+        await generateChapter(ui);
+
+        await test.step('shows Audiobook in progress with the generated chapters over all chapters', async () => {
+          await showProjectExplorer(ui);
+          await expandProject(ui, AUDIO_PROJECT);
+          await expect(row).toHaveAttribute('data-state', 'doing');
+          await expect
+            .poll(() => moduleState(app.page, AUDIO_ID, 'audiobook'))
+            .toMatchObject({ state: 'doing', done: 1, total: 4 });
+        });
+
+        await test.step('shows Audiobook as needing review once a generated chapter changes in Scripting', async () => {
+          await switchModule(ui, 'scripting');
+          await ui.main.scripting.block(0).text.fill(EDITED);
+          await expect(row).toHaveAttribute('data-state', 'stale');
+          await expect
+            .poll(() => moduleState(app.page, AUDIO_ID, 'audiobook'))
+            .toMatchObject({ state: 'stale', done: 0, total: 4 });
+          expect((await moduleState(app.page, AUDIO_ID, 'audiobook'))?.note).toContain(
+            '1 need review',
+          );
+        });
+      });
+    });
   });
 });

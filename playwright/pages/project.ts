@@ -2,6 +2,9 @@ import type { Locator, Page } from '@playwright/test';
 
 export type TemplateId = 'audiobook' | 'filmseries' | 'blank';
 
+export type ModuleId =
+  'scripting' | 'character' | 'world' | 'storyboard' | 'audiobook' | 'canvas' | 'video';
+
 export class ProjectExplorer {
   constructor(private readonly page: Page) {}
 
@@ -23,6 +26,36 @@ export class ProjectExplorer {
 
   status(label: string): Locator {
     return this.statuses.filter({ hasText: label });
+  }
+
+  project(name: string): Locator {
+    return this.page.getByTestId('project-explorer-project').filter({
+      has: this.page.getByTestId('project-explorer-project-row').filter({ hasText: name }),
+    });
+  }
+
+  expand(name: string): Locator {
+    return this.project(name).getByTestId('project-explorer-expand');
+  }
+
+  modules(name: string): Locator {
+    return this.project(name).getByTestId('project-modules-row');
+  }
+
+  moduleLabels(name: string): Locator {
+    return this.project(name).getByTestId('project-modules-label');
+  }
+
+  module(name: string, moduleId: ModuleId): Locator {
+    return this.modules(name).and(this.page.locator(`[data-module-id="${moduleId}"]`));
+  }
+
+  moduleDot(name: string, moduleId: ModuleId): Locator {
+    return this.module(name, moduleId).getByTestId('project-modules-dot');
+  }
+
+  moduleCount(name: string, moduleId: ModuleId): Locator {
+    return this.module(name, moduleId).getByTestId('project-modules-count');
   }
 }
 
@@ -334,5 +367,19 @@ export class ProjectPages {
 
   get rail(): Locator {
     return this.page.locator('[data-testid=railbar-item][data-rail=projects]');
+  }
+
+  get moduleTabs(): Locator {
+    return this.page.getByTestId('editor-tab-module');
+  }
+
+  moduleTab(projectId: number, moduleId: ModuleId): Locator {
+    return this.page.locator(
+      `[data-testid=editor-tab-module][data-tab-id="pmod:${projectId}:${moduleId}"]`,
+    );
+  }
+
+  projectTab(projectId: number): Locator {
+    return this.view.tabs.and(this.page.locator(`[data-tab-id="project:${projectId}"]`));
   }
 }

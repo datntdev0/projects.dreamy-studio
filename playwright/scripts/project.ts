@@ -57,6 +57,7 @@ export interface SeedProject {
   readonly novel?: string;
   readonly missingNovel?: boolean;
   readonly range?: readonly [number, number];
+  readonly translation?: 'VI' | 'EN';
   readonly archived?: boolean;
   readonly updatedAt?: string;
   readonly dirs?: readonly string[];
@@ -104,7 +105,14 @@ function novelRef(
   if (row === undefined) {
     throw new Error(`no novel titled ${project.novel}`);
   }
-  return { id: Number(row['id']), lang: String(row['lang']) };
+  return { id: Number(row['id']), lang: project.translation ?? String(row['lang']) };
+}
+
+function sourceKind(project: SeedProject, novelId: number | null): string | null {
+  if (novelId === null) {
+    return null;
+  }
+  return project.translation === undefined ? 'original' : 'translation';
 }
 
 async function writeProjectFiles(dir: string, project: SeedProject): Promise<void> {
@@ -131,7 +139,7 @@ export async function seedProjects(
     for (const project of projects) {
       const novel = novelRef(database, project);
       const stamp = project.updatedAt ?? DEFAULT_STAMP;
-      const kind = novel.id === null ? null : 'original';
+      const kind = sourceKind(project, novel.id);
       const [from, to] =
         novel.id === null || project.range === undefined ? [null, null] : project.range;
       const result = insert.run(

@@ -8,6 +8,7 @@ import { LibraryNav } from './library.ts';
 import { AddChapterDialog, DisplayPanel, NovelChapters, NovelCreateDialog, NovelExplorer, NovelImportDialog, NovelList, NovelPanel, NovelReader } from './novels.ts';
 import { PipelinesNav } from './pipeline.ts';
 import { ProjectPages } from './project.ts';
+import { AudiobookPage, ScriptingPage } from './scripting.ts';
 import { SettingsPage } from './settings.ts';
 import { TranslationPage } from './translation.ts';
 
@@ -30,6 +31,8 @@ export class MainPage {
   readonly assistant: AssistantPage;
   readonly settings: SettingsPage;
   readonly project: ProjectPages;
+  readonly scripting: ScriptingPage;
+  readonly audiobook: AudiobookPage;
 
   constructor(private readonly page: Page) {
     this.switchDialog = new SwitchDialog(page);
@@ -50,6 +53,8 @@ export class MainPage {
     this.assistant = new AssistantPage(page);
     this.settings = new SettingsPage(page);
     this.project = new ProjectPages(page);
+    this.scripting = new ScriptingPage(page);
+    this.audiobook = new AudiobookPage(page);
   }
 
   get root(): Locator {

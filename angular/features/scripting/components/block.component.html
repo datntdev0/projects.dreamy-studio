@@ -100,6 +100,11 @@
           (edited)="editText($event)"
           (keydown)="onKeydown($event)"
         ></div>
+        @if (block().type === 'note') {
+          <span class="field-hint" data-testid="scripting-block-hint">
+            {{ definition().hintKey | t }}
+          </span>
+        }
       }
     }
   </div>

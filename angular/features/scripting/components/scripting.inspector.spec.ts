@@ -70,7 +70,7 @@ describe('ScriptingInspector (audiobook cast)', () => {
     expect(byId(mounted.root, 'sc-next-btn')).toBeNull();
     expect(textOf(mounted, 'sc-ins-cast')).toContain('5');
     expect(allById(mounted.root, 'scripting-inspector-cast-kb')).toHaveLength(4);
-    expect(allById(mounted.root, 'scripting-inspector-cast-used')).toHaveLength(0);
+    expect(allById(mounted.root, 'scripting-inspector-cast-used')).toHaveLength(5);
     expect(textOf(mounted, 'scripting-inspector-cast-narrator')).toBe('NARR');
     expect(textOf(mounted, 'scripting-inspector-cast-hint')).toContain('Knowledgebase');
   });
@@ -149,7 +149,7 @@ describe('ScriptingInspector (film script)', () => {
     const mounted = await openInspector(3);
     expect(textOf(mounted, 'scripting-inspector-cast-list')).not.toContain('Narrator');
     expect(allById(mounted.root, 'scripting-inspector-cast-kb')).toHaveLength(4);
-    expect(allById(mounted.root, 'scripting-inspector-cast-used')).toHaveLength(0);
+    expect(allById(mounted.root, 'scripting-inspector-cast-used')).toHaveLength(4);
   });
 });
 

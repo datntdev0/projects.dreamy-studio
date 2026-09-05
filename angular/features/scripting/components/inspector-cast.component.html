@@ -26,15 +26,14 @@
           <span class="badge badge-primary" data-testid="scripting-inspector-cast-narrator">
             {{ 'scripting.inspector.cast.badgeNarrator' | t }}
           </span>
-        } @else {
-          <span
-            class="mono t-mute"
-            [attr.title]="'scripting.inspector.cast.blockCount' | t"
-            data-testid="scripting-inspector-cast-used"
-          >
-            {{ row.used }}
-          </span>
         }
+        <span
+          class="mono t-mute"
+          [attr.title]="'scripting.inspector.cast.blockCount' | t"
+          data-testid="scripting-inspector-cast-used"
+        >
+          {{ row.used }}
+        </span>
         <button
           type="button"
           class="btn btn-icon btn-sm"

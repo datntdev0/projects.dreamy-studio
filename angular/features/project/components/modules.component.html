@@ -20,6 +20,11 @@
         {{ row.module.labelKey | t }}
       </span>
       <span class="nx-n mono">
+        @if (row.state.state !== 'idle' && row.state.total > 0) {
+          <span [attr.title]="row.state.note || null" data-testid="project-modules-count">
+            {{ row.state.done }}/{{ row.state.total }}
+          </span>
+        }
         <span
           [class.dot-o]="row.state.state === 'idle'"
           [class.dot]="row.state.state !== 'idle'"

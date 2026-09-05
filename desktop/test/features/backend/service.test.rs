@@ -524,3 +524,26 @@ fn folders_are_created_on_demand() {
     assert!(models.is_dir());
     assert_eq!(models, fixture.dir.path().join("models"));
 }
+
+#[test]
+fn subtitles_header_is_decoded_from_base64() {
+    let srt = "1\n00:00:00,000 --> 00:00:01,000\nXin chào\n";
+    let encoded = STANDARD.encode(srt);
+
+    assert_eq!(decode_subtitles(&encoded).as_deref(), Some(srt));
+    assert_eq!(decode_subtitles(" not base64 ! "), None);
+    assert_eq!(decode_subtitles(&STANDARD.encode([0xff, 0xfe])), None);
+}
+
+#[test]
+fn synthesis_requests_send_the_sentence_pause() {
+    let request = SynthesisRequest {
+        sentence_pause_ms: 250,
+        ..SynthesisRequest::default()
+    };
+
+    assert_eq!(
+        serde_json::to_value(&request).unwrap()["sentencePauseMs"],
+        250
+    );
+}

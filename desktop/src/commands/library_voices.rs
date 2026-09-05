@@ -1,4 +1,5 @@
 use crate::commands::blocking::run_blocking_with;
+use crate::features::audiobook::models::MixSettings;
 use crate::features::backend::service::BackendService;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
@@ -48,7 +49,13 @@ pub fn preview_voice(
     let workspace = library.open(session)?;
     let (voice, reference) = workspace.voice_for_synthesis(id)?;
     let text = voices::normalize_sample_text(text.as_deref().unwrap_or(&voice.sample_text))?;
-    let audio = voices::synthesize(backend, &voice, reference.as_deref(), &text)?;
+    let audio = voices::synthesize(
+        backend,
+        &voice,
+        reference.as_deref(),
+        &text,
+        MixSettings::default().sentence_pause_ms(),
+    )?;
     if let Some(duration_ms) = audio.duration_ms {
         workspace.voice_record_duration(id, &text, duration_ms)?;
     }

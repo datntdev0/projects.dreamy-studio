@@ -16,6 +16,7 @@ use tempfile::TempDir;
 
 struct FakeSynthesizer {
     reply: Result<Vec<u8>, ClientError>,
+    subtitles: Option<String>,
     seen: Mutex<Vec<SynthesisRequest>>,
 }
 
@@ -26,6 +27,7 @@ impl Synthesizer for FakeSynthesizer {
             bytes,
             duration_ms: None,
             cached: false,
+            subtitles: self.subtitles.clone(),
         })
     }
 }
@@ -33,6 +35,13 @@ impl Synthesizer for FakeSynthesizer {
 fn synthesizer(reply: Result<Vec<u8>, ClientError>) -> Arc<FakeSynthesizer> {
     Arc::new(FakeSynthesizer {
         reply,
+        subtitles: Some(
+            "1
+00:00:00,000 --> 00:00:01,000
+Một hai
+"
+            .to_string(),
+        ),
         seen: Mutex::new(Vec::new()),
     })
 }
@@ -75,11 +84,21 @@ fn library_voices_are_sent_to_the_synthesizer() {
     let fake = synthesizer(Ok(b"RIFF".to_vec()));
     let speaker = LibrarySpeaker::new(library, fake.clone());
 
-    let bytes = speaker.speak(id, "Một hai").unwrap();
+    let speech = speaker.speak(id, "Một hai", 450).unwrap();
 
-    assert_eq!(bytes, b"RIFF");
+    assert_eq!(speech.wav, b"RIFF");
+    assert_eq!(
+        speech.subtitles.as_deref(),
+        Some(
+            "1
+00:00:00,000 --> 00:00:01,000
+Một hai
+"
+        )
+    );
     let seen = fake.seen.lock().unwrap();
     assert_eq!(seen[0].text, "Một hai");
+    assert_eq!(seen[0].sentence_pause_ms, 450);
     assert_eq!(seen[0].model, "omnivoice");
     assert_eq!(seen[0].preset, "elderly-man");
 }
@@ -103,9 +122,9 @@ fn synthesis_failures_carry_the_backend_message() {
     );
     let healthy = LibrarySpeaker::new(library, synthesizer(Ok(Vec::new())));
 
-    let down = offline.speak(id, "a").unwrap_err();
-    let rejected = api.speak(id, "a").unwrap_err();
-    let missing = healthy.speak(id + 50, "a").unwrap_err();
+    let down = offline.speak(id, "a", 0).unwrap_err();
+    let rejected = api.speak(id, "a", 0).unwrap_err();
+    let missing = healthy.speak(id + 50, "a", 0).unwrap_err();
 
     assert_eq!(
         (down.code, down.detail.as_str()),
@@ -124,7 +143,7 @@ fn cloud_voices_are_not_connected() {
     let fake = synthesizer(Ok(Vec::new()));
 
     let error = LibrarySpeaker::new(library, fake.clone())
-        .speak(id, "a")
+        .speak(id, "a", 0)
         .unwrap_err();
 
     assert_eq!(error.code, ProjectErrorCode::BackendFailed);

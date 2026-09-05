@@ -4,7 +4,6 @@ use crate::commands::project::task_failure;
 use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
 use crate::features::audiobook::models::AudiobookConfig;
-use crate::features::audiobook::models::ExportFormat;
 use crate::features::audiobook::models::ExportReply;
 use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::models::SegmentRequest;
@@ -90,10 +89,9 @@ pub fn save_mix(
     service: &ProjectService,
     session: &WorkspaceSession,
     project_id: i64,
-    unit_id: &str,
     mix: MixSettings,
 ) -> ProjectResult<MixSettings> {
-    audiobook(service, session)?.mix_save(project_id, unit_id, mix)
+    audiobook(service, session)?.mix_save(project_id, mix)
 }
 
 pub fn set_flag(
@@ -145,14 +143,13 @@ pub fn preview_voice(
     workspace.preview(project_id, voice_id, speed, text, &voice)
 }
 
-pub fn export_unit(
+pub fn export_units(
     service: &ProjectService,
     session: &WorkspaceSession,
     project_id: i64,
-    unit_id: &str,
-    format: ExportFormat,
+    unit_ids: &[String],
 ) -> ProjectResult<ExportReply> {
-    audiobook(service, session)?.export(project_id, unit_id, format)
+    audiobook(service, session)?.export(project_id, unit_ids)
 }
 
 async fn run_voiced<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> ProjectResult<T>
@@ -214,11 +211,10 @@ pub async fn audiobook_config_save<R: Runtime>(
 pub async fn audiobook_mix_save<R: Runtime>(
     app: AppHandle<R>,
     project_id: i64,
-    unit_id: String,
     mix: MixSettings,
 ) -> ProjectResult<MixSettings> {
     run_blocking(app, move |service, session| {
-        save_mix(service, session, project_id, &unit_id, mix)
+        save_mix(service, session, project_id, mix)
     })
     .await
 }
@@ -287,11 +283,10 @@ pub async fn audiobook_voice_preview<R: Runtime>(
 pub async fn audiobook_export<R: Runtime>(
     app: AppHandle<R>,
     project_id: i64,
-    unit_id: String,
-    format: ExportFormat,
+    unit_ids: Vec<String>,
 ) -> ProjectResult<ExportReply> {
     run_blocking(app, move |service, session| {
-        export_unit(service, session, project_id, &unit_id, format)
+        export_units(service, session, project_id, &unit_ids)
     })
     .await
 }

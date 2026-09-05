@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::audiobook::voice::Speech;
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::TaskStatus;
@@ -161,9 +162,9 @@ struct CancellingVoice {
 }
 
 impl SegmentVoice for CancellingVoice {
-    fn speak(&self, voice_id: i64, text: &str) -> ProjectResult<Vec<u8>> {
+    fn speak(&self, voice_id: i64, text: &str, pause_ms: i64) -> ProjectResult<Speech> {
         self.cancel.store(true, Ordering::SeqCst);
-        self.inner.speak(voice_id, text)
+        self.inner.speak(voice_id, text, pause_ms)
     }
 }
 

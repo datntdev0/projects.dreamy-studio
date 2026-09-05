@@ -319,6 +319,7 @@ pub fn synthesis_request(
     voice: &LibraryVoice,
     reference: Option<&Path>,
     text: &str,
+    sentence_pause_ms: i64,
 ) -> LibraryResult<SynthesisRequest> {
     if voice.engine_kind == VoiceEngineKind::Cloud {
         return Err(LibraryError::new(
@@ -337,6 +338,7 @@ pub fn synthesis_request(
         reference_path: reference
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default(),
+        sentence_pause_ms,
     })
 }
 
@@ -345,8 +347,9 @@ pub fn synthesize(
     voice: &LibraryVoice,
     reference: Option<&Path>,
     text: &str,
+    sentence_pause_ms: i64,
 ) -> LibraryResult<SynthesizedAudio> {
-    let request = synthesis_request(voice, reference, text)?;
+    let request = synthesis_request(voice, reference, text, sentence_pause_ms)?;
     synthesizer.synthesize(&request).map_err(synthesis_error)
 }
 

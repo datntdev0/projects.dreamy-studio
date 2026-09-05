@@ -223,7 +223,7 @@ fn history_is_newest_first_and_clamps_the_limit() {
             novel_id,
             "translation",
             "VI",
-            &[task.clone()],
+            std::slice::from_ref(&task),
             &format_timestamp(Utc::now()),
         )
         .unwrap();
@@ -232,7 +232,7 @@ fn history_is_newest_first_and_clamps_the_limit() {
             novel_id,
             "translation",
             "EN",
-            &[task.clone()],
+            std::slice::from_ref(&task),
             &format_timestamp(Utc::now()),
         )
         .unwrap();

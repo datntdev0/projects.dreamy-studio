@@ -1,5 +1,6 @@
 use super::*;
 use crate::features::audiobook::audio::decode_wav;
+use crate::features::audiobook::models::AudiobookConfig;
 use crate::features::audiobook::models::UnitAudioFile;
 use crate::features::project::models::ProjectErrorCode;
 use crate::features::scripting::models::ScriptFile;
@@ -20,6 +21,7 @@ fn mix() -> MixSettings {
         intro: 1.0,
         outro: 2.0,
         vol: -6.0,
+        sentence: 0.3,
     }
 }
 
@@ -36,68 +38,108 @@ fn story() -> ScriptUnit {
     )
 }
 
-fn durations() -> [(&'static str, &'static str, f64); 3] {
-    [
-        ("b1", "narr", 1.0),
-        ("b2", "narr", 2.0),
-        ("b3", "kb-1", 0.5),
-    ]
+fn sequel() -> ScriptUnit {
+    ScriptUnit {
+        no: 2,
+        title: "Chapter Two".to_string(),
+        ..audio_unit(
+            "U02",
+            vec![
+                audio_block("c1", "narration", "Sun. Wind.", ""),
+                audio_block("c2", "narration", "End.", ""),
+            ],
+        )
+    }
 }
 
-fn done_book(unit: &ScriptUnit) -> Audiobook {
+type Durations = Vec<(&'static str, &'static str, f64)>;
+
+fn durations_of(unit_id: &str) -> Durations {
+    match unit_id {
+        "U01" => vec![
+            ("b1", "narr", 1.0),
+            ("b2", "narr", 2.0),
+            ("b3", "kb-1", 0.5),
+        ],
+        _ => vec![("c1", "narr", 1.5), ("c2", "narr", 1.0)],
+    }
+}
+
+fn add_records(book: Audiobook, unit: &ScriptUnit) -> Audiobook {
     let blocks = unit.blocks.as_ref().unwrap();
-    let records = durations()
+    let records = durations_of(&unit.id)
         .iter()
         .map(|(id, speaker, dur)| {
             let block = blocks.iter().find(|block| block.id == *id).unwrap();
             (*id, record_for(block, Some(speaker), *dur))
         })
         .collect();
-    with_records(voiced_book(&["narr", "kb-1"]), &unit.id, records)
+    with_records(book, &unit.id, records)
+}
+
+fn done_book(units: &[ScriptUnit]) -> Audiobook {
+    let book = Audiobook {
+        mix: mix(),
+        ..voiced_book(&["narr", "kb-1"])
+    };
+    units.iter().fold(book, add_records)
+}
+
+fn spans(timeline: &Timeline) -> Vec<(&str, f64, f64)> {
+    timeline
+        .slots
+        .iter()
+        .map(|slot| (slot.block_id.as_str(), slot.start, slot.end))
+        .collect()
 }
 
 #[test]
 fn the_timeline_adds_intro_gaps_pauses_and_outro() {
-    let unit = story();
+    let units = [story()];
 
-    let timeline = timeline(&done_book(&unit), &unit, &mix());
+    let timeline = timeline(&done_book(&units), &units, &mix());
 
-    let spans: Vec<(&str, f64, f64)> = timeline
-        .cues
-        .iter()
-        .map(|cue| (cue.block_id.as_str(), cue.start, cue.end))
-        .collect();
     assert_eq!(
-        spans,
+        spans(&timeline),
         vec![("b1", 1.0, 2.0), ("b2", 3.0, 5.0), ("b3", 5.5, 6.0)]
     );
     assert_eq!(timeline.total, 8.0);
 }
 
 #[test]
-fn subtitles_list_one_cue_per_segment() {
-    let unit = story();
+fn chapters_are_joined_with_outro_and_intro() {
+    let units = [story(), sequel()];
 
-    let text = srt_text(&timeline(&done_book(&unit), &unit, &mix()));
+    let timeline = timeline(&done_book(&units), &units, &mix());
 
     assert_eq!(
-        text,
-        "1\n00:00:01,000 --> 00:00:02,000\nChapter one\n\n\
-         2\n00:00:03,000 --> 00:00:05,000\nIt rained.\n\n\
-         3\n00:00:05,500 --> 00:00:06,000\nHi\n\n"
+        spans(&timeline),
+        vec![
+            ("b1", 1.0, 2.0),
+            ("b2", 3.0, 5.0),
+            ("b3", 5.5, 6.0),
+            ("c1", 9.0, 10.5),
+            ("c2", 11.0, 12.0),
+        ]
     );
-    assert_eq!(srt_time(3725.5), "01:02:05,500");
-    assert_eq!(srt_time(-1.0), "00:00:00,000");
+    assert_eq!(timeline.slots[3].unit_id, "U02");
+    assert_eq!(timeline.total, 14.0);
 }
 
 #[test]
-fn export_names_use_the_unit_number_and_a_slug() {
-    let unit = story();
+fn export_names_use_the_unit_number_or_the_project_range() {
+    let first = story();
+    let second = sequel();
 
     assert_eq!(
-        export_name(&unit, ExportFormat::Wav),
-        "1-chapter-one-start.wav"
+        export_stem("My Book", std::slice::from_ref(&first)),
+        "1-chapter-one-start"
     );
+    assert_eq!(
+        export_stem("My Book!", &[first.clone(), second.clone()]),
+        "my-book-1-2"
+    );
+    assert_eq!(export_stem("??", &[first, second]), "audiobook-1-2");
     assert_eq!(slug("  Chương Một!! "), "chương-một");
     assert_eq!(slug("?!"), "unit");
     assert_eq!(slug(&"a".repeat(80)).len(), 60);
@@ -106,7 +148,7 @@ fn export_names_use_the_unit_number_and_a_slug() {
 #[test]
 fn export_requires_every_segment_to_be_fresh() {
     let unit = story();
-    let mut book = done_book(&unit);
+    let mut book = done_book(std::slice::from_ref(&unit));
 
     assert!(require_complete(&book, &unit).is_ok());
     book.units.get_mut("U01").unwrap().audio.remove("b2");
@@ -116,31 +158,46 @@ fn export_requires_every_segment_to_be_fresh() {
 
     assert_eq!(missing.code, ProjectErrorCode::InvalidInput);
     assert!(missing.detail.contains("1 of 3"), "{}", missing.detail);
+    assert!(
+        missing.detail.contains("Chapter One: Start"),
+        "{}",
+        missing.detail
+    );
     assert_eq!(empty.code, ProjectErrorCode::InvalidInput);
 }
 
-fn write_project(dir: &Path, unit: &ScriptUnit, book: &Audiobook) {
-    let (head, body) = unit.clone().split();
+fn write_project(dir: &Path, units: &[ScriptUnit], book: &Audiobook) {
     let scripts = ScriptFiles::new(dir);
+    let mut heads = Vec::new();
+    for unit in units {
+        let (head, body) = unit.clone().split();
+        scripts.write_unit(&unit.id, &body).unwrap();
+        heads.push(head);
+    }
     scripts
         .write_script(&ScriptFile {
-            units: vec![head],
+            units: heads,
             ..ScriptFile::default()
         })
         .unwrap();
-    scripts.write_unit(&unit.id, &body).unwrap();
     let files = AudiobookFiles::new(dir);
     files
-        .write_config(&crate::features::audiobook::models::AudiobookConfig {
+        .write_config(&AudiobookConfig {
             voices: book.voices.clone(),
+            mix: book.mix,
         })
         .unwrap();
+    for unit in units {
+        write_unit_audio(&files, unit, book);
+    }
+}
+
+fn write_unit_audio(files: &AudiobookFiles, unit: &ScriptUnit, book: &Audiobook) {
     let stored = UnitAudioFile {
         audio: book.units[&unit.id].audio.clone(),
-        mix: mix(),
     };
     files.write_unit(&unit.id, &stored).unwrap();
-    for (id, _, dur) in durations() {
+    for (id, _, dur) in durations_of(&unit.id) {
         let path = files.segment_path(&unit.id, id).unwrap();
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(path, tone_wav(RATE, 1, dur)).unwrap();
@@ -155,19 +212,27 @@ fn peak(samples: &[f32], from: f64, to: f64) -> f32 {
         .fold(0.0_f32, |high, sample| high.max(sample.abs()))
 }
 
-#[test]
-fn wav_export_mixes_segments_on_the_timeline_with_gain() {
-    let dir = TempDir::new().unwrap();
-    let unit = story();
-    write_project(dir.path(), &unit, &done_book(&unit));
+fn ids(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| value.to_string()).collect()
+}
 
-    let path = export_unit(dir.path(), "U01", ExportFormat::Wav).unwrap();
+#[test]
+fn single_unit_export_writes_wav_and_srt() {
+    let dir = TempDir::new().unwrap();
+    let units = [story()];
+    write_project(dir.path(), &units, &done_book(&units));
+
+    let (wav, srt) = export_units(dir.path(), "Book", &ids(&["U01"])).unwrap();
 
     assert_eq!(
-        path,
+        wav,
         dir.path().join("audiobook/exports/1-chapter-one-start.wav")
     );
-    let decoded = decode_wav(&path).unwrap();
+    assert_eq!(
+        srt,
+        dir.path().join("audiobook/exports/1-chapter-one-start.srt")
+    );
+    let decoded = decode_wav(&wav).unwrap();
     assert_eq!((decoded.sample_rate, decoded.channels), (RATE, 1));
     assert_eq!(decoded.samples.len(), 8 * RATE as usize);
     assert_eq!(peak(&decoded.samples, 0.0, 0.99), 0.0);
@@ -177,33 +242,75 @@ fn wav_export_mixes_segments_on_the_timeline_with_gain() {
     assert_eq!(peak(&decoded.samples, 5.01, 5.49), 0.0);
     assert!(peak(&decoded.samples, 5.5, 6.0) > 0.2);
     assert_eq!(peak(&decoded.samples, 6.01, 8.0), 0.0);
+    assert_eq!(
+        fs::read_to_string(srt).unwrap(),
+        "1\n00:00:01,000 --> 00:00:02,000\nChapter one\n\n\
+         2\n00:00:03,000 --> 00:00:05,000\nIt rained.\n\n\
+         3\n00:00:05,500 --> 00:00:06,000\nHi\n\n"
+    );
 }
 
 #[test]
-fn srt_export_writes_the_subtitles_next_to_the_audio() {
+fn chapters_are_exported_together_in_script_order() {
     let dir = TempDir::new().unwrap();
-    let unit = story();
-    write_project(dir.path(), &unit, &done_book(&unit));
+    let units = [story(), sequel()];
+    write_project(dir.path(), &units, &done_book(&units));
+    let files = AudiobookFiles::new(dir.path());
+    fs::write(
+        files.segment_srt_path("U02", "c1").unwrap(),
+        "1\n00:00:00,000 --> 00:00:00,600\nSun.\n\n2\n00:00:00,900 --> 00:00:01,500\nWind.\n\n",
+    )
+    .unwrap();
 
-    let path = export_unit(dir.path(), "U01", ExportFormat::Srt).unwrap();
+    let (wav, srt) = export_units(dir.path(), "My Book", &ids(&["U02", "U01"])).unwrap();
 
-    assert!(path.ends_with("1-chapter-one-start.srt"));
-    let text = fs::read_to_string(path).unwrap();
-    assert!(text.starts_with("1\n00:00:01,000 --> 00:00:02,000\nChapter one\n"));
+    assert_eq!(wav, dir.path().join("audiobook/exports/my-book-1-2.wav"));
+    assert!(srt.ends_with("my-book-1-2.srt"));
+    let decoded = decode_wav(&wav).unwrap();
+    assert_eq!(decoded.samples.len(), 14 * RATE as usize);
+    assert_eq!(peak(&decoded.samples, 6.01, 8.99), 0.0);
+    assert!((peak(&decoded.samples, 9.0, 10.5) - 0.25).abs() < 0.01);
+    let text = fs::read_to_string(srt).unwrap();
+    assert!(
+        text.ends_with(
+            "3\n00:00:05,500 --> 00:00:06,000\nHi\n\n\
+             4\n00:00:09,000 --> 00:00:09,600\nSun.\n\n\
+             5\n00:00:09,900 --> 00:00:10,500\nWind.\n\n\
+             6\n00:00:11,000 --> 00:00:12,000\nEnd.\n\n"
+        ),
+        "{text}"
+    );
 }
 
 #[test]
-fn export_refuses_stale_segments_and_unknown_units() {
+fn export_validates_the_selection() {
     let dir = TempDir::new().unwrap();
-    let unit = story();
-    let mut book = done_book(&unit);
-    book.voices.get_mut("kb-1").unwrap().voice = Some(9);
-    write_project(dir.path(), &unit, &book);
+    let units = [story(), sequel()];
+    write_project(dir.path(), &units, &done_book(&units));
 
-    let stale = export_unit(dir.path(), "U01", ExportFormat::Wav).unwrap_err();
-    let unknown = export_unit(dir.path(), "U77", ExportFormat::Srt).unwrap_err();
+    let empty = export_units(dir.path(), "Book", &[]).unwrap_err();
+    let twice = export_units(dir.path(), "Book", &ids(&["U01", "U01"])).unwrap_err();
+    let unsafe_id = export_units(dir.path(), "Book", &ids(&["../U"])).unwrap_err();
+    let unknown = export_units(dir.path(), "Book", &ids(&["U01", "U77"])).unwrap_err();
+
+    for error in [empty, twice, unsafe_id] {
+        assert_eq!(error.code, ProjectErrorCode::InvalidInput);
+    }
+    assert_eq!(unknown.code, ProjectErrorCode::NotFound);
+    assert!(!dir.path().join("audiobook/exports").exists());
+}
+
+#[test]
+fn export_refuses_any_stale_chapter() {
+    let dir = TempDir::new().unwrap();
+    let units = [story(), sequel()];
+    let mut book = done_book(&units);
+    book.units.get_mut("U02").unwrap().audio.remove("c2");
+    write_project(dir.path(), &units, &book);
+
+    let stale = export_units(dir.path(), "Book", &ids(&["U01", "U02"])).unwrap_err();
 
     assert_eq!(stale.code, ProjectErrorCode::InvalidInput);
-    assert_eq!(unknown.code, ProjectErrorCode::NotFound);
+    assert!(stale.detail.contains("Chapter Two"), "{}", stale.detail);
     assert!(!dir.path().join("audiobook/exports").exists());
 }

@@ -1,9 +1,11 @@
 use crate::features::audiobook::audio::encode_wav;
 use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
+use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::models::SegmentRequest;
 use crate::features::audiobook::models::SpeakerVoice;
 use crate::features::audiobook::voice::SegmentVoice;
+use crate::features::audiobook::voice::Speech;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
 use crate::features::project::models::ProjectResult;
@@ -63,8 +65,10 @@ pub fn ffmpeg_available() -> bool {
 #[derive(Default)]
 pub struct FakeVoice {
     pub wav: Vec<u8>,
+    pub subtitles: Option<String>,
     pub failure: Option<String>,
     pub calls: Mutex<Vec<(i64, String)>>,
+    pub pauses: Mutex<Vec<i64>>,
 }
 
 impl FakeVoice {
@@ -72,6 +76,13 @@ impl FakeVoice {
         Self {
             wav: tone_wav(8_000, 1, seconds),
             ..Self::default()
+        }
+    }
+
+    pub fn subtitled(seconds: f64, subtitles: &str) -> Self {
+        Self {
+            subtitles: Some(subtitles.to_string()),
+            ..Self::speaking(seconds)
         }
     }
 
@@ -85,20 +96,28 @@ impl FakeVoice {
     pub fn calls(&self) -> Vec<(i64, String)> {
         self.calls.lock().unwrap().clone()
     }
+
+    pub fn pauses(&self) -> Vec<i64> {
+        self.pauses.lock().unwrap().clone()
+    }
 }
 
 impl SegmentVoice for FakeVoice {
-    fn speak(&self, voice_id: i64, text: &str) -> ProjectResult<Vec<u8>> {
+    fn speak(&self, voice_id: i64, text: &str, pause_ms: i64) -> ProjectResult<Speech> {
         self.calls
             .lock()
             .unwrap()
             .push((voice_id, text.to_string()));
+        self.pauses.lock().unwrap().push(pause_ms);
         match &self.failure {
             Some(message) => Err(ProjectError::new(
                 ProjectErrorCode::BackendFailed,
                 message.clone(),
             )),
-            None => Ok(self.wav.clone()),
+            None => Ok(Speech {
+                wav: self.wav.clone(),
+                subtitles: self.subtitles.clone(),
+            }),
         }
     }
 }
@@ -168,6 +187,7 @@ pub fn voiced_book(speakers: &[&str]) -> Audiobook {
         .collect();
     Audiobook {
         voices,
+        mix: MixSettings::default(),
         units: BTreeMap::new(),
     }
 }

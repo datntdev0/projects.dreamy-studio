@@ -11,6 +11,8 @@ use crate::features::settings::repository::SettingsRepository;
 use crate::infra::backend_client::BackendClient;
 use crate::infra::backend_client::ClientError;
 use crate::infra::backend_client::Method;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use chrono::SecondsFormat;
 use chrono::Utc;
 use serde::de::DeserializeOwned;
@@ -224,6 +226,11 @@ fn ensure_dir(path: &Path) -> Result<PathBuf, String> {
     Ok(path.to_path_buf())
 }
 
+pub fn decode_subtitles(value: &str) -> Option<String> {
+    let bytes = STANDARD.decode(value.trim()).ok()?;
+    String::from_utf8(bytes).ok()
+}
+
 fn now() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
@@ -242,6 +249,7 @@ impl Synthesizer for BackendService {
                 .header("x-duration-ms")
                 .and_then(|value| value.parse().ok()),
             cached: response.header("x-cache") == Some("hit"),
+            subtitles: response.header("x-subtitles").and_then(decode_subtitles),
             bytes: response.bytes,
         })
     }

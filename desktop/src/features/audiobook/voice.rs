@@ -8,8 +8,14 @@ use crate::features::project::models::ProjectErrorCode;
 use crate::features::project::models::ProjectResult;
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Speech {
+    pub wav: Vec<u8>,
+    pub subtitles: Option<String>,
+}
+
 pub trait SegmentVoice: Send + Sync {
-    fn speak(&self, voice_id: i64, text: &str) -> ProjectResult<Vec<u8>>;
+    fn speak(&self, voice_id: i64, text: &str, pause_ms: i64) -> ProjectResult<Speech>;
 }
 
 pub struct LibrarySpeaker {
@@ -27,7 +33,7 @@ impl LibrarySpeaker {
 }
 
 impl SegmentVoice for LibrarySpeaker {
-    fn speak(&self, voice_id: i64, text: &str) -> ProjectResult<Vec<u8>> {
+    fn speak(&self, voice_id: i64, text: &str, pause_ms: i64) -> ProjectResult<Speech> {
         let (voice, reference) = self
             .library
             .voice_for_synthesis(voice_id)
@@ -37,8 +43,12 @@ impl SegmentVoice for LibrarySpeaker {
             &voice,
             reference.as_deref(),
             text,
+            pause_ms,
         )
-        .map(|audio| audio.bytes)
+        .map(|audio| Speech {
+            wav: audio.bytes,
+            subtitles: audio.subtitles,
+        })
         .map_err(voice_error)
     }
 }

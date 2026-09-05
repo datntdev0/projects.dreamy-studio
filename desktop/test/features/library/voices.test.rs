@@ -437,6 +437,7 @@ fn synthesis_request_carries_the_voice_settings() {
         &synthesis_voice(VoiceSource::Clone, VoiceEngineKind::Local),
         Some(&reference),
         "Một hai ba",
+        300,
     )
     .unwrap();
     assert_eq!(
@@ -450,12 +451,14 @@ fn synthesis_request_carries_the_voice_settings() {
             preset: "elderly-man".to_string(),
             prompt: "male, low pitch".to_string(),
             reference_path: reference.to_string_lossy().into_owned(),
+            sentence_pause_ms: 300,
         }
     );
     let preset = synthesis_request(
         &synthesis_voice(VoiceSource::Preset, VoiceEngineKind::Local),
         None,
         "a",
+        0,
     )
     .unwrap();
     assert_eq!(preset.reference_path, "");
@@ -467,6 +470,7 @@ fn cloud_voices_cannot_be_previewed_yet() {
         &synthesis_voice(VoiceSource::Preset, VoiceEngineKind::Cloud),
         None,
         "a",
+        0,
     )
     .unwrap_err();
     assert_eq!(error.code, LibraryErrorCode::VoiceEngineUnavailable);

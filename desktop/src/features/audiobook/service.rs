@@ -1,23 +1,25 @@
+use crate::features::audiobook::audio::Clip;
 use crate::features::audiobook::audio::render_clip;
 use crate::features::audiobook::audio::require_speed;
-use crate::features::audiobook::export::export_unit;
+use crate::features::audiobook::export::export_units;
 use crate::features::audiobook::files::AudiobookFiles;
 use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
 use crate::features::audiobook::models::AudiobookConfig;
-use crate::features::audiobook::models::ExportFormat;
 use crate::features::audiobook::models::ExportReply;
 use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::models::SegmentRequest;
 use crate::features::audiobook::models::UnitAudio;
+use crate::features::audiobook::subtitles::rescale_srt;
 use crate::features::audiobook::voice::SegmentVoice;
+use crate::features::novel::files::write_atomic;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectResult;
 use crate::features::project::service::ProjectWorkspace;
 use crate::features::scripting::files::require_safe_id;
-use crate::features::scripting::files::require_unit_id;
 use crate::features::workspace::repository::format_timestamp;
 use crate::shared::files::read_if_exists;
+use crate::shared::files::remove_if_exists;
 use chrono::Utc;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
@@ -46,20 +48,17 @@ impl AudiobookWorkspace {
     }
 
     pub fn config_save(&self, project_id: i64, config: AudiobookConfig) -> ProjectResult<()> {
-        self.with_files(project_id, |files| files.write_config(&config))
+        self.with_files(project_id, |files| {
+            files
+                .update_config(|stored| stored.voices = config.voices)
+                .map(drop)
+        })
     }
 
-    pub fn mix_save(
-        &self,
-        project_id: i64,
-        unit_id: &str,
-        mix: MixSettings,
-    ) -> ProjectResult<MixSettings> {
+    pub fn mix_save(&self, project_id: i64, mix: MixSettings) -> ProjectResult<MixSettings> {
         let mix = mix.clamped();
         self.with_files(project_id, |files| {
-            let mut unit = files.read_unit(unit_id)?;
-            unit.mix = mix;
-            files.write_unit(unit_id, &unit)?;
+            files.update_config(|stored| stored.mix = mix)?;
             Ok(mix)
         })
     }
@@ -121,14 +120,19 @@ impl AudiobookWorkspace {
     ) -> ProjectResult<Option<AudioRecord>> {
         let text = spoken_text(&request.text)?;
         require_speed(request.speed)?;
-        let (target, scratch) = self.with_files(project_id, |files| {
+        let (target, scratch, mix) = self.with_files(project_id, |files| {
             Ok((
                 files.segment_path(unit_id, block_id)?,
                 files.audio_dir(unit_id)?,
+                files.mix()?,
             ))
         })?;
-        let bytes = voice.speak(request.voice, &text)?;
-        let (clip, dur) = render_clip(&bytes, request.speed, &scratch)?;
+        let speech = voice.speak(request.voice, &text, mix.sentence_pause_ms())?;
+        let (clip, dur) = render_clip(&speech.wav, request.speed, &scratch)?;
+        let subtitles = speech
+            .subtitles
+            .as_deref()
+            .and_then(|srt| rescale_srt(srt, request.speed));
         if cancel.load(Ordering::SeqCst) {
             return Ok(None);
         }
@@ -143,7 +147,8 @@ impl AudiobookWorkspace {
             flag: String::new(),
         };
         self.with_files(project_id, |files| {
-            clip.persist(&target)?;
+            let srt_target = files.segment_srt_path(unit_id, block_id)?;
+            persist_segment(clip, &target, &srt_target, subtitles.as_deref())?;
             let mut unit = files.read_unit(unit_id)?;
             unit.audio.insert(block_id.to_string(), record.clone());
             files.write_unit(unit_id, &unit)?;
@@ -161,24 +166,20 @@ impl AudiobookWorkspace {
     ) -> ProjectResult<Vec<u8>> {
         let text = spoken_text(text)?;
         require_speed(speed)?;
-        let scratch = self.with_files(project_id, |files| Ok(files.scratch_dir()))?;
-        let bytes = voice.speak(voice_id, &text)?;
-        let (clip, _) = render_clip(&bytes, speed, &scratch)?;
+        let (scratch, mix) =
+            self.with_files(project_id, |files| Ok((files.scratch_dir(), files.mix()?)))?;
+        let speech = voice.speak(voice_id, &text, mix.sentence_pause_ms())?;
+        let (clip, _) = render_clip(&speech.wav, speed, &scratch)?;
         clip.read()
     }
 
-    pub fn export(
-        &self,
-        project_id: i64,
-        unit_id: &str,
-        format: ExportFormat,
-    ) -> ProjectResult<ExportReply> {
-        require_unit_id(unit_id)?;
-        let path = self
-            .projects
-            .with_project(project_id, |_, dir| export_unit(dir, unit_id, format))?;
+    pub fn export(&self, project_id: i64, unit_ids: &[String]) -> ProjectResult<ExportReply> {
+        let (wav, srt) = self.projects.with_project(project_id, |summary, dir| {
+            export_units(dir, &summary.name, unit_ids)
+        })?;
         Ok(ExportReply {
-            path: path.to_string_lossy().into_owned(),
+            wav: wav.to_string_lossy().into_owned(),
+            srt: srt.to_string_lossy().into_owned(),
         })
     }
 
@@ -190,6 +191,20 @@ impl AudiobookWorkspace {
         self.projects
             .with_project(project_id, |_, dir| job(&AudiobookFiles::new(dir)))
     }
+}
+
+fn persist_segment(
+    clip: Clip,
+    wav_target: &Path,
+    srt_target: &Path,
+    subtitles: Option<&str>,
+) -> ProjectResult<()> {
+    clip.persist(wav_target)?;
+    match subtitles {
+        Some(text) => write_atomic(srt_target, text.as_bytes())?,
+        None => remove_if_exists(srt_target)?,
+    }
+    Ok(())
 }
 
 fn spoken_text(text: &str) -> ProjectResult<String> {

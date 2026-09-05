@@ -168,6 +168,7 @@ pub struct SynthesisRequest {
     pub preset: String,
     pub prompt: String,
     pub reference_path: String,
+    pub sentence_pause_ms: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -175,4 +176,5 @@ pub struct SynthesizedAudio {
     pub bytes: Vec<u8>,
     pub duration_ms: Option<i64>,
     pub cached: bool,
+    pub subtitles: Option<String>,
 }

@@ -7,6 +7,7 @@ pub const GAP_LIMITS: (f64, f64) = (0.0, 5.0);
 pub const INTRO_LIMITS: (f64, f64) = (0.0, 10.0);
 pub const OUTRO_LIMITS: (f64, f64) = (0.0, 10.0);
 pub const VOL_LIMITS: (f64, f64) = (-12.0, 6.0);
+pub const SENTENCE_LIMITS: (f64, f64) = (0.0, 2.0);
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -28,6 +29,7 @@ impl Default for SpeakerVoice {
 #[serde(rename_all = "camelCase", default)]
 pub struct AudiobookConfig {
     pub voices: BTreeMap<String, SpeakerVoice>,
+    pub mix: MixSettings,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -50,6 +52,7 @@ pub struct MixSettings {
     pub intro: f64,
     pub outro: f64,
     pub vol: f64,
+    pub sentence: f64,
 }
 
 impl Default for MixSettings {
@@ -59,6 +62,7 @@ impl Default for MixSettings {
             intro: 0.8,
             outro: 1.5,
             vol: 0.0,
+            sentence: 0.3,
         }
     }
 }
@@ -70,7 +74,12 @@ impl MixSettings {
             intro: clamp_field(self.intro, INTRO_LIMITS),
             outro: clamp_field(self.outro, OUTRO_LIMITS),
             vol: clamp_field(self.vol, VOL_LIMITS),
+            sentence: clamp_field(self.sentence, SENTENCE_LIMITS),
         }
+    }
+
+    pub fn sentence_pause_ms(self) -> i64 {
+        (self.clamped().sentence * 1000.0).round() as i64
     }
 }
 
@@ -83,14 +92,12 @@ fn clamp_field(value: f64, (low, high): (f64, f64)) -> f64 {
 #[serde(rename_all = "camelCase", default)]
 pub struct UnitAudioFile {
     pub audio: BTreeMap<String, AudioRecord>,
-    pub mix: MixSettings,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UnitAudio {
     pub audio: BTreeMap<String, AudioRecord>,
-    pub mix: MixSettings,
     pub meta: Option<String>,
 }
 
@@ -98,7 +105,6 @@ impl From<UnitAudioFile> for UnitAudio {
     fn from(file: UnitAudioFile) -> Self {
         Self {
             audio: file.audio,
-            mix: file.mix,
             meta: None,
         }
     }
@@ -108,6 +114,7 @@ impl From<UnitAudioFile> for UnitAudio {
 #[serde(rename_all = "camelCase")]
 pub struct Audiobook {
     pub voices: BTreeMap<String, SpeakerVoice>,
+    pub mix: MixSettings,
     pub units: BTreeMap<String, UnitAudio>,
 }
 
@@ -141,24 +148,9 @@ fn default_speed() -> f64 {
     SPEED_DEFAULT
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ExportFormat {
-    Wav,
-    Srt,
-}
-
-impl ExportFormat {
-    pub fn extension(self) -> &'static str {
-        match self {
-            Self::Wav => "wav",
-            Self::Srt => "srt",
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportReply {
-    pub path: String,
+    pub wav: String,
+    pub srt: String,
 }

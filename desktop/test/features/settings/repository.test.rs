@@ -27,8 +27,10 @@ fn loads_defaults_when_the_file_is_missing() {
 fn saves_and_loads_the_general_section() {
     let dir = TempDir::new().unwrap();
     let repo = repository(&dir);
-    let mut settings = AppSettings::default();
-    settings.general = general(Language::En, Theme::Light);
+    let settings = AppSettings {
+        general: general(Language::En, Theme::Light),
+        ..AppSettings::default()
+    };
     repo.save(&settings).unwrap();
     assert_eq!(repo.load().unwrap(), settings);
     let text = fs::read_to_string(repo.path()).unwrap();

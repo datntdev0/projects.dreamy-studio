@@ -1,5 +1,6 @@
 use crate::features::audiobook::models::Audiobook;
 use crate::features::audiobook::models::AudiobookConfig;
+use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::models::UnitAudioFile;
 use crate::features::project::files::read_json;
 use crate::features::project::files::write_json;
@@ -39,6 +40,20 @@ impl AudiobookFiles {
         read_json(&self.config_path())
     }
 
+    pub fn update_config(
+        &self,
+        change: impl FnOnce(&mut AudiobookConfig),
+    ) -> ProjectResult<AudiobookConfig> {
+        let mut config = self.read_config()?.unwrap_or_default();
+        change(&mut config);
+        self.write_config(&config)?;
+        Ok(config)
+    }
+
+    pub fn mix(&self) -> ProjectResult<MixSettings> {
+        Ok(self.read_config()?.unwrap_or_default().mix.clamped())
+    }
+
     pub fn write_config(&self, config: &AudiobookConfig) -> ProjectResult<()> {
         write_json(&self.config_path(), config)
     }
@@ -62,8 +77,10 @@ impl AudiobookFiles {
             let unit = self.read_unit(&unit_id)?;
             units.insert(unit_id, unit.into());
         }
+        let config = config.unwrap_or_default();
         Ok(Some(Audiobook {
-            voices: config.unwrap_or_default().voices,
+            voices: config.voices,
+            mix: config.mix.clamped(),
             units,
         }))
     }
@@ -71,6 +88,10 @@ impl AudiobookFiles {
     pub fn segment_path(&self, unit_id: &str, block_id: &str) -> ProjectResult<PathBuf> {
         require_safe_id("block", block_id)?;
         Ok(self.audio_dir(unit_id)?.join(format!("{block_id}.wav")))
+    }
+
+    pub fn segment_srt_path(&self, unit_id: &str, block_id: &str) -> ProjectResult<PathBuf> {
+        Ok(self.segment_path(unit_id, block_id)?.with_extension("srt"))
     }
 
     pub fn audio_dir(&self, unit_id: &str) -> ProjectResult<PathBuf> {

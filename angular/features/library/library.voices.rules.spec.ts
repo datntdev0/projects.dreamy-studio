@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LibraryVoice, VoiceEngine } from './library.voices.models';
 // prettier-ignore
-import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, normalizeSampleText, presetName, presetOptionText, sameSampleText, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, voiceById, voiceDateText, voiceDurationText, voiceGenderKey, voiceGenderOptions, voiceHue, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey } from './library.voices.rules';
+import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, normalizeSampleText, presetName, presetOptionText, sameSampleText, sortVoices, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, voiceById, voiceDurationText, voiceGenderKey, voiceGenderOptions, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey, voiceTone } from './library.voices.rules';
 
 function translate(key: string, params?: Record<string, string | number>): string {
   return params ? `${key}:${JSON.stringify(params)}` : key;
@@ -113,13 +113,28 @@ describe('library.voices.rules', () => {
     expect(engineOptionText(engines[3], translate)).toContain('notConnected');
   });
 
-  it('derives labels, monogram and hue', () => {
-    expect(voiceMonogram('Narrator An')).toBe('NA');
-    expect(voiceMonogram('mira')).toBe('M');
+  it('derives the monogram from the first character of the name', () => {
+    expect(voiceMonogram('Narrator An')).toBe('N');
+    expect(voiceMonogram('  mira ')).toBe('M');
+    expect(voiceMonogram('đức')).toBe('Đ');
     expect(voiceMonogram('  ')).toBe('?');
-    expect(voiceHue(1)).toBe(voiceHue(1));
-    expect(voiceHue(1)).not.toBe(voiceHue(2));
-    expect(voiceHue(7)).toBeLessThan(360);
+    expect(voiceMonogram('')).toBe('?');
+  });
+
+  it('derives a stable avatar tone from the name', () => {
+    expect(['A', 'B', 'C', 'D'].map(voiceTone)).toEqual([0, 1, 2, 3]);
+    expect(voiceTone('Narrator')).toBe(0);
+    expect(voiceTone('Mira')).toBe(2);
+    expect(voiceTone('Wren')).toBe(voiceTone('Wren'));
+    expect(voiceTone('')).toBe(1);
+    for (const name of ['Alpha', 'Beta', 'Hải Đăng', 'x'.repeat(200)]) {
+      expect(voiceTone(name)).toBeGreaterThanOrEqual(0);
+      expect(voiceTone(name)).toBeLessThan(4);
+      expect(Number.isInteger(voiceTone(name))).toBe(true);
+    }
+  });
+
+  it('derives labels', () => {
     expect(voiceLanguageKey('vi')).toBe('library.voice.language.vi');
     expect(voiceLanguageKey('xx')).toBeNull();
     expect(voiceLanguageText('xx', translate)).toBe('xx');
@@ -135,7 +150,6 @@ describe('library.voices.rules', () => {
       'male',
       'neutral',
     ]);
-    expect(voiceDateText('2026-01-02T03:04:00Z')).toBe('2026-01-02');
     expect(voiceDurationText(libraryVoice({ sampleDurationMs: 65_000 }))).toBe('1:05');
     expect(voiceDurationText(libraryVoice({ sampleDurationMs: null }))).toBe('');
     expect(presetName(engines, libraryVoice({ engine: 'a', preset: 'Mai Anh' }))).toBe('Mai Anh');
@@ -156,7 +170,7 @@ describe('library.voices.rules', () => {
     );
   });
 
-  it('searches, filters and sorts', () => {
+  it('searches, filters and orders newest first', () => {
     const items = [
       libraryVoice({ id: 1, name: 'Beta', createdAt: '2026-01-01', engineKind: 'local' }),
       libraryVoice({
@@ -169,11 +183,17 @@ describe('library.voices.rules', () => {
     ];
     const ids = (filters: Parameters<typeof filterVoices>[1]): number[] =>
       filterVoices(items, filters).map((item) => item.id);
-    expect(ids({ query: '', sort: 'new', engine: 'all' })).toEqual([2, 1]);
-    expect(ids({ query: '', sort: 'name', engine: 'all' })).toEqual([2, 1]);
-    expect(ids({ query: 'DEEP', sort: 'new', engine: 'all' })).toEqual([2]);
-    expect(ids({ query: 'beta', sort: 'new', engine: 'local' })).toEqual([1]);
-    expect(ids({ query: '', sort: 'new', engine: 'cloud' })).toEqual([2]);
+    expect(ids({ query: '', engine: 'all' })).toEqual([2, 1]);
+    expect(ids({ query: 'DEEP', engine: 'all' })).toEqual([2]);
+    expect(ids({ query: 'beta', engine: 'local' })).toEqual([1]);
+    expect(ids({ query: '', engine: 'cloud' })).toEqual([2]);
+    const tied = [
+      libraryVoice({ id: 3, name: 'Zed', createdAt: '2026-01-01' }),
+      libraryVoice({ id: 5, name: 'Ann', createdAt: '2026-01-01' }),
+      ...items,
+    ];
+    expect(sortVoices(tied).map((item) => item.id)).toEqual([2, 5, 3, 1]);
+    expect(tied.map((item) => item.id)).toEqual([3, 5, 1, 2]);
     expect(voiceById(items, 1)?.name).toBe('Beta');
     expect(voiceById(items, 9)).toBeNull();
   });

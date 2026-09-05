@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { TabsService } from '@layout/tabs.service';
-import { ComponentCase, describeComponents } from '@testing/exercise';
+import { byId } from '@testing/dom';
+import { ComponentCase, describeComponents, Mounted } from '@testing/exercise';
 import {
   libraryImage,
   libraryPrompt,
@@ -9,6 +10,7 @@ import {
   libraryVoice,
 } from '@testing/fixtures';
 import { setupWorld, warmWorld } from '@testing/world';
+import { expect } from 'vitest';
 
 import { LibraryDialogsService } from '../library.dialogs.service';
 import { LibraryImageService } from '../library.images.service';
@@ -67,6 +69,20 @@ const video = libraryVideo({ id: 1, name: 'clip.mp4', tags: ['hero'] });
 const voice = libraryVoice({ id: 1 });
 const offlineVoice = libraryVoice({ id: 9, engine: 'ghost-engine', engineKind: 'cloud' });
 const prompt = libraryPrompt({ id: 1, name: 'Scene prompt', tags: ['calm'] });
+
+function expectToneAvatar(mounted: Mounted<unknown>): void {
+  const mark = byId(mounted.root, 'library-voice-avatar-mark') as HTMLElement;
+  expect(mark.className.split(' ').sort()).toEqual(['lb-vo-av', 'tone-3']);
+  expect(mark.textContent?.trim()).toBe('N');
+}
+
+function expectLabelledPlay(mounted: Mounted<unknown>): void {
+  const button = byId(mounted.root, 'library-voice-play-button') as HTMLButtonElement;
+  expect(button.classList).toContain('btn');
+  expect(button.classList).toContain('btn-sm');
+  expect(button.classList).not.toContain('lb-pbtn');
+  expect(byId(button, 'library-voice-play-icon')).not.toBeNull();
+}
 
 const cases: ComponentCase[] = [
   { name: 'LibraryExplorer', type: LibraryExplorer, before: warm },
@@ -230,7 +246,13 @@ const cases: ComponentCase[] = [
     inputs: { voiceId: 2 },
     before: warm,
   },
-  { name: 'LibraryVoiceAvatar', type: LibraryVoiceAvatar, inputs: { voice }, before: warm },
+  {
+    name: 'LibraryVoiceAvatar',
+    type: LibraryVoiceAvatar,
+    inputs: { voice },
+    before: warm,
+    after: expectToneAvatar,
+  },
   { name: 'LibraryVoiceEngine', type: LibraryVoiceEngine, inputs: { voice }, before: warm },
   {
     name: 'LibraryVoiceEngine (offline)',
@@ -239,6 +261,13 @@ const cases: ComponentCase[] = [
     before: warm,
   },
   { name: 'LibraryVoicePlay', type: LibraryVoicePlay, inputs: { voice }, before: warm },
+  {
+    name: 'LibraryVoicePlay (labelled)',
+    type: LibraryVoicePlay,
+    inputs: { voice, labelled: true },
+    before: warm,
+    after: expectLabelledPlay,
+  },
   { name: 'LibraryVoiceNotice', type: LibraryVoiceNotice, before: warm },
   {
     name: 'LibraryVoiceDialog',

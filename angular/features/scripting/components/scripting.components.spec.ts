@@ -131,7 +131,7 @@ describe('Scripting audiobook editor', () => {
     expect(byId(mounted.root, 'sc-unit-add-btn')).toBeNull();
     expect(textOf(mounted, 'sc-unit-title')).toBe('Điều thủy triều trả lại');
     expect(byId(mounted.root, 'sc-status-U03')).toBeNull();
-    expect(textOf(mounted, 'sc-stats')).toBe('6 blocks114 words≈ 0:46');
+    expect(byId(mounted.root, 'sc-stats')).toBeNull();
     expect(textOf(mounted, 'scripting-subbar-number')).toBe('CHAPTERS 03');
     expect(byId(mounted.root, 'sc-chs')).toBeNull();
     expect(byId(mounted.root, 'sc-drawer-btn')).toBeNull();
@@ -164,7 +164,6 @@ describe('Scripting audiobook editor', () => {
     await writeText(mounted, 'sc-text-B29', 'A brand new line.');
     expect(blocksOf(AUDIOBOOK).find((block) => block.id === 'B29')?.text).toBe('A brand new line.');
     expect(byId(mounted.root, 'sc-text-B29')?.textContent).toBe('A brand new line.');
-    expect(textOf(mounted, 'sc-stats')).toContain('6 blocks');
   });
 
   it('adds a block of the chosen type after the selection and focuses it', async () => {

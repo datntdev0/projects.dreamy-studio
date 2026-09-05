@@ -3,10 +3,9 @@ import { Icon } from '@components/icon';
 import { moduleTabId } from '@layout/layout.models';
 import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
-import { LanguageKey } from '@shared/language/language.models';
 
 import { ProjectModuleRow, ProjectSummary } from '../project.models';
-import { moduleRows, moduleStateKey } from '../project.rules';
+import { moduleRows } from '../project.rules';
 import { ProjectService } from '../project.service';
 
 @Component({
@@ -24,10 +23,6 @@ export class ProjectModules {
 
   constructor() {
     effect(this.ensureModules.bind(this));
-  }
-
-  stateKey(row: ProjectModuleRow): LanguageKey {
-    return moduleStateKey(row.state.state);
   }
 
   isActive(row: ProjectModuleRow): boolean {

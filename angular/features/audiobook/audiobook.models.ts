@@ -17,7 +17,7 @@ export type MetaState = 'none' | 'stale' | 'done';
 
 export type StaleReason = 'text' | 'speaker' | 'voice' | 'speed' | 'tone';
 
-export type MixField = 'gap' | 'intro' | 'outro' | 'vol';
+export type MixField = 'gap' | 'intro' | 'outro' | 'vol' | 'sentence';
 
 export type VoiceIssueKind = 'model' | 'cloud';
 
@@ -39,8 +39,6 @@ export type GroupBilling = 'local' | CloudBilling;
 
 export type AudiobookInspector = 'chapter' | 'voices';
 
-export type ExportFormat = 'wav' | 'srt';
-
 export interface AudiobookMessage {
   key: LanguageKey;
   params: Record<string, string | number>;
@@ -56,6 +54,7 @@ export interface MixSettings {
   intro: number;
   outro: number;
   vol: number;
+  sentence: number;
 }
 
 export interface AudioRecord {
@@ -71,7 +70,6 @@ export interface AudioRecord {
 
 export interface UnitAudio {
   audio: Record<string, AudioRecord>;
-  mix: MixSettings;
   meta: MetaState | null;
 }
 
@@ -80,6 +78,7 @@ export interface AudiobookConfig {
 }
 
 export interface Audiobook extends AudiobookConfig {
+  mix: MixSettings;
   units: Record<string, UnitAudio>;
 }
 
@@ -212,7 +211,6 @@ export interface ChapterPanel {
   duration: number;
   mix: MixSettings | null;
   blockers: Blocker[];
-  canExport: boolean;
 }
 
 export interface AudiobookContext {
@@ -257,10 +255,16 @@ export interface GenerateGroup {
   cost: number;
 }
 
+export interface GenerateChapter {
+  unit: ScriptUnit;
+  total: number;
+  todo: number;
+  blocked: boolean;
+  complete: boolean;
+}
+
 export interface GeneratePlan {
-  unitId: string;
-  unitNo: number;
-  segmentIds: string[];
+  unitIds: string[];
   segments: number;
   regenerated: number;
   groups: GenerateGroup[];
@@ -287,7 +291,8 @@ export interface PreviewRequest {
 }
 
 export interface ExportReply {
-  path: string;
+  wav: string;
+  srt: string;
 }
 
 export interface PlayItem {

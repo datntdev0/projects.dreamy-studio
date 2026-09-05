@@ -6,10 +6,5 @@
     <span class="t-ink ab-sub-t" data-testid="audiobook-subbar-title">
       {{ labels.unitTitle(ctx(), unit.no, unit.title) }}
     </span>
-    <span class="sc-stats mono" data-testid="ab-stats">
-      @for (part of stats(); track $index) {
-        <span>{{ part }}</span>
-      }
-    </span>
   </div>
 }

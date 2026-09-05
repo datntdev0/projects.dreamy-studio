@@ -13,21 +13,31 @@ app-library-voice-notice {
   display: inline-grid;
   flex: none;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: hsl(var(--hue, 210) 55% 42%);
-  color: var(--on-primary);
-  font-weight: 600;
-  font-size: 13px;
-  line-height: 1;
-  letter-spacing: 0.02em;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-full);
+  font: 600 13px/1 var(--font);
 }
 
-.lb-vo-av.is-sm {
-  width: 28px;
-  height: 28px;
-  font-size: 11px;
+.lb-vo-av.tone-0 {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.lb-vo-av.tone-1 {
+  background: var(--secondary-soft);
+  color: var(--secondary-text);
+}
+
+.lb-vo-av.tone-2 {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.lb-vo-av.tone-3 {
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .lb-vo-eng {

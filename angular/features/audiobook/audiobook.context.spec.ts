@@ -18,7 +18,7 @@ import {
   segmentRowsOf,
   voiceGroupsOf,
 } from './audiobook.context';
-import { emptyUnitAudio, emptyView } from './audiobook.rules';
+import { DEFAULT_MIX, emptyUnitAudio, emptyView } from './audiobook.rules';
 
 const voices = [
   libraryVoice({ id: 1, name: 'Local', engine: 'vieneu-turbo' }),
@@ -115,13 +115,8 @@ describe('buildContext', () => {
     expect(ctx.canPlay).toBe(true);
     expect(ctx.inspector).toBe('chapter');
     expect(ctx.changed).toBe(0);
-    expect(ctx.chapterPanel).toMatchObject({
-      total: 3,
-      generated: 1,
-      attention: 2,
-      canExport: false,
-    });
-    expect(ctx.chapterPanel.mix).toEqual(emptyUnitAudio().mix);
+    expect(ctx.chapterPanel).toMatchObject({ total: 3, generated: 1, attention: 2 });
+    expect(ctx.chapterPanel.mix).toEqual(DEFAULT_MIX);
     expect(ctx.rail.map((row) => [row.unit.id, row.active])).toEqual([
       ['U01', true],
       ['U02', false],
@@ -208,7 +203,21 @@ describe('buildContext', () => {
     expect(voiced.canGenerate).toBe(true);
   });
 
-  it('counts changed segments and allows export once every segment is generated', () => {
+  it('shows the project mix for every chapter with blocks', () => {
+    const mix = { ...DEFAULT_MIX, gap: 2, sentence: 1.2 };
+    const book = audiobook({ ...input().book, mix });
+    const first = buildContext(input({ book, view: { ...emptyView(), unit: 'U01' } }));
+    expect(first.chapterPanel.mix).toEqual(mix);
+    const other = script([unit, scriptUnit({ id: 'U02', no: 2, blocks })]);
+    const second = buildContext(
+      input({ book, script: other, view: { ...emptyView(), unit: 'U02' } }),
+    );
+    expect(second.chapterPanel.mix).toBe(first.chapterPanel.mix);
+    const plain = buildContext(input({ view: { ...emptyView(), unit: 'U01' } }));
+    expect(first.summary?.duration).toBeGreaterThan(plain.summary?.duration ?? 0);
+  });
+
+  it('counts changed segments', () => {
     const records = {
       h: audioRecord({ text: 'Title', voice: 1 }),
       n: audioRecord({ text: 'Wren walks.', voice: 1 }),
@@ -218,12 +227,10 @@ describe('buildContext', () => {
       audiobook({ ...input().book, units: { U01: { ...emptyUnitAudio(), audio } } });
     const done = buildContext(input({ book: book(records) }));
     expect(done.changed).toBe(0);
-    expect(done.chapterPanel.canExport).toBe(true);
     const changed = buildContext(
       input({ book: book({ ...records, n: { ...records.n, text: 'Old words.' } }) }),
     );
     expect(changed.changed).toBe(1);
     expect(changed.segments[1].reasons).toEqual(['text']);
-    expect(changed.chapterPanel.canExport).toBe(false);
   });
 });

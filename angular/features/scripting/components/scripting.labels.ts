@@ -3,7 +3,7 @@ import { durationText } from '@features/library/library.rules';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
-import { CastMember, RailRow, ScriptConfig, ScriptContext, UnitStats } from '../scripting.models';
+import { CastMember, RailRow, ScriptConfig } from '../scripting.models';
 import { pad2 } from '../scripting.rules';
 
 const MILLISECONDS = 1000;
@@ -85,23 +85,5 @@ export class ScriptingLabels {
           words: formatCount(counted.words),
         })
       : translate('scripting.editor.rail.words.none');
-  }
-
-  stats(ctx: ScriptContext): string[] {
-    const stats = ctx.stats;
-    return stats ? this.statParts(stats) : [];
-  }
-
-  private statParts(stats: UnitStats): string[] {
-    const translate = this.languageService.translate.bind(this.languageService);
-    const parts = [
-      translate('scripting.editor.stats.blocks', { count: stats.blocks }),
-      translate('scripting.editor.stats.words', { count: formatCount(stats.words) }),
-      translate('scripting.editor.stats.duration', { time: this.duration(stats.secs) }),
-    ];
-    if (stats.scenes !== null) {
-      parts.push(translate('scripting.editor.stats.scenes', { count: stats.scenes }));
-    }
-    return parts;
   }
 }

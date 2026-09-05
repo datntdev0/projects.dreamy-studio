@@ -154,13 +154,6 @@ export interface BlockPatch {
   seconds?: number;
 }
 
-export interface UnitStats {
-  blocks: number;
-  words: number;
-  secs: number;
-  scenes: number | null;
-}
-
 export interface RailRow {
   unit: ScriptUnit;
   active: boolean;
@@ -193,7 +186,6 @@ export interface ScriptContext {
   source: ScriptSource | null;
   hasDefault: boolean;
   metrics: ScriptMetrics | null;
-  stats: UnitStats | null;
   scenes: ScriptScene[];
   rail: RailRow[];
   railSummary: RailSummary;

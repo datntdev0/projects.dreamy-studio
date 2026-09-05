@@ -2,7 +2,7 @@ import { audiobook, audioRecord } from '@testing/audiobook';
 import { describe, expect, it } from 'vitest';
 
 import * as edit from './audiobook.edit';
-import { emptyUnitAudio } from './audiobook.rules';
+import { DEFAULT_MIX, emptyUnitAudio } from './audiobook.rules';
 
 describe('speaker configuration', () => {
   it('sets voice and clamps speed', () => {
@@ -26,10 +26,16 @@ describe('speaker configuration', () => {
 });
 
 describe('unit audio', () => {
-  it('stores clamped mix settings per unit', () => {
-    const book = edit.setMix(audiobook(), 'U01', 'gap', 99);
-    expect(book.units['U01'].mix).toEqual({ ...emptyUnitAudio().mix, gap: 5 });
-    expect(edit.setMix(book, 'U01', 'vol', -3).units['U01'].mix.vol).toBe(-3);
+  it('stores clamped mix settings for the whole project', () => {
+    const base = audiobook({ units: { U01: emptyUnitAudio() } });
+    const book = edit.setMix(base, 'gap', 99);
+    expect(book.mix).toEqual({ ...DEFAULT_MIX, gap: 5 });
+    expect(book.units).toBe(base.units);
+    expect(base.mix).toEqual(DEFAULT_MIX);
+    expect(edit.setMix(book, 'vol', -3).mix.vol).toBe(-3);
+    expect(edit.setMix(book, 'sentence', 9).mix.sentence).toBe(2);
+    expect(edit.setMix(book, 'sentence', -1).mix.sentence).toBe(0);
+    expect(edit.setMix(book, 'sentence', 0.45).mix).toEqual({ ...book.mix, sentence: 0.45 });
   });
 
   it('stores records, flags and mix replies', () => {
@@ -41,9 +47,10 @@ describe('unit audio', () => {
     expect(flagged.units['U01'].audio['B1'].flag).toBe('bad stress');
     expect(edit.setRecordFlag(flagged, 'U01', 'B1', 'bad stress')).toBe(flagged);
     expect(edit.setRecordFlag(flagged, 'U01', 'B1', '').units['U01'].audio['B1'].flag).toBe('');
-    const mixed = edit.putMix(stored, 'U01', { gap: 1, intro: 2, outro: 3, vol: 0 });
-    expect(mixed.units['U01'].mix).toEqual({ gap: 1, intro: 2, outro: 3, vol: 0 });
-    expect(mixed.units['U01'].audio['B1']).toEqual(audioRecord());
+    const reply = { gap: 1, intro: 2, outro: 3, vol: 0, sentence: 0.5 };
+    const mixed = edit.putMix(stored, reply);
+    expect(mixed.mix).toBe(reply);
+    expect(mixed.units).toBe(stored.units);
     const unit = { ...emptyUnitAudio(), audio: { B2: audioRecord() } };
     expect(edit.putUnit(base, 'U02', unit).units['U02']).toBe(unit);
   });

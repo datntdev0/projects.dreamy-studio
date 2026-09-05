@@ -1,11 +1,49 @@
 @if (open() && plan(); as plan) {
 <ds-dialog
-  [title]="'audiobook.dialog.generate.title' | t: { unit: unitName(), no: unitNo() }"
+  [title]="'audiobook.dialog.generate.title' | t"
   [eyebrow]="'audiobook.dialog.cap' | t"
   [closeLabel]="'audiobook.dialog.close' | t"
   data-testid="ab-gen-modal"
   (closed)="close()"
 >
+  <div class="ab-gen-head" data-testid="ab-gen-chapters-head">
+    <span class="eyebrow">{{ "audiobook.dialog.generate.chapters" | t }}</span>
+    <label class="check" data-testid="ab-gen-all-field">
+      <input
+        type="checkbox"
+        data-testid="ab-gen-all"
+        [checked]="allSelected()"
+        (change)="toggleAll($event)"
+      />
+      <span class="t-sm">{{ "audiobook.dialog.generate.selectAll" | t }}</span>
+    </label>
+  </div>
+  <div class="ab-gen-list" data-testid="ab-gen-chapters">
+    @for (chapter of chapters(); track chapter.unit.id) {
+    <label
+      class="check ab-gen-ch"
+      [class.is-off]="chapter.blocked"
+      [attr.data-testid]="'ab-gen-ch-' + chapter.unit.id"
+    >
+      <input
+        type="checkbox"
+        [checked]="isSelected(chapter)"
+        [disabled]="chapter.blocked"
+        [attr.data-testid]="'ab-gen-ch-check-' + chapter.unit.id"
+        (change)="toggle(chapter, $event)"
+      />
+      <span class="t-ink ellip ab-gen-t">{{ chapterTitle(chapter) }}</span>
+      <span
+        class="t-sm ab-gen-st"
+        [class]="'is-' + statusOf(chapter)"
+        [attr.data-testid]="'ab-gen-ch-status-' + chapter.unit.id"
+      >
+        {{ statusText(chapter) }}
+      </span>
+    </label>
+    }
+  </div>
+  @if (plan.segments > 0) {
   <p class="t-sm" data-testid="audiobook-generate-intro" [innerHTML]="introHtml()"></p>
   <div class="sc-chks" data-testid="ab-gen-groups">
     @for (group of plan.groups; track group.key) { @if (group.kind === "local") {
@@ -36,12 +74,39 @@
       [innerHTML]="estimateHtml()"
     ></div>
   </div>
+  } @else if (selected().length > 0) {
+  <p class="t-sm t-mute" data-testid="ab-gen-nothing">
+    {{ "audiobook.dialog.generate.nothing" | t }}
+  </p>
+  }
+  <label class="check" data-testid="ab-gen-export-field">
+    <input
+      type="checkbox"
+      data-testid="ab-gen-export"
+      [checked]="exportAfter()"
+      (change)="setExport($event)"
+    />
+    <span>
+      <b>{{ "audiobook.dialog.generate.export" | t }}</b>
+      <br />
+      <span class="t-sm t-mute">{{ "audiobook.dialog.generate.exportHint" | t }}</span>
+    </span>
+  </label>
   <ds-button dialogFoot data-testid="ab-gen-cancel-btn" (pressed)="close()">
     {{ "common.cancel" | t }}
   </ds-button>
-  <ds-button dialogFoot variant="primary" data-testid="ab-gen-go-btn" (pressed)="generate()">
+  <ds-button
+    dialogFoot
+    variant="primary"
+    data-testid="ab-gen-go-btn"
+    [disabled]="!canRun()"
+    (pressed)="generate()"
+  >
+    @if (plan.segments > 0) {
     <ds-icon name="spark" [size]="14" />
-    {{ "audiobook.dialog.generate.go" | t: { count: plan.segments } }}
+    {{ "audiobook.dialog.generate.go" | t: { count: plan.segments } }} } @else {
+    <ds-icon name="download" [size]="14" />
+    {{ "audiobook.dialog.generate.exportOnly" | t }} }
   </ds-button>
 </ds-dialog>
 }

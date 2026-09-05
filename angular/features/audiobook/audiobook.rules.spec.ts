@@ -32,10 +32,12 @@ describe('audiobook defaults', () => {
       goto: null,
     });
     const book = rules.emptyBook();
-    expect(book).toEqual({ voices: {}, units: {} });
+    expect(book).toEqual({ voices: {}, mix: rules.DEFAULT_MIX, units: {} });
+    expect(book.mix).not.toBe(rules.DEFAULT_MIX);
+    expect(rules.DEFAULT_MIX.sentence).toBe(0.3);
+    expect(rules.MIX_LIMITS.sentence).toEqual([0, 2]);
     expect(rules.unitAudioOf(book, 'U01')).toEqual(rules.emptyUnitAudio());
-    expect(rules.emptyUnitAudio().mix).toEqual(rules.DEFAULT_MIX);
-    expect(rules.emptyUnitAudio().mix).not.toBe(rules.DEFAULT_MIX);
+    expect(rules.emptyUnitAudio()).toEqual({ audio: {}, meta: null });
   });
 });
 
@@ -212,7 +214,7 @@ describe('segment state', () => {
       state: 'stale',
       meta: false,
     } as const;
-    const mix = { gap: 1, intro: 2, outro: 3, vol: 0 };
+    const mix = { gap: 1, intro: 2, outro: 3, vol: 0, sentence: 0.3 };
     expect(rules.unitDuration(stat, mix)).toBe(10 + 2 + 2 + 3);
     expect(rules.unitDuration({ ...stat, total: 0 }, mix)).toBe(10 + 5);
     expect(rules.summaryOf(stat, mix, 2)).toEqual({
@@ -308,6 +310,8 @@ describe('speakers and progress', () => {
     expect(rules.clampMix('vol', -50)).toBe(-12);
     expect(rules.clampMix('intro', Number.NaN)).toBe(0);
     expect(rules.clampMix('outro', 2.5)).toBe(2.5);
+    expect(rules.clampMix('sentence', 3)).toBe(2);
+    expect(rules.clampMix('sentence', 0.25)).toBe(0.25);
     expect(rules.speakerVoiceOf(audiobook(), 'x')).toEqual({ voice: null, speed: 1 });
     expect(
       rules.speakerVoiceOf(audiobook({ voices: { x: { voice: 2, speed: 1.1 } } }), 'x').voice,

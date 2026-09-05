@@ -114,21 +114,21 @@ describe('audiobook mock backend', () => {
       config: { voices: {} },
     });
     expect((handlers['audiobook_get']({ projectId: 99 }) as Audiobook).units).toEqual({});
-    const unit = Object.keys(next.units)[0];
     const mix = handlers['audiobook_mix_save']({
       projectId: 1,
-      unitId: unit,
-      mix: { gap: 9, intro: 1, outro: 1, vol: 0 },
+      mix: { gap: 9, intro: 1, outro: 1, vol: 0, sentence: 4 },
     });
-    expect(mix).toEqual({ gap: 5, intro: 1, outro: 1, vol: 0 });
-    expect((handlers['audiobook_get']({ projectId: 1 }) as Audiobook).units[unit].mix.gap).toBe(5);
-    expect(
-      (handlers['audiobook_unit_get']({ projectId: 1, unitId: unit }) as UnitAudio).mix.gap,
-    ).toBe(5);
+    expect(mix).toEqual({ gap: 5, intro: 1, outro: 1, vol: 0, sentence: 2 });
+    expect((handlers['audiobook_get']({ projectId: 1 }) as Audiobook).mix).toEqual(mix);
     expect(handlers['audiobook_unit_get']({ projectId: 77, unitId: 'x' })).toEqual(
       emptyUnitAudio(),
     );
-    expect(() => handlers['audiobook_mix_save']({ projectId: 77, unitId: 'x', mix: {} })).toThrow();
+    expect(() => handlers['audiobook_mix_save']({ projectId: 77, mix: {} })).toThrow();
+    expect(handlers['audiobook_export']({ projectId: 1, unitIds: ['U01', 'U02'] })).toEqual({
+      wav: 'exports/1/U01-U02.wav',
+      srt: 'exports/1/U01-U02.srt',
+    });
+    expect(() => handlers['audiobook_export']({ projectId: 77, unitIds: ['x'] })).toThrow();
   });
 
   it('sets and clears flags on existing records only', () => {

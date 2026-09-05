@@ -18,7 +18,6 @@ import {
   VoiceInput,
   VoicePatch,
   VoiceReferenceFile,
-  VoiceSort,
 } from './library.voices.models';
 import { LibraryVoicePlayer } from './library.voices.player';
 import {
@@ -61,7 +60,6 @@ export class LibraryVoiceService {
   readonly playingId = signal<number | null>(null);
   readonly preparingId = signal<number | null>(null);
   readonly query = signal('');
-  readonly sort = signal<VoiceSort>('new');
   readonly engineFilter = signal<VoiceEngineFilter>('all');
   readonly engines = computed(this.buildEngines.bind(this));
   readonly selected = computed(this.findSelected.bind(this));
@@ -220,7 +218,6 @@ export class LibraryVoiceService {
     this.items.set([]);
     this.selectedId.set(null);
     this.query.set('');
-    this.sort.set('new');
     this.engineFilter.set('all');
     this.loaded.set(false);
     this.loading.set(false);
@@ -238,7 +235,6 @@ export class LibraryVoiceService {
   private buildVisible(): LibraryVoice[] {
     return filterVoices(this.items(), {
       query: this.query(),
-      sort: this.sort(),
       engine: this.engineFilter(),
     });
   }

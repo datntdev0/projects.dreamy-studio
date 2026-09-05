@@ -1,6 +1,6 @@
 import { ProjectModuleState, ProjectTemplateId } from '../project/project.models';
 // prettier-ignore
-import { BlockIds, BlockType, BlockTypeDef, CastMember, ChapterRange, Script, ScriptBlock, ScriptConfig, ScriptMetrics, ScriptPreset, ScriptPresetDef, ScriptScene, ScriptSource, ScriptUnit, ScriptView, SourceParagraph, SpeakerClass, UnitMeta, UnitStats } from './scripting.models';
+import { BlockIds, BlockType, BlockTypeDef, CastMember, ChapterRange, Script, ScriptBlock, ScriptConfig, ScriptMetrics, ScriptPreset, ScriptPresetDef, ScriptScene, ScriptSource, ScriptUnit, ScriptView, SourceParagraph, SpeakerClass, UnitMeta } from './scripting.models';
 
 export const SCRIPT_PRESETS: ScriptPresetDef[] = [
   {
@@ -372,15 +372,6 @@ export function metricsOf(cast: CastMember[], blocks: ScriptBlock[] | null): Scr
   }
   metrics.secs = metrics.words / SPEECH_WORDS_PER_SECOND + metrics.pause;
   return metrics;
-}
-
-export function unitStatsOf(config: ScriptConfig, metrics: ScriptMetrics): UnitStats {
-  return {
-    blocks: metrics.blocks,
-    words: metrics.words,
-    secs: metrics.secs,
-    scenes: config.types.includes('scene') ? metrics.scenes : null,
-  };
 }
 
 export function hasDefaultFor(config: ScriptConfig, source: ScriptSource | null): boolean {

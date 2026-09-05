@@ -1,0 +1,34 @@
+@if (ctx().summary; as summary) {
+  <div
+    class="ab-listen"
+    [class.is-playing]="playing()"
+    [class.is-off]="!ctx().canPlay"
+    data-testid="ab-listen"
+  >
+    <button
+      type="button"
+      class="ab-listen-btn"
+      [disabled]="!ctx().canPlay"
+      [attr.aria-label]="'audiobook.editor.listen.title' | t"
+      data-testid="ab-play-all-btn"
+      (click)="toggle()"
+    >
+      <ds-icon [name]="playing() ? 'pause' : 'play'" [size]="16" />
+    </button>
+    <div class="ab-listen-b" data-testid="audiobook-listen-body">
+      <span class="t-ink ab-listen-t" data-testid="audiobook-listen-title">
+        {{ 'audiobook.editor.listen.title' | t }}
+      </span>
+      <span class="t-sm t-mute" data-testid="audiobook-listen-meta">
+        @if (ctx().canPlay) {
+          {{ labels.listenMeta(summary) }}
+        } @else {
+          {{ 'audiobook.editor.listen.empty' | t }}
+        }
+      </span>
+    </div>
+    <span class="ab-listen-bar" aria-hidden="true" data-testid="audiobook-listen-progress">
+      <i [style.width.%]="summary.segments ? (summary.generated / summary.segments) * 100 : 0"></i>
+    </span>
+  </div>
+}

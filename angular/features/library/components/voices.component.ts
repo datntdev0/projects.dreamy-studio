@@ -10,9 +10,9 @@ import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
 import { LibraryConfirmService } from '../library.confirm.service';
 import { LibraryDialogsService } from '../library.dialogs.service';
-import { LibraryVoice, VoiceEngineFilter, VoiceSort } from '../library.voices.models';
+import { LibraryVoice, VoiceEngineFilter } from '../library.voices.models';
 // prettier-ignore
-import { hasReadyEngine, voiceDateText, voiceDurationText, voiceGenderKey, voiceLanguageText, voiceSourceNameKey } from '../library.voices.rules';
+import { hasReadyEngine, voiceDurationText, voiceGenderKey, voiceLanguageText } from '../library.voices.rules';
 import { LibraryVoiceService } from '../library.voices.service';
 import { LibraryVoiceAvatar } from './voice-avatar.component';
 import { LibraryVoiceEngine } from './voice-engine.component';
@@ -48,10 +48,6 @@ export class LibraryVoices implements OnInit {
 
   onQuery(event: Event): void {
     this.voices.query.set(fieldValue(event));
-  }
-
-  onSort(event: Event): void {
-    this.voices.sort.set(fieldValue(event) as VoiceSort);
   }
 
   onEngineFilter(value: string): void {
@@ -100,14 +96,6 @@ export class LibraryVoices implements OnInit {
     return voiceDurationText(voice) || '—';
   }
 
-  sourceText(voice: LibraryVoice): string {
-    return this.translate(voiceSourceNameKey(voice.source));
-  }
-
-  updatedText(voice: LibraryVoice): string {
-    return voiceDateText(voice.updatedAt);
-  }
-
   get notReadyHint(): string {
     return this.translate('library.voice.engine.notReady');
   }
@@ -127,17 +115,11 @@ export class LibraryVoices implements OnInit {
   get tableColumns(): DatatableColumn[] {
     return [
       { key: 'name', label: this.translate('library.voice.column.name') },
-      { key: 'play', label: '', width: '48px' },
       { key: 'engine', label: this.translate('library.voice.column.engine'), width: '190px' },
       { key: 'language', label: this.translate('library.voice.column.language'), width: '120px' },
       { key: 'gender', label: this.translate('library.voice.column.gender'), width: '90px' },
-      { key: 'source', label: this.translate('library.voice.column.source'), width: '100px' },
       { key: 'duration', label: this.translate('library.voice.column.duration'), width: '110px' },
-      {
-        key: 'updated',
-        label: this.translate('library.voice.column.updated'),
-        width: '120px',
-      },
+      { key: 'actions', label: '', width: '120px' },
     ];
   }
 

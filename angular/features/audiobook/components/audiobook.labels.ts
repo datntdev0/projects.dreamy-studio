@@ -3,13 +3,8 @@ import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
 import { ScriptingLabels } from '../../scripting/components/scripting.labels';
-import {
-  AudiobookContext,
-  Blocker,
-  RailRow,
-  SegmentDisplayState,
-  SegmentRow,
-} from '../audiobook.models';
+// prettier-ignore
+import { AudiobookContext, Blocker, RailRow, SegmentDisplayState, SegmentRow, UnitSummary } from '../audiobook.models';
 import { AudiobookService } from '../audiobook.service';
 
 export const STATE_BADGES: Record<SegmentDisplayState, string> = {
@@ -85,19 +80,11 @@ export class AudiobookLabels {
       : translate('audiobook.editor.rail.none');
   }
 
-  stats(ctx: AudiobookContext): string[] {
-    const summary = ctx.summary;
-    if (!summary) {
-      return [];
-    }
-    const translate = this.languageService.translate.bind(this.languageService);
-    return [
-      translate('audiobook.editor.stats.segments', { count: summary.segments }),
-      translate('audiobook.editor.stats.generated', { count: summary.generated }),
-      summary.running
-        ? translate('audiobook.editor.stats.running', { count: summary.running })
-        : translate('audiobook.editor.stats.pending', { count: summary.pending }),
-      translate('audiobook.editor.stats.duration', { time: this.duration(summary.duration) }),
-    ];
+  listenMeta(summary: UnitSummary): string {
+    return this.languageService.translate('audiobook.editor.listen.meta', {
+      generated: summary.generated,
+      segments: summary.segments,
+      time: this.duration(summary.duration),
+    });
   }
 }

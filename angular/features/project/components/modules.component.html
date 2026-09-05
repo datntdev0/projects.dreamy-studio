@@ -25,15 +25,6 @@
             {{ row.state.done }}/{{ row.state.total }}
           </span>
         }
-        <span
-          [class.dot-o]="row.state.state === 'idle'"
-          [class.dot]="row.state.state !== 'idle'"
-          [class.dot-success]="row.state.state === 'done'"
-          [class.dot-doing]="row.state.state === 'doing'"
-          [class.dot-warning]="row.state.state === 'stale'"
-          [attr.title]="stateKey(row) | t"
-          data-testid="project-modules-dot"
-        ></span>
       </span>
     </div>
   }

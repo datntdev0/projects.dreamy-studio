@@ -11,6 +11,7 @@ import { pipeline, task } from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DEFAULT_MIX, emptyBook } from './audiobook.rules';
 import { AudiobookService } from './audiobook.service';
 
 const PROJECT = 1;
@@ -77,12 +78,29 @@ describe('AudiobookService', () => {
     }
   }
 
-  async function generateAll(): Promise<number> {
+  function currentId(): string {
+    return context().unit?.id ?? '';
+  }
+
+  function generateCurrent(exportAfter = false): Promise<number> {
+    return service.generate(PROJECT, [currentId()], exportAfter);
+  }
+
+  async function generateAll(unitIds = [currentId()], exportAfter = false): Promise<number> {
     vi.useFakeTimers();
-    const started = await service.generate(PROJECT);
+    const started = await service.generate(PROJECT, unitIds, exportAfter);
     await drain();
     await settle();
     return started;
+  }
+
+  function doneId(): string {
+    return context().rail[0].unit.id;
+  }
+
+  function exported(unitIds: string[]): string {
+    const base = `exports/${PROJECT}/${unitIds.join('-')}`;
+    return `Exported ${base}.wav and ${base}.srt`;
   }
 
   function toasts(tone: string): string[] {
@@ -124,7 +142,16 @@ describe('AudiobookService', () => {
       expect(service.bookOf(4)?.units).not.toEqual({});
       ipc.on('audiobook_get', null);
       await service.load(5);
-      expect(service.bookOf(5)).toEqual({ voices: {}, units: {} });
+      expect(service.bookOf(5)).toEqual(emptyBook());
+    });
+
+    it('fills in missing mix settings of a stored book', async () => {
+      ipc.on('audiobook_get', { voices: {}, units: {} });
+      await service.load(5);
+      expect(service.bookOf(5)?.mix).toEqual(DEFAULT_MIX);
+      ipc.on('audiobook_get', { voices: {}, units: {}, mix: { gap: 2 } });
+      await service.load(6);
+      expect(service.bookOf(6)?.mix).toEqual({ ...DEFAULT_MIX, gap: 2 });
     });
 
     it('records a failed load', async () => {
@@ -241,28 +268,36 @@ describe('AudiobookService', () => {
   });
 
   describe('chapter assembly and flags', () => {
-    it('stores mix settings for chapters with a script only', async () => {
+    it('stores one mix for the whole project and persists it', async () => {
       service.setMix(PROJECT, 'gap', 2);
-      expect(context().audio?.mix.gap).toBe(2);
+      service.setMix(PROJECT, 'sentence', 0.5);
+      const mix = service.bookOf(PROJECT)?.mix;
+      expect(mix).toMatchObject({ gap: 2, sentence: 0.5 });
+      expect(context().chapterPanel.mix).toEqual(mix);
       expect(context().summary?.duration).toBeGreaterThan(0);
       await settle();
-      expect(ipc.lastArgs('audiobook_mix_save')).toEqual({
-        projectId: PROJECT,
-        unitId: context().unit?.id,
-        mix: context().audio?.mix,
-      });
+      expect(ipc.lastArgs('audiobook_mix_save')).toEqual({ projectId: PROJECT, mix });
+      service.selectUnit(PROJECT, doneId());
+      expect(context().chapterPanel.mix).toEqual(mix);
+    });
+
+    it('keeps the project mix while a chapter without a script is open', async () => {
       service.selectUnit(PROJECT, context().rail[3].unit.id);
+      expect(context().chapterPanel.mix).toBeNull();
       const saves = ipc.called('audiobook_mix_save');
-      service.setMix(PROJECT, 'gap', 3);
+      service.setMix(PROJECT, 'sentence', 9);
       await settle();
-      expect(ipc.called('audiobook_mix_save')).toBe(saves);
+      expect(ipc.called('audiobook_mix_save')).toBe(saves + 1);
+      expect(service.bookOf(PROJECT)?.mix.sentence).toBe(2);
     });
 
     it('applies the clamped mix returned by the desktop', async () => {
-      ipc.on('audiobook_mix_save', { gap: 1, intro: 1, outro: 1, vol: 0 });
+      const reply = { gap: 1, intro: 1, outro: 1, vol: 0, sentence: 0.2 };
+      ipc.on('audiobook_mix_save', reply);
       service.setMix(PROJECT, 'gap', 2);
       await settle();
-      expect(context().audio?.mix).toEqual({ gap: 1, intro: 1, outro: 1, vol: 0 });
+      expect(service.bookOf(PROJECT)?.mix).toEqual(reply);
+      expect(context().chapterPanel.mix).toEqual(reply);
     });
 
     it('flags a generated segment and clears the flag', async () => {
@@ -307,23 +342,26 @@ describe('AudiobookService', () => {
 
     it('plans and runs every pending segment as one audio pipeline', async () => {
       voiceTeaWoman();
-      const plan = service.generatePlanOf(PROJECT);
+      const unitId = currentId();
+      const plan = service.generatePlanOf(PROJECT, [unitId]);
+      expect(plan?.unitIds).toEqual([unitId]);
       expect(plan?.segments).toBeGreaterThan(0);
       expect(plan?.regenerated).toBeGreaterThan(0);
       expect(plan?.groups.map((group) => group.kind)).toEqual(['cloud']);
-      expect(service.generatePlanOf(99)).toBeNull();
+      expect(service.generatePlanOf(99, [unitId])).toBeNull();
       expect(context().canGenerate).toBe(true);
-      const unitId = context().unit?.id;
+      const todoIds = context().todo.map((block) => block.id);
+      expect(plan?.segments).toBe(todoIds.length);
       const started = await generateAll();
       expect(started).toBe(plan?.segments);
       const args = ipc.lastArgs('pipeline_start') ?? {};
       expect(args['kind']).toBe('audio');
       expect(args['projectId']).toBe(PROJECT);
       const tasks = args['tasks'] as { chapterId: string; segmentId: string }[];
-      expect(tasks.map((item) => item.segmentId)).toEqual(plan?.segmentIds);
+      expect(tasks.map((item) => item.segmentId)).toEqual(todoIds);
       expect(tasks.every((item) => item.chapterId === unitId)).toBe(true);
       const requests = (args['params'] as { requests: Record<string, unknown> }).requests;
-      expect(Object.keys(requests)).toEqual(plan?.segmentIds);
+      expect(Object.keys(requests)).toEqual(todoIds);
       expect(context().stat?.state).toBe('done');
       expect(context().canGenerate).toBe(false);
       expect(service.isGenerating(PROJECT)).toBe(false);
@@ -332,13 +370,66 @@ describe('AudiobookService', () => {
       expect(ipc.called('audiobook_unit_get')).toBeGreaterThan(0);
       expect(ipc.called('project_modules')).toBeGreaterThan(0);
       expect(toasts('success')).toContain('Completed: Audiobook · ' + projectName());
-      expect(await service.generate(PROJECT)).toBe(0);
+      expect(Object.keys(service.bookOf(PROJECT)?.units[unitId] ?? {})).toEqual(['audio', 'meta']);
+      expect(await generateCurrent()).toBe(0);
+      expect(ipc.called('audiobook_export')).toBe(0);
+    });
+
+    it('lists the chapters that can be generated', () => {
+      voiceTeaWoman();
+      const chapters = service.generateChaptersOf(PROJECT);
+      const withBlocks = context().script.units.filter((unit) => unit.blocks !== null);
+      expect(chapters.map((chapter) => chapter.unit.id)).toEqual(withBlocks.map((unit) => unit.id));
+      const current = chapters.find((chapter) => chapter.unit.id === currentId());
+      expect(current).toMatchObject({ blocked: false, complete: false });
+      expect(current?.todo).toBe(context().todo.length);
+      expect(chapters.find((chapter) => chapter.unit.id === doneId())).toMatchObject({
+        todo: 0,
+        complete: true,
+      });
+      expect(service.generateChaptersOf(99)).toEqual([]);
+    });
+
+    it('plans only known chapters with a script', () => {
+      voiceTeaWoman();
+      const meta = context().rail[3].unit.id;
+      expect(service.generatePlanOf(PROJECT, [])).toMatchObject({ unitIds: [], segments: 0 });
+      expect(service.generatePlanOf(PROJECT, ['nope', meta])?.unitIds).toEqual([]);
+      expect(service.generatePlanOf(PROJECT, [doneId()])).toMatchObject({ segments: 0, cost: 0 });
+    });
+
+    it('runs several chapters as one pipeline', async () => {
+      voiceTeaWoman();
+      service.setSpeakerSpeed(PROJECT, 'narr', 1.2);
+      const ids = service
+        .generateChaptersOf(PROJECT)
+        .filter((chapter) => chapter.todo > 0 && !chapter.blocked)
+        .map((chapter) => chapter.unit.id);
+      expect(ids.length).toBeGreaterThan(1);
+      const plan = service.generatePlanOf(PROJECT, ids);
+      const started = await generateAll(ids);
+      expect(started).toBe(plan?.segments);
+      const tasks = ipc.lastArgs('pipeline_start')?.['tasks'] as { chapterId: string }[];
+      expect([...new Set(tasks.map((item) => item.chapterId))]).toEqual(ids);
+      const chapters = service.generateChaptersOf(PROJECT);
+      for (const id of ids) {
+        expect(chapters.find((chapter) => chapter.unit.id === id)?.complete).toBe(true);
+      }
+    });
+
+    it('skips a chapter that is already generating', async () => {
+      voiceTeaWoman();
+      vi.useFakeTimers();
+      expect(await generateCurrent()).toBeGreaterThan(0);
+      expect(await generateCurrent()).toBe(0);
+      expect(ipc.called('pipeline_start')).toBe(1);
+      await drain();
     });
 
     it('shows queued and running tasks as running and keeps going across chapters', async () => {
       voiceTeaWoman();
       vi.useFakeTimers();
-      await service.generate(PROJECT);
+      await generateCurrent();
       const total = context().running.length;
       expect(total).toBeGreaterThan(0);
       expect(service.running()[0]).toMatchObject({ kind: 'audio', projectId: PROJECT });
@@ -363,7 +454,7 @@ describe('AudiobookService', () => {
       const unitId = context().unit?.id ?? '';
       const [first, second] = context().todo;
       const before = context().segments.find((row) => row.block.id === second.id)?.state;
-      expect(await service.generate(PROJECT)).toBeGreaterThan(0);
+      expect(await generateCurrent()).toBeGreaterThan(0);
       const snapshot = audioPipeline([
         audioTask(unitId, first.id, 1),
         audioTask(unitId, second.id, 2),
@@ -396,7 +487,7 @@ describe('AudiobookService', () => {
     it('drops the running state and refetches the unit after a cancel', async () => {
       voiceTeaWoman();
       const channel = captureChannel();
-      await service.generate(PROJECT);
+      await generateCurrent();
       const unitId = context().unit?.id ?? '';
       const queued = audioTask(unitId, context().todo[0].id, 1);
       channel.send({ type: 'started', pipeline: audioPipeline([queued]) });
@@ -417,7 +508,7 @@ describe('AudiobookService', () => {
     it('reports a pipeline that cannot start', async () => {
       voiceTeaWoman();
       ipc.fail('pipeline_start', { code: 'pipeline_busy', detail: 'busy' });
-      expect(await service.generate(PROJECT)).toBe(0);
+      expect(await generateCurrent()).toBe(0);
       expect(toasts('danger')).toContain('Could not generate the segment: busy');
       expect(context().running).toEqual([]);
     });
@@ -453,10 +544,21 @@ describe('AudiobookService', () => {
       });
     });
 
-    it('starts nothing when every pending segment lost its voice', async () => {
+    it('skips a chapter blocked by a speaker without a voice', async () => {
       voiceTeaWoman();
       service.setSpeakerVoice(PROJECT, 'narr', null);
-      expect(await service.generate(PROJECT)).toBe(0);
+      expect(context().blockers.length).toBeGreaterThan(0);
+      expect(await generateCurrent()).toBe(0);
+      expect(ipc.called('pipeline_start')).toBe(0);
+    });
+
+    it('starts nothing when no pending segment has a voice', async () => {
+      service.setSpeakerVoice(PROJECT, 'narr', null);
+      const silent = context().todo.every(
+        (block) => block.type !== 'dialogue' || block.who === TEA_WOMAN,
+      );
+      expect(silent).toBe(true);
+      expect(await generateCurrent()).toBe(0);
       expect(ipc.called('pipeline_start')).toBe(0);
     });
 
@@ -470,19 +572,104 @@ describe('AudiobookService', () => {
   });
 
   describe('export', () => {
-    it('exports a fully generated chapter and refuses an incomplete one', async () => {
-      expect(await service.exportUnit(PROJECT, 'wav')).toBeNull();
-      service.selectUnit(PROJECT, context().rail[0].unit.id);
-      const unitId = context().unit?.id;
-      expect(await service.exportUnit(PROJECT, 'srt')).toBe(`exports/${PROJECT}/${unitId}.srt`);
-      expect(ipc.called('audiobook_export')).toBe(1);
+    it('exports the chapters through the desktop', async () => {
+      const reply = await service.exportUnits(PROJECT, ['U01', 'U02']);
+      expect(reply).toEqual({
+        wav: `exports/${PROJECT}/U01-U02.wav`,
+        srt: `exports/${PROJECT}/U01-U02.srt`,
+      });
+      expect(ipc.lastArgs('audiobook_export')).toEqual({
+        projectId: PROJECT,
+        unitIds: ['U01', 'U02'],
+      });
+    });
+
+    it('saves pending edits before exporting', async () => {
+      service.setMix(PROJECT, 'gap', 2);
+      await service.exportUnits(PROJECT, [doneId()]);
+      const commands = ipc.calls.map((call) => call.command);
+      expect(commands.lastIndexOf('audiobook_mix_save')).toBeLessThan(
+        commands.lastIndexOf('audiobook_export'),
+      );
     });
 
     it('reports a failed export', async () => {
-      service.selectUnit(PROJECT, context().rail[0].unit.id);
       ipc.fail('audiobook_export', { code: 'io', detail: 'disk full' });
-      expect(await service.exportUnit(PROJECT, 'wav')).toBeNull();
-      expect(service.error()).not.toBeNull();
+      expect(await service.exportUnits(PROJECT, [doneId()])).toBeNull();
+      expect(toasts('danger')).toContain('Could not export: disk full');
+    });
+
+    it('exports right away when there is nothing to generate', async () => {
+      const ids = [doneId()];
+      expect(await service.generate(PROJECT, ids, true)).toBe(0);
+      expect(ipc.called('pipeline_start')).toBe(0);
+      expect(ipc.lastArgs('audiobook_export')).toEqual({ projectId: PROJECT, unitIds: ids });
+      expect(toasts('success')).toEqual([exported(ids)]);
+    });
+
+    it('does not export when nothing is generated without the export option', async () => {
+      expect(await service.generate(PROJECT, [doneId()])).toBe(0);
+      expect(ipc.called('audiobook_export')).toBe(0);
+    });
+
+    it('exports once the pipeline completes', async () => {
+      voiceTeaWoman();
+      const ids = [currentId()];
+      expect(await generateAll(ids, true)).toBeGreaterThan(0);
+      await vi.waitFor(() => expect(toasts('success')).toContain(exported(ids)));
+      expect(ipc.called('audiobook_export')).toBe(1);
+      expect(ipc.lastArgs('audiobook_export')).toEqual({ projectId: PROJECT, unitIds: ids });
+      const commands = ipc.calls.map((call) => call.command);
+      expect(commands.lastIndexOf('pipeline_start')).toBeLessThan(
+        commands.indexOf('audiobook_export'),
+      );
+    });
+
+    it('skips the export when segments failed', async () => {
+      voiceTeaWoman();
+      const channel = captureChannel();
+      const unitId = currentId();
+      expect(await generateCurrent(true)).toBeGreaterThan(0);
+      const failed: PipelineTask = { ...audioTask(unitId, 'x', 1), status: 'failed' };
+      channel.send({
+        type: 'finished',
+        pipeline: audioPipeline([failed], { status: 'failed', failed: 1 }),
+      });
+      await vi.waitFor(() =>
+        expect(toasts('warning')).toContain(
+          'Export skipped because some segments were not generated.',
+        ),
+      );
+      expect(ipc.called('audiobook_export')).toBe(0);
+    });
+
+    it('skips the export when the pipeline is cancelled', async () => {
+      voiceTeaWoman();
+      const channel = captureChannel();
+      expect(await generateCurrent(true)).toBeGreaterThan(0);
+      const queued = audioTask(currentId(), context().todo[0].id, 1);
+      channel.send({
+        type: 'finished',
+        pipeline: audioPipeline([{ ...queued, status: 'cancelled' }], { status: 'cancelled' }),
+      });
+      await vi.waitFor(() =>
+        expect(toasts('warning')).toContain(
+          'Export skipped because some segments were not generated.',
+        ),
+      );
+      expect(ipc.called('audiobook_export')).toBe(0);
+    });
+
+    it('does not export a finished pipeline started without the option', async () => {
+      voiceTeaWoman();
+      const channel = captureChannel();
+      expect(await generateCurrent()).toBeGreaterThan(0);
+      const done: PipelineTask = { ...audioTask(currentId(), 'x', 1), status: 'completed' };
+      channel.send({ type: 'finished', pipeline: audioPipeline([done], { status: 'completed' }) });
+      await vi.waitFor(() =>
+        expect(toasts('success')).toContain('Completed: Audiobook · ' + projectName()),
+      );
+      expect(ipc.called('audiobook_export')).toBe(0);
     });
   });
 

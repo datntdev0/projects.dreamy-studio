@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CastMember, ScriptBlock } from './scripting.models';
 // prettier-ignore
-import { activeUnit, appendUnit, BLOCK_TYPES, castOf, chaptersOf, configOf, countWords, emptyView, findBlock, findUnit, firstSpeaker, hasContent, hasDefaultFor, headingText, makeBlock, makeSource, makeUnit, metricsOf, narratorMember, newScript, nextChapterRange, nextUnitChapters, numberWord, pad2, paragraphChapter, paragraphNumber, placeholderMeta, presetDef, presetOfTemplate, replaceUnit, scenesOf, scriptProgress,speakerClass, speakerOf, unitStatsOf } from './scripting.rules';
+import { activeUnit, appendUnit, BLOCK_TYPES, castOf, chaptersOf, configOf, countWords, emptyView, findBlock, findUnit, firstSpeaker, hasContent, hasDefaultFor, headingText, makeBlock, makeSource, makeUnit, metricsOf, narratorMember, newScript, nextChapterRange, nextUnitChapters, numberWord, pad2, paragraphChapter, paragraphNumber, placeholderMeta, presetDef, presetOfTemplate, replaceUnit, scenesOf, scriptProgress,speakerClass, speakerOf } from './scripting.rules';
 
 function blocks(...overrides: Partial<ScriptBlock>[]): ScriptBlock[] {
   return overrides.map((item, index) => scriptBlock({ id: `B${index + 1}`, ...item }));
@@ -137,15 +137,7 @@ describe('scripting rules: source rows', () => {
     expect(src.list.map((item) => item.id)).toEqual(['1.1', '1.2', '1.3']);
   });
 
-  it('computes stats and the default availability', () => {
-    const metrics = metricsOf([], blocks({ text: 'a b c' }));
-    expect(unitStatsOf(configOf('audiobook'), metrics)).toEqual({
-      blocks: 1,
-      words: 3,
-      secs: 1.2,
-      scenes: null,
-    });
-    expect(unitStatsOf(configOf('film'), metrics).scenes).toBe(0);
+  it('computes the default availability', () => {
     expect(hasDefaultFor(configOf('audiobook'), src)).toBe(true);
     expect(hasDefaultFor(configOf('audiobook'), null)).toBe(false);
     expect(hasDefaultFor(configOf('film'), src)).toBe(false);

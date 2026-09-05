@@ -1,11 +1,18 @@
 import { LibraryVoice } from '../library/library.voices.models';
 import { engineName } from '../library/library.voices.rules';
-import { PipelineSnapshot, PipelineTask, TaskRequest } from '../novel/novel.translation.models';
+import { PipelineSnapshot, PipelineTask } from '../novel/novel.translation.models';
 import { ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { CloudAccount } from '../settings/cloud.models';
 // prettier-ignore
-import { AudioEnv, AudioStart, CloudBilling, GenerateGroup, GeneratePlan, GenerationJob, PreviewRequest, SegmentRequest, VoiceAvailability } from './audiobook.models';
-import { COST_PER_CHAR, segmentInfo, todoBlocks, voicingOf } from './audiobook.rules';
+import { AudioEnv, AudioStart, CloudBilling, GenerateChapter, GenerateGroup, GeneratePlan, GenerationJob, PreviewRequest, SegmentRequest, VoiceAvailability } from './audiobook.models';
+import {
+  blockersOf,
+  COST_PER_CHAR,
+  segmentInfo,
+  todoBlocks,
+  voicedBlocks,
+  voicingOf,
+} from './audiobook.rules';
 
 export const LOCAL_GROUP = 'local';
 
@@ -59,20 +66,52 @@ export function generateGroups(
   return [...groups.values()].map(withCost);
 }
 
+export function generateChapterOf(
+  env: AudioEnv,
+  availability: VoiceAvailability,
+  unit: ScriptUnit,
+): GenerateChapter {
+  const total = voicedBlocks(unit).length;
+  const todo = todoBlocks(env, unit).length;
+  return {
+    unit,
+    total,
+    todo,
+    blocked: blockersOf(env, availability, unit).length > 0,
+    complete: total > 0 && todo === 0,
+  };
+}
+
+export function generateChaptersOf(
+  env: AudioEnv,
+  availability: VoiceAvailability,
+  units: ScriptUnit[],
+): GenerateChapter[] {
+  return units
+    .filter((unit) => unit.blocks !== null)
+    .map((unit) => generateChapterOf(env, availability, unit));
+}
+
+function regeneratedCount(env: AudioEnv, unit: ScriptUnit, blocks: ScriptBlock[]): number {
+  return blocks.filter((block) => segmentInfo(env, unit, block).state !== 'none').length;
+}
+
 export function generatePlanOf(
   env: AudioEnv,
   availability: VoiceAvailability,
   accounts: CloudAccount[],
-  unit: ScriptUnit,
+  units: ScriptUnit[],
 ): GeneratePlan {
-  const blocks = todoBlocks(env, unit);
+  const todo = units.map((unit) => todoBlocks(env, unit));
+  const blocks = todo.flat();
   const groups = generateGroups(env, availability, accounts, blocks);
   return {
-    unitId: unit.id,
-    unitNo: unit.no,
-    segmentIds: blocks.map((block) => block.id),
+    unitIds: units.map((unit) => unit.id),
     segments: blocks.length,
-    regenerated: blocks.filter((block) => segmentInfo(env, unit, block).state !== 'none').length,
+    regenerated: units.reduce(
+      (sum, unit, index) => sum + regeneratedCount(env, unit, todo[index]),
+      0,
+    ),
     groups,
     cost: groups.reduce((sum, group) => sum + group.cost, 0),
   };
@@ -96,17 +135,20 @@ export function previewRequestOf(voice: LibraryVoice, speed: number): PreviewReq
   return { voiceId: voice.id, speed, text: voice.sampleText || PREVIEW_FALLBACK_TEXT };
 }
 
-export function audioStartOf(env: AudioEnv, unitId: string, blocks: ScriptBlock[]): AudioStart {
-  const tasks: TaskRequest[] = [];
-  const requests: Record<string, SegmentRequest> = {};
-  for (const block of blocks) {
+function appendStart(env: AudioEnv, start: AudioStart, unit: ScriptUnit): AudioStart {
+  for (const block of todoBlocks(env, unit)) {
     const request = segmentRequestOf(env, block);
     if (request) {
-      tasks.push({ chapterId: unitId, segmentId: block.id });
-      requests[block.id] = request;
+      start.tasks.push({ chapterId: unit.id, segmentId: block.id });
+      start.requests[block.id] = request;
     }
   }
-  return { tasks, requests };
+  return start;
+}
+
+export function audioStartOf(env: AudioEnv, units: ScriptUnit[]): AudioStart {
+  const empty: AudioStart = { tasks: [], requests: {} };
+  return units.reduce(appendStart.bind(null, env), empty);
 }
 
 function isPending(task: PipelineTask): boolean {

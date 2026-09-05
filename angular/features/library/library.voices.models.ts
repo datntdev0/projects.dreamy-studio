@@ -1,7 +1,6 @@
 export type VoiceEngineKind = 'local' | 'cloud';
 export type VoiceSource = 'preset' | 'clone' | 'design';
 export type VoiceGender = 'female' | 'male' | 'neutral';
-export type VoiceSort = 'new' | 'name';
 export type VoiceEngineFilter = 'all' | VoiceEngineKind;
 export type VoiceReferenceMode = 'library' | 'upload' | 'record';
 export type VoiceReferenceKind = 'sound' | 'file' | 'recording';

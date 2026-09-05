@@ -1,7 +1,7 @@
 // prettier-ignore
 import { Audiobook, AudiobookConfig, AudioRecord, ExportReply, MixField, MixSettings, SegmentRequest, UnitAudio } from '@features/audiobook/audiobook.models';
 // prettier-ignore
-import { audiobookProgress, clampMix, emptyUnitAudio, estimateDuration, MIX_LIMITS, stampNow } from '@features/audiobook/audiobook.rules';
+import { audiobookProgress, clampMix, DEFAULT_MIX, emptyUnitAudio, estimateDuration, MIX_LIMITS, stampNow } from '@features/audiobook/audiobook.rules';
 // prettier-ignore
 import { PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest } from '@features/novel/novel.translation.models';
 import { ProjectModuleState } from '@features/project/project.models';
@@ -63,7 +63,10 @@ function unitOf(book: Audiobook, unitId: string): UnitAudio {
 function saveConfig(state: AudiobookState, args: Record<string, unknown>): void {
   const projectId = numberArg(args, 'projectId');
   const config = clone(args['config'] as AudiobookConfig);
-  state.books[projectId] = { ...(state.books[projectId] ?? { units: {} }), ...config };
+  state.books[projectId] = {
+    ...(state.books[projectId] ?? { units: {}, mix: { ...DEFAULT_MIX } }),
+    ...config,
+  };
 }
 
 function getUnit(state: AudiobookState, args: Record<string, unknown>): UnitAudio {
@@ -81,10 +84,8 @@ function clampedMix(mix: MixSettings): MixSettings {
 
 function saveMix(state: AudiobookState, args: Record<string, unknown>): MixSettings {
   const book = bookOf(state, args);
-  const unitId = String(args['unitId']);
-  const mix = clampedMix(args['mix'] as MixSettings);
-  book.units[unitId] = { ...unitOf(book, unitId), mix };
-  return clone(mix);
+  book.mix = clampedMix(args['mix'] as MixSettings);
+  return clone(book.mix);
 }
 
 function setFlag(state: AudiobookState, args: Record<string, unknown>): AudioRecord {
@@ -150,8 +151,8 @@ function segmentAudio(state: AudiobookState, args: Record<string, unknown>): Arr
 
 function exportUnit(state: AudiobookState, args: Record<string, unknown>): ExportReply {
   bookOf(state, args);
-  const projectId = numberArg(args, 'projectId');
-  return { path: `exports/${projectId}/${String(args['unitId'])}.${String(args['format'])}` };
+  const base = `exports/${numberArg(args, 'projectId')}/${(args['unitIds'] as string[]).join('-')}`;
+  return { wav: `${base}.wav`, srt: `${base}.srt` };
 }
 
 function previewVoice(args: Record<string, unknown>): ArrayBuffer {

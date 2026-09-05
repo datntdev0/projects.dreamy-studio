@@ -19,6 +19,7 @@ export class LibraryVoicePlay {
   readonly disabled = input(false);
   readonly hint = input<string | null>(null);
   readonly text = input<string | null>(null);
+  readonly labelled = input(false);
   private readonly voices = inject(LibraryVoiceService);
   isPlaying(): boolean {
     return this.voices.playingId() === this.voice().id;
@@ -33,6 +34,10 @@ export class LibraryVoicePlay {
   label(): LanguageKey {
     if (this.isPreparing()) return 'library.voice.preparing';
     return this.isPlaying() ? 'library.voice.stop' : 'library.voice.play';
+  }
+  caption(): LanguageKey {
+    if (this.isPreparing()) return 'library.voice.preparing';
+    return this.isPlaying() ? 'library.voice.previewStop' : 'library.voice.preview';
   }
   iconSize(): number {
     if (this.size() === 'lg') return 18;

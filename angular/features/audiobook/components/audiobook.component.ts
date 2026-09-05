@@ -15,12 +15,9 @@ import { ProjectSummary } from '@features/project/project.models';
 import { projectModule } from '@features/project/project.rules';
 import { ProjectService } from '@features/project/project.service';
 import { CoreModule } from '@shared/core.module';
-import { LanguageService } from '@shared/language/language.service';
-import { ToastService } from '@shared/toast/toast.service';
 
 import { AudiobookDialogsService } from '../audiobook.dialogs.service';
 import { AudiobookContext, AudiobookMode } from '../audiobook.models';
-import { AudiobookPlayerService } from '../audiobook.player.service';
 import { AudiobookService } from '../audiobook.service';
 import { AudiobookNavigation } from './audiobook.navigation';
 import { AudiobookBanners } from './banners.component';
@@ -60,10 +57,7 @@ export class Audiobook {
   protected readonly navigation = inject(AudiobookNavigation);
   private readonly audiobook = inject(AudiobookService);
   private readonly dialogs = inject(AudiobookDialogsService);
-  private readonly player = inject(AudiobookPlayerService);
   private readonly projects = inject(ProjectService);
-  private readonly toasts = inject(ToastService);
-  private readonly languageService = inject(LanguageService);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -80,12 +74,6 @@ export class Audiobook {
 
   setMode(mode: AudiobookMode): void {
     this.audiobook.setMode(this.projectId(), mode);
-  }
-
-  playChapter(): void {
-    if (!this.player.playChapter(this.projectId())) {
-      this.toasts.show(this.languageService.translate('audiobook.editor.toast.noAudio'), 'warning');
-    }
   }
 
   generateAll(): void {

@@ -71,8 +71,6 @@ describe('LibraryVoiceService', () => {
     await voices.ensureLoaded();
     expect(ipc.called('library_voice_list')).toBe(1);
     expect(voices.visible().map((item) => item.id)).toEqual([2, 1]);
-    voices.sort.set('name');
-    expect(voices.visible().map((item) => item.id)).toEqual([2, 1]);
     voices.query.set('b');
     expect(voices.visible().map((item) => item.id)).toEqual([1]);
     voices.query.set('');

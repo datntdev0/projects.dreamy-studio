@@ -2,7 +2,7 @@ import { kbCharactersOf, kbPlaceNames, kbStatusOf } from './scripting.knowledge'
 // prettier-ignore
 import { CastMember, KbSnapshot, RailRow, RailSummary, Script, ScriptContext, ScriptSource, ScriptUnit, ScriptView, SourceParagraph } from './scripting.models';
 // prettier-ignore
-import { activeUnit, castOf, chaptersOf, DEFAULT_CHAPTER_MAX, hasContent, hasDefaultFor, metricsOf, scenesOf, unitStatsOf } from './scripting.rules';
+import { activeUnit, castOf, chaptersOf, DEFAULT_CHAPTER_MAX, hasContent, hasDefaultFor, metricsOf, scenesOf } from './scripting.rules';
 import { unitSource } from './scripting.source';
 
 export interface ContextInput {
@@ -14,8 +14,6 @@ export interface ContextInput {
   chapters: Record<number, SourceParagraph[] | null>;
   novelChapters: number;
 }
-
-const EMPTY_STATS = null;
 
 export function unitSources(
   script: Script,
@@ -74,7 +72,6 @@ export function buildContext(input: ContextInput): ScriptContext {
     source,
     hasDefault: hasDefaultFor(config, source),
     metrics,
-    stats: metrics ? unitStatsOf(config, metrics) : EMPTY_STATS,
     scenes: scenesOf(blocks),
     rail,
     railSummary: railSummaryOf(rail),

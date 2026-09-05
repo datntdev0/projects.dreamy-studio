@@ -3,12 +3,13 @@ import { CoreModule } from '@shared/core.module';
 
 import { AudiobookContext } from '../audiobook.models';
 import { AudiobookEmpty } from './empty.component';
+import { AudiobookListen } from './listen.component';
 import { AudiobookSegment } from './segment.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-audiobook-list',
-  imports: [CoreModule, AudiobookSegment, AudiobookEmpty],
+  imports: [CoreModule, AudiobookSegment, AudiobookEmpty, AudiobookListen],
   templateUrl: './list.component.html',
 })
 export class AudiobookList {

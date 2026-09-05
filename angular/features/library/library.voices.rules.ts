@@ -22,14 +22,12 @@ import {
   VoiceReference,
   VoiceReferenceFile,
   VoiceReferenceMode,
-  VoiceSort,
   VoiceSource,
 } from './library.voices.models';
 import { VoiceRecording } from './library.voices.recorder';
 
 export interface VoiceFilters {
   query: string;
-  sort: VoiceSort;
   engine: VoiceEngineFilter;
 }
 
@@ -54,8 +52,9 @@ export interface VoiceDraft {
 const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([['edge-read-aloud', ['preset']]]);
 const DEFAULT_GENDER: VoiceGender = 'female';
 
-const HUE_STEP = 137;
-const MONOGRAM_LENGTH = 2;
+const AVATAR_TONES = 4;
+const FNV_OFFSET = 2166136261;
+const FNV_PRIME = 16777619;
 
 const LANGUAGE_KEYS: Record<(typeof VOICE_LANGUAGES)[number], LanguageKey> = {
   vi: 'library.voice.language.vi',
@@ -102,16 +101,12 @@ const ENGINE_SECTIONS: Record<VoiceEngineKind, SettingsSectionId> = {
   cloud: 'cloud',
 };
 
-function firstLetter(word: string): string {
-  return word.charAt(0);
-}
-
 function compareNew(a: LibraryVoice, b: LibraryVoice): number {
   return b.createdAt.localeCompare(a.createdAt) || b.id - a.id;
 }
 
-function compareName(a: LibraryVoice, b: LibraryVoice): number {
-  return a.name.localeCompare(b.name) || a.id - b.id;
+function fnvStep(hash: number, character: string): number {
+  return Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME);
 }
 
 function hasVoiceId(id: number, voice: LibraryVoice): boolean {
@@ -214,12 +209,11 @@ export function voiceById(items: LibraryVoice[], id: number): LibraryVoice | nul
 }
 
 export function voiceMonogram(name: string): string {
-  const letters = name.trim().split(/\s+/).filter(Boolean).map(firstLetter);
-  return letters.slice(0, MONOGRAM_LENGTH).join('').toLocaleUpperCase() || '?';
+  return name.trim().charAt(0).toLocaleUpperCase() || '?';
 }
 
-export function voiceHue(id: number): number {
-  return Math.abs(id * HUE_STEP) % 360;
+export function voiceTone(name: string): number {
+  return ([...name].reduce(fnvStep, FNV_OFFSET) >>> 0) % AVATAR_TONES;
 }
 
 export function voiceLanguageKey(language: string): LanguageKey | null {
@@ -236,10 +230,6 @@ export function voiceSourceKey(source: VoiceSource): LanguageKey {
 
 export function voiceSourceNameKey(source: VoiceSource): LanguageKey {
   return SOURCE_NAME_KEYS[source];
-}
-
-export function voiceDateText(value: string): string {
-  return value.slice(0, 10);
 }
 
 export function normalizeSampleText(text: string): string {
@@ -291,14 +281,13 @@ export function searchVoices(items: LibraryVoice[], query: string): LibraryVoice
   return items.filter(matchesQuery.bind(null, needle));
 }
 
-export function sortVoices(items: LibraryVoice[], sort: VoiceSort): LibraryVoice[] {
-  return [...items].sort(sort === 'name' ? compareName : compareNew);
+export function sortVoices(items: LibraryVoice[]): LibraryVoice[] {
+  return [...items].sort(compareNew);
 }
 
 export function filterVoices(items: LibraryVoice[], filters: VoiceFilters): LibraryVoice[] {
   return sortVoices(
     searchVoices(items, filters.query).filter(matchesEngine.bind(null, filters.engine)),
-    filters.sort,
   );
 }
 

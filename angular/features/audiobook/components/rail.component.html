@@ -55,20 +55,6 @@
               <ds-icon name="alert" [size]="14" />
             </span>
           }
-          @case ('doing') {
-            <span
-              class="dot dot-running"
-              [attr.title]="'audiobook.unit.doing' | t"
-              data-testid="audiobook-rail-mark"
-            ></span>
-          }
-          @default {
-            <span
-              class="dot-o"
-              [attr.title]="'audiobook.unit.none' | t"
-              data-testid="audiobook-rail-mark"
-            ></span>
-          }
         }
       </div>
     }

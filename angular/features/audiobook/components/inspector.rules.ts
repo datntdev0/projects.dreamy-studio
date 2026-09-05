@@ -1,6 +1,6 @@
 import { LanguageKey } from '@shared/language/language.models';
 
-import { ExportFormat, MixField } from '../audiobook.models';
+import { MixField } from '../audiobook.models';
 import { MIX_LIMITS } from '../audiobook.rules';
 
 export interface MixFieldDef {
@@ -26,15 +26,6 @@ export const MIX_FIELDS: MixFieldDef[] = [
   mixDef('gap', 'audiobook.inspector.mix.gap', 'audiobook.inspector.mix.seconds', 0.1),
   mixDef('intro', 'audiobook.inspector.mix.intro', 'audiobook.inspector.mix.seconds', 0.1),
   mixDef('outro', 'audiobook.inspector.mix.outro', 'audiobook.inspector.mix.seconds', 0.1),
+  mixDef('sentence', 'audiobook.inspector.mix.sentence', 'audiobook.inspector.mix.seconds', 0.05),
   mixDef('vol', 'audiobook.inspector.mix.vol', 'audiobook.inspector.mix.db', 1),
-];
-
-export interface ExportFormatDef {
-  format: ExportFormat;
-  labelKey: LanguageKey;
-}
-
-export const EXPORT_FORMATS: ExportFormatDef[] = [
-  { format: 'wav', labelKey: 'audiobook.inspector.export.wav' },
-  { format: 'srt', labelKey: 'audiobook.inspector.export.srt' },
 ];

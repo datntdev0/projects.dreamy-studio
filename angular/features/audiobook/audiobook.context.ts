@@ -18,7 +18,6 @@ import {
   SpeakerDeleteBlock,
   SpeakerRow,
   SpeakerStatus,
-  UnitAudio,
   UnitStat,
   VoiceAvailability,
   VoiceOption,
@@ -189,25 +188,19 @@ function inspectorOf(view: AudiobookView): AudiobookInspector {
   return view.mode === 'voices' ? 'voices' : 'chapter';
 }
 
-function canExportOf(segments: SegmentRow[]): boolean {
-  return segments.length > 0 && segments.every((row) => row.state === 'done');
-}
-
 function chapterPanelOf(
   stat: UnitStat | null,
-  audio: UnitAudio | null,
+  book: Audiobook,
   unit: ScriptUnit | null,
   blockers: AudiobookContext['blockers'],
-  segments: SegmentRow[],
 ): ChapterPanel {
   return {
     total: stat ? stat.total : 0,
     generated: stat ? stat.done : 0,
     attention: stat ? stat.stale + stat.none : 0,
     duration: stat ? stat.dur : 0,
-    mix: unit?.blocks && audio ? audio.mix : null,
+    mix: unit?.blocks ? book.mix : null,
     blockers,
-    canExport: canExportOf(segments),
   };
 }
 
@@ -239,7 +232,7 @@ export function buildContext(input: ContextInput): AudiobookContext {
     running,
     generating: running.length > 0,
     stat,
-    summary: stat && audio ? summaryOf(stat, audio.mix, running.length) : null,
+    summary: stat && audio ? summaryOf(stat, book.mix, running.length) : null,
     rail: railOf(script, stats, unit ? unit.id : null),
     railSummary: railSummaryOf(script, stats),
     segments,
@@ -253,6 +246,6 @@ export function buildContext(input: ContextInput): AudiobookContext {
     lostDialogues: countLostDialogues(script, cast),
     voiceGroups: voiceGroupsOf(voices, availability),
     engines: engineSummaryOf(availability),
-    chapterPanel: chapterPanelOf(stat, audio, unit, blockers, segments),
+    chapterPanel: chapterPanelOf(stat, book, unit, blockers),
   };
 }

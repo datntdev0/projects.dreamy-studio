@@ -35,17 +35,6 @@
 .sc-title-ro {
   font-weight: 500;
 }
-.sc-stats {
-  display: inline-flex;
-  gap: var(--sp-md);
-  font-size: 11px;
-  color: var(--mute);
-  overflow: hidden;
-}
-.sc-stats span + span::before {
-  content: '·';
-  margin-right: var(--sp-md);
-}
 .sc-chs {
   display: inline-flex;
   align-items: center;

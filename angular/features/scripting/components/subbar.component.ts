@@ -25,7 +25,6 @@ export class ScriptingSubbar {
 
   readonly ctx = input.required<ScriptContext>();
   readonly unitLower = computed(this.buildUnitLower.bind(this));
-  readonly stats = computed(this.buildStats.bind(this));
 
   setTitle(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -67,9 +66,5 @@ export class ScriptingSubbar {
 
   private buildUnitLower(): string {
     return this.labels.unitLower(this.ctx().config);
-  }
-
-  private buildStats(): string[] {
-    return this.labels.stats(this.ctx());
   }
 }

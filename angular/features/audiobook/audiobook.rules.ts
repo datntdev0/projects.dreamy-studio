@@ -29,13 +29,14 @@ export const COST_PER_CHAR = 0.000016;
 
 export const TITLE_EXCERPT = 48;
 
-export const DEFAULT_MIX: MixSettings = { gap: 0.6, intro: 0.8, outro: 1.5, vol: 0 };
+export const DEFAULT_MIX: MixSettings = { gap: 0.6, intro: 0.8, outro: 1.5, vol: 0, sentence: 0.3 };
 
 export const MIX_LIMITS: Record<MixField, [number, number]> = {
   gap: [0, 5],
   intro: [0, 10],
   outro: [0, 10],
   vol: [-12, 6],
+  sentence: [0, 2],
 };
 
 export const REASON_KEYS: Record<StaleReason, AudiobookMessage['key']> = {
@@ -51,11 +52,11 @@ export function emptyView(): AudiobookView {
 }
 
 export function emptyBook(): Audiobook {
-  return { voices: {}, units: {} };
+  return { voices: {}, mix: { ...DEFAULT_MIX }, units: {} };
 }
 
 export function emptyUnitAudio(): UnitAudio {
-  return { audio: {}, mix: { ...DEFAULT_MIX }, meta: null };
+  return { audio: {}, meta: null };
 }
 
 export function unitAudioOf(book: Audiobook, unitId: string): UnitAudio {

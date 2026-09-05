@@ -35,17 +35,8 @@
         @if (c.view.mode === 'prod' && c.unit?.blocks) {
           <button
             type="button"
-            class="btn btn-sm"
-            data-testid="ab-play-all-btn"
-            (click)="playChapter()"
-          >
-            <ds-icon name="play" [size]="16" />
-            {{ 'audiobook.editor.bar.playAll' | t }}
-          </button>
-          <button
-            type="button"
             class="btn btn-sm btn-primary"
-            [disabled]="!c.canGenerate"
+            [disabled]="c.generating"
             data-testid="ab-generate-btn"
             (click)="generateAll()"
           >

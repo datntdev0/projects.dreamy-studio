@@ -24,6 +24,9 @@
           }}
         }
       </span>
+    </div>
+    <span class="spacer" data-testid="library-voices-toolbar-spacer"></span>
+    <div class="nv-bar-r" data-testid="library-voices-toolbar-right">
       <ds-segments
         [label]="'library.voice.filter.label' | t"
         [options]="engineOptions"
@@ -31,23 +34,6 @@
         data-testid="library-voices-filter"
         (valueChange)="onEngineFilter($event)"
       />
-    </div>
-    <span class="spacer" data-testid="library-voices-toolbar-spacer"></span>
-    <div class="nv-bar-r" data-testid="library-voices-toolbar-right">
-      <select
-        class="select"
-        [value]="voices.sort()"
-        [attr.aria-label]="'library.voice.sort' | t"
-        data-testid="library-voices-sort"
-        (change)="onSort($event)"
-      >
-        <option value="new" data-testid="library-voices-sort-new">
-          {{ 'library.voice.sort.new' | t }}
-        </option>
-        <option value="name" data-testid="library-voices-sort-name">
-          {{ 'library.voice.sort.name' | t }}
-        </option>
-      </select>
       <button
         type="button"
         class="btn btn-sm btn-primary"
@@ -119,7 +105,7 @@
           [rows]="voices.visible()"
           trackKey="id"
           variant="fill"
-          minWidth="940px"
+          minWidth="760px"
           rowTestId="library-voices-table-row"
           [rowClass]="tableRowClass"
           data-testid="library-voices-table"
@@ -131,7 +117,6 @@
             <div class="nm-title" data-testid="library-voices-table-name-wrap">
               <app-library-voice-avatar
                 [voice]="voiceOf(row)"
-                size="sm"
                 data-testid="library-voices-table-avatar"
               />
               <div class="lb-rname" data-testid="library-voices-table-name-content">
@@ -145,15 +130,6 @@
                 }
               </div>
             </div>
-          </ng-template>
-          <ng-template dsCell="play" let-row>
-            <app-library-voice-play
-              [voice]="voiceOf(row)"
-              size="sm"
-              [disabled]="!voices.isReady(voiceOf(row))"
-              [hint]="notReadyHint"
-              data-testid="library-voices-table-play"
-            />
           </ng-template>
           <ng-template dsCell="engine" let-row>
             <app-library-voice-engine
@@ -171,20 +147,19 @@
               {{ genderText(voiceOf(row)) }}
             </span>
           </ng-template>
-          <ng-template dsCell="source" let-row>
-            <span class="t-sm t-mute" data-testid="library-voices-table-source">
-              {{ sourceText(voiceOf(row)) }}
-            </span>
-          </ng-template>
           <ng-template dsCell="duration" let-row>
             <span class="mono t-mute" data-testid="library-voices-table-duration">
               {{ durationText(voiceOf(row)) }}
             </span>
           </ng-template>
-          <ng-template dsCell="updated" let-row>
-            <span class="mono t-mute" data-testid="library-voices-table-updated">
-              {{ updatedText(voiceOf(row)) }}
-            </span>
+          <ng-template dsCell="actions" let-row>
+            <app-library-voice-play
+              [voice]="voiceOf(row)"
+              [labelled]="true"
+              [disabled]="!voices.isReady(voiceOf(row))"
+              [hint]="notReadyHint"
+              data-testid="library-voices-table-play"
+            />
           </ng-template>
         </ds-datatable>
       }

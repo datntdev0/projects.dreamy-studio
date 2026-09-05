@@ -1,3 +1,48 @@
 ds-dialog[data-testid^='ab-'] .dialog-title {
   text-transform: uppercase;
 }
+
+.ab-gen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+}
+.ab-gen-list {
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+}
+.ab-gen-ch {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--hairline);
+  cursor: pointer;
+}
+.ab-gen-ch:last-child {
+  border-bottom: 0;
+}
+.ab-gen-ch:hover {
+  background: var(--canvas-soft);
+}
+.ab-gen-ch.is-off {
+  opacity: 0.55;
+  cursor: default;
+}
+.ab-gen-st {
+  color: var(--mute);
+}
+.ab-gen-st.is-todo {
+  color: var(--warning);
+}
+.ab-gen-st.is-complete {
+  color: var(--success);
+}
+.ab-gen-st.is-blocked {
+  color: var(--danger);
+}

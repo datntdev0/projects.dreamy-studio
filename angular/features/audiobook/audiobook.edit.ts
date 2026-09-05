@@ -31,10 +31,8 @@ export function removeSpeakerVoice(book: Audiobook, speakerId: string): Audioboo
   return { ...book, voices };
 }
 
-export function setMix(book: Audiobook, unitId: string, field: MixField, value: number): Audiobook {
-  const unit = unitAudioOf(book, unitId);
-  const mix = { ...unit.mix, [field]: clampMix(field, value) };
-  return putUnit(book, unitId, { ...unit, mix });
+export function setMix(book: Audiobook, field: MixField, value: number): Audiobook {
+  return { ...book, mix: { ...book.mix, [field]: clampMix(field, value) } };
 }
 
 export function putRecord(
@@ -60,6 +58,6 @@ export function setRecordFlag(
   return putRecord(book, unitId, blockId, { ...record, flag });
 }
 
-export function putMix(book: Audiobook, unitId: string, mix: MixSettings): Audiobook {
-  return putUnit(book, unitId, { ...unitAudioOf(book, unitId), mix });
+export function putMix(book: Audiobook, mix: MixSettings): Audiobook {
+  return { ...book, mix };
 }

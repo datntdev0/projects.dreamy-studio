@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { moduleTabId } from '@layout/layout.models';
 import { TabsService } from '@layout/tabs.service';
 import { LanguageService } from '@shared/language/language.service';
@@ -16,6 +17,7 @@ import { AudiobookContext, SegmentRow } from '../audiobook.models';
 import { AUDIOBOOK_AUDIO, AudiobookPlayerService } from '../audiobook.player.service';
 import { AudiobookService } from '../audiobook.service';
 import { Audiobook } from './audiobook.component';
+import { AudiobookListen } from './listen.component';
 
 const PROJECT = 1;
 const TEA_WOMAN = 'E16';
@@ -71,6 +73,20 @@ function segmentIds(mounted: Mounted<unknown>): string[] {
   );
 }
 
+function scriptChapterFour(state: ScriptingState): void {
+  const units = state.scripts[PROJECT].units;
+  units[3].meta = null;
+  units[3].blocks = units[2].blocks;
+}
+
+function generateDisabled(mounted: Mounted<unknown>): boolean {
+  return (byId(mounted.root, 'ab-generate-btn') as HTMLButtonElement).disabled;
+}
+
+function listenButton(mounted: Mounted<unknown>): HTMLButtonElement {
+  return byId(mounted.root, 'ab-play-all-btn') as HTMLButtonElement;
+}
+
 async function clickAndSettle(mounted: Mounted<unknown>, id: string): Promise<void> {
   click(mounted.root, id);
   await settle(mounted.fixture);
@@ -96,11 +112,13 @@ describe('Audiobook production editor', () => {
     expect(textOf(mounted, 'audiobook-subbar-number')).toBe('CHAPTERS 02');
     expect(byId(mounted.root, 'audiobook-subbar-lock')).toBeNull();
     expect(byId(mounted.root, 'audiobook-rail-unlocked')).toBeNull();
-    expect(textOf(mounted, 'ab-stats')).toMatch(/^12 segments8 generated4 to generate≈ \d+:\d{2}$/);
+    expect(byId(mounted.root, 'ab-stats')).toBeNull();
     expect(allById(mounted.root, 'ab-list')).toHaveLength(1);
     expect(segmentIds(mounted)).toEqual(ctx.segments.map((row) => row.block.id));
-    expect(textOf(mounted, 'ab-play-all-btn')).toBe('Listen to the whole chapter');
-    expect(byId(mounted.root, 'ab-play-all-btn')?.classList.contains('btn-primary')).toBe(false);
+    const list = mounted.root.querySelector('app-audiobook-list');
+    expect(list?.firstElementChild?.tagName).toBe('APP-AUDIOBOOK-LISTEN');
+    const bar = byId(mounted.root, 'audiobook-bar') as HTMLElement;
+    expect(byId(bar, 'ab-play-all-btn')).toBeNull();
     expect(textOf(mounted, 'ab-generate-btn')).toBe('Generate all');
     expect(byId(mounted.root, 'ab-generate-btn')?.classList.contains('btn-primary')).toBe(true);
     expect(byId(mounted.root, 'ab-filters')).toBeNull();
@@ -168,6 +186,67 @@ describe('Audiobook production editor', () => {
     expect(row.style.getPropertyValue('--pg')).toBe('');
   });
 
+  it('shows the listen card with the chapter progress', async () => {
+    const mounted = await open();
+    expect(textOf(mounted, 'audiobook-listen-title')).toBe('Listen to the whole chapter');
+    expect(textOf(mounted, 'audiobook-listen-meta')).toMatch(
+      /^8\/12 segments generated · ≈ \d+:\d{2}$/,
+    );
+    expect(listenButton(mounted).disabled).toBe(false);
+    expect(listenButton(mounted).getAttribute('aria-label')).toBe('Listen to the whole chapter');
+    const bar = byId(mounted.root, 'audiobook-listen-progress')?.querySelector('i');
+    expect(bar?.style.width).toBe(`${(8 / 12) * 100}%`);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-off')).toBe(false);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-playing')).toBe(false);
+  });
+
+  it('pauses and resumes the chapter from the listen card', async () => {
+    const mounted = await open();
+    await clickAndSettle(mounted, 'ab-play-all-btn');
+    expect(player().playing()).toBe(true);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-playing')).toBe(true);
+    await clickAndSettle(mounted, 'ab-play-all-btn');
+    expect(player().playing()).toBe(false);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-playing')).toBe(false);
+    expect(player().state().queue.length).toBeGreaterThan(1);
+    await clickAndSettle(mounted, 'ab-play-all-btn');
+    expect(player().playing()).toBe(true);
+  });
+
+  it('restarts the chapter when a single segment is playing', async () => {
+    const mounted = await open();
+    const id = rowWhere((row) => row.state === 'done').block.id;
+    await clickAndSettle(mounted, `ab-play-${id}`);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-playing')).toBe(false);
+    await clickAndSettle(mounted, 'ab-play-all-btn');
+    expect(player().state().queue.length).toBeGreaterThan(1);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-playing')).toBe(true);
+  });
+
+  it('disables the listen card for a chapter without audio', async () => {
+    const mounted = await open(scriptChapterFour);
+    await clickAndSettle(mounted, 'ab-unit-U04');
+    expect(context().canPlay).toBe(false);
+    expect(listenButton(mounted).disabled).toBe(true);
+    expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-off')).toBe(true);
+    expect(textOf(mounted, 'audiobook-listen-meta')).toBe(
+      'Generate segments to listen to the whole chapter',
+    );
+  });
+
+  it('warns when the chapter has no audio to queue', async () => {
+    const mounted = await open();
+    const listen = mounted.fixture.debugElement.query(By.directive(AudiobookListen));
+    vi.spyOn(player(), 'playChapter').mockReturnValue(false);
+    (listen.componentInstance as AudiobookListen).toggle();
+    expect(TestBed.inject(ToastService).items()).toEqual([
+      expect.objectContaining({
+        message: 'This chapter has no audio to listen to yet.',
+        tone: 'warning',
+      }),
+    ]);
+  });
+
   it('plays the whole chapter including pauses', async () => {
     const mounted = await open();
     await clickAndSettle(mounted, 'ab-play-all-btn');
@@ -179,16 +258,10 @@ describe('Audiobook production editor', () => {
     expect(byId(mounted.root, 'ab-player')).not.toBeNull();
   });
 
-  it('disables Generate all while the chapter has blockers', async () => {
+  it('opens Generate from the toolbar even while the chapter has blockers', async () => {
     const mounted = await open();
-    expect((byId(mounted.root, 'ab-generate-btn') as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('opens Generate from the toolbar once the blockers are cleared', async () => {
-    const mounted = await open();
-    service().setSpeakerVoice(PROJECT, TEA_WOMAN, 1);
-    await settle(mounted.fixture);
-    expect((byId(mounted.root, 'ab-generate-btn') as HTMLButtonElement).disabled).toBe(false);
+    expect(context().canGenerate).toBe(false);
+    expect(generateDisabled(mounted)).toBe(false);
     await clickAndSettle(mounted, 'ab-generate-btn');
     expect(TestBed.inject(AudiobookDialogsService).request()).toEqual({
       kind: 'generate',
@@ -248,11 +321,12 @@ describe('Audiobook production editor', () => {
     expect(textOf(mounted, `audiobook-segment-state-${id}`)).toBe('Generating');
     expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-running')).toBe(true);
     expect(byId(mounted.root, `ab-regen-${id}`)?.hasAttribute('disabled')).toBe(true);
-    expect(textOf(mounted, 'ab-stats')).toContain('1 generating');
+    expect(generateDisabled(mounted)).toBe(true);
     await service().settled(PROJECT);
     await settle(mounted.fixture);
     expect(textOf(mounted, `audiobook-segment-state-${id}`)).toBe('Generated');
     expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-done')).toBe(true);
+    expect(generateDisabled(mounted)).toBe(false);
   });
 
   it('selects another chapter from the rail without any lock state', async () => {
@@ -290,7 +364,8 @@ describe('Audiobook production editor', () => {
     await clickAndSettle(mounted, 'ab-unit-U05');
     expect(textOf(mounted, 'audiobook-empty')).toContain('has audio that needs regeneration');
     expect(byId(mounted.root, 'ab-play-all-btn')).toBeNull();
-    expect(textOf(mounted, 'ab-stats')).toContain('0 segments');
+    expect(byId(mounted.root, 'ab-listen')).toBeNull();
+    expect(byId(mounted.root, 'ab-stats')).toBeNull();
   });
 
   it('hosts the voices view and returns to production', async () => {

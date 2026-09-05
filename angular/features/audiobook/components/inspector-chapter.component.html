@@ -65,24 +65,3 @@
     }
   </section>
 }
-<section class="ins-sec ins-actions" data-testid="ab-ins-actions">
-  @if (ctx().unit?.blocks) {
-    @for (format of exportFormats; track format.format) {
-      <button
-        type="button"
-        class="btn"
-        [disabled]="!panel().canExport"
-        [attr.data-testid]="'ab-export-' + format.format"
-        (click)="exportAs(format.format)"
-      >
-        <ds-icon name="download" [size]="16" />
-        {{ format.labelKey | t }}
-      </button>
-    }
-    @if (!panel().canExport) {
-      <span class="field-hint" data-testid="ab-export-hint">
-        {{ 'audiobook.inspector.export.hint' | t }}
-      </span>
-    }
-  }
-</section>

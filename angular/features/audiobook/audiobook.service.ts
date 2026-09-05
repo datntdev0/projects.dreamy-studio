@@ -11,7 +11,7 @@ import { trackPipeline, withoutPipeline, withStarted } from '../pipeline/pipelin
 import { ProjectError } from '../project/project.models';
 import { toProjectError } from '../project/project.rules';
 import { ProjectService } from '../project/project.service';
-import { CastAddResult } from '../scripting/scripting.models';
+import { CastAddResult, ScriptUnit } from '../scripting/scripting.models';
 import { findBlock, findUnit } from '../scripting/scripting.rules';
 import { ScriptingService } from '../scripting/scripting.service';
 import { CloudService } from '../settings/cloud.service';
@@ -19,18 +19,24 @@ import { WorkspaceService } from '../workspace/workspace.service';
 import { buildContext } from './audiobook.context';
 import * as edit from './audiobook.edit';
 // prettier-ignore
-import { AUDIO_KIND, audioJobsOf, audioStartOf, generatePlanOf, pipelineUnits, segmentRequestOf } from './audiobook.generate';
+import { AUDIO_KIND, audioJobsOf, audioStartOf, generateChaptersOf, generatePlanOf, pipelineUnits, segmentRequestOf } from './audiobook.generate';
 // prettier-ignore
-import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportFormat, ExportReply, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
-import { emptyBook, emptyView, REASON_KEYS, unitAudioOf } from './audiobook.rules';
+import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportReply, GenerateChapter, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
+import {
+  blockersOf,
+  DEFAULT_MIX,
+  emptyBook,
+  emptyView,
+  REASON_KEYS,
+  unitAudioOf,
+} from './audiobook.rules';
 
 type Persist =
-  | { kind: 'config' }
-  | { kind: 'mix'; unitId: string }
-  | { kind: 'flag'; unitId: string; blockId: string };
+  { kind: 'config' } | { kind: 'mix' } | { kind: 'flag'; unitId: string; blockId: string };
 
 function normalizeBook(stored: Partial<Audiobook> | null): Audiobook {
-  return { ...emptyBook(), ...stored };
+  const book = { ...emptyBook(), ...stored };
+  return { ...book, mix: { ...DEFAULT_MIX, ...book.mix } };
 }
 
 function configOf(book: Audiobook): AudiobookConfig {
@@ -43,6 +49,10 @@ function sameJob(left: GenerationJob, right: GenerationJob): boolean {
 
 function envOf(ctx: AudiobookContext): AudioEnv {
   return { book: ctx.book, cast: ctx.cast, voices: ctx.voices };
+}
+
+function unitsIn(ctx: AudiobookContext, unitIds: string[]): ScriptUnit[] {
+  return ctx.script.units.filter((unit) => unit.blocks !== null && unitIds.includes(unit.id));
 }
 
 @Injectable({ providedIn: 'root' })
@@ -60,6 +70,7 @@ export class AudiobookService {
   private readonly singles = signal<Record<number, GenerationJob[]>>({});
   private readonly pipelines = signal<PipelineSnapshot[]>([]);
   private readonly finishedIds = new Set<number>();
+  private readonly pendingExports = new Map<number, string[]>();
   private readonly loadedIds = signal<Record<number, true>>({});
   private readonly chains = new Map<number, Promise<void>>();
   private readonly generations = new Map<number, Promise<void>>();
@@ -109,12 +120,18 @@ export class AudiobookService {
     });
   }
 
-  generatePlanOf(projectId: number): GeneratePlan | null {
+  generateChaptersOf(projectId: number): GenerateChapter[] {
     const ctx = this.contextOf(projectId);
-    if (!ctx || !ctx.unit || !ctx.unit.blocks) {
+    return ctx ? generateChaptersOf(envOf(ctx), ctx.availability, ctx.script.units) : [];
+  }
+
+  generatePlanOf(projectId: number, unitIds: string[]): GeneratePlan | null {
+    const ctx = this.contextOf(projectId);
+    if (!ctx) {
       return null;
     }
-    return generatePlanOf(envOf(ctx), ctx.availability, this.cloud.accounts(), ctx.unit);
+    const units = unitsIn(ctx, unitIds);
+    return generatePlanOf(envOf(ctx), ctx.availability, this.cloud.accounts(), units);
   }
 
   messageText(message: AudiobookMessage): string {
@@ -223,13 +240,10 @@ export class AudiobookService {
   }
 
   setMix(projectId: number, field: MixField, value: number): void {
-    const unit = this.contextOf(projectId)?.unit;
-    if (unit && unit.blocks) {
-      this.mutate(projectId, (book) => edit.setMix(book, unit.id, field, value), {
-        persist: { kind: 'mix', unitId: unit.id },
-        progress: false,
-      });
-    }
+    this.mutate(projectId, (book) => edit.setMix(book, field, value), {
+      persist: { kind: 'mix' },
+      progress: false,
+    });
   }
 
   flagSegment(projectId: number, blockId: string, note: string): boolean {
@@ -241,13 +255,16 @@ export class AudiobookService {
     return this.setFlag(projectId, blockId, '');
   }
 
-  async generate(projectId: number): Promise<number> {
+  async generate(projectId: number, unitIds: string[], exportAfter = false): Promise<number> {
     const ctx = this.contextOf(projectId);
-    if (!ctx || !ctx.unit || !ctx.canGenerate) {
+    if (!ctx) {
       return 0;
     }
-    const start = audioStartOf(envOf(ctx), ctx.unit.id, ctx.todo);
+    const start = audioStartOf(envOf(ctx), this.startableUnits(ctx, unitIds));
     if (start.tasks.length === 0) {
+      if (exportAfter) {
+        await this.exportAndAnnounce(projectId, unitIds);
+      }
       return 0;
     }
     await this.flush(projectId);
@@ -260,6 +277,9 @@ export class AudiobookService {
         onEvent: this.ipc.channel<PipelineEvent>(this.handleAudioEvent.bind(this, projectId)),
       });
       this.trackStarted(snapshot);
+      if (exportAfter) {
+        this.pendingExports.set(snapshot.id, unitIds);
+      }
       return start.tasks.length;
     } catch (cause) {
       this.showFailure(cause);
@@ -283,20 +303,12 @@ export class AudiobookService {
     return 'started';
   }
 
-  async exportUnit(projectId: number, format: ExportFormat): Promise<string | null> {
-    const ctx = this.contextOf(projectId);
-    if (!ctx || !ctx.unit || !ctx.chapterPanel.canExport) {
-      return null;
-    }
+  async exportUnits(projectId: number, unitIds: string[]): Promise<ExportReply | null> {
+    await this.flush(projectId);
     try {
-      const reply = await this.ipc.invoke<ExportReply>('audiobook_export', {
-        projectId,
-        unitId: ctx.unit.id,
-        format,
-      });
-      return reply.path;
+      return await this.ipc.invoke<ExportReply>('audiobook_export', { projectId, unitIds });
     } catch (cause) {
-      this.error.set(toProjectError(cause));
+      this.toast('audiobook.export.failed', { reason: toProjectError(cause).detail }, 'danger');
       return null;
     }
   }
@@ -307,6 +319,7 @@ export class AudiobookService {
     this.singles.set({});
     this.pipelines.set([]);
     this.finishedIds.clear();
+    this.pendingExports.clear();
     this.loadedIds.set({});
     this.chains.clear();
     this.generations.clear();
@@ -372,22 +385,18 @@ export class AudiobookService {
     if (persist.kind === 'config') {
       await this.ipc.invoke<void>('audiobook_config_save', { projectId, config: configOf(book) });
     } else if (persist.kind === 'mix') {
-      await this.writeMix(projectId, unitAudioOf(book, persist.unitId).mix, persist.unitId);
+      await this.writeMix(projectId, book.mix);
     } else {
       const record = unitAudioOf(book, persist.unitId).audio[persist.blockId];
       await this.writeFlag(projectId, persist.unitId, persist.blockId, record);
     }
   }
 
-  private async writeMix(projectId: number, mix: MixSettings, unitId: string): Promise<void> {
-    const saved = await this.ipc.invoke<MixSettings>('audiobook_mix_save', {
-      projectId,
-      unitId,
-      mix,
-    });
+  private async writeMix(projectId: number, mix: MixSettings): Promise<void> {
+    const saved = await this.ipc.invoke<MixSettings>('audiobook_mix_save', { projectId, mix });
     const book = this.bookOf(projectId);
-    if (book && saved && unitAudioOf(book, unitId).mix === mix) {
-      this.storeBook(projectId, edit.putMix(book, unitId, saved));
+    if (book && saved && book.mix === mix) {
+      this.storeBook(projectId, edit.putMix(book, saved));
     }
   }
 
@@ -460,6 +469,17 @@ export class AudiobookService {
     }
   }
 
+  private startableUnits(ctx: AudiobookContext, unitIds: string[]): ScriptUnit[] {
+    return unitsIn(ctx, unitIds).filter(this.isStartable.bind(this, ctx));
+  }
+
+  private isStartable(ctx: AudiobookContext, unit: ScriptUnit): boolean {
+    return (
+      !this.isGenerating(ctx.projectId, unit.id) &&
+      blockersOf(envOf(ctx), ctx.availability, unit).length === 0
+    );
+  }
+
   private setSingles(projectId: number, list: GenerationJob[]): void {
     this.singles.set({ ...this.singles(), [projectId]: list });
   }
@@ -503,6 +523,27 @@ export class AudiobookService {
     await Promise.all(pipelineUnits(pipeline).map(this.refreshUnit.bind(this, projectId)));
     await this.projects.refreshModules(projectId);
     this.announceFinished(projectId, pipeline);
+    await this.exportFinished(projectId, pipeline);
+  }
+
+  private async exportFinished(projectId: number, pipeline: PipelineSnapshot): Promise<void> {
+    const unitIds = this.pendingExports.get(pipeline.id);
+    this.pendingExports.delete(pipeline.id);
+    if (!unitIds) {
+      return;
+    }
+    if (pipeline.failed > 0 || pipeline.status === 'cancelled') {
+      this.toast('audiobook.export.skipped', {}, 'warning');
+      return;
+    }
+    await this.exportAndAnnounce(projectId, unitIds);
+  }
+
+  private async exportAndAnnounce(projectId: number, unitIds: string[]): Promise<void> {
+    const reply = await this.exportUnits(projectId, unitIds);
+    if (reply) {
+      this.toast('audiobook.export.done', { wav: reply.wav, srt: reply.srt }, 'success');
+    }
   }
 
   private announceFinished(projectId: number, pipeline: PipelineSnapshot): void {
@@ -533,9 +574,7 @@ export class AudiobookService {
   private mergeUnit(projectId: number, unitId: string, unit: UnitAudio): void {
     const book = this.bookOf(projectId);
     if (book && unit) {
-      const local = book.units[unitId];
-      const merged = { ...unit, mix: local ? local.mix : unit.mix };
-      this.storeBook(projectId, edit.putUnit(book, unitId, merged));
+      this.storeBook(projectId, edit.putUnit(book, unitId, { audio: unit.audio, meta: unit.meta }));
     }
   }
 

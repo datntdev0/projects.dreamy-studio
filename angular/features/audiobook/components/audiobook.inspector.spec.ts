@@ -2,14 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { ProjectService } from '@features/project/project.service';
 import { TabsService } from '@layout/tabs.service';
 import { LanguageService } from '@shared/language/language.service';
-import { ToastService } from '@shared/toast/toast.service';
 import { installAudiobookBackend, prepareEngines } from '@testing/audiobook';
 import { byId, click, type } from '@testing/dom';
 import { mount, Mounted, settle } from '@testing/exercise';
 import { setupApp } from '@testing/service';
 import { describe, expect, it } from 'vitest';
 
-import { AudiobookContext } from '../audiobook.models';
+import { MixSettings } from '../audiobook.models';
 import { AudiobookService } from '../audiobook.service';
 import { AudiobookInspector } from './inspector.component';
 
@@ -33,16 +32,16 @@ function audiobook(): AudiobookService {
   return TestBed.inject(AudiobookService);
 }
 
-function context(): AudiobookContext {
-  return audiobook().contextOf(PROJECT) as AudiobookContext;
-}
-
 function textOf(mounted: Mounted<unknown>, id: string): string {
   return (byId(mounted.root, id)?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
-function disabled(mounted: Mounted<unknown>, id: string): boolean {
-  return (byId(mounted.root, id) as HTMLButtonElement).disabled;
+function inputValue(mounted: Mounted<unknown>, id: string): string {
+  return (byId(mounted.root, id) as HTMLInputElement).value;
+}
+
+function mix(): MixSettings {
+  return audiobook().bookOf(PROJECT)?.mix as MixSettings;
 }
 
 async function showUnit(mounted: Mounted<unknown>, unitId: string): Promise<void> {
@@ -58,7 +57,7 @@ describe('AudiobookInspector (chapter panel)', () => {
     expect(byId(mounted.root, 'audiobook-inspector-chapter-unlocked')).toBeNull();
     expect(textOf(mounted, 'audiobook-inspector-chapter-generated')).toMatch(/^\d+\/\d+$/);
     expect(textOf(mounted, 'audiobook-inspector-chapter-duration')).toMatch(/^≈ \d+:\d{2}$/);
-    for (const field of ['gap', 'intro', 'outro', 'vol']) {
+    for (const field of ['gap', 'intro', 'outro', 'sentence', 'vol']) {
       expect(byId(mounted.root, `ab-mix-${field}`)).not.toBeNull();
     }
     expect(byId(mounted.root, 'ab-ins-blockers')).not.toBeNull();
@@ -94,50 +93,43 @@ describe('AudiobookInspector (chapter panel)', () => {
     const mounted = await openInspector();
     type(mounted.root, 'ab-mix-gap', '9');
     await settle(mounted.fixture);
-    expect(context().audio?.mix.gap).toBe(5);
-    expect((byId(mounted.root, 'ab-mix-gap') as HTMLInputElement).value).toBe('5');
+    expect(mix().gap).toBe(5);
+    expect(inputValue(mounted, 'ab-mix-gap')).toBe('5');
     type(mounted.root, 'ab-mix-vol', '-40');
     await settle(mounted.fixture);
-    expect(context().audio?.mix.vol).toBe(-12);
+    expect(mix().vol).toBe(-12);
     type(mounted.root, 'ab-mix-intro', '1.5');
     await settle(mounted.fixture);
-    expect(context().audio?.mix.intro).toBe(1.5);
+    expect(mix().intro).toBe(1.5);
     type(mounted.root, 'ab-mix-outro', 'abc');
     await settle(mounted.fixture);
-    expect(context().audio?.mix.outro).toBe(0);
-    expect((byId(mounted.root, 'ab-mix-outro') as HTMLInputElement).value).toBe('0');
-  });
-});
-
-describe('AudiobookInspector (chapter actions)', () => {
-  it('blocks export until every segment is generated', async () => {
-    const mounted = await openInspector();
-    expect(disabled(mounted, 'ab-export-wav')).toBe(true);
-    expect(disabled(mounted, 'ab-export-srt')).toBe(true);
-    expect(textOf(mounted, 'ab-export-hint')).toBe('Generate every segment before exporting.');
+    expect(mix().outro).toBe(0);
+    expect(inputValue(mounted, 'ab-mix-outro')).toBe('0');
   });
 
-  it('exports a complete chapter as WAV and SRT', async () => {
+  it('edits the pause between sentences within its range', async () => {
     const mounted = await openInspector();
+    expect(inputValue(mounted, 'ab-mix-sentence')).toBe('0.3');
+    expect(textOf(mounted, 'audiobook-inspector-chapter-mix-hint')).toContain(
+      'Applies to every chapter of this project.',
+    );
+    type(mounted.root, 'ab-mix-sentence', '0.55');
+    await settle(mounted.fixture);
+    expect(mix().sentence).toBe(0.55);
+    type(mounted.root, 'ab-mix-sentence', '7');
+    await settle(mounted.fixture);
+    expect(mix().sentence).toBe(2);
+    expect(inputValue(mounted, 'ab-mix-sentence')).toBe('2');
+  });
+
+  it('shares one mix across every chapter of the project', async () => {
+    const mounted = await openInspector();
+    type(mounted.root, 'ab-mix-gap', '2.5');
+    await settle(mounted.fixture);
     await showUnit(mounted, 'U01');
-    expect(byId(mounted.root, 'ab-export-hint')).toBeNull();
-    expect(textOf(mounted, 'ab-export-wav')).toBe('WAV');
-    click(mounted.root, 'ab-export-wav');
-    await audiobook().flush(PROJECT);
-    await settle(mounted.fixture);
-    click(mounted.root, 'ab-export-srt');
-    await settle(mounted.fixture);
-    const toasts = TestBed.inject(ToastService).items();
-    expect(toasts.map((toast) => toast.message)).toEqual([
-      `Exported to exports/${PROJECT}/U01.wav`,
-      `Exported to exports/${PROJECT}/U01.srt`,
-    ]);
-  });
-
-  it('hides the chapter actions for a chapter without a script', async () => {
-    const mounted = await openInspector();
-    await showUnit(mounted, 'U04');
+    expect(inputValue(mounted, 'ab-mix-gap')).toBe('2.5');
     expect(byId(mounted.root, 'ab-export-wav')).toBeNull();
+    expect(byId(mounted.root, 'ab-export-hint')).toBeNull();
   });
 });
 

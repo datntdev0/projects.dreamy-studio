@@ -45,11 +45,6 @@
         />
       </span>
     }
-    <span class="sc-stats mono" data-testid="sc-stats">
-      @for (part of stats(); track $index) {
-        <span>{{ part }}</span>
-      }
-    </span>
     <span class="spacer"></span>
     @if (unit.blocks) {
       @if (ctx().hasDefault) {

@@ -110,7 +110,6 @@ describe('ScriptingService', () => {
       expect(ctx?.rail[0].active).toBe(true);
       expect(ctx?.rail[2].active).toBe(false);
       expect(ctx?.hasDefault).toBe(true);
-      expect(ctx?.stats).toMatchObject({ blocks: 13, scenes: null });
       expect(ctx?.chapterMax).toBe(12);
       expect(ctx?.kb.available).toBe(true);
       expect(ctx?.places).toContain('Tháp Đèn');

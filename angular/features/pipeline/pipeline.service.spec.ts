@@ -147,7 +147,7 @@ describe('PipelineService with audio pipelines', () => {
     await audiobook.load(1);
     audiobook.setSpeakerVoice(1, 'E16', 1);
     vi.useFakeTimers();
-    await audiobook.generate(1);
+    await audiobook.generate(1, [audiobook.contextOf(1)?.unit?.id ?? '']);
     const [audio] = pipelines.running();
     expect(audio).toMatchObject({ kind: 'audio', projectId: 1, novelId: null });
     const name = TestBed.inject(ProjectService).projectById(1)?.name;

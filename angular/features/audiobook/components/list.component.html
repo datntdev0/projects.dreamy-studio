@@ -1,3 +1,6 @@
+@if (ctx().rows.length > 0) {
+  <app-audiobook-listen [ctx]="ctx()" />
+}
 @for (row of ctx().rows; track row.kind === 'segment' ? row.segment.block.id : row.pause.block.id) {
   @if (row.kind === 'segment') {
     <app-audiobook-segment [projectId]="ctx().projectId" [row]="row.segment" />

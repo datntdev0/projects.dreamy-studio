@@ -1,3 +1,5 @@
+import { TargetLang } from '@features/novel/novel.models';
+
 export type ProjectTemplateId = 'audiobook' | 'filmseries' | 'blank';
 
 export type ProjectSrcKind = 'original' | 'translation';
@@ -32,9 +34,12 @@ export interface ProjectInput {
   description: string;
   novelId: number | null;
   srcKind: ProjectSrcKind | null;
+  srcLang: TargetLang | null;
   rangeFrom: number | null;
   rangeTo: number | null;
 }
+
+export type ProjectTextVersion = 'original' | TargetLang;
 
 export interface ProjectPatch {
   name?: string;

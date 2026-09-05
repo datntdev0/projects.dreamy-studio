@@ -86,10 +86,13 @@
             class="select"
             [disabled]="!selectedNovel()"
             data-testid="project-create-version-select"
+            (change)="onVersion($event)"
           >
-            @if (selectedNovel()) {
-            <option>{{ "project.source.original" | t }}</option>
-            } @else {
+            @for (version of versions(); track version) {
+            <option [value]="version" [selected]="form().version === version">
+              {{ versionLabel(version) }}
+            </option>
+            } @empty {
             <option>—</option>
             }
           </select>

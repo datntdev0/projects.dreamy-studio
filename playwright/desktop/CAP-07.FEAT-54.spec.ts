@@ -1,6 +1,6 @@
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, BLANK_PROJECT, CHAPTERS, DEFAULT_CREATED, dragBy, generateDefault, LOOSE_PROJECT, NO_SCRIPT, NOT_DRAFTED, openAudiobook, openScripting, openScriptingOf, paragraphsOf, PICK_TITLE, PRESET_AUDIOBOOK, PRESET_BADGE, PRESET_FILM, RAIL_MAX, RAIL_MIN, railMeta, railWidth, RESET_ALL, RESET_INTRO, RESET_WARNING, SCRATCH_ONLY, SINGLE_PROJECT, startWriting, statsFor, TYPE_HEADING, TYPE_NARRATION, UNNAMED, VI_SECOND_TITLE, VI_TITLE, VIET_PROJECT } from '../scripts/scripting.ts';
+import { AUDIO_PROJECT, BLANK_PROJECT, CHAPTERS, DEFAULT_CREATED, dragBy, generateDefault, LOOSE_PROJECT, NO_SCRIPT, NOT_DRAFTED, openAudiobook, openScripting, openScriptingOf, paragraphsOf, PICK_TITLE, PRESET_AUDIOBOOK, PRESET_BADGE, PRESET_FILM, RAIL_MAX, RAIL_MIN, railMeta, railWidth, RESET_ALL, RESET_INTRO, RESET_WARNING, SCRATCH_ONLY, SINGLE_PROJECT, startWriting, statsFor, TYPE_HEADING, TYPE_NARRATION, UNNAMED, VI_SECOND_TITLE, VI_TITLE, VIET_PROJECT, WHOLE_PROJECT } from '../scripts/scripting.ts';
 
 const EDITED = 'Lin Feng waited at the gate.';
 
@@ -27,6 +27,13 @@ test.describe('CAP-07 Pre-Production', () => {
           await expect(unit).toContainText(String(index + 1).padStart(2, '0'));
           await expect(unit).toContainText(chapter.title);
         }
+      });
+
+      await test.step('creates one entry per chapter of the novel for a project taking all chapters', async () => {
+        await openScripting(ui, WHOLE_PROJECT);
+        await expect(scripting.units).toHaveCount(CHAPTERS.length);
+        await expect(scripting.unit(CHAPTERS.length)).toContainText(CHAPTERS.at(-1)?.title ?? '');
+        await expect(scripting.unit(1)).toContainText(NOT_DRAFTED);
       });
 
       await test.step('takes the chapter titles from the translation of a project bound to the translated text', async () => {

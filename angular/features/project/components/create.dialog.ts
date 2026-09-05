@@ -2,7 +2,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
 import { Button } from '@components/button';
 import { Icon } from '@components/icon';
+import { NovelSummary } from '@features/novel/novel.models';
 import { NovelService } from '@features/novel/novel.service';
+import { targetsOf, translatedCount } from '@features/novel/novel.translation.rules';
+import { NovelTranslationService } from '@features/novel/novel.translation.service';
 import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
@@ -11,7 +14,7 @@ import { ToastService } from '@shared/toast/toast.service';
 import { fieldChecked, fieldValue } from '@shared/utils/dom';
 
 import { ProjectDialogsService } from '../project.dialogs.service';
-import { ProjectInput, ProjectTemplateId } from '../project.models';
+import { ProjectInput, ProjectTemplateId, ProjectTextVersion } from '../project.models';
 // prettier-ignore
 import { PROJECT_TEMPLATES, toProjectError, validateProjectName, validateRange } from '../project.rules';
 import { ProjectService } from '../project.service';
@@ -20,6 +23,7 @@ interface CreateForm {
   name: string;
   template: ProjectTemplateId;
   novelId: number | null;
+  version: ProjectTextVersion;
   allChapters: boolean;
   rangeFrom: number | null;
   rangeTo: number | null;
@@ -29,6 +33,7 @@ const EMPTY_FORM: CreateForm = {
   name: '',
   template: 'audiobook',
   novelId: null,
+  version: 'original',
   allChapters: true,
   rangeFrom: 1,
   rangeTo: 1,
@@ -44,6 +49,7 @@ const EMPTY_FORM: CreateForm = {
 export class ProjectCreateDialog {
   private readonly projects = inject(ProjectService);
   readonly novels = inject(NovelService);
+  private readonly translations = inject(NovelTranslationService);
   private readonly dialogs = inject(ProjectDialogsService);
   private readonly tabs = inject(TabsService);
   private readonly toasts = inject(ToastService);
@@ -58,11 +64,25 @@ export class ProjectCreateDialog {
   readonly formError = signal('');
   readonly templates = PROJECT_TEMPLATES;
   readonly selectedNovel = computed(this.buildSelectedNovel.bind(this));
+  readonly versions = computed(this.buildVersions.bind(this));
 
   constructor() {
     effect(this.syncOpen.bind(this));
     effect(this.focusName.bind(this));
     effect(this.loadNovels.bind(this));
+    effect(this.loadTranslations.bind(this));
+  }
+
+  versionLabel(version: ProjectTextVersion): string {
+    if (version === 'original') {
+      return this.languageService.translate('project.source.original');
+    }
+    return `${this.languageService.translate('project.source.translation')} ${version}`;
+  }
+
+  onVersion(event: Event): void {
+    const version = fieldValue(event) as ProjectTextVersion;
+    this.form.set({ ...this.form(), version });
   }
 
   close(): void {
@@ -87,6 +107,7 @@ export class ProjectCreateDialog {
     this.form.set({
       ...this.form(),
       novelId,
+      version: 'original',
       allChapters: true,
       rangeFrom: 1,
       rangeTo: novel?.chapterCount ?? 1,
@@ -159,10 +180,39 @@ export class ProjectCreateDialog {
       template: form.template,
       description: '',
       novelId: novel?.id ?? null,
-      srcKind: novel ? 'original' : null,
+      srcKind: novel ? (form.version === 'original' ? 'original' : 'translation') : null,
+      srcLang: novel && form.version !== 'original' ? form.version : null,
       rangeFrom: novel && !form.allChapters ? form.rangeFrom : null,
       rangeTo: novel && !form.allChapters ? form.rangeTo : null,
     };
+  }
+
+  private buildVersions(): ProjectTextVersion[] {
+    const novel = this.selectedNovel();
+    if (!novel) {
+      return [];
+    }
+    const translated = targetsOf(novel.lang).filter(
+      (target) => translatedCount(this.translations.of(novel.id, target)) > 0,
+    );
+    return ['original', ...translated];
+  }
+
+  private loadTranslations(): void {
+    const novel = this.selectedNovel();
+    if (novel) {
+      untracked(this.ensureTranslations.bind(this, novel));
+    }
+  }
+
+  private ensureTranslations(novel: NovelSummary): void {
+    for (const target of targetsOf(novel.lang)) {
+      void this.translations.ensure(novel.id, target).catch(this.ignore);
+    }
+  }
+
+  private ignore(): void {
+    return;
   }
 
   private buildSelectedNovel() {

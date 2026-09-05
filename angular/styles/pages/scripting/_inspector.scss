@@ -41,9 +41,16 @@ app-scripting-inspector-cast {
 }
 .sc-cast-r {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto auto;
   gap: var(--sp-sm);
   align-items: center;
+}
+.sc-cast-r > .mono {
+  grid-column: 4;
+  text-align: end;
+}
+.sc-cast-r > .btn {
+  grid-column: 5;
 }
 .sc-cast-r .input {
   height: 24px;

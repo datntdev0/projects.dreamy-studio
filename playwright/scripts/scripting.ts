@@ -22,6 +22,7 @@ export const VIET_PROJECT = 'Azure Viet';
 export const LOOSE_PROJECT = 'Loose Audio';
 export const BLANK_PROJECT = 'Blank Draft';
 export const SINGLE_PROJECT = 'Azure Single';
+export const WHOLE_PROJECT = 'Azure Whole';
 
 export const PROJECT_IDS: Readonly<Record<string, number>> = {
   [AUDIO_PROJECT]: 1,
@@ -29,6 +30,7 @@ export const PROJECT_IDS: Readonly<Record<string, number>> = {
   [LOOSE_PROJECT]: 3,
   [BLANK_PROJECT]: 4,
   [SINGLE_PROJECT]: 5,
+  [WHOLE_PROJECT]: 6,
 };
 
 export const HERO = 'Lin Feng';
@@ -119,6 +121,7 @@ const PROJECTS: readonly SeedProject[] = [
   { name: LOOSE_PROJECT },
   { name: BLANK_PROJECT, template: 'blank' },
   { name: SINGLE_PROJECT, novel: SAMPLE_TITLE, range: [3, 4] },
+  { name: WHOLE_PROJECT, novel: SAMPLE_TITLE },
 ];
 
 export interface ModuleStateRecord {

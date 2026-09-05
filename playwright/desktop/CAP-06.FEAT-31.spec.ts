@@ -3,6 +3,9 @@ import { existsSync } from 'node:fs';
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
 import { AUDIOBOOK, AUDIOBOOK_BLURB, BLANK, BLANK_BLURB, FILMSERIES, FILMSERIES_BLURB, HARBOR_CHAPTERS, openProjectsView, ORIGINAL, PROJECT_CREATED, PROJECT_NAME_REQUIRED, projectFolder, RANGE_INVALID, readProjects, removeNovel,SOURCE_NOVEL_NOT_FOUND } from '../scripts/project.ts';
+import { seedTranslation } from '../scripts/translation.ts';
+
+const TRANSLATION_VI = 'Translation VI';
 
 test.describe('CAP-06 Project Management', () => {
   test.describe('FEAT-31 Project Creation', () => {
@@ -118,6 +121,41 @@ test.describe('CAP-06 Project Management', () => {
         await expect(project.create.error).toHaveText(SOURCE_NOVEL_NOT_FOUND);
         await expect(project.create.panel).toBeVisible();
         expect(readProjects(folder)).toHaveLength(1);
+      });
+    });
+
+    test('US-0090 creates a project from a translated text version of the novel', async ({
+      ui,
+      picker,
+      sandbox,
+    }) => {
+      const folder = await openProjectsView(ui, picker, sandbox, {
+        novels: [{ title: 'Harbor Lights', lang: 'ZH', chapters: HARBOR_CHAPTERS }],
+      });
+      await seedTranslation(folder, {
+        novel: 'Harbor Lights',
+        target: 'VI',
+        chapters: [{ chapter: 1 }, { chapter: 2 }],
+      });
+      const project = ui.main.project;
+      await project.catalog.create.click();
+
+      await test.step('lists the original and every target language that has translated chapters', async () => {
+        await project.create.novel.selectOption({ label: 'Harbor Lights' });
+        await expect(project.create.version.locator('option')).toHaveText([
+          ORIGINAL,
+          TRANSLATION_VI,
+        ]);
+      });
+
+      await test.step('creates the project from the chosen translation', async () => {
+        await project.create.name.fill('Harbor Viet');
+        await project.create.version.selectOption({ label: TRANSLATION_VI });
+        await project.create.submit.click();
+
+        await expect(project.create.panel).toBeHidden();
+        await expect(project.panel.source).toContainText(TRANSLATION_VI);
+        expect(readProjects(folder)[0]).toMatchObject({ srcKind: 'translation', srcLang: 'VI' });
       });
     });
   });

@@ -25,6 +25,7 @@ fn input(name: &str) -> ProjectInput {
         description: String::new(),
         novel_id: None,
         src_kind: None,
+        src_lang: None,
         range_from: None,
         range_to: None,
     }
@@ -131,6 +132,26 @@ fn validates_novel_range_and_marks_deleted_novels_missing() {
         service.create(nonexistent).unwrap_err().code,
         ProjectErrorCode::NovelNotFound
     );
+}
+
+#[test]
+fn a_translated_source_keeps_the_target_language() {
+    let (dir, service) = workspace();
+    let novel_id = insert_novel(&dir, 2);
+    let mut request = input("Translated");
+    request.novel_id = Some(novel_id);
+    request.src_kind = Some("translation".to_string());
+    for invalid in [None, Some("ZH"), Some("FR")] {
+        request.src_lang = invalid.map(str::to_string);
+        assert_eq!(
+            service.create(request.clone()).unwrap_err().code,
+            ProjectErrorCode::InvalidInput
+        );
+    }
+    request.src_lang = Some("vi".to_string());
+    let project = service.create(request).unwrap();
+    assert_eq!(project.src_kind.as_deref(), Some("translation"));
+    assert_eq!(project.src_lang.as_deref(), Some("VI"));
 }
 
 #[test]

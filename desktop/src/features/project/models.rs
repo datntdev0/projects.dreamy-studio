@@ -35,6 +35,8 @@ pub struct ProjectInput {
     #[serde(default)]
     pub src_kind: Option<String>,
     #[serde(default)]
+    pub src_lang: Option<String>,
+    #[serde(default)]
     pub range_from: Option<i64>,
     #[serde(default)]
     pub range_to: Option<i64>,

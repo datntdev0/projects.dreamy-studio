@@ -18,7 +18,7 @@ import { BlockPatch, BlockType, CastAddResult, CastMember, KbSnapshot, MoveDirec
 // prettier-ignore
 import { activeUnit, chaptersOf, emptyView, findBlock, findUnit, nextChapterRange, nextUnitChapters } from './scripting.rules';
 // prettier-ignore
-import { chapterParagraphs, chapterTitleOf, initialScript, unitSource, usesTranslation } from './scripting.source';
+import { chapterParagraphs, chapterTitleOf, initialScript, needsChapterUnits, projectChapters, unitSource, usesTranslation } from './scripting.source';
 
 type PersistKind = 'unit' | 'script' | 'cast';
 
@@ -110,7 +110,7 @@ export class ScriptingService {
       kb: this.kbOf(project),
       hasNovel: project.novelId !== null,
       chapters: this.chapterMap(project, script),
-      novelChapters: project.novelId === null ? 0 : this.novels.chaptersOf(project.novelId).length,
+      novelChapters: this.novelChapters(project),
     });
   }
 
@@ -131,7 +131,10 @@ export class ScriptingService {
       const project = this.requireProject(projectId);
       await this.loadNovelData(project);
       const stored = await this.ipc.invoke<Script | null>('scripting_get', { projectId });
-      const script = stored ?? (await this.createScript(project));
+      const script =
+        stored && !needsChapterUnits(project, stored, this.novelChapters(project))
+          ? stored
+          : await this.createScript(project);
       this.scripts.set({ ...this.scripts(), [projectId]: script });
       this.loadedIds.set({ ...this.loadedIds(), [projectId]: true });
       await this.ensureSources(projectId);
@@ -224,7 +227,7 @@ export class ScriptingService {
     if (!script || !project || !script.cfg.freeUnits) {
       return null;
     }
-    const total = project.novelId === null ? 0 : this.novels.chaptersOf(project.novelId).length;
+    const total = this.novelChapters(project);
     const next = edit.addUnitWith(script, nextUnitChapters(script, total));
     const unit = next.units[next.units.length - 1];
     this.commit(
@@ -544,7 +547,7 @@ export class ScriptingService {
   }
 
   private chapterMax(project: ProjectSummary): number {
-    const total = project.novelId === null ? 0 : this.novels.chaptersOf(project.novelId).length;
+    const total = this.novelChapters(project);
     return total || 99;
   }
 
@@ -623,7 +626,7 @@ export class ScriptingService {
   }
 
   private async createScript(project: ProjectSummary): Promise<Script> {
-    const script = initialScript(project, this.titlesOf(project));
+    const script = initialScript(project, this.titlesOf(project), this.novelChapters(project));
     await this.ipc.invoke<void>('scripting_save', { projectId: project.id, script });
     return script;
   }
@@ -631,10 +634,11 @@ export class ScriptingService {
   private titlesOf(project: ProjectSummary): Record<number, string> {
     const titles: Record<number, string> = {};
     const novelId = project.novelId;
-    if (novelId === null || project.rangeFrom === null || project.rangeTo === null) {
+    const range = projectChapters(project, this.novelChapters(project));
+    if (novelId === null || range === null) {
       return titles;
     }
-    for (let seq = project.rangeFrom; seq <= project.rangeTo; seq += 1) {
+    for (let seq = range[0]; seq <= range[1]; seq += 1) {
       const row = this.novels.chaptersOf(novelId).find((item) => item.seq === seq);
       titles[seq] = chapterTitleOf({
         seq,
@@ -645,6 +649,10 @@ export class ScriptingService {
       });
     }
     return titles;
+  }
+
+  private novelChapters(project: ProjectSummary): number {
+    return project.novelId === null ? 0 : this.novels.chaptersOf(project.novelId).length;
   }
 
   private requireProject(projectId: number): ProjectSummary {

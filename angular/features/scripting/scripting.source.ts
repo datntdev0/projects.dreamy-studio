@@ -60,18 +60,45 @@ export function chapterTitleOf(input: ChapterTitleInput): string {
   return translated || input.originalTitle || `Chapter ${input.seq}`;
 }
 
-function chapterBounds(project: ProjectSummary): ChapterRange | null {
-  return project.rangeFrom !== null && project.rangeTo !== null
-    ? [project.rangeFrom, project.rangeTo]
-    : null;
+export function projectChapters(
+  project: ProjectSummary,
+  novelChapters: number,
+): ChapterRange | null {
+  if (project.rangeFrom !== null && project.rangeTo !== null) {
+    return [project.rangeFrom, project.rangeTo];
+  }
+  return project.novelId !== null && novelChapters > 0 ? [1, novelChapters] : null;
 }
 
-export function initialScript(project: ProjectSummary, titles: Record<number, string>): Script {
+export function needsChapterUnits(
+  project: ProjectSummary,
+  script: Script,
+  novelChapters: number,
+): boolean {
+  const [unit, ...rest] = script.units;
+  return (
+    presetOfTemplate(project.template) === 'audiobook' &&
+    projectChapters(project, novelChapters) !== null &&
+    rest.length === 0 &&
+    unit !== undefined &&
+    unit.ch === null &&
+    unit.chs === null &&
+    unit.blocks === null &&
+    script.extraCast.length === 0 &&
+    !script.choose
+  );
+}
+
+export function initialScript(
+  project: ProjectSummary,
+  titles: Record<number, string>,
+  novelChapters = 0,
+): Script {
   const preset = presetOfTemplate(project.template);
   const base = newScript(preset ?? 'audiobook', { choose: preset === null });
-  const range = chapterBounds(project);
+  const range = projectChapters(project, novelChapters);
   if (preset === 'film') {
-    return appendUnit(base, { chs: range });
+    return appendUnit(base, { chs: projectChapters(project, 0) });
   }
   if (!range) {
     return appendUnit(base);

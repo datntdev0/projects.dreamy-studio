@@ -13,6 +13,7 @@ use crate::features::project::models::ProjectSummary;
 use crate::features::project::repository::NewProject;
 use crate::features::project::repository::ProjectRepository;
 use crate::features::project::repository::ProjectRow;
+use crate::features::translation::models::TranslationTarget;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
@@ -150,7 +151,7 @@ impl ProjectWorkspace {
                         "chapter range is outside the novel",
                     ));
                 }
-                Some(lang)
+                Some(source_lang(src_kind, &lang, input.src_lang.as_deref())?)
             }
             None => None,
         };
@@ -337,6 +338,23 @@ fn require_summary(repo: &ProjectRepository, id: i64) -> ProjectResult<ProjectSu
 fn require_project(repo: &ProjectRepository, id: i64) -> ProjectResult<ProjectRow> {
     repo.find_project(id)?
         .ok_or_else(|| ProjectError::not_found(format!("project {id} does not exist")))
+}
+
+fn source_lang(
+    kind: Option<&str>,
+    novel_lang: &str,
+    requested: Option<&str>,
+) -> ProjectResult<String> {
+    if kind != Some("translation") {
+        return Ok(novel_lang.to_string());
+    }
+    let target = requested
+        .and_then(TranslationTarget::parse)
+        .filter(|target| !target.as_str().eq_ignore_ascii_case(novel_lang))
+        .ok_or_else(|| {
+            ProjectError::invalid("a translation needs a target language other than the novel's")
+        })?;
+    Ok(target.as_str().to_string())
 }
 
 #[cfg(test)]

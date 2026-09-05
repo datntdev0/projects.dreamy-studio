@@ -94,6 +94,7 @@ describe('ProjectService', () => {
           description: '',
           novelId: null,
           srcKind: null,
+          srcLang: null,
           rangeFrom: null,
           rangeTo: null,
         })

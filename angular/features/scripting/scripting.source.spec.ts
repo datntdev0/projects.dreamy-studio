@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ParagraphRow } from '../novel/novel.models';
 // prettier-ignore
-import { chapterParagraphs, chapterTitleOf, initialScript, paragraphRef, rangeSource, unitSource, usesTranslation } from './scripting.source';
+import { chapterParagraphs, chapterTitleOf, initialScript, needsChapterUnits, paragraphRef, rangeSource, unitSource, usesTranslation } from './scripting.source';
 
 const ORIGINALS: ParagraphRow[] = [
   { n: 1, text: 'one', hashcheck: 'a' },
@@ -105,6 +105,28 @@ describe('scripting initial script', () => {
     );
     expect(script.units).toHaveLength(1);
     expect(script.units[0]).toMatchObject({ no: 1, ch: null, title: '' });
+  });
+
+  it('creates a unit for every chapter when the project takes the whole novel', () => {
+    const whole = project({ template: 'audiobook', novelId: 1, rangeFrom: null, rangeTo: null });
+    const script = initialScript(whole, { 1: 'One' }, 3);
+    expect(script.units.map((unit) => [unit.no, unit.ch, unit.title])).toEqual([
+      [1, 1, 'One'],
+      [2, 2, 'Chapter 2'],
+      [3, 3, 'Chapter 3'],
+    ]);
+  });
+
+  it('rebuilds only an untouched single unit script of a whole novel audiobook', () => {
+    const whole = project({ template: 'audiobook', novelId: 1, rangeFrom: null, rangeTo: null });
+    const untouched = initialScript(whole, {}, 0);
+    expect(needsChapterUnits(whole, untouched, 3)).toBe(true);
+    expect(needsChapterUnits(whole, untouched, 0)).toBe(false);
+    expect(needsChapterUnits(whole, initialScript(whole, {}, 3), 3)).toBe(false);
+    const written = { ...untouched, units: [{ ...untouched.units[0], blocks: [] }] };
+    expect(needsChapterUnits(whole, written, 3)).toBe(false);
+    const film = project({ template: 'filmseries', novelId: 1, rangeFrom: null, rangeTo: null });
+    expect(needsChapterUnits(film, initialScript(film, {}, 3), 3)).toBe(false);
   });
 
   it('creates one episode spanning the range for films', () => {

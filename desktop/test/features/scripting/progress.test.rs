@@ -49,8 +49,8 @@ fn counts_meta_or_non_empty_blocks_as_content() {
 
 #[test]
 fn falls_back_to_the_chapter_range_without_a_script() {
-    let states = module_states(&project(Some(3), Some(7)), None);
-    let blank = module_states(&project(None, None), None);
+    let states = module_states(&project(Some(3), Some(7)), None, &Audiobook::default());
+    let blank = module_states(&project(None, None), None, &Audiobook::default());
 
     assert_eq!(states[0], ProjectModuleState::idle(SCRIPTING_MODULE, 5));
     assert_eq!(states[1], ProjectModuleState::idle(AUDIOBOOK_MODULE, 0));
@@ -60,8 +60,14 @@ fn falls_back_to_the_chapter_range_without_a_script() {
 #[test]
 fn sizes_the_audiobook_row_by_script_units() {
     let stored = script(vec![written_unit("U01", 1), unit("U02", 2)]);
-    let states = module_states(&project(None, None), Some(&stored));
+    let states = module_states(&project(None, None), Some(&stored), &Audiobook::default());
 
     assert_eq!(states[0].id, SCRIPTING_MODULE);
-    assert_eq!(states[1], ProjectModuleState::idle(AUDIOBOOK_MODULE, 2));
+    assert_eq!(
+        states[1],
+        ProjectModuleState {
+            note: "0/2 chapters".to_string(),
+            ..ProjectModuleState::idle(AUDIOBOOK_MODULE, 2)
+        }
+    );
 }

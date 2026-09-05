@@ -51,6 +51,8 @@ pub struct TaskRequest {
     pub chapter_id: String,
     #[serde(default)]
     pub passage: Option<usize>,
+    #[serde(default)]
+    pub segment_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -58,6 +60,7 @@ pub struct TaskRequest {
 pub struct PipelineTask {
     pub id: i64,
     pub chapter_id: String,
+    pub segment_id: Option<String>,
     pub passage: Option<usize>,
     pub status: TaskStatus,
     pub progress: u8,
@@ -70,7 +73,8 @@ pub struct PipelineTask {
 #[serde(rename_all = "camelCase")]
 pub struct PipelineSnapshot {
     pub id: i64,
-    pub novel_id: i64,
+    pub novel_id: Option<i64>,
+    pub project_id: Option<i64>,
     pub kind: String,
     pub target: String,
     pub status: PipelineStatus,
@@ -103,6 +107,64 @@ pub enum PipelineEvent {
     Finished {
         pipeline: PipelineSnapshot,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobOwner {
+    Novel(i64),
+    Project(i64),
+}
+
+impl JobOwner {
+    pub fn of(novel_id: Option<i64>, project_id: Option<i64>) -> PipelineResult<Self> {
+        match (novel_id, project_id) {
+            (Some(id), None) => Ok(Self::Novel(id)),
+            (None, Some(id)) => Ok(Self::Project(id)),
+            _ => Err(PipelineError::invalid(
+                "exactly one of novelId or projectId is required",
+            )),
+        }
+    }
+
+    pub fn filter(novel_id: Option<i64>, project_id: Option<i64>) -> PipelineResult<Option<Self>> {
+        match (novel_id, project_id) {
+            (None, None) => Ok(None),
+            _ => Self::of(novel_id, project_id).map(Some),
+        }
+    }
+
+    pub fn novel_id(self) -> Option<i64> {
+        match self {
+            Self::Novel(id) => Some(id),
+            Self::Project(_) => None,
+        }
+    }
+
+    pub fn project_id(self) -> Option<i64> {
+        match self {
+            Self::Project(id) => Some(id),
+            Self::Novel(_) => None,
+        }
+    }
+
+    pub fn require_novel(self) -> PipelineResult<i64> {
+        self.novel_id()
+            .ok_or_else(|| PipelineError::invalid("novelId is required"))
+    }
+
+    pub fn require_project(self) -> PipelineResult<i64> {
+        self.project_id()
+            .ok_or_else(|| PipelineError::invalid("projectId is required"))
+    }
+}
+
+impl fmt::Display for JobOwner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Novel(id) => write!(f, "novel {id}"),
+            Self::Project(id) => write!(f, "project {id}"),
+        }
+    }
 }
 
 pub trait PipelineTarget: Send + Sync {

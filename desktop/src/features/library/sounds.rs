@@ -87,7 +87,83 @@ pub struct SoundAnalysis {
     pub overview: [u8; 32],
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct DecodedSound {
+    pub sample_rate: u32,
+    pub channels: u32,
+    pub samples: Vec<f32>,
+}
+
+pub fn decode(path: &Path, format: SoundFormat) -> LibraryResult<DecodedSound> {
+    let mut samples = Vec::new();
+    let (sample_rate, channels) = decode_with(path, format, &mut |values, _, _| {
+        samples.extend_from_slice(values);
+    })?;
+    Ok(DecodedSound {
+        sample_rate,
+        channels,
+        samples,
+    })
+}
+
 pub fn analyze(path: &Path, format: SoundFormat) -> LibraryResult<SoundAnalysis> {
+    let mut peaks = Vec::new();
+    let mut frames = 0_u64;
+    let (sample_rate, channels) = decode_with(path, format, &mut |values, rate, channels| {
+        frames = collect_peaks(&mut peaks, values, rate, channels, frames);
+    })?;
+    if frames == 0 {
+        return Err(sound_unreadable("sound has no decodable audio"));
+    }
+    let mut overview = [0_u8; 32];
+    let overview_len = overview.len();
+    for (index, value) in overview.iter_mut().enumerate() {
+        let start = index * peaks.len() / overview_len;
+        let end = ((index + 1) * peaks.len()).div_ceil(overview_len);
+        let values = &peaks[start..end];
+        *value =
+            (values.iter().map(|peak| u32::from(*peak)).sum::<u32>() / values.len() as u32) as u8;
+    }
+    Ok(SoundAnalysis {
+        duration_ms: (frames * 1000 / u64::from(sample_rate)) as i64,
+        sample_rate,
+        channels,
+        peaks,
+        overview,
+    })
+}
+
+fn collect_peaks(
+    peaks: &mut Vec<u8>,
+    values: &[f32],
+    sample_rate: u32,
+    channels: u32,
+    mut frames: u64,
+) -> u64 {
+    let width = channels as usize;
+    for frame in values.chunks_exact(width) {
+        let peak = frame
+            .iter()
+            .map(|sample| sample.abs())
+            .fold(0_f32, f32::max)
+            .clamp(0.0, 1.0);
+        let peak_index = (frames * u64::from(PEAK_RATE) / u64::from(sample_rate)) as usize;
+        if peaks.len() <= peak_index {
+            peaks.resize(peak_index + 1, 0);
+        }
+        peaks[peak_index] = peaks[peak_index].max((peak * 255.0).round() as u8);
+        frames += 1;
+    }
+    frames
+}
+
+type SampleSink<'a> = dyn FnMut(&[f32], u32, u32) + 'a;
+
+fn decode_with(
+    path: &Path,
+    format: SoundFormat,
+    sink: &mut SampleSink<'_>,
+) -> LibraryResult<(u32, u32)> {
     let mut header = [0_u8; 16];
     let mut source = File::open(path)?;
     let count = source.read(&mut header)?;
@@ -126,8 +202,6 @@ pub fn analyze(path: &Path, format: SoundFormat) -> LibraryResult<SoundAnalysis>
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec_params, &DecoderOptions::default())
         .map_err(sound_decode_error)?;
-    let mut peaks = Vec::new();
-    let mut frames = 0_u64;
     let mut decoded = false;
 
     loop {
@@ -138,10 +212,7 @@ pub fn analyze(path: &Path, format: SoundFormat) -> LibraryResult<SoundAnalysis>
             {
                 break;
             }
-            Err(error) if decoded => {
-                let _ = error;
-                continue;
-            }
+            Err(_) if decoded => continue,
             Err(error) => return Err(sound_decode_error(error)),
         };
         if packet.track_id() != track_id {
@@ -149,51 +220,18 @@ pub fn analyze(path: &Path, format: SoundFormat) -> LibraryResult<SoundAnalysis>
         }
         let audio = match decoder.decode(&packet) {
             Ok(audio) => audio,
-            Err(error) if decoded => {
-                let _ = error;
-                continue;
-            }
+            Err(_) if decoded => continue,
             Err(error) => return Err(sound_decode_error(error)),
         };
         decoded = true;
         let mut samples = SampleBuffer::<f32>::new(audio.capacity() as u64, *audio.spec());
         samples.copy_interleaved_ref(audio);
-        let values = samples.samples();
-        let frame_count = values.len() / channels as usize;
-        for frame in 0..frame_count {
-            let peak = values[frame * channels as usize..(frame + 1) * channels as usize]
-                .iter()
-                .map(|sample| sample.abs())
-                .fold(0_f32, f32::max)
-                .clamp(0.0, 1.0);
-            let peak_index = (frames * u64::from(PEAK_RATE) / u64::from(sample_rate)) as usize;
-            if peaks.len() <= peak_index {
-                peaks.resize(peak_index + 1, 0);
-            }
-            peaks[peak_index] = peaks[peak_index].max((peak * 255.0).round() as u8);
-            frames += 1;
-        }
+        sink(samples.samples(), sample_rate, channels);
     }
-    if !decoded || frames == 0 {
+    if !decoded {
         return Err(sound_unreadable("sound has no decodable audio"));
     }
-
-    let mut overview = [0_u8; 32];
-    let overview_len = overview.len();
-    for (index, value) in overview.iter_mut().enumerate() {
-        let start = index * peaks.len() / overview_len;
-        let end = ((index + 1) * peaks.len()).div_ceil(overview_len);
-        let values = &peaks[start..end];
-        *value =
-            (values.iter().map(|peak| u32::from(*peak)).sum::<u32>() / values.len() as u32) as u8;
-    }
-    Ok(SoundAnalysis {
-        duration_ms: (frames * 1000 / u64::from(sample_rate)) as i64,
-        sample_rate,
-        channels,
-        peaks,
-        overview,
-    })
+    Ok((sample_rate, channels))
 }
 
 #[derive(Debug, Clone)]

@@ -140,7 +140,7 @@ fn project_modules_and_audiobook_report_through_ipc() {
         modules,
         json!([
             { "id": "scripting", "state": "doing", "done": 1, "total": 2, "note": "1/2 chapters" },
-            { "id": "audiobook", "state": "idle", "done": 0, "total": 2, "note": "" },
+            { "id": "audiobook", "state": "idle", "done": 0, "total": 2, "note": "0/2 chapters" },
         ])
     );
     assert!(audiobook.is_null());

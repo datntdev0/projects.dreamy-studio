@@ -3,6 +3,7 @@ use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::executor::PipelineLimits;
 use crate::features::pipeline::job::JobRegistry;
 use crate::features::pipeline::jobs::translation::KIND_TRANSLATION;
+use crate::features::pipeline::models::JobOwner;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineEvent;
@@ -34,7 +35,8 @@ impl PipelineTarget for Channel<PipelineEvent> {
 #[derive(Debug, Clone, Default)]
 pub struct JobRequest {
     pub kind: Option<String>,
-    pub novel_id: i64,
+    pub novel_id: Option<i64>,
+    pub project_id: Option<i64>,
     pub target: Option<String>,
     pub lang: Option<String>,
     pub params: Option<Value>,
@@ -69,13 +71,15 @@ pub fn start_pipeline(
     let JobRequest {
         kind,
         novel_id,
+        project_id,
         target,
         lang,
         params,
     } = request;
+    let owner = JobOwner::of(novel_id, project_id)?;
     let params = job_params(target, lang, params)?;
     let kind = kind.as_deref().unwrap_or(KIND_TRANSLATION);
-    let job = registry.create(kind, session, novel_id, &params)?;
+    let job = registry.create(kind, session, owner, &params)?;
     executor.start(job, tasks, sink)
 }
 
@@ -98,7 +102,7 @@ pub fn limits_of(settings: PipelineSettings) -> PipelineLimits {
 
 pub fn list_history(
     session: &WorkspaceSession,
-    novel_id: i64,
+    owner: Option<JobOwner>,
     limit: Option<i64>,
 ) -> PipelineResult<Vec<PipelineSnapshot>> {
     let workspace = session.current().ok_or_else(|| {
@@ -106,7 +110,7 @@ pub fn list_history(
     })?;
     let limit = limit.unwrap_or(20).clamp(1, 100);
     let database = Database::open_read_only(&Path::new(&workspace.path).join(WORKSPACE_DB_FILE))?;
-    Ok(PipelineRepository::new(database.connection()).list_history(novel_id, limit)?)
+    Ok(PipelineRepository::new(database.connection()).list_history(owner, limit)?)
 }
 
 fn task_failure(error: tauri::Error) -> PipelineError {
@@ -134,7 +138,8 @@ where
 pub async fn pipeline_start<R: Runtime>(
     app: AppHandle<R>,
     kind: Option<String>,
-    novel_id: i64,
+    novel_id: Option<i64>,
+    project_id: Option<i64>,
     target: Option<String>,
     lang: Option<String>,
     params: Option<Value>,
@@ -146,6 +151,7 @@ pub async fn pipeline_start<R: Runtime>(
     let request = JobRequest {
         kind,
         novel_id,
+        project_id,
         target,
         lang,
         params,
@@ -165,11 +171,12 @@ pub fn pipeline_cancel<R: Runtime>(app: AppHandle<R>, pipeline_id: Option<i64>) 
 #[tauri::command]
 pub async fn pipeline_history_list<R: Runtime>(
     app: AppHandle<R>,
-    novel_id: i64,
+    novel_id: Option<i64>,
+    project_id: Option<i64>,
     limit: Option<i64>,
 ) -> PipelineResult<Vec<PipelineSnapshot>> {
     run_blocking(app, move |_, _, session| {
-        list_history(session, novel_id, limit)
+        list_history(session, JobOwner::filter(novel_id, project_id)?, limit)
     })
     .await
 }

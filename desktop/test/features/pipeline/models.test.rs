@@ -7,7 +7,8 @@ use serde_json::json;
 fn snapshot() -> PipelineSnapshot {
     PipelineSnapshot {
         id: 1,
-        novel_id: 2,
+        novel_id: Some(2),
+        project_id: None,
         kind: KIND_TRANSLATION.to_string(),
         target: "VI".to_string(),
         status: PipelineStatus::Running,
@@ -25,6 +26,7 @@ fn task() -> PipelineTask {
     PipelineTask {
         id: 3,
         chapter_id: "chapter".to_string(),
+        segment_id: None,
         passage: Some(2),
         status: TaskStatus::Queued,
         progress: 0,
@@ -44,11 +46,11 @@ fn serializes_pipeline_events_and_snapshots_for_the_wire() {
         json!({
             "type": "started",
             "pipeline": {
-                "id": 1, "novelId": 2, "kind": "translation", "target": "VI",
+                "id": 1, "novelId": 2, "projectId": null, "kind": "translation", "target": "VI",
                 "status": "running", "total": 1, "done": 0, "failed": 0,
                 "createdAt": "created", "startedAt": "started", "finishedAt": null,
                 "tasks": [{
-                    "id": 3, "chapterId": "chapter", "passage": 2, "status": "queued",
+                    "id": 3, "chapterId": "chapter", "segmentId": null, "passage": 2, "status": "queued",
                     "progress": 0, "error": "", "startedAt": null, "finishedAt": null
                 }]
             }
@@ -64,7 +66,7 @@ fn serializes_pipeline_events_and_snapshots_for_the_wire() {
             "type": "task",
             "pipelineId": 1,
             "task": {
-                "id": 3, "chapterId": "chapter", "passage": 2, "status": "queued",
+                "id": 3, "chapterId": "chapter", "segmentId": null, "passage": 2, "status": "queued",
                 "progress": 0, "error": "", "startedAt": null, "finishedAt": null
             }
         })

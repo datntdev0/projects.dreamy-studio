@@ -38,7 +38,8 @@ fn completes_a_job_and_emits_lifecycle_events() {
     assert_eq!(snapshot.status, PipelineStatus::Running);
     assert_eq!(snapshot.kind, FAKE_KIND);
     assert_eq!(snapshot.target, "VI");
-    assert_eq!(snapshot.novel_id, fixture.novel_id);
+    assert_eq!(snapshot.novel_id, Some(fixture.novel_id));
+    assert_eq!(snapshot.project_id, None);
     let finished = target.wait_for_finished();
     assert_eq!(finished.status, PipelineStatus::Completed);
     assert_eq!(finished.done, 1);
@@ -67,6 +68,7 @@ fn marks_only_the_failing_task_as_failed() {
     tasks.push(TaskRequest {
         chapter_id: second.clone(),
         passage: None,
+        segment_id: None,
     });
     executor.start(job.boxed(), tasks, target.clone()).unwrap();
     let finished = target.wait_for_finished();
@@ -99,6 +101,7 @@ fn a_failed_prepare_fails_every_task_with_its_text() {
     tasks.push(TaskRequest {
         chapter_id: second,
         passage: None,
+        segment_id: None,
     });
     executor.start(job.boxed(), tasks, target.clone()).unwrap();
     let finished = target.wait_for_finished();
@@ -163,6 +166,7 @@ fn allows_the_same_chapter_as_a_chapter_and_as_a_passage() {
     tasks.push(TaskRequest {
         chapter_id: fixture.chapter_id.clone(),
         passage: Some(1),
+        segment_id: None,
     });
     let target = Arc::new(RecordingTarget::new());
     executor.start(job.boxed(), tasks, target.clone()).unwrap();
@@ -414,6 +418,7 @@ fn caps_the_running_tasks_across_every_pipeline() {
             .map(|chapter_id| TaskRequest {
                 chapter_id: chapter_id.clone(),
                 passage: None,
+                segment_id: None,
             })
             .collect();
         let job = FakeJob::new(&fixture, name)

@@ -1,3 +1,5 @@
+use crate::features::audiobook::models::Audiobook;
+use crate::features::audiobook::rules::audiobook_progress;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectSummary;
 use crate::features::scripting::models::Script;
@@ -28,12 +30,13 @@ pub fn script_progress(script: &Script) -> ProjectModuleState {
     }
 }
 
-pub fn module_states(project: &ProjectSummary, script: Option<&Script>) -> Vec<ProjectModuleState> {
+pub fn module_states(
+    project: &ProjectSummary,
+    script: Option<&Script>,
+    book: &Audiobook,
+) -> Vec<ProjectModuleState> {
     match script {
-        Some(script) => vec![
-            script_progress(script),
-            ProjectModuleState::idle(AUDIOBOOK_MODULE, script.units.len()),
-        ],
+        Some(script) => vec![script_progress(script), audiobook_progress(book, script)],
         None => vec![
             ProjectModuleState::idle(SCRIPTING_MODULE, range_len(project)),
             ProjectModuleState::idle(AUDIOBOOK_MODULE, 0),

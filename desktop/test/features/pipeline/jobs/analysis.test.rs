@@ -83,6 +83,7 @@ fn task_of(chapter_id: &str) -> PipelineTask {
     PipelineTask {
         id: 1,
         chapter_id: chapter_id.to_string(),
+        segment_id: None,
         passage: None,
         status: TaskStatus::Running,
         progress: 0,
@@ -96,6 +97,7 @@ fn request(chapter_id: &str, passage: Option<usize>) -> TaskRequest {
     TaskRequest {
         chapter_id: chapter_id.to_string(),
         passage,
+        segment_id: None,
     }
 }
 
@@ -170,7 +172,7 @@ fn describes_itself_for_the_executor() {
     assert_eq!(job.kind(), "analysis");
     assert_eq!(job.kind(), KIND_ANALYSIS);
     assert_eq!(job.scope(), "VI");
-    assert_eq!(job.novel_id(), setup.fixture.novel_id);
+    assert_eq!(job.owner(), JobOwner::Novel(setup.fixture.novel_id));
     assert_eq!(job.dir(), setup.fixture.path());
     assert!(job.prepare().is_ok());
 }
@@ -772,7 +774,7 @@ fn the_factory_needs_an_open_workspace() {
     let error = factory
         .create(
             &WorkspaceSession::new(),
-            1,
+            JobOwner::Novel(1),
             &serde_json::json!({ "lang": "VI" }),
         )
         .err()

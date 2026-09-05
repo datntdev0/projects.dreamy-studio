@@ -1,3 +1,4 @@
+use crate::features::audiobook::files::AudiobookFiles;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectResult;
@@ -49,7 +50,8 @@ impl ScriptingWorkspace {
     pub fn modules(&self, project_id: i64) -> ProjectResult<Vec<ProjectModuleState>> {
         self.projects.with_project(project_id, |project, dir| {
             let script = read_script(&ScriptFiles::new(dir))?;
-            Ok(module_states(project, script.as_ref()))
+            let book = AudiobookFiles::new(dir).read_book()?.unwrap_or_default();
+            Ok(module_states(project, script.as_ref(), &book))
         })
     }
 }

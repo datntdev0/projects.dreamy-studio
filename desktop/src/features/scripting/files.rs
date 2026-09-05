@@ -70,16 +70,20 @@ impl ScriptFiles {
 }
 
 pub fn require_unit_id(unit_id: &str) -> ProjectResult<()> {
-    if is_unit_id(unit_id) {
+    require_safe_id("unit", unit_id)
+}
+
+pub fn require_safe_id(label: &str, value: &str) -> ProjectResult<()> {
+    if is_safe_id(value) {
         Ok(())
     } else {
         Err(ProjectError::invalid(format!(
-            "unit id {unit_id:?} is malformed"
+            "{label} id {value:?} is malformed"
         )))
     }
 }
 
-fn is_unit_id(value: &str) -> bool {
+pub fn is_safe_id(value: &str) -> bool {
     (1..=UNIT_ID_MAX).contains(&value.len())
         && value
             .bytes()

@@ -96,6 +96,10 @@ impl ProjectWorkspace {
         Self { dir, gate }
     }
 
+    pub fn dir(&self) -> &Path {
+        &self.dir
+    }
+
     pub fn list(&self) -> ProjectResult<Vec<ProjectSummary>> {
         let db = self.database()?;
         Ok(ProjectRepository::new(db.connection()).list()?)

@@ -32,6 +32,10 @@ const NOT_RUNNING: &str = "The local backend is not running.";
 const CUDA_NOT_READY: &str =
     "CUDA needs an NVIDIA GPU and an installed CUDA runtime before it can be selected.";
 
+pub trait Synthesizer: Send + Sync {
+    fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError>;
+}
+
 pub struct BackendService {
     supervisor: Arc<BackendSupervisor>,
     settings: SettingsRepository,
@@ -154,23 +158,6 @@ impl BackendService {
         self.proxy(Method::Delete, &model_path(id)?)
     }
 
-    pub fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
-        let port = self
-            .supervisor
-            .monitor()
-            .port()
-            .ok_or_else(|| ClientError::Unreachable(NOT_RUNNING.to_string()))?;
-        let response =
-            BackendClient::new(port, SYNTHESIS_TIMEOUT).post_for_bytes(SYNTHESIS_PATH, request)?;
-        Ok(SynthesizedAudio {
-            duration_ms: response
-                .header("x-duration-ms")
-                .and_then(|value| value.parse().ok()),
-            cached: response.header("x-cache") == Some("hit"),
-            bytes: response.bytes,
-        })
-    }
-
     pub fn logs_dir(&self) -> Result<PathBuf, String> {
         ensure_dir(&self.logs_dir)
     }
@@ -239,6 +226,25 @@ fn ensure_dir(path: &Path) -> Result<PathBuf, String> {
 
 fn now() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
+}
+
+impl Synthesizer for BackendService {
+    fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
+        let port = self
+            .supervisor
+            .monitor()
+            .port()
+            .ok_or_else(|| ClientError::Unreachable(NOT_RUNNING.to_string()))?;
+        let response =
+            BackendClient::new(port, SYNTHESIS_TIMEOUT).post_for_bytes(SYNTHESIS_PATH, request)?;
+        Ok(SynthesizedAudio {
+            duration_ms: response
+                .header("x-duration-ms")
+                .and_then(|value| value.parse().ok()),
+            cached: response.header("x-cache") == Some("hit"),
+            bytes: response.bytes,
+        })
+    }
 }
 
 #[cfg(test)]

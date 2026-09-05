@@ -50,10 +50,12 @@ fn requests() -> Vec<TaskRequest> {
         TaskRequest {
             chapter_id: "chapter-one".to_string(),
             passage: None,
+            segment_id: None,
         },
         TaskRequest {
             chapter_id: "chapter-two".to_string(),
             passage: Some(3),
+            segment_id: None,
         },
     ]
 }
@@ -124,11 +126,15 @@ fn lists_history_by_newest_id_with_limit_and_novel_scope() {
     let other_novel = insert_novel(fixture.database.connection(), "Other");
     let other = insert_pipeline(&repo, other_novel, "other");
 
-    let history = repo.list_history(fixture.novel_id, 1).unwrap();
+    let history = repo
+        .list_history(Some(JobOwner::Novel(fixture.novel_id)), 1)
+        .unwrap();
     assert_eq!(history.len(), 1);
     assert_eq!(history[0].id, second);
     assert_eq!(history[0].tasks.len(), 2);
-    let history = repo.list_history(fixture.novel_id, 10).unwrap();
+    let history = repo
+        .list_history(Some(JobOwner::Novel(fixture.novel_id)), 10)
+        .unwrap();
     assert_eq!(
         history.iter().map(|item| item.id).collect::<Vec<_>>(),
         vec![second, first]
@@ -187,4 +193,94 @@ fn deleting_a_novel_cascades_its_history_and_tasks() {
 
     assert_eq!(repo.snapshot(pipeline_id).unwrap(), None);
     assert!(fixture.dir.path().exists());
+}
+
+fn insert_project(conn: &Connection, name: &str) -> i64 {
+    conn.execute(
+        "INSERT INTO ws_projects (name, template, created_at, updated_at, opened_at) \
+         VALUES (?1, 'audiobook', ?2, ?2, ?2)",
+        params![name, NOW],
+    )
+    .unwrap();
+    conn.last_insert_rowid()
+}
+
+fn segment_tasks() -> Vec<TaskRequest> {
+    ["b1", "b2"]
+        .iter()
+        .map(|id| TaskRequest {
+            chapter_id: "U01".to_string(),
+            passage: None,
+            segment_id: Some(id.to_string()),
+        })
+        .collect()
+}
+
+#[test]
+fn project_pipelines_keep_segments_and_list_by_owner() {
+    let fixture = fixture();
+    let conn = fixture.database.connection();
+    let repo = PipelineRepository::new(conn);
+    let project = insert_project(conn, "Book");
+    let other_project = insert_project(conn, "Other");
+    let novel_run = insert_pipeline(&repo, fixture.novel_id, NOW);
+    let audio = repo
+        .insert_pipeline(
+            JobOwner::Project(project),
+            "audio",
+            "audio",
+            PipelineStatus::Queued,
+            &segment_tasks(),
+            NOW,
+        )
+        .unwrap();
+    let other = repo
+        .insert_pipeline(
+            JobOwner::Project(other_project),
+            "audio",
+            "audio",
+            PipelineStatus::Running,
+            &segment_tasks(),
+            NOW,
+        )
+        .unwrap();
+
+    let snapshot = repo.snapshot(audio).unwrap().unwrap();
+    let by_project = repo
+        .list_history(Some(JobOwner::Project(project)), 10)
+        .unwrap();
+    let by_novel = repo
+        .list_history(Some(JobOwner::Novel(fixture.novel_id)), 10)
+        .unwrap();
+    let all = repo.list_history(None, 10).unwrap();
+
+    assert_eq!(
+        (snapshot.novel_id, snapshot.project_id),
+        (None, Some(project))
+    );
+    assert_eq!(snapshot.started_at, None);
+    assert_eq!(
+        snapshot
+            .tasks
+            .iter()
+            .map(|task| task.segment_id.as_deref())
+            .collect::<Vec<_>>(),
+        vec![Some("b1"), Some("b2")]
+    );
+    assert_eq!(
+        by_project.iter().map(|item| item.id).collect::<Vec<_>>(),
+        vec![audio]
+    );
+    assert_eq!(
+        by_novel.iter().map(|item| item.id).collect::<Vec<_>>(),
+        vec![novel_run]
+    );
+    assert_eq!(
+        all.iter().map(|item| item.id).collect::<Vec<_>>(),
+        vec![other, audio, novel_run]
+    );
+    let value = serde_json::to_value(&snapshot).unwrap();
+    assert_eq!(value["projectId"], project);
+    assert_eq!(value["novelId"], serde_json::Value::Null);
+    assert_eq!(value["tasks"][0]["segmentId"], "b1");
 }

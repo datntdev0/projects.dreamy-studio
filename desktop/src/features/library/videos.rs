@@ -5,6 +5,7 @@ use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
 use crate::features::library::models::LibraryVideo;
+use crate::shared::ffmpeg;
 use crate::shared::files;
 use crate::shared::process::hide_window;
 use rusqlite::Connection;
@@ -756,19 +757,7 @@ fn seek_candidates(duration_ms: i64) -> Vec<i64> {
 }
 
 pub fn sidecar_path() -> LibraryResult<PathBuf> {
-    let executable = std::env::current_exe()?;
-    let name = if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    };
-    executable
-        .ancestors()
-        .skip(1)
-        .take(2)
-        .map(|directory| directory.join(name))
-        .find(|candidate| candidate.is_file())
-        .ok_or_else(|| video_unreadable("ffmpeg sidecar is missing"))
+    ffmpeg::sidecar_path().map_err(video_unreadable)
 }
 
 fn run_ffmpeg(ffmpeg: &Path, video: &Path, seconds: i64) -> LibraryResult<Vec<u8>> {

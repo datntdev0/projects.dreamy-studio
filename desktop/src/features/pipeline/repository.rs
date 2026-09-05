@@ -1,3 +1,4 @@
+use crate::features::pipeline::models::JobOwner;
 use crate::features::pipeline::models::PipelineSnapshot;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::PipelineTask;
@@ -7,6 +8,11 @@ use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::Row;
 use rusqlite::params;
+
+const HISTORY_COLUMNS: &str = "id, novel_id, project_id, kind, target, status, total, done, \
+     failed, created_at, started_at, finished_at";
+const TASK_COLUMNS: &str =
+    "id, chapter_id, segment_id, passage, status, progress, error, started_at, finished_at";
 
 pub struct PipelineRepository<'a> {
     conn: &'a Connection,
@@ -26,12 +32,19 @@ impl<'a> PipelineRepository<'a> {
         tasks: &[TaskRequest],
         now: &str,
     ) -> rusqlite::Result<i64> {
-        self.insert_pipeline(novel_id, kind, target, PipelineStatus::Running, tasks, now)
+        self.insert_pipeline(
+            JobOwner::Novel(novel_id),
+            kind,
+            target,
+            PipelineStatus::Running,
+            tasks,
+            now,
+        )
     }
 
     pub fn insert_pipeline(
         &self,
-        novel_id: i64,
+        owner: JobOwner,
         kind: &str,
         target: &str,
         status: PipelineStatus,
@@ -42,10 +55,11 @@ impl<'a> PipelineRepository<'a> {
         let transaction = self.conn.unchecked_transaction()?;
         transaction.execute(
             "INSERT INTO ws_pipeline_history \
-             (novel_id, kind, target, status, total, created_at, started_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+             (novel_id, project_id, kind, target, status, total, created_at, started_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                novel_id,
+                owner.novel_id(),
+                owner.project_id(),
                 kind,
                 target,
                 status.as_str(),
@@ -57,11 +71,13 @@ impl<'a> PipelineRepository<'a> {
         let pipeline_id = transaction.last_insert_rowid();
         for task in tasks {
             transaction.execute(
-                "INSERT INTO ws_pipeline_tasks (pipeline_id, chapter_id, passage, status) \
-                 VALUES (?1, ?2, ?3, 'queued')",
+                "INSERT INTO ws_pipeline_tasks \
+                 (pipeline_id, chapter_id, segment_id, passage, status) \
+                 VALUES (?1, ?2, ?3, ?4, 'queued')",
                 params![
                     pipeline_id,
                     task.chapter_id,
+                    task.segment_id,
                     task.passage.map(|passage| passage as i64)
                 ],
             )?;
@@ -73,8 +89,7 @@ impl<'a> PipelineRepository<'a> {
     pub fn snapshot(&self, id: i64) -> rusqlite::Result<Option<PipelineSnapshot>> {
         self.conn
             .query_row(
-                "SELECT id, novel_id, kind, target, status, total, done, failed, created_at, \
-                 started_at, finished_at FROM ws_pipeline_history WHERE id = ?1",
+                &format!("SELECT {HISTORY_COLUMNS} FROM ws_pipeline_history WHERE id = ?1"),
                 [id],
                 row_to_snapshot,
             )
@@ -85,8 +100,7 @@ impl<'a> PipelineRepository<'a> {
     pub fn task(&self, task_id: i64) -> rusqlite::Result<Option<PipelineTask>> {
         self.conn
             .query_row(
-                "SELECT id, chapter_id, passage, status, progress, error, started_at, finished_at \
-                 FROM ws_pipeline_tasks WHERE id = ?1",
+                &format!("SELECT {TASK_COLUMNS} FROM ws_pipeline_tasks WHERE id = ?1"),
                 [task_id],
                 row_to_task,
             )
@@ -152,15 +166,18 @@ impl<'a> PipelineRepository<'a> {
 
     pub fn list_history(
         &self,
-        novel_id: i64,
+        owner: Option<JobOwner>,
         limit: i64,
     ) -> rusqlite::Result<Vec<PipelineSnapshot>> {
-        let mut statement = self.conn.prepare(
-            "SELECT id, novel_id, kind, target, status, total, done, failed, created_at, started_at, \
-             finished_at FROM ws_pipeline_history WHERE novel_id = ?1 ORDER BY id DESC LIMIT ?2",
-        )?;
+        let mut statement = self.conn.prepare(&format!(
+            "SELECT {HISTORY_COLUMNS} FROM ws_pipeline_history \
+             WHERE (?1 IS NULL OR novel_id = ?1) AND (?2 IS NULL OR project_id = ?2) \
+             ORDER BY id DESC LIMIT ?3"
+        ))?;
+        let novel_id = owner.and_then(JobOwner::novel_id);
+        let project_id = owner.and_then(JobOwner::project_id);
         let snapshots = statement
-            .query_map(params![novel_id, limit], row_to_snapshot)?
+            .query_map(params![novel_id, project_id, limit], row_to_snapshot)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         snapshots
             .into_iter()
@@ -199,45 +216,46 @@ impl<'a> PipelineRepository<'a> {
     }
 
     fn tasks(&self, pipeline_id: i64) -> rusqlite::Result<Vec<PipelineTask>> {
-        let mut statement = self.conn.prepare(
-            "SELECT id, chapter_id, passage, status, progress, error, started_at, finished_at \
-             FROM ws_pipeline_tasks WHERE pipeline_id = ?1 ORDER BY id",
-        )?;
+        let mut statement = self.conn.prepare(&format!(
+            "SELECT {TASK_COLUMNS} FROM ws_pipeline_tasks WHERE pipeline_id = ?1 ORDER BY id"
+        ))?;
         statement.query_map([pipeline_id], row_to_task)?.collect()
     }
 }
 
 fn row_to_snapshot(row: &Row<'_>) -> rusqlite::Result<PipelineSnapshot> {
-    let status: String = row.get(4)?;
+    let status: String = row.get(5)?;
     Ok(PipelineSnapshot {
         id: row.get(0)?,
         novel_id: row.get(1)?,
-        kind: row.get(2)?,
-        target: row.get(3)?,
+        project_id: row.get(2)?,
+        kind: row.get(3)?,
+        target: row.get(4)?,
         status: PipelineStatus::parse(&status).ok_or(rusqlite::Error::InvalidQuery)?,
-        total: row.get(5)?,
-        done: row.get(6)?,
-        failed: row.get(7)?,
-        created_at: row.get(8)?,
-        started_at: row.get(9)?,
-        finished_at: row.get(10)?,
+        total: row.get(6)?,
+        done: row.get(7)?,
+        failed: row.get(8)?,
+        created_at: row.get(9)?,
+        started_at: row.get(10)?,
+        finished_at: row.get(11)?,
         tasks: Vec::new(),
     })
 }
 
 fn row_to_task(row: &Row<'_>) -> rusqlite::Result<PipelineTask> {
-    let status: String = row.get(3)?;
+    let status: String = row.get(4)?;
     Ok(PipelineTask {
         id: row.get(0)?,
         chapter_id: row.get(1)?,
+        segment_id: row.get(2)?,
         passage: row
-            .get::<_, Option<i64>>(2)?
+            .get::<_, Option<i64>>(3)?
             .map(|passage| passage as usize),
         status: TaskStatus::parse(&status).ok_or(rusqlite::Error::InvalidQuery)?,
-        progress: row.get(4)?,
-        error: row.get(5)?,
-        started_at: row.get(6)?,
-        finished_at: row.get(7)?,
+        progress: row.get(5)?,
+        error: row.get(6)?,
+        started_at: row.get(7)?,
+        finished_at: row.get(8)?,
     })
 }
 

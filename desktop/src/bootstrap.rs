@@ -12,6 +12,7 @@ use std::sync::Mutex;
 
 use crate::commands;
 use crate::commands::assistant::AppMcpHost;
+use crate::commands::audiobook::AppSynthesizer;
 use crate::container::AppContainer;
 use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::server::McpServer;
@@ -21,13 +22,16 @@ use crate::features::assistant::service::McpEndpoint;
 use crate::features::backend::service::BackendService;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::library::models::StreamKind;
+use crate::features::library::service::LibraryService;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::analyzer::LlmAnalyzer;
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::pipeline::job::JobRegistry;
 use crate::features::pipeline::jobs::analysis::AnalysisJobFactory;
+use crate::features::pipeline::jobs::audio::AudioJobFactory;
 use crate::features::pipeline::jobs::translation::TranslationJobFactory;
 use crate::features::pipeline::llm::LlmTranslator;
+use crate::features::project::service::ProjectService;
 use crate::features::settings::models::Theme;
 use crate::features::settings::repository::SettingsRepository;
 use crate::features::settings::service::SettingsService;
@@ -146,6 +150,14 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::scripting::scripting_unit_save,
             commands::scripting::scripting_cast_save,
             commands::audiobook::audiobook_get,
+            commands::audiobook::audiobook_unit_get,
+            commands::audiobook::audiobook_config_save,
+            commands::audiobook::audiobook_mix_save,
+            commands::audiobook::audiobook_flag_set,
+            commands::audiobook::audiobook_segment_generate,
+            commands::audiobook::audiobook_segment_audio,
+            commands::audiobook::audiobook_voice_preview,
+            commands::audiobook::audiobook_export,
             commands::library::library_summary,
             commands::library::library_collection_list,
             commands::library::library_collection_create,
@@ -264,9 +276,11 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
     app.manage(service);
     app.manage(loader);
     app.manage(NovelService::new());
-    manage_pipeline(app, container);
-    app.manage(crate::features::project::service::ProjectService::new());
-    app.manage(crate::features::library::service::LibraryService::new());
+    let projects = ProjectService::new();
+    let library = LibraryService::new();
+    manage_pipeline(app, container, &projects, &library);
+    app.manage(projects);
+    app.manage(library);
 }
 
 fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
@@ -301,7 +315,12 @@ fn manage_assistant<R: Runtime>(app: &App<R>, container: &AppContainer) {
     app.manage(grants);
 }
 
-fn manage_pipeline<R: Runtime>(app: &App<R>, container: &AppContainer) {
+fn manage_pipeline<R: Runtime>(
+    app: &App<R>,
+    container: &AppContainer,
+    projects: &ProjectService,
+    library: &LibraryService,
+) {
     let translation = crate::features::translation::service::TranslationService::new();
     let translator = std::sync::Arc::new(LlmTranslator::new(SettingsRepository::new(
         container.settings_path.clone(),
@@ -323,6 +342,11 @@ fn manage_pipeline<R: Runtime>(app: &App<R>, container: &AppContainer) {
             )))
             .register(std::sync::Arc::new(AnalysisJobFactory::new(
                 knowledge, analyzer,
+            )))
+            .register(std::sync::Arc::new(AudioJobFactory::new(
+                projects.clone(),
+                library.clone(),
+                std::sync::Arc::new(AppSynthesizer::new(app.handle().clone())),
             ))),
     );
 }

@@ -106,7 +106,7 @@ pub fn project_module_states(
     ScriptingWorkspace::new(service.open(session)?).modules(project_id)
 }
 
-fn task_failure(error: tauri::Error) -> ProjectError {
+pub(crate) fn task_failure(error: tauri::Error) -> ProjectError {
     ProjectError::new(ProjectErrorCode::Task, error.to_string())
 }
 

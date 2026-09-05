@@ -1,3 +1,6 @@
+use crate::features::backend::models::SynthesisRequest;
+use crate::features::backend::models::SynthesizedAudio;
+use crate::features::backend::service::Synthesizer;
 use crate::features::library::assets;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
@@ -11,9 +14,8 @@ use crate::features::library::models::VoiceReference;
 use crate::features::library::models::VoiceSource;
 use crate::features::library::sounds;
 use crate::features::library::sounds::SoundFormat;
-use crate::features::library::videos;
-use crate::shared::process::failure_snippet;
-use crate::shared::process::hide_window;
+use crate::infra::backend_client::ClientError;
+use crate::shared::ffmpeg;
 use base64::Engine;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
@@ -21,14 +23,18 @@ use rusqlite::params;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
-use std::process::Stdio;
 
 pub const VOICE_NAME_MAX: usize = 255;
 pub const SAMPLE_TEXT_MAX: usize = 500;
 pub const RECORDING_MAX_MS: i64 = 30_500;
 pub const PRESET_ONLY_ENGINES: [&str; 1] = ["edge-read-aloud"];
 
+const ENGINE_UNAVAILABLE_CODES: [&str; 4] = [
+    "MODEL_NOT_FOUND",
+    "MODEL_NOT_INSTALLED",
+    "MODEL_BUSY",
+    "ENGINE_UNSUPPORTED",
+];
 const REFERENCE_FILE: &str = "reference.wav";
 const STAGING_PREFIX: &str = ".staging-";
 const VOICE_COLUMNS: &str = "id, name, description, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, sample_duration_ms, created_at, updated_at";
@@ -279,27 +285,69 @@ pub fn upload_extension(path: &Path) -> LibraryResult<&'static str> {
 }
 
 pub fn convert_reference(source: &Path, target: &Path) -> LibraryResult<i64> {
-    let ffmpeg = videos::sidecar_path().map_err(|error| reference_invalid(error.detail))?;
-    let mut command = Command::new(ffmpeg);
-    command
-        .args(["-v", "error", "-nostdin", "-y", "-i"])
-        .arg(source)
-        .args(["-vn", "-ac", "1", "-c:a", "pcm_s16le", "-f", "wav"])
-        .arg(target)
-        .stdin(Stdio::null());
-    hide_window(&mut command);
-    let output = command.output()?;
-    if !output.status.success() {
+    let options = ["-vn", "-ac", "1"].map(str::to_string);
+    if let Err(detail) = ffmpeg::run(&ffmpeg::wav_args(source, target, &options)) {
         let _ = fs::remove_file(target);
-        let detail = failure_snippet(
-            &String::from_utf8_lossy(&output.stdout),
-            &String::from_utf8_lossy(&output.stderr),
-        );
-        return Err(reference_invalid(format!("ffmpeg failed: {detail}")));
+        return Err(reference_invalid(detail));
     }
     let analysis = sounds::analyze(target, SoundFormat::Wav)
         .map_err(|error| reference_invalid(error.detail))?;
     Ok(analysis.duration_ms)
+}
+
+pub fn synthesis_error(error: ClientError) -> LibraryError {
+    match error {
+        ClientError::Unreachable(detail) => {
+            LibraryError::new(LibraryErrorCode::VoiceBackendOffline, detail)
+        }
+        ClientError::Api { code, message, .. }
+            if ENGINE_UNAVAILABLE_CODES.contains(&code.as_str()) =>
+        {
+            LibraryError::new(LibraryErrorCode::VoiceEngineUnavailable, message)
+        }
+        ClientError::Api { code, message, .. } => LibraryError::new(
+            LibraryErrorCode::VoiceSynthesisFailed,
+            format!("{code}: {message}"),
+        ),
+        ClientError::Invalid(detail) => {
+            LibraryError::new(LibraryErrorCode::VoiceSynthesisFailed, detail)
+        }
+    }
+}
+
+pub fn synthesis_request(
+    voice: &LibraryVoice,
+    reference: Option<&Path>,
+    text: &str,
+) -> LibraryResult<SynthesisRequest> {
+    if voice.engine_kind == VoiceEngineKind::Cloud {
+        return Err(LibraryError::new(
+            LibraryErrorCode::VoiceEngineUnavailable,
+            "cloud voices cannot be previewed yet",
+        ));
+    }
+    Ok(SynthesisRequest {
+        model: voice.engine.clone(),
+        text: text.to_string(),
+        source: voice.source.as_str().to_string(),
+        language: voice.language.clone(),
+        gender: voice.gender.as_str().to_string(),
+        preset: voice.preset.clone().unwrap_or_default(),
+        prompt: voice.prompt.clone(),
+        reference_path: reference
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+    })
+}
+
+pub fn synthesize(
+    synthesizer: &dyn Synthesizer,
+    voice: &LibraryVoice,
+    reference: Option<&Path>,
+    text: &str,
+) -> LibraryResult<SynthesizedAudio> {
+    let request = synthesis_request(voice, reference, text)?;
+    synthesizer.synthesize(&request).map_err(synthesis_error)
 }
 
 pub fn list(conn: &Connection) -> LibraryResult<Vec<LibraryVoice>> {

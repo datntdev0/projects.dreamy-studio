@@ -20,6 +20,7 @@ use crate::features::pipeline::job::JobFactory;
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::job::TaskOutcome;
 use crate::features::pipeline::log::TaskLog;
+use crate::features::pipeline::models::JobOwner;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineErrorCode;
 use crate::features::pipeline::models::PipelineResult;
@@ -347,8 +348,8 @@ impl PipelineJob for AnalysisJob {
         KIND_ANALYSIS
     }
 
-    fn novel_id(&self) -> i64 {
-        self.novel_id
+    fn owner(&self) -> JobOwner {
+        JobOwner::Novel(self.novel_id)
     }
 
     fn scope(&self) -> String {
@@ -474,9 +475,10 @@ impl JobFactory for AnalysisJobFactory {
     fn create(
         &self,
         session: &WorkspaceSession,
-        novel_id: i64,
+        owner: JobOwner,
         params: &serde_json::Value,
     ) -> PipelineResult<Box<dyn PipelineJob>> {
+        let novel_id = owner.require_novel()?;
         let workspace = self.knowledge.open(session).map_err(pipeline_error)?;
         let raw = params
             .get("lang")

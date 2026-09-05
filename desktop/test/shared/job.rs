@@ -3,6 +3,7 @@ use crate::features::novel::service::NovelWorkspace;
 use crate::features::pipeline::job::PipelineJob;
 use crate::features::pipeline::job::TaskOutcome;
 use crate::features::pipeline::log::TaskLog;
+use crate::features::pipeline::models::JobOwner;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineEvent;
 use crate::features::pipeline::models::PipelineResult;
@@ -87,6 +88,7 @@ impl JobFixture {
         vec![TaskRequest {
             chapter_id: self.chapter_id.clone(),
             passage: None,
+            segment_id: None,
         }]
     }
 }
@@ -260,8 +262,8 @@ impl PipelineJob for FakeJob {
         FAKE_KIND
     }
 
-    fn novel_id(&self) -> i64 {
-        self.novel_id
+    fn owner(&self) -> JobOwner {
+        JobOwner::Novel(self.novel_id)
     }
 
     fn scope(&self) -> String {

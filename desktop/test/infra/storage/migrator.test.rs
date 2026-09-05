@@ -128,7 +128,7 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 17);
+    assert_eq!(history_count(db.connection()), 18);
     for table in [
         "ws_library_voices",
         "ws_assistant_sessions",
@@ -195,7 +195,7 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
             "local".to_string()
         )
     );
-    assert_eq!(history_count(db.connection()), 17);
+    assert_eq!(history_count(db.connection()), 18);
     assert!(table_exists(
         db.connection(),
         "ws_novel_translation_dictionary"
@@ -214,7 +214,9 @@ fn workspace_upgrade_from_0_1_0_3_adds_assistant_tables() {
     let old_scripts: Vec<Script> = workspace_scripts()
         .unwrap()
         .into_iter()
-        .filter(|script| !["0.2.0", "0.3.0"].contains(&script.version.to_string().as_str()))
+        .filter(|script| {
+            !["0.2.0", "0.3.0", "0.4.0"].contains(&script.version.to_string().as_str())
+        })
         .collect();
     Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
     assert_eq!(history_count(db.connection()), 13);
@@ -222,7 +224,7 @@ fn workspace_upgrade_from_0_1_0_3_adds_assistant_tables() {
 
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
 
-    assert_eq!(history_count(db.connection()), 17);
+    assert_eq!(history_count(db.connection()), 18);
     assert!(table_exists(db.connection(), "ws_assistant_sessions"));
     assert!(table_exists(db.connection(), "ws_assistant_messages"));
     let conn = db.connection();
@@ -593,13 +595,95 @@ fn workspace_upgrade_from_0_2_0_3_adds_the_voice_library() {
     let old_scripts: Vec<Script> = workspace_scripts()
         .unwrap()
         .into_iter()
-        .filter(|script| script.version.to_string() != "0.3.0")
+        .filter(|script| !["0.3.0", "0.4.0"].contains(&script.version.to_string().as_str()))
         .collect();
     Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
     assert!(!table_exists(db.connection(), "ws_library_voices"));
 
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
 
-    assert_eq!(history_count(db.connection()), 17);
+    assert_eq!(history_count(db.connection()), 18);
     assert!(table_exists(db.connection(), "ws_library_voices"));
+}
+
+fn insert_rows(conn: &Connection, sql: &[&str]) {
+    for statement in sql {
+        conn.execute(statement, []).unwrap();
+    }
+}
+
+#[test]
+fn workspace_upgrade_to_0_4_0_keeps_pipelines_and_attaches_them_to_projects() {
+    let dir = TempDir::new().unwrap();
+    let (_, mut db) = open_new(&dir);
+    let cancel = AtomicBool::new(false);
+    let old_scripts: Vec<Script> = workspace_scripts()
+        .unwrap()
+        .into_iter()
+        .filter(|script| script.version.to_string() != "0.4.0")
+        .collect();
+    Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
+    insert_rows(
+        db.connection(),
+        &[
+            "INSERT INTO ws_novels (title, lang, origin, created_at, updated_at) \
+             VALUES ('Novel', 'EN', 'local', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+            "INSERT INTO ws_pipeline_history (novel_id, kind, target, status, total, done, \
+             created_at) VALUES (1, 'translation', 'VI', 'completed', 1, 1, '2026-01-01T00:00:00Z')",
+            "INSERT INTO ws_pipeline_tasks (pipeline_id, chapter_id, passage, status, progress) \
+             VALUES (1, 'c1', 2, 'completed', 100)",
+        ],
+    );
+
+    Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
+
+    let conn = db.connection();
+    let history: (i64, Option<i64>, String, i64) = conn
+        .query_row(
+            "SELECT novel_id, project_id, target, done FROM ws_pipeline_history WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    let task: (String, Option<String>, i64, i64) = conn
+        .query_row(
+            "SELECT chapter_id, segment_id, passage, progress FROM ws_pipeline_tasks WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(history, (1, None, "VI".to_string(), 1));
+    assert_eq!(task, ("c1".to_string(), None, 2, 100));
+    assert!(!table_exists(conn, "ws_pipeline_history_backup"));
+    assert!(!table_exists(conn, "ws_pipeline_tasks_backup"));
+    insert_rows(
+        conn,
+        &[
+            "INSERT INTO ws_projects (name, template, created_at, updated_at, opened_at) \
+             VALUES ('Book', 'audiobook', 'a', 'a', 'a')",
+            "INSERT INTO ws_pipeline_history (project_id, kind, target, status, total, \
+             created_at) VALUES (1, 'audio', 'audio', 'running', 1, 'a')",
+            "INSERT INTO ws_pipeline_tasks (pipeline_id, chapter_id, segment_id, status) \
+             VALUES (2, 'U01', 'b1', 'queued')",
+        ],
+    );
+    let new_id: i64 = conn
+        .query_row("SELECT MAX(id) FROM ws_pipeline_history", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(new_id, 2);
+
+    conn.execute("DELETE FROM ws_projects WHERE id = 1", [])
+        .unwrap();
+
+    let left: (i64, i64) = conn
+        .query_row(
+            "SELECT (SELECT COUNT(*) FROM ws_pipeline_history), \
+             (SELECT COUNT(*) FROM ws_pipeline_tasks)",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(left, (1, 1));
 }

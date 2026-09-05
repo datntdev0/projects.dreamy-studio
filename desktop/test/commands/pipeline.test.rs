@@ -80,7 +80,7 @@ impl JobFactory for ProbeFactory {
     fn create(
         &self,
         _session: &WorkspaceSession,
-        _novel_id: i64,
+        _owner: JobOwner,
         params: &serde_json::Value,
     ) -> PipelineResult<Box<dyn PipelineJob>> {
         self.seen.lock().unwrap().push(params.clone());
@@ -103,7 +103,7 @@ fn registry() -> JobRegistry {
 fn analysis_request(novel_id: i64, lang: Option<&str>) -> JobRequest {
     JobRequest {
         kind: Some("analysis".to_string()),
-        novel_id,
+        novel_id: Some(novel_id),
         lang: lang.map(str::to_string),
         ..JobRequest::default()
     }
@@ -111,7 +111,7 @@ fn analysis_request(novel_id: i64, lang: Option<&str>) -> JobRequest {
 
 fn request(novel_id: i64, target: Option<&str>) -> JobRequest {
     JobRequest {
-        novel_id,
+        novel_id: Some(novel_id),
         target: target.map(str::to_string),
         ..JobRequest::default()
     }
@@ -192,7 +192,7 @@ fn commands_without_a_workspace_return_no_workspace() {
         sink,
     )
     .unwrap_err();
-    let history = list_history(&session, 1, None).unwrap_err();
+    let history = list_history(&session, Some(JobOwner::Novel(1)), None).unwrap_err();
 
     assert_eq!(start.code, PipelineErrorCode::NoWorkspace);
     assert_eq!(history.code, PipelineErrorCode::NoWorkspace);
@@ -216,6 +216,7 @@ fn history_is_newest_first_and_clamps_the_limit() {
     let task = TaskRequest {
         chapter_id,
         passage: None,
+        segment_id: None,
     };
     let first = repo
         .insert_pipeline_with_tasks(
@@ -245,8 +246,13 @@ fn history_is_newest_first_and_clamps_the_limit() {
         )
         .unwrap();
 
-    let one = list_history(&fixture.session, novel_id, Some(0)).unwrap();
-    let all = list_history(&fixture.session, novel_id, Some(1000)).unwrap();
+    let one = list_history(&fixture.session, Some(JobOwner::Novel(novel_id)), Some(0)).unwrap();
+    let all = list_history(
+        &fixture.session,
+        Some(JobOwner::Novel(novel_id)),
+        Some(1000),
+    )
+    .unwrap();
 
     assert_eq!(one.len(), 1);
     assert_eq!(one[0].id, third);
@@ -270,6 +276,7 @@ fn snapshot_serializes_with_camel_case_fields() {
             &[TaskRequest {
                 chapter_id,
                 passage: Some(1),
+                segment_id: None,
             }],
             &format_timestamp(Utc::now()),
         )
@@ -301,6 +308,7 @@ fn task_of(chapter_id: &str) -> Vec<TaskRequest> {
     vec![TaskRequest {
         chapter_id: chapter_id.to_string(),
         passage: None,
+        segment_id: None,
     }]
 }
 
@@ -323,7 +331,7 @@ fn the_default_kind_is_translation() {
 
     assert_eq!(snapshot.kind, "translation");
     assert_eq!(snapshot.target, "VI");
-    assert_eq!(snapshot.novel_id, novel_id);
+    assert_eq!(snapshot.novel_id, Some(novel_id));
     let finished = sink.wait_for_finished();
     assert_eq!(finished.status, PipelineStatus::Completed);
     assert_eq!(finished.done, 1);
@@ -559,7 +567,7 @@ fn an_analysis_starts_with_a_lang_and_stores_the_result() {
 
     assert_eq!(snapshot.kind, "analysis");
     assert_eq!(snapshot.target, "VI");
-    assert_eq!(snapshot.novel_id, novel_id);
+    assert_eq!(snapshot.novel_id, Some(novel_id));
     let finished = sink.wait_for_finished();
     assert_eq!(finished.status, PipelineStatus::Completed);
     let stored = KnowledgeService::new()
@@ -717,4 +725,48 @@ fn pipeline_history_is_listed_and_cancelling_nothing_is_false_through_ipc() {
     assert!(history.as_array().unwrap().is_empty());
     assert_eq!(cancelled, false);
     assert_eq!(invalid["code"], "invalid_input");
+}
+
+#[test]
+fn pipelines_need_exactly_one_owner() {
+    let fixture = fixture();
+    let executor = PipelineExecutor::new();
+    let sink: Arc<dyn PipelineTarget> = Arc::new(RecordingTarget::default());
+    let both = JobRequest {
+        project_id: Some(2),
+        ..request(1, Some("VI"))
+    };
+    let neither = JobRequest {
+        novel_id: None,
+        ..request(1, Some("VI"))
+    };
+
+    for job in [both, neither] {
+        let error = start_pipeline(
+            &executor,
+            &registry(),
+            &fixture.session,
+            job,
+            task_of("c1"),
+            sink.clone(),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, PipelineErrorCode::InvalidInput);
+    }
+    let project = start_pipeline(
+        &executor,
+        &registry(),
+        &fixture.session,
+        JobRequest {
+            novel_id: None,
+            project_id: Some(1),
+            ..request(1, Some("VI"))
+        },
+        task_of("c1"),
+        sink,
+    )
+    .unwrap_err();
+    assert_eq!(project.code, PipelineErrorCode::InvalidInput);
+    assert_eq!(JobOwner::filter(None, None).unwrap(), None);
+    assert!(JobOwner::filter(Some(1), Some(2)).is_err());
 }

@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 struct FakeFactory {
     job: FakeJob,
-    seen: Mutex<Vec<(i64, serde_json::Value)>>,
+    seen: Mutex<Vec<(JobOwner, serde_json::Value)>>,
 }
 
 impl JobFactory for FakeFactory {
@@ -19,10 +19,10 @@ impl JobFactory for FakeFactory {
     fn create(
         &self,
         _session: &WorkspaceSession,
-        novel_id: i64,
+        owner: JobOwner,
         params: &serde_json::Value,
     ) -> PipelineResult<Box<dyn PipelineJob>> {
-        self.seen.lock().unwrap().push((novel_id, params.clone()));
+        self.seen.lock().unwrap().push((owner, params.clone()));
         Ok(self.job.boxed())
     }
 }
@@ -40,7 +40,7 @@ fn creates_the_job_of_the_registered_kind() {
         .create(
             FAKE_KIND,
             &WorkspaceSession::new(),
-            7,
+            JobOwner::Project(7),
             &json!({ "scope": "VI" }),
         )
         .unwrap();
@@ -49,7 +49,7 @@ fn creates_the_job_of_the_registered_kind() {
     assert_eq!(job.scope(), "VI");
     assert_eq!(
         *factory.seen.lock().unwrap(),
-        vec![(7, json!({ "scope": "VI" }))]
+        vec![(JobOwner::Project(7), json!({ "scope": "VI" }))]
     );
 }
 
@@ -58,7 +58,12 @@ fn rejects_an_unknown_kind_as_invalid_input() {
     let registry = JobRegistry::new();
 
     let error = registry
-        .create("missing", &WorkspaceSession::new(), 1, &json!({}))
+        .create(
+            "missing",
+            &WorkspaceSession::new(),
+            JobOwner::Novel(1),
+            &json!({}),
+        )
         .err()
         .unwrap();
 

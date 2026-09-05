@@ -1,4 +1,5 @@
 use crate::features::pipeline::log::TaskLog;
+use crate::features::pipeline::models::JobOwner;
 use crate::features::pipeline::models::PipelineError;
 use crate::features::pipeline::models::PipelineResult;
 use crate::features::pipeline::models::PipelineTask;
@@ -17,7 +18,7 @@ pub enum TaskOutcome {
 
 pub trait PipelineJob: Send + Sync {
     fn kind(&self) -> &'static str;
-    fn novel_id(&self) -> i64;
+    fn owner(&self) -> JobOwner;
     fn scope(&self) -> String;
     fn dir(&self) -> &Path;
     fn validate(&self, tasks: &[TaskRequest]) -> PipelineResult<()>;
@@ -36,7 +37,7 @@ pub trait JobFactory: Send + Sync {
     fn create(
         &self,
         session: &WorkspaceSession,
-        novel_id: i64,
+        owner: JobOwner,
         params: &serde_json::Value,
     ) -> PipelineResult<Box<dyn PipelineJob>>;
 }
@@ -60,14 +61,14 @@ impl JobRegistry {
         &self,
         kind: &str,
         session: &WorkspaceSession,
-        novel_id: i64,
+        owner: JobOwner,
         params: &serde_json::Value,
     ) -> PipelineResult<Box<dyn PipelineJob>> {
         let factory = self
             .factories
             .get(kind)
             .ok_or_else(|| PipelineError::invalid(format!("unsupported pipeline kind '{kind}'")))?;
-        factory.create(session, novel_id, params)
+        factory.create(session, owner, params)
     }
 }
 

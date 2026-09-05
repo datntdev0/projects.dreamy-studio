@@ -232,14 +232,8 @@ impl PipelineExecutor {
             RunState::Running => PipelineStatus::Running,
             RunState::Queued => PipelineStatus::Queued,
         };
-        let pipeline_id = repo.insert_pipeline(
-            job.novel_id(),
-            job.kind(),
-            &job.scope(),
-            status,
-            &tasks,
-            &now,
-        )?;
+        let pipeline_id =
+            repo.insert_pipeline(job.owner(), job.kind(), &job.scope(), status, &tasks, &now)?;
         let snapshot = repo
             .snapshot(pipeline_id)?
             .ok_or_else(|| PipelineError::not_found("pipeline was not created"))?;
@@ -248,10 +242,10 @@ impl PipelineExecutor {
         log.line(
             "pipeline",
             &format!(
-                "{} pipeline {pipeline_id} ({}) for novel {}: {} tasks, {}",
+                "{} pipeline {pipeline_id} ({}) for {}: {} tasks, {}",
                 job.kind(),
                 job.scope(),
-                job.novel_id(),
+                job.owner(),
                 tasks.len(),
                 match state {
                     RunState::Running => "running",
@@ -360,9 +354,10 @@ fn spawn_coordinator(context: Arc<CoordinatorContext>, promoted: bool) -> Pipeli
 }
 
 fn task_label(task: &PipelineTask) -> String {
-    match task.passage {
-        Some(passage) => format!("{}-p{passage}", task.chapter_id),
-        None => task.chapter_id.clone(),
+    match (&task.segment_id, task.passage) {
+        (Some(segment), _) => format!("{}-{segment}", task.chapter_id),
+        (None, Some(passage)) => format!("{}-p{passage}", task.chapter_id),
+        (None, None) => task.chapter_id.clone(),
     }
 }
 
@@ -498,7 +493,11 @@ fn validate_requests(tasks: &[TaskRequest]) -> PipelineResult<()> {
     }
     let mut seen = HashSet::new();
     for task in tasks {
-        if !seen.insert((task.chapter_id.clone(), task.passage)) {
+        if !seen.insert((
+            task.chapter_id.clone(),
+            task.segment_id.clone(),
+            task.passage,
+        )) {
             return Err(PipelineError::invalid("duplicate pipeline task"));
         }
     }

@@ -47,3 +47,8 @@ export interface PipelineBar {
   failed: number;
   running: number;
 }
+
+export interface PipelineChapter {
+  seq: number;
+  title: string;
+}

@@ -66,7 +66,7 @@ export class PipelineHistory implements OnInit {
   }
 
   novelOf(pipeline: PipelineSnapshot): string {
-    return this.pipelines.novelName(pipeline.novelId);
+    return this.pipelines.ownerName(pipeline);
   }
 
   kindOf(pipeline: PipelineSnapshot): LanguageKey | null {

@@ -1,8 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+// prettier-ignore
+import { PipelineEvent, PipelineSnapshot, PipelineTask } from '@features/novel/novel.translation.models';
+import { ProjectService } from '@features/project/project.service';
 import { BackendService } from '@features/settings/backend.service';
 import { LanguageService } from '@shared/language/language.service';
+import { ToastService } from '@shared/toast/toast.service';
 import { installAudiobookBackend, prepareEngines } from '@testing/audiobook';
 import { FakeIpc } from '@testing/fake-ipc';
+import { pipeline, task } from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,6 +17,21 @@ const PROJECT = 1;
 const TEA_WOMAN = 'E16';
 const STEP_MS = 400;
 const DRAIN_STEPS = 40;
+
+function audioTask(unitId: string, segmentId: string, id: number): PipelineTask {
+  return task({ id, chapterId: unitId, segmentId, status: 'queued' });
+}
+
+function audioPipeline(tasks: PipelineTask[], overrides: Partial<PipelineSnapshot> = {}) {
+  return pipeline({
+    id: 41,
+    novelId: null,
+    projectId: PROJECT,
+    kind: 'audio',
+    tasks,
+    ...overrides,
+  });
+}
 
 describe('AudiobookService', () => {
   let ipc: FakeIpc;
@@ -43,6 +63,10 @@ describe('AudiobookService', () => {
     await service.settled(PROJECT);
   }
 
+  function projectName(): string {
+    return TestBed.inject(ProjectService).projectById(PROJECT)?.name ?? '';
+  }
+
   function voiceTeaWoman(): void {
     service.setSpeakerVoice(PROJECT, TEA_WOMAN, 1);
   }
@@ -55,9 +79,26 @@ describe('AudiobookService', () => {
 
   async function generateAll(): Promise<number> {
     vi.useFakeTimers();
-    const pending = service.generate(PROJECT);
+    const started = await service.generate(PROJECT);
     await drain();
-    return pending;
+    await settle();
+    return started;
+  }
+
+  function toasts(tone: string): string[] {
+    return TestBed.inject(ToastService)
+      .items()
+      .filter((item) => item.tone === tone)
+      .map((item) => item.message);
+  }
+
+  function captureChannel(): { send: (event: PipelineEvent) => void } {
+    const sink = { send: (event: PipelineEvent) => void event };
+    ipc.on('pipeline_start', (args) => {
+      sink.send = (args?.['onEvent'] as { onmessage: typeof sink.send }).onmessage;
+      return pipeline({ id: 41, novelId: null, projectId: PROJECT, kind: 'audio' });
+    });
+    return sink;
   }
 
   describe('loading', () => {
@@ -111,7 +152,6 @@ describe('AudiobookService', () => {
       expect(ctx.rail[3].stat.meta).toBe(true);
       expect(ctx.railSummary.total).toBe(12);
       expect(ctx.canPlay).toBe(true);
-      expect(ctx.availability.backendRunning).toBe(true);
       expect(ctx.engines).toEqual({ localModels: 1, cloudProviders: 2 });
       expect(ctx.speakers[0].member.kind).toBe('narrator');
     });
@@ -166,12 +206,12 @@ describe('AudiobookService', () => {
       expect(context().blockers.map((item) => item.kind)).toContain('voice');
     });
 
-    it('reports backend-off blockers through the live availability', () => {
+    it('never blocks on the local backend state', () => {
       const backend = TestBed.inject(BackendService);
-      service.setSpeakerVoice(PROJECT, 'narr', 2);
+      voiceTeaWoman();
       backend.server.update((server) => ({ ...server, status: 'stopped' }));
-      expect(context().blockers[0].message.key).toBe('audiobook.blocker.engine.backend');
-      expect(context().canGenerate).toBe(false);
+      expect(context().blockers).toEqual([]);
+      expect(context().canGenerate).toBe(true);
     });
 
     it('adds, renames and removes manual speakers', async () => {
@@ -206,12 +246,23 @@ describe('AudiobookService', () => {
       expect(context().audio?.mix.gap).toBe(2);
       expect(context().summary?.duration).toBeGreaterThan(0);
       await settle();
-      expect(ipc.lastArgs('audiobook_unit_save')).toMatchObject({ unitId: context().unit?.id });
+      expect(ipc.lastArgs('audiobook_mix_save')).toEqual({
+        projectId: PROJECT,
+        unitId: context().unit?.id,
+        mix: context().audio?.mix,
+      });
       service.selectUnit(PROJECT, context().rail[3].unit.id);
-      const saves = ipc.called('audiobook_unit_save');
+      const saves = ipc.called('audiobook_mix_save');
       service.setMix(PROJECT, 'gap', 3);
       await settle();
-      expect(ipc.called('audiobook_unit_save')).toBe(saves);
+      expect(ipc.called('audiobook_mix_save')).toBe(saves);
+    });
+
+    it('applies the clamped mix returned by the desktop', async () => {
+      ipc.on('audiobook_mix_save', { gap: 1, intro: 1, outro: 1, vol: 0 });
+      service.setMix(PROJECT, 'gap', 2);
+      await settle();
+      expect(context().audio?.mix).toEqual({ gap: 1, intro: 1, outro: 1, vol: 0 });
     });
 
     it('flags a generated segment and clears the flag', async () => {
@@ -226,7 +277,24 @@ describe('AudiobookService', () => {
       const missing = context().segments.find((item) => !item.record)?.block.id ?? '';
       expect(service.flagSegment(PROJECT, missing, 'x')).toBe(false);
       await settle();
-      expect(ipc.called('audiobook_unit_save')).toBe(2);
+      expect(ipc.called('audiobook_flag_set')).toBe(2);
+      expect(ipc.lastArgs('audiobook_flag_set')).toEqual({
+        projectId: PROJECT,
+        unitId: context().unit?.id,
+        blockId: id,
+        flag: '',
+      });
+      expect(ipc.calls.some((call) => call.args && 'unit' in call.args)).toBe(false);
+    });
+
+    it('replaces an empty note with the re-listen hint', async () => {
+      const id = context().segments.find((row) => row.record)?.block.id ?? '';
+      expect(service.flagSegment(PROJECT, id, '  ')).toBe(true);
+      await settle();
+      expect(ipc.lastArgs('audiobook_flag_set')?.['flag']).toBe('Needs re-listening');
+      expect(context().segments.find((row) => row.block.id === id)?.record?.flag).toBe(
+        'Needs re-listening',
+      );
     });
   });
 
@@ -237,7 +305,7 @@ describe('AudiobookService', () => {
       expect(context().blockers[0].speakerId).toBe(TEA_WOMAN);
     });
 
-    it('plans, generates every pending segment and refreshes progress', async () => {
+    it('plans and runs every pending segment as one audio pipeline', async () => {
       voiceTeaWoman();
       const plan = service.generatePlanOf(PROJECT);
       expect(plan?.segments).toBeGreaterThan(0);
@@ -245,36 +313,116 @@ describe('AudiobookService', () => {
       expect(plan?.groups.map((group) => group.kind)).toEqual(['cloud']);
       expect(service.generatePlanOf(99)).toBeNull();
       expect(context().canGenerate).toBe(true);
-      const generated = await generateAll();
-      expect(generated).toBe(plan?.segments);
+      const unitId = context().unit?.id;
+      const started = await generateAll();
+      expect(started).toBe(plan?.segments);
+      const args = ipc.lastArgs('pipeline_start') ?? {};
+      expect(args['kind']).toBe('audio');
+      expect(args['projectId']).toBe(PROJECT);
+      const tasks = args['tasks'] as { chapterId: string; segmentId: string }[];
+      expect(tasks.map((item) => item.segmentId)).toEqual(plan?.segmentIds);
+      expect(tasks.every((item) => item.chapterId === unitId)).toBe(true);
+      const requests = (args['params'] as { requests: Record<string, unknown> }).requests;
+      expect(Object.keys(requests)).toEqual(plan?.segmentIds);
       expect(context().stat?.state).toBe('done');
       expect(context().canGenerate).toBe(false);
       expect(service.isGenerating(PROJECT)).toBe(false);
-      expect(ipc.called('audiobook_segment_generate')).toBe(generated);
+      expect(service.running()).toEqual([]);
+      expect(ipc.called('audiobook_segment_generate')).toBe(0);
+      expect(ipc.called('audiobook_unit_get')).toBeGreaterThan(0);
       expect(ipc.called('project_modules')).toBeGreaterThan(0);
+      expect(toasts('success')).toContain('Completed: Audiobook · ' + projectName());
       expect(await service.generate(PROJECT)).toBe(0);
     });
 
-    it('shows segments as running while the backend works', async () => {
+    it('shows queued and running tasks as running and keeps going across chapters', async () => {
       voiceTeaWoman();
       vi.useFakeTimers();
-      const pending = service.generate(PROJECT);
+      await service.generate(PROJECT);
       const total = context().running.length;
       expect(total).toBeGreaterThan(0);
+      expect(service.running()[0]).toMatchObject({ kind: 'audio', projectId: PROJECT });
       expect(
         context().rows.some((row) => row.kind === 'segment' && row.segment.state === 'running'),
       ).toBe(true);
       expect(service.isGenerating(PROJECT, context().unit?.id)).toBe(true);
       expect(service.isGenerating(PROJECT, 'other')).toBe(false);
       expect(context().canGenerate).toBe(false);
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(800);
       expect(context().running.length).toBeLessThan(total);
+      const unitId = context().unit?.id ?? '';
+      service.selectUnit(PROJECT, context().rail[0].unit.id);
+      expect(service.isGenerating(PROJECT, unitId)).toBe(true);
       await drain();
-      await pending;
+      expect(service.isGenerating(PROJECT)).toBe(false);
+    });
+
+    it('reports failed tasks, the failed count and keeps previous states', async () => {
+      voiceTeaWoman();
+      const channel = captureChannel();
+      const unitId = context().unit?.id ?? '';
+      const [first, second] = context().todo;
+      const before = context().segments.find((row) => row.block.id === second.id)?.state;
+      expect(await service.generate(PROJECT)).toBeGreaterThan(0);
+      const snapshot = audioPipeline([
+        audioTask(unitId, first.id, 1),
+        audioTask(unitId, second.id, 2),
+      ]);
+      channel.send({ type: 'started', pipeline: snapshot });
+      expect(context().running).toEqual([first.id, second.id]);
+      channel.send({ type: 'updated', pipeline: { ...snapshot, status: 'running' } });
+      const failed: PipelineTask = {
+        ...audioTask(unitId, second.id, 2),
+        status: 'failed',
+        error: 'backend off',
+      };
+      channel.send({ type: 'task', pipelineId: 41, task: failed });
+      expect(toasts('danger')).toContain('Could not generate the segment: backend off');
+      expect(context().running).toEqual([first.id]);
+      expect(context().segments.find((row) => row.block.id === second.id)?.state).toBe(before);
+      channel.send({
+        type: 'finished',
+        pipeline: { ...snapshot, status: 'failed', failed: 1, tasks: [failed] },
+      });
+      await settle();
+      await vi.waitFor(() =>
+        expect(toasts('warning')).toContain(`Could not generate 1 segments for ${projectName()}.`),
+      );
+      expect(context().running).toEqual([]);
+      channel.send({ type: 'started', pipeline: snapshot });
+      expect(service.running()).toEqual([]);
+    });
+
+    it('drops the running state and refetches the unit after a cancel', async () => {
+      voiceTeaWoman();
+      const channel = captureChannel();
+      await service.generate(PROJECT);
+      const unitId = context().unit?.id ?? '';
+      const queued = audioTask(unitId, context().todo[0].id, 1);
+      channel.send({ type: 'started', pipeline: audioPipeline([queued]) });
+      expect(context().running.length).toBe(1);
+      const fetches = ipc.called('audiobook_unit_get');
+      const cancelled = audioPipeline([{ ...queued, status: 'cancelled' }], {
+        status: 'cancelled',
+      });
+      channel.send({ type: 'finished', pipeline: cancelled });
+      expect(context().running).toEqual([]);
+      await settle();
+      await vi.waitFor(() =>
+        expect(toasts('info')).toContain(`Cancelled: Audiobook · ${projectName()}`),
+      );
+      expect(ipc.called('audiobook_unit_get')).toBe(fetches + 1);
+    });
+
+    it('reports a pipeline that cannot start', async () => {
+      voiceTeaWoman();
+      ipc.fail('pipeline_start', { code: 'pipeline_busy', detail: 'busy' });
+      expect(await service.generate(PROJECT)).toBe(0);
+      expect(toasts('danger')).toContain('Could not generate the segment: busy');
       expect(context().running).toEqual([]);
     });
 
-    it('regenerates one segment and reports why it cannot', async () => {
+    it('regenerates one segment directly and reports why it cannot', async () => {
       const row = context().segments.find((item) => item.record);
       const id = row?.block.id ?? '';
       expect(service.regenerate(PROJECT, 'nothing')).toBe('noop');
@@ -286,19 +434,30 @@ describe('AudiobookService', () => {
       await drain();
       await settle();
       expect(ipc.called('audiobook_segment_generate')).toBe(1);
+      expect(ipc.called('pipeline_start')).toBe(0);
       service.setSpeakerVoice(PROJECT, 'narr', null);
       expect(service.regenerate(PROJECT, id)).toBe('blocked');
     });
 
-    it('skips segments that lost their voice and records backend failures', async () => {
+    it('keeps the segment state when a regeneration fails', async () => {
+      voiceTeaWoman();
+      const row = context().segments.find((item) => item.record);
+      const id = row?.block.id ?? '';
+      ipc.fail('audiobook_segment_generate', { code: 'backend_failed', detail: 'engine crashed' });
+      expect(service.regenerate(PROJECT, id)).toBe('started');
+      await settle();
+      expect(toasts('danger')).toContain('Could not generate the segment: engine crashed');
+      expect(context().segments.find((item) => item.block.id === id)).toMatchObject({
+        state: row?.state,
+        record: row?.record,
+      });
+    });
+
+    it('starts nothing when every pending segment lost its voice', async () => {
       voiceTeaWoman();
       service.setSpeakerVoice(PROJECT, 'narr', null);
       expect(await service.generate(PROJECT)).toBe(0);
-      service.setSpeakerVoice(PROJECT, 'narr', 1);
-      ipc.fail('audiobook_segment_generate', { code: 'tts', detail: 'engine crashed' });
-      expect(await generateAll()).toBe(0);
-      expect(service.error()).toMatchObject({ code: 'tts' });
-      expect(context().running).toEqual([]);
+      expect(ipc.called('pipeline_start')).toBe(0);
     });
 
     it('records persistence failures without losing the optimistic edit', async () => {
@@ -343,7 +502,6 @@ describe('AudiobookService', () => {
       expect(service.issueText({ kind: 'cloud', engine: 'ElevenLabs' })).toBe(
         'Requires connecting ElevenLabs',
       );
-      expect(service.issueText({ kind: 'backend', engine: 'x' })).toBe('Python backend is off');
     });
   });
 });

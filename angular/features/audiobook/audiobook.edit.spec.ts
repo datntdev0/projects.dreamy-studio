@@ -32,18 +32,19 @@ describe('unit audio', () => {
     expect(edit.setMix(book, 'U01', 'vol', -3).units['U01'].mix.vol).toBe(-3);
   });
 
-  it('stores, flags and clears records', () => {
+  it('stores records, flags and mix replies', () => {
     const base = audiobook();
     const stored = edit.putRecord(base, 'U01', 'B1', audioRecord());
     expect(stored.units['U01'].audio['B1'].flag).toBe('');
-    expect(edit.flagRecord(base, 'U01', 'B1', 'x')).toBe(base);
-    const flagged = edit.flagRecord(stored, 'U01', 'B1', '  bad stress ');
+    expect(edit.setRecordFlag(base, 'U01', 'B1', 'x')).toBe(base);
+    const flagged = edit.setRecordFlag(stored, 'U01', 'B1', 'bad stress');
     expect(flagged.units['U01'].audio['B1'].flag).toBe('bad stress');
-    expect(edit.flagRecord(stored, 'U01', 'B1', ' ').units['U01'].audio['B1'].flag).toBe(
-      edit.DEFAULT_FLAG_NOTE,
-    );
-    expect(edit.clearRecordFlag(flagged, 'U01', 'B1').units['U01'].audio['B1'].flag).toBe('');
-    expect(edit.clearRecordFlag(stored, 'U01', 'B1')).toBe(stored);
-    expect(edit.clearRecordFlag(base, 'U01', 'B1')).toBe(base);
+    expect(edit.setRecordFlag(flagged, 'U01', 'B1', 'bad stress')).toBe(flagged);
+    expect(edit.setRecordFlag(flagged, 'U01', 'B1', '').units['U01'].audio['B1'].flag).toBe('');
+    const mixed = edit.putMix(stored, 'U01', { gap: 1, intro: 2, outro: 3, vol: 0 });
+    expect(mixed.units['U01'].mix).toEqual({ gap: 1, intro: 2, outro: 3, vol: 0 });
+    expect(mixed.units['U01'].audio['B1']).toEqual(audioRecord());
+    const unit = { ...emptyUnitAudio(), audio: { B2: audioRecord() } };
+    expect(edit.putUnit(base, 'U02', unit).units['U02']).toBe(unit);
   });
 });

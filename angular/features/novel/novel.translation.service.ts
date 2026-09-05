@@ -1,6 +1,7 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
+import { trackPipeline, withoutPipeline } from '../pipeline/pipeline.tracking';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { NovelError, ParagraphSaveResult, TargetLang, TranslationStatus } from './novel.models';
 import { clampSeq, normalizeParagraphText, toNovelError } from './novel.rules';
@@ -16,28 +17,6 @@ export const ANALYSIS_KIND = 'analysis';
 
 function storeKey(novelId: number, target: TargetLang): string {
   return `${novelId}:${target}`;
-}
-
-function replaceTask(tasks: PipelineTask[], next: PipelineTask): PipelineTask[] {
-  const result: PipelineTask[] = [];
-  for (const task of tasks) {
-    result.push(task.id === next.id ? next : task);
-  }
-  return result;
-}
-
-function taskTotals(tasks: PipelineTask[]): { done: number; failed: number } {
-  let done = 0;
-  let failed = 0;
-  for (const task of tasks) {
-    if (task.status === 'completed') {
-      done += 1;
-    }
-    if (task.status === 'failed') {
-      failed += 1;
-    }
-  }
-  return { done, failed };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -415,32 +394,27 @@ export class NovelTranslationService {
   }
 
   private handlePipelineEvent(event: PipelineEvent): void {
-    if (event.type === 'started') {
-      this.activePipelines.set([
-        ...this.running().filter((pipeline) => pipeline.id !== event.pipeline.id),
-        event.pipeline,
-      ]);
+    if (event.type === 'finished') {
+      void this.finishPipeline(event.pipeline);
       return;
     }
-    if (event.type === 'updated') {
-      this.activePipelines.set(
-        this.running().map((pipeline) => this.withSnapshot(pipeline, event.pipeline)),
-      );
-      return;
-    }
+    const owner =
+      event.type === 'task'
+        ? this.running().find((pipeline) => pipeline.id === event.pipelineId)
+        : undefined;
+    this.activePipelines.set(trackPipeline(this.running(), event));
     if (event.type === 'task') {
-      this.applyTask(event.pipelineId, event.task);
-      return;
+      this.refreshCompleted(owner, event.task);
     }
-    void this.finishPipeline(event.pipeline);
   }
 
-  private applyTask(pipelineId: number, task: PipelineTask): void {
-    const owner = this.running().find((pipeline) => pipeline.id === pipelineId);
-    this.activePipelines.set(
-      this.running().map((pipeline) => this.withTask(pipeline, pipelineId, task)),
-    );
-    if (owner && owner.kind !== ANALYSIS_KIND && task.status === 'completed') {
+  private refreshCompleted(owner: PipelineSnapshot | undefined, task: PipelineTask): void {
+    if (
+      owner &&
+      owner.novelId !== null &&
+      owner.kind !== ANALYSIS_KIND &&
+      task.status === 'completed'
+    ) {
       void this.refresh(owner.novelId, owner.target as TargetLang);
     }
   }
@@ -451,30 +425,14 @@ export class NovelTranslationService {
       this.finished.set(pipeline);
       return;
     }
-    await this.refresh(pipeline.novelId, pipeline.target as TargetLang);
+    if (pipeline.novelId !== null) {
+      await this.refresh(pipeline.novelId, pipeline.target as TargetLang);
+    }
     this.removePipeline(pipeline.id);
   }
 
   private removePipeline(pipelineId: number): void {
-    this.activePipelines.set(this.running().filter((pipeline) => pipeline.id !== pipelineId));
-  }
-
-  private withSnapshot(pipeline: PipelineSnapshot, next: PipelineSnapshot): PipelineSnapshot {
-    return pipeline.id === next.id
-      ? { ...pipeline, status: next.status, startedAt: next.startedAt }
-      : pipeline;
-  }
-
-  private withTask(
-    pipeline: PipelineSnapshot,
-    pipelineId: number,
-    task: PipelineTask,
-  ): PipelineSnapshot {
-    if (pipeline.id !== pipelineId) {
-      return pipeline;
-    }
-    const tasks = replaceTask(pipeline.tasks, task);
-    return { ...pipeline, ...taskTotals(tasks), tasks };
+    this.activePipelines.set(withoutPipeline(this.running(), pipelineId));
   }
 
   private async refreshWarnings(novelId: number, target: TargetLang): Promise<void> {

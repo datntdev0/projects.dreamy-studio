@@ -1,19 +1,15 @@
 import { LibraryVoice } from '../library/library.voices.models';
 import { engineName } from '../library/library.voices.rules';
+import { PipelineSnapshot, PipelineTask, TaskRequest } from '../novel/novel.translation.models';
 import { ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { CloudAccount } from '../settings/cloud.models';
-import {
-  AudioEnv,
-  CloudBilling,
-  GenerateGroup,
-  GeneratePlan,
-  PreviewRequest,
-  SegmentRequest,
-  VoiceAvailability,
-} from './audiobook.models';
+// prettier-ignore
+import { AudioEnv, AudioStart, CloudBilling, GenerateGroup, GeneratePlan, GenerationJob, PreviewRequest, SegmentRequest, VoiceAvailability } from './audiobook.models';
 import { COST_PER_CHAR, segmentInfo, todoBlocks, voicingOf } from './audiobook.rules';
 
 export const LOCAL_GROUP = 'local';
+
+export const AUDIO_KIND = 'audio';
 
 export const PREVIEW_FALLBACK_TEXT = 'The lamp keeper climbed the stairs as the tide rolled in.';
 
@@ -98,4 +94,49 @@ export function segmentRequestOf(env: AudioEnv, block: ScriptBlock): SegmentRequ
 
 export function previewRequestOf(voice: LibraryVoice, speed: number): PreviewRequest {
   return { voiceId: voice.id, speed, text: voice.sampleText || PREVIEW_FALLBACK_TEXT };
+}
+
+export function audioStartOf(env: AudioEnv, unitId: string, blocks: ScriptBlock[]): AudioStart {
+  const tasks: TaskRequest[] = [];
+  const requests: Record<string, SegmentRequest> = {};
+  for (const block of blocks) {
+    const request = segmentRequestOf(env, block);
+    if (request) {
+      tasks.push({ chapterId: unitId, segmentId: block.id });
+      requests[block.id] = request;
+    }
+  }
+  return { tasks, requests };
+}
+
+function isPending(task: PipelineTask): boolean {
+  return task.status === 'queued' || task.status === 'running';
+}
+
+function collectJobs(pipeline: PipelineSnapshot, jobs: GenerationJob[]): void {
+  for (const task of pipeline.tasks) {
+    if (task.segmentId !== null && isPending(task)) {
+      jobs.push({ unitId: task.chapterId, blockId: task.segmentId });
+    }
+  }
+}
+
+export function audioJobsOf(pipelines: PipelineSnapshot[], projectId: number): GenerationJob[] {
+  const jobs: GenerationJob[] = [];
+  for (const pipeline of pipelines) {
+    if (pipeline.kind === AUDIO_KIND && pipeline.projectId === projectId) {
+      collectJobs(pipeline, jobs);
+    }
+  }
+  return jobs;
+}
+
+export function pipelineUnits(pipeline: PipelineSnapshot): string[] {
+  const units: string[] = [];
+  for (const task of pipeline.tasks) {
+    if (!units.includes(task.chapterId)) {
+      units.push(task.chapterId);
+    }
+  }
+  return units;
 }

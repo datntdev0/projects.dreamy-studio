@@ -241,7 +241,7 @@ export class ScriptingService {
     const script = this.scriptOf(projectId);
     if (script && target && script.cfg.preset === 'film') {
       const next = edit.setUnitTitle(script, target.id, title, stampNow());
-      this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id, false));
+      this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id));
     }
   }
 
@@ -255,7 +255,7 @@ export class ScriptingService {
     const max = this.chapterMax(project);
     const range = nextChapterRange(target.chs, index, value, max);
     const next = edit.setUnitChapters(script, target.id, range, stampNow());
-    this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id, false));
+    this.commit(projectId, { script: next, view: {} }, this.unitPersist(target.id));
     void this.ensureSources(projectId);
   }
 
@@ -266,7 +266,7 @@ export class ScriptingService {
       return null;
     }
     const change = edit.startUnit(script, target.id, this.castOf(projectId), stampNow());
-    this.commit(projectId, change, this.unitPersist(target.id, true));
+    this.commit(projectId, change, this.unitPersist(target.id));
     return change.view.sel ?? null;
   }
 
@@ -295,7 +295,7 @@ export class ScriptingService {
     const ctx = this.editable(projectId);
     if (ctx) {
       const change = edit.removeBlock(ctx.script, ctx.unit.id, blockId, stampNow());
-      this.commit(projectId, change, this.unitPersist(ctx.unit.id, false));
+      this.commit(projectId, change, this.unitPersist(ctx.unit.id));
     }
   }
 
@@ -310,7 +310,7 @@ export class ScriptingService {
         ctx.cast,
         stampNow(),
       );
-      this.commit(projectId, change, this.unitPersist(ctx.unit.id, false));
+      this.commit(projectId, change, this.unitPersist(ctx.unit.id));
     }
   }
 
@@ -326,7 +326,7 @@ export class ScriptingService {
     const ctx = this.editable(projectId);
     if (ctx) {
       const change = edit.patchBlock(ctx.script, ctx.unit.id, blockId, patch, stampNow());
-      this.commit(projectId, change, this.unitPersist(ctx.unit.id, false));
+      this.commit(projectId, change, this.unitPersist(ctx.unit.id));
     }
   }
 
@@ -334,7 +334,7 @@ export class ScriptingService {
     const ctx = this.editable(projectId);
     if (ctx) {
       const change = edit.moveBlock(ctx.script, ctx.unit.id, blockId, direction, stampNow());
-      this.commit(projectId, change, this.unitPersist(ctx.unit.id, false));
+      this.commit(projectId, change, this.unitPersist(ctx.unit.id));
     }
   }
 
@@ -344,7 +344,7 @@ export class ScriptingService {
       return null;
     }
     const change = edit.duplicateBlock(ctx.script, ctx.unit.id, blockId, stampNow());
-    this.commit(projectId, change, this.unitPersist(ctx.unit.id, false));
+    this.commit(projectId, change, this.unitPersist(ctx.unit.id));
     return change.view.sel ?? null;
   }
 
@@ -362,11 +362,7 @@ export class ScriptingService {
     if (!next) {
       return false;
     }
-    this.commit(
-      projectId,
-      { script: next, view: { sel: null } },
-      this.unitPersist(ctx.unit.id, true),
-    );
+    this.commit(projectId, { script: next, view: { sel: null } }, this.unitPersist(ctx.unit.id));
     return true;
   }
 
@@ -448,12 +444,12 @@ export class ScriptingService {
     type: BlockType,
   ): string | null {
     const change = edit.insertBlock(ctx.script, ctx.unit.id, afterId, type, ctx.cast, stampNow());
-    this.commit(projectId, change, this.unitPersist(ctx.unit.id, false));
+    this.commit(projectId, change, this.unitPersist(ctx.unit.id));
     return change.view.sel ?? null;
   }
 
-  private unitPersist(unitId: string, progress: boolean): Persist {
-    return { kind: 'unit', unitId, progress };
+  private unitPersist(unitId: string): Persist {
+    return { kind: 'unit', unitId, progress: true };
   }
 
   private commit(projectId: number, change: ScriptChange, persist: Persist): void {

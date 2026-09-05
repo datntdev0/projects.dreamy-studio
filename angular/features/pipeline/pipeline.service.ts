@@ -1,14 +1,18 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { ChapterRow, NovelError, NovelSummary } from '@features/novel/novel.models';
+import { AudiobookService } from '@features/audiobook/audiobook.service';
+import { NovelError, NovelSummary } from '@features/novel/novel.models';
 import { displayName, toNovelError } from '@features/novel/novel.rules';
 import { NovelService } from '@features/novel/novel.service';
 import { PipelineSnapshot } from '@features/novel/novel.translation.models';
 import { NovelTranslationService } from '@features/novel/novel.translation.service';
+import { ProjectSummary } from '@features/project/project.models';
+import { ProjectService } from '@features/project/project.service';
+import { ScriptingService } from '@features/scripting/scripting.service';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { LayoutService } from '@layout/layout.service';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
-import { PipelineTotals } from './pipeline.models';
+import { PipelineChapter, PipelineTotals } from './pipeline.models';
 import { compareNewestFirst, HISTORY_LIMIT, totalsOf } from './pipeline.rules';
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +20,9 @@ export class PipelineService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly novels = inject(NovelService);
   private readonly translation = inject(NovelTranslationService);
+  private readonly audiobook = inject(AudiobookService);
+  private readonly projects = inject(ProjectService);
+  private readonly scripting = inject(ScriptingService);
   private readonly workspace = inject(WorkspaceService);
   private readonly layout = inject(LayoutService);
   private readonly records = signal<PipelineSnapshot[]>([]);
@@ -42,10 +49,26 @@ export class PipelineService {
     return novel ? displayName(novel) : `#${novelId}`;
   }
 
-  chapterOf(novelId: number, chapterId: string): ChapterRow | undefined {
-    for (const chapter of this.novels.chaptersOf(novelId)) {
+  projectName(projectId: number): string {
+    return this.projects.projectById(projectId)?.name ?? `#${projectId}`;
+  }
+
+  ownerName(pipeline: PipelineSnapshot): string {
+    if (pipeline.projectId !== null) {
+      return this.projectName(pipeline.projectId);
+    }
+    return pipeline.novelId === null ? '' : this.novelName(pipeline.novelId);
+  }
+
+  chapterOf(pipeline: PipelineSnapshot, chapterId: string): PipelineChapter | undefined {
+    if (pipeline.projectId !== null) {
+      return this.unitOf(pipeline.projectId, chapterId);
+    }
+    for (const chapter of pipeline.novelId === null
+      ? []
+      : this.novels.chaptersOf(pipeline.novelId)) {
       if (chapter.id === chapterId) {
-        return chapter;
+        return { seq: chapter.seq, title: chapter.title };
       }
     }
     return undefined;
@@ -56,8 +79,11 @@ export class PipelineService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      await this.novels.ensureLoaded();
-      const lists = await Promise.all(this.novels.novels().map(this.fetchNovel.bind(this)));
+      await Promise.all([this.novels.ensureLoaded(), this.projects.ensureLoaded()]);
+      const lists = await Promise.all([
+        ...this.novels.novels().map(this.fetchNovel.bind(this)),
+        ...this.projects.projects().map(this.fetchProject.bind(this)),
+      ]);
       if (epoch === this.epoch) {
         const records = lists.flat().sort(compareNewestFirst);
         this.records.set(records);
@@ -77,9 +103,9 @@ export class PipelineService {
 
   select(id: number | null): void {
     this.selectedId.set(id);
-    const pipeline = this.selected();
-    if (pipeline && this.novels.chaptersOf(pipeline.novelId).length === 0) {
-      void this.novels.loadChapters(pipeline.novelId).catch(this.ignore);
+    const novelId = this.selected()?.novelId ?? null;
+    if (novelId !== null && this.novels.chaptersOf(novelId).length === 0) {
+      void this.novels.loadChapters(novelId).catch(this.ignore);
     }
   }
 
@@ -105,13 +131,23 @@ export class PipelineService {
   private loadRunningChapters(records: PipelineSnapshot[]): void {
     const novelIds = new Set<number>();
     for (const record of records) {
-      if (record.status === 'running' && this.novels.chaptersOf(record.novelId).length === 0) {
-        novelIds.add(record.novelId);
+      const novelId = record.novelId;
+      if (
+        record.status === 'running' &&
+        novelId !== null &&
+        this.novels.chaptersOf(novelId).length === 0
+      ) {
+        novelIds.add(novelId);
       }
     }
     for (const novelId of novelIds) {
       void this.novels.loadChapters(novelId).catch(this.ignore);
     }
+  }
+
+  private unitOf(projectId: number, unitId: string): PipelineChapter | undefined {
+    const unit = this.scripting.scriptOf(projectId)?.units.find((item) => item.id === unitId);
+    return unit ? { seq: unit.no, title: unit.title } : undefined;
   }
 
   private ignore(): void {
@@ -125,8 +161,15 @@ export class PipelineService {
     });
   }
 
+  private fetchProject(project: ProjectSummary): Promise<PipelineSnapshot[]> {
+    return this.ipc.invoke<PipelineSnapshot[]>('pipeline_history_list', {
+      projectId: project.id,
+      limit: HISTORY_LIMIT,
+    });
+  }
+
   private buildRunning(): PipelineSnapshot[] {
-    return this.translation.running();
+    return [...this.translation.running(), ...this.audiobook.running()];
   }
 
   private buildTotals(): PipelineTotals {
@@ -134,7 +177,7 @@ export class PipelineService {
   }
 
   private buildHistory(): PipelineSnapshot[] {
-    const active = this.translation.running();
+    const active = this.running();
     const out: PipelineSnapshot[] = [];
     for (const record of this.records()) {
       out.push(active.find((pipeline) => pipeline.id === record.id) ?? record);
@@ -162,7 +205,7 @@ export class PipelineService {
   }
 
   private syncActive(): void {
-    const count = this.translation.running().length;
+    const count = this.running().length;
     untracked(this.applyActive.bind(this, count));
   }
 

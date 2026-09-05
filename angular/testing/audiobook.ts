@@ -1,10 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import {
-  Audiobook,
-  AudioEnv,
-  AudioRecord,
-  VoiceAvailability,
-} from '@features/audiobook/audiobook.models';
+// prettier-ignore
+import { Audiobook, AudioEnv, AudioRecord, VoiceAvailability } from '@features/audiobook/audiobook.models';
+// prettier-ignore
+import { AUDIOBOOK_AUDIO, AudiobookAudioOutput } from '@features/audiobook/audiobook.player.service';
 import { emptyBook } from '@features/audiobook/audiobook.rules';
 import { CastMember } from '@features/scripting/scripting.models';
 import { BackendService } from '@features/settings/backend.service';
@@ -83,7 +81,6 @@ export function availability(overrides: Partial<VoiceAvailability> = {}): VoiceA
         presets: [],
       },
     ],
-    backendRunning: true,
     ...overrides,
   };
 }
@@ -97,11 +94,59 @@ export function envOf(overrides: Partial<AudioEnv> = {}): AudioEnv {
   };
 }
 
+export class FakeAudioOutput implements AudiobookAudioOutput {
+  readonly played: ArrayBuffer[] = [];
+  ended: (() => void) | null = null;
+  progress: ((seconds: number) => void) | null = null;
+  paused = false;
+  stops = 0;
+  durationMs = 2000;
+  failure: unknown = null;
+
+  async play(
+    data: ArrayBuffer,
+    ended: () => void,
+    progress?: (seconds: number) => void,
+  ): Promise<number> {
+    if (this.failure !== null) {
+      throw this.failure;
+    }
+    this.played.push(data);
+    this.ended = ended;
+    this.progress = progress ?? null;
+    this.paused = false;
+    return this.durationMs;
+  }
+
+  pause(): void {
+    this.paused = true;
+  }
+
+  async resume(): Promise<void> {
+    this.paused = false;
+  }
+
+  stop(): void {
+    this.stops += 1;
+    this.ended = null;
+    this.progress = null;
+  }
+
+  finish(): void {
+    const ended = this.ended;
+    this.ended = null;
+    ended?.();
+  }
+}
+
 export interface AudiobookBackend {
   scripting: ScriptingState;
+  output: FakeAudioOutput;
 }
 
 export function installAudiobookBackend(ipc: FakeIpc): AudiobookBackend {
+  const output = new FakeAudioOutput();
+  TestBed.configureTestingModule({ providers: [{ provide: AUDIOBOOK_AUDIO, useValue: output }] });
   const scripting = createScriptingState();
   installScriptingBackend(ipc, scripting);
   const handlers = audiobookHandlers(scripting, (args) =>
@@ -110,7 +155,7 @@ export function installAudiobookBackend(ipc: FakeIpc): AudiobookBackend {
   for (const [command, handler] of Object.entries(handlers)) {
     ipc.on(command, (args) => handler(args ?? {}));
   }
-  return { scripting };
+  return { scripting, output };
 }
 
 export function prepareEngines(running = true): BackendService {

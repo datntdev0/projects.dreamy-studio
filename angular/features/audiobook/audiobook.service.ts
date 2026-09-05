@@ -1,26 +1,33 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
+import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
-import { noop } from '@shared/utils/noop';
+import { ToastTone } from '@shared/toast/toast.models';
+import { ToastService } from '@shared/toast/toast.service';
 
 import { LibraryVoiceService } from '../library/library.voices.service';
+import { PipelineEvent, PipelineSnapshot, PipelineTask } from '../novel/novel.translation.models';
+import { trackPipeline, withoutPipeline, withStarted } from '../pipeline/pipeline.tracking';
 import { ProjectError } from '../project/project.models';
 import { toProjectError } from '../project/project.rules';
 import { ProjectService } from '../project/project.service';
 import { CastAddResult } from '../scripting/scripting.models';
 import { findBlock, findUnit } from '../scripting/scripting.rules';
 import { ScriptingService } from '../scripting/scripting.service';
-import { BackendService } from '../settings/backend.service';
 import { CloudService } from '../settings/cloud.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { buildContext } from './audiobook.context';
 import * as edit from './audiobook.edit';
-import { generatePlanOf, segmentRequestOf } from './audiobook.generate';
 // prettier-ignore
-import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportFormat, ExportReply, GeneratePlan, GenerationJob, MixField, RegenerateResult, StaleReason, VoiceAvailability, VoiceIssue } from './audiobook.models';
-import { emptyBook, emptyView, REASON_KEYS } from './audiobook.rules';
+import { AUDIO_KIND, audioJobsOf, audioStartOf, generatePlanOf, pipelineUnits, segmentRequestOf } from './audiobook.generate';
+// prettier-ignore
+import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportFormat, ExportReply, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
+import { emptyBook, emptyView, REASON_KEYS, unitAudioOf } from './audiobook.rules';
 
-type Persist = { kind: 'config' } | { kind: 'unit'; unitId: string };
+type Persist =
+  | { kind: 'config' }
+  | { kind: 'mix'; unitId: string }
+  | { kind: 'flag'; unitId: string; blockId: string };
 
 function normalizeBook(stored: Partial<Audiobook> | null): Audiobook {
   return { ...emptyBook(), ...stored };
@@ -44,13 +51,15 @@ export class AudiobookService {
   private readonly projects = inject(ProjectService);
   private readonly scripting = inject(ScriptingService);
   private readonly voices = inject(LibraryVoiceService);
-  private readonly backend = inject(BackendService);
   private readonly cloud = inject(CloudService);
   private readonly workspace = inject(WorkspaceService);
   private readonly languageService = inject(LanguageService);
+  private readonly toasts = inject(ToastService);
   private readonly books = signal<Record<number, Audiobook>>({});
   private readonly views = signal<Record<number, AudiobookView>>({});
-  private readonly jobs = signal<Record<number, GenerationJob[]>>({});
+  private readonly singles = signal<Record<number, GenerationJob[]>>({});
+  private readonly pipelines = signal<PipelineSnapshot[]>([]);
+  private readonly finishedIds = new Set<number>();
   private readonly loadedIds = signal<Record<number, true>>({});
   private readonly chains = new Map<number, Promise<void>>();
   private readonly generations = new Map<number, Promise<void>>();
@@ -59,6 +68,7 @@ export class AudiobookService {
   readonly loading = signal(false);
   readonly error = signal<ProjectError | null>(null);
   readonly availability = computed(this.buildAvailability.bind(this));
+  readonly running = this.pipelines.asReadonly();
 
   constructor() {
     effect(this.syncWorkspace.bind(this));
@@ -77,7 +87,7 @@ export class AudiobookService {
   }
 
   isGenerating(projectId: number, unitId?: string): boolean {
-    const running = this.jobs()[projectId] ?? [];
+    const running = this.jobsOf(projectId);
     return unitId === undefined ? running.length > 0 : running.some((job) => job.unitId === unitId);
   }
 
@@ -95,7 +105,7 @@ export class AudiobookService {
       view: this.viewOf(projectId),
       voices: this.voices.items(),
       availability: this.availability(),
-      jobs: this.jobs()[projectId] ?? [],
+      jobs: this.jobsOf(projectId),
     });
   }
 
@@ -128,7 +138,7 @@ export class AudiobookService {
       await this.scripting.ensureLoaded(projectId);
       await this.voices.ensureLoaded();
       const stored = await this.ipc.invoke<Audiobook | null>('audiobook_get', { projectId });
-      this.books.set({ ...this.books(), [projectId]: normalizeBook(stored) });
+      this.storeBook(projectId, normalizeBook(stored));
       this.loadedIds.set({ ...this.loadedIds(), [projectId]: true });
       this.pinUnit(projectId);
     } catch (cause) {
@@ -216,34 +226,45 @@ export class AudiobookService {
     const unit = this.contextOf(projectId)?.unit;
     if (unit && unit.blocks) {
       this.mutate(projectId, (book) => edit.setMix(book, unit.id, field, value), {
-        persist: { kind: 'unit', unitId: unit.id },
+        persist: { kind: 'mix', unitId: unit.id },
         progress: false,
       });
     }
   }
 
   flagSegment(projectId: number, blockId: string, note: string): boolean {
-    return this.mutateRecord(projectId, blockId, (book, unitId) =>
-      edit.flagRecord(book, unitId, blockId, note),
-    );
+    const flag = note.trim() || this.languageService.translate('audiobook.flag.defaultNote');
+    return this.setFlag(projectId, blockId, flag);
   }
 
   clearFlag(projectId: number, blockId: string): boolean {
-    return this.mutateRecord(projectId, blockId, (book, unitId) =>
-      edit.clearRecordFlag(book, unitId, blockId),
-    );
+    return this.setFlag(projectId, blockId, '');
   }
 
-  generate(projectId: number): Promise<number> {
+  async generate(projectId: number): Promise<number> {
     const ctx = this.contextOf(projectId);
     if (!ctx || !ctx.unit || !ctx.canGenerate) {
-      return Promise.resolve(0);
+      return 0;
     }
-    return this.startJobs(
-      projectId,
-      ctx.unit.id,
-      ctx.todo.map((block) => block.id),
-    );
+    const start = audioStartOf(envOf(ctx), ctx.unit.id, ctx.todo);
+    if (start.tasks.length === 0) {
+      return 0;
+    }
+    await this.flush(projectId);
+    try {
+      const snapshot = await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
+        kind: AUDIO_KIND,
+        projectId,
+        tasks: start.tasks,
+        params: { requests: start.requests },
+        onEvent: this.ipc.channel<PipelineEvent>(this.handleAudioEvent.bind(this, projectId)),
+      });
+      this.trackStarted(snapshot);
+      return start.tasks.length;
+    } catch (cause) {
+      this.showFailure(cause);
+      return 0;
+    }
   }
 
   regenerate(projectId: number, blockId: string): RegenerateResult {
@@ -258,7 +279,7 @@ export class AudiobookService {
     if (row.state === 'running') {
       return 'running';
     }
-    void this.startJobs(projectId, ctx.unit.id, [blockId]);
+    this.startSingle(projectId, { unitId: ctx.unit.id, blockId });
     return 'started';
   }
 
@@ -283,7 +304,9 @@ export class AudiobookService {
   reset(): void {
     this.books.set({});
     this.views.set({});
-    this.jobs.set({});
+    this.singles.set({});
+    this.pipelines.set([]);
+    this.finishedIds.clear();
     this.loadedIds.set({});
     this.chains.clear();
     this.generations.clear();
@@ -291,19 +314,15 @@ export class AudiobookService {
     this.error.set(null);
   }
 
-  private mutateRecord(
-    projectId: number,
-    blockId: string,
-    change: (book: Audiobook, unitId: string) => Audiobook,
-  ): boolean {
+  private setFlag(projectId: number, blockId: string, flag: string): boolean {
     const unit = this.contextOf(projectId)?.unit;
     const before = this.bookOf(projectId);
     if (!unit || !before) {
       return false;
     }
-    const next = change(before, unit.id);
+    const next = edit.setRecordFlag(before, unit.id, blockId, flag);
     this.mutate(projectId, () => next, {
-      persist: { kind: 'unit', unitId: unit.id },
+      persist: { kind: 'flag', unitId: unit.id, blockId },
       progress: true,
     });
     return next !== before;
@@ -323,13 +342,15 @@ export class AudiobookService {
       return;
     }
     this.pinUnit(projectId);
-    this.books.set({ ...this.books(), [projectId]: next });
-    this.enqueue(projectId, this.persist.bind(this, projectId, next, options));
+    this.storeBook(projectId, next);
+    void this.enqueue(projectId, this.persist.bind(this, projectId, next, options));
   }
 
-  private enqueue(projectId: number, task: () => Promise<void>): void {
+  private enqueue(projectId: number, task: () => Promise<void>): Promise<void> {
     const previous = this.chains.get(projectId) ?? Promise.resolve();
-    this.chains.set(projectId, previous.then(task));
+    const next = previous.then(task);
+    this.chains.set(projectId, next);
+    return next;
   }
 
   private async persist(
@@ -350,38 +371,63 @@ export class AudiobookService {
   private async write(projectId: number, book: Audiobook, persist: Persist): Promise<void> {
     if (persist.kind === 'config') {
       await this.ipc.invoke<void>('audiobook_config_save', { projectId, config: configOf(book) });
+    } else if (persist.kind === 'mix') {
+      await this.writeMix(projectId, unitAudioOf(book, persist.unitId).mix, persist.unitId);
     } else {
-      await this.ipc.invoke<void>('audiobook_unit_save', {
-        projectId,
-        unitId: persist.unitId,
-        unit: book.units[persist.unitId],
-      });
+      const record = unitAudioOf(book, persist.unitId).audio[persist.blockId];
+      await this.writeFlag(projectId, persist.unitId, persist.blockId, record);
     }
   }
 
-  private startJobs(projectId: number, unitId: string, blockIds: string[]): Promise<number> {
-    const added = blockIds.map((blockId) => ({ unitId, blockId }));
-    this.setJobs(projectId, [...(this.jobs()[projectId] ?? []), ...added]);
+  private async writeMix(projectId: number, mix: MixSettings, unitId: string): Promise<void> {
+    const saved = await this.ipc.invoke<MixSettings>('audiobook_mix_save', {
+      projectId,
+      unitId,
+      mix,
+    });
+    const book = this.bookOf(projectId);
+    if (book && saved && unitAudioOf(book, unitId).mix === mix) {
+      this.storeBook(projectId, edit.putMix(book, unitId, saved));
+    }
+  }
+
+  private async writeFlag(
+    projectId: number,
+    unitId: string,
+    blockId: string,
+    record: AudioRecord | undefined,
+  ): Promise<void> {
+    if (!record) {
+      return;
+    }
+    const saved = await this.ipc.invoke<AudioRecord>('audiobook_flag_set', {
+      projectId,
+      unitId,
+      blockId,
+      flag: record.flag,
+    });
+    const book = this.bookOf(projectId);
+    if (book && saved && unitAudioOf(book, unitId).audio[blockId] === record) {
+      this.storeBook(projectId, edit.putRecord(book, unitId, blockId, saved));
+    }
+  }
+
+  private startSingle(projectId: number, job: GenerationJob): void {
+    this.setSingles(projectId, [...(this.singles()[projectId] ?? []), job]);
     const previous = this.generations.get(projectId) ?? Promise.resolve();
-    const run = previous.then(this.runJobs.bind(this, projectId, added));
-    this.generations.set(projectId, run.then(noop, noop));
-    return run;
+    this.generations.set(projectId, previous.then(this.runSingle.bind(this, projectId, job)));
   }
 
-  private async runJobs(projectId: number, queued: GenerationJob[]): Promise<number> {
+  private async runSingle(projectId: number, job: GenerationJob): Promise<void> {
     await this.flush(projectId);
-    let generated = 0;
-    for (const job of queued) {
-      generated += (await this.generateOne(projectId, job)) ? 1 : 0;
-      this.setJobs(
-        projectId,
-        (this.jobs()[projectId] ?? []).filter((item) => !sameJob(item, job)),
-      );
-    }
-    if (generated > 0) {
+    const generated = await this.generateOne(projectId, job);
+    this.setSingles(
+      projectId,
+      (this.singles()[projectId] ?? []).filter((item) => !sameJob(item, job)),
+    );
+    if (generated) {
       await this.projects.refreshModules(projectId);
     }
-    return generated;
   }
 
   private async generateOne(projectId: number, job: GenerationJob): Promise<boolean> {
@@ -389,7 +435,7 @@ export class AudiobookService {
     const unit = ctx ? findUnit(ctx.script, job.unitId) : undefined;
     const block = findBlock(unit, job.blockId);
     const request = ctx && block ? segmentRequestOf(envOf(ctx), block) : null;
-    if (!ctx || !request) {
+    if (!request) {
       return false;
     }
     try {
@@ -402,7 +448,7 @@ export class AudiobookService {
       this.applyRecord(projectId, job, record);
       return true;
     } catch (cause) {
-      this.error.set(toProjectError(cause));
+      this.showFailure(cause);
       return false;
     }
   }
@@ -410,13 +456,99 @@ export class AudiobookService {
   private applyRecord(projectId: number, job: GenerationJob, record: AudioRecord): void {
     const book = this.bookOf(projectId);
     if (book) {
-      const next = edit.putRecord(book, job.unitId, job.blockId, record);
-      this.books.set({ ...this.books(), [projectId]: next });
+      this.storeBook(projectId, edit.putRecord(book, job.unitId, job.blockId, record));
     }
   }
 
-  private setJobs(projectId: number, list: GenerationJob[]): void {
-    this.jobs.set({ ...this.jobs(), [projectId]: list });
+  private setSingles(projectId: number, list: GenerationJob[]): void {
+    this.singles.set({ ...this.singles(), [projectId]: list });
+  }
+
+  private jobsOf(projectId: number): GenerationJob[] {
+    return [...(this.singles()[projectId] ?? []), ...audioJobsOf(this.pipelines(), projectId)];
+  }
+
+  private trackStarted(snapshot: PipelineSnapshot): void {
+    const known = this.pipelines().some((pipeline) => pipeline.id === snapshot.id);
+    if (!known && !this.finishedIds.has(snapshot.id)) {
+      this.pipelines.set(withStarted(this.pipelines(), snapshot));
+    }
+  }
+
+  private handleAudioEvent(projectId: number, event: PipelineEvent): void {
+    if (event.type === 'finished') {
+      void this.finishAudio(projectId, event.pipeline);
+      return;
+    }
+    if (event.type === 'started' && this.finishedIds.has(event.pipeline.id)) {
+      return;
+    }
+    this.pipelines.set(trackPipeline(this.pipelines(), event));
+    if (event.type === 'task') {
+      this.applyAudioTask(projectId, event.task);
+    }
+  }
+
+  private applyAudioTask(projectId: number, task: PipelineTask): void {
+    if (task.status === 'completed') {
+      void this.refreshUnit(projectId, task.chapterId);
+    } else if (task.status === 'failed') {
+      this.toast('audiobook.toast.segmentFailed', { reason: task.error }, 'danger');
+    }
+  }
+
+  private async finishAudio(projectId: number, pipeline: PipelineSnapshot): Promise<void> {
+    this.finishedIds.add(pipeline.id);
+    this.pipelines.set(withoutPipeline(this.pipelines(), pipeline.id));
+    await Promise.all(pipelineUnits(pipeline).map(this.refreshUnit.bind(this, projectId)));
+    await this.projects.refreshModules(projectId);
+    this.announceFinished(projectId, pipeline);
+  }
+
+  private announceFinished(projectId: number, pipeline: PipelineSnapshot): void {
+    const name = this.projects.projectById(projectId)?.name ?? '';
+    if (pipeline.failed > 0) {
+      const params = { name, count: pipeline.failed };
+      this.toast('audiobook.dialog.generate.failed', params, 'warning');
+    } else if (pipeline.status === 'cancelled') {
+      this.toast('audiobook.dialog.generate.cancelled', { name }, 'info');
+    } else {
+      this.toast('audiobook.dialog.generate.done', { name }, 'success');
+    }
+  }
+
+  private refreshUnit(projectId: number, unitId: string): Promise<void> {
+    return this.enqueue(projectId, this.fetchUnit.bind(this, projectId, unitId));
+  }
+
+  private async fetchUnit(projectId: number, unitId: string): Promise<void> {
+    try {
+      const unit = await this.ipc.invoke<UnitAudio>('audiobook_unit_get', { projectId, unitId });
+      this.mergeUnit(projectId, unitId, unit);
+    } catch (cause) {
+      this.error.set(toProjectError(cause));
+    }
+  }
+
+  private mergeUnit(projectId: number, unitId: string, unit: UnitAudio): void {
+    const book = this.bookOf(projectId);
+    if (book && unit) {
+      const local = book.units[unitId];
+      const merged = { ...unit, mix: local ? local.mix : unit.mix };
+      this.storeBook(projectId, edit.putUnit(book, unitId, merged));
+    }
+  }
+
+  private showFailure(cause: unknown): void {
+    this.toast('audiobook.toast.segmentFailed', { reason: toProjectError(cause).detail }, 'danger');
+  }
+
+  private toast(key: LanguageKey, params: Record<string, string | number>, tone: ToastTone): void {
+    this.toasts.show(this.languageService.translate(key, params), tone);
+  }
+
+  private storeBook(projectId: number, book: Audiobook): void {
+    this.books.set({ ...this.books(), [projectId]: book });
   }
 
   private pinUnit(projectId: number): void {
@@ -432,10 +564,7 @@ export class AudiobookService {
   }
 
   private buildAvailability(): VoiceAvailability {
-    return {
-      engines: this.voices.engines(),
-      backendRunning: this.backend.server().status === 'running',
-    };
+    return { engines: this.voices.engines() };
   }
 
   private syncWorkspace(): void {

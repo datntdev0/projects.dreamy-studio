@@ -49,6 +49,7 @@ export function task(overrides: Partial<PipelineTask> = {}): PipelineTask {
     id: 1,
     chapterId: 'c1',
     passage: null,
+    segmentId: null,
     status: 'queued',
     progress: 0,
     error: '',
@@ -62,6 +63,7 @@ export function pipeline(overrides: Partial<PipelineSnapshot> = {}): PipelineSna
   return {
     id: 1,
     novelId: 1,
+    projectId: null,
     kind: 'translation',
     target: 'VI',
     status: 'running',

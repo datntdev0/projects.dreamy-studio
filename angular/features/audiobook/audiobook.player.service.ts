@@ -1,45 +1,23 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import { silenceWav } from '@shared/audio/wav';
+import { WavPlayer } from '@shared/audio/wav-player';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { LanguageService } from '@shared/language/language.service';
 
 import { previewRequestOf } from './audiobook.generate';
-import {
-  AudiobookContext,
-  PlayerState,
-  PlayItem,
-  PreviewReply,
-  PreviewResult,
-} from './audiobook.models';
-import {
-  chapterQueue,
-  currentItem,
-  elapsedSeconds,
-  idlePlayer,
-  isSingleItem,
-  itemPercent,
-  overallPercent,
-  PLAYER_TICK_MS,
-  previewItem,
-  segmentItem,
-  startPlayer,
-  tickPlayer,
-  toggledPlayer,
-  totalSeconds,
-} from './audiobook.playback';
-import { PREVIEW_SECONDS, unitAudioOf } from './audiobook.rules';
+import { AudiobookContext, PlayerState, PlayItem, PreviewResult } from './audiobook.models';
+// prettier-ignore
+import { advancedPlayer, chapterQueue, currentItem, elapsedSeconds, idlePlayer, isSingleItem, itemPercent, measuredPlayer, overallPercent, previewItem, segmentItem, startPlayer, timedPlayer, toggledPlayer, totalSeconds } from './audiobook.playback';
+import { unitAudioOf } from './audiobook.rules';
 import { AudiobookService } from './audiobook.service';
 
-export interface AudiobookClock {
-  start(callback: () => void, intervalMs: number): unknown;
-  stop(handle: unknown): void;
-}
+const MILLISECONDS = 1000;
 
-export const AUDIOBOOK_CLOCK = new InjectionToken<AudiobookClock>('AUDIOBOOK_CLOCK', {
+export type AudiobookAudioOutput = Pick<WavPlayer, 'play' | 'pause' | 'resume' | 'stop'>;
+
+export const AUDIOBOOK_AUDIO = new InjectionToken<AudiobookAudioOutput>('AUDIOBOOK_AUDIO', {
   providedIn: 'root',
-  factory: (): AudiobookClock => ({
-    start: (callback, intervalMs) => setInterval(callback, intervalMs),
-    stop: (handle) => clearInterval(handle as ReturnType<typeof setInterval>),
-  }),
+  factory: (): AudiobookAudioOutput => new WavPlayer(),
 });
 
 function unitTitleOf(ctx: AudiobookContext): string {
@@ -51,9 +29,9 @@ function unitTitleOf(ctx: AudiobookContext): string {
 export class AudiobookPlayerService {
   private readonly ipc = inject(DesktopIpcService);
   private readonly audiobook = inject(AudiobookService);
-  private readonly clock = inject(AUDIOBOOK_CLOCK);
+  private readonly output = inject(AUDIOBOOK_AUDIO);
   private readonly languageService = inject(LanguageService);
-  private handle: unknown = null;
+  private token = 0;
 
   readonly state = signal<PlayerState>(idlePlayer());
   readonly current = computed(() => currentItem(this.state()));
@@ -98,7 +76,7 @@ export class AudiobookPlayerService {
     if (isSingleItem(this.state(), item.id)) {
       this.toggle();
     } else {
-      this.begin([item]);
+      void this.playCurrent(this.begin([item]));
     }
     return true;
   }
@@ -113,7 +91,7 @@ export class AudiobookPlayerService {
     if (queue.length === 0) {
       return false;
     }
-    this.begin(queue);
+    void this.playCurrent(this.begin(queue));
     return true;
   }
 
@@ -123,53 +101,109 @@ export class AudiobookPlayerService {
     if (!ctx || !row || !row.voice || !row.canPreview) {
       return 'unavailable';
     }
+    const unitId = ctx.unit ? ctx.unit.id : '';
+    const token = this.begin([previewItem(projectId, unitId, row.member.name, row.voice.name, 0)]);
     try {
-      const reply = await this.ipc.invoke<PreviewReply | null>('audiobook_voice_preview', {
+      const data = await this.ipc.invoke<ArrayBuffer>('audiobook_voice_preview', {
         projectId,
         ...previewRequestOf(row.voice, row.speed),
       });
-      const dur = reply && reply.dur > 0 ? reply.dur : PREVIEW_SECONDS;
-      const unitId = ctx.unit ? ctx.unit.id : '';
-      this.begin([previewItem(projectId, unitId, row.member.name, row.voice.name, dur)]);
+      if (token === this.token) {
+        await this.playData(token, data);
+      }
       return 'started';
     } catch {
+      this.halt(token);
       return 'failed';
     }
   }
 
   toggle(): void {
-    this.state.set(toggledPlayer(this.state()));
+    const state = this.state();
+    if (state.queue.length === 0) {
+      return;
+    }
+    if (state.on) {
+      this.output.pause();
+    } else {
+      void this.output.resume().catch(this.halt.bind(this, this.token));
+    }
+    this.state.set(toggledPlayer(state));
   }
 
   stop(): void {
-    this.release();
+    this.token += 1;
+    this.output.stop();
     this.state.set(idlePlayer());
   }
 
-  tick(): void {
-    const next = tickPlayer(this.state());
+  private begin(queue: PlayItem[]): number {
+    this.stop();
+    this.state.set(startPlayer(queue));
+    return this.token;
+  }
+
+  private async playCurrent(token: number): Promise<void> {
+    const item = this.current();
+    if (!item) {
+      return;
+    }
+    try {
+      const data = await this.dataOf(item);
+      if (token === this.token) {
+        await this.playData(token, data);
+      }
+    } catch {
+      this.halt(token);
+    }
+  }
+
+  private dataOf(item: PlayItem): Promise<ArrayBuffer> {
+    if (item.kind === 'segment') {
+      return this.ipc.invoke<ArrayBuffer>('audiobook_segment_audio', {
+        projectId: item.projectId,
+        unitId: item.unitId,
+        blockId: item.id,
+      });
+    }
+    return Promise.resolve(silenceWav(item.dur));
+  }
+
+  private async playData(token: number, data: ArrayBuffer): Promise<void> {
+    const ended = this.next.bind(this, token);
+    const progress = this.track.bind(this, token);
+    const ms = await this.output.play(data, ended, progress);
+    if (token !== this.token) {
+      return;
+    }
+    this.state.set(measuredPlayer(this.state(), ms / MILLISECONDS));
+    if (!this.state().on) {
+      this.output.pause();
+    }
+  }
+
+  private track(token: number, seconds: number): void {
+    if (token === this.token) {
+      this.state.set(timedPlayer(this.state(), seconds));
+    }
+  }
+
+  private next(token: number): void {
+    if (token !== this.token) {
+      return;
+    }
+    const next = advancedPlayer(this.state());
     this.state.set(next);
     if (next.queue.length === 0) {
-      this.release();
+      this.stop();
+    } else {
+      void this.playCurrent(token);
     }
   }
 
-  advance(ticks = 1): void {
-    for (let count = 0; count < ticks; count += 1) {
-      this.tick();
-    }
-  }
-
-  private begin(queue: PlayItem[]): void {
-    this.release();
-    this.state.set(startPlayer(queue));
-    this.handle = this.clock.start(this.tick.bind(this), PLAYER_TICK_MS);
-  }
-
-  private release(): void {
-    if (this.handle !== null) {
-      this.clock.stop(this.handle);
-      this.handle = null;
+  private halt(token: number): void {
+    if (token === this.token) {
+      this.stop();
     }
   }
 }

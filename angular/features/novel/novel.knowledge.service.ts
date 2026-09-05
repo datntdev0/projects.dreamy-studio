@@ -236,7 +236,7 @@ export class NovelKnowledgeService {
 
   private syncFinished(): void {
     const finished = this.translation.finished();
-    if (finished && finished.kind === ANALYSIS_KIND) {
+    if (finished && finished.kind === ANALYSIS_KIND && finished.novelId !== null) {
       untracked(this.load.bind(this, finished.novelId, finished.target as KnowledgeLang));
     }
   }

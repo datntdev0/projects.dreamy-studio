@@ -159,12 +159,8 @@ describe('buildContext', () => {
     expect(meta.blockers).toEqual([]);
     expect(meta.chapterPanel.mix).toBeNull();
     expect(meta.canGenerate).toBe(false);
-    const open = buildContext(
-      input({
-        availability: availability({ backendRunning: false }),
-      }),
-    );
-    expect(open.blockers.map((item) => item.kind)).toEqual(['engine']);
+    const uninstalled = buildContext(input({ availability: availability({ engines: [] }) }));
+    expect(uninstalled.blockers.map((item) => item.kind)).toEqual(['engine', 'engine']);
   });
 
   it('describes speakers for the voices view', () => {

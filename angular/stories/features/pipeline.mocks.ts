@@ -1,11 +1,12 @@
 import { computed, Provider, signal } from '@angular/core';
-import { ChapterRow, NovelError } from '@features/novel/novel.models';
+import { NovelError } from '@features/novel/novel.models';
 import { PipelineSnapshot } from '@features/novel/novel.translation.models';
+import { PipelineChapter } from '@features/pipeline/pipeline.models';
 import { totalsOf } from '@features/pipeline/pipeline.rules';
 import { PipelineService } from '@features/pipeline/pipeline.service';
 
 import { LANTERN_CHAPTERS } from '../screens/novel-translation.fixtures';
-import { NOVEL_NAMES } from './pipeline.fixtures';
+import { NOVEL_NAMES, PROJECT_NAMES } from './pipeline.fixtures';
 
 export interface PipelineScenario {
   pipelines?: PipelineSnapshot[];
@@ -15,20 +16,17 @@ export interface PipelineScenario {
   error?: NovelError | null;
 }
 
-function chapterRow(novelId: number, chapterId: string): ChapterRow {
+function chapterOf(_pipeline: PipelineSnapshot, chapterId: string): PipelineChapter {
   const seq = Number(chapterId.slice(3));
-  const stamp = '2026-11-09T09:15:00Z';
-  return {
-    id: chapterId,
-    novelId,
-    seq,
-    title: LANTERN_CHAPTERS[seq - 1]?.title ?? '',
-    wordCount: 0,
-    translationStatus: 'none',
-    analysisStatus: 'none',
-    createdAt: stamp,
-    updatedAt: stamp,
-  };
+  return { seq, title: LANTERN_CHAPTERS[seq - 1]?.title ?? '' };
+}
+
+function ownerName(pipeline: PipelineSnapshot): string {
+  if (pipeline.projectId !== null) {
+    return PROJECT_NAMES[pipeline.projectId] ?? `#${pipeline.projectId}`;
+  }
+  const novelId = pipeline.novelId ?? 0;
+  return NOVEL_NAMES[novelId] ?? `#${novelId}`;
 }
 
 function serviceMock(scenario: PipelineScenario): Partial<PipelineService> {
@@ -45,8 +43,8 @@ function serviceMock(scenario: PipelineScenario): Partial<PipelineService> {
     history,
     selected,
     totals: computed(() => totalsOf(running())),
-    novelName: (novelId) => NOVEL_NAMES[novelId] ?? `#${novelId}`,
-    chapterOf: chapterRow,
+    ownerName,
+    chapterOf,
     load: () => Promise.resolve(),
     select: (id) => selectedId.set(id),
     openLog: (id) => selectedId.set(id),

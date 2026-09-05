@@ -115,13 +115,15 @@ export type TaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancel
 
 export interface TaskRequest {
   chapterId: string;
-  passage: number | null;
+  passage?: number | null;
+  segmentId?: string;
 }
 
 export interface PipelineTask {
   id: number;
   chapterId: string;
   passage: number | null;
+  segmentId: string | null;
   status: TaskStatus;
   progress: number;
   error: string;
@@ -131,7 +133,8 @@ export interface PipelineTask {
 
 export interface PipelineSnapshot {
   id: number;
-  novelId: number;
+  novelId: number | null;
+  projectId: number | null;
   kind: string;
   target: string;
   status: PipelineStatus;

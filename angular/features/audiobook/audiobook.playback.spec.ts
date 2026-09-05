@@ -31,28 +31,34 @@ describe('player state machine', () => {
     expect(playback.currentItem(playback.idlePlayer())).toBeNull();
   });
 
-  it('advances time by one step per tick and moves to the next item', () => {
-    expect(playback.PLAYER_STEP).toBeCloseTo(0.9);
+  it('moves to the next item and goes idle after the last one', () => {
     let state: PlayerState = playback.startPlayer([item('a', 2), item('b', 1)]);
-    state = playback.tickPlayer(state);
-    expect(state.time).toBeCloseTo(0.9);
-    state = playback.tickPlayer(state);
-    expect(state.time).toBeCloseTo(1.8);
-    state = playback.tickPlayer(state);
-    expect(state).toMatchObject({ index: 1, time: 0 });
-    state = playback.tickPlayer(state);
-    expect(state.time).toBeCloseTo(0.9);
-    state = playback.tickPlayer(state);
-    expect(state).toEqual(playback.idlePlayer());
+    state = playback.timedPlayer(state, 1.5);
+    expect(state.time).toBe(1.5);
+    state = playback.advancedPlayer(state);
+    expect(state).toMatchObject({ index: 1, time: 0, on: true });
+    expect(playback.advancedPlayer(state)).toEqual(playback.idlePlayer());
   });
 
-  it('does not tick while paused or idle', () => {
+  it('clamps reported time and applies the measured duration', () => {
+    const state = playback.startPlayer([item('a', 2), item('b', 1)]);
+    expect(playback.timedPlayer(state, 9).time).toBe(2);
+    expect(playback.timedPlayer(state, -1).time).toBe(0);
+    const unknown = playback.startPlayer([item('p', 0)]);
+    expect(playback.timedPlayer(unknown, 3).time).toBe(3);
+    const idle = playback.idlePlayer();
+    expect(playback.timedPlayer(idle, 3)).toBe(idle);
+    const measured = playback.measuredPlayer(state, 2.5);
+    expect(measured.queue.map((entry) => entry.dur)).toEqual([2.5, 1]);
+    expect(playback.measuredPlayer(state, 0)).toBe(state);
+    expect(playback.measuredPlayer(idle, 2)).toBe(idle);
+  });
+
+  it('toggles only a non-empty queue', () => {
     const paused = playback.toggledPlayer(playback.startPlayer([item('a', 3)]));
     expect(paused.on).toBe(false);
-    expect(playback.tickPlayer(paused)).toBe(paused);
     expect(playback.toggledPlayer(paused).on).toBe(true);
     const idle = playback.idlePlayer();
-    expect(playback.tickPlayer(idle)).toBe(idle);
     expect(playback.toggledPlayer(idle)).toBe(idle);
   });
 

@@ -46,15 +46,7 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
       this.languageService.translate('audiobook.dialog.generate.started', { name }),
       'info',
     );
-    const generated = await this.audiobook.generate(projectId);
-    const complete = generated === plan.segments;
-    this.toasts.show(
-      this.languageService.translate(
-        complete ? 'audiobook.dialog.generate.done' : 'audiobook.dialog.generate.failed',
-        { name },
-      ),
-      complete ? 'success' : 'warning',
-    );
+    await this.audiobook.generate(projectId);
   }
 
   protected override admits(ctx: AudiobookContext): boolean {

@@ -266,6 +266,7 @@ function startAnalysis(state: MockState, args: Record<string, unknown>): Pipelin
   const snapshot: PipelineSnapshot = {
     id: state.nextPipeline,
     novelId: Number(args['novelId']),
+    projectId: null,
     kind: 'analysis',
     target: 'Knowledge',
     status: 'running',
@@ -279,6 +280,7 @@ function startAnalysis(state: MockState, args: Record<string, unknown>): Pipelin
       id: index + 1,
       chapterId: task.chapterId,
       passage: null,
+      segmentId: null,
       status: 'queued',
       progress: 0,
       error: '',

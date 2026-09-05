@@ -26,7 +26,7 @@ export class PipelineLog {
   readonly entries = computed(this.buildEntries.bind(this));
 
   novelOf(pipeline: PipelineSnapshot): string {
-    return this.pipelines.novelName(pipeline.novelId);
+    return this.pipelines.ownerName(pipeline);
   }
 
   iconOf(pipeline: PipelineSnapshot): string {
@@ -94,7 +94,7 @@ export class PipelineLog {
   }
 
   private labelOf(pipeline: PipelineSnapshot, task: PipelineTask): string {
-    const chapter = this.pipelines.chapterOf(pipeline.novelId, task.chapterId);
+    const chapter = this.pipelines.chapterOf(pipeline, task.chapterId);
     const key: LanguageKey =
       task.passage === null ? 'pipeline.task.chapter' : 'pipeline.task.passage';
     const base = this.languageService.translate(key, {

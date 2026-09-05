@@ -1,6 +1,7 @@
 import { LanguageKey } from '@shared/language/language.models';
 
 import { LibraryVoice, VoiceEngine, VoiceEngineKind } from '../library/library.voices.models';
+import { TaskRequest } from '../novel/novel.translation.models';
 // prettier-ignore
 import { CastMember, Script, ScriptBlock, ScriptConfig, ScriptUnit, ScriptUnitKind, SpeakerClass } from '../scripting/scripting.models';
 
@@ -18,7 +19,7 @@ export type StaleReason = 'text' | 'speaker' | 'voice' | 'speed' | 'tone';
 
 export type MixField = 'gap' | 'intro' | 'outro' | 'vol';
 
-export type VoiceIssueKind = 'backend' | 'model' | 'cloud';
+export type VoiceIssueKind = 'model' | 'cloud';
 
 export type BlockerKind = 'who' | 'voice' | 'engine';
 
@@ -96,7 +97,6 @@ export interface AudioEnv {
 
 export interface VoiceAvailability {
   engines: VoiceEngine[];
-  backendRunning: boolean;
 }
 
 export interface VoiceIssue {
@@ -275,14 +275,15 @@ export interface SegmentRequest {
   paren: string;
 }
 
+export interface AudioStart {
+  tasks: TaskRequest[];
+  requests: Record<string, SegmentRequest>;
+}
+
 export interface PreviewRequest {
   voiceId: number;
   speed: number;
   text: string;
-}
-
-export interface PreviewReply {
-  dur: number;
 }
 
 export interface ExportReply {

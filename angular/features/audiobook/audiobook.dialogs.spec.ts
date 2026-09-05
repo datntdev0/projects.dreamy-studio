@@ -142,7 +142,7 @@ describe('audiobook generate dialog', () => {
     );
   });
 
-  it('generates, closes and reports success', async () => {
+  it('starts the pipeline, closes and reports the start', async () => {
     const mounted = await ready();
     const generate = vi.spyOn(audiobook(), 'generate');
     await open(mounted, () => dialogs().openGenerate(PROJECT));
@@ -151,26 +151,11 @@ describe('audiobook generate dialog', () => {
     click(mounted.root, 'ab-gen-go-btn');
     expect(generate).toHaveBeenCalledWith(PROJECT);
     expect(dialogs().request()).toBeNull();
+    await settle(mounted.fixture);
     expect(toasts().map((item) => item.message)).toEqual([
       expect.stringContaining('Started: Audiobook · '),
     ]);
-    await settle(mounted.fixture);
-    const messages = toasts();
-    expect(messages).toHaveLength(2);
-    expect(messages[1].message).toContain('Completed: Audiobook · ');
-    expect(messages[1].tone).toBe('success');
     expect(byId(mounted.root, 'ab-gen-modal')).toBeNull();
-  });
-
-  it('warns when some segments could not be generated', async () => {
-    const mounted = await ready();
-    vi.spyOn(audiobook(), 'generate').mockResolvedValue(0);
-    await open(mounted, () => dialogs().openGenerate(PROJECT));
-    click(mounted.root, 'ab-gen-go-btn');
-    await settle(mounted.fixture);
-    const last = toasts().at(-1);
-    expect(last?.message).toContain('Could not generate every segment for ');
-    expect(last?.tone).toBe('warning');
   });
 
   it('cancels without generating', async () => {

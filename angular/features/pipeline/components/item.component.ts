@@ -49,7 +49,7 @@ export class PipelineItem {
   readonly statusKey = computed(this.buildStatusKey.bind(this));
 
   seqOf(task: PipelineTask): number {
-    return this.pipelines.chapterOf(this.pipeline().novelId, task.chapterId)?.seq ?? 0;
+    return this.pipelines.chapterOf(this.pipeline(), task.chapterId)?.seq ?? 0;
   }
 
   taskLabelKey(task: PipelineTask): LanguageKey {
@@ -103,7 +103,7 @@ export class PipelineItem {
   }
 
   private buildNovel(): string {
-    return this.pipelines.novelName(this.pipeline().novelId);
+    return this.pipelines.ownerName(this.pipeline());
   }
 
   private buildIcon(): string {

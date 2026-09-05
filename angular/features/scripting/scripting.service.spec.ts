@@ -233,7 +233,7 @@ describe('ScriptingService', () => {
       const args = ipc.lastArgs('scripting_unit_save');
       expect(args).toMatchObject({ projectId: 1, seq: 34 });
       expect((args?.['unit'] as { id: string }).id).toBe('U03');
-      expect(ipc.called('project_modules')).toBe(0);
+      expect(ipc.called('project_modules')).toBe(1);
       expect(scripting.addBlock(1, 'scene')).toBeNull();
     });
 
@@ -319,7 +319,7 @@ describe('ScriptingService', () => {
       scripting.startWriting(1);
       expect(scripting.contextOf(1)?.railSummary).toEqual({ done: 12, total: 12, percent: 100 });
       await scripting.flush(1);
-      expect(ipc.called('project_modules')).toBe(1);
+      expect(ipc.called('project_modules')).toBe(7);
     });
 
     it('opens the first unit and keeps every unit editable', () => {

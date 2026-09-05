@@ -4,28 +4,8 @@ import { engineName, engineReady, voiceById } from '../library/library.voices.ru
 import { ProjectModuleState } from '../project/project.models';
 import { CastMember, Script, ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { countWords } from '../scripting/scripting.rules';
-import {
-  Audiobook,
-  AudiobookMessage,
-  AudiobookView,
-  AudioEnv,
-  AudioRecord,
-  Blocker,
-  MetaState,
-  MixField,
-  MixSettings,
-  SegmentInfo,
-  SegmentState,
-  SpeakerVoice,
-  StaleReason,
-  UnitAudio,
-  UnitAudioState,
-  UnitStat,
-  UnitSummary,
-  VoiceAvailability,
-  VoiceIssue,
-  Voicing,
-} from './audiobook.models';
+// prettier-ignore
+import { Audiobook, AudiobookMessage, AudiobookView, AudioEnv, AudioRecord, Blocker, MetaState, MixField, MixSettings, SegmentInfo, SegmentState, SpeakerVoice, StaleReason, UnitAudio, UnitAudioState, UnitStat, UnitSummary, VoiceAvailability, VoiceIssue, Voicing } from './audiobook.models';
 
 export const VOICED_TYPES: ScriptBlock['type'][] = ['heading', 'narration', 'dialogue'];
 
@@ -37,6 +17,8 @@ export const SPEED_MAX = 1.5;
 
 export const SPEED_DEFAULT = 1;
 
+export const SPEED_STEP = 0.05;
+
 export const WORDS_PER_SECOND = 2.6;
 
 export const MIN_SEGMENT_SECONDS = 0.8;
@@ -44,8 +26,6 @@ export const MIN_SEGMENT_SECONDS = 0.8;
 export const SEGMENT_PADDING_SECONDS = 0.25;
 
 export const COST_PER_CHAR = 0.000016;
-
-export const PREVIEW_SECONDS = 6;
 
 export const TITLE_EXCERPT = 48;
 
@@ -105,14 +85,11 @@ export function voiceIssueOf(
   voice: LibraryVoice,
   availability: VoiceAvailability,
 ): VoiceIssue | null {
-  const name = engineName(availability.engines, voice.engine);
-  if (voice.engineKind === 'local') {
-    if (!availability.backendRunning) {
-      return { kind: 'backend', engine: name };
-    }
-    return engineReady(availability.engines, voice.engine) ? null : { kind: 'model', engine: name };
+  if (engineReady(availability.engines, voice.engine)) {
+    return null;
   }
-  return engineReady(availability.engines, voice.engine) ? null : { kind: 'cloud', engine: name };
+  const kind = voice.engineKind === 'local' ? 'model' : 'cloud';
+  return { kind, engine: engineName(availability.engines, voice.engine) };
 }
 
 export function isUsable(voice: LibraryVoice | null, availability: VoiceAvailability): boolean {
@@ -309,7 +286,8 @@ function belongsTo(speaker: CastMember, block: ScriptBlock): boolean {
 
 export function clampSpeed(value: number): number {
   const parsed = Number.isFinite(value) && value !== 0 ? value : SPEED_DEFAULT;
-  return Math.max(SPEED_MIN, Math.min(SPEED_MAX, parsed));
+  const stepped = Math.round(parsed / SPEED_STEP) * SPEED_STEP;
+  return Number(Math.max(SPEED_MIN, Math.min(SPEED_MAX, stepped)).toFixed(2));
 }
 
 export function clampMix(field: MixField, value: number): number {

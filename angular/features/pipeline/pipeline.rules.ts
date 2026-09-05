@@ -196,9 +196,9 @@ export function matchesFilter(status: PipelineStatus, filter: PipelineFilter): b
   return filter === 'all' || status === filter;
 }
 
-export function matchesQuery(novelName: string, query: string): boolean {
+export function matchesQuery(name: string, query: string): boolean {
   const needle = query.trim().toLowerCase();
-  return !needle || novelName.toLowerCase().includes(needle);
+  return !needle || name.toLowerCase().includes(needle);
 }
 
 export function durationMs(pipeline: PipelineSnapshot): number | null {

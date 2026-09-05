@@ -2,12 +2,6 @@ import { ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { PlayerState, PlayItem, UnitAudio } from './audiobook.models';
 import { excerptTitle, isVoiced } from './audiobook.rules';
 
-export const PLAYER_RATE = 6;
-
-export const PLAYER_TICK_MS = 150;
-
-export const PLAYER_STEP = (PLAYER_TICK_MS / 1000) * PLAYER_RATE;
-
 export function idlePlayer(): PlayerState {
   return { queue: [], index: -1, time: 0, on: false };
 }
@@ -20,17 +14,25 @@ export function currentItem(state: PlayerState): PlayItem | null {
   return state.queue[state.index] ?? null;
 }
 
-export function tickPlayer(state: PlayerState): PlayerState {
-  const item = currentItem(state);
-  if (!state.on || !item) {
-    return state;
-  }
-  const time = state.time + PLAYER_STEP;
-  if (time < item.dur) {
-    return { ...state, time };
-  }
+export function advancedPlayer(state: PlayerState): PlayerState {
   const index = state.index + 1;
   return index >= state.queue.length ? idlePlayer() : { ...state, index, time: 0 };
+}
+
+export function timedPlayer(state: PlayerState, time: number): PlayerState {
+  const item = currentItem(state);
+  return item ? { ...state, time: Math.max(0, Math.min(item.dur || time, time)) } : state;
+}
+
+export function measuredPlayer(state: PlayerState, dur: number): PlayerState {
+  const item = currentItem(state);
+  if (!item || dur <= 0) {
+    return state;
+  }
+  const queue = state.queue.map((entry, index) =>
+    index === state.index ? { ...entry, dur } : entry,
+  );
+  return { ...state, queue };
 }
 
 export function toggledPlayer(state: PlayerState): PlayerState {

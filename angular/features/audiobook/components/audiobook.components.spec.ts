@@ -3,36 +3,22 @@ import { moduleTabId } from '@layout/layout.models';
 import { TabsService } from '@layout/tabs.service';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
-import { installAudiobookBackend, prepareEngines } from '@testing/audiobook';
+import { FakeAudioOutput, installAudiobookBackend, prepareEngines } from '@testing/audiobook';
 import { allById, byId, click } from '@testing/dom';
 import { mount, Mounted, settle } from '@testing/exercise';
 import { setupApp } from '@testing/service';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ScriptingState } from '../../../stories/screens/scripting.mocks';
 import { ScriptingService } from '../../scripting/scripting.service';
 import { AudiobookDialogsService } from '../audiobook.dialogs.service';
 import { AudiobookContext, SegmentRow } from '../audiobook.models';
-import {
-  AUDIOBOOK_CLOCK,
-  AudiobookClock,
-  AudiobookPlayerService,
-} from '../audiobook.player.service';
+import { AUDIOBOOK_AUDIO, AudiobookPlayerService } from '../audiobook.player.service';
 import { AudiobookService } from '../audiobook.service';
 import { Audiobook } from './audiobook.component';
 
 const PROJECT = 1;
 const TEA_WOMAN = 'E16';
-
-class ManualClock implements AudiobookClock {
-  start(): unknown {
-    return 'handle';
-  }
-
-  stop(): void {
-    return undefined;
-  }
-}
 
 async function load(): Promise<void> {
   prepareEngines();
@@ -44,9 +30,6 @@ async function load(): Promise<void> {
 }
 
 async function open(prepare?: (state: ScriptingState) => void): Promise<Mounted<Audiobook>> {
-  TestBed.configureTestingModule({
-    providers: [{ provide: AUDIOBOOK_CLOCK, useValue: new ManualClock() }],
-  });
   const ipc = setupApp();
   ipc.on('workspace_current', null);
   const backend = installAudiobookBackend(ipc);
@@ -168,7 +151,9 @@ describe('Audiobook production editor', () => {
     const row = byId(mounted.root, `ab-seg-${id}`) as HTMLElement;
     expect(row.classList.contains('is-playing')).toBe(true);
     expect(row.style.getPropertyValue('--pg')).toBe('0%');
-    player().advance(2);
+    const output = TestBed.inject(AUDIOBOOK_AUDIO) as FakeAudioOutput;
+    await vi.waitFor(() => expect(output.progress).not.toBeNull());
+    output.progress?.(1);
     await settle(mounted.fixture);
     expect(row.style.getPropertyValue('--pg')).not.toBe('0%');
     expect(textOf(mounted, 'audiobook-player-time')).toMatch(/^\d+:\d{2} \/ \d+:\d{2}$/);

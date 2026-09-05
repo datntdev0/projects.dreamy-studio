@@ -94,10 +94,6 @@ describe('voice usability', () => {
     expect(rules.voiceIssueOf(edge, ok)).toBeNull();
     expect(rules.voiceIssueOf(eleven, ok)).toEqual({ kind: 'cloud', engine: 'ElevenLabs' });
     expect(rules.voiceIssueOf(unknown, ok)).toEqual({ kind: 'cloud', engine: 'ghost' });
-    const off = availability({ backendRunning: false });
-    expect(rules.voiceIssueOf(local, off)).toEqual({ kind: 'backend', engine: 'VieNeu Turbo' });
-    expect(rules.voiceIssueOf(missing, off)?.kind).toBe('backend');
-    expect(rules.voiceIssueOf(edge, off)).toBeNull();
   });
 
   it('treats a missing voice as unusable', () => {
@@ -273,8 +269,6 @@ describe('blockers', () => {
       voice: 'Slow',
       engine: 'VieNeu Nano',
     });
-    const off = rules.blockersOf(envOf(), availability({ backendRunning: false }), unitWith());
-    expect(off[0].message.key).toBe('audiobook.blocker.engine.backend');
   });
 
   it('counts dialogues without a speaker across units', () => {
@@ -306,6 +300,8 @@ describe('speakers and progress', () => {
     expect(rules.clampSpeed(0)).toBe(1);
     expect(rules.clampSpeed(Number.NaN)).toBe(1);
     expect(rules.clampSpeed(0.1)).toBe(0.6);
+    expect(rules.clampSpeed(1.23)).toBe(1.25);
+    expect(rules.clampSpeed(1.22)).toBe(1.2);
     expect(rules.clampSpeed(3)).toBe(1.5);
     expect(rules.clampSpeed(1.2)).toBe(1.2);
     expect(rules.clampMix('gap', 9)).toBe(5);

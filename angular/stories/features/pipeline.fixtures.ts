@@ -6,6 +6,10 @@ export const NOVEL_NAMES: Record<number, string> = {
   2: 'Gió qua thung lũng',
 };
 
+export const PROJECT_NAMES: Record<number, string> = {
+  1: 'Harrowmere audiobook',
+};
+
 interface TaskSpec {
   chapter: number;
   status: TaskStatus;
@@ -16,7 +20,8 @@ interface TaskSpec {
 
 interface PipelineSpec {
   id: number;
-  novelId: number;
+  novelId: number | null;
+  projectId?: number;
   kind?: string;
   target: string;
   status: PipelineStatus;
@@ -44,6 +49,7 @@ function taskOf(spec: TaskSpec, index: number, base: string): PipelineTask {
     id: index + 1,
     chapterId: `ch-${spec.chapter}`,
     passage: spec.passage ?? null,
+    segmentId: null,
     status: spec.status,
     progress,
     error: spec.error ?? '',
@@ -61,6 +67,7 @@ function pipelineOf(spec: PipelineSpec): PipelineSnapshot {
   return {
     id: spec.id,
     novelId: spec.novelId,
+    projectId: spec.projectId ?? null,
     kind: spec.kind ?? 'translation',
     target: spec.target,
     status: spec.status,
@@ -121,10 +128,11 @@ export function runningAnalysis(novelId = 2): PipelineSnapshot {
   });
 }
 
-export function runningAudio(novelId = 1): PipelineSnapshot {
+export function runningAudio(projectId = 1): PipelineSnapshot {
   return pipelineOf({
     id: 7,
-    novelId,
+    novelId: null,
+    projectId,
     kind: 'audio',
     target: 'Voice An',
     status: 'running',

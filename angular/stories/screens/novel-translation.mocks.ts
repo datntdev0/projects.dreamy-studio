@@ -305,7 +305,7 @@ function cancelPipeline(state: MockState): boolean {
 }
 
 function writeTranslatedTask(state: MockState, pipeline: MockPipeline, task: PipelineTask): void {
-  const translation = translationFor(state, pipeline.snapshot.novelId, pipeline.target);
+  const translation = translationFor(state, pipeline.snapshot.novelId ?? 0, pipeline.target);
   const source = sourceOf(task.chapterId);
   if (task.passage === null) {
     const existing = translation.chapters[task.chapterId];
@@ -410,6 +410,7 @@ function startPipeline(state: MockState, args: Record<string, unknown>): Pipelin
   const snapshot: PipelineSnapshot = {
     id: state.nextPipelineId,
     novelId: Number(args['novelId']),
+    projectId: null,
     kind: 'translation',
     target: String(args['target']),
     status: 'running',
@@ -422,7 +423,8 @@ function startPipeline(state: MockState, args: Record<string, unknown>): Pipelin
     tasks: tasks.map((task, index) => ({
       id: index + 1,
       chapterId: task.chapterId,
-      passage: task.passage,
+      passage: task.passage ?? null,
+      segmentId: null,
       status: 'queued',
       progress: 0,
       error: '',

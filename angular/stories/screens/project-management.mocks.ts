@@ -67,7 +67,7 @@ export function projectScreenHandlers(scenario: ProjectScenario = {}): IpcHandle
   const base = knowledgeScreenHandlers({ chapters: !empty });
   const scriptingState = createScriptingState();
   const scripting = scriptingHandlers(base, scriptingState);
-  const audiobook = audiobookHandlers(scriptingState, scripting['project_modules']);
+  const audiobook = audiobookHandlers(scriptingState, scripting['project_modules'], base);
   return {
     ...base,
     ...SHELL_HANDLERS,

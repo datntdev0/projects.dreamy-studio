@@ -1,3 +1,4 @@
+import base64
 import os
 import platform
 from collections.abc import AsyncIterator
@@ -91,12 +92,13 @@ def model_remove(model_id: str, services: ServicesDep) -> TtsModelResponse:
 def tts_synthesize(body: SynthesizeRequest, services: ServicesDep) -> Response:
     result = services.synthesize(body.to_request())
     return Response(
-        content=result.audio.path.read_bytes(),
+        content=result.content,
         media_type="audio/wav",
         headers={
-            "X-Duration-Ms": str(result.audio.duration_ms),
-            "X-Sample-Rate": str(result.audio.sample_rate),
+            "X-Duration-Ms": str(result.duration_ms),
+            "X-Sample-Rate": str(result.sample_rate),
             "X-Cache": "hit" if result.cached else "miss",
+            "X-Subtitles": base64.b64encode(result.subtitles.encode("utf-8")).decode("ascii"),
         },
     )
 

@@ -1,3 +1,4 @@
+import base64
 import io
 import sys
 import tempfile
@@ -55,6 +56,10 @@ def tone_catalog() -> Catalog:
         cuda=cuda_catalog(),
         runtimes={"voice": runtime},
     )
+
+
+def subtitles(headers: dict[str, str]) -> str:
+    return base64.b64decode(headers["x-subtitles"].encode("ascii")).decode("utf-8")
 
 
 class SynthesisTests(unittest.TestCase):
@@ -119,6 +124,35 @@ class SynthesisTests(unittest.TestCase):
         self.assertEqual(self.synthesize(text="Một câu khác")[1]["x-cache"], "miss")
         self.assertEqual(self.synthesize(gender="male")[1]["x-cache"], "miss")
         self.assertEqual(len(self.cached_files()), 3)
+        self.assertEqual(subtitles(headers), "1\n00:00:00,000 --> 00:00:00,960\nXin chào các bạn\n")
+
+    def test_sentences_are_joined_with_pauses_and_subtitles(self):
+        text = "Xin chào các bạn.\nHôm nay trời đẹp!"
+        status, headers, content = self.synthesize(text=text, sentencePauseMs=200)
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            (headers["x-cache"], headers["x-duration-ms"], headers["x-sample-rate"]),
+            ("miss", "2240", "24000"),
+        )
+        with wave.open(io.BytesIO(content)) as audio:
+            self.assertEqual(audio.getnframes(), 24 * 2240)
+            frames = audio.readframes(audio.getnframes())
+        pause = frames[2 * 24 * 1020 : 2 * 24 * 1220]
+        self.assertEqual(pause, b"\x00" * len(pause))
+        self.assertEqual(
+            subtitles(headers),
+            "1\n00:00:00,000 --> 00:00:01,020\nXin chào các bạn.\n\n"
+            "2\n00:00:01,220 --> 00:00:02,240\nHôm nay trời đẹp!\n",
+        )
+        self.assertEqual(len(self.cached_files()), 2)
+
+    def test_cache_hit_requires_every_sentence(self):
+        self.assertEqual(self.synthesize(text="Xin chào các bạn.")[1]["x-cache"], "miss")
+        mixed = self.synthesize(text="Xin chào các bạn. Hôm nay trời đẹp!")[1]
+        self.assertEqual((mixed["x-cache"], mixed["x-duration-ms"]), ("miss", "2340"))
+        again = self.synthesize(text="Xin chào các bạn.  Hôm nay trời đẹp!")[1]
+        self.assertEqual(again["x-cache"], "hit")
+        self.assertEqual(len(self.cached_files()), 2)
 
     def test_clone_cache_follows_reference_content(self):
         clone = {"source": "clone", "referencePath": str(self.reference)}
@@ -138,7 +172,9 @@ class SynthesisTests(unittest.TestCase):
             ({"model": "silent"}, (422, "ENGINE_UNSUPPORTED")),
             ({"model": "loose"}, (422, "ENGINE_UNSUPPORTED")),
             ({"text": "   "}, (422, "TEXT_EMPTY")),
-            ({"text": "a" * 501}, (422, "TEXT_TOO_LONG")),
+            ({"text": "a" * 5001}, (422, "TEXT_TOO_LONG")),
+            ({"sentencePauseMs": -1}, (422, "HTTP_422")),
+            ({"sentencePauseMs": 2001}, (422, "HTTP_422")),
             ({"preset": "Nobody"}, (422, "PRESET_UNKNOWN")),
             ({"source": "clone", "referencePath": "relative.wav"}, (422, "REFERENCE_MISSING")),
             (

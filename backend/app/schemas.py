@@ -1,12 +1,16 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from app.catalog import CatalogModel, VoicePreset
 from app.downloads import Download
 from app.gpu import Gpu
-from app.synthesis import SynthesisRequest
+from app.synthesis import (
+    DEFAULT_SENTENCE_PAUSE_MS,
+    MAX_SENTENCE_PAUSE_MS,
+    SynthesisRequest,
+)
 
 VoiceSource = Literal["preset", "clone", "design"]
 DownloadState = Literal["none", "downloading", "installed", "error"]
@@ -121,6 +125,9 @@ class SynthesizeRequest(CamelModel):
     preset: str = ""
     prompt: str = ""
     reference_path: str = ""
+    sentence_pause_ms: int = Field(
+        default=DEFAULT_SENTENCE_PAUSE_MS, ge=0, le=MAX_SENTENCE_PAUSE_MS
+    )
 
     def to_request(self) -> SynthesisRequest:
         return SynthesisRequest(
@@ -132,4 +139,5 @@ class SynthesizeRequest(CamelModel):
             preset=self.preset,
             prompt=self.prompt,
             reference_path=self.reference_path,
+            sentence_pause_ms=self.sentence_pause_ms,
         )

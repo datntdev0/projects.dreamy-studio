@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -7,16 +6,20 @@ from app.catalog import CatalogModel, VoicePreset
 from app.downloads import file_sha256
 from app.errors import BackendError
 from app.models import ModelDownloader
+from app.sentences import normalize_text, split_sentences
+from app.subtitles import Cue, build_srt
 from app.tts_cache import CachedAudio, TtsCache, cache_key
+from app.waves import combine_waves
 from app.worker_host import WorkerError, WorkerHost, WorkerSpec
 
-MAX_TEXT_LENGTH = 500
+MAX_TEXT_LENGTH = 5000
+DEFAULT_SENTENCE_PAUSE_MS = 300
+MAX_SENTENCE_PAUSE_MS = 2000
 LOAD_TIMEOUT = 600.0
 SYNTHESIZE_TIMEOUT = 300.0
 PRESET_SOURCE = "preset"
 CLONE_SOURCE = "clone"
 DESIGN_SOURCE = "design"
-WHITESPACE = re.compile(r"\s+")
 ERROR_STATUS = {
     "TEXT_EMPTY": 422,
     "PRESET_UNKNOWN": 422,
@@ -40,29 +43,36 @@ class SynthesisRequest:
     preset: str = ""
     prompt: str = ""
     reference_path: str = ""
+    sentence_pause_ms: int = DEFAULT_SENTENCE_PAUSE_MS
 
 
 @dataclass(frozen=True)
-class SynthesisResult:
+class SentenceAudio:
+    text: str
     audio: CachedAudio
     cached: bool
 
 
-def normalize_text(text: str) -> str:
-    return WHITESPACE.sub(" ", text).strip()
+@dataclass(frozen=True)
+class SynthesisResult:
+    content: bytes
+    duration_ms: int
+    sample_rate: int
+    cached: bool
+    subtitles: str
 
 
 def reject(code: str, message: str) -> BackendError:
     return BackendError(ERROR_STATUS.get(code, 422), code, message)
 
 
-def check_text(text: str) -> str:
+def check_text(text: str) -> list[str]:
     normalized = normalize_text(text)
     if not normalized:
         raise reject("TEXT_EMPTY", "Sample text is empty")
     if len(normalized) > MAX_TEXT_LENGTH:
         raise reject("TEXT_TOO_LONG", f"Sample text exceeds {MAX_TEXT_LENGTH} characters")
-    return normalized
+    return split_sentences(text)
 
 
 def check_reference(path: str) -> Path:
@@ -113,6 +123,33 @@ def worker_failure(error: WorkerError) -> BackendError:
     return BackendError(ERROR_STATUS.get(error.code, 500), error.code, error.message)
 
 
+def single_result(sentence: SentenceAudio) -> SynthesisResult:
+    audio = sentence.audio
+    cue = Cue(sentence.text, 0, audio.duration_ms)
+    return SynthesisResult(
+        content=audio.path.read_bytes(),
+        duration_ms=audio.duration_ms,
+        sample_rate=audio.sample_rate,
+        cached=sentence.cached,
+        subtitles=build_srt([cue]),
+    )
+
+
+def combined_result(sentences: list[SentenceAudio], pause_ms: int) -> SynthesisResult:
+    combined = combine_waves([sentence.audio.path for sentence in sentences], pause_ms)
+    cues = [
+        Cue(sentence.text, start, end)
+        for sentence, (start, end) in zip(sentences, combined.spans, strict=True)
+    ]
+    return SynthesisResult(
+        content=combined.content,
+        duration_ms=combined.duration_ms,
+        sample_rate=combined.sample_rate,
+        cached=all(sentence.cached for sentence in sentences),
+        subtitles=build_srt(cues),
+    )
+
+
 class Synthesizer:
     def __init__(
         self,
@@ -150,8 +187,21 @@ class Synthesizer:
         model = downloader.model
         spec = self.spec(downloader)
         self.check_installed(downloader)
-        text = check_text(request.text)
+        sentences = check_text(request.text)
         voice = check_voice(model, request)
+        rendered = [self.sentence(downloader, spec, text, voice) for text in sentences]
+        if len(rendered) == 1:
+            return single_result(rendered[0])
+        return combined_result(rendered, request.sentence_pause_ms)
+
+    def sentence(
+        self,
+        downloader: ModelDownloader,
+        spec: WorkerSpec,
+        text: str,
+        voice: dict[str, Any],
+    ) -> SentenceAudio:
+        model = downloader.model
         key = cache_key(
             {
                 "model": model.id,
@@ -164,8 +214,8 @@ class Synthesizer:
         with self.cache.key_lock(key):
             cached = self.cache.get(model.id, key)
             if cached is not None:
-                return SynthesisResult(cached, cached=True)
-            return SynthesisResult(self.render(downloader, spec, key, text, voice), cached=False)
+                return SentenceAudio(text, cached, cached=True)
+            return SentenceAudio(text, self.render(downloader, spec, key, text, voice), False)
 
     def render(
         self,

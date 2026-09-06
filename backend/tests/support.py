@@ -5,15 +5,19 @@ import json
 import os
 import re
 import sys
+import tempfile
 import threading
 import time
+import unittest
 import zipfile
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import FastAPI
 
+GPU_LINE = "NVIDIA GeForce RTX 4090, 24564, 566.03"
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 TREE_PATH = re.compile(r"^/api/models/(?P<repo>[^/]+/[^/]+)/tree/[^/?]+")
 RESOLVE_PATH = re.compile(r"^/(?P<repo>[^/]+/[^/]+)/resolve/[^/]+/(?P<file>[^?]+)")
@@ -245,3 +249,33 @@ def write_fake_smi(directory: Path, output: str, exit_code: int = 0) -> Path:
     script.write_text(f"#!/bin/sh\necho '{output}'\nexit {exit_code}\n")
     os.chmod(script, 0o755)
     return script
+
+
+class ServerTestCase(unittest.TestCase):
+    default_model = ""
+    app: FastAPI
+
+    def start_server(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.remote = FakeRemote()
+        self.server = FakeServer(self.remote)
+        self.server.start()
+        self.addCleanup(self.temp.cleanup)
+        self.addCleanup(self.server.stop)
+        proxy = patch.dict(os.environ, {"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "*"})
+        proxy.start()
+        self.addCleanup(proxy.stop)
+        self.smi = write_fake_smi(self.root, GPU_LINE)
+
+    def call(self, method: str, path: str, app: FastAPI | None = None) -> tuple[int, object]:
+        return asgi_request(app or self.app, method, path)
+
+    def model(self, model_id: str = "", app: FastAPI | None = None) -> dict:
+        status, body = self.call("GET", "/models", app)
+        self.assertEqual(status, 200)
+        return next(item for item in body if item["id"] == (model_id or self.default_model))
+
+    def wait_model(self, state: str, model_id: str = "", app: FastAPI | None = None) -> dict:
+        wait_until(lambda: self.model(model_id, app)["state"] == state)
+        return self.model(model_id, app)

@@ -3,7 +3,7 @@ import wave
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.errors import BackendError
+from app.shared.errors import BackendError
 
 PCM_8_BIT_SILENCE = b"\x80"
 PCM_SILENCE = b"\x00"

@@ -6,9 +6,9 @@ from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.hf_api import RepoFile
 from huggingface_hub.utils import tqdm as hf_tqdm
 
-from app.catalog import CatalogModel
-from app.downloads import Download, DownloadCancelled, DownloadJob, DownloadSlot
-from app.runtimes import RuntimeInstaller
+from app.features.models.runtimes import RuntimeInstaller
+from app.shared.catalog import CatalogModel
+from app.shared.downloads import Download, DownloadCancelled, DownloadJob, DownloadSlot
 
 REVISION = "main"
 

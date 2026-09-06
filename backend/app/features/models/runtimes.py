@@ -8,8 +8,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit
 
-from app.catalog import RuntimeVariant, RuntimeWheel
-from app.downloads import (
+from app.shared.catalog import RuntimeVariant, RuntimeWheel
+from app.shared.downloads import (
     DownloadJob,
     directory_size,
     fetch_file,
@@ -18,7 +18,7 @@ from app.downloads import (
     utc_now,
     write_manifest,
 )
-from app.processes import NO_WINDOW_FLAGS
+from app.shared.processes import NO_WINDOW_FLAGS
 
 SITE_DIR = "site-packages"
 STAGING_NAME = ".wheels"

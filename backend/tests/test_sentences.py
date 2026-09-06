@@ -1,6 +1,6 @@
 import unittest
 
-from app.sentences import MAX_SENTENCE_LENGTH, split_sentences
+from app.features.speeches.sentences import MAX_SENTENCE_LENGTH, split_sentences
 
 
 class SentenceTests(unittest.TestCase):

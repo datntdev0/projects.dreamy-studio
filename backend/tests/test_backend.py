@@ -8,22 +8,24 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from support import asgi_request
 
-from app.errors import register_error_handlers
-from app.log import DailyFileHandler, LineFormatter, delete_old_logs, setup_logging
+from app.shared.errors import register_error_handlers
+from app.shared.log import DailyFileHandler, LineFormatter, delete_old_logs, setup_logging
+
+
+def fail_route():
+    raise RuntimeError("secret details")
+
+
+def item_route(item_id: int):
+    return {"item_id": item_id}
 
 
 class BackendErrorTests(unittest.TestCase):
     def test_http_and_unexpected_errors(self):
         app = FastAPI()
         register_error_handlers(app)
-
-        @app.get("/fail")
-        def fail():
-            raise RuntimeError("secret details")
-
-        @app.get("/items/{item_id}")
-        def item(item_id: int):
-            return {"item_id": item_id}
+        app.add_api_route("/fail", fail_route)
+        app.add_api_route("/items/{item_id}", item_route)
 
         status, body = asgi_request(app, "GET", "/missing")
         self.assertEqual(

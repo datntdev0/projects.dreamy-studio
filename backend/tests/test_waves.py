@@ -4,9 +4,9 @@ import unittest
 import wave
 from pathlib import Path
 
-from app.errors import BackendError
-from app.subtitles import Cue, build_srt, srt_time
-from app.waves import combine_waves
+from app.features.speeches.subtitles import Cue, build_srt, srt_time
+from app.features.speeches.waves import combine_waves
+from app.shared.errors import BackendError
 
 
 def write_clip(path: Path, frames: int, rate: int = 1000, channels: int = 1) -> Path:

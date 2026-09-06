@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.catalog import CudaCatalog, CudaPackage
-from app.downloads import DownloadJob, DownloadSlot, fetch_file, fetch_json, read_manifest
+from app.shared.catalog import CudaCatalog, CudaPackage
+from app.shared.downloads import DownloadJob, DownloadSlot, fetch_file, fetch_json, read_manifest
 
 WHEEL_SUFFIX = "win_amd64.whl"
 STAGING_NAME = ".wheels"

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from support import wait_until
 
-from app.worker_host import (
+from app.features.speeches.worker_host import (
     WorkerCrashed,
     WorkerError,
     WorkerHost,

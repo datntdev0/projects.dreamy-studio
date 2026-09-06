@@ -24,4 +24,4 @@ where = ["."]
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["catalog.json", "runtimes/*.json"]
+"app.shared.resources" = ["catalog.json", "runtimes/*.json"]

@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-RUNTIMES_DIR = Path(__file__).resolve().parents[1] / "app" / "runtimes"
+RUNTIMES_DIR = Path(__file__).resolve().parents[1] / "app" / "shared" / "resources" / "runtimes"
 PLATFORM = "win_amd64"
 USER_AGENT = "dreamy-studio-lock"
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.downloads import remove_tree
+from app.shared.downloads import remove_tree
 
 AUDIO_SUFFIX = ".wav"
 META_SUFFIX = ".json"

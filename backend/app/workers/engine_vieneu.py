@@ -3,7 +3,7 @@ import gc
 from pathlib import Path
 from typing import Any
 
-from protocol import EngineError
+from protocol import EngineError, model_path, reference_path
 
 TURBO_MODE = "v3turbo"
 NANO_MODE = "v3nano"
@@ -13,22 +13,8 @@ PRESET_SOURCE = "preset"
 CLONE_SOURCE = "clone"
 
 
-def model_path(payload: dict[str, Any]) -> Path:
-    path = Path(str(payload.get("modelDir", "")))
-    if not path.is_dir():
-        raise EngineError("MODEL_NOT_INSTALLED", f"Model folder is missing: {path}")
-    return path
-
-
 def preset_ids(tts: Any) -> set[str]:
     return {voice_id for _, voice_id in tts.list_preset_voices()}
-
-
-def reference_path(voice: dict[str, Any]) -> str:
-    path = Path(str(voice.get("referencePath") or ""))
-    if not path.is_file():
-        raise EngineError("REFERENCE_MISSING", "Reference audio is missing")
-    return str(path)
 
 
 class VieneuEngine:
@@ -89,7 +75,7 @@ class VieneuEngine:
                 raise EngineError("PRESET_UNKNOWN", f"Unknown preset voice '{preset}'")
             return {"voice": preset}
         if source == CLONE_SOURCE:
-            return {"ref_audio": reference_path(voice)}
+            return {"ref_audio": str(reference_path(voice))}
         raise EngineError("SOURCE_UNSUPPORTED", f"VieNeu does not support '{source}' voices")
 
     def synthesize(self, payload: dict[str, Any]) -> dict[str, Any]:

@@ -1,119 +1,34 @@
-import base64
 import os
-import platform
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, Request, Response
+from fastapi import FastAPI
 
-from app.catalog import Catalog
-from app.config import Settings
-from app.cuda import configure_dll_search
-from app.errors import register_error_handlers
-from app.log import setup_logging
-from app.schemas import (
-    CudaResponse,
-    HealthResponse,
-    SynthesizeRequest,
-    SystemResponse,
-    TtsModelResponse,
-)
-from app.services import Services
-
-router = APIRouter()
-
-
-def get_services(request: Request) -> Services:
-    return request.app.state.services
-
-
-ServicesDep = Annotated[Services, Depends(get_services)]
-
-
-@router.get("/health", response_model=HealthResponse)
-def health(services: ServicesDep) -> HealthResponse:
-    return HealthResponse(
-        status="ok",
-        version=services.version,
-        python_version=platform.python_version(),
-        started_at=services.started_at,
-        device=services.device,
-    )
-
-
-@router.get("/system", response_model=SystemResponse)
-def system(services: ServicesDep) -> SystemResponse:
-    return services.system_view()
-
-
-@router.post("/system/gpu/scan", response_model=SystemResponse)
-def gpu_scan(services: ServicesDep) -> SystemResponse:
-    return services.scan_gpu()
-
-
-@router.post("/cuda/download", response_model=CudaResponse, status_code=202)
-def cuda_download(services: ServicesDep) -> CudaResponse:
-    return services.start_cuda()
-
-
-@router.post("/cuda/cancel", response_model=CudaResponse)
-def cuda_cancel(services: ServicesDep) -> CudaResponse:
-    return services.cancel_cuda()
-
-
-@router.delete("/cuda", response_model=CudaResponse)
-def cuda_remove(services: ServicesDep) -> CudaResponse:
-    return services.remove_cuda()
-
-
-@router.get("/models", response_model=list[TtsModelResponse])
-def model_list(services: ServicesDep) -> list[TtsModelResponse]:
-    return services.model_list()
-
-
-@router.post("/models/{model_id}/download", response_model=TtsModelResponse, status_code=202)
-def model_download(model_id: str, services: ServicesDep) -> TtsModelResponse:
-    return services.start_model(model_id)
-
-
-@router.post("/models/{model_id}/cancel", response_model=TtsModelResponse)
-def model_cancel(model_id: str, services: ServicesDep) -> TtsModelResponse:
-    return services.cancel_model(model_id)
-
-
-@router.delete("/models/{model_id}", response_model=TtsModelResponse)
-def model_remove(model_id: str, services: ServicesDep) -> TtsModelResponse:
-    return services.remove_model(model_id)
-
-
-@router.post("/tts/synthesize", response_class=Response)
-def tts_synthesize(body: SynthesizeRequest, services: ServicesDep) -> Response:
-    result = services.synthesize(body.to_request())
-    return Response(
-        content=result.content,
-        media_type="audio/wav",
-        headers={
-            "X-Duration-Ms": str(result.duration_ms),
-            "X-Sample-Rate": str(result.sample_rate),
-            "X-Cache": "hit" if result.cached else "miss",
-            "X-Subtitles": base64.b64encode(result.subtitles.encode("utf-8")).decode("ascii"),
-        },
-    )
+from app.container import Container
+from app.features.models.router import router as models_router
+from app.features.speeches.router import router as speeches_router
+from app.features.system.cuda import configure_dll_search
+from app.features.system.router import router as system_router
+from app.shared.catalog import Catalog
+from app.shared.config import Settings
+from app.shared.errors import register_error_handlers
+from app.shared.log import setup_logging
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     yield
-    application.state.services.close()
+    application.state.container.close()
 
 
 def create_app(settings: Settings, catalog: Catalog | None = None) -> FastAPI:
     application = FastAPI(title="Dreamy Studio Local Backend", lifespan=lifespan)
     register_error_handlers(application)
-    application.include_router(router)
-    application.state.services = Services(settings, catalog)
+    application.include_router(system_router)
+    application.include_router(models_router)
+    application.include_router(speeches_router)
+    application.state.container = Container(settings, catalog)
     return application
 
 

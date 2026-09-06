@@ -8,12 +8,12 @@ from unittest.mock import patch
 
 from support import asgi_request, write_fake_smi
 
-from app import runtime
-from app.config import Settings
-from app.cuda import configure_dll_search
-from app.downloads import write_manifest
-from app.gpu import parse_nvidia_smi, query_nvidia_smi
+from app import __main__ as cli
+from app.features.system.cuda import configure_dll_search
+from app.features.system.gpu import parse_nvidia_smi, query_nvidia_smi
 from app.main import create_app
+from app.shared.config import Settings
+from app.shared.downloads import write_manifest
 
 
 class GpuTests(unittest.TestCase):
@@ -120,11 +120,11 @@ class RuntimeTests(unittest.TestCase):
             with (
                 patch.object(sys, "argv", argv),
                 patch.dict(os.environ, {}),
-                patch.object(runtime, "setup_logging"),
-                patch.object(runtime, "install_excepthook"),
-                patch.object(runtime.uvicorn, "run") as run,
+                patch.object(cli, "setup_logging"),
+                patch.object(cli, "install_excepthook"),
+                patch.object(cli.uvicorn, "run") as run,
             ):
-                runtime.main()
+                cli.main()
                 data_dir = os.environ["DREAMY_BACKEND_DATA_DIR"]
                 device = os.environ["DREAMY_BACKEND_DEVICE"]
                 worker_python = os.environ["DREAMY_WORKER_PYTHON"]

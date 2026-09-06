@@ -2,15 +2,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app.catalog import CatalogModel, VoicePreset
-from app.downloads import file_sha256
-from app.errors import BackendError
-from app.models import ModelDownloader
-from app.sentences import normalize_text, split_sentences
-from app.subtitles import Cue, build_srt
-from app.tts_cache import CachedAudio, TtsCache, cache_key
-from app.waves import combine_waves
-from app.worker_host import WorkerError, WorkerHost, WorkerSpec
+from app.features.models.downloader import ModelDownloader
+from app.features.speeches.cache import CachedAudio, TtsCache, cache_key
+from app.features.speeches.sentences import normalize_text, split_sentences
+from app.features.speeches.subtitles import Cue, build_srt
+from app.features.speeches.waves import combine_waves
+from app.features.speeches.worker_host import WorkerError, WorkerHost, WorkerSpec
+from app.shared.catalog import CatalogModel, VoicePreset
+from app.shared.downloads import file_sha256
+from app.shared.errors import BackendError
 
 MAX_TEXT_LENGTH = 5000
 DEFAULT_SENTENCE_PAUSE_MS = 300

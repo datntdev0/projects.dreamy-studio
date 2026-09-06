@@ -9,10 +9,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any
 
-from app.processes import NO_WINDOW_FLAGS
+from app.shared.processes import NO_WINDOW_FLAGS
 from app.workers.protocol import SHUTDOWN
 
-WORKERS_DIR = Path(__file__).resolve().parent / "workers"
+WORKERS_DIR = Path(__file__).resolve().parents[2] / "workers"
 BOOTSTRAP = WORKERS_DIR / "bootstrap.py"
 STOP_TIMEOUT = 5.0
 DEFAULT_IDLE_SECONDS = 600.0

@@ -8,7 +8,11 @@ from pathlib import Path
 
 from support import asgi_raw, asgi_request
 
-from app.catalog import (
+from app.features.speeches.cache import TtsCache
+from app.features.speeches.synthesis import SynthesisRequest, check_voice, worker_failure
+from app.features.speeches.worker_host import WorkerTimeout
+from app.main import create_app
+from app.shared.catalog import (
     Catalog,
     CatalogModel,
     CatalogRuntime,
@@ -16,12 +20,8 @@ from app.catalog import (
     VoicePreset,
     cuda_catalog,
 )
-from app.config import Settings
-from app.downloads import write_manifest
-from app.main import create_app
-from app.synthesis import SynthesisRequest, check_voice, worker_failure
-from app.tts_cache import TtsCache
-from app.worker_host import WorkerTimeout
+from app.shared.config import Settings
+from app.shared.downloads import write_manifest
 
 CURRENT_PYTHON = f"{sys.version_info.major}.{sys.version_info.minor}"
 PRESETS = (VoicePreset("Mai Anh", "Mai Anh", "female", "north", "news"),)
@@ -72,7 +72,7 @@ class SynthesisTests(unittest.TestCase):
         for model_id in ("tone", "silent", "loose"):
             self.install(f"models/{model_id}", {"id": model_id, "totalBytes": 10})
         self.app = self.make_app()
-        self.addCleanup(self.app.state.services.close)
+        self.addCleanup(self.app.state.container.close)
         self.reference = self.root / "reference.wav"
         self.reference.write_bytes(b"first take")
 
@@ -197,19 +197,19 @@ class SynthesisTests(unittest.TestCase):
                 runtimes=tone_catalog().runtimes,
             ),
         )
-        self.addCleanup(app.state.services.close)
+        self.addCleanup(app.state.container.close)
         payload = {"model": "tone", "text": "a", "source": "design", "prompt": "warm"}
         status, body = asgi_request(app, "POST", "/tts/synthesize", payload)
         self.assertEqual((status, body["code"]), (422, "SOURCE_UNSUPPORTED"))
 
     def test_engine_override_skips_runtime(self):
         app = self.make_app(engine="engine_tone")
-        self.addCleanup(app.state.services.close)
+        self.addCleanup(app.state.container.close)
         status, headers, _ = self.synthesize(app, model="loose")
         self.assertEqual((status, headers["x-cache"]), (200, "miss"))
         (self.data / "runtime" / "voice-cpu" / "manifest.json").unlink()
         restarted = self.make_app(engine="engine_tone")
-        self.addCleanup(restarted.state.services.close)
+        self.addCleanup(restarted.state.container.close)
         models = asgi_request(restarted, "GET", "/models")[1]
         self.assertEqual(next(m for m in models if m["id"] == "tone")["state"], "installed")
         self.assertEqual(self.synthesize(restarted)[0], 200)

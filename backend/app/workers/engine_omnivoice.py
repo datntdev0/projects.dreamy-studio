@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import soundfile
-from protocol import EngineError
+from protocol import EngineError, model_path, reference_path
 
 ASR_DIR = "asr"
 CUDA_DEVICE = "cuda"
@@ -14,20 +14,6 @@ CLONE_SOURCE = "clone"
 GENDERS = ("female", "male")
 AUTO_LANGUAGES = ("", "multi", "mul")
 PROMPT_CACHE_SIZE = 8
-
-
-def model_path(payload: dict[str, Any]) -> Path:
-    path = Path(str(payload.get("modelDir", "")))
-    if not path.is_dir():
-        raise EngineError("MODEL_NOT_INSTALLED", f"Model folder is missing: {path}")
-    return path
-
-
-def reference_path(voice: dict[str, Any]) -> Path:
-    path = Path(str(voice.get("referencePath") or ""))
-    if not path.is_file():
-        raise EngineError("REFERENCE_MISSING", "Reference audio is missing")
-    return path
 
 
 def reference_key(path: Path) -> tuple[str, int, int]:

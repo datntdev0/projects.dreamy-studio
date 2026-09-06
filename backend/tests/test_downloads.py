@@ -1,19 +1,14 @@
 import json
-import os
-import tempfile
-import unittest
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import patch
 
-from support import FakeRemote, FakeServer, asgi_request, wait_until, write_fake_smi
+from support import ServerTestCase, wait_until
 
-from app.catalog import Catalog, ExtraSource, cuda_catalog, model_catalog
-from app.config import Settings
 from app.main import create_app
+from app.shared.catalog import Catalog, ExtraSource, cuda_catalog, model_catalog
+from app.shared.config import Settings
 
 TURBO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
-GPU_LINE = "NVIDIA GeForce RTX 4090, 24564, 566.03"
 
 
 def standalone_catalog() -> Catalog:
@@ -21,24 +16,16 @@ def standalone_catalog() -> Catalog:
     return Catalog(models=models, cuda=cuda_catalog())
 
 
-class DownloadTestCase(unittest.TestCase):
+class DownloadTestCase(ServerTestCase):
+    default_model = "vieneu-turbo"
+
     def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
-        self.remote = FakeRemote()
+        self.start_server()
         self.remote.repos[TURBO] = {
             "config.json": b"{}",
             "onnx/model.onnx": b"m" * 300_000,
             "voices/a.bin": b"v" * 2000,
         }
-        self.server = FakeServer(self.remote)
-        self.server.start()
-        self.addCleanup(self.temp.cleanup)
-        self.addCleanup(self.server.stop)
-        proxy = patch.dict(os.environ, {"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "*"})
-        proxy.start()
-        self.addCleanup(proxy.stop)
-        self.smi = write_fake_smi(self.root, GPU_LINE)
         self.app = self.make_app()
 
     def settings(self, device: str = "cpu", smi: Path | None = None) -> Settings:
@@ -52,18 +39,6 @@ class DownloadTestCase(unittest.TestCase):
 
     def make_app(self, device: str = "cpu", smi: Path | None = None):
         return create_app(self.settings(device, smi), standalone_catalog())
-
-    def call(self, method: str, path: str, app=None) -> tuple[int, object]:
-        return asgi_request(app or self.app, method, path)
-
-    def model(self, model_id: str = "vieneu-turbo", app=None) -> dict:
-        status, body = self.call("GET", "/models", app)
-        self.assertEqual(status, 200)
-        return next(item for item in body if item["id"] == model_id)
-
-    def wait_model(self, state: str, model_id: str = "vieneu-turbo") -> dict:
-        wait_until(lambda: self.model(model_id)["state"] == state)
-        return self.model(model_id)
 
     def cuda(self) -> dict:
         return self.call("GET", "/system")[1]["cuda"]
@@ -252,7 +227,7 @@ class CudaDownloadTests(DownloadTestCase):
         )
         self.assertFalse(self.remote.gets("manylinux2014_x86_64.whl"))
 
-        self.assertEqual(self.make_app(device="cuda").state.services.device, "cuda")
+        self.assertEqual(self.make_app(device="cuda").state.container.device, "cuda")
 
         status, body = self.call("DELETE", "/cuda")
         self.assertEqual((status, body["state"]), (200, "none"))

@@ -3,7 +3,7 @@ import subprocess
 import threading
 from dataclasses import dataclass
 
-from app.processes import NO_WINDOW_FLAGS
+from app.shared.processes import NO_WINDOW_FLAGS
 
 QUERY_ARGS = (
     "--query-gpu=name,memory.total,driver_version",

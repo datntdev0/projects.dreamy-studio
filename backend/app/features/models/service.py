@@ -1,58 +1,33 @@
-from importlib import metadata
+from collections.abc import Callable
 
-from app.catalog import Catalog, CatalogModel, RuntimeVariant, load_catalog
-from app.config import Settings
-from app.cuda import CudaInstaller, cuda_installed
-from app.downloads import DownloadBusy, utc_now
-from app.errors import BackendError
-from app.gpu import GpuDetector
-from app.models import ModelDownloader
-from app.runtimes import RuntimeInstaller
-from app.schemas import CudaResponse, GpuResponse, SystemResponse, TtsModelResponse
-from app.synthesis import SynthesisRequest, SynthesisResult, Synthesizer
-from app.tts_cache import TtsCache
-from app.worker_host import WorkerHost
-
-PACKAGE_NAME = "dreamy-studio-backend"
+from app.features.models.downloader import ModelDownloader
+from app.features.models.runtimes import RuntimeInstaller
+from app.features.models.schemas import TtsModelResponse
+from app.shared.catalog import Catalog, CatalogModel, RuntimeVariant
+from app.shared.config import Settings
+from app.shared.downloads import DownloadBusy
+from app.shared.errors import BackendError
 
 
-def package_version() -> str:
-    try:
-        return metadata.version(PACKAGE_NAME)
-    except metadata.PackageNotFoundError:
-        return "0.0.0"
-
-
-def effective_device(settings: Settings) -> str:
-    if settings.device == "cuda" and cuda_installed(settings.cuda_dir):
-        return "cuda"
-    return "cpu"
-
-
-class Services:
-    def __init__(self, settings: Settings, catalog: Catalog | None = None) -> None:
+class ModelService:
+    def __init__(
+        self,
+        settings: Settings,
+        catalog: Catalog,
+        device: str,
+        on_removed: Callable[[str], None],
+    ) -> None:
         self.settings = settings
-        self.catalog = catalog or load_catalog()
-        self.started_at = utc_now()
-        self.version = package_version()
-        self.device = effective_device(settings)
-        self.gpu = GpuDetector(settings.nvidia_smi)
-        self.cuda = CudaInstaller(settings.cuda_dir, settings.pypi_url, self.catalog.cuda)
+        self.catalog = catalog
+        self.device = device
+        self.on_removed = on_removed
         self.runtimes = self.build_runtimes()
-        self.workers = WorkerHost(settings.worker_python, settings.log_dir)
-        self.tts_cache = TtsCache(settings.tts_cache_dir)
-        self.synthesizer = Synthesizer(
-            self.workers, self.tts_cache, self.device, settings.tts_engine
-        )
         self.models = {
             model.id: ModelDownloader(
                 model, settings.models_dir, settings.hf_endpoint, self.runtime_of(model)
             )
-            for model in self.catalog.models
+            for model in catalog.models
         }
-
-    def close(self) -> None:
-        self.workers.close()
 
     def installer(self, variant: RuntimeVariant) -> RuntimeInstaller:
         return RuntimeInstaller(
@@ -93,31 +68,6 @@ class Services:
         for variant in self.catalog.runtimes[runtime_id].variants.values():
             self.variant_installer(variant).remove()
 
-    def cuda_view(self) -> CudaResponse:
-        return CudaResponse.of(self.cuda.slot.status(), self.cuda.version())
-
-    def system_view(self) -> SystemResponse:
-        return SystemResponse(gpu=GpuResponse.of(self.gpu.get()), cuda=self.cuda_view())
-
-    def scan_gpu(self) -> SystemResponse:
-        self.gpu.scan()
-        return self.system_view()
-
-    def start_cuda(self) -> CudaResponse:
-        if not self.gpu.get().found:
-            raise BackendError(409, "CUDA_NO_GPU", "No NVIDIA GPU was detected")
-        return CudaResponse.of(self.cuda.slot.start(), self.cuda.version())
-
-    def cancel_cuda(self) -> CudaResponse:
-        return CudaResponse.of(self.cuda.slot.cancel(), self.cuda.version())
-
-    def remove_cuda(self) -> CudaResponse:
-        try:
-            download = self.cuda.slot.remove()
-        except DownloadBusy as error:
-            raise BackendError(409, "CUDA_BUSY", "CUDA runtime is downloading") from error
-        return CudaResponse.of(download, self.cuda.version())
-
     def model(self, model_id: str) -> ModelDownloader:
         if model_id not in self.models:
             raise BackendError(404, "MODEL_NOT_FOUND", f"Model '{model_id}' was not found")
@@ -144,9 +94,6 @@ class Services:
             download = downloader.slot.remove()
         except DownloadBusy as error:
             raise BackendError(409, "MODEL_BUSY", f"Model '{model_id}' is downloading") from error
-        self.tts_cache.clear(model_id)
+        self.on_removed(model_id)
         self.release_runtime(downloader.model)
         return TtsModelResponse.of(downloader.model, download)
-
-    def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
-        return self.synthesizer.synthesize(self.model(request.model), request)

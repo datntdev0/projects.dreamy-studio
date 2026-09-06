@@ -1,17 +1,16 @@
 import hashlib
 import io
 import json
-import os
 import sys
-import tempfile
 import unittest
 import zipfile
 from pathlib import Path
-from unittest.mock import patch
 
-from support import FakeRemote, FakeServer, asgi_request, wait_until, write_fake_smi
+from support import FakeRemote, ServerTestCase
 
-from app.catalog import (
+from app.features.models.runtimes import RuntimeInstaller, mirrored_url, wheel_destination
+from app.main import create_app
+from app.shared.catalog import (
     Catalog,
     CatalogModel,
     CatalogRuntime,
@@ -19,16 +18,13 @@ from app.catalog import (
     RuntimeWheel,
     cuda_catalog,
 )
-from app.config import Settings
-from app.downloads import DownloadCancelled, DownloadJob
-from app.main import create_app
-from app.runtimes import RuntimeInstaller, mirrored_url, wheel_destination
+from app.shared.config import Settings
+from app.shared.downloads import DownloadCancelled, DownloadJob
 
 CURRENT_PYTHON = f"{sys.version_info.major}.{sys.version_info.minor}"
 PUBLIC_HOST = "https://files.example"
 FIRST_REPO = "fake/first-voice"
 SECOND_REPO = "fake/second-voice"
-GPU_LINE = "NVIDIA GeForce RTX 4090, 24564, 566.03"
 
 
 def build_runtime_wheel(name: str, version: str) -> bytes:
@@ -68,21 +64,13 @@ def voice_model(model_id: str, source: str) -> CatalogModel:
     )
 
 
-class RuntimeTestCase(unittest.TestCase):
+class RuntimeTestCase(ServerTestCase):
+    default_model = "first"
+
     def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
-        self.remote = FakeRemote()
+        self.start_server()
         self.remote.repos[FIRST_REPO] = {"config.json": b"{}", "model.onnx": b"m" * 5_000}
         self.remote.repos[SECOND_REPO] = {"config.json": b"{}", "model.onnx": b"n" * 3_000}
-        self.server = FakeServer(self.remote)
-        self.server.start()
-        self.addCleanup(self.temp.cleanup)
-        self.addCleanup(self.server.stop)
-        proxy = patch.dict(os.environ, {"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "*"})
-        proxy.start()
-        self.addCleanup(proxy.stop)
-        self.smi = write_fake_smi(self.root, GPU_LINE)
         self.wheels = (
             publish_wheel(self.remote, "voice-core", "1.0.0"),
             publish_wheel(self.remote, "voice-codec", "2.1.0"),
@@ -117,18 +105,6 @@ class RuntimeTestCase(unittest.TestCase):
             wheel_mirror=self.server.url,
         )
         return create_app(settings, self.catalog(python))
-
-    def call(self, method: str, path: str, app=None) -> tuple[int, object]:
-        return asgi_request(app or self.app, method, path)
-
-    def model(self, model_id: str = "first", app=None) -> dict:
-        status, body = self.call("GET", "/models", app)
-        self.assertEqual(status, 200)
-        return next(item for item in body if item["id"] == model_id)
-
-    def wait_model(self, state: str, model_id: str = "first", app=None) -> dict:
-        wait_until(lambda: self.model(model_id, app)["state"] == state)
-        return self.model(model_id, app)
 
     @property
     def runtime_dir(self) -> Path:

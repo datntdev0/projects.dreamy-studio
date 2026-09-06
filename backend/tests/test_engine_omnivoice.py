@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.worker_host import WorkerError, WorkerHost, WorkerSpec
+from app.features.speeches.worker_host import WorkerError, WorkerHost, WorkerSpec
 
 FAKE_TORCH = """
 import os

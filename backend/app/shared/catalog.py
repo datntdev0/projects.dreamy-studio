@@ -106,7 +106,9 @@ class Catalog:
 
 
 def read_resource(path: str) -> Any:
-    return json.loads(resources.files("app").joinpath(path).read_text(encoding="utf-8"))
+    return json.loads(
+        resources.files("app.shared.resources").joinpath(path).read_text(encoding="utf-8")
+    )
 
 
 @cache

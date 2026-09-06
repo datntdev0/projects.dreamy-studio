@@ -1,6 +1,7 @@
 import { LanguageKey } from '@shared/language/language.models';
 
 import { SegmentRow } from '../audiobook.models';
+import { isInProgress } from '../audiobook.rules';
 
 export type SegmentActionKind = 'regen' | 'flag' | 'edit';
 
@@ -18,7 +19,7 @@ function flagLabel(row: SegmentRow): LanguageKey {
 
 export function segmentActions(row: SegmentRow): SegmentAction[] {
   const hasAudio = row.record !== null;
-  const running = row.state === 'running';
+  const running = isInProgress(row.state);
   return [
     {
       kind: 'regen',

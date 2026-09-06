@@ -1,28 +1,3 @@
-<section class="ins-sec" data-testid="audiobook-inspector-chapter-details">
-  <span class="eyebrow">{{ 'audiobook.inspector.chapters' | t }}</span>
-  <dl class="kv" data-testid="audiobook-inspector-chapter-kv">
-    <dt>{{ 'audiobook.inspector.chapters' | t }}</dt>
-    <dd data-testid="audiobook-inspector-chapter-name">
-      @if (ctx().unit; as unit) {
-        {{ labels.unitTitle(ctx().config, unit) }}
-      }
-    </dd>
-    <dt>{{ 'audiobook.inspector.passage' | t }}</dt>
-    <dd data-testid="audiobook-inspector-chapter-total">{{ panel().total || empty }}</dd>
-    <dt>{{ 'audiobook.inspector.generated' | t }}</dt>
-    <dd data-testid="audiobook-inspector-chapter-generated">
-      {{ panel().total ? panel().generated + '/' + panel().total : empty }}
-    </dd>
-    <dt>{{ 'audiobook.inspector.attention' | t }}</dt>
-    <dd data-testid="audiobook-inspector-chapter-attention">
-      {{ panel().total ? panel().attention : empty }}
-    </dd>
-    <dt>{{ 'audiobook.inspector.audio' | t }}</dt>
-    <dd data-testid="audiobook-inspector-chapter-duration">
-      {{ panel().duration ? '≈ ' + labels.duration(panel().duration) : empty }}
-    </dd>
-  </dl>
-</section>
 @if (panel().mix; as mix) {
   <section class="ins-sec" data-testid="ab-ins-mix">
     <span class="eyebrow">{{ 'audiobook.inspector.assembly' | t }}</span>

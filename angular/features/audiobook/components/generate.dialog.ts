@@ -5,6 +5,7 @@ import { Icon } from '@components/icon';
 import { ProjectService } from '@features/project/project.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
+import { fieldChecked } from '@shared/utils/dom';
 
 import { GenerateChapter, GenerateGroup, GeneratePlan } from '../audiobook.models';
 import { AudiobookDialogBase } from './audiobook.dialog.base';
@@ -40,6 +41,7 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
 
   readonly selected = signal<string[]>([]);
   readonly exportAfter = signal(false);
+  readonly overwrite = signal(false);
   readonly chapters = computed(this.buildChapters.bind(this));
   readonly selectable = computed(this.buildSelectable.bind(this));
   readonly allSelected = computed(this.buildAllSelected.bind(this));
@@ -71,28 +73,32 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
   statusOf(chapter: GenerateChapter): ChapterStatus {
     if (chapter.blocked) return 'blocked';
     if (chapter.total === 0) return 'empty';
-    return chapter.complete ? 'complete' : 'todo';
+    return chapter.complete && !this.overwrite() ? 'complete' : 'todo';
   }
 
   statusText(chapter: GenerateChapter): string {
     return this.languageService.translate(STATUS_KEYS[this.statusOf(chapter)], {
-      count: chapter.todo,
+      count: this.overwrite() ? chapter.total : chapter.todo,
     });
   }
 
   toggle(chapter: GenerateChapter, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+    const checked = fieldChecked(event);
     const others = this.selected().filter((id) => id !== chapter.unit.id);
     this.selected.set(checked ? [...others, chapter.unit.id] : others);
   }
 
   toggleAll(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+    const checked = fieldChecked(event);
     this.selected.set(checked ? this.selectable().map(unitIdOf) : []);
   }
 
   setExport(event: Event): void {
-    this.exportAfter.set((event.target as HTMLInputElement).checked);
+    this.exportAfter.set(fieldChecked(event));
+  }
+
+  setOverwrite(event: Event): void {
+    this.overwrite.set(fieldChecked(event));
   }
 
   async generate(): Promise<void> {
@@ -102,7 +108,7 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
       return;
     }
     const name = this.projects.projectById(projectId)?.name ?? '';
-    const exportAfter = this.exportAfter();
+    const options = { exportAfter: this.exportAfter(), overwrite: this.overwrite() };
     this.close();
     if (plan.segments > 0) {
       this.toasts.show(
@@ -110,7 +116,7 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
         'info',
       );
     }
-    await this.audiobook.generate(projectId, plan.unitIds, exportAfter);
+    await this.audiobook.generate(projectId, plan.unitIds, options);
   }
 
   private resetSelection(): void {
@@ -124,6 +130,7 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
     const current = this.selectable().find((chapter) => chapter.unit.id === unit?.id);
     this.selected.set(current ? [current.unit.id] : []);
     this.exportAfter.set(false);
+    this.overwrite.set(false);
   }
 
   private buildChapters(): GenerateChapter[] {
@@ -145,7 +152,9 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
     const ids = this.selectable()
       .map(unitIdOf)
       .filter((id) => this.selected().includes(id));
-    return projectId === null ? null : this.audiobook.generatePlanOf(projectId, ids);
+    return projectId === null
+      ? null
+      : this.audiobook.generatePlanOf(projectId, ids, this.overwrite());
   }
 
   private buildCanRun(): boolean {
@@ -164,11 +173,16 @@ export class AudiobookGenerateDialog extends AudiobookDialogBase {
     const count = this.languageService.translate('audiobook.dialog.generate.count', {
       count: plan.segments,
     });
-    const key =
-      plan.regenerated > 0
-        ? 'audiobook.dialog.generate.introRegen'
-        : 'audiobook.dialog.generate.intro';
-    return this.boldHtml(key, { regen: plan.regenerated }, 'count', count);
+    return this.boldHtml(this.introKey(plan), { regen: plan.regenerated }, 'count', count);
+  }
+
+  private introKey(plan: GeneratePlan): LanguageKey {
+    if (this.overwrite()) {
+      return 'audiobook.dialog.generate.introOverwrite';
+    }
+    return plan.regenerated > 0
+      ? 'audiobook.dialog.generate.introRegen'
+      : 'audiobook.dialog.generate.intro';
   }
 
   private buildEstimateHtml(): string {

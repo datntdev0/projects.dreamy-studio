@@ -319,7 +319,7 @@ describe('Audiobook production editor', () => {
     await clickAndSettle(mounted, `ab-regen-${id}`);
     expect(context().running).toEqual([id]);
     expect(textOf(mounted, `audiobook-segment-state-${id}`)).toBe('Generating');
-    expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-running')).toBe(true);
+    expect(byId(mounted.root, `ab-seg-${id}`)?.classList.contains('is-generating')).toBe(true);
     expect(byId(mounted.root, `ab-regen-${id}`)?.hasAttribute('disabled')).toBe(true);
     expect(generateDisabled(mounted)).toBe(true);
     await service().settled(PROJECT);

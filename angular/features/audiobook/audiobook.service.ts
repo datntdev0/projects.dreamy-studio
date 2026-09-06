@@ -21,12 +21,13 @@ import * as edit from './audiobook.edit';
 // prettier-ignore
 import { AUDIO_KIND, audioJobsOf, audioStartOf, generateChaptersOf, generatePlanOf, pipelineUnits, segmentRequestOf } from './audiobook.generate';
 // prettier-ignore
-import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportReply, GenerateChapter, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
+import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportReply, GenerateChapter, GenerateOptions, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
 import {
   blockersOf,
   DEFAULT_MIX,
   emptyBook,
   emptyView,
+  isInProgress,
   REASON_KEYS,
   unitAudioOf,
 } from './audiobook.rules';
@@ -45,6 +46,12 @@ function configOf(book: Audiobook): AudiobookConfig {
 
 function sameJob(left: GenerationJob, right: GenerationJob): boolean {
   return left.unitId === right.unitId && left.blockId === right.blockId;
+}
+
+const DEFAULT_GENERATE_OPTIONS: GenerateOptions = { exportAfter: false, overwrite: false };
+
+function withActiveHead(job: GenerationJob, index: number): GenerationJob {
+  return { ...job, active: index === 0 };
 }
 
 function envOf(ctx: AudiobookContext): AudioEnv {
@@ -125,13 +132,13 @@ export class AudiobookService {
     return ctx ? generateChaptersOf(envOf(ctx), ctx.availability, ctx.script.units) : [];
   }
 
-  generatePlanOf(projectId: number, unitIds: string[]): GeneratePlan | null {
+  generatePlanOf(projectId: number, unitIds: string[], overwrite = false): GeneratePlan | null {
     const ctx = this.contextOf(projectId);
     if (!ctx) {
       return null;
     }
     const units = unitsIn(ctx, unitIds);
-    return generatePlanOf(envOf(ctx), ctx.availability, this.cloud.accounts(), units);
+    return generatePlanOf(envOf(ctx), ctx.availability, this.cloud.accounts(), units, overwrite);
   }
 
   messageText(message: AudiobookMessage): string {
@@ -255,12 +262,17 @@ export class AudiobookService {
     return this.setFlag(projectId, blockId, '');
   }
 
-  async generate(projectId: number, unitIds: string[], exportAfter = false): Promise<number> {
+  async generate(
+    projectId: number,
+    unitIds: string[],
+    options: GenerateOptions = DEFAULT_GENERATE_OPTIONS,
+  ): Promise<number> {
     const ctx = this.contextOf(projectId);
     if (!ctx) {
       return 0;
     }
-    const start = audioStartOf(envOf(ctx), this.startableUnits(ctx, unitIds));
+    const { exportAfter, overwrite } = options;
+    const start = audioStartOf(envOf(ctx), this.startableUnits(ctx, unitIds), overwrite);
     if (start.tasks.length === 0) {
       if (exportAfter) {
         await this.exportAndAnnounce(projectId, unitIds);
@@ -296,10 +308,10 @@ export class AudiobookService {
     if (ctx.blockers.length > 0) {
       return 'blocked';
     }
-    if (row.state === 'running') {
+    if (isInProgress(row.state)) {
       return 'running';
     }
-    this.startSingle(projectId, { unitId: ctx.unit.id, blockId });
+    this.startSingle(projectId, { unitId: ctx.unit.id, blockId, active: false });
     return 'started';
   }
 
@@ -485,7 +497,8 @@ export class AudiobookService {
   }
 
   private jobsOf(projectId: number): GenerationJob[] {
-    return [...(this.singles()[projectId] ?? []), ...audioJobsOf(this.pipelines(), projectId)];
+    const singles = (this.singles()[projectId] ?? []).map(withActiveHead);
+    return [...singles, ...audioJobsOf(this.pipelines(), projectId)];
   }
 
   private trackStarted(snapshot: PipelineSnapshot): void {

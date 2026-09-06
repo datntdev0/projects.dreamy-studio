@@ -19,11 +19,14 @@ const PROJECT = 1;
 const TEA_WOMAN = 'E16';
 const VOICE = 1;
 const NARRATOR = 'narr';
+const NO_OPTIONS = { exportAfter: false, overwrite: false };
+const EXPORT_OPTIONS = { exportAfter: true, overwrite: false };
 
 const PLAN: GeneratePlan = {
   unitIds: ['U02'],
   segments: 3,
   regenerated: 2,
+  overwritten: 0,
   cost: 0.048,
   groups: [
     { key: 'local', kind: 'local', name: '', billing: 'local', chars: 1200, cost: 0 },
@@ -232,7 +235,7 @@ describe('audiobook generate dialog', () => {
     await press(mounted, 'ab-gen-go-btn');
     expect(plan.unitIds).toHaveLength(2);
     expect(plan.unitIds).toEqual(expect.arrayContaining([currentId(), other.unit.id]));
-    expect(generate).toHaveBeenCalledWith(PROJECT, plan.unitIds, false);
+    expect(generate).toHaveBeenCalledWith(PROJECT, plan.unitIds, NO_OPTIONS);
   });
 
   it('selects and clears every selectable chapter at once', async () => {
@@ -257,7 +260,7 @@ describe('audiobook generate dialog', () => {
     const total = planFor([currentId()]).segments;
     generate.mockResolvedValue(total);
     click(mounted.root, 'ab-gen-go-btn');
-    expect(generate).toHaveBeenCalledWith(PROJECT, [currentId()], false);
+    expect(generate).toHaveBeenCalledWith(PROJECT, [currentId()], NO_OPTIONS);
     expect(dialogs().request()).toBeNull();
     await settle(mounted.fixture);
     expect(toasts().map((item) => item.message)).toEqual([
@@ -272,7 +275,7 @@ describe('audiobook generate dialog', () => {
     await press(mounted, 'ab-gen-export');
     expect(checkbox(mounted, 'ab-gen-export').checked).toBe(true);
     await press(mounted, 'ab-gen-go-btn');
-    expect(generate).toHaveBeenCalledWith(PROJECT, [currentId()], true);
+    expect(generate).toHaveBeenCalledWith(PROJECT, [currentId()], EXPORT_OPTIONS);
   });
 
   it('offers an export only when the selected chapters are generated', async () => {
@@ -290,9 +293,36 @@ describe('audiobook generate dialog', () => {
     expect(goDisabled(mounted)).toBe(false);
     const generate = vi.spyOn(audiobook(), 'generate').mockResolvedValue(0);
     await press(mounted, 'ab-gen-go-btn');
-    expect(generate).toHaveBeenCalledWith(PROJECT, [done.unit.id], true);
+    expect(generate).toHaveBeenCalledWith(PROJECT, [done.unit.id], EXPORT_OPTIONS);
     expect(dialogs().request()).toBeNull();
     expect(toasts()).toEqual([]);
+  });
+
+  it('skips generated segments by default and regenerates them when overwriting', async () => {
+    const mounted = await opened();
+    const done = chapterWhere(isComplete);
+    await press(mounted, `ab-gen-ch-check-${currentId()}`);
+    await press(mounted, `ab-gen-ch-check-${done.unit.id}`);
+    expect(checkbox(mounted, 'ab-gen-overwrite').checked).toBe(false);
+    expect(byId(mounted.root, 'ab-gen-overwrite-warn')).toBeNull();
+    expect(byId(mounted.root, 'ab-gen-nothing')).not.toBeNull();
+    await press(mounted, 'ab-gen-overwrite');
+    const plan = audiobook().generatePlanOf(PROJECT, [done.unit.id], true) as GeneratePlan;
+    expect(plan.segments).toBe(done.total);
+    expect(textOf(mounted, `ab-gen-ch-status-${done.unit.id}`)).toBe(`${done.total} to generate`);
+    expect(textOf(mounted, 'ab-gen-overwrite-warn')).toBe(
+      `${plan.overwritten} generated segments will be overwritten.`,
+    );
+    expect(textOf(mounted, 'audiobook-generate-intro')).toContain(
+      'including segments that already have audio',
+    );
+    expect(textOf(mounted, 'ab-gen-go-btn')).toBe(`Generate ${done.total} segments`);
+    const generate = vi.spyOn(audiobook(), 'generate').mockResolvedValue(done.total);
+    await press(mounted, 'ab-gen-go-btn');
+    expect(generate).toHaveBeenCalledWith(PROJECT, [done.unit.id], {
+      exportAfter: false,
+      overwrite: true,
+    });
   });
 
   it('exports generated chapters through the desktop', async () => {

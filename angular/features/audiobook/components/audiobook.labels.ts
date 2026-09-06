@@ -9,7 +9,8 @@ import { AudiobookService } from '../audiobook.service';
 
 export const STATE_BADGES: Record<SegmentDisplayState, string> = {
   none: 'badge',
-  running: 'badge badge-running',
+  queued: 'badge',
+  generating: 'badge badge-running',
   done: 'badge badge-success',
   stale: 'badge badge-warning',
   flag: 'badge badge-danger',

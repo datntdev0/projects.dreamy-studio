@@ -9,7 +9,7 @@ export type AudiobookMode = 'prod' | 'voices';
 
 export type SegmentState = 'none' | 'done' | 'stale' | 'flag';
 
-export type SegmentDisplayState = SegmentState | 'running';
+export type SegmentDisplayState = SegmentState | 'queued' | 'generating';
 
 export type UnitAudioState = 'none' | 'doing' | 'stale' | 'done';
 
@@ -205,10 +205,6 @@ export interface EngineSummary {
 }
 
 export interface ChapterPanel {
-  total: number;
-  generated: number;
-  attention: number;
-  duration: number;
   mix: MixSettings | null;
   blockers: Blocker[];
 }
@@ -267,6 +263,7 @@ export interface GeneratePlan {
   unitIds: string[];
   segments: number;
   regenerated: number;
+  overwritten: number;
   groups: GenerateGroup[];
   cost: number;
 }
@@ -315,6 +312,12 @@ export interface PlayerState {
 export interface GenerationJob {
   unitId: string;
   blockId: string;
+  active: boolean;
+}
+
+export interface GenerateOptions {
+  exportAfter: boolean;
+  overwrite: boolean;
 }
 
 export interface AudiobookDialogRequestGenerate {

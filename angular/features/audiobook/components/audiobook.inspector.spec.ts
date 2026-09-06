@@ -52,11 +52,9 @@ async function showUnit(mounted: Mounted<unknown>, unitId: string): Promise<void
 describe('AudiobookInspector (chapter panel)', () => {
   it('describes the unit and the assembly mix without a Scripting shortcut', async () => {
     const mounted = await openInspector();
-    expect(textOf(mounted, 'audiobook-inspector-chapter-name')).toMatch(/^Chapter 2/);
+    expect(byId(mounted.root, 'audiobook-inspector-chapter-details')).toBeNull();
     expect(byId(mounted.root, 'audiobook-inspector-chapter-locked')).toBeNull();
     expect(byId(mounted.root, 'audiobook-inspector-chapter-unlocked')).toBeNull();
-    expect(textOf(mounted, 'audiobook-inspector-chapter-generated')).toMatch(/^\d+\/\d+$/);
-    expect(textOf(mounted, 'audiobook-inspector-chapter-duration')).toMatch(/^≈ \d+:\d{2}$/);
     for (const field of ['gap', 'intro', 'outro', 'sentence', 'vol']) {
       expect(byId(mounted.root, `ab-mix-${field}`)).not.toBeNull();
     }
@@ -77,16 +75,12 @@ describe('AudiobookInspector (chapter panel)', () => {
     const mounted = await openInspector();
     await showUnit(mounted, 'U03');
     expect(byId(mounted.root, 'audiobook-inspector-chapter-blocker')).toBeNull();
-    expect(textOf(mounted, 'audiobook-inspector-chapter-generated')).toBe('5/5');
   });
 
   it('hides the mix for a chapter without a script', async () => {
     const mounted = await openInspector();
     await showUnit(mounted, 'U04');
     expect(byId(mounted.root, 'ab-ins-mix')).toBeNull();
-    expect(textOf(mounted, 'audiobook-inspector-chapter-total')).toBe('—');
-    expect(textOf(mounted, 'audiobook-inspector-chapter-generated')).toBe('—');
-    expect(textOf(mounted, 'audiobook-inspector-chapter-duration')).toBe('—');
   });
 
   it('stores the mix and clamps it to the allowed range', async () => {

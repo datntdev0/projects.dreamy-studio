@@ -1,5 +1,5 @@
 // prettier-ignore
-import { addPause, assignVoice, castVoices, chapterEstimate, CLOUD_VOICE, EMPTY_BLANK, EMPTY_SCRIPT, FLAG_DEFAULT, FLAG_PLACEHOLDER, FLAG_TOAST, generateChapter, HERO_VOICE, NANO_VOICE, NARRATOR_VOICE, openAudiobookOf, openDraftedProject, orphanDialogues, paragraph, QUIET_VOICE, readUnitAudio, REASON_SPEAKER, REASON_SPEED, REASON_TEXT, REASON_TONE, REASON_VOICE, regenerateSegment, reopenAudiobook, savedFlags, setSpeed, showMode, speakAs, STATE_DONE, STATE_FLAG, STATE_NONE, STATE_RUNNING, STATE_STALE, stopBackend, switchModule, UNIT_DONE, UNIT_NONE, UNIT_STALE } from '../scripts/audiobook.ts';
+import { addPause, assignVoice, castVoices, chapterEstimate, CLOUD_VOICE, EMPTY_BLANK, EMPTY_SCRIPT, FLAG_DEFAULT, FLAG_PLACEHOLDER, FLAG_TOAST, generateChapter, HERO_VOICE, NANO_VOICE, NARRATOR_VOICE, openAudiobookOf, openDraftedProject, orphanDialogues, paragraph, QUIET_VOICE, readUnitAudio, REASON_SPEAKER, REASON_SPEED, REASON_TEXT, REASON_TONE, REASON_VOICE, regenerateSegment, reopenAudiobook, savedFlags, setSpeed, showMode, speakAs, STATE_DONE, STATE_FLAG, STATE_GENERATING, STATE_NONE, STATE_STALE, stopBackend, switchModule, UNIT_DONE, UNIT_NONE, UNIT_STALE } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 // prettier-ignore
 import { addBlock, assignSpeaker, AUDIO_PROJECT, castId, changeType, HERO, MASTER, NARRATOR, NARRATOR_ID, openAudiobook, paragraphsOf, startWriting, trackSaves, TYPE_DIALOGUE, TYPE_HEADING, TYPE_NARRATION, TYPE_NOTE, waitForSaves } from '../scripts/scripting.ts';
@@ -138,7 +138,7 @@ test.describe('CAP-08 Production Workflow', () => {
         await expect(book.root.getByTestId('ab-stats')).toHaveCount(0);
         await backend.holdSynthesis(paragraph(2, 1));
         await book.segment(1).regenerate.click();
-        await expect(book.segment(1).state).toHaveText(STATE_RUNNING);
+        await expect(book.segment(1).state).toHaveText(STATE_GENERATING);
         await backend.releaseSynthesis();
         await expect(book.segment(1).state).toHaveText(STATE_DONE, { timeout: 60_000 });
       });
@@ -322,7 +322,7 @@ test.describe('CAP-08 Production Workflow', () => {
         await expect(next.flag).toBeDisabled();
         await backend.holdSynthesis(paragraph(1, 1));
         await next.regenerate.click();
-        await expect(next.state).toHaveText(STATE_RUNNING);
+        await expect(next.state).toHaveText(STATE_GENERATING);
         await expect(next.flag).toBeDisabled();
         await backend.releaseSynthesis();
         await expect(next.state).toHaveText(STATE_DONE, { timeout: 60_000 });

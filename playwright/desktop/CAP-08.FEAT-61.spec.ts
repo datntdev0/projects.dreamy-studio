@@ -1,10 +1,10 @@
 import type { MixField } from '../pages/audiobook.ts';
 // prettier-ignore
-import { addPause, assignVoice, castVoices, DEFAULT_MIX, exportSize, exportsOf, NARRATOR_VOICE, openAudiobookOf, openDraftedProject, readUnitAudio, recordedSeconds, regenerateSegment, reopenAudiobook, savedMix, showInspector, showMode, srtCueCount, startGeneration } from '../scripts/audiobook.ts';
+import { addPause, assignVoice, castVoices, DEFAULT_MIX, exportSize, exportsOf, NARRATOR_VOICE, openAudiobookOf, openDraftedProject, regenerateSegment, reopenAudiobook, savedMix, showInspector, showMode, srtCueCount, startGeneration } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 import type { Ui } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, durationText, NARRATOR, NARRATOR_ID, openAudiobook } from '../scripts/scripting.ts';
+import { AUDIO_PROJECT, NARRATOR, NARRATOR_ID, openAudiobook } from '../scripts/scripting.ts';
 
 const MIX_FIELDS: readonly MixField[] = ['gap', 'intro', 'outro', 'sentence', 'vol'];
 const MIX_INPUTS: readonly (readonly [MixField, string, string])[] = [
@@ -67,13 +67,9 @@ test.describe('CAP-08 Production Workflow', () => {
       await regenerateSegment(ui, 0);
       await showInspector(ui);
 
-      await test.step('shows the chapter, segments, generated, needing attention, audio duration and the assembly settings without export buttons', async () => {
-        const seconds = recordedSeconds(await readUnitAudio(folder, 1));
-        await expect(chapter.name).toHaveText('Chapter 1 · The Arrival');
-        await expect(chapter.total).toHaveText('4');
-        await expect(chapter.generated).toHaveText('1/4');
-        await expect(chapter.attention).toHaveText('3');
-        await expect(chapter.duration).toHaveText(`≈ ${durationText(seconds)}`);
+      await test.step('shows the assembly settings without chapter details or export buttons', async () => {
+        await expect(chapter.root).toBeVisible();
+        await expect(chapter.details).toHaveCount(0);
         await expect(chapter.assembly).toBeVisible();
         await expect(book.root.getByTestId(/^ab-export-/)).toHaveCount(0);
       });

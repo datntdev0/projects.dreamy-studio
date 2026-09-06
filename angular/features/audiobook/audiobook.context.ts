@@ -14,7 +14,9 @@ import {
   ListRow,
   RailRow,
   RailSummary,
+  SegmentDisplayState,
   SegmentRow,
+  SegmentState,
   SpeakerDeleteBlock,
   SpeakerRow,
   SpeakerStatus,
@@ -51,10 +53,22 @@ export interface ContextInput {
   jobs: GenerationJob[];
 }
 
+function displayStateOf(
+  jobs: GenerationJob[],
+  blockId: string,
+  state: SegmentState,
+): SegmentDisplayState {
+  const job = jobs.find((item) => item.blockId === blockId);
+  if (!job) {
+    return state;
+  }
+  return job.active ? 'generating' : 'queued';
+}
+
 function segmentRowOf(
   env: AudioEnv,
   unit: ScriptUnit,
-  running: string[],
+  jobs: GenerationJob[],
   block: ScriptBlock,
   n: number,
 ): SegmentRow {
@@ -67,16 +81,20 @@ function segmentRowOf(
     speakerClass: speakerClass(speaker ?? undefined),
     voice,
     speed,
-    state: running.includes(block.id) ? 'running' : info.state,
+    state: displayStateOf(jobs, block.id, info.state),
     record: info.record,
     reasons: info.reasons,
   };
 }
 
-export function segmentRowsOf(env: AudioEnv, unit: ScriptUnit, running: string[]): SegmentRow[] {
+export function segmentRowsOf(
+  env: AudioEnv,
+  unit: ScriptUnit,
+  jobs: GenerationJob[],
+): SegmentRow[] {
   return (unit.blocks ?? [])
     .filter(isVoiced)
-    .map((block, index) => segmentRowOf(env, unit, running, block, index + 1));
+    .map((block, index) => segmentRowOf(env, unit, jobs, block, index + 1));
 }
 
 export function listRowsOf(unit: ScriptUnit | null, segments: SegmentRow[]): ListRow[] {
@@ -189,16 +207,11 @@ function inspectorOf(view: AudiobookView): AudiobookInspector {
 }
 
 function chapterPanelOf(
-  stat: UnitStat | null,
   book: Audiobook,
   unit: ScriptUnit | null,
   blockers: AudiobookContext['blockers'],
 ): ChapterPanel {
   return {
-    total: stat ? stat.total : 0,
-    generated: stat ? stat.done : 0,
-    attention: stat ? stat.stale + stat.none : 0,
-    duration: stat ? stat.dur : 0,
     mix: unit?.blocks ? book.mix : null,
     blockers,
   };
@@ -211,9 +224,10 @@ export function buildContext(input: ContextInput): AudiobookContext {
   const unit = findUnit(script, view.unit) ?? defaultUnitOf(script, stats);
   const stat = unit ? stats[script.units.indexOf(unit)] : null;
   const audio = unit ? unitAudioOf(book, unit.id) : null;
-  const running = input.jobs.filter((job) => job.unitId === unit?.id).map((job) => job.blockId);
+  const jobs = input.jobs.filter((job) => job.unitId === unit?.id);
+  const running = jobs.map((job) => job.blockId);
   const hasBlocks = !!unit && unit.blocks !== null;
-  const segments = unit && hasBlocks ? segmentRowsOf(env, unit, running) : [];
+  const segments = unit && hasBlocks ? segmentRowsOf(env, unit, jobs) : [];
   const todo = unit && hasBlocks ? todoBlocks(env, unit) : [];
   const blockers = unit && hasBlocks ? blockersOf(env, availability, unit) : [];
   return {
@@ -246,6 +260,6 @@ export function buildContext(input: ContextInput): AudiobookContext {
     lostDialogues: countLostDialogues(script, cast),
     voiceGroups: voiceGroupsOf(voices, availability),
     engines: engineSummaryOf(availability),
-    chapterPanel: chapterPanelOf(stat, book, unit, blockers),
+    chapterPanel: chapterPanelOf(book, unit, blockers),
   };
 }

@@ -7,8 +7,6 @@ import { LanguageService } from '@shared/language/language.service';
 import { capitalize } from '../../scripting/scripting.dialogs.rules';
 import { ScriptConfig, ScriptUnit } from '../../scripting/scripting.models';
 
-export const EMPTY_VALUE = '—';
-
 @Injectable({ providedIn: 'root' })
 export class AudiobookInspectorLabels {
   private readonly language = inject(LanguageService);

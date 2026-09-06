@@ -160,6 +160,7 @@ describe('generation plan', () => {
       unitIds: [],
       segments: 0,
       regenerated: 0,
+      overwritten: 0,
       groups: [],
       cost: 0,
     });
@@ -170,6 +171,14 @@ describe('generation plan', () => {
       segments: 0,
       cost: 0,
     });
+  });
+
+  it('plans every voiced block and counts the overwritten ones when overwriting', () => {
+    const env = produced(setup(1, 3));
+    const plan = generate.generatePlanOf(env, availability(), accounts, [first, second], true);
+    expect(plan).toMatchObject({ segments: 4, regenerated: 1, overwritten: 2 });
+    const kept = generate.generatePlanOf(env, availability(), accounts, [first, second], false);
+    expect(kept).toMatchObject({ segments: 2, overwritten: 0 });
   });
 });
 
@@ -234,6 +243,12 @@ describe('audio start', () => {
     expect(start.tasks.map((task) => task.segmentId)).toEqual(['d', 'd2']);
     expect(start.requests['n']).toBeUndefined();
     expect(generate.audioStartOf(setup(1, 2), [])).toEqual({ tasks: [], requests: {} });
+  });
+
+  it('queues the generated blocks too when overwriting', () => {
+    const env = produced(setup(1, 2));
+    const start = generate.audioStartOf(env, [first, second], true);
+    expect(start.tasks.map((task) => task.segmentId)).toEqual(['n', 'd', 'n2', 'd2']);
   });
 });
 

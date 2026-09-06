@@ -65,11 +65,14 @@ function input(overrides: Partial<ContextInput> = {}): ContextInput {
 describe('segment rows', () => {
   it('numbers voiced blocks and carries state and speaker', () => {
     const env = { book: input().book, cast: input().cast, voices };
-    const rows = segmentRowsOf(env, unit, ['n']);
+    const rows = segmentRowsOf(env, unit, [
+      { unitId: 'U01', blockId: 'n', active: true },
+      { unitId: 'U01', blockId: 'd', active: false },
+    ]);
     expect(rows.map((row) => [row.n, row.block.id, row.state])).toEqual([
       [1, 'h', 'done'],
-      [2, 'n', 'running'],
-      [3, 'd', 'flag'],
+      [2, 'n', 'generating'],
+      [3, 'd', 'queued'],
     ]);
     expect(rows[1].speaker?.id).toBe('narr');
     expect(rows[2].speakerClass).toBe('spk-0');
@@ -115,7 +118,6 @@ describe('buildContext', () => {
     expect(ctx.canPlay).toBe(true);
     expect(ctx.inspector).toBe('chapter');
     expect(ctx.changed).toBe(0);
-    expect(ctx.chapterPanel).toMatchObject({ total: 3, generated: 1, attention: 2 });
     expect(ctx.chapterPanel.mix).toEqual(DEFAULT_MIX);
     expect(ctx.rail.map((row) => [row.unit.id, row.active])).toEqual([
       ['U01', true],
@@ -135,14 +137,14 @@ describe('buildContext', () => {
     expect(none.stat).toBeNull();
     expect(none.summary).toBeNull();
     expect(none.canGenerate).toBe(false);
-    expect(none.chapterPanel).toMatchObject({ total: 0, mix: null });
+    expect(none.chapterPanel.mix).toBeNull();
     expect(none.railSummary.percent).toBe(0);
   });
 
   it('reports running jobs, blockers and a meta unit', () => {
     const jobs = [
-      { unitId: 'U01', blockId: 'n' },
-      { unitId: 'U02', blockId: 'z' },
+      { unitId: 'U01', blockId: 'n', active: true },
+      { unitId: 'U02', blockId: 'z', active: false },
     ];
     const running = buildContext(input({ jobs, view: { ...emptyView(), unit: 'U01' } }));
     expect(running.running).toEqual(['n']);

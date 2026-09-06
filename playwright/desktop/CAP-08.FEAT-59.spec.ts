@@ -1,5 +1,5 @@
 // prettier-ignore
-import { assignVoice, BACKEND_REASON, castVoices, COMPLETED_TOAST, EDGE_GROUP_TEXT, EDGE_VOICE, expectEveryState, HERO_VOICE, LOCAL_GROUP_TEXT, NARRATOR_VOICE, NO_COST, openAudiobookOf, paragraph, readUnitAudio, regenerateSegment, savedFlags, SEGMENT_FAILED, setPipelineLimits, showMode, speakAs, STARTED_TOAST, startGeneration, STATE_DONE, STATE_NONE, STATE_RUNNING, switchModule } from '../scripts/audiobook.ts';
+import { assignVoice, BACKEND_REASON, castVoices, COMPLETED_TOAST, EDGE_GROUP_TEXT, EDGE_VOICE, expectEveryState, HERO_VOICE, LOCAL_GROUP_TEXT, NARRATOR_VOICE, NO_COST, openAudiobookOf, paragraph, readUnitAudio, regenerateSegment, savedFlags, SEGMENT_FAILED, setPipelineLimits, showMode, speakAs, STARTED_TOAST, startGeneration, STATE_DONE, STATE_GENERATING, STATE_NONE, STATE_QUEUED, switchModule } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 import type { Ui } from '../scripts/fixtures.ts';
 // prettier-ignore
@@ -72,15 +72,23 @@ test.describe('CAP-08 Production Workflow', () => {
         await castVoices(ui, { [HERO_ID]: voices[HERO_VOICE] ?? 0 });
       });
 
-      await test.step('locks generate all while segments are being generated and offers nothing to generate once every segment is done', async () => {
+      await test.step('locks generate all while segments are being generated, skips generated segments once every segment is done and offers to overwrite them', async () => {
         await backend.holdSynthesis(EDITED);
         await startGeneration(ui);
-        await expect(book.segment(2).state).toHaveText(STATE_RUNNING);
+        await expect(book.segment(2).state).toHaveText(STATE_GENERATING);
         await expect(book.generateAll).toBeDisabled();
         await backend.releaseSynthesis();
         await expectEveryState(ui, STATE_DONE, GENERATION_TIMEOUT.timeout);
         await book.generateAll.click();
         await expect(dialog.nothing).toBeVisible();
+        await expect(dialog.go).toBeDisabled();
+        await expect(dialog.overwrite).not.toBeChecked();
+        await expect(dialog.overwriteWarning).toBeHidden();
+        await dialog.overwrite.check();
+        await expect(dialog.nothing).toBeHidden();
+        await expect(dialog.overwriteWarning).toBeVisible();
+        await expect(dialog.go).toBeEnabled();
+        await dialog.overwrite.uncheck();
         await expect(dialog.go).toBeDisabled();
         await dialog.cancel.click();
       });
@@ -109,8 +117,8 @@ test.describe('CAP-08 Production Workflow', () => {
       await test.step('creates an audiobook pipeline with one task per segment, announces it and marks the segments as generating', async () => {
         await startGeneration(ui);
         await expect(ui.main.toast(STARTED_TOAST)).toBeVisible();
-        await expect(book.segment(2).state).toHaveText(STATE_RUNNING);
-        await expect(book.segment(3).state).toHaveText(STATE_RUNNING);
+        await expect(book.segment(2).state).toHaveText(STATE_GENERATING);
+        await expect(book.segment(3).state).toHaveText(STATE_QUEUED);
         const pipeline = await waitForPipeline(folder, { states: ['running'] });
         expect(pipeline.kind).toBe('audio');
         expect(pipeline.tasks).toHaveLength(4);
@@ -142,7 +150,7 @@ test.describe('CAP-08 Production Workflow', () => {
           'queued',
         ]);
         await book.unit(1).click();
-        await expect(book.segment(2).state).toHaveText(STATE_RUNNING);
+        await expect(book.segment(2).state).toHaveText(STATE_GENERATING);
         await expect(book.segment(1).state).toHaveText(STATE_DONE, GENERATION_TIMEOUT);
       });
 
@@ -211,7 +219,7 @@ test.describe('CAP-08 Production Workflow', () => {
       await test.step('marks the segment as generating and then generated', async () => {
         await backend.holdSynthesis(paragraph(1, 0));
         await segment.regenerate.click();
-        await expect(segment.state).toHaveText(STATE_RUNNING);
+        await expect(segment.state).toHaveText(STATE_GENERATING);
         await expect(segment.regenerate).toBeDisabled();
         await backend.releaseSynthesis();
         await expect(segment.state).toHaveText(STATE_DONE, GENERATION_TIMEOUT);

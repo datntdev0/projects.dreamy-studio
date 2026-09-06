@@ -5,7 +5,7 @@ import { ProjectModuleState } from '../project/project.models';
 import { CastMember, Script, ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { countWords } from '../scripting/scripting.rules';
 // prettier-ignore
-import { Audiobook, AudiobookMessage, AudiobookView, AudioEnv, AudioRecord, Blocker, MetaState, MixField, MixSettings, SegmentInfo, SegmentState, SpeakerVoice, StaleReason, UnitAudio, UnitAudioState, UnitStat, UnitSummary, VoiceAvailability, VoiceIssue, Voicing } from './audiobook.models';
+import { Audiobook, AudiobookMessage, AudiobookView, AudioEnv, AudioRecord, Blocker, MetaState, MixField, MixSettings, SegmentDisplayState, SegmentInfo, SegmentState, SpeakerVoice, StaleReason, UnitAudio, UnitAudioState, UnitStat, UnitSummary, VoiceAvailability, VoiceIssue, Voicing } from './audiobook.models';
 
 export const VOICED_TYPES: ScriptBlock['type'][] = ['heading', 'narration', 'dialogue'];
 
@@ -61,6 +61,10 @@ export function emptyUnitAudio(): UnitAudio {
 
 export function unitAudioOf(book: Audiobook, unitId: string): UnitAudio {
   return book.units[unitId] ?? emptyUnitAudio();
+}
+
+export function isInProgress(state: SegmentDisplayState): boolean {
+  return state === 'queued' || state === 'generating';
 }
 
 export function isVoiced(block: ScriptBlock): boolean {

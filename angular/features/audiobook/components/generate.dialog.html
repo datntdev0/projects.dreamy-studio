@@ -43,6 +43,19 @@
     </label>
     }
   </div>
+  <label class="check" data-testid="ab-gen-overwrite-field">
+    <input
+      type="checkbox"
+      data-testid="ab-gen-overwrite"
+      [checked]="overwrite()"
+      (change)="setOverwrite($event)"
+    />
+    <span>
+      <b>{{ "audiobook.dialog.generate.overwrite" | t }}</b>
+      <br />
+      <span class="t-sm t-mute">{{ "audiobook.dialog.generate.overwriteHint" | t }}</span>
+    </span>
+  </label>
   @if (plan.segments > 0) {
   <p class="t-sm" data-testid="audiobook-generate-intro" [innerHTML]="introHtml()"></p>
   <div class="sc-chks" data-testid="ab-gen-groups">
@@ -66,6 +79,12 @@
     </div>
     } }
   </div>
+  @if (plan.overwritten > 0) {
+  <div class="sc-ban is-warn" data-testid="ab-gen-overwrite-warn">
+    <ds-icon name="alert" [size]="15" />
+    <span>{{ "audiobook.dialog.generate.warnOverwrite" | t: { count: plan.overwritten } }}</span>
+  </div>
+  }
   <div class="sc-est" data-testid="ab-gen-estimate">
     <ds-icon name="info" [size]="16" />
     <div

@@ -21,7 +21,8 @@
 .ab-seg.is-flag {
   --st: var(--danger);
 }
-.ab-seg.is-running {
+.ab-seg.is-queued,
+.ab-seg.is-generating {
   --st: var(--secondary);
 }
 .ab-seg.is-playing {

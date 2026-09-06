@@ -11,7 +11,7 @@ import { pipeline, task } from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_MIX, emptyBook } from './audiobook.rules';
+import { DEFAULT_MIX, emptyBook, isInProgress } from './audiobook.rules';
 import { AudiobookService } from './audiobook.service';
 
 const PROJECT = 1;
@@ -83,12 +83,12 @@ describe('AudiobookService', () => {
   }
 
   function generateCurrent(exportAfter = false): Promise<number> {
-    return service.generate(PROJECT, [currentId()], exportAfter);
+    return service.generate(PROJECT, [currentId()], { exportAfter, overwrite: false });
   }
 
   async function generateAll(unitIds = [currentId()], exportAfter = false): Promise<number> {
     vi.useFakeTimers();
-    const started = await service.generate(PROJECT, unitIds, exportAfter);
+    const started = await service.generate(PROJECT, unitIds, { exportAfter, overwrite: false });
     await drain();
     await settle();
     return started;
@@ -426,7 +426,7 @@ describe('AudiobookService', () => {
       await drain();
     });
 
-    it('shows queued and running tasks as running and keeps going across chapters', async () => {
+    it('shows queued and running tasks as queued or generating and keeps going across chapters', async () => {
       voiceTeaWoman();
       vi.useFakeTimers();
       await generateCurrent();
@@ -434,7 +434,7 @@ describe('AudiobookService', () => {
       expect(total).toBeGreaterThan(0);
       expect(service.running()[0]).toMatchObject({ kind: 'audio', projectId: PROJECT });
       expect(
-        context().rows.some((row) => row.kind === 'segment' && row.segment.state === 'running'),
+        context().rows.some((row) => row.kind === 'segment' && isInProgress(row.segment.state)),
       ).toBe(true);
       expect(service.isGenerating(PROJECT, context().unit?.id)).toBe(true);
       expect(service.isGenerating(PROJECT, 'other')).toBe(false);
@@ -601,7 +601,7 @@ describe('AudiobookService', () => {
 
     it('exports right away when there is nothing to generate', async () => {
       const ids = [doneId()];
-      expect(await service.generate(PROJECT, ids, true)).toBe(0);
+      expect(await service.generate(PROJECT, ids, { exportAfter: true, overwrite: false })).toBe(0);
       expect(ipc.called('pipeline_start')).toBe(0);
       expect(ipc.lastArgs('audiobook_export')).toEqual({ projectId: PROJECT, unitIds: ids });
       expect(toasts('success')).toEqual([exported(ids)]);

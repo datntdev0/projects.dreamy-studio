@@ -4,7 +4,7 @@ import { PipelineSnapshot, PipelineTask } from '../novel/novel.translation.model
 import { ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { CloudAccount } from '../settings/cloud.models';
 // prettier-ignore
-import { AudioEnv, AudioStart, CloudBilling, GenerateChapter, GenerateGroup, GeneratePlan, GenerationJob, PreviewRequest, SegmentRequest, VoiceAvailability } from './audiobook.models';
+import { AudioEnv, AudioStart, CloudBilling, GenerateChapter, GenerateGroup, GeneratePlan, GenerationJob, PreviewRequest, SegmentRequest, SegmentState, VoiceAvailability } from './audiobook.models';
 import {
   blockersOf,
   COST_PER_CHAR,
@@ -92,8 +92,30 @@ export function generateChaptersOf(
     .map((unit) => generateChapterOf(env, availability, unit));
 }
 
-function regeneratedCount(env: AudioEnv, unit: ScriptUnit, blocks: ScriptBlock[]): number {
-  return blocks.filter((block) => segmentInfo(env, unit, block).state !== 'none').length;
+function countStates(
+  env: AudioEnv,
+  unit: ScriptUnit,
+  blocks: ScriptBlock[],
+  states: SegmentState[],
+): number {
+  return blocks.filter((block) => states.includes(segmentInfo(env, unit, block).state)).length;
+}
+
+function sumStates(
+  env: AudioEnv,
+  units: ScriptUnit[],
+  blocks: ScriptBlock[][],
+  states: SegmentState[],
+): number {
+  return units.reduce((sum, unit, index) => sum + countStates(env, unit, blocks[index], states), 0);
+}
+
+export function blocksToGenerate(
+  env: AudioEnv,
+  unit: ScriptUnit,
+  overwrite: boolean,
+): ScriptBlock[] {
+  return overwrite ? voicedBlocks(unit) : todoBlocks(env, unit);
 }
 
 export function generatePlanOf(
@@ -101,17 +123,16 @@ export function generatePlanOf(
   availability: VoiceAvailability,
   accounts: CloudAccount[],
   units: ScriptUnit[],
+  overwrite = false,
 ): GeneratePlan {
-  const todo = units.map((unit) => todoBlocks(env, unit));
+  const todo = units.map((unit) => blocksToGenerate(env, unit, overwrite));
   const blocks = todo.flat();
   const groups = generateGroups(env, availability, accounts, blocks);
   return {
     unitIds: units.map((unit) => unit.id),
     segments: blocks.length,
-    regenerated: units.reduce(
-      (sum, unit, index) => sum + regeneratedCount(env, unit, todo[index]),
-      0,
-    ),
+    regenerated: sumStates(env, units, todo, ['stale', 'flag']),
+    overwritten: sumStates(env, units, todo, ['done']),
     groups,
     cost: groups.reduce((sum, group) => sum + group.cost, 0),
   };
@@ -135,8 +156,13 @@ export function previewRequestOf(voice: LibraryVoice, speed: number): PreviewReq
   return { voiceId: voice.id, speed, text: voice.sampleText || PREVIEW_FALLBACK_TEXT };
 }
 
-function appendStart(env: AudioEnv, start: AudioStart, unit: ScriptUnit): AudioStart {
-  for (const block of todoBlocks(env, unit)) {
+function appendStart(
+  env: AudioEnv,
+  overwrite: boolean,
+  start: AudioStart,
+  unit: ScriptUnit,
+): AudioStart {
+  for (const block of blocksToGenerate(env, unit, overwrite)) {
     const request = segmentRequestOf(env, block);
     if (request) {
       start.tasks.push({ chapterId: unit.id, segmentId: block.id });
@@ -146,9 +172,9 @@ function appendStart(env: AudioEnv, start: AudioStart, unit: ScriptUnit): AudioS
   return start;
 }
 
-export function audioStartOf(env: AudioEnv, units: ScriptUnit[]): AudioStart {
+export function audioStartOf(env: AudioEnv, units: ScriptUnit[], overwrite = false): AudioStart {
   const empty: AudioStart = { tasks: [], requests: {} };
-  return units.reduce(appendStart.bind(null, env), empty);
+  return units.reduce(appendStart.bind(null, env, overwrite), empty);
 }
 
 function isPending(task: PipelineTask): boolean {
@@ -158,7 +184,11 @@ function isPending(task: PipelineTask): boolean {
 function collectJobs(pipeline: PipelineSnapshot, jobs: GenerationJob[]): void {
   for (const task of pipeline.tasks) {
     if (task.segmentId !== null && isPending(task)) {
-      jobs.push({ unitId: task.chapterId, blockId: task.segmentId });
+      jobs.push({
+        unitId: task.chapterId,
+        blockId: task.segmentId,
+        active: task.status === 'running',
+      });
     }
   }
 }

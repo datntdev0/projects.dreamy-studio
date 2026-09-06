@@ -166,24 +166,8 @@ export class AudiobookChapterPanel {
     return this.page.getByTestId('audiobook-inspector-chapter');
   }
 
-  get name(): Locator {
-    return this.page.getByTestId('audiobook-inspector-chapter-name');
-  }
-
-  get total(): Locator {
-    return this.page.getByTestId('audiobook-inspector-chapter-total');
-  }
-
-  get generated(): Locator {
-    return this.page.getByTestId('audiobook-inspector-chapter-generated');
-  }
-
-  get attention(): Locator {
-    return this.page.getByTestId('audiobook-inspector-chapter-attention');
-  }
-
-  get duration(): Locator {
-    return this.page.getByTestId('audiobook-inspector-chapter-duration');
+  get details(): Locator {
+    return this.page.getByTestId('audiobook-inspector-chapter-details');
   }
 
   get assembly(): Locator {
@@ -296,6 +280,14 @@ export class AudiobookGenerateDialog {
 
   get nothing(): Locator {
     return this.page.getByTestId('ab-gen-nothing');
+  }
+
+  get overwrite(): Locator {
+    return this.page.getByTestId('ab-gen-overwrite');
+  }
+
+  get overwriteWarning(): Locator {
+    return this.page.getByTestId('ab-gen-overwrite-warn');
   }
 
   group(key: string): Locator {

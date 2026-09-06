@@ -64,7 +64,8 @@ export const LIBRARY_VOICES: readonly SeedVoice[] = [
 ];
 
 export const STATE_NONE = 'Not generated';
-export const STATE_RUNNING = 'Generating';
+export const STATE_QUEUED = 'Queued';
+export const STATE_GENERATING = 'Generating';
 export const STATE_DONE = 'Generated';
 export const STATE_STALE = 'Needs regeneration';
 export const STATE_FLAG = 'Failed';

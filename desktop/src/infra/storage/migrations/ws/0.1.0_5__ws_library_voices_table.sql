@@ -15,8 +15,11 @@ CREATE TABLE ws_library_voices (
     sample_text TEXT NOT NULL,
     sample_duration_ms INTEGER NULL,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    rights TEXT NOT NULL DEFAULT 'own',
+    collection_id INTEGER NULL
 );
 
 CREATE INDEX idx_ws_library_voices_created_at ON ws_library_voices (created_at);
 CREATE INDEX idx_ws_library_voices_reference_sound_id ON ws_library_voices (reference_sound_id);
+CREATE INDEX idx_ws_library_voices_collection_id ON ws_library_voices (collection_id);

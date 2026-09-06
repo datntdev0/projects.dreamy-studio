@@ -2,6 +2,7 @@ CREATE TABLE ws_pipeline_tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     pipeline_id INTEGER NOT NULL REFERENCES ws_pipeline_history (id) ON DELETE CASCADE,
     chapter_id TEXT NOT NULL,
+    segment_id TEXT,
     passage INTEGER,
     status TEXT NOT NULL,
     progress INTEGER NOT NULL DEFAULT 0,

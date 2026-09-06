@@ -13,7 +13,7 @@ use crate::features::pipeline::models::TaskRequest;
 use crate::features::pipeline::translator::TranslateError;
 use crate::features::pipeline::translator::TranslateJob;
 use crate::features::pipeline::translator::Translator;
-use crate::features::translation::dictionary::DictionaryRepository;
+use crate::features::translation::dictionary::DictionaryFiles;
 use crate::features::translation::files::TranslationFiles;
 use crate::features::translation::models::DictEntry;
 use crate::features::translation::models::TranslationTarget;
@@ -158,13 +158,13 @@ impl PipelineJob for TranslationJob {
     }
 
     fn prepare(&self) -> Result<(), String> {
-        let guidelines = TranslationFiles::new(self.workspace.dir().to_path_buf())
+        let root = self.workspace.dir().to_path_buf();
+        let guidelines = TranslationFiles::new(root.clone())
             .read_guidelines(self.novel_id, self.target)
             .map_err(|error| error.detail)?;
-        let db = self.database().map_err(|error| error.detail)?;
-        let dict = DictionaryRepository::new(db.connection())
+        let dict = DictionaryFiles::new(root)
             .list(self.novel_id, self.target)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| error.detail)?;
         *self.prepared.lock().unwrap_or_else(PoisonError::into_inner) =
             Some(Prepared { guidelines, dict });
         Ok(())

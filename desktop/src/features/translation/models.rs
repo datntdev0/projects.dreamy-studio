@@ -12,6 +12,8 @@ pub enum TranslationTarget {
 }
 
 impl TranslationTarget {
+    pub const ALL: [Self; 2] = [Self::Vi, Self::En];
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Vi => "VI",

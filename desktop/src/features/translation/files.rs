@@ -105,7 +105,7 @@ impl TranslationFiles {
         self.novel_dir(novel_id).join(GUIDELINES_FILE)
     }
 
-    fn translation_dir(&self, novel_id: i64, target: TranslationTarget) -> PathBuf {
+    pub(crate) fn translation_dir(&self, novel_id: i64, target: TranslationTarget) -> PathBuf {
         self.novel_dir(novel_id)
             .join(format!("translation_{}", target.dir_name()))
     }
@@ -130,14 +130,14 @@ fn decode_chapter(path: &Path, bytes: &[u8]) -> TranslationResult<ChapterFile> {
     serde_json::from_slice(bytes).map_err(|error| invalid_file(path, error))
 }
 
-fn invalid_file(path: &Path, error: serde_json::Error) -> TranslationError {
+pub(crate) fn invalid_file(path: &Path, error: serde_json::Error) -> TranslationError {
     TranslationError::new(
         TranslationErrorCode::Io,
         format!("file {} is not valid: {error}", path.display()),
     )
 }
 
-fn encode_error(error: serde_json::Error) -> TranslationError {
+pub(crate) fn encode_error(error: serde_json::Error) -> TranslationError {
     TranslationError::new(
         TranslationErrorCode::Io,
         format!("cannot encode translation file: {error}"),

@@ -3,8 +3,7 @@ use crate::features::novel::models::Paragraph;
 use crate::features::novel::repository::NovelRepository;
 use crate::features::novel::repository::NovelRow;
 use crate::features::novel::service::normalize_paragraph;
-use crate::features::translation::dictionary::DictionaryRepository;
-use crate::features::translation::dictionary::is_duplicate;
+use crate::features::translation::dictionary::DictionaryFiles;
 use crate::features::translation::files::TranslationFiles;
 use crate::features::translation::models::ChapterFile;
 use crate::features::translation::models::DictEntry;
@@ -23,7 +22,6 @@ use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
 use chrono::Utc;
-use rusqlite::OptionalExtension;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -82,7 +80,7 @@ impl TranslationWorkspace {
         let db = self.database()?;
         let repo = NovelRepository::new(db.connection());
         let chapters = repo.list_chapters(novel_id)?;
-        let dict = DictionaryRepository::new(db.connection()).list(novel_id, target)?;
+        let dict = self.dictionary().list(novel_id, target)?;
         let files = self.files();
         let mut translated = BTreeMap::new();
         let mut warnings = Vec::new();
@@ -135,14 +133,7 @@ impl TranslationWorkspace {
         let _gate = lock(&self.gate);
         let target = self.target_for(novel_id, target)?;
         let input = clean_input(input)?;
-        let db = self.database()?;
-        let repo = DictionaryRepository::new(db.connection());
-        let id = repo
-            .insert(novel_id, target, &input, &now())
-            .map_err(map_dictionary_error)?;
-        let entry = repo
-            .find(novel_id, id)?
-            .ok_or_else(|| TranslationError::not_found("dictionary entry does not exist"))?;
+        let entry = self.dictionary().insert(novel_id, target, &input, &now())?;
         let flagged = self.flagged(novel_id, target, &entry)?;
         Ok(DictChange { entry, flagged })
     }
@@ -156,18 +147,12 @@ impl TranslationWorkspace {
         let _gate = lock(&self.gate);
         let db = self.database()?;
         require_novel(&NovelRepository::new(db.connection()), novel_id)?;
-        let repo = DictionaryRepository::new(db.connection());
-        let old = repo.find(novel_id, id)?.ok_or_else(|| {
-            TranslationError::not_found(format!("dictionary entry {id} does not exist"))
-        })?;
-        let target = entry_target(db.connection(), id)?.ok_or_else(|| {
-            TranslationError::not_found(format!("dictionary entry {id} does not exist"))
-        })?;
-        let target = TranslationTarget::parse(&target)
-            .ok_or_else(|| TranslationError::invalid("dictionary target is invalid"))?;
+        let dictionary = self.dictionary();
+        let (target, old) = dictionary
+            .find(novel_id, id)?
+            .ok_or_else(|| missing_entry(id))?;
         let entry = apply_patch(old, patch)?;
-        repo.update(novel_id, &entry, &now())
-            .map_err(map_dictionary_error)?;
+        dictionary.update(novel_id, target, &entry, &now())?;
         let flagged = self.flagged(novel_id, target, &entry)?;
         Ok(DictChange { entry, flagged })
     }
@@ -176,10 +161,8 @@ impl TranslationWorkspace {
         let _gate = lock(&self.gate);
         let db = self.database()?;
         require_novel(&NovelRepository::new(db.connection()), novel_id)?;
-        if !DictionaryRepository::new(db.connection()).delete(novel_id, id)? {
-            return Err(TranslationError::not_found(format!(
-                "dictionary entry {id} does not exist"
-            )));
+        if !self.dictionary().delete(novel_id, id)? {
+            return Err(missing_entry(id));
         }
         Ok(())
     }
@@ -365,6 +348,10 @@ impl TranslationWorkspace {
         TranslationFiles::new(self.dir.clone())
     }
 
+    fn dictionary(&self) -> DictionaryFiles {
+        DictionaryFiles::new(self.dir.clone())
+    }
+
     fn read_original(&self, novel_id: i64, chapter_id: &str) -> TranslationResult<Vec<Paragraph>> {
         NovelFiles::new(self.dir.clone())
             .read_chapter(novel_id, chapter_id)
@@ -468,25 +455,8 @@ fn apply_patch(mut entry: DictEntry, patch: DictPatch) -> TranslationResult<Dict
     Ok(entry)
 }
 
-fn map_dictionary_error(error: rusqlite::Error) -> TranslationError {
-    if is_duplicate(&error) {
-        TranslationError::new(
-            TranslationErrorCode::DictionaryDuplicate,
-            "a dictionary entry with this source already exists",
-        )
-    } else {
-        error.into()
-    }
-}
-
-fn entry_target(conn: &rusqlite::Connection, id: i64) -> TranslationResult<Option<String>> {
-    Ok(conn
-        .query_row(
-            "SELECT target FROM ws_novel_translation_dictionary WHERE id = ?1",
-            [id],
-            |row| row.get(0),
-        )
-        .optional()?)
+fn missing_entry(id: i64) -> TranslationError {
+    TranslationError::not_found(format!("dictionary entry {id} does not exist"))
 }
 
 fn nth<T>(items: &[T], n: usize) -> TranslationResult<&T> {

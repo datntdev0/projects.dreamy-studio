@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -761,30 +762,67 @@ async function writeGuidelines(
   await writeJson(path, { guidelines: { ...(current.guidelines ?? {}), [target]: text } });
 }
 
-function insertDictionary(
-  database: DatabaseSync,
+const DICTIONARY_FILE = 'dictionary.jsonl';
+const TARGETS: readonly TranslationTarget[] = ['VI', 'EN'];
+
+interface StoredDictEntry {
+  readonly id: number;
+  readonly src: string;
+  readonly dst: string;
+  readonly type: string;
+  readonly note: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export function dictionaryPath(folder: string, novelId: number, target: TranslationTarget): string {
+  return join(novelDir(folder, novelId), translationDirName(target), DICTIONARY_FILE);
+}
+
+function readStoredDictionary(
+  folder: string,
+  novelId: number,
+  target: TranslationTarget,
+): StoredDictEntry[] {
+  const path = dictionaryPath(folder, novelId, target);
+  if (!existsSync(path)) {
+    return [];
+  }
+  return readFileSync(path, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => JSON.parse(line) as StoredDictEntry);
+}
+
+async function writeDictionary(
+  folder: string,
   novelId: number,
   target: TranslationTarget,
   entries: readonly SeedDictEntry[],
-): Record<string, number> {
+): Promise<Record<string, number>> {
   const ids: Record<string, number> = {};
-  const insert = database.prepare(
-    'INSERT INTO ws_novel_translation_dictionary (novel_id, target, src, dst, type, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-  );
+  if (entries.length === 0) {
+    return ids;
+  }
+  const stored = readStoredDictionary(folder, novelId, target);
+  let next = Math.max(0, ...readDictionaryById(folder, novelId).map((row) => row.id)) + 1;
   for (const [index, entry] of entries.entries()) {
     const stamp = new Date(TRANSLATION_BASE_TIME + index * 1000).toISOString();
-    const result = insert.run(
-      novelId,
-      target,
-      entry.src,
-      entry.dst,
-      entry.type ?? 'term',
-      entry.note ?? '',
-      stamp,
-      stamp,
-    );
-    ids[entry.src] = Number(result.lastInsertRowid);
+    stored.push({
+      id: next,
+      src: entry.src,
+      dst: entry.dst,
+      type: entry.type ?? 'term',
+      note: entry.note ?? '',
+      createdAt: stamp,
+      updatedAt: stamp,
+    });
+    ids[entry.src] = next;
+    next += 1;
   }
+  const path = dictionaryPath(folder, novelId, target);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, stored.map((item) => `${JSON.stringify(item)}\n`).join(''));
   return ids;
 }
 
@@ -847,11 +885,10 @@ export async function seedTranslation(
   if (seed.guidelines !== undefined) {
     await writeGuidelines(folder, place.id, seed.target, seed.guidelines);
   }
+  const dictionary = await writeDictionary(folder, place.id, seed.target, seed.dictionary ?? []);
   const database = new DatabaseSync(join(folder, WORKSPACE_DB_FILE));
-  let dictionary: Record<string, number> = {};
   try {
     database.exec('BEGIN');
-    dictionary = insertDictionary(database, place.id, seed.target, seed.dictionary ?? []);
     markTranslated(database, translatedIds);
     database.exec('COMMIT');
   } finally {
@@ -1036,41 +1073,21 @@ export async function readGuidelines(
   }
 }
 
-function toDictionary(row: Record<string, unknown>): DictionaryRow {
-  return {
-    id: Number(row['id']),
-    novelId: Number(row['novel_id']),
-    target: String(row['target']),
-    src: String(row['src']),
-    dst: String(row['dst']),
-    type: String(row['type']),
-    note: String(row['note']),
-    createdAt: String(row['created_at']),
-    updatedAt: String(row['updated_at']),
-  };
-}
-
 export function readDictionaryById(
   folder: string,
   novelId: number,
   target?: TranslationTarget,
 ): DictionaryRow[] {
-  const database = openReadOnly(folder);
-  try {
-    const rows =
-      target === undefined
-        ? database
-            .prepare('SELECT * FROM ws_novel_translation_dictionary WHERE novel_id = ? ORDER BY id')
-            .all(novelId)
-        : database
-            .prepare(
-              'SELECT * FROM ws_novel_translation_dictionary WHERE novel_id = ? AND target = ? ORDER BY id',
-            )
-            .all(novelId, target);
-    return rows.map(toDictionary);
-  } finally {
-    database.close();
-  }
+  const targets = target === undefined ? TARGETS : [target];
+  return targets
+    .flatMap((key) =>
+      readStoredDictionary(folder, novelId, key).map((entry) => ({
+        ...entry,
+        novelId,
+        target: key,
+      })),
+    )
+    .sort((a, b) => a.id - b.id);
 }
 
 export async function readDictionary(

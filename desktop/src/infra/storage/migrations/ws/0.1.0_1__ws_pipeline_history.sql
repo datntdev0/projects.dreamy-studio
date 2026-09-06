@@ -1,6 +1,7 @@
 CREATE TABLE ws_pipeline_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    novel_id INTEGER NOT NULL REFERENCES ws_novels (id) ON DELETE CASCADE,
+    novel_id INTEGER REFERENCES ws_novels (id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES ws_projects (id) ON DELETE CASCADE,
     kind TEXT NOT NULL,
     target TEXT NOT NULL,
     status TEXT NOT NULL,
@@ -12,3 +13,4 @@ CREATE TABLE ws_pipeline_history (
     finished_at TEXT
 );
 CREATE INDEX ix_ws_pipeline_history_novel ON ws_pipeline_history (novel_id, id DESC);
+CREATE INDEX ix_ws_pipeline_history_project ON ws_pipeline_history (project_id, id DESC);

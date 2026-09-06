@@ -2,7 +2,7 @@
 import { castVoices, generateChapter, NARRATOR_VOICE, openAudiobookOf, switchModule } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, COMING_SOON, expandProject, generateDefault, MODULE_LABELS, moduleState, NARRATOR_ID, openScripting, openScriptingWorkspace, PROJECT_IDS, showProjectExplorer, startWriting, STATE_DOING, STATE_DONE, STATE_IDLE, UNSUPPORTED_MODULES } from '../scripts/scripting.ts';
+import { AUDIO_PROJECT, COMING_SOON, expandProject, generateDefault, MODULE_LABELS, moduleState, NARRATOR_ID, openScripting, openScriptingWorkspace, PROJECT_IDS, showProjectExplorer, startWriting, UNSUPPORTED_MODULES } from '../scripts/scripting.ts';
 
 const AUDIO_ID = PROJECT_IDS[AUDIO_PROJECT] ?? 1;
 const EDITED = 'Lin Feng arrived late at the gates.';
@@ -90,7 +90,7 @@ test.describe('CAP-06 Project Management', () => {
       await test.step('shows not started while no chapter has a script', async () => {
         await expandProject(ui, AUDIO_PROJECT);
         await expect(row).toHaveAttribute('data-state', 'idle');
-        await expect(dot).toHaveAttribute('title', STATE_IDLE);
+        await expect(dot).toHaveCount(0);
         await expect(count).toBeHidden();
         expect(await moduleState(app.page, AUDIO_ID, 'scripting')).toMatchObject({
           state: 'idle',
@@ -103,7 +103,6 @@ test.describe('CAP-06 Project Management', () => {
         await openScripting(ui, AUDIO_PROJECT);
         await generateDefault(ui, 1);
         await expect(row).toHaveAttribute('data-state', 'doing');
-        await expect(dot).toHaveAttribute('title', STATE_DOING);
         await expect(count).toHaveText('1/4');
         await expect
           .poll(() => moduleState(app.page, AUDIO_ID, 'scripting'))
@@ -115,7 +114,6 @@ test.describe('CAP-06 Project Management', () => {
         await generateDefault(ui, 3);
         await startWriting(ui, 4);
         await expect(row).toHaveAttribute('data-state', 'done');
-        await expect(dot).toHaveAttribute('title', STATE_DONE);
         await expect(count).toHaveText('4/4');
         await expect
           .poll(() => moduleState(app.page, AUDIO_ID, 'scripting'))

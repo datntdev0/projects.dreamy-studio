@@ -57,9 +57,6 @@ export const UNSUPPORTED_MODULES: readonly ModuleId[] = [
   'video',
 ];
 
-export const STATE_IDLE = 'Not started';
-export const STATE_DOING = 'In progress';
-export const STATE_DONE = 'Done';
 export const COMING_SOON = 'Coming soon';
 
 export const TYPE_HEADING = 'Title';
@@ -96,7 +93,6 @@ export const DELETE_FREE = 'Delete';
 export const RAIL_MIN = 180;
 export const RAIL_MAX = 420;
 
-const SPEECH_WORDS_PER_SECOND = 2.5;
 const SAVE_COMMANDS: readonly string[] = [
   'scripting_save',
   'scripting_unit_save',
@@ -405,15 +401,6 @@ export function wordCount(texts: readonly string[]): number {
 export function durationText(seconds: number): string {
   const rounded = Math.round(seconds);
   return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
-}
-
-export function statsFor(texts: readonly string[]): string[] {
-  const words = wordCount(texts);
-  return [
-    `${texts.length} blocks`,
-    `${words} words`,
-    `≈ ${durationText(words / SPEECH_WORDS_PER_SECOND)}`,
-  ];
 }
 
 export function railMeta(texts: readonly string[]): string {

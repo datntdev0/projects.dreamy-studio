@@ -43,19 +43,22 @@ test.describe('CAP-05 Asset Library Management', () => {
       await openVoices(ui, picker, sandbox, VOICES);
       const list = ui.main.library.voices;
 
-      await test.step('shows each voice with description, play button, engine, language, gender, source, sample length and update date and the total', async () => {
+      await test.step('shows each voice with avatar, description, engine, language, gender, sample length and a trailing preview button and the total', async () => {
         await expect(list.count).toHaveText('3 voices');
         await expect(list.names).toHaveText(['Narrator An', 'Brother Minh', 'Cloud Ana']);
         const row = list.row('Narrator An');
         await expect(row.description).toHaveText('Warm bedtime narrator');
-        await expect(row.play).toBeVisible();
+        await expect(row.avatar).toHaveText('N');
+        await expect(row.avatar).toHaveClass(/tone-[0-3]/);
         await expect(row.engine).toHaveText('VieNeu-TTS v3 Turbo');
         await expect(row.language).toHaveText('Vietnamese');
         await expect(row.gender).toHaveText('Female');
-        await expect(row.source).toHaveText('Preset');
         await expect(row.duration).toHaveText('0:04');
-        await expect(row.updated).toHaveText('2026-03-01');
-        await expect(list.row('Cloud Ana').source).toHaveText('Designed');
+        await expect(row.cells.last().getByTestId('library-voice-play-button')).toHaveText(
+          'Preview',
+        );
+        await expect(list.table).not.toContainText('Preset');
+        await expect(list.table).not.toContainText('2026-03-01');
       });
 
       await test.step('dims the engine of a voice whose engine is not ready and explains why', async () => {
@@ -88,7 +91,7 @@ test.describe('CAP-05 Asset Library Management', () => {
       });
     });
 
-    test('US-0131 searches, filters by engine type and sorts the voices', async ({
+    test('US-0131 searches and filters the voices by engine type', async ({
       ui,
       picker,
       sandbox,
@@ -105,7 +108,9 @@ test.describe('CAP-05 Asset Library Management', () => {
         await list.search.fill('');
       });
 
-      await test.step('keeps only voices of the chosen engine type', async () => {
+      await test.step('keeps only voices of the chosen engine type, picked next to the new voice button', async () => {
+        await expect(list.toolbarRight.getByTestId('library-voices-filter')).toBeVisible();
+        await expect(list.toolbarRight.getByTestId('library-voices-create')).toBeVisible();
         await list.filter.getByRole('button', { name: 'Cloud', exact: true }).click();
         await expect(list.names).toHaveText(['Cloud Ana']);
         await list.filter.getByRole('button', { name: 'Local', exact: true }).click();
@@ -114,22 +119,14 @@ test.describe('CAP-05 Asset Library Management', () => {
         await expect(list.names).toHaveCount(3);
       });
 
-      await test.step('sorts by newest first or by name from A to Z', async () => {
-        await list.sort.selectOption('name');
-        await expect(list.names).toHaveText(['Brother Minh', 'Cloud Ana', 'Narrator An']);
-        await list.sort.selectOption('new');
-        await expect(list.names).toHaveText(['Narrator An', 'Brother Minh', 'Cloud Ana']);
-        await list.sort.selectOption('name');
-      });
-
-      await test.step('clears the keyword and engine filter but keeps the sort order', async () => {
+      await test.step('clears the keyword and engine filter and lists the newest voices first', async () => {
         await list.filter.getByRole('button', { name: 'Cloud', exact: true }).click();
         await list.search.fill('nobody');
         await expect(list.emptyFiltered).toBeVisible();
         await list.clearFilters.click();
         await expect(list.search).toHaveValue('');
-        await expect(list.names).toHaveText(['Brother Minh', 'Cloud Ana', 'Narrator An']);
-        await expect(list.sort).toHaveValue('name');
+        await expect(list.names).toHaveText(['Narrator An', 'Brother Minh', 'Cloud Ana']);
+        await expect(list.root.getByTestId('library-voices-sort')).toHaveCount(0);
       });
     });
 

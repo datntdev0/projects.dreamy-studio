@@ -230,8 +230,8 @@ export class ScriptingPage {
     return this.page.getByTestId('sc-unit-title');
   }
 
-  get stats(): Locator {
-    return this.page.getByTestId('sc-stats').locator('span');
+  get subbar(): Locator {
+    return this.page.getByTestId('sc-sub');
   }
 
   get resetButton(): Locator {

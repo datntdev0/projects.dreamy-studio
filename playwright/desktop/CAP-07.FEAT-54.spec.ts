@@ -1,6 +1,6 @@
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, BLANK_PROJECT, CHAPTERS, DEFAULT_CREATED, dragBy, generateDefault, LOOSE_PROJECT, NO_SCRIPT, NOT_DRAFTED, openAudiobook, openScripting, openScriptingOf, paragraphsOf, PICK_TITLE, PRESET_AUDIOBOOK, PRESET_BADGE, PRESET_FILM, RAIL_MAX, RAIL_MIN, railMeta, railWidth, RESET_ALL, RESET_INTRO, RESET_WARNING, SCRATCH_ONLY, SINGLE_PROJECT, startWriting, statsFor, TYPE_HEADING, TYPE_NARRATION, UNNAMED, VI_SECOND_TITLE, VI_TITLE, VIET_PROJECT, WHOLE_PROJECT } from '../scripts/scripting.ts';
+import { AUDIO_PROJECT, BLANK_PROJECT, CHAPTERS, DEFAULT_CREATED, dragBy, generateDefault, LOOSE_PROJECT, NO_SCRIPT, NOT_DRAFTED, openAudiobook, openScripting, openScriptingOf, paragraphsOf, PICK_TITLE, PRESET_AUDIOBOOK, PRESET_BADGE, PRESET_FILM, RAIL_MAX, RAIL_MIN, railMeta, railWidth, RESET_ALL, RESET_INTRO, RESET_WARNING, SCRATCH_ONLY, SINGLE_PROJECT, startWriting, TYPE_HEADING, TYPE_NARRATION, UNNAMED, VI_SECOND_TITLE, VI_TITLE, VIET_PROJECT, WHOLE_PROJECT } from '../scripts/scripting.ts';
 
 const EDITED = 'Lin Feng waited at the gate.';
 
@@ -83,8 +83,8 @@ test.describe('CAP-07 Pre-Production', () => {
         await expect(scripting.unit(2)).toContainText(NOT_DRAFTED);
       });
 
-      await test.step('shows the block count, word count and estimated reading time of the open chapter', async () => {
-        await expect(scripting.stats).toHaveText(statsFor(first));
+      await test.step('shows no block, word or reading time summary above the open chapter', async () => {
+        await expect(scripting.subbar.getByTestId('sc-stats')).toHaveCount(0);
       });
 
       await test.step('opens a chapter on click, Enter or Space', async () => {

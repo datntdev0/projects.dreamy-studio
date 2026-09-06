@@ -3,8 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import { unitKey } from './scripting.ts';
 
 export type AudiobookMode = 'prod' | 'voices';
-export type MixField = 'gap' | 'intro' | 'outro' | 'vol';
-export type ExportFormat = 'wav' | 'srt';
+export type MixField = 'gap' | 'intro' | 'outro' | 'vol' | 'sentence';
 export type BannerKind = 'who' | 'voice' | 'engine' | 'changed';
 export type StaleReason = 'text' | 'speaker' | 'voice' | 'speed' | 'tone';
 
@@ -195,16 +194,8 @@ export class AudiobookChapterPanel {
     return this.page.getByTestId('audiobook-inspector-chapter-blocker');
   }
 
-  get exportHint(): Locator {
-    return this.page.getByTestId('ab-export-hint');
-  }
-
   mix(field: MixField): Locator {
     return this.page.getByTestId(`ab-mix-${field}`);
-  }
-
-  exportAs(format: ExportFormat): Locator {
-    return this.page.getByTestId(`ab-export-${format}`);
   }
 }
 
@@ -288,11 +279,35 @@ export class AudiobookGenerateDialog {
   }
 
   get go(): Locator {
-    return this.page.getByTestId('ab-gen-go-btn');
+    return this.page.getByTestId('ab-gen-go-btn').getByRole('button');
+  }
+
+  get chapters(): Locator {
+    return this.page.getByTestId('ab-gen-chapters').getByTestId(/^ab-gen-ch-check-/);
+  }
+
+  get selectAll(): Locator {
+    return this.page.getByTestId('ab-gen-all');
+  }
+
+  get exportAfter(): Locator {
+    return this.page.getByTestId('ab-gen-export');
+  }
+
+  get nothing(): Locator {
+    return this.page.getByTestId('ab-gen-nothing');
   }
 
   group(key: string): Locator {
     return this.page.getByTestId(`ab-gen-group-${key}`);
+  }
+
+  chapter(unitId: string): Locator {
+    return this.page.getByTestId(`ab-gen-ch-check-${unitId}`);
+  }
+
+  chapterStatus(unitId: string): Locator {
+    return this.page.getByTestId(`ab-gen-ch-status-${unitId}`);
   }
 }
 
@@ -373,8 +388,12 @@ export class AudiobookPage {
     return this.page.getByTestId('ab-generate-btn');
   }
 
-  get stats(): Locator {
-    return this.page.getByTestId('ab-stats').locator('span');
+  get listen(): Locator {
+    return this.page.getByTestId('ab-listen');
+  }
+
+  get listenMeta(): Locator {
+    return this.page.getByTestId('audiobook-listen-meta');
   }
 
   get editWho(): Locator {

@@ -70,7 +70,6 @@ export const STATE_STALE = 'Needs regeneration';
 export const STATE_FLAG = 'Failed';
 export const UNIT_DONE = 'Audio generated';
 export const UNIT_STALE = 'Needs review';
-export const UNIT_DOING = 'In progress';
 export const UNIT_NONE = 'Not generated';
 export const STATUS_READY = 'Ready';
 export const STATUS_NO_VOICE = 'NO VOICE';
@@ -93,7 +92,7 @@ export const SPEAKER_DUPLICATE = 'A speaker with this name already exists.';
 export const DELETE_NARRATOR = 'The narrator cannot be deleted';
 export const DELETE_KB = 'Characters from the Knowledgebase';
 export const DELETE_IN_USE = 'In use';
-export const NO_AUDIO = 'This chapter has no audio to listen to yet.';
+export const LISTEN_EMPTY = 'Generate segments to listen to the whole chapter';
 export const EMPTY_SCRIPT = 'Write the narration script in Scripting before generating audio.';
 export const EMPTY_BLANK = 'No segments to voice';
 export const FLAG_PLACEHOLDER = 'e.g. Wrong stress on a proper name, pauses too fast';
@@ -102,7 +101,6 @@ export const FLAG_DEFAULT = 'Needs re-listening';
 export const LOCAL_GROUP_TEXT = 'Local TTS · runs on this machine, no data leaves it';
 export const EDGE_GROUP_TEXT = `${EDGE_ENGINE} · the text will be sent to the provider, billed to the account’s credits`;
 export const NO_COST = 'Estimated cost: no direct cost. Progress is shown in the Pipelines panel.';
-export const EXPORT_HINT = 'Generate every segment before exporting.';
 export const STARTED_TOAST = `Started: Audiobook · ${AUDIO_PROJECT}`;
 export const COMPLETED_TOAST = `Completed: Audiobook · ${AUDIO_PROJECT}`;
 export const SEGMENT_FAILED = 'Could not generate the segment:';
@@ -114,6 +112,7 @@ export const DEFAULT_MIX: Readonly<Record<MixField, number>> = {
   intro: 0.8,
   outro: 1.5,
   vol: 0,
+  sentence: 0.3,
 };
 
 const GENERATION_TIMEOUT_MS = 90_000;
@@ -131,11 +130,11 @@ export interface AudioRecordFile {
 
 export interface UnitAudioFile {
   readonly audio: Readonly<Record<string, AudioRecordFile>>;
-  readonly mix: Readonly<Record<MixField, number>>;
 }
 
 export interface AudiobookFile {
   readonly voices: Readonly<Record<string, { voice: number | null; speed: number }>>;
+  readonly mix?: Readonly<Record<MixField, number>>;
 }
 
 export interface AudiobookSetup {
@@ -278,10 +277,11 @@ export async function expectEveryState(ui: Ui, state: string, timeout = 10_000):
   await expect(states.filter({ hasNotText: state })).toHaveCount(0, { timeout });
 }
 
-export async function startGeneration(ui: Ui): Promise<void> {
+export async function startGeneration(ui: Ui, exportAfter = false): Promise<void> {
   const dialog = ui.main.audiobook.generateDialog;
   await ui.main.audiobook.generateAll.click();
   await expect(dialog.panel).toBeVisible();
+  await dialog.exportAfter.setChecked(exportAfter);
   await dialog.go.click();
   await expect(dialog.panel).toBeHidden();
 }
@@ -348,11 +348,8 @@ export async function savedVoiceOf(folder: string, speakerId: string): Promise<n
   return (await readAudiobook(folder))?.voices[speakerId]?.voice ?? null;
 }
 
-export async function savedMix(
-  folder: string,
-  position: number,
-): Promise<Readonly<Record<MixField, number>> | null> {
-  return (await readUnitAudio(folder, position))?.mix ?? null;
+export async function savedMix(folder: string): Promise<Readonly<Record<MixField, number>> | null> {
+  return (await readAudiobook(folder))?.mix ?? null;
 }
 
 export async function savedFlags(folder: string, position: number): Promise<string[]> {
@@ -369,7 +366,7 @@ export function recordedSeconds(unit: UnitAudioFile | null): number {
 }
 
 export function chapterEstimate(unit: UnitAudioFile | null, segments: number): string {
-  const mix = unit?.mix ?? DEFAULT_MIX;
+  const mix = DEFAULT_MIX;
   const silence = Math.max(0, segments - 1) * mix.gap + mix.intro + mix.outro;
   return `≈ ${durationText(recordedSeconds(unit) + silence)}`;
 }

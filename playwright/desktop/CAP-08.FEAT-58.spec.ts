@@ -1,5 +1,5 @@
 // prettier-ignore
-import { addPause, assignVoice, castVoices, chapterEstimate, CLOUD_VOICE, EMPTY_BLANK, EMPTY_SCRIPT, FLAG_DEFAULT, FLAG_PLACEHOLDER, FLAG_TOAST, generateChapter, HERO_VOICE, NANO_VOICE, NARRATOR_VOICE, openAudiobookOf, openDraftedProject, orphanDialogues, paragraph, QUIET_VOICE, readUnitAudio, REASON_SPEAKER, REASON_SPEED, REASON_TEXT, REASON_TONE, REASON_VOICE, regenerateSegment, reopenAudiobook, savedFlags, setSpeed, showMode, speakAs, STATE_DONE, STATE_FLAG, STATE_NONE, STATE_RUNNING, STATE_STALE, stopBackend, switchModule, UNIT_DOING, UNIT_DONE, UNIT_NONE, UNIT_STALE } from '../scripts/audiobook.ts';
+import { addPause, assignVoice, castVoices, chapterEstimate, CLOUD_VOICE, EMPTY_BLANK, EMPTY_SCRIPT, FLAG_DEFAULT, FLAG_PLACEHOLDER, FLAG_TOAST, generateChapter, HERO_VOICE, NANO_VOICE, NARRATOR_VOICE, openAudiobookOf, openDraftedProject, orphanDialogues, paragraph, QUIET_VOICE, readUnitAudio, REASON_SPEAKER, REASON_SPEED, REASON_TEXT, REASON_TONE, REASON_VOICE, regenerateSegment, reopenAudiobook, savedFlags, setSpeed, showMode, speakAs, STATE_DONE, STATE_FLAG, STATE_NONE, STATE_RUNNING, STATE_STALE, stopBackend, switchModule, UNIT_DONE, UNIT_NONE, UNIT_STALE } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 // prettier-ignore
 import { addBlock, assignSpeaker, AUDIO_PROJECT, castId, changeType, HERO, MASTER, NARRATOR, NARRATOR_ID, openAudiobook, paragraphsOf, startWriting, trackSaves, TYPE_DIALOGUE, TYPE_HEADING, TYPE_NARRATION, TYPE_NOTE, waitForSaves } from '../scripts/scripting.ts';
@@ -114,9 +114,9 @@ test.describe('CAP-08 Production Workflow', () => {
         await expect(book.unitMeta(1)).toHaveText(/^4\/4 segments · \d+:\d{2}$/);
         await expect(book.unitMark(1)).toHaveAttribute('title', UNIT_DONE);
         await expect(book.unitMeta(2)).toHaveText(/^1\/4 segments · \d+:\d{2}$/);
-        await expect(book.unitMark(2)).toHaveAttribute('title', UNIT_DOING);
+        await expect(book.unitMark(2)).toHaveCount(0);
         await expect(book.unitMeta(3)).toHaveText(UNIT_NONE);
-        await expect(book.unitMark(3)).toHaveAttribute('title', UNIT_NONE);
+        await expect(book.unitMark(3)).toHaveCount(0);
         await switchModule(ui, 'scripting');
         await scripting.unit(2).click();
         await scripting.block(0).text.fill(EDITED);
@@ -130,17 +130,15 @@ test.describe('CAP-08 Production Workflow', () => {
         await expect(book.unit(2)).toHaveAttribute('aria-selected', 'true');
       });
 
-      await test.step('shows the segments, generated, to generate or generating counts and the estimated duration with silences', async () => {
+      await test.step('shows the generated and total segments and the estimated duration with silences on the whole chapter item', async () => {
         await regenerateSegment(ui, 0);
-        await expect(book.stats).toHaveText([
-          '4 segments',
-          '1 generated',
-          '3 to generate',
-          chapterEstimate(await readUnitAudio(folder, 2), 4),
-        ]);
+        await expect(book.listenMeta).toHaveText(
+          `1/4 segments generated · ${chapterEstimate(await readUnitAudio(folder, 2), 4)}`,
+        );
+        await expect(book.root.getByTestId('ab-stats')).toHaveCount(0);
         await backend.holdSynthesis(paragraph(2, 1));
         await book.segment(1).regenerate.click();
-        await expect(book.stats.nth(2)).toHaveText('1 generating');
+        await expect(book.segment(1).state).toHaveText(STATE_RUNNING);
         await backend.releaseSynthesis();
         await expect(book.segment(1).state).toHaveText(STATE_DONE, { timeout: 60_000 });
       });
@@ -256,14 +254,21 @@ test.describe('CAP-08 Production Workflow', () => {
         await expect(book.voices.root).toBeVisible();
       });
 
-      await test.step('locks generate all while a blocking problem remains', async () => {
+      await test.step('locks a chapter in the generate dialog while a blocking problem remains', async () => {
         await showMode(ui, 'prod');
-        await expect(book.generateAll).toBeDisabled();
+        const dialog = book.generateDialog;
+        await book.generateAll.click();
+        await expect(dialog.chapters.first()).toBeDisabled();
+        await expect(dialog.go).toBeDisabled();
+        await dialog.cancel.click();
         await castVoices(ui, {
           [NARRATOR_ID]: voices[NARRATOR_VOICE] ?? 0,
           [HERO_ID]: voices[HERO_VOICE] ?? 0,
         });
-        await expect(book.generateAll).toBeEnabled();
+        await book.generateAll.click();
+        await expect(dialog.chapters.first()).toBeEnabled();
+        await expect(dialog.go).toBeEnabled();
+        await dialog.cancel.click();
       });
 
       await test.step('reports no blocking problem for an installed local voice while the backend is off', async () => {

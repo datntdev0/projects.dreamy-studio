@@ -1,5 +1,5 @@
 // prettier-ignore
-import { addPause, assignVoice, NARRATOR_VOICE, NO_AUDIO, openDraftedProject, PAUSE, PLAY, readUnitAudio, recordedSeconds, regenerateSegment, setSpeed, showMode } from '../scripts/audiobook.ts';
+import { addPause, assignVoice, LISTEN_EMPTY, NARRATOR_VOICE, openDraftedProject, PAUSE, PLAY, readUnitAudio, recordedSeconds, regenerateSegment, setSpeed, showMode } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 // prettier-ignore
 import { AUDIO_PROJECT, durationText, NARRATOR_ID, openAudiobook } from '../scripts/scripting.ts';
@@ -29,9 +29,12 @@ test.describe('CAP-08 Production Workflow', () => {
       await setSpeed(ui, NARRATOR_ID, '0.6');
       await showMode(ui, 'prod');
 
-      await test.step('tells that the chapter has no audio to listen to yet', async () => {
-        await book.playAll.click();
-        await expect(ui.main.toast(NO_AUDIO)).toBeVisible();
+      await test.step('shows the whole chapter as the first item of the list and locks it while the chapter has no audio yet', async () => {
+        await expect(
+          book.list.getByTestId(/^(audiobook-listen|ab-seg-.+)$/).first(),
+        ).toHaveAttribute('data-testid', 'audiobook-listen');
+        await expect(book.listenMeta).toHaveText(LISTEN_EMPTY);
+        await expect(book.playAll).toBeDisabled();
         await expect(player.root).toBeHidden();
       });
 
@@ -65,7 +68,9 @@ test.describe('CAP-08 Production Workflow', () => {
 
       await test.step('plays the segments with audio in order with the pauses of the script in between', async () => {
         const total = recordedSeconds(await readUnitAudio(folder, 1)) + PAUSE_SECONDS;
+        await expect(book.listenMeta).toContainText('3/4 segments generated');
         await book.playAll.click();
+        await expect(book.listen).toHaveClass(/is-playing/);
         await expect(player.title).toContainText(LONG_FIRST.slice(0, 30));
         await expect(player.time).toHaveText(new RegExp(` / ${durationText(total)}$`));
       });

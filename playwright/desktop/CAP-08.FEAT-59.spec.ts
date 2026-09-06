@@ -72,14 +72,17 @@ test.describe('CAP-08 Production Workflow', () => {
         await castVoices(ui, { [HERO_ID]: voices[HERO_VOICE] ?? 0 });
       });
 
-      await test.step('locks generate all while every segment is generated or being generated', async () => {
+      await test.step('locks generate all while segments are being generated and offers nothing to generate once every segment is done', async () => {
         await backend.holdSynthesis(EDITED);
         await startGeneration(ui);
         await expect(book.segment(2).state).toHaveText(STATE_RUNNING);
         await expect(book.generateAll).toBeDisabled();
         await backend.releaseSynthesis();
         await expectEveryState(ui, STATE_DONE, GENERATION_TIMEOUT.timeout);
-        await expect(book.generateAll).toBeDisabled();
+        await book.generateAll.click();
+        await expect(dialog.nothing).toBeVisible();
+        await expect(dialog.go).toBeDisabled();
+        await dialog.cancel.click();
       });
     });
 
@@ -108,7 +111,6 @@ test.describe('CAP-08 Production Workflow', () => {
         await expect(ui.main.toast(STARTED_TOAST)).toBeVisible();
         await expect(book.segment(2).state).toHaveText(STATE_RUNNING);
         await expect(book.segment(3).state).toHaveText(STATE_RUNNING);
-        await expect(book.stats.nth(2)).toHaveText(/^\d generating$/);
         const pipeline = await waitForPipeline(folder, { states: ['running'] });
         expect(pipeline.kind).toBe('audio');
         expect(pipeline.tasks).toHaveLength(4);
@@ -141,6 +143,7 @@ test.describe('CAP-08 Production Workflow', () => {
         ]);
         await book.unit(1).click();
         await expect(book.segment(2).state).toHaveText(STATE_RUNNING);
+        await expect(book.segment(1).state).toHaveText(STATE_DONE, GENERATION_TIMEOUT);
       });
 
       await test.step('stops the unfinished tasks on cancel, keeps the finished segments and returns the others to their previous state', async () => {

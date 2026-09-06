@@ -27,16 +27,16 @@ export class VoiceRow {
     return this.root.getByTestId('library-voices-table-gender');
   }
 
-  get source(): Locator {
-    return this.root.getByTestId('library-voices-table-source');
-  }
-
   get duration(): Locator {
     return this.root.getByTestId('library-voices-table-duration');
   }
 
-  get updated(): Locator {
-    return this.root.getByTestId('library-voices-table-updated');
+  get avatar(): Locator {
+    return this.root.getByTestId('library-voice-avatar-mark');
+  }
+
+  get cells(): Locator {
+    return this.root.locator('td');
   }
 }
 
@@ -55,12 +55,12 @@ export class VoiceList {
     return this.root.getByTestId('library-voices-filter');
   }
 
-  get sort(): Locator {
-    return this.root.getByTestId('library-voices-sort');
-  }
-
   get count(): Locator {
     return this.root.getByTestId('library-voices-count');
+  }
+
+  get toolbarRight(): Locator {
+    return this.root.getByTestId('library-voices-toolbar-right');
   }
 
   get create(): Locator {
@@ -101,10 +101,6 @@ export class VoiceList {
 
   row(name: string): VoiceRow {
     return new VoiceRow(this.rows.filter({ has: this.page.getByText(name, { exact: true }) }));
-  }
-
-  sortOption(key: 'new' | 'name'): Locator {
-    return this.root.getByTestId(`library-voices-sort-${key}`);
   }
 }
 

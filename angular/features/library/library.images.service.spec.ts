@@ -8,7 +8,7 @@ import { WorkspaceService } from '../workspace/workspace.service';
 import { LibraryImageService } from './library.images.service';
 import { LibraryService } from './library.service';
 
-const counts = { image: 0, sound: 0, video: 0, prompt: 0 };
+const counts = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 
 describe('LibraryImageService', () => {
   let ipc: FakeIpc;
@@ -35,8 +35,7 @@ describe('LibraryImageService', () => {
     images.query.set('b');
     expect(images.visible().map((item) => item.id)).toEqual([2]);
     images.query.set('');
-    images.sort.set('name');
-    expect(images.visible()[0].id).toBe(1);
+    expect(images.visible().map((item) => item.id)).toEqual([1, 2]);
     images.select(2);
     expect(images.selected()?.id).toBe(2);
     images.select(null);

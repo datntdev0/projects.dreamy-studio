@@ -16,9 +16,10 @@ import { listenForLibraryDrops } from '../library.drag-drop';
 import { AssetRef } from '../library.models';
 import { formatBytes } from '../library.rules';
 import { LibraryService } from '../library.service';
-import { LibrarySound, SoundSort } from '../library.sounds.models';
+import { LibrarySound } from '../library.sounds.models';
 import { durationText } from '../library.sounds.rules';
 import { LibrarySoundService } from '../library.sounds.service';
+import { LibraryAssetAvatar } from './asset-avatar.component';
 import { LibrarySoundMedia } from './sound-media.component';
 
 function toAssetRef(sound: LibrarySound): AssetRef {
@@ -28,7 +29,7 @@ function toAssetRef(sound: LibrarySound): AssetRef {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-library-sounds',
-  imports: [Datatable, DatatableCell, Icon, CoreModule, LibrarySoundMedia],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryAssetAvatar, LibrarySoundMedia],
   templateUrl: './sounds.component.html',
 })
 export class LibrarySounds implements OnInit, OnDestroy {
@@ -52,10 +53,6 @@ export class LibrarySounds implements OnInit, OnDestroy {
 
   onQuery(event: Event): void {
     this.sounds.query.set(fieldValue(event));
-  }
-
-  onSort(event: Event): void {
-    this.sounds.sort.set(fieldValue(event) as SoundSort);
   }
 
   setView(value: 'grid' | 'list'): void {

@@ -1,11 +1,10 @@
 import { CollectionFilter } from './library.models';
-import { compareFor, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
-import { LibrarySound, SoundSort } from './library.sounds.models';
+import { hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
+import { LibrarySound } from './library.sounds.models';
 export { durationText } from './library.rules';
 
 export interface SoundFilters {
   query: string;
-  sort: SoundSort;
   collection: CollectionFilter;
   tags: string[];
 }
@@ -26,14 +25,8 @@ export function searchSounds(items: LibrarySound[], query: string): LibrarySound
   const needle = query.trim().toLocaleLowerCase();
   return items.filter(matchesNameOrTags.bind(null, needle));
 }
-export function sortSounds(items: LibrarySound[], sort: SoundSort): LibrarySound[] {
-  return [...items].sort(compareFor.bind(null, sort));
-}
 export function filterSounds(items: LibrarySound[], filters: SoundFilters): LibrarySound[] {
-  return sortSounds(
-    searchSounds(items, filters.query)
-      .filter(matchesCollection.bind(null, filters.collection))
-      .filter(hasAllTags.bind(null, filters.tags)),
-    filters.sort,
-  );
+  return searchSounds(items, filters.query)
+    .filter(matchesCollection.bind(null, filters.collection))
+    .filter(hasAllTags.bind(null, filters.tags));
 }

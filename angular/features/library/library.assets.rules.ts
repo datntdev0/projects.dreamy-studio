@@ -1,10 +1,9 @@
 import { AssetRow } from './library.assets.models';
-import { LibrarySort, LibraryTag } from './library.models';
-import { compareFor, hasAllTags, matchesNameOrTags, sortTags } from './library.rules';
+import { LibraryTag } from './library.models';
+import { compareNewest, hasAllTags, matchesNameOrTags, sortTags } from './library.rules';
 
 export interface AssetFilters {
   query: string;
-  sort: LibrarySort;
   collection: number;
   tags: string[];
 }
@@ -23,11 +22,14 @@ export function filterAssetRows(rows: AssetRow[], filters: AssetFilters): AssetR
     .filter(inCollection.bind(null, filters.collection))
     .filter(matchesQuery.bind(null, needle))
     .filter(hasAllTags.bind(null, filters.tags))
-    .sort(compareFor.bind(null, filters.sort));
+    .sort(compareNewest);
 }
 function addRowTags(counts: Map<string, LibraryTag>, row: AssetRow): void {
   for (const tag of row.tags) {
-    const entry = counts.get(tag) ?? { tag, counts: { image: 0, sound: 0, video: 0, prompt: 0 } };
+    const entry = counts.get(tag) ?? {
+      tag,
+      counts: { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 },
+    };
     entry.counts[row.ref.kind] += 1;
     counts.set(tag, entry);
   }

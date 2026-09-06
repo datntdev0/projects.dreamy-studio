@@ -108,7 +108,7 @@ export async function expectLibraryCounts(
 
 export async function queuePick(
   picker: PickerStub,
-  kind: LibraryKind,
+  kind: UploadKind,
   paths: readonly string[],
 ): Promise<void> {
   await picker.queue(PICK_COMMANDS[kind], [...paths]);
@@ -310,20 +310,6 @@ export async function openWriteDialog(ui: Ui): Promise<PromptAuthoringPage> {
   return page;
 }
 
-export async function openImportDialog(
-  ui: Ui,
-  picker: PickerStub,
-  paths: readonly string[],
-): Promise<PromptAuthoringPage> {
-  const page = authoring(ui);
-  await queuePick(picker, 'prompt', paths);
-  await page.upload.click();
-  await expect(page.dialog.panel).toBeVisible();
-  await page.dialog.pick.click();
-  await expect(page.dialog.queueRows).toHaveCount(paths.length);
-  return page;
-}
-
 export async function fillPromptForm(page: PromptAuthoringPage, form: PromptForm): Promise<void> {
   const dialog = page.dialog;
   if (form.name !== undefined) {
@@ -359,8 +345,6 @@ export async function readPrompt(
   return { row, text: await storedText(folder, row.id) };
 }
 
-export type SortKey = 'new' | 'name' | 'size';
-
 export async function expectNames(
   list: LibrarySectionList,
   names: readonly string[],
@@ -372,8 +356,8 @@ export async function searchFor(list: LibrarySectionList, keyword: string): Prom
   await list.search.fill(keyword);
 }
 
-export async function sortBy(list: LibrarySectionList, key: SortKey): Promise<void> {
-  await list.sort.selectOption(key);
+export async function expectNoSortControl(list: LibrarySectionList): Promise<void> {
+  await expect(list.toolbar.locator('[data-testid$="-sort"]')).toHaveCount(0);
 }
 
 export async function toggleFilterTag(ui: Ui, tag: string): Promise<void> {
@@ -416,7 +400,7 @@ export async function openPreview(ui: Ui, kind: LibraryKind, name: string): Prom
         ? library.sounds.card(name)
         : kind === 'video'
           ? library.videos.card(name)
-          : library.prompts.card(name);
+          : library.prompts.row(name);
   await target.dblclick();
 }
 
@@ -510,7 +494,7 @@ export function infoPanel(ui: Ui, kind: InfoKind): LibraryInfoPanel {
 }
 
 export async function selectAsset(ui: Ui, kind: InfoKind, name: string): Promise<LibraryInfoPanel> {
-  await ui.main.library.section(kind).card(name).click();
+  await ui.main.library.section(kind).item(name).click();
   const panel = infoPanel(ui, kind);
   await expect(panel.root).toBeVisible();
   await expect(panel.name).toHaveValue(name);
@@ -592,10 +576,10 @@ export async function openDeletionDialog(ui: Ui, kind: LibraryKind, name: string
   const library = ui.main.library;
   await library.explorer.row(kind).click();
   await expect(library.section(kind).root).toBeVisible();
-  const card = library.section(kind).card(name);
-  const classes = (await card.getAttribute('class')) ?? '';
+  const item = library.section(kind).item(name);
+  const classes = (await item.getAttribute('class')) ?? '';
   if (!classes.split(/\s+/).includes('is-selected')) {
-    await card.click();
+    await item.click();
   }
   await new LibraryDeletionPage(library.page).deleteButton(kind).click();
   await expect(ui.main.confirm.panel).toBeVisible();
@@ -771,17 +755,15 @@ export const KIND_TAG_TYPES: Readonly<Record<LibraryKind, string>> = {
   prompt: 'library_prompt',
 };
 
-export const PICK_COMMANDS: Readonly<Record<LibraryKind, string>> = {
+export const PICK_COMMANDS: Readonly<Record<UploadKind, string>> = {
   image: 'library_image_pick',
   sound: 'library_sound_pick',
   video: 'library_video_pick',
-  prompt: 'library_prompt_pick',
 };
 
 export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif'] as const;
 export const SOUND_EXTENSIONS = ['mp3', 'wav', 'aac'] as const;
 export const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'mkv'] as const;
-export const PROMPT_EXTENSIONS = ['txt', 'md'] as const;
 
 export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 export const SOUND_MAX_BYTES = 200 * 1024 * 1024;
@@ -1503,20 +1485,6 @@ export async function stageVideo(
   spec: Omit<VideoSpec, 'format'> = {},
 ): Promise<string> {
   return stageFile(sandbox, name, videoBytes({ ...spec, format: videoFormatOf(name) }));
-}
-
-export async function stagePrompt(sandbox: Sandbox, name: string, text: string): Promise<string> {
-  return stageFile(sandbox, name, text);
-}
-
-export async function stageSizedFile(
-  sandbox: Sandbox,
-  name: string,
-  bytes: number,
-): Promise<string> {
-  const path = sandbox.file(name);
-  await writeSizedFile(path, bytes);
-  return path;
 }
 
 export async function stageSizedImage(
@@ -2272,55 +2240,48 @@ export async function storedText(folder: string, id: number): Promise<string> {
   return readFile(storedPath(folder, 'prompt', id, 'txt'), 'utf8');
 }
 
-const UPLOAD_NOUN_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+const UPLOAD_NOUN_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: 'images',
   sound: 'sounds',
   video: 'videos',
-  prompt: 'prompts',
 };
 
 export const UPLOAD_SUCCESS = 'images to the library.';
 export const UPLOAD_PARTIAL = 'Uploaded 2/4 images; 2 files failed.';
-export const UPLOAD_SUCCESS_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const UPLOAD_SUCCESS_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: UPLOAD_SUCCESS,
   sound: 'sounds to the library.',
   video: 'videos to the library.',
-  prompt: 'prompts to the library.',
 };
-export const UPLOAD_PARTIAL_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const UPLOAD_PARTIAL_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: UPLOAD_PARTIAL,
   sound: 'Uploaded 2/4 sounds; 2 files failed.',
   video: 'Uploaded 2/4 videos; 2 files failed.',
-  prompt: 'Uploaded 2/4 prompts; 2 files failed.',
 };
-export const UPLOAD_TITLE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const UPLOAD_TITLE_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: 'Upload images',
   sound: 'Upload sounds',
   video: 'Upload videos',
-  prompt: 'Upload prompts',
 };
-export const UPLOAD_CLOSE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const UPLOAD_CLOSE_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: 'Close upload images dialog',
   sound: 'Close upload sounds dialog',
   video: 'Close upload videos dialog',
-  prompt: 'Close upload prompts dialog',
 };
 
-export function uploadSubmitLabel(kind: LibraryKind, count: number): string {
+export function uploadSubmitLabel(kind: UploadKind, count: number): string {
   return `Upload ${count} ${UPLOAD_NOUN_BY_KIND[kind]}`;
 }
 
-export const DROPZONE_LABEL_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const DROPZONE_LABEL_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: 'Image file selection area',
   sound: 'Sound file selection area',
   video: 'Video file selection area',
-  prompt: 'Prompt file selection area',
 };
-export const DROP_TITLE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const DROP_TITLE_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: 'Drag and drop images here',
   sound: 'Drag and drop sounds here',
   video: 'Drag and drop videos here',
-  prompt: 'Drag and drop prompt files here',
 };
 export const UPLOAD_SKIPPED = 'files already in the list.';
 
@@ -2330,25 +2291,21 @@ export const CHECK_TOO_LARGE = 'Larger than the 25 MB image limit.';
 export const CHECK_NOT_FOUND = 'File not found.';
 export const CHECK_DUPLICATE =
   'An image with the same name already exists; its name will be changed automatically.';
-export const CHECK_UNSUPPORTED_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const CHECK_UNSUPPORTED_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: CHECK_UNSUPPORTED,
   sound: 'is not a supported sound format.',
   video: 'is not a supported video format.',
-  prompt: 'is not a supported prompt format (TXT or MD only).',
 };
-export const CHECK_TOO_LARGE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const CHECK_TOO_LARGE_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: CHECK_TOO_LARGE,
   sound: 'Larger than the 200 MB sound limit.',
   video: 'Larger than the 2 GB video limit.',
-  prompt: 'Larger than the 256 KB prompt limit.',
 };
-export const CHECK_DUPLICATE_BY_KIND: Readonly<Record<LibraryKind, string>> = {
+export const CHECK_DUPLICATE_BY_KIND: Readonly<Record<UploadKind, string>> = {
   image: CHECK_DUPLICATE,
   sound: 'A sound with the same name already exists; its name will be changed automatically.',
   video: 'A video with the same name already exists; its name will be changed automatically.',
-  prompt: 'A prompt with the same name already exists; its name will be changed automatically.',
 };
-export const CHECK_UNREADABLE = 'Content cannot be read';
 
 export const BADGE_VALID = 'VALID';
 export const BADGE_RENAME = 'RENAME';

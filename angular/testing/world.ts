@@ -26,7 +26,7 @@ import { FakeIpc, provideFakeIpc } from './fake-ipc';
 import { chapter, libraryCollection, libraryImage, libraryPrompt, librarySound, libraryVideo, libraryVoice, novel, pipeline, project, projectModuleState, session, task } from './fixtures';
 import { entity, fact, ONTOLOGY_VIEW } from './knowledge';
 
-const COUNTS = { image: 2, sound: 1, video: 1, prompt: 1 };
+const COUNTS = { image: 2, sound: 1, video: 1, prompt: 1, voice: 0 };
 
 export function worldChapters(novelId = 1): ChapterRow[] {
   return [
@@ -533,16 +533,16 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
     libraryCollection({
       id: 2,
       name: 'Music',
-      counts: { image: 0, sound: 3, video: 0, prompt: 0 },
+      counts: { image: 0, sound: 3, video: 0, prompt: 0, voice: 0 },
     }),
   ]);
   ipc.on('library_tag_list', [
-    { tag: 'hero', counts: { image: 2, sound: 0, video: 1, prompt: 0 } },
-    { tag: 'calm', counts: { image: 0, sound: 1, video: 0, prompt: 1 } },
+    { tag: 'hero', counts: { image: 2, sound: 0, video: 1, prompt: 0, voice: 0 } },
+    { tag: 'calm', counts: { image: 0, sound: 1, video: 0, prompt: 1, voice: 0 } },
   ]);
   ipc.on('library_summary', {
     assets: COUNTS,
-    unfiled: { image: 1, sound: 0, video: 0, prompt: 1 },
+    unfiled: { image: 1, sound: 0, video: 0, prompt: 1, voice: 0 },
   });
   ipc.on('library_collection_create', libraryCollection({ id: 3, name: 'New' }));
   ipc.on('library_collection_update', libraryCollection({ id: 1, name: 'Covers' }));
@@ -614,11 +614,6 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
     }),
   ];
   ipc.on('library_prompt_list', prompts);
-  ipc.on('library_prompt_pick', ['C:/in/a.txt']);
-  ipc.on('library_prompt_inspect', [
-    { path: 'C:/in/a.txt', name: 'a.txt', size: 10, status: 'ok' },
-  ]);
-  ipc.on('library_prompt_upload', prompts[0]);
   ipc.on('library_prompt_create', prompts[0]);
   ipc.on('library_prompt_update', prompts[0]);
   ipc.on('library_prompt_delete', 1);
@@ -634,7 +629,6 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
       preset: null,
       referenceSoundId: 1,
       referenceName: 'harbor-ambience.wav',
-      sampleDurationMs: null,
     }),
     libraryVoice({
       id: 3,

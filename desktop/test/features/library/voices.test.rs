@@ -1,6 +1,7 @@
 use super::*;
 use crate::features::library::models::AssetRights;
 use crate::features::library::models::AssetUploadInput;
+use crate::features::library::models::CollectionInput;
 use crate::features::library::service::LibraryWorkspace;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::infra::storage::database::Database;
@@ -181,37 +182,40 @@ fn preset_voice_lifecycle() {
     let voice = workspace.voice_create(input(VoiceSource::Preset)).unwrap();
     assert_eq!(voice.name, "Narrator");
     assert_eq!(voice.reference_kind, None);
-    assert_eq!(voice.sample_duration_ms, None);
     assert_eq!(workspace.voice_list().unwrap(), vec![voice.clone()]);
-
-    workspace
-        .voice_record_duration(voice.id, &voice.sample_text, 2_400)
-        .unwrap();
-    workspace
-        .voice_record_duration(voice.id, "Other text", 9_999)
-        .unwrap();
     let (stored, reference) = workspace.voice_for_synthesis(voice.id).unwrap();
-    assert_eq!((stored.sample_duration_ms, reference), (Some(2_400), None));
+    assert_eq!((stored, reference), (voice.clone(), None));
 
     let updated = workspace
         .voice_update(
             voice.id,
             VoicePatch {
+                name: Some("  Người kể  ".to_string()),
                 sample_text: Some("  Một   câu mới ".to_string()),
                 description: Some(" Mới ".to_string()),
+                ..VoicePatch::default()
             },
         )
         .unwrap();
     assert_eq!(updated.sample_text, "Một câu mới");
     assert_eq!(updated.description, "Mới");
-    assert_eq!(updated.sample_duration_ms, None);
-    assert_eq!(updated.name, voice.name);
+    assert_eq!(updated.name, "Người kể");
+    assert_eq!(
+        error_code(workspace.voice_update(
+            voice.id,
+            VoicePatch {
+                name: Some(" ".to_string()),
+                ..VoicePatch::default()
+            },
+        )),
+        LibraryErrorCode::VoiceInvalid
+    );
     assert_eq!(
         error_code(workspace.voice_update(
             voice.id,
             VoicePatch {
                 sample_text: Some(" ".to_string()),
-                description: None,
+                ..VoicePatch::default()
             },
         )),
         LibraryErrorCode::VoiceInvalid
@@ -224,6 +228,58 @@ fn preset_voice_lifecycle() {
         LibraryErrorCode::VoiceNotFound
     );
     drop(dir);
+}
+
+#[test]
+fn voices_carry_tags_collection_and_rights() {
+    let (_dir, workspace) = fixture();
+    let voice = workspace.voice_create(input(VoiceSource::Preset)).unwrap();
+    assert_eq!(
+        (voice.rights, voice.collection_id, voice.tags.clone()),
+        (AssetRights::Own, None, Vec::new())
+    );
+    let collection = workspace
+        .collection_create(CollectionInput {
+            name: "Narrators".to_string(),
+            description: String::new(),
+        })
+        .unwrap();
+    let updated = workspace
+        .voice_update(
+            voice.id,
+            VoicePatch {
+                rights: Some(AssetRights::Licensed),
+                collection_id: Some(Some(collection.id)),
+                tags: Some(vec!["Warm".to_string(), " calm ".to_string()]),
+                ..VoicePatch::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(updated.rights, AssetRights::Licensed);
+    assert_eq!(updated.collection_id, Some(collection.id));
+    assert_eq!(updated.tags, vec!["calm".to_string(), "warm".to_string()]);
+    assert_eq!(workspace.collection_list().unwrap()[0].counts.voice, 1);
+    assert_eq!(workspace.summary().unwrap().assets.voice, 1);
+    let tags = workspace.tag_list().unwrap();
+    assert!(tags.iter().all(|tag| tag.counts.voice == 1));
+    let copy = workspace.voice_duplicate(voice.id, "Copy").unwrap();
+    assert_eq!(
+        (copy.collection_id, copy.tags.clone()),
+        (Some(collection.id), updated.tags.clone())
+    );
+    assert_eq!(
+        error_code(workspace.voice_update(
+            voice.id,
+            VoicePatch {
+                collection_id: Some(Some(999)),
+                ..VoicePatch::default()
+            },
+        )),
+        LibraryErrorCode::CollectionNotFound
+    );
+    workspace.collection_delete(collection.id).unwrap();
+    workspace.voice_delete(&[voice.id, copy.id]).unwrap();
+    assert!(workspace.tag_list().unwrap().is_empty());
 }
 
 #[test]
@@ -424,7 +480,9 @@ fn synthesis_voice(source: VoiceSource, engine_kind: VoiceEngineKind) -> Library
         reference_name: String::new(),
         prompt: "male, low pitch".to_string(),
         sample_text: "Xin chào".to_string(),
-        sample_duration_ms: None,
+        rights: AssetRights::Own,
+        collection_id: None,
+        tags: Vec::new(),
         created_at: String::new(),
         updated_at: String::new(),
     }

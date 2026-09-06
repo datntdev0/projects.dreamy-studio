@@ -42,7 +42,6 @@ export interface SeedVoice {
   readonly referenceSoundId?: number | null;
   readonly referenceName?: string;
   readonly sampleText?: string;
-  readonly sampleDurationMs?: number | null;
   readonly createdAt: string;
 }
 
@@ -60,7 +59,8 @@ export interface VoiceRecord {
   readonly referenceSoundId: number | null;
   readonly referenceName: string;
   readonly sampleText: string;
-  readonly sampleDurationMs: number | null;
+  readonly rights: string;
+  readonly collectionId: number | null;
 }
 
 export interface OpenedVoices {
@@ -70,9 +70,9 @@ export interface OpenedVoices {
 }
 
 const VOICE_INSERT =
-  'INSERT INTO ws_library_voices (name, description, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, sample_duration_ms, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  'INSERT INTO ws_library_voices (name, description, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 const VOICE_SELECT =
-  'SELECT id, name, description, engine, source, language, gender, preset, prompt, reference_kind AS referenceKind, reference_sound_id AS referenceSoundId, reference_name AS referenceName, sample_text AS sampleText, sample_duration_ms AS sampleDurationMs FROM ws_library_voices ORDER BY id';
+  'SELECT id, name, description, engine, source, language, gender, preset, prompt, reference_kind AS referenceKind, reference_sound_id AS referenceSoundId, reference_name AS referenceName, sample_text AS sampleText, rights, collection_id AS collectionId FROM ws_library_voices ORDER BY id';
 
 function insertVoice(database: DatabaseSync, voice: SeedVoice): number {
   const result = database
@@ -91,7 +91,6 @@ function insertVoice(database: DatabaseSync, voice: SeedVoice): number {
       voice.referenceSoundId ?? null,
       voice.referenceName ?? '',
       voice.sampleText ?? VOICE_SAMPLE_VI,
-      voice.sampleDurationMs === undefined ? 3_500 : voice.sampleDurationMs,
       voice.createdAt,
       voice.createdAt,
     );

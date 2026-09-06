@@ -1,7 +1,7 @@
 import { LibraryBrowsingPage } from '../pages/library.ts';
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { chooseFilterCollection, expectLibraryCounts, expectNames, expectTagPressed, openLibraryView, searchFor, showLibrarySection, sortBy, toggleFilterTag } from '../scripts/library.ts';
+import { chooseFilterCollection, expectLibraryCounts, expectNames, expectNoSortControl, expectTagPressed, openLibraryView, searchFor, showLibrarySection, toggleFilterTag } from '../scripts/library.ts';
 
 const COUNT_SEED = {
   images: [
@@ -98,7 +98,7 @@ test.describe('CAP-05 Asset Library Management', () => {
         await showLibrarySection(ui, 'sounds');
         await expect(library.sounds.cards).toHaveCount(2);
         await showLibrarySection(ui, 'prompts');
-        await expect(library.prompts.cards).toHaveCount(2);
+        await expect(library.prompts.rows).toHaveCount(2);
         await showLibrarySection(ui, 'videos');
         await expect(library.videos.root).toBeVisible();
       });
@@ -116,7 +116,7 @@ test.describe('CAP-05 Asset Library Management', () => {
       });
     });
 
-    test('US-0036 searches assets by name, tag or prompt content and sorts them', async ({
+    test('US-0036 searches assets by name, tag or prompt content and lists them newest first', async ({
       ui,
       picker,
       sandbox,
@@ -142,24 +142,15 @@ test.describe('CAP-05 Asset Library Management', () => {
         await expectNames(prompts, ['Closing Scene']);
       });
 
-      await test.step('orders the list by newest, name or file size as chosen', async () => {
+      await test.step('keeps images and prompts newest first without a sort control', async () => {
         await showLibrarySection(ui, 'images');
         await searchFor(images, '');
-
-        await sortBy(images, 'name');
-        await expectNames(images, ['Harbor Dawn', 'Market Night', 'Pier Fog', 'Zebra Study']);
-        await sortBy(images, 'size');
-        await expectNames(images, ['Zebra Study', 'Harbor Dawn', 'Pier Fog', 'Market Night']);
-        await sortBy(images, 'new');
+        await expectNoSortControl(images);
         await expectNames(images, ['Zebra Study', 'Market Night', 'Pier Fog', 'Harbor Dawn']);
 
         await showLibrarySection(ui, 'prompts');
         await searchFor(prompts, '');
-        await sortBy(prompts, 'size');
-        await expectNames(prompts, ['Closing Scene', 'Opening Scene', 'Aria Voice']);
-        await sortBy(prompts, 'name');
-        await expectNames(prompts, ['Aria Voice', 'Closing Scene', 'Opening Scene']);
-        await sortBy(prompts, 'new');
+        await expectNoSortControl(prompts);
         await expectNames(prompts, ['Closing Scene', 'Aria Voice', 'Opening Scene']);
       });
     });

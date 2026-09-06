@@ -11,16 +11,28 @@
       <label for="library-sound-panel-name" data-testid="library-sound-panel-name-label">
         {{ "library.sound.field.name" | t }}
       </label>
-      <input
-        id="library-sound-panel-name"
-        class="input"
-        maxlength="255"
-        [value]="item.name"
-        autocomplete="off"
-        data-testid="library-sound-panel-name"
-        (blur)="nameBlur(item, $event)"
-        (keydown)="nameKeydown($event)"
-      />
+      <div class="lb-name-row" data-testid="library-sound-panel-name-row">
+        <input
+          id="library-sound-panel-name"
+          class="input"
+          maxlength="255"
+          [value]="item.name"
+          autocomplete="off"
+          data-testid="library-sound-panel-name"
+          (blur)="nameBlur(item, $event)"
+          (keydown)="nameKeydown($event)"
+        />
+        <button
+          type="button"
+          class="btn btn-icon lb-ins-del"
+          [attr.aria-label]="'library.sound.delete' | t"
+          [attr.title]="'library.sound.delete' | t"
+          data-testid="library-sound-panel-delete"
+          (click)="remove(item)"
+        >
+          <ds-icon name="trash" [size]="16" data-testid="library-sound-panel-delete-icon" />
+        </button>
+      </div>
     </div>
   </section>
   <section class="ins-sec ins-form" data-testid="library-sound-panel-fields">
@@ -151,17 +163,6 @@
       <dt data-testid="library-sound-panel-origin-label">{{ "library.image.info.origin" | t }}</dt>
       <dd data-testid="library-sound-panel-origin">{{ originKey(item) | t }}</dd>
     </dl>
-  </section>
-  <section class="ins-sec ins-actions" data-testid="library-sound-panel-actions">
-    <button
-      type="button"
-      class="btn btn-danger"
-      data-testid="library-sound-panel-delete"
-      (click)="remove(item)"
-    >
-      <ds-icon name="trash" [size]="16" data-testid="library-sound-panel-delete-icon" />
-      {{ "library.sound.delete" | t }}
-    </button>
   </section>
 </section>
 } @else {

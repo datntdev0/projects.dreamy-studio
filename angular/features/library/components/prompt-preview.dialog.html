@@ -10,7 +10,6 @@
   <div class="lbp" data-testid="library-prompt-preview-content">
     <div class="lbp-stage lbp-prompt" data-testid="library-prompt-preview-stage">
       <div class="row-actions" data-testid="library-prompt-preview-bar">
-        <span class="badge" data-testid="library-prompt-preview-kind">{{ kind(item) | t }}</span>
         <span class="spacer" data-testid="library-prompt-preview-spacer"></span>
         <ds-button size="small" data-testid="library-prompt-preview-copy" (pressed)="copy(item)">
           <ds-icon name="copy" [size]="14" data-testid="library-prompt-preview-copy-icon" />
@@ -21,11 +20,35 @@
         class="lb-prompt"
         data-testid="library-prompt-preview-text"
       >@for (segment of segments(item); track $index) { @if (segment.variable) { <mark class="lb-var" data-testid="library-prompt-preview-variable">{{ segment.text }}</mark> } @else { {{ segment.text }} } }</pre>
+      <button
+        type="button"
+        class="btn btn-icon lbp-nav is-prev"
+        [attr.aria-label]="'library.preview.previous' | t"
+        [disabled]="!hasPrevious()"
+        data-testid="library-prompt-preview-previous"
+        (click)="previous()"
+      >
+        <ds-icon name="chev-l" [size]="14" data-testid="library-prompt-preview-previous-icon" />
+      </button>
+      <button
+        type="button"
+        class="btn btn-icon lbp-nav is-next"
+        [attr.aria-label]="'library.preview.next' | t"
+        [disabled]="!hasNext()"
+        data-testid="library-prompt-preview-next"
+        (click)="next()"
+      >
+        <ds-icon name="chev-r" [size]="14" data-testid="library-prompt-preview-next-icon" />
+      </button>
     </div>
     <aside class="lbp-side" data-testid="library-prompt-preview-side">
       <dl class="kv" data-testid="library-prompt-preview-info">
         <dt data-testid="library-prompt-preview-code-label">{{ 'library.image.info.code' | t }}</dt>
         <dd class="mono" data-testid="library-prompt-preview-code">{{ code(item) }}</dd>
+        <dt data-testid="library-prompt-preview-kind-label">
+          {{ 'library.prompt.field.kind' | t }}
+        </dt>
+        <dd data-testid="library-prompt-preview-kind">{{ kind(item) | t }}</dd>
         <dt data-testid="library-prompt-preview-length-label">
           {{ 'library.prompt.info.length' | t }}
         </dt>
@@ -49,24 +72,6 @@
         {{ collection(item) }}
       </span>
       }
-      <div class="row-actions" data-testid="library-prompt-preview-navigation">
-        <ds-button
-          size="small"
-          [disabled]="position().index <= 0"
-          data-testid="library-prompt-preview-previous"
-          (pressed)="previous()"
-        >
-          {{ 'library.preview.previous' | t }}
-        </ds-button>
-        <ds-button
-          size="small"
-          [disabled]="position().index + 1 >= position().total"
-          data-testid="library-prompt-preview-next"
-          (pressed)="next()"
-        >
-          {{ 'library.preview.next' | t }}
-        </ds-button>
-      </div>
     </aside>
   </div>
 </ds-dialog>

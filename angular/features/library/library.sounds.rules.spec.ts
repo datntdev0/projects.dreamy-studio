@@ -2,7 +2,7 @@ import { librarySound } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { audioText, durationText, filterSounds, searchSounds, sortSounds, soundCode } from './library.sounds.rules';
+import { audioText, durationText, filterSounds, searchSounds, soundCode } from './library.sounds.rules';
 
 describe('library.sounds.rules', () => {
   const items = [
@@ -22,39 +22,23 @@ describe('library.sounds.rules', () => {
     expect(audioText(librarySound({ sampleRate: 48000, channels: 2 }))).toBe('48 kHz · Stereo');
     expect(audioText(librarySound({ sampleRate: 48000, channels: 6 }))).toBe('48 kHz · 6 ch');
     expect(searchSounds(items, '')).toHaveLength(2);
-    expect(sortSounds(items, 'size')[0].id).toBe(2);
   });
 
-  it('filters and sorts', () => {
+  it('filters keeping the given order', () => {
     expect(durationText(65_000)).toBe('1:05');
     expect(soundCode(3)).toMatch(/0003$/);
     expect(
-      filterSounds(items, { query: 'X', sort: 'new', collection: null, tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterSounds(items, { query: 'X', collection: null, tags: [] }).map((item) => item.id),
     ).toEqual([1]);
     expect(
-      filterSounds(items, { query: '', sort: 'name', collection: null, tags: [] }).map(
-        (item) => item.id,
-      ),
-    ).toEqual([2, 1]);
+      filterSounds(items, { query: '', collection: null, tags: [] }).map((item) => item.id),
+    ).toEqual([1, 2]);
     expect(
-      filterSounds(items, { query: '', sort: 'size', collection: null, tags: [] }).map(
-        (item) => item.id,
-      ),
-    ).toEqual([2, 1]);
-    expect(
-      filterSounds(items, { query: '', sort: 'new', collection: 2, tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterSounds(items, { query: '', collection: 2, tags: [] }).map((item) => item.id),
     ).toEqual([1]);
     expect(
-      filterSounds(items, { query: '', sort: 'new', collection: 'none', tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterSounds(items, { query: '', collection: 'none', tags: [] }).map((item) => item.id),
     ).toEqual([2]);
-    expect(
-      filterSounds(items, { query: '', sort: 'new', collection: null, tags: ['x', 'y'] }),
-    ).toEqual([]);
+    expect(filterSounds(items, { query: '', collection: null, tags: ['x', 'y'] })).toEqual([]);
   });
 });

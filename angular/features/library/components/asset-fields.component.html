@@ -1,0 +1,101 @@
+<div class="field" data-testid="library-asset-fields-tags-field">
+  <label [for]="fieldId() + '-tags'" data-testid="library-asset-fields-tags-label">
+    {{ 'library.asset.field.tags' | t }}
+    <span class="t-mute mono" data-testid="library-asset-fields-tags-count">
+      {{ tags().length }}/{{ maxTags }}
+    </span>
+  </label>
+  <div class="tags" data-testid="library-asset-fields-tags">
+    @for (tag of tags(); track tag) {
+      <span class="tag" data-testid="library-asset-fields-tag">
+        {{ tag }}
+        <button
+          type="button"
+          class="tag-x"
+          [attr.aria-label]="'library.asset.field.tagRemove' | t: { tag }"
+          data-testid="library-asset-fields-tag-remove"
+          (click)="removeTag(tag)"
+        >
+          <ds-icon name="x" [size]="16" data-testid="library-asset-fields-tag-remove-icon" />
+        </button>
+      </span>
+    } @empty {
+      <span class="t-sm t-mute" data-testid="library-asset-fields-tags-empty">
+        {{ 'library.asset.field.tagsEmpty' | t }}
+      </span>
+    }
+  </div>
+  <input
+    class="input tag-in"
+    [id]="fieldId() + '-tags'"
+    [attr.list]="fieldId() + '-tag-suggestions'"
+    [disabled]="isFull()"
+    [attr.placeholder]="'library.asset.field.tagsPlaceholder' | t"
+    autocomplete="off"
+    data-testid="library-asset-fields-tag-input"
+    (keydown)="addTag($event)"
+  />
+  <datalist
+    [id]="fieldId() + '-tag-suggestions'"
+    data-testid="library-asset-fields-tag-suggestions"
+  >
+    @for (tag of library.tags(); track tag.tag) {
+      <option [value]="tag.tag" data-testid="library-asset-fields-tag-suggestion"></option>
+    }
+  </datalist>
+</div>
+<div class="field" data-testid="library-asset-fields-collection-field">
+  <label [for]="fieldId() + '-collection'" data-testid="library-asset-fields-collection-label">
+    {{ 'library.asset.field.collection' | t }}
+  </label>
+  <select
+    class="select"
+    [id]="fieldId() + '-collection'"
+    data-testid="library-asset-fields-collection"
+    (change)="setCollection($event)"
+  >
+    <option
+      value=""
+      [selected]="collectionId() === null"
+      data-testid="library-asset-fields-collection-none"
+    >
+      {{ 'library.asset.field.collectionNone' | t }}
+    </option>
+    @for (collection of library.collections(); track collection.id) {
+      <option
+        [value]="collection.id"
+        [selected]="collectionId() === collection.id"
+        data-testid="library-asset-fields-collection-option"
+      >
+        {{ collection.name }}
+      </option>
+    }
+    <option value="__new" data-testid="library-asset-fields-collection-new">
+      {{ 'library.asset.field.collectionNew' | t }}
+    </option>
+  </select>
+</div>
+<div class="field" data-testid="library-asset-fields-rights-field">
+  <label [for]="fieldId() + '-rights'" data-testid="library-asset-fields-rights-label">
+    {{ 'library.asset.field.rights' | t }}
+  </label>
+  <select
+    class="select"
+    [id]="fieldId() + '-rights'"
+    data-testid="library-asset-fields-rights"
+    (change)="setRights($event)"
+  >
+    @for (right of rightOptions; track right) {
+      <option
+        [value]="right"
+        [selected]="rights() === right"
+        data-testid="library-asset-fields-right-option"
+      >
+        {{ rightKey(right) | t }}
+      </option>
+    }
+  </select>
+  <span class="field-hint" data-testid="library-asset-fields-rights-hint">
+    {{ 'library.asset.field.rightsHint' | t }}
+  </span>
+</div>

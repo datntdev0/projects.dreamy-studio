@@ -57,7 +57,7 @@ function base(
 }
 
 function emptyCounts(): KindCounts {
-  return { image: 0, sound: 0, video: 0, prompt: 0 };
+  return { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 }
 
 function gradient(hue: number, width: number, height: number): string {
@@ -147,7 +147,6 @@ function prompt(
 }
 
 const SAMPLE_TEXT = 'The lamp keeper climbed the stairs as the tide rolled in beneath the harbor.';
-const SAMPLE_DURATION_MS = 4_200;
 
 function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
   return {
@@ -165,7 +164,9 @@ function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
     referenceName: '',
     prompt: '',
     sampleText: SAMPLE_TEXT,
-    sampleDurationMs: SAMPLE_DURATION_MS,
+    rights: 'own',
+    collectionId: null,
+    tags: [],
     createdAt: stamp(id),
     updatedAt: stamp(id),
     ...fields,
@@ -192,7 +193,6 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
       source: 'design',
       preset: null,
       prompt: 'A quiet, weathered voice that sounds like it has told the same story for decades.',
-      sampleDurationMs: 5_600,
     }),
     voice(4, {
       name: 'Mira',
@@ -200,7 +200,6 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
       engineKind: 'cloud',
       language: 'en',
       preset: 'narrator-bright',
-      sampleDurationMs: 3_100,
     }),
     voice(5, {
       name: 'Storyteller Bao',
@@ -210,7 +209,6 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
       source: 'clone',
       preset: null,
       referenceName: 'storyteller-reference.wav',
-      sampleDurationMs: 6_400,
     }),
     voice(6, {
       name: 'Harbor Chorus',
@@ -221,7 +219,6 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
       source: 'design',
       preset: null,
       prompt: 'A layered crowd of dockworkers murmuring in several languages.',
-      sampleDurationMs: null,
     }),
   ];
 }

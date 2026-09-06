@@ -1,11 +1,9 @@
 import { CollectionFilter } from './library.models';
-// prettier-ignore
-import { compareFor, durationText, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
-import { LibraryVideo, VideoSort } from './library.videos.models';
+import { durationText, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
+import { LibraryVideo } from './library.videos.models';
 
 export interface VideoFilters {
   query: string;
-  sort: VideoSort;
   collection: CollectionFilter;
   tags: string[];
 }
@@ -24,14 +22,8 @@ export function searchVideos(items: LibraryVideo[], query: string): LibraryVideo
   const needle = query.trim().toLocaleLowerCase();
   return items.filter(matchesNameOrTags.bind(null, needle));
 }
-export function sortVideos(items: LibraryVideo[], sort: VideoSort): LibraryVideo[] {
-  return [...items].sort(compareFor.bind(null, sort));
-}
 export function filterVideos(items: LibraryVideo[], filters: VideoFilters): LibraryVideo[] {
-  return sortVideos(
-    searchVideos(items, filters.query)
-      .filter(matchesCollection.bind(null, filters.collection))
-      .filter(hasAllTags.bind(null, filters.tags)),
-    filters.sort,
-  );
+  return searchVideos(items, filters.query)
+    .filter(matchesCollection.bind(null, filters.collection))
+    .filter(hasAllTags.bind(null, filters.tags));
 }

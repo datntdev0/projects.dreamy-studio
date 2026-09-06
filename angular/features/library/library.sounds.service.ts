@@ -8,7 +8,7 @@ import { AssetCheck, AssetPatch, AssetUploadInput, LibraryError } from './librar
 import { toLibraryError } from './library.rules';
 import { LibraryService } from './library.service';
 import { decodePeaks } from './library.sounds.audio';
-import { LibrarySound, SoundSort } from './library.sounds.models';
+import { LibrarySound } from './library.sounds.models';
 import { LibrarySoundPlayer } from './library.sounds.player';
 import { filterSounds } from './library.sounds.rules';
 import { LibraryWorkspaceSync } from './library.workspace-sync';
@@ -30,7 +30,6 @@ export class LibrarySoundService {
   readonly error = signal<LibraryError | null>(null);
   readonly selectedId = signal<number | null>(null);
   readonly query = signal('');
-  readonly sort = signal<SoundSort>('new');
   readonly selected = computed(this.findSelected.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
 
@@ -139,7 +138,6 @@ export class LibrarySoundService {
     this.pendingPeaks.clear();
     this.selectedId.set(null);
     this.query.set('');
-    this.sort.set('new');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
@@ -154,7 +152,6 @@ export class LibrarySoundService {
   private buildVisible(): LibrarySound[] {
     return filterSounds(this.items(), {
       query: this.query(),
-      sort: this.sort(),
       collection: this.library.filterCollection(),
       tags: this.library.filterTags(),
     });

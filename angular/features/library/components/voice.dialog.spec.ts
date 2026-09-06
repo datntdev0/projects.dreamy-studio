@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { mount, Mounted, settle } from '@testing/exercise';
 import { FakeIpc } from '@testing/fake-ipc';
-import { installFakeMedia, uninstallFakeMedia } from '@testing/media';
+import { FakeAudio, installFakeMedia, uninstallFakeMedia } from '@testing/media';
 import { setupWorld, warmWorld } from '@testing/world';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -63,16 +63,21 @@ describe('LibraryVoiceDialog', () => {
 
   it('lists the presets of the selected engine and follows the preset gender', async () => {
     const mounted = await open();
-    const options = mounted.root.querySelectorAll(
-      "[data-testid='library-voice-dialog-preset-option']",
-    );
-    expect(Array.from(options).map((option) => option.textContent?.trim())).toEqual([
-      'Hải Đăng · Male · Northern · Natural',
-      'Mai Anh · Female · Northern · News',
+    const names = mounted.root.querySelectorAll("[data-testid='library-voice-dialog-preset-name']");
+    expect(Array.from(names).map((name) => name.textContent?.trim())).toEqual([
+      'Hải Đăng',
+      'Mai Anh',
     ]);
+    expect(byId(mounted, 'library-voice-dialog-preset-meta')?.textContent?.trim()).toBe(
+      'Male · Northern · Natural',
+    );
     expect(mounted.instance.preset()).toBe('Mai Anh');
     expect(mounted.instance.gender()).toBe('female');
-    mounted.instance.onPreset({ target: { value: 'Hải Đăng' } } as unknown as Event);
+    mounted.instance.onPresetFilter('male');
+    await settle(mounted.fixture, 2);
+    expect(mounted.instance.visiblePresets().map((preset) => preset.id)).toEqual(['Hải Đăng']);
+    await click(mounted, 'library-voice-dialog-preset-pick');
+    expect(mounted.instance.preset()).toBe('Hải Đăng');
     expect(mounted.instance.gender()).toBe('male');
     mounted.instance.onGender('neutral');
     expect(mounted.instance.gender()).toBe('neutral');
@@ -180,5 +185,17 @@ describe('LibraryVoiceDialog', () => {
     expect(options.map((option) => option.disabled)).toEqual([false, true, true]);
     mounted.instance.onEngine({ target: { value: 'omnivoice' } } as unknown as Event);
     expect(mounted.instance.source()).toBe('clone');
+  });
+
+  it('plays the bundled sample of a preset and stops it on close', async () => {
+    installFakeMedia();
+    const mounted = await open();
+    await click(mounted, 'library-voice-dialog-preset-play');
+    expect(FakeAudio.instances.at(-1)?.src).toBe('assets/voices/vieneu-turbo/hai-dang.mp3');
+    const play = byId(mounted, 'library-voice-dialog-preset-play');
+    expect(play?.getAttribute('aria-pressed')).toBe('true');
+    expect(play?.getAttribute('aria-label')).toBe('Stop Hải Đăng');
+    mounted.instance.close();
+    expect(FakeAudio.instances.at(-1)?.paused).toBe(true);
   });
 });

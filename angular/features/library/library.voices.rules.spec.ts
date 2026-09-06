@@ -3,9 +3,10 @@ import { CloudAccount } from '@features/settings/cloud.models';
 import { librarySound, libraryVoice } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
+import { nameTone } from './library.rules';
 import { LibraryVoice, VoiceEngine } from './library.voices.models';
 // prettier-ignore
-import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, normalizeSampleText, presetName, presetOptionText, sameSampleText, sortVoices, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, voiceById, voiceDurationText, voiceGenderKey, voiceGenderOptions, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey, voiceTone } from './library.voices.rules';
+import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterPresets, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetFilterOptions, presetMetaText, presetName, presetSampleSlug, presetSampleUrl, sortVoices, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, voiceById, voiceGenderKey, voiceGenderOptions, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey } from './library.voices.rules';
 
 function translate(key: string, params?: Record<string, string | number>): string {
   return params ? `${key}:${JSON.stringify(params)}` : key;
@@ -82,6 +83,10 @@ describe('library.voices.rules', () => {
       'neutral',
     ]);
     expect(engines[2].presets).toEqual([]);
+    expect(findEngine(engines, 'edge-read-aloud')?.presets.map((preset) => preset.id)).toEqual([
+      'vi-VN-HoaiMyNeural',
+      'vi-VN-NamMinhNeural',
+    ]);
     expect(findEngine(engines, 'c')?.name).toBe('c');
     expect(findEngine(engines, 'zz')).toBeNull();
     expect(engineName(engines, 'a')).toBe('A');
@@ -114,23 +119,25 @@ describe('library.voices.rules', () => {
   });
 
   it('derives the monogram from the first character of the name', () => {
-    expect(voiceMonogram('Narrator An')).toBe('N');
-    expect(voiceMonogram('  mira ')).toBe('M');
-    expect(voiceMonogram('đức')).toBe('Đ');
+    expect(voiceMonogram('Narrator An')).toBe('NA');
+    expect(voiceMonogram('Nguyễn Văn  Bình')).toBe('NB');
+    expect(voiceMonogram('  mira ')).toBe('MI');
+    expect(voiceMonogram('đức')).toBe('ĐỨ');
+    expect(voiceMonogram('A')).toBe('A');
     expect(voiceMonogram('  ')).toBe('?');
     expect(voiceMonogram('')).toBe('?');
   });
 
   it('derives a stable avatar tone from the name', () => {
-    expect(['A', 'B', 'C', 'D'].map(voiceTone)).toEqual([0, 1, 2, 3]);
-    expect(voiceTone('Narrator')).toBe(0);
-    expect(voiceTone('Mira')).toBe(2);
-    expect(voiceTone('Wren')).toBe(voiceTone('Wren'));
-    expect(voiceTone('')).toBe(1);
+    expect(['A', 'B', 'C', 'D'].map(nameTone)).toEqual([0, 1, 2, 3]);
+    expect(nameTone('Narrator')).toBe(0);
+    expect(nameTone('Mira')).toBe(2);
+    expect(nameTone('Wren')).toBe(nameTone('Wren'));
+    expect(nameTone('')).toBe(1);
     for (const name of ['Alpha', 'Beta', 'Hải Đăng', 'x'.repeat(200)]) {
-      expect(voiceTone(name)).toBeGreaterThanOrEqual(0);
-      expect(voiceTone(name)).toBeLessThan(4);
-      expect(Number.isInteger(voiceTone(name))).toBe(true);
+      expect(nameTone(name)).toBeGreaterThanOrEqual(0);
+      expect(nameTone(name)).toBeLessThan(4);
+      expect(Number.isInteger(nameTone(name))).toBe(true);
     }
   });
 
@@ -150,8 +157,6 @@ describe('library.voices.rules', () => {
       'male',
       'neutral',
     ]);
-    expect(voiceDurationText(libraryVoice({ sampleDurationMs: 65_000 }))).toBe('1:05');
-    expect(voiceDurationText(libraryVoice({ sampleDurationMs: null }))).toBe('');
     expect(presetName(engines, libraryVoice({ engine: 'a', preset: 'Mai Anh' }))).toBe('Mai Anh');
     expect(presetName(engines, libraryVoice({ engine: 'a', preset: 'custom' }))).toBe('custom');
     expect(presetName(engines, libraryVoice({ engine: 'z', preset: null }))).toBe('—');
@@ -178,15 +183,20 @@ describe('library.voices.rules', () => {
         name: 'Alpha',
         description: 'Deep tone',
         createdAt: '2026-02-01',
-        engineKind: 'cloud',
+        collectionId: 4,
+        tags: ['calm'],
       }),
     ];
-    const ids = (filters: Parameters<typeof filterVoices>[1]): number[] =>
-      filterVoices(items, filters).map((item) => item.id);
-    expect(ids({ query: '', engine: 'all' })).toEqual([2, 1]);
-    expect(ids({ query: 'DEEP', engine: 'all' })).toEqual([2]);
-    expect(ids({ query: 'beta', engine: 'local' })).toEqual([1]);
-    expect(ids({ query: '', engine: 'cloud' })).toEqual([2]);
+    const ids = (filters: Partial<Parameters<typeof filterVoices>[1]>): number[] =>
+      filterVoices(items, { query: '', collection: null, tags: [], ...filters }).map(
+        (item) => item.id,
+      );
+    expect(ids({})).toEqual([2, 1]);
+    expect(ids({ query: 'DEEP' })).toEqual([2]);
+    expect(ids({ query: 'calm' })).toEqual([2]);
+    expect(ids({ collection: 4 })).toEqual([2]);
+    expect(ids({ collection: 'none' })).toEqual([1]);
+    expect(ids({ tags: ['calm'] })).toEqual([2]);
     const tied = [
       libraryVoice({ id: 3, name: 'Zed', createdAt: '2026-01-01' }),
       libraryVoice({ id: 5, name: 'Ann', createdAt: '2026-01-01' }),
@@ -282,18 +292,32 @@ describe('library.voices.rules', () => {
     expect(supportedPreset({ ...local, presets: [local.presets[0]] }, '')?.id).toBe('Hải Đăng');
     expect(supportedPreset(empty, 'Mai Anh')).toBeNull();
     expect(supportedPreset(null, '')).toBeNull();
-    expect(presetOptionText(local.presets[1], translate)).toBe(
-      'Mai Anh · library.voice.gender.female · library.voice.region.north · library.voice.style.news',
+    expect(presetMetaText(local.presets[1], translate)).toBe(
+      'library.voice.gender.female · library.voice.region.north · library.voice.style.news',
     );
-    expect(presetOptionText(local.presets[2], translate)).toBe(
-      'Odd · library.voice.gender.neutral',
+    expect(presetMetaText(local.presets[2], translate)).toBe('library.voice.gender.neutral');
+  });
+
+  it('points preset samples at bundled assets named by a plain slug', () => {
+    expect(presetSampleSlug('Hải Đăng')).toBe('hai-dang');
+    expect(presetSampleSlug('Thiền Tâm Đức')).toBe('thien-tam-duc');
+    expect(presetSampleSlug('Ái Hân')).toBe('ai-han');
+    expect(presetSampleSlug('young-woman')).toBe('young-woman');
+    expect(presetSampleUrl('vieneu-turbo', 'Mỹ Duyên')).toBe(
+      'assets/voices/vieneu-turbo/my-duyen.mp3',
     );
   });
 
-  it('compares sample texts by their words', () => {
-    expect(normalizeSampleText('  Xin \n  chào ')).toBe('Xin chào');
-    expect(sameSampleText('Xin chào', ' Xin   chào ')).toBe(true);
-    expect(sameSampleText('Xin chào', 'Xin chao')).toBe(false);
+  it('filters presets by gender and offers only the genders present', () => {
+    const [local] = engines;
+    const presets = local.presets.slice(0, 2);
+    expect(filterPresets(presets, 'all')).toHaveLength(2);
+    expect(filterPresets(presets, 'male').map((preset) => preset.id)).toEqual(['Hải Đăng']);
+    expect(presetFilterOptions(presets, translate).map((option) => option.value)).toEqual([
+      'all',
+      'female',
+      'male',
+    ]);
   });
 
   it('builds references from the selected way of providing audio', () => {

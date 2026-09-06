@@ -5,9 +5,6 @@ app-library-prompt-panel,
 app-library-prompts-panel {
   display: contents;
 }
-.lb-grid.is-wide {
-  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
-}
 .lb-media.is-prompt {
   display: block;
   padding: var(--sp-md) var(--sp-md) 30px;
@@ -34,8 +31,9 @@ app-library-prompts-panel {
   gap: var(--sp-sm);
 }
 .lb-prompt {
+  height: 360px;
   margin: 0;
-  padding: var(--sp-md);
+  padding: var(--sp-md) 52px;
   overflow: auto;
   white-space: pre-wrap;
   font: 400 12.5px/20px var(--font-mono);

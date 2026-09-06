@@ -1,9 +1,11 @@
 export type VoiceEngineKind = 'local' | 'cloud';
 export type VoiceSource = 'preset' | 'clone' | 'design';
 export type VoiceGender = 'female' | 'male' | 'neutral';
-export type VoiceEngineFilter = 'all' | VoiceEngineKind;
+export type VoicePresetFilter = 'all' | VoiceGender;
 export type VoiceReferenceMode = 'library' | 'upload' | 'record';
 export type VoiceReferenceKind = 'sound' | 'file' | 'recording';
+
+import { AssetRights } from './library.models';
 
 export interface LibraryVoice {
   id: number;
@@ -20,7 +22,9 @@ export interface LibraryVoice {
   referenceName: string;
   prompt: string;
   sampleText: string;
-  sampleDurationMs: number | null;
+  rights: AssetRights;
+  collectionId: number | null;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -73,8 +77,12 @@ export const VOICE_REFERENCE_MODES: VoiceReferenceMode[] = ['library', 'upload',
 export const VOICE_ENGINE_KINDS: VoiceEngineKind[] = ['local', 'cloud'];
 
 export interface VoicePatch {
+  name?: string;
   sampleText?: string;
   description?: string;
+  rights?: AssetRights;
+  collectionId?: number | null;
+  tags?: string[];
 }
 
 export interface VoiceEngineGroup {

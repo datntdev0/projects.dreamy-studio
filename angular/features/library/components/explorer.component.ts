@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Icon } from '@components/icon';
 import { collectionTabId } from '@layout/layout.models';
 import { TabsService } from '@layout/tabs.service';
@@ -9,7 +9,6 @@ import { LibraryCollectionAssetsService } from '../library.collection-assets.ser
 import { LibraryKind, LibraryTag } from '../library.models';
 import { sumCounts, tagsForKind } from '../library.rules';
 import { LibraryService } from '../library.service';
-import { LibraryVoiceService } from '../library.voices.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,16 +17,12 @@ import { LibraryVoiceService } from '../library.voices.service';
   templateUrl: './explorer.component.html',
   host: { 'data-testid': 'library-explorer' },
 })
-export class LibraryExplorer implements OnInit {
+export class LibraryExplorer {
   readonly library = inject(LibraryService);
   readonly tabs = inject(TabsService);
-  readonly voices = inject(LibraryVoiceService);
   private readonly collectionAssets = inject(LibraryCollectionAssetsService);
   readonly open = signal(true);
   readonly filtersOpen = signal(true);
-  ngOnInit(): void {
-    void this.voices.ensureLoaded();
-  }
   toggle(): void {
     this.open.set(!this.open());
   }
@@ -58,6 +53,7 @@ export class LibraryExplorer implements OnInit {
     if (active === 'sounds') return 'sound';
     if (active === 'videos') return 'video';
     if (active === 'prompts') return 'prompt';
+    if (active === 'voices') return 'voice';
     return null;
   }
   activeCollectionId(): number | null {

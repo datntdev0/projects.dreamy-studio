@@ -6,7 +6,7 @@ import { noop } from '@shared/utils/noop';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { LibraryGrid } from './library.grid';
 // prettier-ignore
-import { ImageCheck, ImagePatch, ImageSort, ImageUploadInput, ImageViewMode, LibraryImage } from './library.images.models';
+import { ImageCheck, ImagePatch, ImageUploadInput, ImageViewMode, LibraryImage } from './library.images.models';
 import { filterImages } from './library.images.rules';
 import { LibraryError } from './library.models';
 import { toLibraryError } from './library.rules';
@@ -33,7 +33,6 @@ export class LibraryImageService {
   readonly error = signal<LibraryError | null>(null);
   readonly selectedId = signal<number | null>(null);
   readonly query = signal('');
-  readonly sort = signal<ImageSort>('new');
   readonly viewMode = this.library.viewMode;
   readonly gridSize = this.grid.size;
   readonly gridRatio = this.grid.ratio;
@@ -171,7 +170,6 @@ export class LibraryImageService {
     this.pendingThumbnails.clear();
     this.selectedId.set(null);
     this.query.set('');
-    this.sort.set('new');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
@@ -185,7 +183,6 @@ export class LibraryImageService {
   private buildVisible(): LibraryImage[] {
     return filterImages(this.items(), {
       query: this.query(),
-      sort: this.sort(),
       collection: this.library.filterCollection(),
       tags: this.library.filterTags(),
     });

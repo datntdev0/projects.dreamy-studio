@@ -8,7 +8,6 @@ const VOICES: readonly SeedVoice[] = [
     name: 'Narrator An',
     description: 'Warm bedtime narrator',
     preset: 'Mai Anh',
-    sampleDurationMs: 3_500,
     createdAt: '2026-03-01T08:00:00Z',
   },
   {
@@ -26,7 +25,6 @@ const VOICES: readonly SeedVoice[] = [
     engineKind: 'cloud',
     source: 'design',
     prompt: 'female, young adult',
-    sampleDurationMs: null,
     createdAt: '2026-01-01T08:00:00Z',
   },
 ];
@@ -43,17 +41,15 @@ test.describe('CAP-05 Asset Library Management', () => {
       await openVoices(ui, picker, sandbox, VOICES);
       const list = ui.main.library.voices;
 
-      await test.step('shows each voice with avatar, description, engine, language, gender, sample length and a trailing preview button and the total', async () => {
-        await expect(list.count).toHaveText('3 voices');
+      await test.step('shows each voice with avatar, description, engine, language, gender and a trailing preview button', async () => {
         await expect(list.names).toHaveText(['Narrator An', 'Brother Minh', 'Cloud Ana']);
         const row = list.row('Narrator An');
         await expect(row.description).toHaveText('Warm bedtime narrator');
-        await expect(row.avatar).toHaveText('N');
+        await expect(row.avatar).toHaveText('NA');
         await expect(row.avatar).toHaveClass(/tone-[0-3]/);
         await expect(row.engine).toHaveText('VieNeu-TTS v3 Turbo');
         await expect(row.language).toHaveText('Vietnamese');
         await expect(row.gender).toHaveText('Female');
-        await expect(row.duration).toHaveText('0:04');
         await expect(row.cells.last().getByTestId('library-voice-play-button')).toHaveText(
           'Preview',
         );
@@ -99,28 +95,20 @@ test.describe('CAP-05 Asset Library Management', () => {
       await openVoices(ui, picker, sandbox, VOICES);
       const list = ui.main.library.voices;
 
-      await test.step('keeps only voices whose name or description matches, ignoring case, with the matched count', async () => {
+      await test.step('keeps only voices whose name or description matches, ignoring case', async () => {
         await list.search.fill('BROTHER');
         await expect(list.names).toHaveText(['Brother Minh']);
-        await expect(list.count).toHaveText('1 of 3 voices');
         await list.search.fill('announcer');
         await expect(list.names).toHaveText(['Cloud Ana']);
         await list.search.fill('');
       });
 
-      await test.step('keeps only voices of the chosen engine type, picked next to the new voice button', async () => {
-        await expect(list.toolbarRight.getByTestId('library-voices-filter')).toBeVisible();
+      await test.step('offers only the new voice button on the right, without an engine type filter', async () => {
+        await expect(list.toolbarRight.getByTestId('library-voices-filter')).toHaveCount(0);
         await expect(list.toolbarRight.getByTestId('library-voices-create')).toBeVisible();
-        await list.filter.getByRole('button', { name: 'Cloud', exact: true }).click();
-        await expect(list.names).toHaveText(['Cloud Ana']);
-        await list.filter.getByRole('button', { name: 'Local', exact: true }).click();
-        await expect(list.names).toHaveText(['Narrator An', 'Brother Minh']);
-        await list.filter.getByRole('button', { name: 'All', exact: true }).click();
-        await expect(list.names).toHaveCount(3);
       });
 
-      await test.step('clears the keyword and engine filter and lists the newest voices first', async () => {
-        await list.filter.getByRole('button', { name: 'Cloud', exact: true }).click();
+      await test.step('clears the keyword filter and lists the newest voices first', async () => {
         await list.search.fill('nobody');
         await expect(list.emptyFiltered).toBeVisible();
         await list.clearFilters.click();

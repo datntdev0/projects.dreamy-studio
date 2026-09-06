@@ -1,11 +1,10 @@
-import { ImageSort, LibraryImage } from './library.images.models';
+import { LibraryImage } from './library.images.models';
 import { CollectionFilter } from './library.models';
-import { compareFor, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
+import { hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
 export { fileNameOf, formatBytes } from './library.rules';
 
 export interface ImageFilters {
   query: string;
-  sort: ImageSort;
   collection: CollectionFilter;
   tags: string[];
 }
@@ -31,14 +30,9 @@ export function searchImages(items: LibraryImage[], query: string): LibraryImage
   return items.filter(matchesNameOrTags.bind(null, needle));
 }
 
-export function sortImages(items: LibraryImage[], sort: ImageSort): LibraryImage[] {
-  return [...items].sort(compareFor.bind(null, sort));
-}
-
 export function filterImages(items: LibraryImage[], filters: ImageFilters): LibraryImage[] {
   const searched = searchImages(items, filters.query);
-  const filtered = searched
+  return searched
     .filter(matchesCollection.bind(null, filters.collection))
     .filter(hasAllTags.bind(null, filters.tags));
-  return sortImages(filtered, filters.sort);
 }

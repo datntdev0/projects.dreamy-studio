@@ -11,16 +11,28 @@
       <label for="library-image-panel-name" data-testid="library-image-panel-name-label">
         {{ "library.image.field.name" | t }}
       </label>
-      <input
-        id="library-image-panel-name"
-        class="input"
-        maxlength="255"
-        [value]="image.name"
-        autocomplete="off"
-        data-testid="library-image-panel-name"
-        (blur)="nameBlur(image, $event)"
-        (keydown)="nameKeydown($event)"
-      />
+      <div class="lb-name-row" data-testid="library-image-panel-name-row">
+        <input
+          id="library-image-panel-name"
+          class="input"
+          maxlength="255"
+          [value]="image.name"
+          autocomplete="off"
+          data-testid="library-image-panel-name"
+          (blur)="nameBlur(image, $event)"
+          (keydown)="nameKeydown($event)"
+        />
+        <button
+          type="button"
+          class="btn btn-icon lb-ins-del"
+          [attr.aria-label]="'library.image.delete' | t"
+          [attr.title]="'library.image.delete' | t"
+          data-testid="library-image-panel-delete"
+          (click)="remove(image)"
+        >
+          <ds-icon name="trash" [size]="16" data-testid="library-image-panel-delete-icon" />
+        </button>
+      </div>
     </div>
   </section>
   <section class="ins-sec ins-form" data-testid="library-image-panel-fields">
@@ -155,17 +167,6 @@
       </dt>
       <dd data-testid="library-image-panel-info-origin">{{ originKey(image) | t }}</dd>
     </dl>
-  </section>
-  <section class="ins-sec ins-actions" data-testid="library-image-panel-actions">
-    <button
-      type="button"
-      class="btn btn-danger"
-      data-testid="library-image-panel-delete"
-      (click)="remove(image)"
-    >
-      <ds-icon name="trash" [size]="16" data-testid="library-image-panel-delete-icon" />
-      {{ "library.image.delete" | t }}
-    </button>
   </section>
 </section>
 } @else {

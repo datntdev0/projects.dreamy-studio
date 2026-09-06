@@ -109,14 +109,6 @@ export class LibrarySectionList {
     return this.part('search');
   }
 
-  get count(): Locator {
-    return this.part('count');
-  }
-
-  get sort(): Locator {
-    return this.part('sort');
-  }
-
   get gridView(): Locator {
     return this.part('view-grid');
   }
@@ -171,6 +163,10 @@ export class LibrarySectionList {
 
   row(name: string): Locator {
     return this.rows.filter({ hasText: name });
+  }
+
+  item(name: string): Locator {
+    return this.kind === 'prompt' ? this.row(name) : this.card(name);
   }
 
   protected part(suffix: string): Locator {
@@ -239,10 +235,6 @@ export class LibraryCollectionView {
 
   get title(): Locator {
     return this.page.getByTestId('library-collection-assets-title-text');
-  }
-
-  get count(): Locator {
-    return this.page.getByTestId('library-collection-assets-count');
   }
 
   get empty(): Locator {
@@ -393,42 +385,6 @@ export class PromptDialog {
     return this.page.getByTestId('library-upload-dialog-panel');
   }
 
-  get tabs(): Locator {
-    return this.page.getByTestId('library-upload-dialog-tabs');
-  }
-
-  get filesTab(): Locator {
-    return this.tabs.getByRole('button').nth(0);
-  }
-
-  get writeTab(): Locator {
-    return this.tabs.getByRole('button').nth(1);
-  }
-
-  get title(): Locator {
-    return this.panel.getByTestId('dialog-title');
-  }
-
-  get closeButton(): Locator {
-    return this.panel.getByTestId('dialog-close').getByTestId('button');
-  }
-
-  get dropzone(): Locator {
-    return this.page.getByTestId('library-upload-dialog-dropzone');
-  }
-
-  get dropzoneTitle(): Locator {
-    return this.page.getByTestId('library-upload-dialog-dropzone-title');
-  }
-
-  get pick(): Locator {
-    return this.page.getByTestId('library-upload-dialog-pick').getByTestId('button');
-  }
-
-  get queueRows(): Locator {
-    return this.page.getByTestId('library-upload-dialog-queue-row');
-  }
-
   get name(): Locator {
     return this.page.getByTestId('library-upload-dialog-write-name');
   }
@@ -476,24 +432,6 @@ export class PromptDialog {
   get cancel(): Locator {
     return this.page.getByTestId('library-upload-dialog-cancel').getByTestId('button');
   }
-
-  row(fileName: string): Locator {
-    return this.queueRows.filter({
-      has: withExactText(this.page.getByTestId('library-upload-dialog-file-name'), fileName),
-    });
-  }
-
-  badge(fileName: string): Locator {
-    return this.row(fileName).getByTestId('library-upload-dialog-status-badge');
-  }
-
-  message(fileName: string): Locator {
-    return this.row(fileName).getByTestId('library-upload-dialog-file-message');
-  }
-
-  size(fileName: string): Locator {
-    return this.row(fileName).getByTestId('library-upload-dialog-queue-size');
-  }
 }
 
 export class PromptInspector {
@@ -539,20 +477,6 @@ export class PromptAuthoringPage {
 
   get write(): Locator {
     return this.page.getByTestId('library-prompts-write');
-  }
-
-  get upload(): Locator {
-    return this.page.getByTestId('library-prompts-upload');
-  }
-
-  get cards(): Locator {
-    return this.page.getByTestId('library-prompts-card');
-  }
-
-  card(name: string): Locator {
-    return this.cards.filter({
-      has: withExactText(this.page.getByTestId('library-prompts-card-name'), name),
-    });
   }
 
   async setValue(field: Locator, value: string): Promise<void> {

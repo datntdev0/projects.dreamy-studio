@@ -2,6 +2,7 @@ use super::*;
 use crate::features::library::collections::AssetTable;
 use crate::features::library::models::AssetRights;
 use crate::features::library::models::LibraryKind;
+use crate::features::library::models::PromptKind;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::video::write_sample_clip;
@@ -30,13 +31,14 @@ fn asset_table(kind: LibraryKind) -> AssetTable {
         LibraryKind::Sound => "test_sound_assets",
         LibraryKind::Video => "test_video_assets",
         LibraryKind::Prompt => "test_prompt_assets",
+        LibraryKind::Voice => "test_voice_assets",
     };
     AssetTable { kind, table }
 }
 
 fn setup_assets(dir: &TempDir) -> Connection {
     let conn = Connection::open(dir.path().join(WORKSPACE_DB_FILE)).unwrap();
-    conn.execute_batch("CREATE TABLE test_image_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_sound_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_video_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_prompt_assets (id INTEGER PRIMARY KEY, collection_id INTEGER);").unwrap();
+    conn.execute_batch("CREATE TABLE test_image_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_sound_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_video_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_prompt_assets (id INTEGER PRIMARY KEY, collection_id INTEGER); CREATE TABLE test_voice_assets (id INTEGER PRIMARY KEY, collection_id INTEGER);").unwrap();
     conn
 }
 
@@ -854,8 +856,11 @@ fn streams_sound_and_video_ranges_with_kind_specific_clamps() {
     assert_eq!(clamped.bytes.len() as u64, StreamKind::Video.max_chunk());
 }
 
-fn prompt_input(collection_id: Option<i64>) -> AssetUploadInput {
-    AssetUploadInput {
+fn prompt_input(name: &str, text: &str, collection_id: Option<i64>) -> PromptCreateInput {
+    PromptCreateInput {
+        name: name.into(),
+        kind: PromptKind::General,
+        text: text.into(),
         collection_id,
         tags: vec!["Example".to_string()],
         rights: AssetRights::Own,
@@ -863,29 +868,31 @@ fn prompt_input(collection_id: Option<i64>) -> AssetUploadInput {
 }
 
 #[test]
-fn prompts_upload_create_update_list_and_delete() {
+fn prompts_create_update_list_and_delete() {
     let (dir, workspace) = fixture();
-    let source = dir.path().join("Harbor v1.2.md");
-    fs::write(&source, "\u{feff} hello\r\nworld \n").unwrap();
-    let uploaded = workspace
-        .prompt_upload(source.to_str().unwrap(), prompt_input(None))
+    let first = workspace
+        .prompt_create(prompt_input(
+            " Harbor v1.2 ",
+            "\u{feff} hello\r\nworld \n",
+            None,
+        ))
         .unwrap();
     assert_eq!(
         (
-            uploaded.name.as_str(),
-            uploaded.kind,
-            uploaded.origin.as_str(),
-            uploaded.text.as_str()
+            first.name.as_str(),
+            first.kind,
+            first.origin.as_str(),
+            first.text.as_str()
         ),
-        ("Harbor v1.2", PromptKind::General, "upload", "hello\nworld")
+        ("Harbor v1.2", PromptKind::General, "app", "hello\nworld")
     );
     assert!(
         dir.path()
-            .join(format!("library/prompts/{}.txt", uploaded.id))
+            .join(format!("library/prompts/{}.txt", first.id))
             .is_file()
     );
     let duplicate = workspace
-        .prompt_upload(source.to_str().unwrap(), prompt_input(None))
+        .prompt_create(prompt_input("Harbor v1.2", "again", None))
         .unwrap();
     assert_eq!(duplicate.name, "Harbor v1.2 (2)");
     let created = workspace
@@ -917,17 +924,13 @@ fn prompts_upload_create_update_list_and_delete() {
         .unwrap(),
         "new\ntext"
     );
-    fs::remove_file(
-        dir.path()
-            .join(format!("library/prompts/{}.txt", uploaded.id)),
-    )
-    .unwrap();
+    fs::remove_file(dir.path().join(format!("library/prompts/{}.txt", first.id))).unwrap();
     assert_eq!(
         workspace
             .prompt_list()
             .unwrap()
             .iter()
-            .find(|prompt| prompt.id == uploaded.id)
+            .find(|prompt| prompt.id == first.id)
             .unwrap()
             .text,
         ""
@@ -941,57 +944,11 @@ fn prompts_upload_create_update_list_and_delete() {
 }
 
 #[test]
-fn prompt_inspection_reports_all_file_errors_and_duplicate_warning() {
-    let (dir, workspace) = fixture();
-    let valid = dir.path().join("same.txt");
-    fs::write(&valid, "text").unwrap();
-    workspace
-        .prompt_upload(valid.to_str().unwrap(), prompt_input(None))
-        .unwrap();
-    let empty = dir.path().join("empty.txt");
-    fs::write(&empty, []).unwrap();
-    let png = dir.path().join("bad.png");
-    fs::write(&png, "x").unwrap();
-    let invalid = dir.path().join("invalid.txt");
-    fs::write(&invalid, [0xff]).unwrap();
-    let large = dir.path().join("large.txt");
-    fs::write(&large, vec![b'x'; prompts::PROMPT_MAX_BYTES + 1]).unwrap();
-    let checks = workspace
-        .prompt_inspect(&[
-            valid.to_string_lossy().to_string(),
-            empty.to_string_lossy().to_string(),
-            png.to_string_lossy().to_string(),
-            invalid.to_string_lossy().to_string(),
-            large.to_string_lossy().to_string(),
-            dir.path().join("missing.txt").to_string_lossy().to_string(),
-        ])
-        .unwrap();
-    let codes = checks
-        .iter()
-        .map(|check| check.code.as_deref().unwrap_or(""))
-        .collect::<Vec<_>>();
-    assert_eq!(
-        codes,
-        [
-            "duplicate_name",
-            "empty",
-            "unsupported",
-            "unreadable",
-            "too_large",
-            "not_found"
-        ]
-    );
-    assert_eq!(workspace.prompt_list().unwrap().len(), 1);
-}
-
-#[test]
 fn prompt_counts_collections_and_tags_include_prompts() {
-    let (dir, workspace) = fixture();
+    let (_dir, workspace) = fixture();
     let collection = workspace.collection_create(collection("Prompts")).unwrap();
-    let source = dir.path().join("file.txt");
-    fs::write(&source, "body").unwrap();
     let prompt = workspace
-        .prompt_upload(source.to_str().unwrap(), prompt_input(Some(collection.id)))
+        .prompt_create(prompt_input("file", "body", Some(collection.id)))
         .unwrap();
     assert_eq!(workspace.summary().unwrap().assets.prompt, 1);
     assert_eq!(workspace.collection_list().unwrap()[0].counts.prompt, 1);
@@ -1020,18 +977,16 @@ fn prompt_counts_collections_and_tags_include_prompts() {
 #[test]
 fn prompt_failures_leave_insert_clean_and_preserve_previous_update_text() {
     let (dir, workspace) = fixture();
-    let source = dir.path().join("clean.txt");
-    fs::write(&source, "before").unwrap();
     assert_eq!(
         workspace
-            .prompt_upload(source.to_str().unwrap(), prompt_input(Some(99_999)))
+            .prompt_create(prompt_input("clean", "before", Some(99_999)))
             .unwrap_err()
             .code,
         LibraryErrorCode::CollectionNotFound
     );
     assert!(workspace.prompt_list().unwrap().is_empty());
     let prompt = workspace
-        .prompt_upload(source.to_str().unwrap(), prompt_input(None))
+        .prompt_create(prompt_input("clean", "before", None))
         .unwrap();
     let error = workspace
         .prompt_update(

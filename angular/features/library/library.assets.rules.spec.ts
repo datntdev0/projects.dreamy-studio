@@ -45,15 +45,9 @@ describe('library assets', () => {
     expect(toAssetRows([], [], [])).toEqual([]);
   });
 
-  it('filters and sorts rows in a collection', () => {
-    const base = { query: '', sort: 'new' as const, collection: 9, tags: [] };
+  it('filters rows in a collection, newest first', () => {
+    const base = { query: '', collection: 9, tags: [] };
     expect(filterAssetRows(rows, base).map((row) => row.ref.id)).toEqual([4, 2, 1]);
-    expect(filterAssetRows(rows, { ...base, sort: 'name' }).map((row) => row.ref.id)).toEqual([
-      1, 4, 2,
-    ]);
-    expect(filterAssetRows(rows, { ...base, sort: 'size' }).map((row) => row.ref.id)).toEqual([
-      2, 1, 4,
-    ]);
     expect(filterAssetRows(rows, { ...base, query: 'secret' }).map((row) => row.ref.id)).toEqual([
       4,
     ]);

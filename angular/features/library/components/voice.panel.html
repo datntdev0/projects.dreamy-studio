@@ -1,11 +1,38 @@
 @if (voice(); as item) {
 <section data-testid="library-voice-panel-content">
   <section class="ins-sec lb-ins-top" data-testid="library-voice-panel-summary">
-    <div class="lb-vo-head" data-testid="library-voice-panel-head">
-      <app-library-voice-avatar [voice]="item" data-testid="library-voice-panel-avatar" />
-      <span class="t-ink lb-vo-head-name" data-testid="library-voice-panel-name">
-        {{ item.name }}
+    <div class="lb-ins-name" data-testid="library-voice-panel-type">
+      <span class="type-tag" data-testid="library-voice-panel-type-tag">
+        <ds-icon name="voice" [size]="13" data-testid="library-voice-panel-type-icon" />
+        {{ 'library.kind.voice' | t }}
       </span>
+    </div>
+    <div class="field" data-testid="library-voice-panel-name-field">
+      <label for="library-voice-panel-name" data-testid="library-voice-panel-name-label">
+        {{ 'library.voice.field.name' | t }}
+      </label>
+      <div class="lb-name-row" data-testid="library-voice-panel-name-row">
+        <input
+          id="library-voice-panel-name"
+          class="input"
+          maxlength="255"
+          [value]="item.name"
+          autocomplete="off"
+          data-testid="library-voice-panel-name"
+          (blur)="nameBlur(item, $event)"
+          (keydown)="nameKeydown($event)"
+        />
+        <button
+          type="button"
+          class="btn btn-icon lb-ins-del"
+          [attr.aria-label]="'library.voice.delete' | t"
+          [attr.title]="'library.voice.delete' | t"
+          data-testid="library-voice-panel-delete"
+          (click)="remove(item)"
+        >
+          <ds-icon name="trash" [size]="16" data-testid="library-voice-panel-delete-icon" />
+        </button>
+      </div>
     </div>
     <app-library-voice-engine [voice]="item" data-testid="library-voice-panel-engine" />
   </section>
@@ -41,22 +68,8 @@
         rows="3"
         [value]="item.sampleText"
         data-testid="library-voice-panel-sample-text"
-        (input)="sampleInput(item, $event)"
         (change)="sampleChange(item, $event)"
       ></textarea>
-    </div>
-    <div class="lb-vo-sample" data-testid="library-voice-panel-sample-player">
-      <app-library-voice-play
-        [voice]="item"
-        size="lg"
-        [disabled]="!ready(item)"
-        [hint]="notReadyHint()"
-        [text]="sampleText(item)"
-        data-testid="library-voice-panel-play"
-      />
-      <span class="mono t-sm t-mute" data-testid="library-voice-panel-duration">
-        {{ duration(item) }}
-      </span>
     </div>
   </section>
   <section class="ins-sec ins-form" data-testid="library-voice-panel-description-section">
@@ -76,6 +89,18 @@
         (change)="descriptionChange(item, $event)"
       ></textarea>
     </div>
+  </section>
+  <section class="ins-sec ins-form" data-testid="library-voice-panel-fields">
+    <app-library-asset-fields
+      fieldId="library-voice-panel"
+      [tags]="item.tags"
+      [collectionId]="item.collectionId"
+      [rights]="item.rights"
+      data-testid="library-voice-panel-asset-fields"
+      (tagsChange)="save(item, { tags: $event })"
+      (collectionChange)="save(item, { collectionId: $event })"
+      (rightsChange)="save(item, { rights: $event })"
+    />
   </section>
   <section class="ins-sec" data-testid="library-voice-panel-info">
     <span class="eyebrow" data-testid="library-voice-panel-info-title">
@@ -119,15 +144,6 @@
     >
       <ds-icon name="copy" [size]="16" data-testid="library-voice-panel-duplicate-icon" />
       {{ 'library.voice.duplicate' | t }}
-    </button>
-    <button
-      type="button"
-      class="btn btn-danger"
-      data-testid="library-voice-panel-delete"
-      (click)="remove(item)"
-    >
-      <ds-icon name="trash" [size]="16" data-testid="library-voice-panel-delete-icon" />
-      {{ 'library.voice.delete' | t }}
     </button>
   </section>
 </section>

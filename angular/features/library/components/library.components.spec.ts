@@ -73,7 +73,7 @@ const prompt = libraryPrompt({ id: 1, name: 'Scene prompt', tags: ['calm'] });
 function expectToneAvatar(mounted: Mounted<unknown>): void {
   const mark = byId(mounted.root, 'library-voice-avatar-mark') as HTMLElement;
   expect(mark.className.split(' ').sort()).toEqual(['lb-vo-av', 'tone-3']);
-  expect(mark.textContent?.trim()).toBe('N');
+  expect(mark.textContent?.trim()).toBe('NA');
 }
 
 function expectLabelledPlay(mounted: Mounted<unknown>): void {
@@ -314,7 +314,7 @@ const cases: ComponentCase[] = [
     type: LibraryUploadDialog,
     before: async () => {
       await warm();
-      TestBed.inject(LibraryDialogsService).openUpload([], 'prompt', null, 'write');
+      TestBed.inject(LibraryDialogsService).openUpload([], 'prompt');
     },
   },
 ];

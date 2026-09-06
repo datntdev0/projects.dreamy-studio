@@ -1,6 +1,4 @@
-import { AssetRights, LibrarySort } from './library.models';
-
-export type SoundSort = LibrarySort;
+import { AssetRights } from './library.models';
 
 export interface LibrarySound {
   id: number;

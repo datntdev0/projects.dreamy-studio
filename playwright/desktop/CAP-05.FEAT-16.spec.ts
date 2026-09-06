@@ -165,7 +165,7 @@ test.describe('CAP-05 Asset Library Management', () => {
         { prompts: [{ name: 'Scene', kind: 'image', text: 'Draw {{subject}} in {{style}}' }] },
         'prompts',
       );
-      await ui.main.library.prompts.card('Scene').click();
+      await ui.main.library.prompts.row('Scene').click();
       const panel = infoPanel(ui, 'prompt');
       await expect(panel.root).toBeVisible();
       await expect(panel.variables).toHaveText(['{{subject}}', '{{style}}']);

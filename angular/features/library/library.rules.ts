@@ -2,12 +2,10 @@ import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { AssetRights, CollectionFilter, KindCounts, LibraryCollection, LibraryError, LibraryKind, LibrarySort, LibraryTag } from './library.models';
+import { AssetRights, CollectionFilter, KindCounts, LibraryCollection, LibraryError, LibraryKind, LibraryTag } from './library.models';
 
-export interface Sortable {
+export interface Dated {
   id: number;
-  name: string;
-  size: number;
   createdAt: string;
 }
 export interface Searchable {
@@ -18,18 +16,8 @@ export interface Collectable {
   tags: string[];
   collectionId: number | null;
 }
-function compareNew(a: Sortable, b: Sortable): number {
+export function compareNewest(a: Dated, b: Dated): number {
   return b.createdAt.localeCompare(a.createdAt) || b.id - a.id;
-}
-function compareName(a: Sortable, b: Sortable): number {
-  return a.name.localeCompare(b.name) || a.id - b.id;
-}
-function compareSize(a: Sortable, b: Sortable): number {
-  return b.size - a.size || compareName(a, b);
-}
-export function compareFor(sort: LibrarySort, a: Sortable, b: Sortable): number {
-  if (sort === 'name') return compareName(a, b);
-  return sort === 'size' ? compareSize(a, b) : compareNew(a, b);
 }
 function tagContains(needle: string, tag: string): boolean {
   return tag.toLocaleLowerCase().includes(needle);
@@ -73,7 +61,7 @@ export function collectionCode(id: number): string {
   return `COL-${String(id).padStart(2, '0')}`;
 }
 export function sumCounts(counts: KindCounts): number {
-  return counts.image + counts.sound + counts.video + counts.prompt;
+  return counts.image + counts.sound + counts.video + counts.prompt + counts.voice;
 }
 function compareTags(a: LibraryTag, b: LibraryTag): number {
   return sumCounts(b.counts) - sumCounts(a.counts) || a.tag.localeCompare(b.tag);
@@ -153,7 +141,6 @@ export function libraryErrorKey(error: unknown): string {
   if (code === 'video_too_large') return 'library.error.videoTooLarge';
   if (code === 'video_unreadable') return 'library.error.videoUnreadable';
   if (code === 'prompt_not_found') return 'library.error.promptNotFound';
-  if (code === 'prompt_unsupported') return 'library.error.promptUnsupported';
   if (code === 'prompt_too_large') return 'library.error.promptTooLarge';
   if (code === 'prompt_unreadable') return 'library.error.promptUnreadable';
   if (code === 'prompt_empty') return 'library.error.promptEmpty';
@@ -187,4 +174,13 @@ export function fileNameOf(path: string): string {
   const segments = path.split(/[\\/]/);
   const last = segments[segments.length - 1];
   return last || path;
+}
+const AVATAR_TONES = 4;
+const FNV_OFFSET = 2166136261;
+const FNV_PRIME = 16777619;
+function fnvStep(hash: number, character: string): number {
+  return Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME);
+}
+export function nameTone(name: string): number {
+  return ([...name].reduce(fnvStep, FNV_OFFSET) >>> 0) % AVATAR_TONES;
 }

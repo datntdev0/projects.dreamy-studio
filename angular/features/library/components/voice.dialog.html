@@ -3,58 +3,114 @@
   [title]="'library.voice.dialog.title' | t"
   [eyebrow]="'library.cap' | t"
   [closeLabel]="'library.voice.dialog.close' | t"
+  size="large"
   data-testid="library-voice-dialog-panel"
   (closed)="close()"
 >
-  <div class="field" data-testid="library-voice-dialog-name-field">
-    <label for="library-voice-dialog-name" data-testid="library-voice-dialog-name-label">
-      {{ 'library.voice.field.name' | t }}
-      <span aria-hidden="true">*</span>
-    </label>
-    <input
-      id="library-voice-dialog-name"
-      class="input"
-      maxlength="255"
-      autocomplete="off"
-      [value]="name()"
-      [attr.placeholder]="'library.voice.dialog.namePlaceholder' | t"
-      data-testid="library-voice-dialog-name"
-      (input)="onName($event)"
-    />
-  </div>
   @if (!anyReady()) {
   <app-library-voice-notice data-testid="library-voice-dialog-notice" />
   }
-  <div class="field" data-testid="library-voice-dialog-engine-field">
-    <label for="library-voice-dialog-engine" data-testid="library-voice-dialog-engine-label">
-      {{ 'library.voice.field.engine' | t }}
-    </label>
-    <select
-      id="library-voice-dialog-engine"
-      class="select"
-      [disabled]="!anyReady()"
-      data-testid="library-voice-dialog-engine"
-      (change)="onEngine($event)"
-    >
-      @if (!anyReady()) {
-      <option value="" selected data-testid="library-voice-dialog-engine-placeholder">
-        {{ 'library.voice.dialog.enginePlaceholder' | t }}
-      </option>
-      } @for (group of engineGroups(); track group.kind) {
-      <optgroup [label]="groupKey(group) | t" data-testid="library-voice-dialog-engine-group">
-        @for (item of group.engines; track item.id) {
+  <div class="lb-vo-row" data-testid="library-voice-dialog-identity">
+    <div class="field" data-testid="library-voice-dialog-name-field">
+      <label for="library-voice-dialog-name" data-testid="library-voice-dialog-name-label">
+        {{ 'library.voice.field.name' | t }}
+        <span aria-hidden="true">*</span>
+      </label>
+      <input
+        id="library-voice-dialog-name"
+        class="input"
+        maxlength="255"
+        autocomplete="off"
+        [value]="name()"
+        [attr.placeholder]="'library.voice.dialog.namePlaceholder' | t"
+        data-testid="library-voice-dialog-name"
+        (input)="onName($event)"
+      />
+    </div>
+    <div class="field" data-testid="library-voice-dialog-engine-field">
+      <label for="library-voice-dialog-engine" data-testid="library-voice-dialog-engine-label">
+        {{ 'library.voice.field.engine' | t }}
+      </label>
+      <select
+        id="library-voice-dialog-engine"
+        class="select"
+        [disabled]="!anyReady()"
+        data-testid="library-voice-dialog-engine"
+        (change)="onEngine($event)"
+      >
+        @if (!anyReady()) {
+        <option value="" selected data-testid="library-voice-dialog-engine-placeholder">
+          {{ 'library.voice.dialog.enginePlaceholder' | t }}
+        </option>
+        } @for (group of engineGroups(); track group.kind) {
+        <optgroup [label]="groupKey(group) | t" data-testid="library-voice-dialog-engine-group">
+          @for (item of group.engines; track item.id) {
+          <option
+            [value]="item.id"
+            [disabled]="!item.ready"
+            [selected]="engine()?.id === item.id"
+            data-testid="library-voice-dialog-engine-option"
+          >
+            {{ engineText(item) }}
+          </option>
+          }
+        </optgroup>
+        }
+      </select>
+    </div>
+  </div>
+  @if (source() !== 'preset') {
+  <div class="lb-vo-row" data-testid="library-voice-dialog-traits">
+    <div class="field" data-testid="library-voice-dialog-language-field">
+      <label for="library-voice-dialog-language" data-testid="library-voice-dialog-language-label">
+        {{ 'library.voice.field.language' | t }}
+      </label>
+      <select
+        id="library-voice-dialog-language"
+        class="select"
+        data-testid="library-voice-dialog-language"
+        (change)="onLanguage($event)"
+      >
+        @for (code of languages; track code) {
         <option
-          [value]="item.id"
-          [disabled]="!item.ready"
-          [selected]="engine()?.id === item.id"
-          data-testid="library-voice-dialog-engine-option"
+          [value]="code"
+          [selected]="language() === code"
+          data-testid="library-voice-dialog-language-option"
         >
-          {{ engineText(item) }}
+          {{ languageText(code) }}
         </option>
         }
-      </optgroup>
-      }
-    </select>
+      </select>
+    </div>
+    <div class="field" data-testid="library-voice-dialog-gender-field">
+      <label data-testid="library-voice-dialog-gender-label">
+        {{ 'library.voice.field.gender' | t }}
+      </label>
+      <ds-segments
+        [label]="'library.voice.field.gender' | t"
+        [options]="genderOptions()"
+        [value]="gender()"
+        data-testid="library-voice-dialog-gender"
+        (valueChange)="onGender($event)"
+      />
+    </div>
+  </div>
+  }
+  <div class="field" data-testid="library-voice-dialog-description-field">
+    <label
+      for="library-voice-dialog-description"
+      data-testid="library-voice-dialog-description-label"
+    >
+      {{ 'library.voice.field.description' | t }}
+    </label>
+    <textarea
+      id="library-voice-dialog-description"
+      class="textarea"
+      rows="2"
+      [value]="description()"
+      data-testid="library-voice-dialog-description"
+      (input)="onDescription($event)"
+    ></textarea>
   </div>
   <div class="field" data-testid="library-voice-dialog-source-field">
     <label data-testid="library-voice-dialog-source-label">
@@ -70,26 +126,76 @@
   </div>
   @switch (source()) { @case ('preset') {
   <div class="field" data-testid="library-voice-dialog-preset-field">
-    <label for="library-voice-dialog-preset" data-testid="library-voice-dialog-preset-label">
-      {{ 'library.voice.dialog.preset' | t }}
-    </label>
+    <div class="lb-vo-pk-head" data-testid="library-voice-dialog-preset-head">
+      <label id="library-voice-dialog-preset-label" data-testid="library-voice-dialog-preset-label">
+        {{ 'library.voice.dialog.preset' | t }}
+      </label>
+      @if (presetFilterOptions().length > 2) {
+      <ds-segments
+        [label]="'library.voice.dialog.presetFilter' | t"
+        [options]="presetFilterOptions()"
+        [value]="presetFilter()"
+        data-testid="library-voice-dialog-preset-filter"
+        (valueChange)="onPresetFilter($event)"
+      />
+      }
+    </div>
     @if (presets().length) {
-    <select
-      id="library-voice-dialog-preset"
-      class="select"
+    <div
+      class="lb-vo-pk"
+      role="radiogroup"
+      aria-labelledby="library-voice-dialog-preset-label"
       data-testid="library-voice-dialog-preset"
-      (change)="onPreset($event)"
     >
-      @for (item of presets(); track item.id) {
-      <option
-        [value]="item.id"
-        [selected]="preset() === item.id"
+      @for (item of visiblePresets(); track item.id) {
+      <div
+        class="lb-vo-pk-item"
+        [class.is-on]="preset() === item.id"
+        [class.is-playing]="isSamplePlaying(item)"
         data-testid="library-voice-dialog-preset-option"
       >
-        {{ presetText(item) }}
-      </option>
+        <button
+          type="button"
+          class="lb-pbtn"
+          [attr.aria-label]="sampleLabel(item)"
+          [attr.aria-pressed]="isSamplePlaying(item)"
+          data-testid="library-voice-dialog-preset-play"
+          (click)="toggleSample(item)"
+        >
+          <ds-icon
+            [class.is-solid]="!isSamplePlaying(item)"
+            [name]="isSamplePlaying(item) ? 'pause' : 'play'"
+            [size]="12"
+            data-testid="library-voice-dialog-preset-play-icon"
+          />
+        </button>
+        <button
+          type="button"
+          class="lb-vo-pk-pick"
+          role="radio"
+          [attr.aria-checked]="preset() === item.id"
+          [attr.data-value]="item.id"
+          data-testid="library-voice-dialog-preset-pick"
+          (click)="selectPreset(item.id)"
+        >
+          <span class="lb-vo-pk-name" data-testid="library-voice-dialog-preset-name">
+            {{ item.name }}
+          </span>
+          <span class="lb-vo-pk-meta" data-testid="library-voice-dialog-preset-meta">
+            {{ presetMeta(item) }}
+          </span>
+        </button>
+        @if (preset() === item.id) {
+        <ds-icon
+          class="lb-vo-pk-check"
+          name="check"
+          [size]="14"
+          data-testid="library-voice-dialog-preset-check"
+        />
+        }
+      </div>
       }
-    </select>
+    </div>
     } @else {
     <p class="t-sm t-mute" data-testid="library-voice-dialog-preset-empty">
       {{ 'library.voice.dialog.noPresets' | t }}
@@ -263,55 +369,6 @@
     </p>
   </div>
   } }
-  <div class="field" data-testid="library-voice-dialog-language-field">
-    <label for="library-voice-dialog-language" data-testid="library-voice-dialog-language-label">
-      {{ 'library.voice.field.language' | t }}
-    </label>
-    <select
-      id="library-voice-dialog-language"
-      class="select"
-      data-testid="library-voice-dialog-language"
-      (change)="onLanguage($event)"
-    >
-      @for (code of languages; track code) {
-      <option
-        [value]="code"
-        [selected]="language() === code"
-        data-testid="library-voice-dialog-language-option"
-      >
-        {{ languageText(code) }}
-      </option>
-      }
-    </select>
-  </div>
-  <div class="field" data-testid="library-voice-dialog-gender-field">
-    <label data-testid="library-voice-dialog-gender-label">
-      {{ 'library.voice.field.gender' | t }}
-    </label>
-    <ds-segments
-      [label]="'library.voice.field.gender' | t"
-      [options]="genderOptions()"
-      [value]="gender()"
-      data-testid="library-voice-dialog-gender"
-      (valueChange)="onGender($event)"
-    />
-  </div>
-  <div class="field" data-testid="library-voice-dialog-description-field">
-    <label
-      for="library-voice-dialog-description"
-      data-testid="library-voice-dialog-description-label"
-    >
-      {{ 'library.voice.field.description' | t }}
-    </label>
-    <textarea
-      id="library-voice-dialog-description"
-      class="textarea"
-      rows="2"
-      [value]="description()"
-      data-testid="library-voice-dialog-description"
-      (input)="onDescription($event)"
-    ></textarea>
-  </div>
   <ds-button dialogFoot data-testid="library-voice-dialog-cancel" (pressed)="close()">
     {{ 'common.cancel' | t }}
   </ds-button>

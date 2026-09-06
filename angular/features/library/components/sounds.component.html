@@ -14,16 +14,6 @@
           (input)="onQuery($event)"
         />
       </label>
-      <span class="t-sm t-mute" data-testid="library-sounds-count">
-        @if (sounds.visible().length === sounds.items().length) {
-          {{ 'library.sound.countAll' | t: { count: sounds.visible().length } }}
-        } @else {
-          {{
-            'library.sound.countFiltered'
-              | t: { shown: sounds.visible().length, total: sounds.items().length }
-          }}
-        }
-      </span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-sounds-filter-chips">
           @if (library.filterCollection() !== null) {
@@ -79,23 +69,6 @@
     </div>
     <span class="spacer" data-testid="library-sounds-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-sounds-toolbar-right">
-      <select
-        class="select"
-        [value]="sounds.sort()"
-        [attr.aria-label]="'library.sound.sort' | t"
-        data-testid="library-sounds-sort"
-        (change)="onSort($event)"
-      >
-        <option value="new" data-testid="library-sounds-sort-new">
-          {{ 'library.sound.sort.new' | t }}
-        </option>
-        <option value="name" data-testid="library-sounds-sort-name">
-          {{ 'library.sound.sort.name' | t }}
-        </option>
-        <option value="size" data-testid="library-sounds-sort-size">
-          {{ 'library.sound.sort.size' | t }}
-        </option>
-      </select>
       <div
         class="seg"
         role="group"
@@ -227,9 +200,11 @@
         >
           <ng-template dsCell="name" let-row>
             <div class="nm-title" data-testid="library-sounds-table-name-wrap">
-              <span class="lb-th is-ic" data-testid="library-sounds-table-thumb">
-                <ds-icon name="music" [size]="16" />
-              </span>
+              <app-library-asset-avatar
+                [name]="soundOf(row).name"
+                icon="music"
+                data-testid="library-sounds-table-thumb"
+              />
               <div class="lb-rname" data-testid="library-sounds-table-name-content">
                 <div class="t-ink" data-testid="library-sounds-table-name-text">
                   {{ soundOf(row).name }}

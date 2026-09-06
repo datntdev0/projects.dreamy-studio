@@ -2,7 +2,7 @@ import { libraryPrompt } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { charCount, filterPrompts, promptCode, promptExcerpt, promptMeta, promptNameTooLong, promptSegments, promptTextTooLarge, promptVariables, searchPrompts, sortPrompts } from './library.prompts.rules';
+import { charCount, filterPrompts, promptCode, promptExcerpt, promptMeta, promptNameTooLong, promptSegments, promptTextTooLarge, promptVariables, searchPrompts } from './library.prompts.rules';
 
 describe('library.prompts.rules', () => {
   it('formats and measures', () => {
@@ -31,7 +31,7 @@ describe('library.prompts.rules', () => {
     expect(promptExcerpt('x'.repeat(200))).toBe(`${'x'.repeat(180)}…`);
   });
 
-  it('searches, sorts and filters', () => {
+  it('searches and filters', () => {
     const items = [
       libraryPrompt({
         id: 1,
@@ -47,23 +47,14 @@ describe('library.prompts.rules', () => {
     expect(searchPrompts(items, 'WORLD').map((item) => item.id)).toEqual([2]);
     expect(searchPrompts(items, 'x').map((item) => item.id)).toEqual([1]);
     expect(searchPrompts(items, '').length).toBe(2);
-    expect(sortPrompts(items, 'name')[0].id).toBe(2);
-    expect(sortPrompts(items, 'size')[0].id).toBe(2);
-    expect(sortPrompts(items, 'new')[0].id).toBe(2);
     expect(
-      filterPrompts(items, { query: '', sort: 'new', collection: 3, tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterPrompts(items, { query: '', collection: 3, tags: [] }).map((item) => item.id),
     ).toEqual([1]);
     expect(
-      filterPrompts(items, { query: '', sort: 'new', collection: 'none', tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterPrompts(items, { query: '', collection: 'none', tags: [] }).map((item) => item.id),
     ).toEqual([2]);
     expect(
-      filterPrompts(items, { query: '', sort: 'new', collection: null, tags: ['x'] }).map(
-        (item) => item.id,
-      ),
+      filterPrompts(items, { query: '', collection: null, tags: ['x'] }).map((item) => item.id),
     ).toEqual([1]);
   });
 });

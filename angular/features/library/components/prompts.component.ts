@@ -1,24 +1,21 @@
-// prettier-ignore
-import { ChangeDetectionStrategy, Component, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, inject, OnInit } from '@angular/core';
 // prettier-ignore
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
 import { Icon } from '@components/icon';
 import { CoreModule } from '@shared/core.module';
-import { DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
 import { LibraryConfirmService } from '../library.confirm.service';
 import { LibraryDialogsService } from '../library.dialogs.service';
-import { listenForLibraryDrops } from '../library.drag-drop';
 import { AssetRef } from '../library.models';
-import { LibraryPrompt, PromptSort } from '../library.prompts.models';
+import { LibraryPrompt } from '../library.prompts.models';
 import { promptMeta } from '../library.prompts.rules';
 import { LibraryPromptService } from '../library.prompts.service';
 import { formatBytes } from '../library.rules';
 import { LibraryService } from '../library.service';
-import { LibraryPromptMedia } from './prompt-media.component';
+import { LibraryAssetAvatar } from './asset-avatar.component';
 
 function toRef(prompt: LibraryPrompt): AssetRef {
   return { kind: 'prompt', id: prompt.id };
@@ -27,35 +24,22 @@ function toRef(prompt: LibraryPrompt): AssetRef {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-library-prompts',
-  imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryPromptMedia],
+  imports: [Datatable, DatatableCell, Icon, CoreModule, LibraryAssetAvatar],
   templateUrl: './prompts.component.html',
   host: { 'data-testid': 'library-prompts' },
 })
-export class LibraryPrompts implements OnInit, OnDestroy {
-  private readonly ipc = inject(DesktopIpcService);
+export class LibraryPrompts implements OnInit {
   readonly prompts = inject(LibraryPromptService);
   readonly library = inject(LibraryService);
   private readonly languageService = inject(LanguageService);
   readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
-  readonly dragging = signal(false);
-  private unlisten: DesktopUnlisten | null = null;
 
   ngOnInit(): void {
     void this.prompts.ensureLoaded();
-    void this.listenForDrops();
-  }
-  ngOnDestroy(): void {
-    this.unlisten?.();
   }
   onQuery(event: Event): void {
     this.prompts.query.set(fieldValue(event));
-  }
-  onSort(event: Event): void {
-    this.prompts.sort.set(fieldValue(event) as PromptSort);
-  }
-  setView(value: 'grid' | 'list'): void {
-    this.library.setViewMode(value);
   }
   select(prompt: LibraryPrompt): void {
     this.prompts.select(this.selected(prompt) ? null : prompt.id);
@@ -64,21 +48,8 @@ export class LibraryPrompts implements OnInit, OnDestroy {
     this.prompts.select(prompt.id);
     this.dialogs.openPromptPreview(prompt.id, this.prompts.visible().map(toRef));
   }
-  onKeydown(prompt: LibraryPrompt, event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.open(prompt);
-    }
-    if (event.key === ' ') {
-      event.preventDefault();
-      this.select(prompt);
-    }
-  }
-  openUpload(): void {
-    this.dialogs.openUpload([], 'prompt');
-  }
   openWrite(): void {
-    this.dialogs.openUpload([], 'prompt', null, 'write');
+    this.dialogs.openUpload([], 'prompt');
   }
   clear(): void {
     this.prompts.query.set('');
@@ -172,9 +143,6 @@ export class LibraryPrompts implements OnInit, OnDestroy {
     this.confirms.deletePrompts([id]);
   }
 
-  private async listenForDrops(): Promise<void> {
-    this.unlisten = await listenForLibraryDrops(this.ipc, this.dragging, this.dialogs, 'prompt');
-  }
   private dialogOpen(): boolean {
     return this.dialogs.previewPromptId() !== null || isModalOpen();
   }

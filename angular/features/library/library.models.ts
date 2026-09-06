@@ -1,14 +1,15 @@
 import { LanguageKey } from '@shared/language/language.models';
 
-export type LibraryKind = 'image' | 'sound' | 'video' | 'prompt';
+export type LibraryKind = 'image' | 'sound' | 'video' | 'prompt' | 'voice';
+export type UploadKind = Exclude<LibraryKind, 'voice'>;
 export type KindCounts = Record<LibraryKind, number>;
-export type LibrarySort = 'new' | 'name' | 'size';
 export type CollectionFilter = number | 'none' | null;
 export const LIBRARY_KINDS: { id: LibraryKind; icon: string; labelKey: LanguageKey }[] = [
   { id: 'image', icon: 'image', labelKey: 'library.kind.image' },
   { id: 'sound', icon: 'music', labelKey: 'library.kind.sound' },
   { id: 'video', icon: 'film', labelKey: 'library.kind.video' },
   { id: 'prompt', icon: 'prompt', labelKey: 'library.kind.prompt' },
+  { id: 'voice', icon: 'voice', labelKey: 'library.kind.voice' },
 ];
 export interface LibraryCollection {
   id: number;
@@ -55,7 +56,7 @@ export interface AssetPatch {
   collectionId?: number | null;
   tags?: string[];
 }
-export type AssetRef = { kind: 'image' | 'sound' | 'video' | 'prompt'; id: number };
+export type AssetRef = { kind: LibraryKind; id: number };
 export type LibraryErrorCode =
   | 'no_workspace'
   | 'invalid_input'
@@ -77,7 +78,6 @@ export type LibraryErrorCode =
   | 'video_too_large'
   | 'video_unreadable'
   | 'prompt_not_found'
-  | 'prompt_unsupported'
   | 'prompt_too_large'
   | 'prompt_unreadable'
   | 'prompt_empty'

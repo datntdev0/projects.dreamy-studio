@@ -56,9 +56,9 @@ test.describe('CAP-05 Asset Library Management', () => {
         );
       });
 
-      await test.step('shows engine, source with its detail, language, gender, dates, sample text and a play button', async () => {
+      await test.step('shows engine, source with its detail, language, gender, dates and sample text without a play button', async () => {
         await list.row('Narrator An').name.click();
-        await expect(panel.name).toHaveText('Narrator An');
+        await expect(panel.name).toHaveValue('Narrator An');
         await expect(panel.engine).toHaveText('VieNeu-TTS v3 Turbo');
         await expect(panel.sourceName).toHaveText('Preset');
         await expect(panel.sourceDetail).toHaveText('Mai Anh');
@@ -71,7 +71,7 @@ test.describe('CAP-05 Asset Library Management', () => {
           '2026-03-01 08:00',
         );
         await expect(panel.sampleText).toHaveValue(VOICE_SAMPLE_VI);
-        await expect(panel.play).toBeEnabled();
+        await expect(panel.playButtons).toHaveCount(0);
         await list.row('Old sage').name.click();
         await expect(panel.sourceDetail).toHaveText('male, elderly, low pitch');
         await list.row('Grandma').name.click();
@@ -94,6 +94,15 @@ test.describe('CAP-05 Asset Library Management', () => {
         await expect(list.row('Narrator An').description).toHaveText('Calm narrator');
       });
 
+      await test.step('tags the voice and changes its usage rights like other library resources', async () => {
+        await panel.tagInput.fill('warm');
+        await panel.tagInput.press('Enter');
+        await expect(panel.tags).toHaveText(['warm']);
+        await panel.rights.selectOption('licensed');
+        await expect.poll(() => readVoices(folder)[0].rights).toBe('licensed');
+        await expect(panel.collection).toHaveValue('');
+      });
+
       await test.step('reports a failed save', async () => {
         const spy = new IpcSpy(() => app.page);
         await spy.install();
@@ -105,14 +114,19 @@ test.describe('CAP-05 Asset Library Management', () => {
         await spy.mode(UPDATE_COMMAND, 'pass');
       });
 
-      await test.step('keeps name, engine, source, language and gender read-only and suggests creating a new voice instead', async () => {
-        for (const field of [
-          panel.name,
-          panel.engine,
-          panel.sourceName,
-          panel.language,
-          panel.gender,
-        ]) {
+      await test.step('renames the voice from the name field and keeps an empty name unchanged', async () => {
+        await list.row('Narrator An').name.click();
+        await panel.name.fill('Narrator Bình');
+        await panel.name.press('Enter');
+        await expect(list.row('Narrator Bình').name).toBeVisible();
+        await expect.poll(() => readVoices(folder)[0].name).toBe('Narrator Bình');
+        await panel.name.fill('  ');
+        await panel.name.press('Enter');
+        await expect(panel.name).toHaveValue('Narrator Bình');
+      });
+
+      await test.step('keeps engine, source, language and gender read-only and suggests creating a new voice instead', async () => {
+        for (const field of [panel.engine, panel.sourceName, panel.language, panel.gender]) {
           await expect(field.locator('input, select, textarea')).toHaveCount(0);
         }
         await expect(panel.immutableHint).toHaveText(
@@ -134,7 +148,7 @@ test.describe('CAP-05 Asset Library Management', () => {
         await list.row('Old sage').name.click();
         await panel.duplicate.click();
         await expect(ui.main.toast(DUPLICATED_TOAST)).toBeVisible();
-        await expect(panel.name).toHaveText('Old sage copy');
+        await expect(panel.name).toHaveValue('Old sage copy');
         await expect(list.row('Old sage copy').root).toHaveCount(1);
         const copy = readVoices(folder).find((voice) => voice.name === 'Old sage copy');
         expect(copy).toMatchObject({
@@ -148,10 +162,10 @@ test.describe('CAP-05 Asset Library Management', () => {
       await test.step('drops the reference of a voice cloned from an uploaded file and keeps a library reference', async () => {
         await list.row('My take').name.click();
         await panel.duplicate.click();
-        await expect(panel.name).toHaveText('My take copy');
+        await expect(panel.name).toHaveValue('My take copy');
         await list.row('Grandma').name.click();
         await panel.duplicate.click();
-        await expect(panel.name).toHaveText('Grandma copy');
+        await expect(panel.name).toHaveValue('Grandma copy');
         const rows = readVoices(folder);
         const takeCopy = rows.find((voice) => voice.name === 'My take copy');
         const grandmaCopy = rows.find((voice) => voice.name === 'Grandma copy');

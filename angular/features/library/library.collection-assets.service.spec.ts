@@ -31,7 +31,6 @@ describe('LibraryCollectionAssetsService', () => {
     assets.query.set('tune');
     expect(rows().map((row) => row.ref.kind)).toEqual(['sound']);
     assets.query.set('');
-    assets.sort.set('name');
     expect(rows()).toHaveLength(3);
   });
 

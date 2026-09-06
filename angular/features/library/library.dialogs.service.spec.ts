@@ -14,22 +14,20 @@ describe('LibraryDialogsService', () => {
   });
 
   it('opens and closes uploads', () => {
-    dialogs().openUpload(['a'], 'sound', 3, 'write');
+    dialogs().openUpload(['a'], 'sound', 3);
     expect(dialogs().uploadOpen()).toBe(true);
     expect([
       dialogs().uploadPaths(),
       dialogs().uploadKind(),
       dialogs().uploadCollectionId(),
-      dialogs().uploadMode(),
-    ]).toEqual([['a'], 'sound', 3, 'write']);
+    ]).toEqual([['a'], 'sound', 3]);
     dialogs().closeUpload();
     expect([
       dialogs().uploadOpen(),
       dialogs().uploadPaths(),
       dialogs().uploadKind(),
       dialogs().uploadCollectionId(),
-      dialogs().uploadMode(),
-    ]).toEqual([false, [], 'image', null, 'files']);
+    ]).toEqual([false, [], 'image', null]);
     dialogs().openUpload();
     expect(dialogs().uploadKind()).toBe('image');
   });

@@ -406,7 +406,7 @@ fn reopen_existing_workspace_uses_open_mode() {
     ));
     fixture.loader.enter(&fixture.session).unwrap();
     assert_eq!(fixture.service.recent_list().len(), 1);
-    assert_eq!(history_rows(&db_file(&fixture)), 18);
+    assert_eq!(history_rows(&db_file(&fixture)), 19);
 }
 
 #[test]
@@ -740,7 +740,7 @@ fn cancel_keeps_existing_workspace_and_recent_entry() {
         let (result, _) = run_load(&fixture, Some(trigger.clone()));
         assert_eq!(result.unwrap(), LoadOutcome::Cancelled, "{trigger:?}");
         assert!(db_file(&fixture).is_file(), "{trigger:?}");
-        assert_eq!(history_rows(&db_file(&fixture)), 18, "{trigger:?}");
+        assert_eq!(history_rows(&db_file(&fixture)), 19, "{trigger:?}");
         assert!(fixture.container.database_path.is_file());
         assert_eq!(fixture.service.recent_list(), recent_before, "{trigger:?}");
     }
@@ -770,7 +770,7 @@ fn cancel_after_ready_keeps_existing_workspace_db() {
     assert!(matches!(result, Ok(LoadOutcome::Ready { .. })));
     assert_eq!(fixture.session.cancel(), CancelOutcome::Cancelled);
     assert!(db_file(&fixture).is_file());
-    assert_eq!(history_rows(&db_file(&fixture)), 18);
+    assert_eq!(history_rows(&db_file(&fixture)), 19);
 }
 
 #[test]
@@ -876,7 +876,7 @@ fn enter_failure_keeps_existing_workspace() {
     drop_recent_table(&fixture);
     assert!(fixture.loader.enter(&fixture.session).is_err());
     assert!(db_file(&fixture).is_file());
-    assert_eq!(history_rows(&db_file(&fixture)), 18);
+    assert_eq!(history_rows(&db_file(&fixture)), 19);
 }
 
 #[test]
@@ -1052,7 +1052,7 @@ fn assert_first_kept(fixture: &Fixture, base: &Baseline, label: &str) {
     let list = fixture.service.recent_list_for(base.current.as_ref());
     assert_eq!(list, base.list, "{label}");
     assert_eq!(snapshot(&fixture.folder), base.files, "{label}");
-    assert_eq!(history_rows(&db_file(fixture)), 18, "{label}");
+    assert_eq!(history_rows(&db_file(fixture)), 19, "{label}");
     assert!(fixture.container.database_path.is_file(), "{label}");
     assert_eq!(fixture.backend.stopped(), 0, "{label}");
 }

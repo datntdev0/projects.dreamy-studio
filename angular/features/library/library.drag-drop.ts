@@ -3,13 +3,13 @@ import { WritableSignal } from '@angular/core';
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
 
 import { LibraryDialogsService } from './library.dialogs.service';
-import { LibraryKind } from './library.models';
+import { UploadKind } from './library.models';
 
 export function handleLibraryDragDrop(
   event: DesktopDragDropEvent,
   dragging: WritableSignal<boolean>,
   dialogs: LibraryDialogsService,
-  kind: LibraryKind,
+  kind: UploadKind,
 ): void {
   if (dialogs.uploadOpen()) {
     dragging.set(false);
@@ -33,7 +33,7 @@ export function listenForLibraryDrops(
   ipc: DesktopIpcService,
   dragging: WritableSignal<boolean>,
   dialogs: LibraryDialogsService,
-  kind: LibraryKind,
+  kind: UploadKind,
 ): Promise<DesktopUnlisten> {
   return ipc.onDragDrop((event) => handleLibraryDragDrop(event, dragging, dialogs, kind));
 }

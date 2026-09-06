@@ -1,8 +1,7 @@
 // prettier-ignore
-import { ASSET_RATIOS, ASSET_RIGHTS, AssetCheck, AssetCheckStatus, AssetPatch, AssetRights, AssetUploadInput, LibrarySort } from './library.models';
+import { ASSET_RATIOS, ASSET_RIGHTS, AssetCheck, AssetCheckStatus, AssetPatch, AssetRights, AssetUploadInput } from './library.models';
 
 export type ImageRights = AssetRights;
-export type ImageSort = LibrarySort;
 export type ImageViewMode = 'grid' | 'list';
 export type ImageCheckStatus = AssetCheckStatus;
 

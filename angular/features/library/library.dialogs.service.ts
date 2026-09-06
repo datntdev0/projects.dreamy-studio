@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-import { AssetRef } from './library.models';
+import { AssetRef, UploadKind } from './library.models';
 
 @Injectable({ providedIn: 'root' })
 export class LibraryDialogsService {
@@ -8,8 +8,7 @@ export class LibraryDialogsService {
   readonly createVoiceOpen = signal(false);
   readonly uploadOpen = signal(false);
   readonly uploadPaths = signal<string[]>([]);
-  readonly uploadKind = signal<'image' | 'sound' | 'video' | 'prompt'>('image');
-  readonly uploadMode = signal<'files' | 'write'>('files');
+  readonly uploadKind = signal<UploadKind>('image');
   readonly uploadCollectionId = signal<number | null>(null);
   readonly previewImageId = signal<number | null>(null);
   readonly previewSoundId = signal<number | null>(null);
@@ -30,14 +29,12 @@ export class LibraryDialogsService {
   }
   openUpload(
     paths: string[] = [],
-    kind: 'image' | 'sound' | 'video' | 'prompt' = 'image',
+    kind: UploadKind = 'image',
     collectionId: number | null = null,
-    mode: 'files' | 'write' = 'files',
   ): void {
     this.uploadPaths.set([...paths]);
     this.uploadKind.set(kind);
     this.uploadCollectionId.set(collectionId);
-    this.uploadMode.set(mode);
     this.uploadOpen.set(true);
   }
   closeUpload(): void {
@@ -45,7 +42,6 @@ export class LibraryDialogsService {
     this.uploadPaths.set([]);
     this.uploadKind.set('image');
     this.uploadCollectionId.set(null);
-    this.uploadMode.set('files');
   }
   openPreview(id: number, sequence: AssetRef[] | null = null): void {
     this.previewImageId.set(id);
@@ -79,7 +75,7 @@ export class LibraryDialogsService {
     if (ref.kind === 'sound') this.openSoundPreview(ref.id, sequence);
     else if (ref.kind === 'video') this.openVideoPreview(ref.id, sequence);
     else if (ref.kind === 'prompt') this.openPromptPreview(ref.id, sequence);
-    else this.openPreview(ref.id, sequence);
+    else if (ref.kind === 'image') this.openPreview(ref.id, sequence);
   }
   closePreview(): void {
     this.previewImageId.set(null);

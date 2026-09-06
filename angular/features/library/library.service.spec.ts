@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { LibraryService } from './library.service';
 
-const counts = (image = 0) => ({ image, sound: 0, video: 0, prompt: 0 });
+const counts = (image = 0) => ({ image, sound: 0, video: 0, prompt: 0, voice: 0 });
 
 describe('LibraryService', () => {
   let ipc: FakeIpc;

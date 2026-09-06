@@ -3,16 +3,16 @@ import { ChangeDetectionStrategy, Component, HostListener, inject, OnInit } from
 // prettier-ignore
 import { Datatable, DatatableCell, DatatableColumn, DatatableRowEvent } from '@components/datatable';
 import { Icon } from '@components/icon';
-import { SegmentOption, Segments } from '@components/segments';
 import { CoreModule } from '@shared/core.module';
 import { LanguageService } from '@shared/language/language.service';
 import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 
 import { LibraryConfirmService } from '../library.confirm.service';
 import { LibraryDialogsService } from '../library.dialogs.service';
-import { LibraryVoice, VoiceEngineFilter } from '../library.voices.models';
+import { LibraryService } from '../library.service';
+import { LibraryVoice } from '../library.voices.models';
 // prettier-ignore
-import { hasReadyEngine, voiceDurationText, voiceGenderKey, voiceLanguageText } from '../library.voices.rules';
+import { hasReadyEngine, voiceGenderKey, voiceLanguageText } from '../library.voices.rules';
 import { LibraryVoiceService } from '../library.voices.service';
 import { LibraryVoiceAvatar } from './voice-avatar.component';
 import { LibraryVoiceEngine } from './voice-engine.component';
@@ -26,7 +26,6 @@ import { LibraryVoicePlay } from './voice-play.component';
     Datatable,
     DatatableCell,
     Icon,
-    Segments,
     CoreModule,
     LibraryVoiceAvatar,
     LibraryVoiceEngine,
@@ -37,6 +36,7 @@ import { LibraryVoicePlay } from './voice-play.component';
 })
 export class LibraryVoices implements OnInit {
   readonly voices = inject(LibraryVoiceService);
+  private readonly library = inject(LibraryService);
   private readonly languageService = inject(LanguageService);
   private readonly dialogs = inject(LibraryDialogsService);
   private readonly confirms = inject(LibraryConfirmService);
@@ -48,10 +48,6 @@ export class LibraryVoices implements OnInit {
 
   onQuery(event: Event): void {
     this.voices.query.set(fieldValue(event));
-  }
-
-  onEngineFilter(value: string): void {
-    this.voices.engineFilter.set(value as VoiceEngineFilter);
   }
 
   select(voice: LibraryVoice): void {
@@ -69,11 +65,11 @@ export class LibraryVoices implements OnInit {
 
   clearAllFilters(): void {
     this.voices.query.set('');
-    this.voices.engineFilter.set('all');
+    this.library.clearFilters();
   }
 
   hasActiveFilters(): boolean {
-    return this.voices.query().trim().length > 0 || this.voices.engineFilter() !== 'all';
+    return this.voices.query().trim().length > 0 || this.library.filtersActive();
   }
 
   noEngineReady(): boolean {
@@ -92,20 +88,8 @@ export class LibraryVoices implements OnInit {
     return this.translate(voiceGenderKey(voice.gender));
   }
 
-  durationText(voice: LibraryVoice): string {
-    return voiceDurationText(voice) || '—';
-  }
-
   get notReadyHint(): string {
     return this.translate('library.voice.engine.notReady');
-  }
-
-  get engineOptions(): SegmentOption[] {
-    return [
-      { value: 'all', label: this.translate('library.voice.filter.all') },
-      { value: 'local', label: this.translate('library.voice.filter.local') },
-      { value: 'cloud', label: this.translate('library.voice.filter.cloud') },
-    ];
   }
 
   readonly tableRowClass = (row: object): Record<string, boolean> => ({
@@ -118,7 +102,6 @@ export class LibraryVoices implements OnInit {
       { key: 'engine', label: this.translate('library.voice.column.engine'), width: '190px' },
       { key: 'language', label: this.translate('library.voice.column.language'), width: '120px' },
       { key: 'gender', label: this.translate('library.voice.column.gender'), width: '90px' },
-      { key: 'duration', label: this.translate('library.voice.column.duration'), width: '110px' },
       { key: 'actions', label: '', width: '120px' },
     ];
   }

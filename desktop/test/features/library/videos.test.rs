@@ -235,6 +235,55 @@ fn fragmented_mp4() -> Vec<u8> {
     output
 }
 
+fn trex(default_duration: u32) -> Vec<u8> {
+    let mut payload = vec![0; 24];
+    payload[12..16].copy_from_slice(&default_duration.to_be_bytes());
+    boxed(b"trex", payload)
+}
+
+fn traf(track_id: u32, start: Option<u32>, durations: &[u32]) -> Vec<u8> {
+    let mut tfhd = vec![0; 8];
+    tfhd[4..8].copy_from_slice(&track_id.to_be_bytes());
+    let mut traf = boxed(b"tfhd", tfhd);
+    if let Some(start) = start {
+        let mut tfdt = vec![0; 8];
+        tfdt[4..8].copy_from_slice(&start.to_be_bytes());
+        traf.extend(boxed(b"tfdt", tfdt));
+    }
+    let mut trun = vec![0, 0, 0x01, 0x01];
+    trun.extend((durations.len() as u32).to_be_bytes());
+    trun.extend(0_u32.to_be_bytes());
+    for duration in durations {
+        trun.extend(duration.to_be_bytes());
+    }
+    traf.extend(boxed(b"trun", trun));
+    let mut default_trun = vec![0; 4];
+    default_trun.extend(2_u32.to_be_bytes());
+    traf.extend(boxed(b"trun", default_trun));
+    boxed(b"traf", traf)
+}
+
+fn fragmented_without_header_duration() -> Vec<u8> {
+    let mut track = video_track(b"vide", false);
+    let mdhd_duration = track
+        .windows(4)
+        .position(|window| window == b"mdhd")
+        .unwrap()
+        + 4
+        + 16;
+    track[mdhd_duration..mdhd_duration + 4].copy_from_slice(&0_u32.to_be_bytes());
+    let mut moov = mvhd(0, 0);
+    moov.extend(boxed(b"mvex", trex(100)));
+    moov.extend(track);
+    let mut output = boxed(b"ftyp", b"isom".to_vec());
+    output.extend(boxed(b"moov", moov));
+    output.extend(boxed(b"moof", traf(0, Some(0), &[400, 400])));
+    output.extend(boxed(b"mdat", vec![0; 16]));
+    output.extend(boxed(b"moof", traf(7, Some(0), &[9_000])));
+    output.extend(boxed(b"moof", traf(0, None, &[500])));
+    output
+}
+
 fn ebml(id: &[u8], payload: Vec<u8>) -> Vec<u8> {
     let mut output = Vec::new();
     output.extend_from_slice(id);
@@ -319,6 +368,20 @@ fn probes_rotation_and_fragment_duration_and_rejects_audio_track() {
         .unwrap_err()
         .code,
         LibraryErrorCode::VideoUnreadable
+    );
+}
+
+#[test]
+fn probes_duration_and_frame_rate_from_movie_fragments() {
+    let dir = TempDir::new().unwrap();
+    let info = probe(
+        &write(&dir, "fragments.mp4", &fragmented_without_header_duration()),
+        VideoFormat::Mp4,
+    )
+    .unwrap();
+    assert_eq!(
+        (info.duration_ms, info.width, info.height, info.fps),
+        (1_700, 1920, 1080, Some(4.12))
     );
 }
 

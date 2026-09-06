@@ -31,8 +31,8 @@ test.describe('CAP-05 Asset Library Management', () => {
           await confirmDeletionDialog(ui);
 
           await expect(ui.main.toast(deletedToast(target))).toBeVisible();
-          await expect(ui.main.library.section(target.kind).card(target.name)).toHaveCount(0);
-          await expect(ui.main.library.section(target.kind).card(target.keep)).toHaveCount(1);
+          await expect(ui.main.library.section(target.kind).item(target.name)).toHaveCount(0);
+          await expect(ui.main.library.section(target.kind).item(target.keep)).toHaveCount(1);
           const after = await snapshotLibrary(folder);
           expect(after.names[target.kind]).toEqual([target.keep]);
           expect(after.originals[target.kind]).toHaveLength(1);
@@ -54,7 +54,7 @@ test.describe('CAP-05 Asset Library Management', () => {
 
           await cancelDeletionDialog(ui);
 
-          await expect(ui.main.library.section(target.kind).card(target.keep)).toHaveCount(1);
+          await expect(ui.main.library.section(target.kind).item(target.keep)).toHaveCount(1);
         }
         await expectLibraryCounts(ui, { image: 1, sound: 1, video: 1, prompt: 1 });
         expect(await snapshotLibrary(folder)).toEqual(before);

@@ -353,6 +353,8 @@ fn probe_iso(file: &mut File) -> LibraryResult<VideoInfo> {
     let length = file.metadata()?.len();
     let mut offset = 0_u64;
     let mut moov = None;
+    let mut fragments = Vec::new();
+    let mut loaded = 0_u64;
     while offset < length {
         file.seek(SeekFrom::Start(offset))?;
         let Some((size, kind, header)) = read_box_header(file, length - offset)? else {
@@ -361,22 +363,26 @@ fn probe_iso(file: &mut File) -> LibraryResult<VideoInfo> {
         if size < header || size > length - offset {
             return Err(video_unreadable("invalid ISO box size"));
         }
-        if &kind == b"moov" {
+        if &kind == b"moov" || &kind == b"moof" {
             let payload_len = size - header;
-            if payload_len > MAX_MOOV_BYTES {
+            loaded = loaded.saturating_add(payload_len);
+            if loaded > MAX_MOOV_BYTES {
                 return Err(video_unreadable("moov box is too large"));
             }
             let mut data = vec![0; payload_len as usize];
             file.read_exact(&mut data)?;
-            moov = Some(data);
-            break;
+            if &kind == b"moov" {
+                moov = Some(data);
+            } else {
+                fragments.push(data);
+            }
         }
         offset = offset
             .checked_add(size)
             .ok_or_else(|| video_unreadable("invalid ISO box offset"))?;
     }
     let moov = moov.ok_or_else(|| video_unreadable("video has no moov box"))?;
-    parse_moov(&moov)
+    parse_moov(&moov, &fragments)
 }
 
 fn read_box_header(file: &mut File, remaining: u64) -> LibraryResult<Option<(u64, [u8; 4], u64)>> {
@@ -447,7 +453,7 @@ fn iso_find<'a>(data: &'a [u8], wanted: &[u8; 4]) -> LibraryResult<Option<&'a [u
     Ok(None)
 }
 
-fn parse_moov(data: &[u8]) -> LibraryResult<VideoInfo> {
+fn parse_moov(data: &[u8], fragments: &[Vec<u8>]) -> LibraryResult<VideoInfo> {
     let mvhd = iso_find(data, b"mvhd")?.ok_or_else(|| video_unreadable("video has no mvhd"))?;
     let (movie_scale, mut duration) = iso_time(mvhd)?;
     if duration == 0
@@ -470,16 +476,24 @@ fn parse_moov(data: &[u8]) -> LibraryResult<VideoInfo> {
         mut width,
         mut height,
         scale: track_scale,
-        duration: track_duration,
-        samples,
+        duration: mut track_duration,
+        mut samples,
+        track_id,
     } = video.ok_or_else(|| video_unreadable("video has no video track"))?;
-    if duration == 0 {
-        duration = track_duration;
+    if duration == 0 && track_duration == 0 && !fragments.is_empty() {
+        let totals = fragment_totals(data, fragments, track_id)?;
+        track_duration = totals.end;
+        samples = Some(totals.samples);
     }
-    let duration_ms = duration
+    let (ticks, scale) = if duration > 0 {
+        (duration, movie_scale)
+    } else {
+        (track_duration, track_scale)
+    };
+    let duration_ms = ticks
         .checked_mul(1000)
         .ok_or_else(|| video_unreadable("video duration overflows"))?
-        / movie_scale.max(1);
+        / scale.max(1);
     let fps = samples.and_then(|count| fps(count, track_scale, track_duration));
     if width == 0 || height == 0 {
         return Err(video_unreadable("video has invalid dimensions"));
@@ -529,6 +543,156 @@ struct VideoTrack {
     scale: u64,
     duration: u64,
     samples: Option<u64>,
+    track_id: u32,
+}
+
+struct FragmentTotals {
+    end: u64,
+    samples: u64,
+}
+
+struct FragmentHeader {
+    track_id: u32,
+    default_duration: Option<u32>,
+}
+
+const TFHD_BASE_DATA_OFFSET: u32 = 0x1;
+const TFHD_DESCRIPTION_INDEX: u32 = 0x2;
+const TFHD_DEFAULT_DURATION: u32 = 0x8;
+const TRUN_DATA_OFFSET: u32 = 0x1;
+const TRUN_FIRST_FLAGS: u32 = 0x4;
+const TRUN_SAMPLE_DURATION: u32 = 0x100;
+const TRUN_SAMPLE_FIELDS: [u32; 4] = [0x100, 0x200, 0x400, 0x800];
+
+fn be_u32(data: &[u8], at: usize) -> LibraryResult<u32> {
+    data.get(at..at + 4)
+        .map(|bytes| u32::from_be_bytes(bytes.try_into().unwrap()))
+        .ok_or_else(|| video_unreadable("truncated fragment box"))
+}
+
+fn be_u64(data: &[u8], at: usize) -> LibraryResult<u64> {
+    data.get(at..at + 8)
+        .map(|bytes| u64::from_be_bytes(bytes.try_into().unwrap()))
+        .ok_or_else(|| video_unreadable("truncated fragment box"))
+}
+
+fn box_flags(data: &[u8]) -> LibraryResult<u32> {
+    Ok(be_u32(data, 0)? & 0x00ff_ffff)
+}
+
+fn tkhd_track_id(data: &[u8]) -> LibraryResult<u32> {
+    match data.first() {
+        Some(1) => be_u32(data, 20),
+        _ => be_u32(data, 12),
+    }
+}
+
+fn trex_default_duration(moov: &[u8], track_id: u32) -> LibraryResult<u32> {
+    let Some(mvex) = iso_find(moov, b"mvex")? else {
+        return Ok(0);
+    };
+    for entry in iso_children(mvex)? {
+        if &entry.kind == b"trex" && be_u32(entry.payload, 4)? == track_id {
+            return be_u32(entry.payload, 12);
+        }
+    }
+    Ok(0)
+}
+
+fn parse_tfhd(data: &[u8]) -> LibraryResult<FragmentHeader> {
+    let flags = box_flags(data)?;
+    let mut at = 8;
+    if flags & TFHD_BASE_DATA_OFFSET != 0 {
+        at += 8;
+    }
+    if flags & TFHD_DESCRIPTION_INDEX != 0 {
+        at += 4;
+    }
+    let default_duration = if flags & TFHD_DEFAULT_DURATION != 0 {
+        Some(be_u32(data, at)?)
+    } else {
+        None
+    };
+    Ok(FragmentHeader {
+        track_id: be_u32(data, 4)?,
+        default_duration,
+    })
+}
+
+fn tfdt_time(data: &[u8]) -> LibraryResult<u64> {
+    match data.first() {
+        Some(1) => be_u64(data, 4),
+        _ => Ok(u64::from(be_u32(data, 4)?)),
+    }
+}
+
+fn trun_totals(data: &[u8], default_duration: u32) -> LibraryResult<(u64, u64)> {
+    let flags = box_flags(data)?;
+    let count = u64::from(be_u32(data, 4)?);
+    if flags & TRUN_SAMPLE_DURATION == 0 {
+        return Ok((count, count * u64::from(default_duration)));
+    }
+    let mut at = 8;
+    if flags & TRUN_DATA_OFFSET != 0 {
+        at += 4;
+    }
+    if flags & TRUN_FIRST_FLAGS != 0 {
+        at += 4;
+    }
+    let stride = TRUN_SAMPLE_FIELDS
+        .iter()
+        .filter(|field| flags & **field != 0)
+        .count()
+        * 4;
+    let mut ticks = 0_u64;
+    for index in 0..count as usize {
+        ticks += u64::from(be_u32(data, at + index * stride)?);
+    }
+    Ok((count, ticks))
+}
+
+fn add_traf(
+    totals: &mut FragmentTotals,
+    traf: &[u8],
+    track_id: u32,
+    trex_duration: u32,
+) -> LibraryResult<()> {
+    let tfhd = iso_find(traf, b"tfhd")?.ok_or_else(|| video_unreadable("fragment has no tfhd"))?;
+    let header = parse_tfhd(tfhd)?;
+    if header.track_id != track_id {
+        return Ok(());
+    }
+    let default_duration = header.default_duration.unwrap_or(trex_duration);
+    let mut end = match iso_find(traf, b"tfdt")? {
+        Some(tfdt) => tfdt_time(tfdt)?,
+        None => totals.end,
+    };
+    for entry in iso_children(traf)? {
+        if &entry.kind == b"trun" {
+            let (count, ticks) = trun_totals(entry.payload, default_duration)?;
+            end = end.saturating_add(ticks);
+            totals.samples += count;
+        }
+    }
+    totals.end = totals.end.max(end);
+    Ok(())
+}
+
+fn fragment_totals(
+    moov: &[u8],
+    fragments: &[Vec<u8>],
+    track_id: u32,
+) -> LibraryResult<FragmentTotals> {
+    let trex_duration = trex_default_duration(moov, track_id)?;
+    let mut totals = FragmentTotals { end: 0, samples: 0 };
+    for moof in fragments {
+        for entry in iso_children(moof)? {
+            if &entry.kind == b"traf" {
+                add_traf(&mut totals, entry.payload, track_id, trex_duration)?;
+            }
+        }
+    }
+    Ok(totals)
 }
 
 fn parse_track(data: &[u8]) -> LibraryResult<Option<VideoTrack>> {
@@ -543,6 +707,7 @@ fn parse_track(data: &[u8]) -> LibraryResult<Option<VideoTrack>> {
     let tkhd =
         iso_find(data, b"tkhd")?.ok_or_else(|| video_unreadable("video track has no tkhd"))?;
     let (width, height, rotated) = tkhd_dimensions(tkhd)?;
+    let track_id = tkhd_track_id(tkhd)?;
     let mdhd =
         iso_find(mdia, b"mdhd")?.ok_or_else(|| video_unreadable("video track has no mdhd"))?;
     let (scale, duration) = iso_time(mdhd)?;
@@ -562,6 +727,7 @@ fn parse_track(data: &[u8]) -> LibraryResult<Option<VideoTrack>> {
         scale,
         duration,
         samples,
+        track_id,
     }))
 }
 

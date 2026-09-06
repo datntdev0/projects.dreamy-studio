@@ -22,7 +22,6 @@ use crate::features::library::models::LibraryTag;
 use crate::features::library::models::LibraryVideo;
 use crate::features::library::models::LibraryVoice;
 use crate::features::library::models::PromptCreateInput;
-use crate::features::library::models::PromptKind;
 use crate::features::library::models::PromptPatch;
 use crate::features::library::models::StreamChunk;
 use crate::features::library::models::StreamKind;
@@ -365,55 +364,12 @@ impl LibraryWorkspace {
             .encode(sounds::peaks(self.database()?.connection(), id)?))
     }
 
-    pub fn prompt_inspect(&self, paths: &[String]) -> LibraryResult<Vec<AssetCheck>> {
-        let db = self.database()?;
-        paths
-            .iter()
-            .map(|path| inspect_prompt(db.connection(), path))
-            .collect()
-    }
-
-    pub fn prompt_upload(
-        &self,
-        path: &str,
-        input: AssetUploadInput,
-    ) -> LibraryResult<LibraryPrompt> {
-        let source = Path::new(path);
-        let metadata = fs::metadata(source)?;
-        let size = metadata.len();
-        prompt_extension(source)?;
-        if size == 0 {
-            return Err(LibraryError::new(
-                LibraryErrorCode::PromptEmpty,
-                "prompt file is empty",
-            ));
-        }
-        if size > prompts::PROMPT_MAX_BYTES as u64 {
-            return Err(LibraryError::new(
-                LibraryErrorCode::PromptTooLarge,
-                "prompt file exceeds 256 KiB",
-            ));
-        }
-        let text = prompts::decode_file(&fs::read(source)?)?;
-        let name = prompts::normalize_name(&prompts::name_from_file(&assets::file_name(source)?))?;
-        self.prompt_insert(NewPrompt {
-            name,
-            kind: PromptKind::General,
-            text,
-            rights: input.rights,
-            origin: "upload",
-            collection_id: input.collection_id,
-            tags: input.tags,
-        })
-    }
-
     pub fn prompt_create(&self, input: PromptCreateInput) -> LibraryResult<LibraryPrompt> {
         self.prompt_insert(NewPrompt {
             name: prompts::normalize_name(&input.name)?,
             kind: input.kind,
             text: prompts::normalize_text(&input.text)?,
             rights: input.rights,
-            origin: "app",
             collection_id: input.collection_id,
             tags: input.tags,
         })
@@ -739,17 +695,6 @@ impl LibraryWorkspace {
         Ok((voice, reference))
     }
 
-    pub fn voice_record_duration(
-        &self,
-        id: i64,
-        text: &str,
-        duration_ms: i64,
-    ) -> LibraryResult<()> {
-        let _guard = self.lock();
-        voices::record_sample_duration(self.database()?.connection(), id, text, duration_ms)?;
-        Ok(())
-    }
-
     pub fn stream(
         &self,
         kind: StreamKind,
@@ -838,12 +783,6 @@ const VIDEO_RULES: AssetRules = AssetRules {
     unique_name: videos::unique_name,
 };
 
-const PROMPT_RULES: AssetRules = AssetRules {
-    supported: |path| prompt_extension(path).is_ok(),
-    max_bytes: prompts::PROMPT_MAX_BYTES as u64,
-    unique_name: prompts::unique_name,
-};
-
 enum Screening {
     Rejected(AssetCheck),
     Accepted(i64),
@@ -916,32 +855,6 @@ fn inspect_video(conn: &rusqlite::Connection, path: &str) -> LibraryResult<Asset
     inspect_asset(conn, path, &VIDEO_RULES)
 }
 
-fn inspect_prompt(conn: &rusqlite::Connection, path: &str) -> LibraryResult<AssetCheck> {
-    let file_name = assets::display_name(path);
-    let size = match screen_file(path, &file_name, &PROMPT_RULES)? {
-        Screening::Rejected(check) => return Ok(check),
-        Screening::Accepted(size) => size,
-    };
-    if let Err(error) = prompts::decode_file(&fs::read(path)?) {
-        let code = match error.code {
-            LibraryErrorCode::PromptEmpty => "empty",
-            LibraryErrorCode::PromptUnreadable => "unreadable",
-            LibraryErrorCode::PromptTooLarge => "too_large",
-            _ => return Err(error),
-        };
-        return Ok(assets::check(
-            path,
-            file_name,
-            size,
-            AssetCheckStatus::Error,
-            code,
-        ));
-    }
-    let name = prompts::normalize_name(&prompts::name_from_file(&file_name))?;
-    let duplicate = prompts::unique_name(conn, &name, None)? != name;
-    Ok(finish_check(path, name, size, duplicate))
-}
-
 fn image_format(path: &Path) -> LibraryResult<ImageFormat> {
     let extension = assets::extension(path);
     image_format_from_extension(extension)
@@ -983,21 +896,6 @@ fn poster_frame(staged: &Path, name: &str, duration_ms: i64) -> Option<Vec<u8>> 
 fn video_format(path: &Path) -> LibraryResult<videos::VideoFormat> {
     let extension = assets::extension(path);
     video_format_from_extension(extension)
-}
-
-fn prompt_extension(path: &Path) -> LibraryResult<()> {
-    let extension = assets::extension(path);
-    if prompts::PROMPT_EXTENSIONS
-        .iter()
-        .any(|supported| extension.eq_ignore_ascii_case(supported))
-    {
-        Ok(())
-    } else {
-        Err(LibraryError::new(
-            LibraryErrorCode::PromptUnsupported,
-            format!("unsupported prompt extension: {extension}"),
-        ))
-    }
 }
 
 fn video_format_from_extension(extension: &str) -> LibraryResult<videos::VideoFormat> {

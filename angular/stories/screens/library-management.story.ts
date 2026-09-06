@@ -57,7 +57,7 @@ export const Videos: Story = screen(
 
 export const Prompts: Story = screen(
   'library-explorer-prompts',
-  '[data-testid="library-prompts-card"]',
+  '[data-testid="library-prompts-table-row"]',
 );
 
 export const Collections: Story = screen(

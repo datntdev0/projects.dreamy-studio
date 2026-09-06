@@ -7,7 +7,7 @@ import { WorkspaceService } from '../workspace/workspace.service';
 import { KindCounts, LibraryCollection, LibraryError, LibraryKind, LibrarySummary, LibraryTag, TaxonomySelection } from './library.models';
 import { hasCollectionName, searchTags, sortTags, toLibraryError } from './library.rules';
 
-const EMPTY_COUNTS: KindCounts = { image: 0, sound: 0, video: 0, prompt: 0 };
+const EMPTY_COUNTS: KindCounts = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 const EMPTY_SUMMARY: LibrarySummary = { assets: EMPTY_COUNTS, unfiled: EMPTY_COUNTS };
 const VIEW_STORAGE_KEY = 'ds.lb.view';
 
@@ -214,6 +214,7 @@ export class LibraryService {
     if (kind === 'sound') this.tabs.openSounds();
     else if (kind === 'video') this.tabs.openVideos();
     else if (kind === 'prompt') this.tabs.openPrompts();
+    else if (kind === 'voice') this.tabs.openVoices();
     else this.tabs.openImages();
   }
   reset(): void {

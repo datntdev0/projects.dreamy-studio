@@ -18,7 +18,6 @@ export class LibraryVoicePlay {
   readonly size = input<'sm' | 'lg' | null>(null);
   readonly disabled = input(false);
   readonly hint = input<string | null>(null);
-  readonly text = input<string | null>(null);
   readonly labelled = input(false);
   private readonly voices = inject(LibraryVoiceService);
   isPlaying(): boolean {
@@ -36,7 +35,7 @@ export class LibraryVoicePlay {
     return this.isPlaying() ? 'library.voice.stop' : 'library.voice.play';
   }
   caption(): LanguageKey {
-    if (this.isPreparing()) return 'library.voice.preparing';
+    if (this.isPreparing()) return 'library.voice.previewPreparing';
     return this.isPlaying() ? 'library.voice.previewStop' : 'library.voice.preview';
   }
   iconSize(): number {
@@ -49,6 +48,6 @@ export class LibraryVoicePlay {
   toggle(event: Event): void {
     event.stopPropagation();
     this.voices.select(this.voice().id);
-    void this.voices.togglePreview(this.voice().id, this.text() ?? undefined);
+    void this.voices.togglePreview(this.voice().id);
   }
 }

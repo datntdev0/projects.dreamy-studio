@@ -12,7 +12,7 @@ import { LibraryConfirmService } from '../library.confirm.service';
 import { LibraryDialogsService } from '../library.dialogs.service';
 import { dimensionsText } from '../library.images.rules';
 import { LibraryImageService } from '../library.images.service';
-import { AssetRef } from '../library.models';
+import { AssetRef, LIBRARY_KINDS, LibraryKind } from '../library.models';
 import { charCount } from '../library.prompts.rules';
 import { LibraryPromptService } from '../library.prompts.service';
 import { formatBytes } from '../library.rules';
@@ -21,15 +21,33 @@ import { durationText } from '../library.sounds.rules';
 import { LibrarySoundService } from '../library.sounds.service';
 import { videoMeta } from '../library.videos.rules';
 import { LibraryVideoService } from '../library.videos.service';
+import { voiceGenderKey } from '../library.voices.rules';
+import { LibraryVoiceService } from '../library.voices.service';
+import { LibraryAssetAvatar } from './asset-avatar.component';
 import { LibraryImageThumb } from './image-thumb.component';
 import { LibraryPromptMedia } from './prompt-media.component';
 import { LibrarySoundMedia } from './sound-media.component';
 import { LibrarySoundPlay } from './sound-play.component';
 import { LibraryVideoMedia } from './video-media.component';
 import { LibraryVideoThumb } from './video-thumb.component';
+import { LibraryVoiceAvatar } from './voice-avatar.component';
 
 function rowRef(row: AssetRow): AssetRef {
   return row.ref;
+}
+
+function isPreviewable(row: AssetRow): boolean {
+  return row.ref.kind !== 'voice';
+}
+
+type KindInfo = (typeof LIBRARY_KINDS)[number];
+
+function isKind(kind: LibraryKind, entry: KindInfo): boolean {
+  return entry.id === kind;
+}
+
+function kindInfo(kind: LibraryKind): KindInfo {
+  return LIBRARY_KINDS.find(isKind.bind(null, kind)) ?? LIBRARY_KINDS[0];
 }
 
 function inCollection(collectionId: number, row: AssetRow): boolean {
@@ -48,6 +66,8 @@ function inCollection(collectionId: number, row: AssetRow): boolean {
     LibraryVideoMedia,
     LibraryVideoThumb,
     LibraryPromptMedia,
+    LibraryAssetAvatar,
+    LibraryVoiceAvatar,
   ],
   templateUrl: './collection-assets.component.html',
   host: { 'data-testid': 'library-collection-assets' },
@@ -58,6 +78,7 @@ export class LibraryCollectionAssets implements OnInit {
   private readonly sounds = inject(LibrarySoundService);
   private readonly videos = inject(LibraryVideoService);
   private readonly prompts = inject(LibraryPromptService);
+  private readonly voices = inject(LibraryVoiceService);
   private readonly languageService = inject(LanguageService);
   readonly library = inject(LibraryService);
   readonly assets = inject(LibraryCollectionAssetsService);
@@ -72,14 +93,11 @@ export class LibraryCollectionAssets implements OnInit {
     void this.sounds.ensureLoaded();
     void this.videos.ensureLoaded();
     void this.prompts.ensureLoaded();
+    void this.voices.ensureLoaded();
   }
 
   onQuery(event: Event): void {
     this.assets.query.set(fieldValue(event));
-  }
-
-  onSort(event: Event): void {
-    this.assets.sort.set(fieldValue(event) as 'new' | 'name' | 'size');
   }
 
   setView(value: 'grid' | 'list'): void {
@@ -92,7 +110,11 @@ export class LibraryCollectionAssets implements OnInit {
 
   open(row: AssetRow): void {
     this.select(row);
-    this.dialogs.openPreviewRef(row.ref, this.visible().map(rowRef));
+    if (row.voice) {
+      void this.voices.togglePreview(row.voice.id);
+      return;
+    }
+    this.dialogs.openPreviewRef(row.ref, this.visible().filter(isPreviewable).map(rowRef));
   }
 
   onRowKeydown(row: AssetRow, event: KeyboardEvent): void {
@@ -110,12 +132,9 @@ export class LibraryCollectionAssets implements OnInit {
     this.uploadMenuOpen.update((open) => !open);
   }
 
-  openUpload(
-    kind: 'image' | 'sound' | 'video' | 'prompt',
-    mode: 'files' | 'write' = 'files',
-  ): void {
+  openUpload(kind: 'image' | 'sound' | 'video' | 'prompt'): void {
     this.uploadMenuOpen.set(false);
-    this.dialogs.openUpload([], kind, this.collectionId(), mode);
+    this.dialogs.openUpload([], kind, this.collectionId());
   }
 
   clearAllFilters(): void {
@@ -128,6 +147,10 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   meta(row: AssetRow): string {
+    if (row.voice) {
+      const gender = this.languageService.translate(voiceGenderKey(row.voice.gender));
+      return `${this.voices.engineName(row.voice)} · ${gender}`;
+    }
     if (row.video) {
       return videoMeta(row.video);
     }
@@ -144,21 +167,15 @@ export class LibraryCollectionAssets implements OnInit {
   }
 
   size(row: AssetRow): string {
-    return formatBytes(row.size);
+    return row.voice ? '—' : formatBytes(row.size);
   }
 
   typeKey(row: AssetRow): LanguageKey {
-    if (row.ref.kind === 'prompt') return 'library.kind.prompt';
-    return row.ref.kind === 'image'
-      ? 'library.kind.image'
-      : row.ref.kind === 'sound'
-        ? 'library.kind.sound'
-        : 'library.kind.video';
+    return kindInfo(row.ref.kind).labelKey;
   }
 
   typeIcon(row: AssetRow): string {
-    if (row.ref.kind === 'prompt') return 'prompt';
-    return row.ref.kind === 'image' ? 'image' : row.ref.kind === 'sound' ? 'music' : 'film';
+    return kindInfo(row.ref.kind).icon;
   }
 
   collectionName(row: AssetRow): string {
@@ -198,6 +215,7 @@ export class LibraryCollectionAssets implements OnInit {
     if (selected.kind === 'image') this.confirms.deleteImages([selected.id]);
     else if (selected.kind === 'sound') this.confirms.deleteSounds([selected.id]);
     else if (selected.kind === 'video') this.confirms.deleteVideos([selected.id]);
+    else if (selected.kind === 'voice') this.confirms.deleteVoices([selected.id]);
     else this.confirms.deletePrompts([selected.id]);
   }
 

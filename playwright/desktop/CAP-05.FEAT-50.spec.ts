@@ -32,31 +32,25 @@ test.describe('CAP-05 Asset Library Management', () => {
       const dialog = ui.main.library.voiceDialog;
       await openDialog(ui);
 
-      await test.step('shows name, engine, source, language, gender and description with preset, Vietnamese, female and the first ready engine by default', async () => {
-        for (const field of [
-          dialog.name,
-          dialog.engine,
-          dialog.source,
-          dialog.language,
-          dialog.gender,
-          dialog.description,
-        ]) {
+      await test.step('shows name, engine, description and source with preset and the first ready engine by default, hiding language and gender for presets', async () => {
+        for (const field of [dialog.name, dialog.engine, dialog.description, dialog.source]) {
           await expect(field).toBeVisible();
         }
+        await expect(dialog.language).toBeHidden();
+        await expect(dialog.gender).toBeHidden();
         await expect(dialog.engine).toHaveValue('vieneu-turbo');
         await expect(dialog.sourceOption('Preset')).toHaveAttribute('aria-pressed', 'true');
-        await expect(dialog.language).toHaveValue('vi');
-        await expect(dialog.genderOption('Female')).toHaveAttribute('aria-pressed', 'true');
-        await expect(dialog.preset).toHaveValue('Kim Thanh');
+        await expect(dialog.presetPick('Kim Thanh')).toHaveAttribute('aria-checked', 'true');
       });
 
       await test.step('offers the preset voices of the engine with their gender, region and style', async () => {
         await expect(dialog.presetOptions).toHaveCount(25);
-        await expect(dialog.presetOptions.filter({ hasText: 'Mai Anh' })).toHaveText(
-          'Mai Anh · Female · Northern · News',
+        await expect(dialog.presetMeta('Mai Anh')).toHaveText('Female · Northern · News');
+        await expect(dialog.presetPlay('Mai Anh')).toHaveAttribute(
+          'aria-label',
+          'Listen to Mai Anh',
         );
-        await dialog.preset.selectOption('Hải Đăng');
-        await expect(dialog.genderOption('Male')).toHaveAttribute('aria-pressed', 'true');
+        await dialog.presetPick('Hải Đăng').click();
         await dialog.engine.selectOption('omnivoice');
         await expect(dialog.presetOptions).toHaveCount(7);
         await dialog.engine.selectOption('vieneu-turbo');
@@ -127,6 +121,9 @@ test.describe('CAP-05 Asset Library Management', () => {
         await expect(dialog.sourceOption('Clone')).toBeDisabled();
         await expect(dialog.sourceOption('Design')).toBeDisabled();
         await expect(dialog.sourceOption('Preset')).toHaveAttribute('aria-pressed', 'true');
+        await expect(dialog.presetOptions).toHaveCount(2);
+        await expect(dialog.presetMeta('Hoài My')).toHaveText('Female · Northern · Natural');
+        await expect(dialog.presetMeta('Nam Minh')).toHaveText('Male · Northern · Natural');
         await dialog.engine.selectOption('omnivoice');
         await expect(dialog.sourceOption('Design')).toHaveAttribute('aria-pressed', 'true');
         await expect(dialog.prompt).toBeVisible();

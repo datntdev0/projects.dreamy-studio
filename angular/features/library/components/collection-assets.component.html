@@ -20,12 +20,6 @@
           (input)="onQuery($event)"
         />
       </label>
-      <span class="t-sm t-mute" data-testid="library-collection-assets-count">
-        {{ 'library.collection.count' | t: { count: visible().length } }}
-        @if (visible().length !== total()) {
-          / {{ total() }}
-        }
-      </span>
       @if (library.filterTags().length) {
         <span class="nm-chips" data-testid="library-collection-assets-filter-chips">
           @for (tag of library.filterTags(); track tag) {
@@ -59,23 +53,6 @@
     </div>
     <span class="spacer" data-testid="library-collection-assets-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-collection-assets-toolbar-right">
-      <select
-        class="select"
-        [value]="assets.sort()"
-        [attr.aria-label]="'library.sound.sort' | t"
-        data-testid="library-collection-assets-sort"
-        (change)="onSort($event)"
-      >
-        <option value="new" data-testid="library-collection-assets-sort-new">
-          {{ 'library.sound.sort.new' | t }}
-        </option>
-        <option value="name" data-testid="library-collection-assets-sort-name">
-          {{ 'library.sound.sort.name' | t }}
-        </option>
-        <option value="size" data-testid="library-collection-assets-sort-size">
-          {{ 'library.sound.sort.size' | t }}
-        </option>
-      </select>
       <div
         class="seg"
         role="group"
@@ -165,21 +142,8 @@
             <button
               type="button"
               class="btn btn-sm btn-ghost"
-              data-testid="library-collection-assets-upload-prompt"
-              (click)="openUpload('prompt')"
-            >
-              <ds-icon
-                name="prompt"
-                [size]="16"
-                data-testid="library-collection-assets-upload-prompt-icon"
-              />
-              {{ 'library.collection.uploadPrompt' | t }}
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-ghost"
               data-testid="library-collection-assets-write-prompt"
-              (click)="openUpload('prompt', 'write')"
+              (click)="openUpload('prompt')"
             >
               <ds-icon
                 name="pen"
@@ -263,6 +227,13 @@
                   [prompt]="prompt"
                   data-testid="library-collection-assets-card-prompt"
                 />
+              } @else if (row.voice; as voice) {
+                <div class="lb-media is-voice" data-testid="library-collection-assets-card-voice">
+                  <app-library-voice-avatar
+                    [voice]="voice"
+                    data-testid="library-collection-assets-card-voice-avatar"
+                  />
+                </div>
               }
               <div class="lb-card-b" data-testid="library-collection-assets-card-body">
                 <div class="lb-name" data-testid="library-collection-assets-card-name">
@@ -338,17 +309,17 @@
                         [playable]="true"
                         data-testid="library-collection-assets-table-video"
                       />
-                    } @else if (row.prompt) {
-                      <span
-                        class="lb-th is-ic"
+                    } @else if (row.prompt; as prompt) {
+                      <app-library-asset-avatar
+                        [name]="prompt.name"
+                        icon="prompt"
                         data-testid="library-collection-assets-table-prompt"
-                      >
-                        <ds-icon
-                          name="prompt"
-                          [size]="18"
-                          data-testid="library-collection-assets-table-prompt-icon"
-                        />
-                      </span>
+                      />
+                    } @else if (row.voice; as voice) {
+                      <app-library-voice-avatar
+                        [voice]="voice"
+                        data-testid="library-collection-assets-table-voice"
+                      />
                     }
                     <div
                       class="lb-rname"

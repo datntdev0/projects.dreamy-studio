@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Icon } from '@components/icon';
 import { SettingsService } from '@features/settings/settings.service';
 import { CoreModule } from '@shared/core.module';
@@ -11,16 +11,15 @@ import { LibraryConfirmService } from '../library.confirm.service';
 import { formatIsoMinute } from '../library.rules';
 import { LibraryVoice, VoicePatch } from '../library.voices.models';
 // prettier-ignore
-import { engineSection, voiceById, voiceDurationText, voiceGenderKey, voiceLanguageText, voiceSourceDetail, voiceSourceNameKey } from '../library.voices.rules';
+import { engineSection, voiceById, voiceGenderKey, voiceLanguageText, voiceSourceDetail, voiceSourceNameKey } from '../library.voices.rules';
 import { LibraryVoiceService } from '../library.voices.service';
-import { LibraryVoiceAvatar } from './voice-avatar.component';
+import { LibraryAssetFields } from './asset-fields.component';
 import { LibraryVoiceEngine } from './voice-engine.component';
-import { LibraryVoicePlay } from './voice-play.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-library-voice-panel',
-  imports: [Icon, CoreModule, LibraryVoiceAvatar, LibraryVoiceEngine, LibraryVoicePlay],
+  imports: [Icon, CoreModule, LibraryAssetFields, LibraryVoiceEngine],
   templateUrl: './voice.panel.html',
   host: { 'data-testid': 'library-voice-panel' },
 })
@@ -33,7 +32,6 @@ export class LibraryVoicePanel {
   private readonly toasts = inject(ToastService);
   private readonly translate = this.languageService.translate.bind(this.languageService);
   readonly voice = computed(this.resolveVoice.bind(this));
-  private readonly sampleDraft = signal<{ id: number; text: string } | null>(null);
 
   ready(voice: LibraryVoice): boolean {
     return this.voices.isReady(voice);
@@ -41,14 +39,6 @@ export class LibraryVoicePanel {
 
   engineName(voice: LibraryVoice): string {
     return this.voices.engineName(voice);
-  }
-
-  duration(voice: LibraryVoice): string {
-    return voiceDurationText(voice) || '—';
-  }
-
-  notReadyHint(): string {
-    return this.translate('library.voice.engine.notReady');
   }
 
   languageText(voice: LibraryVoice): string {
@@ -75,13 +65,21 @@ export class LibraryVoicePanel {
     return formatIsoMinute(voice.updatedAt);
   }
 
-  sampleText(voice: LibraryVoice): string {
-    const draft = this.sampleDraft();
-    return draft?.id === voice.id ? draft.text : voice.sampleText;
+  nameKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      (event.target as HTMLInputElement).blur();
+    }
   }
 
-  sampleInput(voice: LibraryVoice, event: Event): void {
-    this.sampleDraft.set({ id: voice.id, text: fieldValue(event) });
+  nameBlur(voice: LibraryVoice, event: Event): void {
+    const field = event.target as HTMLInputElement;
+    const name = field.value.trim();
+    if (!name || name === voice.name) {
+      field.value = voice.name;
+      return;
+    }
+    void this.save(voice, { name });
   }
 
   sampleChange(voice: LibraryVoice, event: Event): void {
@@ -109,7 +107,7 @@ export class LibraryVoicePanel {
     this.confirms.deleteVoices([voice.id]);
   }
 
-  private async save(voice: LibraryVoice, patch: VoicePatch): Promise<void> {
+  async save(voice: LibraryVoice, patch: VoicePatch): Promise<void> {
     try {
       await this.voices.update(voice.id, patch);
       this.toasts.show(this.translate('library.voice.toast.updated'));

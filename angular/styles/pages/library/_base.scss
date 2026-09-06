@@ -43,7 +43,8 @@ app-library-tag-panel {
 }
 .lb-ct-h .search .input {
   height: var(--ctl-h-sm);
-  width: 160px;
+  width: 260px;
+  max-width: 100%;
 }
 .lb-desc {
   max-width: 320px;
@@ -83,18 +84,13 @@ app-library-tag-panel {
     border-top: 1px solid var(--hairline);
   }
 }
-.lb .nv-bar .search .input {
-  width: 150px;
+.lb .nv-bar .search {
+  flex: 0 1 auto;
+  min-width: 0;
 }
-app-library-prompts .lb-th.is-ic {
-  display: inline-grid;
-  width: 40px;
-  aspect-ratio: 4 / 3;
-  place-items: center;
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--r-xs);
-  background: var(--canvas-soft);
-  color: var(--mute);
+.lb .nv-bar .search .input {
+  width: 260px;
+  max-width: 100%;
 }
 app-library-prompts .table td {
   white-space: nowrap;
@@ -104,4 +100,25 @@ app-library-prompts .table td .lb-rname {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+app-library-asset-fields {
+  display: contents;
+}
+
+.lb-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.lb-name-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.lb-ins-del {
+  flex: none;
+  color: var(--danger);
+}
+.lb-ins-del:hover {
+  background: var(--danger-soft);
 }

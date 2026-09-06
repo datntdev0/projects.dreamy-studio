@@ -128,7 +128,7 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 18);
+    assert_eq!(history_count(db.connection()), 19);
     for table in [
         "ws_library_voices",
         "ws_assistant_sessions",
@@ -195,7 +195,7 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
             "local".to_string()
         )
     );
-    assert_eq!(history_count(db.connection()), 18);
+    assert_eq!(history_count(db.connection()), 19);
     assert!(table_exists(
         db.connection(),
         "ws_novel_translation_dictionary"
@@ -224,7 +224,7 @@ fn workspace_upgrade_from_0_1_0_3_adds_assistant_tables() {
 
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
 
-    assert_eq!(history_count(db.connection()), 18);
+    assert_eq!(history_count(db.connection()), 19);
     assert!(table_exists(db.connection(), "ws_assistant_sessions"));
     assert!(table_exists(db.connection(), "ws_assistant_messages"));
     let conn = db.connection();
@@ -602,8 +602,20 @@ fn workspace_upgrade_from_0_2_0_3_adds_the_voice_library() {
 
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
 
-    assert_eq!(history_count(db.connection()), 18);
+    assert_eq!(history_count(db.connection()), 19);
     assert!(table_exists(db.connection(), "ws_library_voices"));
+    db.connection()
+        .execute("INSERT INTO ws_library_voices (name, description, engine, engine_kind, source, language, gender, prompt, reference_name, sample_text, created_at, updated_at) VALUES ('V', '', 'e', 'local', 'preset', 'vi', 'male', '', '', 's', 't', 't')", [])
+        .unwrap();
+    let taxonomy: (String, Option<i64>) = db
+        .connection()
+        .query_row(
+            "SELECT rights, collection_id FROM ws_library_voices",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(taxonomy, ("own".to_string(), None));
 }
 
 fn insert_rows(conn: &Connection, sql: &[&str]) {

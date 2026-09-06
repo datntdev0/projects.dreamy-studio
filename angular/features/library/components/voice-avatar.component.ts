@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
+import { nameTone } from '../library.rules';
 import { LibraryVoice } from '../library.voices.models';
-import { voiceMonogram, voiceTone } from '../library.voices.rules';
+import { voiceMonogram } from '../library.voices.rules';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,6 +16,6 @@ export class LibraryVoiceAvatar {
     return voiceMonogram(this.voice().name);
   }
   tone(): number {
-    return voiceTone(this.voice().name);
+    return nameTone(this.voice().name);
   }
 }

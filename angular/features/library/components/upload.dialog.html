@@ -3,19 +3,11 @@
   size="large"
   [title]="isWrite() ? ('library.promptWrite.title' | t) : ('library.upload.title' | t: { noun: config().nounKey | t })"
   [eyebrow]="'library.cap' | t"
-  [closeLabel]="'library.upload.close' | t: { noun: config().nounKey | t }"
+  [closeLabel]="isWrite() ? ('library.promptWrite.close' | t) : ('library.upload.close' | t: { noun: config().nounKey | t })"
   data-testid="library-upload-dialog-panel"
   (closed)="close()"
 >
-  @if (kind() === "prompt") {
-  <ds-segments
-    [label]="'library.upload.tab.files' | t"
-    [options]="tabOptions()"
-    [value]="mode()"
-    data-testid="library-upload-dialog-tabs"
-    (valueChange)="setMode($event)"
-  />
-  } @if (!isWrite()) {
+  @if (!isWrite()) {
   <div
     class="lb-drop"
     [class.is-compact]="items().length"

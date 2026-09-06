@@ -1,12 +1,11 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { replaceById, withoutIds } from '@shared/utils/collection';
-import { noop } from '@shared/utils/noop';
 
 import { WorkspaceService } from '../workspace/workspace.service';
-import { AssetCheck, AssetUploadInput, LibraryError } from './library.models';
+import { LibraryError } from './library.models';
 // prettier-ignore
-import { LibraryPrompt, PromptCreateInput, PromptPatch, PromptSort } from './library.prompts.models';
+import { LibraryPrompt, PromptCreateInput, PromptPatch } from './library.prompts.models';
 import { filterPrompts } from './library.prompts.rules';
 import { toLibraryError } from './library.rules';
 import { LibraryService } from './library.service';
@@ -17,7 +16,6 @@ export class LibraryPromptService {
   private readonly workspace = inject(WorkspaceService);
   private readonly library = inject(LibraryService);
   private readonly workspacePath = computed(() => this.workspace.current()?.path ?? null);
-  private queue: Promise<void> = Promise.resolve();
   private epoch = 0;
   private lastPath: string | null | undefined;
   private lastRevision: number | undefined;
@@ -27,14 +25,12 @@ export class LibraryPromptService {
   readonly error = signal<LibraryError | null>(null);
   readonly selectedId = signal<number | null>(null);
   readonly query = signal('');
-  readonly sort = signal<PromptSort>('new');
   readonly selected = computed(
     () => this.items().find((item) => item.id === this.selectedId()) ?? null,
   );
   readonly visible = computed(() =>
     filterPrompts(this.items(), {
       query: this.query(),
-      sort: this.sort(),
       collection: this.library.filterCollection(),
       tags: this.library.filterTags(),
     }),
@@ -45,17 +41,6 @@ export class LibraryPromptService {
   }
   async ensureLoaded(): Promise<void> {
     if (!this.loaded() && !this.loading()) await this.load();
-  }
-  pick(): Promise<string[]> {
-    return this.ipc.invoke<string[]>('library_prompt_pick');
-  }
-  inspect(paths: string[]): Promise<AssetCheck[]> {
-    return this.ipc.invoke<AssetCheck[]>('library_prompt_inspect', { paths });
-  }
-  upload(path: string, input: AssetUploadInput): Promise<LibraryPrompt> {
-    const task = this.queue.then(() => this.uploadOne(path, input));
-    this.queue = task.then(noop, noop);
-    return task;
   }
   async create(input: PromptCreateInput): Promise<LibraryPrompt> {
     const prompt = await this.ipc.invoke<LibraryPrompt>('library_prompt_create', { input });
@@ -107,12 +92,6 @@ export class LibraryPromptService {
       if (epoch === this.epoch) this.loading.set(false);
     }
   }
-  private async uploadOne(path: string, input: AssetUploadInput): Promise<LibraryPrompt> {
-    const prompt = await this.ipc.invoke<LibraryPrompt>('library_prompt_upload', { path, input });
-    this.items.set([prompt, ...this.items()]);
-    await this.library.refreshTaxonomy();
-    return prompt;
-  }
   private trackWorkspacePath(): void {
     const path = this.workspacePath();
     untracked(this.syncPath.bind(this, path));
@@ -130,7 +109,6 @@ export class LibraryPromptService {
     this.items.set([]);
     this.selectedId.set(null);
     this.query.set('');
-    this.sort.set('new');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);

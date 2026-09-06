@@ -1,6 +1,6 @@
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { BADGE_INVALID, BADGE_VALID, CHECK_EMPTY, CHECK_TOO_LARGE_BY_KIND, CHECK_UNREADABLE, CHECK_UNSUPPORTED_BY_KIND, DROPZONE_LABEL_BY_KIND, fillPromptForm, openImportDialog, openLibraryView, openWriteDialog, PROMPT_BYTES_LIMIT, PROMPT_NAME_REQUIRED, PROMPT_NAME_TOO_LONG, PROMPT_SAVED, PROMPT_TEXT_REQUIRED, PROMPT_TEXT_TOO_LARGE, readLibrary, readPrompt, snapshotPrompts, stageFile, stagePrompt, stageSizedFile, UPLOAD_CLOSE_BY_KIND, UPLOAD_SUCCESS_BY_KIND, UPLOAD_TITLE_BY_KIND, uploadSubmitLabel } from '../scripts/library.ts';
+import { fillPromptForm, openLibraryView, openWriteDialog, PROMPT_BYTES_LIMIT, PROMPT_NAME_REQUIRED, PROMPT_NAME_TOO_LONG, PROMPT_SAVED, PROMPT_TEXT_REQUIRED, PROMPT_TEXT_TOO_LARGE, readPrompt, snapshotPrompts } from '../scripts/library.ts';
 
 const NAME_LIMIT = 120;
 const SEED = {
@@ -34,8 +34,8 @@ test.describe('CAP-05 Asset Library Management', () => {
 
         await expect(ui.main.toast(PROMPT_SAVED)).toContainText('Noir opener');
         await expect(prompts.dialog.panel).toBeHidden();
-        await expect(section.cards).toHaveCount(2);
-        await expect(prompts.card('Noir opener')).toBeVisible();
+        await expect(section.rows).toHaveCount(2);
+        await expect(section.row('Noir opener')).toBeVisible();
         const stored = await readPrompt(folder, 'Noir opener');
         expect(stored.text).toBe(content);
         expect(stored.row).toMatchObject({
@@ -45,7 +45,7 @@ test.describe('CAP-05 Asset Library Management', () => {
           origin: 'app',
           tags: ['cinematic', 'night-scene'],
         });
-        await prompts.card('Noir opener').click();
+        await section.row('Noir opener').click();
         await expect(prompts.inspector.name).toHaveValue('Noir opener');
         await expect(prompts.inspector.kind).toHaveValue('video');
         await expect(prompts.inspector.text).toHaveValue(content);
@@ -115,82 +115,6 @@ test.describe('CAP-05 Asset Library Management', () => {
         await expect(prompts.dialog.textError).toHaveText(PROMPT_TEXT_TOO_LARGE);
         await expect(ui.main.toasts).toHaveCount(0);
         await expect(prompts.dialog.panel).toBeVisible();
-        expect(await snapshotPrompts(folder)).toEqual(before);
-      });
-    });
-
-    test('US-0034 imports prompts from .txt and .md files and marks invalid files with a reason', async ({
-      ui,
-      picker,
-      sandbox,
-    }) => {
-      const { folder } = await openLibraryView(ui, picker, sandbox, SEED, 'prompts');
-      const txtBody = 'Describe {{hero}} at dawn.';
-      const mdBody = '# Brief\nShow {{place}} in {{style}} style.';
-      const txt = await stagePrompt(sandbox, 'Dawn scene.txt', txtBody);
-      const md = await stagePrompt(sandbox, 'hero-brief.md', mdBody);
-      const wrongType = await stagePrompt(sandbox, 'notes.docx', 'Looks like text');
-      const empty = await stagePrompt(sandbox, 'blank.txt', '');
-      const unreadable = await stageFile(
-        sandbox,
-        'binary.txt',
-        Buffer.from([0xc3, 0x28, 0xa0, 0xa1]),
-      );
-      const oversized = await stageSizedFile(sandbox, 'huge.md', PROMPT_BYTES_LIMIT + 1);
-
-      await test.step('creates one prompt per valid file with the file content and the name taken from the file name', async () => {
-        const prompts = await openImportDialog(ui, picker, [txt, md]);
-        await expect(prompts.dialog.title).toHaveText(UPLOAD_TITLE_BY_KIND.prompt);
-        await expect(prompts.dialog.closeButton).toHaveAttribute(
-          'aria-label',
-          UPLOAD_CLOSE_BY_KIND.prompt,
-        );
-
-        await expect(prompts.dialog.badge('Dawn scene')).toHaveText(BADGE_VALID);
-        await expect(prompts.dialog.badge('hero-brief')).toHaveText(BADGE_VALID);
-        await prompts.dialog.rights.selectOption('free');
-        await expect(prompts.dialog.submit).toHaveText(uploadSubmitLabel('prompt', 2));
-        await prompts.dialog.submit.click();
-
-        await expect(ui.main.toast(UPLOAD_SUCCESS_BY_KIND.prompt).last()).toBeVisible();
-        await expect(prompts.dialog.panel).toBeHidden();
-        await expect(prompts.card('Dawn scene')).toBeVisible();
-        await expect(prompts.card('hero-brief')).toBeVisible();
-        const first = await readPrompt(folder, 'Dawn scene');
-        const second = await readPrompt(folder, 'hero-brief');
-        expect(first.text).toBe(txtBody);
-        expect(second.text).toBe(mdBody);
-        expect(first.row).toMatchObject({ rights: 'free', origin: 'upload' });
-        expect(second.row).toMatchObject({ rights: 'free', origin: 'upload' });
-        expect((await readLibrary(folder, (db) => db.counts())).prompt).toBe(3);
-      });
-
-      await test.step('marks a wrong type, empty, unreadable and oversized file invalid with a reason and creates no prompt', async () => {
-        const before = await snapshotPrompts(folder);
-        const prompts = await openImportDialog(ui, picker, [
-          wrongType,
-          empty,
-          unreadable,
-          oversized,
-        ]);
-        const files = ['notes.docx', 'blank.txt', 'binary.txt', 'huge.md'];
-        await expect(prompts.dialog.dropzone).toHaveAttribute(
-          'aria-label',
-          DROPZONE_LABEL_BY_KIND.prompt,
-        );
-
-        for (const file of files) {
-          await expect(prompts.dialog.badge(file)).toHaveText(BADGE_INVALID);
-          await expect(prompts.dialog.message(file)).toBeVisible();
-        }
-        await expect(prompts.dialog.message('notes.docx')).toContainText(
-          CHECK_UNSUPPORTED_BY_KIND.prompt,
-        );
-        await expect(prompts.dialog.message('huge.md')).toHaveText(CHECK_TOO_LARGE_BY_KIND.prompt);
-        await expect(prompts.dialog.message('blank.txt')).toHaveText(CHECK_EMPTY);
-        await expect(prompts.dialog.message('binary.txt')).toHaveText(CHECK_UNREADABLE);
-        await prompts.dialog.rights.selectOption('own');
-        await expect(prompts.dialog.submit).toBeDisabled();
         expect(await snapshotPrompts(folder)).toEqual(before);
       });
     });

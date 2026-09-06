@@ -44,21 +44,16 @@ pub fn preview_voice(
     session: &WorkspaceSession,
     backend: &BackendService,
     id: i64,
-    text: Option<String>,
 ) -> LibraryResult<Vec<u8>> {
     let workspace = library.open(session)?;
     let (voice, reference) = workspace.voice_for_synthesis(id)?;
-    let text = voices::normalize_sample_text(text.as_deref().unwrap_or(&voice.sample_text))?;
     let audio = voices::synthesize(
         backend,
         &voice,
         reference.as_deref(),
-        &text,
+        &voice.sample_text,
         MixSettings::default().sentence_pause_ms(),
     )?;
-    if let Some(duration_ms) = audio.duration_ms {
-        workspace.voice_record_duration(id, &text, duration_ms)?;
-    }
     Ok(audio.bytes)
 }
 
@@ -125,11 +120,10 @@ pub async fn library_voice_delete<R: Runtime>(
 pub async fn library_voice_preview<R: Runtime>(
     app: AppHandle<R>,
     id: i64,
-    text: Option<String>,
 ) -> LibraryResult<Response> {
     let bytes = run_blocking(app, move |app| {
         let (library, session) = library_job(app);
-        preview_voice(&library, &session, &app.state::<BackendService>(), id, text)
+        preview_voice(&library, &session, &app.state::<BackendService>(), id)
     })
     .await?;
     Ok(Response::new(bytes))

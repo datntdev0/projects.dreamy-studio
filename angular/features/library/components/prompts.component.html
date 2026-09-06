@@ -1,4 +1,4 @@
-<div class="nv lb lb-body" [class.is-drop]="dragging()" data-testid="library-prompts-content">
+<div class="nv lb lb-body" data-testid="library-prompts-content">
   <div class="nv-bar" data-testid="library-prompts-toolbar">
     <div class="nv-bar-l" data-testid="library-prompts-toolbar-left">
       <label class="search" data-testid="library-prompts-search-label">
@@ -14,12 +14,6 @@
           (input)="onQuery($event)"
         />
       </label>
-      <span class="t-sm t-mute" data-testid="library-prompts-count">
-        {{ 'library.prompt.count' | t: { count: prompts.visible().length } }}
-        @if (active()) {
-          / {{ prompts.items().length }}
-        }
-      </span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-prompts-filter-chips">
           @if (library.filterCollection() !== null) {
@@ -75,74 +69,21 @@
     </div>
     <span class="spacer" data-testid="library-prompts-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-prompts-toolbar-right">
-      <select
-        class="select"
-        [value]="prompts.sort()"
-        [attr.aria-label]="'library.prompt.sort' | t"
-        data-testid="library-prompts-sort"
-        (change)="onSort($event)"
-      >
-        <option value="new" data-testid="library-prompts-sort-new">
-          {{ 'library.video.sort.new' | t }}
-        </option>
-        <option value="name" data-testid="library-prompts-sort-name">
-          {{ 'library.video.sort.name' | t }}
-        </option>
-        <option value="size" data-testid="library-prompts-sort-size">
-          {{ 'library.prompt.sort.size' | t }}
-        </option>
-      </select>
-      <div
-        class="seg"
-        role="group"
-        [attr.aria-label]="'library.prompt.viewMode' | t"
-        data-testid="library-prompts-view"
-      >
-        <button
-          type="button"
-          [class.is-active]="library.viewMode() === 'grid'"
-          [attr.aria-label]="'library.image.view.grid' | t"
-          [attr.aria-pressed]="library.viewMode() === 'grid'"
-          data-testid="library-prompts-view-grid"
-          (click)="setView('grid')"
-        >
-          <ds-icon name="frames" [size]="14" data-testid="library-prompts-view-grid-icon" />
-        </button>
-        <button
-          type="button"
-          [class.is-active]="library.viewMode() === 'list'"
-          [attr.aria-label]="'library.image.view.list' | t"
-          [attr.aria-pressed]="library.viewMode() === 'list'"
-          data-testid="library-prompts-view-list"
-          (click)="setView('list')"
-        >
-          <ds-icon name="list" [size]="14" data-testid="library-prompts-view-list-icon" />
-        </button>
-      </div>
       <button
         type="button"
-        class="btn btn-sm"
+        class="btn btn-sm btn-primary"
         data-testid="library-prompts-write"
         (click)="openWrite()"
       >
         <ds-icon name="pen" [size]="16" data-testid="library-prompts-write-icon" />
         {{ 'library.prompt.write' | t }}
       </button>
-      <button
-        type="button"
-        class="btn btn-sm btn-primary"
-        data-testid="library-prompts-upload"
-        (click)="openUpload()"
-      >
-        <ds-icon name="upload" [size]="16" data-testid="library-prompts-upload-icon" />
-        {{ 'library.prompt.upload' | t }}
-      </button>
     </div>
   </div>
   <div class="nv-body" data-testid="library-prompts-body">
     <div
       class="nv-scroll"
-      [class.table-view]="library.viewMode() === 'list' && prompts.visible().length > 0"
+      [class.table-view]="prompts.visible().length > 0"
       data-testid="library-prompts-scroll"
     >
       @if (prompts.visible().length === 0) {
@@ -154,14 +95,6 @@
                 <button
                   type="button"
                   class="btn btn-primary"
-                  data-testid="library-prompts-empty-upload"
-                  (click)="openUpload()"
-                >
-                  {{ 'library.prompt.upload' | t }}
-                </button>
-                <button
-                  type="button"
-                  class="btn"
                   data-testid="library-prompts-empty-write"
                   (click)="openWrite()"
                 >
@@ -187,31 +120,6 @@
             </div>
           </div>
         }
-      } @else if (library.viewMode() === 'grid') {
-        <div class="lb-grid is-wide" data-testid="library-prompts-grid">
-          @for (prompt of prompts.visible(); track prompt.id) {
-            <div
-              class="lb-card is-dblclick"
-              [class.is-selected]="selected(prompt)"
-              tabindex="0"
-              data-testid="library-prompts-card"
-              (click)="select(prompt)"
-              (dblclick)="open(prompt)"
-              (keydown)="onKeydown(prompt, $event)"
-            >
-              <app-library-prompt-media
-                [prompt]="prompt"
-                data-testid="library-prompts-card-media"
-              />
-              <div class="lb-card-b" data-testid="library-prompts-card-body">
-                <div class="lb-name" data-testid="library-prompts-card-name">{{ prompt.name }}</div>
-                <div class="t-sm t-mute lb-sub" data-testid="library-prompts-card-meta">
-                  {{ 'library.prompt.chars' | t: { count: length(prompt) } }} · {{ size(prompt) }}
-                </div>
-              </div>
-            </div>
-          }
-        </div>
       } @else {
         <ds-datatable
           [columns]="tableColumns"
@@ -227,9 +135,11 @@
         >
           <ng-template dsCell="name" let-row>
             <div class="nm-title" data-testid="library-prompts-table-name-wrap">
-              <span class="lb-th is-ic" data-testid="library-prompts-table-icon">
-                <ds-icon name="prompt" [size]="18" />
-              </span>
+              <app-library-asset-avatar
+                [name]="promptOf(row).name"
+                icon="prompt"
+                data-testid="library-prompts-table-icon"
+              />
               <div class="lb-rname" data-testid="library-prompts-table-name-content">
                 <div class="t-ink" data-testid="library-prompts-table-name-text">
                   {{ promptOf(row).name }}

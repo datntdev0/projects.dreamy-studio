@@ -13,7 +13,6 @@ use std::fs;
 use std::path::PathBuf;
 
 pub const PROMPT_MAX_BYTES: usize = 256 * 1024;
-pub const PROMPT_EXTENSIONS: [&str; 2] = ["txt", "md"];
 pub const PROMPT_NAME_MAX: usize = 120;
 
 const PROMPT_TAG_TYPE: &str = "library_prompt";
@@ -69,7 +68,6 @@ pub struct NewPrompt {
     pub kind: PromptKind,
     pub text: String,
     pub rights: AssetRights,
-    pub origin: &'static str,
     pub collection_id: Option<i64>,
     pub tags: Vec<String>,
 }
@@ -108,20 +106,6 @@ pub fn normalize_name(name: &str) -> LibraryResult<String> {
         ));
     }
     Ok(name.to_string())
-}
-
-pub fn name_from_file(file_name: &str) -> String {
-    let lower = file_name.to_ascii_lowercase();
-    let stem = if lower.ends_with(".txt") || lower.ends_with(".md") {
-        &file_name[..file_name.rfind('.').unwrap_or(file_name.len())]
-    } else {
-        file_name
-    };
-    if stem.is_empty() {
-        file_name.to_string()
-    } else {
-        stem.to_string()
-    }
 }
 
 pub fn normalize_patch(patch: &PromptPatch) -> LibraryResult<PromptPatch> {
@@ -175,7 +159,7 @@ pub fn unique_name(conn: &Connection, name: &str, except: Option<i64>) -> Librar
 pub fn insert(conn: &Connection, prompt: &NewPrompt, now: &str) -> LibraryResult<i64> {
     let tags = assets::normalized_tags(&prompt.tags)?;
     assets::require_collection(conn, prompt.collection_id)?;
-    conn.execute("INSERT INTO ws_library_prompts (name, kind, size, rights, origin, collection_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)", params![prompt.name, prompt.kind.as_str(), prompt.text.len() as i64, prompt.rights.as_str(), prompt.origin, prompt.collection_id, now])?;
+    conn.execute("INSERT INTO ws_library_prompts (name, kind, size, rights, origin, collection_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 'app', ?5, ?6, ?6)", params![prompt.name, prompt.kind.as_str(), prompt.text.len() as i64, prompt.rights.as_str(), prompt.collection_id, now])?;
     let id = conn.last_insert_rowid();
     assets::replace_tags(conn, PROMPT_TAG_TYPE, id, &tags)?;
     Ok(id)

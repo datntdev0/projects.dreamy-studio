@@ -34,6 +34,10 @@ pub const ASSET_TABLES: &[AssetTable] = &[
         kind: LibraryKind::Prompt,
         table: "ws_library_prompts",
     },
+    AssetTable {
+        kind: LibraryKind::Voice,
+        table: "ws_library_voices",
+    },
 ];
 
 fn now_text() -> String {

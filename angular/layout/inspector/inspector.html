@@ -128,6 +128,11 @@
         [videoId]="selected.id"
         data-testid="inspector-collection-video-panel"
       />
+      } @else if (selected.kind === "voice") {
+      <app-library-voice-panel
+        [voiceId]="selected.id"
+        data-testid="inspector-collection-voice-panel"
+      />
       } @else {
       <app-library-prompt-panel
         [promptId]="selected.id"

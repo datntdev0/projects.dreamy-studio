@@ -2,7 +2,7 @@ import { libraryImage } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { dimensionsText, filterImages, imageCode, imageInspectorDimensionsText, imageInspectorFormatText, searchImages, sortImages } from './library.images.rules';
+import { dimensionsText, filterImages, imageCode, imageInspectorDimensionsText, imageInspectorFormatText, searchImages } from './library.images.rules';
 
 describe('library.images.rules', () => {
   const items = [
@@ -26,33 +26,22 @@ describe('library.images.rules', () => {
     expect(imageInspectorFormatText(items[2])).toBe('—');
   });
 
-  it('searches and sorts', () => {
+  it('searches', () => {
     expect(searchImages(items, '')).toHaveLength(3);
     expect(searchImages(items, ' A.p ').map((item) => item.id)).toEqual([2]);
     expect(searchImages(items, 'Y').map((item) => item.id)).toEqual([2]);
-    expect(sortImages(items, 'new').map((item) => item.id)).toEqual([3, 2, 1]);
-    expect(sortImages(items, 'name').map((item) => item.id)).toEqual([2, 1, 3]);
-    expect(sortImages(items, 'size').map((item) => item.id)).toEqual([2, 3, 1]);
   });
 
-  it('filters by collection and tags', () => {
+  it('filters by collection and tags keeping the given order', () => {
     expect(
-      filterImages(items, { query: '', sort: 'new', collection: 5, tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterImages(items, { query: '', collection: 5, tags: [] }).map((item) => item.id),
     ).toEqual([1]);
     expect(
-      filterImages(items, { query: '', sort: 'new', collection: 'none', tags: [] }).map(
-        (item) => item.id,
-      ),
-    ).toEqual([3, 2]);
+      filterImages(items, { query: '', collection: 'none', tags: [] }).map((item) => item.id),
+    ).toEqual([2, 3]);
     expect(
-      filterImages(items, { query: '', sort: 'name', collection: null, tags: ['y'] }).map(
-        (item) => item.id,
-      ),
+      filterImages(items, { query: '', collection: null, tags: ['y'] }).map((item) => item.id),
     ).toEqual([2]);
-    expect(
-      filterImages(items, { query: '', sort: 'name', collection: null, tags: [] }),
-    ).toHaveLength(3);
+    expect(filterImages(items, { query: '', collection: null, tags: [] })).toHaveLength(3);
   });
 });

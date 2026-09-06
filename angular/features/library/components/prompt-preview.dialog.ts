@@ -43,6 +43,13 @@ export class LibraryPromptPreviewDialog {
       total: sequence.length,
     };
   });
+  hasPrevious(): boolean {
+    return this.position().index > 0;
+  }
+  hasNext(): boolean {
+    const position = this.position();
+    return position.index >= 0 && position.index + 1 < position.total;
+  }
   code(item: LibraryPrompt): string {
     return promptCode(item.id);
   }

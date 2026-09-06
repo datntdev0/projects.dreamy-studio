@@ -21,7 +21,6 @@ fn new_prompt(name: &str, text: &str) -> NewPrompt {
         kind: PromptKind::General,
         text: text.to_string(),
         rights: AssetRights::Own,
-        origin: "app",
         collection_id: None,
         tags: vec!["Example".to_string()],
     }
@@ -124,11 +123,6 @@ fn normalizes_prompt_text_and_names() {
         normalize_name(&"x".repeat(121)).unwrap_err().code,
         LibraryErrorCode::PromptNameInvalid
     );
-    assert_eq!(name_from_file("a.txt"), "a");
-    assert_eq!(name_from_file("A.MD"), "A");
-    assert_eq!(name_from_file("a.v2.md"), "a.v2");
-    assert_eq!(name_from_file(".txt"), ".txt");
-    assert_eq!(name_from_file("a.png"), "a.png");
 }
 
 #[test]

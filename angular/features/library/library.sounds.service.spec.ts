@@ -10,7 +10,7 @@ import { LibraryService } from './library.service';
 import { LibrarySoundPlayer } from './library.sounds.player';
 import { LibrarySoundService } from './library.sounds.service';
 
-const counts = { image: 0, sound: 0, video: 0, prompt: 0 };
+const counts = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 
 describe('LibrarySoundService', () => {
   let ipc: FakeIpc;

@@ -1,6 +1,7 @@
 use super::*;
 use crate::features::backend::models::SynthesisRequest;
 use crate::features::backend::models::SynthesizedAudio;
+use crate::features::library::models::AssetRights;
 use crate::features::library::models::VoiceEngineKind;
 use crate::features::library::models::VoiceGender;
 use crate::features::library::models::VoiceSource;
@@ -69,6 +70,9 @@ fn library_with_voice(engine_kind: VoiceEngineKind) -> (TempDir, LibraryWorkspac
         reference_sound_id: None,
         reference_name: String::new(),
         sample_text: "Xin chào".to_string(),
+        rights: AssetRights::Own,
+        collection_id: None,
+        tags: Vec::new(),
     };
     let id = voices::insert(db.connection(), &voice, "2026-11-23T00:00:00Z").unwrap();
     let library = LibraryWorkspace::with_gate(

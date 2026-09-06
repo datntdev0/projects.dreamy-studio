@@ -110,15 +110,6 @@ export class LibraryPromptPanel {
   remove(item: LibraryPrompt): void {
     this.confirms.deletePrompts([item.id]);
   }
-  async copy(item: LibraryPrompt): Promise<void> {
-    this.toasts.show(
-      this.languageService.translate(
-        (await this.prompts.copy(item.id))
-          ? 'library.prompt.toast.copied'
-          : 'library.prompt.toast.copyFailed',
-      ),
-    );
-  }
   private async save(
     item: LibraryPrompt,
     patch: {

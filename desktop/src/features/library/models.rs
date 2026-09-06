@@ -19,10 +19,17 @@ pub enum LibraryKind {
     Sound,
     Video,
     Prompt,
+    Voice,
 }
 
 impl LibraryKind {
-    pub const ALL: [Self; 4] = [Self::Image, Self::Sound, Self::Video, Self::Prompt];
+    pub const ALL: [Self; 5] = [
+        Self::Image,
+        Self::Sound,
+        Self::Video,
+        Self::Prompt,
+        Self::Voice,
+    ];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -30,6 +37,7 @@ impl LibraryKind {
             Self::Sound => "sound",
             Self::Video => "video",
             Self::Prompt => "prompt",
+            Self::Voice => "voice",
         }
     }
 }
@@ -40,6 +48,7 @@ pub struct KindCounts {
     pub sound: i64,
     pub video: i64,
     pub prompt: i64,
+    pub voice: i64,
 }
 
 impl KindCounts {
@@ -49,6 +58,7 @@ impl KindCounts {
             LibraryKind::Sound => &mut self.sound,
             LibraryKind::Video => &mut self.video,
             LibraryKind::Prompt => &mut self.prompt,
+            LibraryKind::Voice => &mut self.voice,
         }
     }
 }
@@ -438,9 +448,17 @@ pub struct VoiceInput {
 #[serde(rename_all = "camelCase")]
 pub struct VoicePatch {
     #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
     pub sample_text: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
+    #[serde(default)]
+    pub rights: Option<AssetRights>,
+    #[serde(default, deserialize_with = "deserialize_optional_collection_id")]
+    pub collection_id: Option<Option<i64>>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -460,7 +478,9 @@ pub struct LibraryVoice {
     pub reference_name: String,
     pub prompt: String,
     pub sample_text: String,
-    pub sample_duration_ms: Option<i64>,
+    pub rights: AssetRights,
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -488,7 +508,6 @@ pub enum LibraryErrorCode {
     VideoTooLarge,
     VideoUnreadable,
     PromptNotFound,
-    PromptUnsupported,
     PromptTooLarge,
     PromptUnreadable,
     PromptEmpty,
@@ -528,7 +547,6 @@ impl LibraryErrorCode {
             Self::VideoTooLarge => "video_too_large",
             Self::VideoUnreadable => "video_unreadable",
             Self::PromptNotFound => "prompt_not_found",
-            Self::PromptUnsupported => "prompt_unsupported",
             Self::PromptTooLarge => "prompt_too_large",
             Self::PromptUnreadable => "prompt_unreadable",
             Self::PromptEmpty => "prompt_empty",

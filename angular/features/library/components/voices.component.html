@@ -14,26 +14,9 @@
           (input)="onQuery($event)"
         />
       </label>
-      <span class="t-sm t-mute" data-testid="library-voices-count">
-        @if (voices.visible().length === voices.items().length) {
-          {{ 'library.voice.countAll' | t: { count: voices.visible().length } }}
-        } @else {
-          {{
-            'library.voice.countFiltered'
-              | t: { shown: voices.visible().length, total: voices.items().length }
-          }}
-        }
-      </span>
     </div>
     <span class="spacer" data-testid="library-voices-toolbar-spacer"></span>
     <div class="nv-bar-r" data-testid="library-voices-toolbar-right">
-      <ds-segments
-        [label]="'library.voice.filter.label' | t"
-        [options]="engineOptions"
-        [value]="voices.engineFilter()"
-        data-testid="library-voices-filter"
-        (valueChange)="onEngineFilter($event)"
-      />
       <button
         type="button"
         class="btn btn-sm btn-primary"
@@ -145,11 +128,6 @@
           <ng-template dsCell="gender" let-row>
             <span class="t-sm t-mute" data-testid="library-voices-table-gender">
               {{ genderText(voiceOf(row)) }}
-            </span>
-          </ng-template>
-          <ng-template dsCell="duration" let-row>
-            <span class="mono t-mute" data-testid="library-voices-table-duration">
-              {{ durationText(voiceOf(row)) }}
             </span>
           </ng-template>
           <ng-template dsCell="actions" let-row>

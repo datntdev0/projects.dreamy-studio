@@ -14,10 +14,11 @@ import { durationText, formatBytes } from '../library.rules';
 import { LibrarySound } from '../library.sounds.models';
 import { LibrarySoundService } from '../library.sounds.service';
 // prettier-ignore
-import { VOICE_LANGUAGES, VOICE_REFERENCE_MODES, VOICE_SOURCES, VoiceEngine, VoiceEngineGroup, VoiceGender, VoicePreset, VoiceReference, VoiceReferenceFile, VoiceReferenceMode, VoiceSource } from '../library.voices.models';
+import { VOICE_LANGUAGES, VOICE_REFERENCE_MODES, VOICE_SOURCES, VoiceEngine, VoiceEngineGroup, VoiceGender, VoicePreset, VoicePresetFilter, VoiceReference, VoiceReferenceFile, VoiceReferenceMode, VoiceSource } from '../library.voices.models';
 import { VOICE_RECORDING_MAX_MS, VoiceRecorder } from '../library.voices.recorder';
 // prettier-ignore
-import { buildVoiceReference, engineGroupKey, engineOptionText, engineSupportsSource, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetOptionText, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, VoiceDraft, voiceGenderOptions, voiceLanguageText, voiceSourceKey } from '../library.voices.rules';
+import { buildVoiceReference, engineGroupKey, engineOptionText, engineSupportsSource, filterPresets, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetFilterOptions, presetMetaText, presetSampleUrl, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, VoiceDraft, voiceGenderOptions, voiceLanguageText, voiceSourceKey } from '../library.voices.rules';
+import { LibraryVoiceSamples } from '../library.voices.samples';
 import { LibraryVoiceService } from '../library.voices.service';
 import { LibraryVoiceNotice } from './voice-notice.component';
 
@@ -37,6 +38,7 @@ export class LibraryVoiceDialog {
   private readonly sounds = inject(LibrarySoundService);
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
+  private readonly samples = inject(LibraryVoiceSamples);
   private readonly translate = this.languageService.translate.bind(this.languageService);
   readonly open = this.dialogs.createVoiceOpen;
   readonly name = signal('');
@@ -44,6 +46,7 @@ export class LibraryVoiceDialog {
   readonly requestedSource = signal<VoiceSource>('preset');
   readonly referenceMode = signal<VoiceReferenceMode>('library');
   readonly requestedPreset = signal('');
+  readonly presetFilter = signal<VoicePresetFilter>('all');
   readonly referenceSoundId = signal<number | null>(null);
   readonly recorder = new VoiceRecorder();
   readonly consent = signal(false);
@@ -54,6 +57,8 @@ export class LibraryVoiceDialog {
   readonly referenceFile = signal<VoiceReferenceFile | null>(null);
   readonly busy = signal(false);
   readonly presets = computed(this.buildPresets.bind(this));
+  readonly visiblePresets = computed(this.buildVisiblePresets.bind(this));
+  readonly presetFilterOptions = computed(this.buildPresetFilterOptions.bind(this));
   readonly selectedPreset = computed(this.buildSelectedPreset.bind(this));
   readonly preset = computed(this.buildPresetId.bind(this));
   readonly gender = computed(this.buildGender.bind(this));
@@ -87,8 +92,24 @@ export class LibraryVoiceDialog {
     return voiceLanguageText(code, this.translate);
   }
 
-  presetText(preset: VoicePreset): string {
-    return presetOptionText(preset, this.translate);
+  presetMeta(preset: VoicePreset): string {
+    return presetMetaText(preset, this.translate);
+  }
+
+  isSamplePlaying(preset: VoicePreset): boolean {
+    return this.samples.isPlaying(this.sampleUrl(preset));
+  }
+
+  sampleLabel(preset: VoicePreset): string {
+    const key = this.isSamplePlaying(preset)
+      ? 'library.voice.dialog.sample.stop'
+      : 'library.voice.dialog.sample.play';
+    return this.translate(key, { name: preset.name });
+  }
+
+  async toggleSample(preset: VoicePreset): Promise<void> {
+    const played = await this.samples.toggle(this.sampleUrl(preset));
+    if (!played) this.toasts.show(this.translate('library.voice.dialog.sample.failed'), 'danger');
   }
 
   soundText(sound: LibrarySound): string {
@@ -113,11 +134,14 @@ export class LibraryVoiceDialog {
 
   onEngine(event: Event): void {
     this.engineId.set(fieldValue(event));
+    this.presetFilter.set('all');
+    this.samples.stop();
     this.releaseRecorder();
   }
 
   onSource(value: string): void {
     this.requestedSource.set(value as VoiceSource);
+    this.samples.stop();
     this.releaseRecorder();
   }
 
@@ -151,8 +175,12 @@ export class LibraryVoiceDialog {
     this.recorder.discard();
   }
 
-  onPreset(event: Event): void {
-    this.requestedPreset.set(fieldValue(event));
+  onPresetFilter(value: string): void {
+    this.presetFilter.set(value as VoicePresetFilter);
+  }
+
+  selectPreset(id: string): void {
+    this.requestedPreset.set(id);
     this.requestedGender.set(null);
   }
 
@@ -179,6 +207,7 @@ export class LibraryVoiceDialog {
 
   close(): void {
     this.recorder.discard();
+    this.samples.stop();
     this.dialogs.closeCreateVoice();
   }
 
@@ -232,6 +261,18 @@ export class LibraryVoiceDialog {
 
   private buildPresets(): VoicePreset[] {
     return this.engine()?.presets ?? [];
+  }
+
+  private buildVisiblePresets(): VoicePreset[] {
+    return filterPresets(this.presets(), this.presetFilter());
+  }
+
+  private buildPresetFilterOptions(): SegmentOption[] {
+    return presetFilterOptions(this.presets(), this.translate);
+  }
+
+  private sampleUrl(preset: VoicePreset): string {
+    return presetSampleUrl(this.engine()?.id ?? '', preset.id);
   }
 
   private buildSelectedPreset(): VoicePreset | null {
@@ -296,6 +337,7 @@ export class LibraryVoiceDialog {
 
   private applyOpen(open: boolean): void {
     this.recorder.discard();
+    this.samples.stop();
     if (!open) return;
     this.reset();
     void this.sounds.ensureLoaded();
@@ -309,6 +351,7 @@ export class LibraryVoiceDialog {
     this.referenceFile.set(null);
     this.description.set('');
     this.requestedPreset.set('');
+    this.presetFilter.set('all');
     this.referenceSoundId.set(null);
     this.consent.set(false);
     this.prompt.set('');

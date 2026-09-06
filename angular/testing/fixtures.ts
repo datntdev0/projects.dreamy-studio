@@ -159,7 +159,9 @@ export function libraryVoice(overrides: Partial<LibraryVoice> = {}): LibraryVoic
     referenceName: '',
     prompt: '',
     sampleText: 'Once upon a time.',
-    sampleDurationMs: 3000,
+    rights: 'own',
+    collectionId: null,
+    tags: [],
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -211,7 +213,7 @@ export function libraryCollection(overrides: Partial<LibraryCollection> = {}): L
     description: '',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
-    counts: { image: 1, sound: 0, video: 0, prompt: 0 },
+    counts: { image: 1, sound: 0, video: 0, prompt: 0, voice: 0 },
     ...overrides,
   };
 }

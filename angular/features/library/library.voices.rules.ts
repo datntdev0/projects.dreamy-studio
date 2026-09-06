@@ -4,7 +4,8 @@ import { CloudAccount } from '@features/settings/cloud.models';
 import { SettingsSectionId } from '@features/settings/settings.models';
 import { LanguageKey, LanguageParams } from '@shared/language/language.models';
 
-import { durationText } from './library.rules';
+import { CollectionFilter } from './library.models';
+import { durationText, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
 import { LibrarySound } from './library.sounds.models';
 import {
   LibraryVoice,
@@ -13,12 +14,12 @@ import {
   VOICE_LANGUAGES,
   VOICE_SOURCES,
   VoiceEngine,
-  VoiceEngineFilter,
   VoiceEngineGroup,
   VoiceEngineKind,
   VoiceGender,
   VoiceInput,
   VoicePreset,
+  VoicePresetFilter,
   VoiceReference,
   VoiceReferenceFile,
   VoiceReferenceMode,
@@ -28,7 +29,8 @@ import { VoiceRecording } from './library.voices.recorder';
 
 export interface VoiceFilters {
   query: string;
-  engine: VoiceEngineFilter;
+  collection: CollectionFilter;
+  tags: string[];
 }
 
 export interface VoiceReferenceSources {
@@ -50,11 +52,29 @@ export interface VoiceDraft {
 }
 
 const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([['edge-read-aloud', ['preset']]]);
+const CLOUD_ENGINE_PRESETS = new Map<string, VoicePreset[]>([
+  [
+    'edge-read-aloud',
+    [
+      {
+        id: 'vi-VN-HoaiMyNeural',
+        name: 'Hoài My',
+        gender: 'female',
+        region: 'north',
+        style: 'natural',
+      },
+      {
+        id: 'vi-VN-NamMinhNeural',
+        name: 'Nam Minh',
+        gender: 'male',
+        region: 'north',
+        style: 'natural',
+      },
+    ],
+  ],
+]);
 const DEFAULT_GENDER: VoiceGender = 'female';
-
-const AVATAR_TONES = 4;
-const FNV_OFFSET = 2166136261;
-const FNV_PRIME = 16777619;
+const PRESET_SAMPLES_DIR = 'assets/voices';
 
 const LANGUAGE_KEYS: Record<(typeof VOICE_LANGUAGES)[number], LanguageKey> = {
   vi: 'library.voice.language.vi',
@@ -105,23 +125,12 @@ function compareNew(a: LibraryVoice, b: LibraryVoice): number {
   return b.createdAt.localeCompare(a.createdAt) || b.id - a.id;
 }
 
-function fnvStep(hash: number, character: string): number {
-  return Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME);
-}
-
 function hasVoiceId(id: number, voice: LibraryVoice): boolean {
   return voice.id === id;
 }
 
 function matchesQuery(needle: string, voice: LibraryVoice): boolean {
-  return (
-    voice.name.toLocaleLowerCase().includes(needle) ||
-    voice.description.toLocaleLowerCase().includes(needle)
-  );
-}
-
-function matchesEngine(filter: VoiceEngineFilter, voice: LibraryVoice): boolean {
-  return filter === 'all' || voice.engineKind === filter;
+  return matchesNameOrTags(needle, voice) || voice.description.toLocaleLowerCase().includes(needle);
 }
 
 function isLocalReady(model: TtsModel): boolean {
@@ -168,7 +177,7 @@ function toCloudEngine(account: CloudAccount): VoiceEngine {
     kind: 'cloud',
     ready: account.connected,
     sources: CLOUD_ENGINE_SOURCES.get(account.id) ?? VOICE_SOURCES,
-    presets: [],
+    presets: CLOUD_ENGINE_PRESETS.get(account.id) ?? [],
   };
 }
 
@@ -208,12 +217,17 @@ export function voiceById(items: LibraryVoice[], id: number): LibraryVoice | nul
   return items.find(hasVoiceId.bind(null, id)) ?? null;
 }
 
-export function voiceMonogram(name: string): string {
-  return name.trim().charAt(0).toLocaleUpperCase() || '?';
+function toChars(word: string): string[] {
+  return Array.from(word);
 }
 
-export function voiceTone(name: string): number {
-  return ([...name].reduce(fnvStep, FNV_OFFSET) >>> 0) % AVATAR_TONES;
+export function voiceMonogram(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean).map(toChars);
+  if (words.length === 0) return '?';
+  const first = words[0];
+  const last = words[words.length - 1];
+  const letters = words.length > 1 ? [first[0], last[0]] : first.slice(0, 2);
+  return letters.join('').toLocaleUpperCase();
 }
 
 export function voiceLanguageKey(language: string): LanguageKey | null {
@@ -230,18 +244,6 @@ export function voiceSourceKey(source: VoiceSource): LanguageKey {
 
 export function voiceSourceNameKey(source: VoiceSource): LanguageKey {
   return SOURCE_NAME_KEYS[source];
-}
-
-export function normalizeSampleText(text: string): string {
-  return text.split(/\s+/).filter(Boolean).join(' ');
-}
-
-export function sameSampleText(stored: string, sample: string): boolean {
-  return normalizeSampleText(stored) === normalizeSampleText(sample);
-}
-
-export function voiceDurationText(voice: LibraryVoice): string {
-  return voice.sampleDurationMs === null ? '' : durationText(voice.sampleDurationMs);
 }
 
 export function buildVoiceEngines(models: TtsModel[], accounts: CloudAccount[]): VoiceEngine[] {
@@ -287,7 +289,9 @@ export function sortVoices(items: LibraryVoice[]): LibraryVoice[] {
 
 export function filterVoices(items: LibraryVoice[], filters: VoiceFilters): LibraryVoice[] {
   return sortVoices(
-    searchVoices(items, filters.query).filter(matchesEngine.bind(null, filters.engine)),
+    searchVoices(items, filters.query)
+      .filter(matchesCollection.bind(null, filters.collection))
+      .filter(hasAllTags.bind(null, filters.tags)),
   );
 }
 
@@ -328,13 +332,47 @@ export function voiceStyleKey(style: string): LanguageKey | null {
   return STYLE_KEYS[style] ?? null;
 }
 
-export function presetOptionText(preset: VoicePreset, translate: VoiceTranslate): string {
+export function presetMetaText(preset: VoicePreset, translate: VoiceTranslate): string {
   const region = voiceRegionKey(preset.region);
   const style = voiceStyleKey(preset.style);
-  const parts = [preset.name, translate(voiceGenderKey(preset.gender))];
+  const parts = [translate(voiceGenderKey(preset.gender))];
   if (region) parts.push(translate(region));
   if (style) parts.push(translate(style));
   return parts.join(' · ');
+}
+
+export function presetSampleSlug(presetId: string): string {
+  return presetId
+    .replaceAll('đ', 'd')
+    .replaceAll('Đ', 'D')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function presetSampleUrl(engineId: string, presetId: string): string {
+  return `${PRESET_SAMPLES_DIR}/${engineId}/${presetSampleSlug(presetId)}.mp3`;
+}
+
+export function filterPresets(presets: VoicePreset[], filter: VoicePresetFilter): VoicePreset[] {
+  return filter === 'all' ? presets : presets.filter(hasGender.bind(null, filter));
+}
+
+export function presetFilterOptions(
+  presets: VoicePreset[],
+  translate: VoiceTranslate,
+): SegmentOption[] {
+  const genders = VOICE_GENDERS.filter(presetsHaveGender.bind(null, presets));
+  return [
+    { value: 'all', label: translate('library.voice.dialog.presetFilter.all') },
+    ...genders.map(toGenderOption.bind(null, translate)),
+  ];
+}
+
+function presetsHaveGender(presets: VoicePreset[], gender: VoiceGender): boolean {
+  return presets.some(hasGender.bind(null, gender));
 }
 
 export function isVoiceDraftValid(draft: VoiceDraft): boolean {

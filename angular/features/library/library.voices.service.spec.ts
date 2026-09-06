@@ -40,7 +40,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   return { promise, resolve };
 }
 
-const counts = { image: 0, sound: 0, video: 0, prompt: 0 };
+const counts = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 
 describe('LibraryVoiceService', () => {
   let ipc: FakeIpc;
@@ -74,8 +74,6 @@ describe('LibraryVoiceService', () => {
     voices.query.set('b');
     expect(voices.visible().map((item) => item.id)).toEqual([1]);
     voices.query.set('');
-    voices.engineFilter.set('cloud');
-    expect(voices.visible().map((item) => item.id)).toEqual([2]);
     voices.select(2);
     expect(voices.selected()?.id).toBe(2);
     voices.select(null);
@@ -184,13 +182,12 @@ describe('LibraryVoiceService', () => {
     const preview = voices.togglePreview(1);
     expect(voices.preparingId()).toBe(1);
     expect(voices.isPreviewActive(1)).toBe(true);
-    expect(ipc.lastArgs('library_voice_preview')).toEqual({ id: 1, text: 'Once upon a time.' });
+    expect(ipc.lastArgs('library_voice_preview')).toEqual({ id: 1 });
     pending.resolve(sample);
     await preview;
     expect(voices.preparingId()).toBeNull();
     expect(voices.playingId()).toBe(1);
     expect(player.played).toEqual([sample]);
-    expect(voices.items().find((item) => item.id === 1)?.sampleDurationMs).toBe(2_500);
     player.ended?.();
     expect(voices.playingId()).toBeNull();
   });
@@ -198,10 +195,9 @@ describe('LibraryVoiceService', () => {
   it('plays one sample at a time and toggles the active one off', async () => {
     ipc.on('library_voice_preview', new ArrayBuffer(4));
     await voices.togglePreview(1);
-    await voices.togglePreview(2, 'Một câu khác');
+    await voices.togglePreview(2);
     expect(voices.playingId()).toBe(2);
-    expect(ipc.lastArgs('library_voice_preview')).toEqual({ id: 2, text: 'Một câu khác' });
-    expect(voices.items().find((item) => item.id === 2)?.sampleDurationMs).toBe(3000);
+    expect(ipc.lastArgs('library_voice_preview')).toEqual({ id: 2 });
     await voices.togglePreview(2);
     expect(voices.playingId()).toBeNull();
     expect(player.stop).toHaveBeenCalled();

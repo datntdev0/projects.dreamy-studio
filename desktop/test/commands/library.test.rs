@@ -145,6 +145,14 @@ fn asset_calls(kind: &str) -> Vec<(String, serde_json::Value)> {
             format!("library_{kind}_upload"),
             json!({ "path": "missing.bin", "input": upload_input() }),
         ),
+    ]
+    .into_iter()
+    .chain(record_calls(kind))
+    .collect()
+}
+
+fn record_calls(kind: &str) -> Vec<(String, serde_json::Value)> {
+    vec![
         (format!("library_{kind}_list"), json!({})),
         (
             format!("library_{kind}_update"),
@@ -186,9 +194,10 @@ fn library_calls() -> Vec<(String, serde_json::Value)> {
             json!({ "input": prompt_input() }),
         ),
     ];
-    for kind in ["image", "sound", "video", "prompt"] {
+    for kind in ["image", "sound", "video"] {
         calls.extend(asset_calls(kind));
     }
+    calls.extend(record_calls("prompt"));
     calls
 }
 
@@ -222,7 +231,6 @@ fn library_commands_reject_unknown_rows_and_files_in_an_open_workspace() {
         "library_sound_update",
         "library_video_upload",
         "library_video_update",
-        "library_prompt_upload",
         "library_prompt_update",
     ];
 
@@ -240,15 +248,18 @@ fn library_lists_and_inspections_work_in_an_open_workspace() {
 
     for kind in ["image", "sound", "video", "prompt"] {
         let list = host.invoke(&format!("library_{kind}_list"), json!({}));
+        let delete = host.invoke(&format!("library_{kind}_delete"), json!({ "ids": [] }));
+
+        assert!(list.unwrap().as_array().unwrap().is_empty(), "{kind}");
+        assert_eq!(delete.unwrap(), 0, "{kind}");
+    }
+    for kind in ["image", "sound", "video"] {
         let inspect = host.invoke(
             &format!("library_{kind}_inspect"),
             json!({ "paths": ["missing.bin"] }),
         );
-        let delete = host.invoke(&format!("library_{kind}_delete"), json!({ "ids": [] }));
 
-        assert!(list.unwrap().as_array().unwrap().is_empty(), "{kind}");
         assert_eq!(inspect.unwrap().as_array().unwrap().len(), 1, "{kind}");
-        assert_eq!(delete.unwrap(), 0, "{kind}");
     }
     assert!(host.invoke("library_summary", json!({})).is_ok());
     assert!(
@@ -380,16 +391,4 @@ fn images_are_uploaded_read_updated_and_deleted_through_ipc() {
     assert!(full.as_str().unwrap().starts_with("data:image/"));
     assert_eq!(renamed["name"], "Dot");
     assert_eq!(deleted, 1);
-}
-
-#[test]
-fn prompt_files_are_uploaded_through_ipc() {
-    let host = MockHost::new();
-    host.open_workspace();
-    let file = host.dir.path().join("scene.txt");
-    std::fs::write(&file, "a quiet harbour").unwrap();
-
-    let prompt = upload(&host, "library_prompt_upload", &file);
-
-    assert_eq!(prompt["text"], "a quiet harbour");
 }

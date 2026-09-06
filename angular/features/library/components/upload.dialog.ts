@@ -2,7 +2,6 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { Button } from '@components/button';
 import { Icon } from '@components/icon';
-import { SegmentOption, Segments } from '@components/segments';
 import { CoreModule } from '@shared/core.module';
 // prettier-ignore
 import { DesktopDragDropEvent, DesktopIpcService, DesktopUnlisten } from '@shared/desktop/desktop-ipc.service';
@@ -17,7 +16,7 @@ import { IMAGE_RIGHTS, ImageCheck, ImageRights, ImageUploadInput } from '../libr
 import { fileNameOf, formatBytes } from '../library.images.rules';
 import { LibraryImageService } from '../library.images.service';
 // prettier-ignore
-import { PROMPT_KINDS, PROMPT_MAX_BYTES, PROMPT_NAME_MAX, PromptCreateInput, PromptKind } from '../library.prompts.models';
+import { PROMPT_KINDS, PROMPT_NAME_MAX, PromptCreateInput, PromptKind } from '../library.prompts.models';
 import { promptNameTooLong, promptTextTooLarge, promptVariables } from '../library.prompts.rules';
 import { LibraryPromptService } from '../library.prompts.service';
 import { libraryErrorKey, normalizeTag } from '../library.rules';
@@ -27,10 +26,10 @@ import { VIDEO_MAX_BYTES } from '../library.videos.models';
 import { LibraryVideoService } from '../library.videos.service';
 
 type UploadRunState = '' | 'waiting' | 'uploading' | 'done' | 'error';
-type UploadKind = 'image' | 'sound' | 'video' | 'prompt';
+type UploadKind = 'image' | 'sound' | 'video';
 
 interface UploadConfig {
-  icon: 'image' | 'music' | 'film' | 'prompt';
+  icon: 'image' | 'music' | 'film';
   nounKey: LanguageKey;
   hintKey: LanguageKey;
   dropzoneKey: LanguageKey;
@@ -63,14 +62,6 @@ const UPLOAD_CONFIG: Record<UploadKind, UploadConfig> = {
     dropTitleKey: 'library.upload.dropTitle.video',
     limit: VIDEO_MAX_BYTES,
   },
-  prompt: {
-    icon: 'prompt',
-    nounKey: 'library.noun.prompt',
-    hintKey: 'library.upload.hint.prompt',
-    dropzoneKey: 'library.upload.dropzone.prompt',
-    dropTitleKey: 'library.upload.dropTitle.prompt',
-    limit: PROMPT_MAX_BYTES,
-  },
 };
 
 const SCOPED_CHECK_CODES = ['unsupported', 'too_large', 'duplicate_name'];
@@ -102,7 +93,7 @@ function parseTags(value: string): string[] {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-library-upload-dialog',
-  imports: [Button, Icon, CoreModule, Segments],
+  imports: [Button, Icon, CoreModule],
   templateUrl: './upload.dialog.html',
   host: { 'data-testid': 'library-upload-dialog' },
 })
@@ -129,7 +120,6 @@ export class LibraryUploadDialog {
   readonly tags = signal('');
   readonly rights = signal<ImageRights | ''>('');
   readonly over = signal(false);
-  readonly mode = this.dialogs.uploadMode;
   readonly writeName = signal('');
   readonly writeKind = signal<PromptKind>('general');
   readonly writeText = signal('');
@@ -138,7 +128,6 @@ export class LibraryUploadDialog {
   readonly promptKinds = PROMPT_KINDS;
   readonly isWrite = computed(this.buildIsWrite.bind(this));
   readonly writeVariables = computed(this.buildWriteVariables.bind(this));
-  readonly tabOptions = computed(this.buildTabOptions.bind(this));
   readonly uploading = signal(false);
   readonly rightOptions = IMAGE_RIGHTS;
   readonly validCount = computed(this.countValid.bind(this));
@@ -154,7 +143,7 @@ export class LibraryUploadDialog {
   }
 
   config(): UploadConfig {
-    return UPLOAD_CONFIG[this.kind()];
+    return UPLOAD_CONFIG[this.kind() as UploadKind];
   }
 
   statusKey(item: UploadItem): LanguageKey {
@@ -185,13 +174,6 @@ export class LibraryUploadDialog {
 
   kindKey(kind: PromptKind): LanguageKey {
     return `library.prompt.kind.${kind}` as LanguageKey;
-  }
-
-  setMode(value: string): void {
-    if (!this.uploading()) {
-      this.dialogs.uploadMode.set(value === 'write' ? 'write' : 'files');
-      this.writeTried.set(false);
-    }
   }
 
   setWriteName(event: Event): void {
@@ -392,18 +374,11 @@ export class LibraryUploadDialog {
   }
 
   private buildIsWrite(): boolean {
-    return this.kind() === 'prompt' && this.mode() === 'write';
+    return this.kind() === 'prompt';
   }
 
   private buildWriteVariables(): string {
     return promptVariables(this.writeText()).join(', ');
-  }
-
-  private buildTabOptions(): SegmentOption[] {
-    return [
-      { value: 'files', label: this.languageService.translate('library.upload.tab.files') },
-      { value: 'write', label: this.languageService.translate('library.upload.tab.write') },
-    ];
   }
 
   private syncOpen(): void {
@@ -575,21 +550,18 @@ export class LibraryUploadDialog {
   private pickPaths(): Promise<string[]> {
     if (this.kind() === 'sound') return this.sounds.pick();
     if (this.kind() === 'video') return this.videos.pick();
-    if (this.kind() === 'prompt') return this.prompts.pick();
     return this.images.pick();
   }
 
   private inspectPaths(paths: string[]): Promise<ImageCheck[]> {
     if (this.kind() === 'sound') return this.sounds.inspect(paths);
     if (this.kind() === 'video') return this.videos.inspect(paths);
-    if (this.kind() === 'prompt') return this.prompts.inspect(paths);
     return this.images.inspect(paths);
   }
 
   private uploadPath(path: string, input: ImageUploadInput): Promise<unknown> {
     if (this.kind() === 'sound') return this.sounds.upload(path, input);
     if (this.kind() === 'video') return this.videos.upload(path, input);
-    if (this.kind() === 'prompt') return this.prompts.upload(path, input);
     return this.images.upload(path, input);
   }
 }

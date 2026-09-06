@@ -1,7 +1,6 @@
-import { AssetRights, LibrarySort } from './library.models';
+import { AssetRights } from './library.models';
 
 export type PromptKind = 'image' | 'video' | 'voice' | 'general';
-export type PromptSort = LibrarySort;
 export interface LibraryPrompt {
   id: number;
   name: string;
@@ -32,7 +31,6 @@ export interface PromptPatch {
   tags?: string[];
 }
 export const PROMPT_KINDS: PromptKind[] = ['image', 'video', 'voice', 'general'];
-export const PROMPT_EXTENSIONS = ['txt', 'md'] as const;
 export const PROMPT_MAX_BYTES = 256 * 1024;
 export const PROMPT_NAME_MAX = 120;
 export const PROMPT_EXCERPT = 180;

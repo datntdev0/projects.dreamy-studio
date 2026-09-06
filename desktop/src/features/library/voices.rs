@@ -2,6 +2,7 @@ use crate::features::backend::models::SynthesisRequest;
 use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::service::Synthesizer;
 use crate::features::library::assets;
+use crate::features::library::models::AssetRights;
 use crate::features::library::models::LibraryError;
 use crate::features::library::models::LibraryErrorCode;
 use crate::features::library::models::LibraryResult;
@@ -37,7 +38,8 @@ const ENGINE_UNAVAILABLE_CODES: [&str; 4] = [
 ];
 const REFERENCE_FILE: &str = "reference.wav";
 const STAGING_PREFIX: &str = ".staging-";
-const VOICE_COLUMNS: &str = "id, name, description, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, sample_duration_ms, created_at, updated_at";
+const VOICE_TAG_TYPE: &str = "library_voice";
+const VOICE_COLUMNS: &str = "id, name, description, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, created_at, updated_at, rights, collection_id";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceKind {
@@ -71,6 +73,9 @@ pub struct NewVoice {
     pub reference_sound_id: Option<i64>,
     pub reference_name: String,
     pub sample_text: String,
+    pub rights: AssetRights,
+    pub collection_id: Option<i64>,
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -157,6 +162,7 @@ pub fn normalize_sample_text(text: &str) -> LibraryResult<String> {
 
 pub fn normalize_patch(patch: &VoicePatch) -> LibraryResult<VoicePatch> {
     Ok(VoicePatch {
+        name: patch.name.as_deref().map(normalize_name).transpose()?,
         sample_text: patch
             .sample_text
             .as_deref()
@@ -166,6 +172,13 @@ pub fn normalize_patch(patch: &VoicePatch) -> LibraryResult<VoicePatch> {
             .description
             .as_deref()
             .map(|text| text.trim().to_string()),
+        rights: patch.rights,
+        collection_id: patch.collection_id,
+        tags: patch
+            .tags
+            .as_deref()
+            .map(assets::normalized_tags)
+            .transpose()?,
     })
 }
 
@@ -212,6 +225,9 @@ pub fn validate_input(input: &VoiceInput) -> LibraryResult<NewVoice> {
         reference_sound_id: None,
         reference_name: String::new(),
         sample_text: default_sample_text(input.language.trim()).to_string(),
+        rights: AssetRights::Own,
+        collection_id: None,
+        tags: Vec::new(),
     })
 }
 
@@ -239,6 +255,9 @@ pub fn copy_of(voice: &LibraryVoice, name: &str) -> LibraryResult<NewVoice> {
             String::new()
         },
         sample_text: voice.sample_text.clone(),
+        rights: voice.rights,
+        collection_id: voice.collection_id,
+        tags: voice.tags.clone(),
     })
 }
 
@@ -358,19 +377,27 @@ pub fn list(conn: &Connection) -> LibraryResult<Vec<LibraryVoice>> {
         format!("SELECT {VOICE_COLUMNS} FROM ws_library_voices ORDER BY created_at DESC, id DESC");
     let mut statement = conn.prepare(&sql)?;
     let rows = statement.query_map([], voice_from_row)?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+    let mut voices = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    for voice in &mut voices {
+        voice.tags = assets::tags_for(conn, VOICE_TAG_TYPE, voice.id)?;
+    }
+    Ok(voices)
 }
 
 pub fn get(conn: &Connection, id: i64) -> LibraryResult<LibraryVoice> {
     let sql = format!("SELECT {VOICE_COLUMNS} FROM ws_library_voices WHERE id = ?1");
-    conn.query_row(&sql, [id], voice_from_row)
+    let mut voice = conn
+        .query_row(&sql, [id], voice_from_row)
         .optional()?
-        .ok_or_else(|| voice_not_found(id))
+        .ok_or_else(|| voice_not_found(id))?;
+    voice.tags = assets::tags_for(conn, VOICE_TAG_TYPE, id)?;
+    Ok(voice)
 }
 
 pub fn insert(conn: &Connection, voice: &NewVoice, now: &str) -> LibraryResult<i64> {
+    assets::require_collection(conn, voice.collection_id)?;
     conn.execute(
-        "INSERT INTO ws_library_voices (name, description, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, sample_duration_ms, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, NULL, ?14, ?14)",
+        "INSERT INTO ws_library_voices (name, description, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at, rights, collection_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14, ?15, ?16)",
         params![
             voice.name,
             voice.description,
@@ -386,9 +413,13 @@ pub fn insert(conn: &Connection, voice: &NewVoice, now: &str) -> LibraryResult<i
             voice.reference_name,
             voice.sample_text,
             now,
+            voice.rights.as_str(),
+            voice.collection_id,
         ],
     )?;
-    Ok(conn.last_insert_rowid())
+    let id = conn.last_insert_rowid();
+    assets::replace_tags(conn, VOICE_TAG_TYPE, id, &voice.tags)?;
+    Ok(id)
 }
 
 pub fn update(
@@ -398,11 +429,19 @@ pub fn update(
     now: &str,
 ) -> LibraryResult<LibraryVoice> {
     let current = get(conn, id)?;
+    if let Some(name) = patch.name.as_deref()
+        && name != current.name
+    {
+        conn.execute(
+            "UPDATE ws_library_voices SET name = ?1, updated_at = ?2 WHERE id = ?3",
+            params![name, now, id],
+        )?;
+    }
     if let Some(text) = patch.sample_text.as_deref()
         && text != current.sample_text
     {
         conn.execute(
-            "UPDATE ws_library_voices SET sample_text = ?1, sample_duration_ms = NULL, updated_at = ?2 WHERE id = ?3",
+            "UPDATE ws_library_voices SET sample_text = ?1, updated_at = ?2 WHERE id = ?3",
             params![text, now, id],
         )?;
     }
@@ -414,20 +453,33 @@ pub fn update(
             params![description, now, id],
         )?;
     }
+    if let Some(rights) = patch.rights
+        && rights != current.rights
+    {
+        conn.execute(
+            "UPDATE ws_library_voices SET rights = ?1, updated_at = ?2 WHERE id = ?3",
+            params![rights.as_str(), now, id],
+        )?;
+    }
+    if let Some(collection_id) = patch.collection_id
+        && collection_id != current.collection_id
+    {
+        assets::require_collection(conn, collection_id)?;
+        conn.execute(
+            "UPDATE ws_library_voices SET collection_id = ?1, updated_at = ?2 WHERE id = ?3",
+            params![collection_id, now, id],
+        )?;
+    }
+    if let Some(tags) = patch.tags.as_ref()
+        && *tags != current.tags
+    {
+        assets::replace_tags(conn, VOICE_TAG_TYPE, id, tags)?;
+        conn.execute(
+            "UPDATE ws_library_voices SET updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+    }
     get(conn, id)
-}
-
-pub fn record_sample_duration(
-    conn: &Connection,
-    id: i64,
-    text: &str,
-    duration_ms: i64,
-) -> LibraryResult<bool> {
-    let changed = conn.execute(
-        "UPDATE ws_library_voices SET sample_duration_ms = ?1 WHERE id = ?2 AND sample_text = ?3",
-        params![duration_ms, id, text],
-    )?;
-    Ok(changed > 0)
 }
 
 pub fn detach_sounds(conn: &Connection, sound_ids: &[i64]) -> LibraryResult<()> {
@@ -444,6 +496,7 @@ pub fn delete(conn: &Connection, ids: &[i64]) -> LibraryResult<Vec<i64>> {
     let mut removed = Vec::new();
     for id in ids {
         if conn.execute("DELETE FROM ws_library_voices WHERE id = ?1", [id])? > 0 {
+            assets::delete_tags(conn, VOICE_TAG_TYPE, *id)?;
             removed.push(*id);
         }
     }
@@ -499,9 +552,11 @@ fn voice_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryVoice> {
         reference_name: row.get(11)?,
         prompt: row.get(12)?,
         sample_text: row.get(13)?,
-        sample_duration_ms: row.get(14)?,
-        created_at: row.get(15)?,
-        updated_at: row.get(16)?,
+        created_at: row.get(14)?,
+        updated_at: row.get(15)?,
+        rights: parse_column(row, 16, "rights", AssetRights::parse)?,
+        collection_id: row.get(17)?,
+        tags: Vec::new(),
     })
 }
 

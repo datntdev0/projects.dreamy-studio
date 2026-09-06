@@ -1,6 +1,5 @@
-import { AssetRights, LibrarySort } from './library.models';
+import { AssetRights } from './library.models';
 
-export type VideoSort = LibrarySort;
 export interface LibraryVideo {
   id: number;
   name: string;

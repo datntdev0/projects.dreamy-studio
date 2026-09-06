@@ -47,7 +47,7 @@ test.describe('CAP-05 Asset Library Management', () => {
       });
 
       await test.step('removes the voice, stops its sample and confirms the deletion', async () => {
-        await panel.play.click();
+        await list.row('Narrator An').play.click();
         await panel.remove.click();
         await confirm.accept.click();
         await expect(ui.main.toast('Deleted “Narrator An”.')).toBeVisible();

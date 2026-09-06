@@ -16,7 +16,7 @@ describe('library.rules', () => {
   });
 
   it('sums counts across kinds', () => {
-    expect(sumCounts({ image: 1, sound: 2, video: 3, prompt: 4 })).toBe(10);
+    expect(sumCounts({ image: 1, sound: 2, video: 3, prompt: 4, voice: 5 })).toBe(15);
   });
 
   it('formats durations', () => {
@@ -46,7 +46,7 @@ describe('library.rules', () => {
 });
 
 describe('library.rules taxonomy', () => {
-  const counts = (image: number, sound = 0) => ({ image, sound, video: 0, prompt: 0 });
+  const counts = (image: number, sound = 0) => ({ image, sound, video: 0, prompt: 0, voice: 0 });
   const tags = [
     { tag: 'b', counts: counts(1) },
     { tag: 'a', counts: counts(1) },
@@ -97,7 +97,6 @@ describe('library.rules taxonomy', () => {
       'video_too_large',
       'video_unreadable',
       'prompt_not_found',
-      'prompt_unsupported',
       'prompt_too_large',
       'prompt_unreadable',
       'prompt_empty',

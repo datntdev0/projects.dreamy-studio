@@ -17,7 +17,7 @@ import { listenForLibraryDrops } from '../library.drag-drop';
 import { ASSET_RATIOS, AssetRef } from '../library.models';
 import { formatBytes } from '../library.rules';
 import { LibraryService } from '../library.service';
-import { LibraryVideo, VideoSort } from '../library.videos.models';
+import { LibraryVideo } from '../library.videos.models';
 import { videoMeta } from '../library.videos.rules';
 import { LibraryVideoService } from '../library.videos.service';
 import { LibraryVideoMedia } from './video-media.component';
@@ -62,9 +62,6 @@ export class LibraryVideos implements OnInit, OnDestroy {
   }
   onQuery(event: Event): void {
     this.videos.query.set(fieldValue(event));
-  }
-  onSort(event: Event): void {
-    this.videos.sort.set(fieldValue(event) as VideoSort);
   }
   onGridSize(value: number): void {
     this.videos.setGridSize(value);

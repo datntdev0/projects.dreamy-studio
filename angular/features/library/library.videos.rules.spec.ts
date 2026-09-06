@@ -2,7 +2,7 @@ import { libraryVideo } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { filterVideos, frameText, searchVideos, sortVideos, videoCode, videoMeta } from './library.videos.rules';
+import { filterVideos, frameText, searchVideos, videoCode, videoMeta } from './library.videos.rules';
 
 describe('library.videos.rules', () => {
   const items = [
@@ -24,25 +24,19 @@ describe('library.videos.rules', () => {
     expect(videoMeta(items[0])).toBe('0:05 · 1920×1080');
   });
 
-  it('filters and sorts', () => {
+  it('filters keeping the given order', () => {
     expect(searchVideos(items, 'x')).toHaveLength(1);
-    expect(sortVideos(items, 'name')[0].id).toBe(2);
-    expect(sortVideos(items, 'size')[0].id).toBe(2);
-    expect(sortVideos(items, 'new')[0].id).toBe(2);
     expect(
-      filterVideos(items, { query: '', sort: 'new', collection: 2, tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterVideos(items, { query: '', collection: null, tags: [] }).map((item) => item.id),
+    ).toEqual([1, 2]);
+    expect(
+      filterVideos(items, { query: '', collection: 2, tags: [] }).map((item) => item.id),
     ).toEqual([1]);
     expect(
-      filterVideos(items, { query: '', sort: 'new', collection: 'none', tags: [] }).map(
-        (item) => item.id,
-      ),
+      filterVideos(items, { query: '', collection: 'none', tags: [] }).map((item) => item.id),
     ).toEqual([2]);
     expect(
-      filterVideos(items, { query: '', sort: 'new', collection: null, tags: ['x'] }).map(
-        (item) => item.id,
-      ),
+      filterVideos(items, { query: '', collection: null, tags: ['x'] }).map((item) => item.id),
     ).toEqual([1]);
   });
 });

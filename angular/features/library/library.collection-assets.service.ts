@@ -3,11 +3,12 @@ import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@a
 import { AssetRow, toAssetRows } from './library.assets.models';
 import { collectionTags, filterAssetRows } from './library.assets.rules';
 import { LibraryImageService } from './library.images.service';
-import { AssetRef, LibrarySort, LibraryTag } from './library.models';
+import { AssetRef, LibraryTag } from './library.models';
 import { LibraryPromptService } from './library.prompts.service';
 import { LibraryService } from './library.service';
 import { LibrarySoundService } from './library.sounds.service';
 import { LibraryVideoService } from './library.videos.service';
+import { LibraryVoiceService } from './library.voices.service';
 
 function sameRef(left: AssetRef, right: AssetRef): boolean {
   return left.kind === right.kind && left.id === right.id;
@@ -25,12 +26,12 @@ export class LibraryCollectionAssetsService {
   private readonly sounds = inject(LibrarySoundService);
   private readonly videos = inject(LibraryVideoService);
   private readonly prompts = inject(LibraryPromptService);
+  private readonly voices = inject(LibraryVoiceService);
   private readonly library = inject(LibraryService);
   private readonly rowsByCollection = new Map<number, Signal<AssetRow[]>>();
   private readonly selections = new Map<number, WritableSignal<AssetRef | null>>();
 
   readonly query = signal('');
-  readonly sort = signal<LibrarySort>('new');
 
   rows(collectionId: number): Signal<AssetRow[]> {
     const existing = this.rowsByCollection.get(collectionId);
@@ -46,6 +47,7 @@ export class LibraryCollectionAssetsService {
       this.sounds.items(),
       this.videos.items(),
       this.prompts.items(),
+      this.voices.items(),
     );
   }
 
@@ -65,7 +67,6 @@ export class LibraryCollectionAssetsService {
   private filterRows(collectionId: number): AssetRow[] {
     return filterAssetRows(this.allRows(), {
       query: this.query(),
-      sort: this.sort(),
       collection: collectionId,
       tags: this.library.filterTags(),
     });

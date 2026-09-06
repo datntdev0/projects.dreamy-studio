@@ -8,7 +8,7 @@ import { WorkspaceService } from '../workspace/workspace.service';
 import { LibraryPromptService } from './library.prompts.service';
 import { LibraryService } from './library.service';
 
-const counts = { image: 0, sound: 0, video: 0, prompt: 0 };
+const counts = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 
 describe('LibraryPromptService', () => {
   let ipc: FakeIpc;
@@ -39,18 +39,6 @@ describe('LibraryPromptService', () => {
     expect(prompts.selected()?.id).toBe(2);
     prompts.select(null);
     expect(prompts.selected()).toBeNull();
-  });
-
-  it('proxies commands and uploads', async () => {
-    ipc.on('library_prompt_pick', ['/a.txt']);
-    ipc.on('library_prompt_inspect', []);
-    expect(await prompts.pick()).toEqual(['/a.txt']);
-    expect(await prompts.inspect(['/a.txt'])).toEqual([]);
-    ipc.fail('library_prompt_upload', 'x');
-    await expect(prompts.upload('/a', { tags: [], rights: 'own' })).rejects.toBe('x');
-    ipc.on('library_prompt_upload', libraryPrompt({ id: 7 }));
-    await prompts.upload('/b', { tags: [], rights: 'own' });
-    expect(prompts.items()[0].id).toBe(7);
   });
 
   it('creates, updates and removes', async () => {

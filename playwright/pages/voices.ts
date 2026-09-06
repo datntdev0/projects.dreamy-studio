@@ -27,10 +27,6 @@ export class VoiceRow {
     return this.root.getByTestId('library-voices-table-gender');
   }
 
-  get duration(): Locator {
-    return this.root.getByTestId('library-voices-table-duration');
-  }
-
   get avatar(): Locator {
     return this.root.getByTestId('library-voice-avatar-mark');
   }
@@ -49,14 +45,6 @@ export class VoiceList {
 
   get search(): Locator {
     return this.root.getByTestId('library-voices-search');
-  }
-
-  get filter(): Locator {
-    return this.root.getByTestId('library-voices-filter');
-  }
-
-  get count(): Locator {
-    return this.root.getByTestId('library-voices-count');
   }
 
   get toolbarRight(): Locator {
@@ -183,6 +171,26 @@ export class VoiceDialog {
     return this.root.getByTestId('library-voice-dialog-cancel');
   }
 
+  presetOption(name: string): Locator {
+    return this.presetOptions.filter({
+      has: this.page
+        .getByTestId('library-voice-dialog-preset-name')
+        .getByText(name, { exact: true }),
+    });
+  }
+
+  presetPick(name: string): Locator {
+    return this.presetOption(name).getByTestId('library-voice-dialog-preset-pick');
+  }
+
+  presetMeta(name: string): Locator {
+    return this.presetOption(name).getByTestId('library-voice-dialog-preset-meta');
+  }
+
+  presetPlay(name: string): Locator {
+    return this.presetOption(name).getByTestId('library-voice-dialog-preset-play');
+  }
+
   sourceOption(label: string): Locator {
     return this.source.getByRole('button', { name: label, exact: true });
   }
@@ -223,14 +231,24 @@ export class VoicePanel {
     return this.root.getByTestId('library-voice-panel-sample-text');
   }
 
-  get play(): Locator {
-    return this.root
-      .getByTestId('library-voice-panel-play')
-      .getByTestId('library-voice-play-button');
+  get playButtons(): Locator {
+    return this.root.getByTestId('library-voice-play-button');
   }
 
-  get duration(): Locator {
-    return this.root.getByTestId('library-voice-panel-duration');
+  get tagInput(): Locator {
+    return this.root.getByTestId('library-asset-fields-tag-input');
+  }
+
+  get tags(): Locator {
+    return this.root.getByTestId('library-asset-fields-tag');
+  }
+
+  get collection(): Locator {
+    return this.root.getByTestId('library-asset-fields-collection');
+  }
+
+  get rights(): Locator {
+    return this.root.getByTestId('library-asset-fields-rights');
   }
 
   get description(): Locator {

@@ -1,11 +1,10 @@
 import { CollectionFilter } from './library.models';
 // prettier-ignore
-import { LibraryPrompt, PROMPT_MAX_BYTES, PROMPT_NAME_MAX, PromptSort } from './library.prompts.models';
-import { compareFor, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
+import { LibraryPrompt, PROMPT_MAX_BYTES, PROMPT_NAME_MAX } from './library.prompts.models';
+import { hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
 
 export interface PromptFilters {
   query: string;
-  sort: PromptSort;
   collection: CollectionFilter;
   tags: string[];
 }
@@ -57,14 +56,8 @@ export function searchPrompts(items: LibraryPrompt[], query: string): LibraryPro
   const needle = query.trim().toLocaleLowerCase();
   return items.filter(matchesQuery.bind(null, needle));
 }
-export function sortPrompts(items: LibraryPrompt[], sort: PromptSort): LibraryPrompt[] {
-  return [...items].sort(compareFor.bind(null, sort));
-}
 export function filterPrompts(items: LibraryPrompt[], filters: PromptFilters): LibraryPrompt[] {
-  return sortPrompts(
-    searchPrompts(items, filters.query)
-      .filter(matchesCollection.bind(null, filters.collection))
-      .filter(hasAllTags.bind(null, filters.tags)),
-    filters.sort,
-  );
+  return searchPrompts(items, filters.query)
+    .filter(matchesCollection.bind(null, filters.collection))
+    .filter(hasAllTags.bind(null, filters.tags));
 }

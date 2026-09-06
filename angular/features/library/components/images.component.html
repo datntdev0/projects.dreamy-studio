@@ -14,16 +14,6 @@
           (input)="onQuery($event)"
         />
       </label>
-      <span class="t-sm t-mute" data-testid="library-images-count">
-        @if (images.visible().length === images.items().length) {
-          {{ 'library.image.countAll' | t: { count: images.visible().length } }}
-        } @else {
-          {{
-            'library.image.countFiltered'
-              | t: { shown: images.visible().length, total: images.items().length }
-          }}
-        }
-      </span>
       @if (library.filtersActive()) {
         <span class="nm-chips" data-testid="library-images-filter-chips">
           @if (library.filterCollection() !== null) {
@@ -111,23 +101,6 @@
           }
         </div>
       }
-      <select
-        class="select"
-        [value]="images.sort()"
-        [attr.aria-label]="'library.image.sort' | t"
-        data-testid="library-images-sort"
-        (change)="onSort($event)"
-      >
-        <option value="new" data-testid="library-images-sort-new">
-          {{ 'library.image.sort.new' | t }}
-        </option>
-        <option value="name" data-testid="library-images-sort-name">
-          {{ 'library.image.sort.name' | t }}
-        </option>
-        <option value="size" data-testid="library-images-sort-size">
-          {{ 'library.image.sort.size' | t }}
-        </option>
-      </select>
       <div
         class="seg"
         role="group"

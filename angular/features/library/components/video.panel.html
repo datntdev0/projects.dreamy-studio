@@ -11,16 +11,28 @@
       <label for="library-video-panel-name" data-testid="library-video-panel-name-label">
         {{ "library.image.field.name" | t }}
       </label>
-      <input
-        id="library-video-panel-name"
-        class="input"
-        maxlength="255"
-        [value]="item.name"
-        autocomplete="off"
-        data-testid="library-video-panel-name"
-        (blur)="nameBlur(item, $event)"
-        (keydown)="nameKeydown($event)"
-      />
+      <div class="lb-name-row" data-testid="library-video-panel-name-row">
+        <input
+          id="library-video-panel-name"
+          class="input"
+          maxlength="255"
+          [value]="item.name"
+          autocomplete="off"
+          data-testid="library-video-panel-name"
+          (blur)="nameBlur(item, $event)"
+          (keydown)="nameKeydown($event)"
+        />
+        <button
+          type="button"
+          class="btn btn-icon lb-ins-del"
+          [attr.aria-label]="'library.video.delete' | t"
+          [attr.title]="'library.video.delete' | t"
+          data-testid="library-video-panel-delete"
+          (click)="remove(item)"
+        >
+          <ds-icon name="trash" [size]="16" data-testid="library-video-panel-delete-icon" />
+        </button>
+      </div>
     </div>
   </section>
   <section class="ins-sec ins-form" data-testid="library-video-panel-fields">
@@ -151,17 +163,6 @@
       <dt data-testid="library-video-panel-origin-label">{{ "library.image.info.origin" | t }}</dt>
       <dd data-testid="library-video-panel-origin">{{ originKey(item) | t }}</dd>
     </dl>
-  </section>
-  <section class="ins-sec ins-actions" data-testid="library-video-panel-actions">
-    <button
-      type="button"
-      class="btn btn-danger"
-      data-testid="library-video-panel-delete"
-      (click)="remove(item)"
-    >
-      <ds-icon name="trash" [size]="16" data-testid="library-video-panel-delete-icon" />
-      {{ "library.video.delete" | t }}
-    </button>
   </section>
 </section>
 } @else {

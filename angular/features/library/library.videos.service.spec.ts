@@ -8,7 +8,7 @@ import { WorkspaceService } from '../workspace/workspace.service';
 import { LibraryService } from './library.service';
 import { LibraryVideoService } from './library.videos.service';
 
-const counts = { image: 0, sound: 0, video: 0, prompt: 0 };
+const counts = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 
 describe('LibraryVideoService', () => {
   let ipc: FakeIpc;

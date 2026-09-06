@@ -13,7 +13,7 @@ import { createScriptingState, scriptingHandlers } from './scripting.mocks';
 
 const ANALYZED_CHAPTERS = [1, 2];
 
-const NO_ASSETS = { image: 0, sound: 0, video: 0, prompt: 0 };
+const NO_ASSETS = { image: 0, sound: 0, video: 0, prompt: 0, voice: 0 };
 
 const SHELL_HANDLERS: IpcHandlers = {
   app_info: () => ({ name: 'Dreamy Studio', version: '0.0.0' }),

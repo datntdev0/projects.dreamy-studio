@@ -1,4 +1,5 @@
 app-library-voices,
+app-library-asset-avatar,
 app-library-voice-avatar,
 app-library-voice-play {
   display: contents;
@@ -17,7 +18,20 @@ app-library-voice-notice {
   height: 30px;
   border: 1px solid var(--hairline);
   border-radius: var(--r-full);
-  font: 600 13px/1 var(--font);
+  font: 600 11px/1 var(--font);
+  letter-spacing: 0.2px;
+}
+
+.lb-media.is-voice {
+  display: grid;
+  place-items: center;
+  background: var(--canvas-soft);
+}
+
+.lb-media.is-voice .lb-vo-av {
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
 }
 
 .lb-vo-av.tone-0 {
@@ -109,25 +123,6 @@ app-library-voices .nm-title {
   margin: 0;
 }
 
-.lb-vo-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-}
-
-.lb-vo-head-name {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-weight: 600;
-}
-
-.lb-vo-sample {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-}
-
 .lb-vo-src {
   display: block;
   overflow-wrap: anywhere;
@@ -201,11 +196,132 @@ app-library-voices .nm-title {
   }
 }
 
+.lb-vo-play {
+  justify-content: center;
+  width: 104px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.lb-vo-play.is-busy .ic,
 .lb-pbtn.is-busy .ic {
   animation: lb-vo-spin 1s linear infinite;
 }
 @keyframes lb-vo-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.lb-vo-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-lg);
+}
+
+.lb-vo-row > .field {
+  align-content: start;
+}
+
+.lb-vo-pk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.lb-vo-pk {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--sp-sm);
+  max-height: 264px;
+  overflow-y: auto;
+  padding: var(--sp-xs);
+  margin: calc(var(--sp-xs) * -1);
+}
+
+.lb-vo-pk-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  min-width: 0;
+  padding: var(--sp-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--canvas-card);
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.lb-vo-pk-item:hover {
+  border-color: var(--hairline-strong);
+  background: var(--canvas-soft);
+}
+
+.lb-vo-pk-item.is-on {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.lb-vo-pk-item .lb-pbtn {
+  flex: none;
+}
+
+.lb-vo-pk-item:not(.is-playing) .lb-pbtn {
+  background: var(--canvas-soft);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+}
+
+.lb-vo-pk-pick {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lb-vo-pk-pick:focus-visible {
+  border-radius: var(--r-sm);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.lb-vo-pk-name,
+.lb-vo-pk-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-vo-pk-name {
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.lb-vo-pk-meta {
+  color: var(--mute);
+  font-size: 11.5px;
+  line-height: 16px;
+}
+
+.lb-vo-pk-check {
+  flex: none;
+  color: var(--primary);
+}
+
+@media (max-width: 560px) {
+  .lb-vo-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

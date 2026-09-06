@@ -17,7 +17,6 @@ use crate::features::library::models::LibraryTag;
 use crate::features::library::models::LibraryVideo;
 use crate::features::library::models::PromptCreateInput;
 use crate::features::library::models::PromptPatch;
-use crate::features::library::prompts::PROMPT_EXTENSIONS;
 use crate::features::library::service::LibraryService;
 use crate::features::library::sounds::SOUND_EXTENSIONS;
 use crate::features::library::videos::VIDEO_EXTENSIONS;
@@ -31,7 +30,6 @@ use tauri_plugin_dialog::DialogExt;
 const IMAGE_PICKER_LABEL: &str = "Images";
 const SOUND_PICKER_LABEL: &str = "Sounds";
 const VIDEO_PICKER_LABEL: &str = "Videos";
-const PROMPT_PICKER_LABEL: &str = "Prompts";
 
 pub fn get_summary(
     service: &LibraryService,
@@ -251,27 +249,6 @@ pub fn video_poster(
     id: i64,
 ) -> LibraryResult<Option<String>> {
     service.open(session)?.video_poster(id)
-}
-
-pub fn pick_prompts<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
-    pick_files(app, PROMPT_PICKER_LABEL, &PROMPT_EXTENSIONS)
-}
-
-pub fn inspect_prompts(
-    service: &LibraryService,
-    session: &WorkspaceSession,
-    paths: Vec<String>,
-) -> LibraryResult<Vec<AssetCheck>> {
-    service.open(session)?.prompt_inspect(&paths)
-}
-
-pub fn upload_prompt(
-    service: &LibraryService,
-    session: &WorkspaceSession,
-    path: String,
-    input: AssetUploadInput,
-) -> LibraryResult<LibraryPrompt> {
-    service.open(session)?.prompt_upload(&path, input)
 }
 
 pub fn create_prompt(
@@ -629,36 +606,6 @@ pub async fn library_video_poster<R: Runtime>(
     })
     .await
 }
-#[tauri::command]
-pub async fn library_prompt_pick<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
-    spawn_blocking(move || pick_prompts(&app))
-        .await
-        .unwrap_or_default()
-}
-
-#[tauri::command]
-pub async fn library_prompt_inspect<R: Runtime>(
-    app: AppHandle<R>,
-    paths: Vec<String>,
-) -> LibraryResult<Vec<AssetCheck>> {
-    run_blocking(app, move |service, session| {
-        inspect_prompts(service, session, paths)
-    })
-    .await
-}
-
-#[tauri::command]
-pub async fn library_prompt_upload<R: Runtime>(
-    app: AppHandle<R>,
-    path: String,
-    input: AssetUploadInput,
-) -> LibraryResult<LibraryPrompt> {
-    run_blocking(app, move |service, session| {
-        upload_prompt(service, session, path, input)
-    })
-    .await
-}
-
 #[tauri::command]
 pub async fn library_prompt_create<R: Runtime>(
     app: AppHandle<R>,

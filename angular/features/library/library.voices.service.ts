@@ -14,7 +14,6 @@ import { LibrarySoundService } from './library.sounds.service';
 import {
   LibraryVoice,
   VoiceEngine,
-  VoiceEngineFilter,
   VoiceInput,
   VoicePatch,
   VoiceReferenceFile,
@@ -25,7 +24,6 @@ import {
   engineName,
   engineReady,
   filterVoices,
-  sameSampleText,
   voiceById,
 } from './library.voices.rules';
 import { LibraryWorkspaceSync } from './library.workspace-sync';
@@ -37,6 +35,10 @@ function requireVoice(voice: LibraryVoice | null | undefined): LibraryVoice {
 
 function isDeleted(deleted: Set<number>, id: number | null): boolean {
   return id !== null && deleted.has(id);
+}
+
+function touchesTaxonomy(patch: VoicePatch): boolean {
+  return patch.tags !== undefined || patch.collectionId !== undefined;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -60,7 +62,6 @@ export class LibraryVoiceService {
   readonly playingId = signal<number | null>(null);
   readonly preparingId = signal<number | null>(null);
   readonly query = signal('');
-  readonly engineFilter = signal<VoiceEngineFilter>('all');
   readonly engines = computed(this.buildEngines.bind(this));
   readonly selected = computed(this.findSelected.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
@@ -116,6 +117,7 @@ export class LibraryVoiceService {
       await this.ipc.invoke<LibraryVoice>('library_voice_update', { id, patch }),
     );
     this.items.set(replaceById(this.items(), voice));
+    if (touchesTaxonomy(patch)) await this.library.refreshTaxonomy();
     return voice;
   }
 
@@ -128,6 +130,7 @@ export class LibraryVoiceService {
     );
     this.items.set([copy, ...this.items()]);
     this.select(copy.id);
+    await this.library.refreshTaxonomy();
     return copy;
   }
 
@@ -142,6 +145,7 @@ export class LibraryVoiceService {
     if ([this.playingId(), this.preparingId()].some(isDeleted.bind(null, deleted))) {
       this.stopPreview();
     }
+    await this.library.refreshTaxonomy();
     return count ?? list.length;
   }
 
@@ -149,24 +153,19 @@ export class LibraryVoiceService {
     return this.playingId() === id || this.preparingId() === id;
   }
 
-  async togglePreview(id: number, text?: string): Promise<void> {
+  async togglePreview(id: number): Promise<void> {
     const voice = voiceById(this.items(), id);
     const wasActive = this.isPreviewActive(id);
     this.stopPreview();
     if (!voice || wasActive) return;
     const token = this.previewToken;
-    const sample = text ?? voice.sampleText;
     this.preparingId.set(id);
     try {
-      const data = await this.ipc.invoke<ArrayBuffer>('library_voice_preview', {
-        id,
-        text: sample,
-      });
+      const data = await this.ipc.invoke<ArrayBuffer>('library_voice_preview', { id });
       if (token !== this.previewToken) return;
       this.preparingId.set(null);
       this.playingId.set(id);
-      const durationMs = await this.player.play(data, this.endPreview.bind(this, token));
-      if (token === this.previewToken) this.rememberDuration(id, sample, durationMs);
+      await this.player.play(data, this.endPreview.bind(this, token));
     } catch (error) {
       if (token !== this.previewToken) return;
       this.stopPreview();
@@ -176,12 +175,6 @@ export class LibraryVoiceService {
 
   private endPreview(token: number): void {
     if (token === this.previewToken) this.stopPreview();
-  }
-
-  private rememberDuration(id: number, sample: string, durationMs: number): void {
-    const voice = voiceById(this.items(), id);
-    if (!voice || durationMs <= 0 || !sameSampleText(voice.sampleText, sample)) return;
-    this.items.set(replaceById(this.items(), { ...voice, sampleDurationMs: durationMs }));
   }
 
   private previewErrorText(error: unknown): string {
@@ -218,7 +211,6 @@ export class LibraryVoiceService {
     this.items.set([]);
     this.selectedId.set(null);
     this.query.set('');
-    this.engineFilter.set('all');
     this.loaded.set(false);
     this.loading.set(false);
   }
@@ -235,7 +227,8 @@ export class LibraryVoiceService {
   private buildVisible(): LibraryVoice[] {
     return filterVoices(this.items(), {
       query: this.query(),
-      engine: this.engineFilter(),
+      collection: this.library.filterCollection(),
+      tags: this.library.filterTags(),
     });
   }
 }

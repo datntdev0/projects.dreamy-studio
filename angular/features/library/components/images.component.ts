@@ -14,7 +14,7 @@ import { fieldValue, isDeleteShortcut, isModalOpen } from '@shared/utils/dom';
 import { LibraryConfirmService } from '../library.confirm.service';
 import { LibraryDialogsService } from '../library.dialogs.service';
 import { listenForLibraryDrops } from '../library.drag-drop';
-import { IMAGE_RATIOS, ImageSort, ImageViewMode, LibraryImage } from '../library.images.models';
+import { IMAGE_RATIOS, ImageViewMode, LibraryImage } from '../library.images.models';
 import { dimensionsText, formatBytes } from '../library.images.rules';
 import { LibraryImageService } from '../library.images.service';
 import { LibraryService } from '../library.service';
@@ -48,10 +48,6 @@ export class LibraryImages implements OnInit, OnDestroy {
 
   onQuery(event: Event): void {
     this.images.query.set(fieldValue(event));
-  }
-
-  onSort(event: Event): void {
-    this.images.sort.set(fieldValue(event) as ImageSort);
   }
 
   onGridSize(value: number): void {

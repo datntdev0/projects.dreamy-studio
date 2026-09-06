@@ -8,7 +8,7 @@ import { LibraryGrid } from './library.grid';
 import { AssetCheck, AssetPatch, AssetUploadInput, LibraryError } from './library.models';
 import { toLibraryError } from './library.rules';
 import { LibraryService } from './library.service';
-import { LibraryVideo, VIDEO_STREAM_SCHEME, VideoSort } from './library.videos.models';
+import { LibraryVideo, VIDEO_STREAM_SCHEME } from './library.videos.models';
 import { filterVideos } from './library.videos.rules';
 import { LibraryWorkspaceSync } from './library.workspace-sync';
 
@@ -32,7 +32,6 @@ export class LibraryVideoService {
   readonly error = signal<LibraryError | null>(null);
   readonly selectedId = signal<number | null>(null);
   readonly query = signal('');
-  readonly sort = signal<VideoSort>('new');
   readonly gridSize = this.grid.size;
   readonly gridRatio = this.grid.ratio;
   readonly selected = computed(this.findSelected.bind(this));
@@ -150,7 +149,6 @@ export class LibraryVideoService {
     this.pendingPosters.clear();
     this.selectedId.set(null);
     this.query.set('');
-    this.sort.set('new');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
@@ -164,7 +162,6 @@ export class LibraryVideoService {
   private buildVisible(): LibraryVideo[] {
     return filterVideos(this.items(), {
       query: this.query(),
-      sort: this.sort(),
       collection: this.library.filterCollection(),
       tags: this.library.filterTags(),
     });

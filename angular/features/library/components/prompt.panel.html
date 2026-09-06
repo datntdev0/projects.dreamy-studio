@@ -11,15 +11,27 @@
       <label for="library-prompt-panel-name" data-testid="library-prompt-panel-name-label">
         {{ "library.prompt.field.name" | t }}
       </label>
-      <input
-        id="library-prompt-panel-name"
-        class="input"
-        maxlength="255"
-        [value]="item.name"
-        autocomplete="off"
-        data-testid="library-prompt-panel-name"
-        (blur)="nameBlur(item, $event)"
-      />
+      <div class="lb-name-row" data-testid="library-prompt-panel-name-row">
+        <input
+          id="library-prompt-panel-name"
+          class="input"
+          maxlength="255"
+          [value]="item.name"
+          autocomplete="off"
+          data-testid="library-prompt-panel-name"
+          (blur)="nameBlur(item, $event)"
+        />
+        <button
+          type="button"
+          class="btn btn-icon lb-ins-del"
+          [attr.aria-label]="'library.prompt.delete' | t"
+          [attr.title]="'library.prompt.delete' | t"
+          data-testid="library-prompt-panel-delete"
+          (click)="remove(item)"
+        >
+          <ds-icon name="trash" [size]="16" data-testid="library-prompt-panel-delete-icon" />
+        </button>
+      </div>
     </div>
     <div class="field" data-testid="library-prompt-panel-kind-field">
       <label for="library-prompt-panel-kind" data-testid="library-prompt-panel-kind-label">
@@ -199,21 +211,6 @@
       <dt data-testid="library-prompt-panel-origin-label">{{ "library.image.info.origin" | t }}</dt>
       <dd data-testid="library-prompt-panel-origin">{{ originKey(item) | t }}</dd>
     </dl>
-  </section>
-  <section class="ins-sec ins-actions" data-testid="library-prompt-panel-actions">
-    <button type="button" class="btn" data-testid="library-prompt-panel-copy" (click)="copy(item)">
-      <ds-icon name="copy" [size]="16" data-testid="library-prompt-panel-copy-icon" />
-      {{ "library.prompt.copy" | t }}
-    </button>
-    <button
-      type="button"
-      class="btn btn-danger"
-      data-testid="library-prompt-panel-delete"
-      (click)="remove(item)"
-    >
-      <ds-icon name="trash" [size]="16" data-testid="library-prompt-panel-delete-icon" />
-      {{ "library.prompt.delete" | t }}
-    </button>
   </section>
 </section>
 } @else {

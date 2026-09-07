@@ -122,76 +122,103 @@ describe('AssistantScriptDraftCard', () => {
       expect(textOf(mounted, 'assistant-script-draft-warning')).toBe('Long unit');
     });
 
-    it('shows the proposed rows with speakers, notes and the unchanged marker', async () => {
+    it('shows only the changed blocks with a gap for the unchanged ones', async () => {
       const mounted = await mountCard(scriptDraft());
       const rows = allById(mounted.root, 'assistant-script-draft-row');
       expect(rows).toHaveLength(3);
-      expect(rows[0].classList.contains('is-kept')).toBe(true);
-      expect(rows[1].classList.contains('is-kept')).toBe(false);
+      expect(rows[0].classList.contains('is-del')).toBe(true);
+      expect(rows[0].dataset['kind']).toBe('removed');
+      expect(rows[0].textContent).toContain('Old line');
+      expect(rows[1].classList.contains('is-ins')).toBe(true);
       expect(rows[1].dataset['type']).toBe('dialogue');
       expect(rows[1].textContent).toContain('Lin Mo');
       expect(rows[1].textContent).toContain('(softly)');
       expect(rows[1].textContent).toContain('Hello there');
-      expect(allById(mounted.root, 'assistant-script-draft-row-kept')).toHaveLength(1);
       expect(rows[2].textContent).toContain('Innkeeper');
+      expect(mounted.root.textContent).not.toContain('Old narration');
+      expect(textOf(mounted, 'assistant-script-draft-gap')).toBe(
+        translate('assistant.draft.gap', { count: 1 }),
+      );
     });
 
-    it('switches to the current script and shows the truncation notice only there', async () => {
-      const mounted = await mountCard(scriptDraft({ currentTruncated: true }));
-      expect(byId(mounted.root, 'assistant-script-draft-truncated')).toBeNull();
-      click(mounted.root, 'assistant-script-draft-view-before');
-      await settle(mounted.fixture);
+    it('marks every row with its sign', async () => {
+      const mounted = await mountCard(scriptDraft());
+      const signs = allById(mounted.root, 'assistant-script-draft-row-sign').map((sign) =>
+        sign.textContent?.trim(),
+      );
+      expect(signs).toEqual(['\u2212', '+', '+']);
+    });
+
+    it('summarizes the added and removed blocks and hides the moved count when none moved', async () => {
+      const mounted = await mountCard(scriptDraft());
+      expect(textOf(mounted, 'assistant-script-draft-added')).toBe(
+        translate('assistant.draft.added', { count: 2 }),
+      );
+      expect(textOf(mounted, 'assistant-script-draft-removed')).toBe(
+        translate('assistant.draft.removed', { count: 1 }),
+      );
+      expect(byId(mounted.root, 'assistant-script-draft-moved')).toBeNull();
+    });
+
+    it('shows a moved block when the order changes', async () => {
+      const base = scriptDraft();
+      const reordered = scriptDraft({
+        blocks: [
+          { ...base.blocks[0], id: 'b2', text: 'Old line', who: 'kb-1', type: 'dialogue' },
+          { ...base.blocks[0], id: 'b1', text: 'Old narration' },
+        ],
+      });
+      const mounted = await mountCard(reordered);
       const rows = allById(mounted.root, 'assistant-script-draft-row');
-      expect(rows).toHaveLength(2);
-      expect(rows[0].textContent).toContain('Old narration');
-      expect(allById(mounted.root, 'assistant-script-draft-row-kept')).toHaveLength(0);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].classList.contains('is-move')).toBe(true);
+      expect(textOf(mounted, 'assistant-script-draft-moved')).toBe(
+        translate('assistant.draft.moved', { count: 1 }),
+      );
+    });
+
+    it('shows the truncation notice when the current script is truncated', async () => {
+      const mounted = await mountCard(scriptDraft({ currentTruncated: true }));
       expect(byId(mounted.root, 'assistant-script-draft-truncated')).not.toBeNull();
-      click(mounted.root, 'assistant-script-draft-view-after');
-      await settle(mounted.fixture);
-      expect(byId(mounted.root, 'assistant-script-draft-truncated')).toBeNull();
-      expect(allById(mounted.root, 'assistant-script-draft-row')).toHaveLength(3);
     });
 
     it('does not show the truncation notice when the current script is complete', async () => {
       const mounted = await mountCard(scriptDraft());
-      click(mounted.root, 'assistant-script-draft-view-before');
-      await settle(mounted.fixture);
       expect(byId(mounted.root, 'assistant-script-draft-truncated')).toBeNull();
     });
 
     it('collapses a long list and expands it on demand', async () => {
-      const mounted = await mountCard(longDraft(DRAFT_COLLAPSED_ROWS + 5));
+      const extra = 5;
+      const mounted = await mountCard(longDraft(DRAFT_COLLAPSED_ROWS + extra));
+      const total = DRAFT_COLLAPSED_ROWS + extra + 2;
       expect(allById(mounted.root, 'assistant-script-draft-row')).toHaveLength(
         DRAFT_COLLAPSED_ROWS,
       );
       expect(textOf(mounted, 'assistant-script-draft-more')).toBe(
-        translate('assistant.draft.more', { count: 5 }),
+        translate('assistant.draft.more', { count: total - DRAFT_COLLAPSED_ROWS }),
       );
       click(mounted.root, 'assistant-script-draft-more');
       await settle(mounted.fixture);
-      expect(allById(mounted.root, 'assistant-script-draft-row')).toHaveLength(
-        DRAFT_COLLAPSED_ROWS + 5,
-      );
+      expect(allById(mounted.root, 'assistant-script-draft-row')).toHaveLength(total);
       expect(byId(mounted.root, 'assistant-script-draft-more')).toBeNull();
     });
 
-    it('collapses the list again after switching the view', async () => {
-      const mounted = await mountCard(longDraft(DRAFT_COLLAPSED_ROWS + 5));
-      click(mounted.root, 'assistant-script-draft-more');
-      await settle(mounted.fixture);
-      click(mounted.root, 'assistant-script-draft-view-before');
-      await settle(mounted.fixture);
-      click(mounted.root, 'assistant-script-draft-view-after');
-      await settle(mounted.fixture);
-      expect(allById(mounted.root, 'assistant-script-draft-row')).toHaveLength(
-        DRAFT_COLLAPSED_ROWS,
-      );
-    });
-
-    it('shows an empty notice when the proposal has no blocks', async () => {
-      const mounted = await mountCard(scriptDraft({ blocks: [] }));
+    it('shows an empty notice when the draft changes nothing', async () => {
+      const base = scriptDraft();
+      const same = scriptDraft({
+        current: [base.current[0]],
+        blocks: [base.blocks[0]],
+      });
+      const mounted = await mountCard(same);
       expect(byId(mounted.root, 'assistant-script-draft-empty')).not.toBeNull();
       expect(byId(mounted.root, 'assistant-script-draft-rows')).toBeNull();
+    });
+
+    it('lists the current blocks as removed and blocks Apply when the proposal has no blocks', async () => {
+      const mounted = await mountCard(scriptDraft({ blocks: [] }));
+      const rows = allById(mounted.root, 'assistant-script-draft-row');
+      expect(rows).toHaveLength(2);
+      expect(rows.every((row) => row.dataset['kind'] === 'removed')).toBe(true);
       expect(isDisabled(mounted, 'assistant-script-draft-apply')).toBe(true);
       expect(isDisabled(mounted, 'assistant-script-draft-reject')).toBe(false);
     });

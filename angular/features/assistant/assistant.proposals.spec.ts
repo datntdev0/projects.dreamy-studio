@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DictProposal, TranslationFinding, TranslationReview } from './assistant.models';
 // prettier-ignore
-import { canApplyDraft, canRun, changedDraftBlocks, countResolved, countSeverity, DRAFT_COLLAPSED_ROWS, draftRows, draftSpeakerName, isNewSpeaker, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
+import { canApplyDraft, canRun, changedDraftBlocks, countResolved, countSeverity, DRAFT_COLLAPSED_ROWS, draftSpeakerName, isNewSpeaker, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
 
 const finding = (
   id: string,
@@ -109,20 +109,5 @@ describe('assistant.proposals', () => {
     expect(draftSpeakerName(draft, '')).toBe('');
     const unlisted = scriptDraft({ speakers: [] });
     expect(draftSpeakerName(unlisted, 'x1')).toBe('Innkeeper');
-  });
-
-  it('lists the proposed rows with kept flags and unique keys', () => {
-    const rows = draftRows(scriptDraft(), 'after');
-    expect(rows.map((row) => row.kept)).toEqual([true, false, false]);
-    expect(rows.map((row) => row.speaker)).toEqual(['Narrator', 'Lin Mo', 'Innkeeper']);
-    expect(rows[1]).toMatchObject({ type: 'dialogue', text: 'Hello there', paren: 'softly' });
-    expect(new Set(rows.map((row) => row.key)).size).toBe(3);
-  });
-
-  it('lists the current rows as never kept', () => {
-    const rows = draftRows(scriptDraft(), 'before');
-    expect(rows.map((row) => row.key)).toEqual(['b1', 'b2']);
-    expect(rows.every((row) => !row.kept)).toBe(true);
-    expect(rows[1]).toMatchObject({ type: 'dialogue', text: 'Old line', speaker: 'Lin Mo' });
   });
 });

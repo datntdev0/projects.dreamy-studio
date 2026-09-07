@@ -232,15 +232,23 @@ export interface ScriptDraft {
   status: ProposalStatus;
 }
 
-export type ScriptDraftView = 'after' | 'before';
+export type ScriptDraftDiffKind = 'added' | 'removed' | 'moved' | 'gap';
 
-export interface ScriptDraftRow {
+export interface ScriptDraftDiffRow {
   key: string;
-  type: BlockType;
+  kind: ScriptDraftDiffKind;
+  type: BlockType | null;
   text: string;
   paren: string;
   speaker: string;
-  kept: boolean;
+  count: number;
+}
+
+export interface ScriptDraftDiff {
+  rows: ScriptDraftDiffRow[];
+  added: number;
+  removed: number;
+  moved: number;
 }
 
 export type AssistantAttachment =

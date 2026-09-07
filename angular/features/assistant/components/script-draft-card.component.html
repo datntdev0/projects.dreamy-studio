@@ -79,73 +79,79 @@
     </div>
   }
 
-  <div class="seg" role="group" data-testid="assistant-script-draft-views">
-    <button
-      type="button"
-      [class.is-active]="view() === 'after'"
-      [attr.aria-pressed]="view() === 'after'"
-      data-testid="assistant-script-draft-view-after"
-      (click)="show('after')"
-    >
-      {{ 'assistant.draft.after' | t: { count: data.blocks.length } }}
-    </button>
-    <button
-      type="button"
-      [class.is-active]="view() === 'before'"
-      [attr.aria-pressed]="view() === 'before'"
-      data-testid="assistant-script-draft-view-before"
-      (click)="show('before')"
-    >
-      {{ 'assistant.draft.before' | t: { count: data.current.length } }}
-    </button>
-  </div>
-
-  @if (view() === 'before' && data.currentTruncated) {
+  @if (data.currentTruncated) {
     <div class="asst-valid" data-testid="assistant-script-draft-truncated">
       <ds-icon name="info" [size]="14" />
       <span>{{ 'assistant.draft.truncated' | t }}</span>
     </div>
   }
 
-  @if (rows().length === 0) {
+  <div class="asst-card-stats" data-testid="assistant-script-draft-diff-stats">
+    <span class="badge badge-success" data-testid="assistant-script-draft-added">
+      {{ 'assistant.draft.added' | t: { count: diff().added } }}
+    </span>
+    <span class="badge badge-danger" data-testid="assistant-script-draft-removed">
+      {{ 'assistant.draft.removed' | t: { count: diff().removed } }}
+    </span>
+    @if (diff().moved > 0) {
+      <span class="badge badge-warning" data-testid="assistant-script-draft-moved">
+        {{ 'assistant.draft.moved' | t: { count: diff().moved } }}
+      </span>
+    }
+  </div>
+
+  @if (diff().rows.length === 0) {
     <p class="t-sm t-mute" data-testid="assistant-script-draft-empty">
       {{ 'assistant.draft.empty' | t }}
     </p>
   } @else {
     <ol class="asst-draft-rows" data-testid="assistant-script-draft-rows">
       @for (row of visibleRows(); track row.key) {
-        <li
-          class="asst-draft-row"
-          [class.is-kept]="row.kept"
-          [attr.data-type]="row.type"
-          data-testid="assistant-script-draft-row"
-        >
-          <span
-            class="asst-draft-type"
-            [attr.title]="typeOf(row).labelKey | t"
-            data-testid="assistant-script-draft-row-type"
+        @if (row.kind === 'gap') {
+          <li class="asst-draft-gap t-sm t-mute" data-testid="assistant-script-draft-gap">
+            {{ 'assistant.draft.gap' | t: { count: row.count } }}
+          </li>
+        } @else {
+          <li
+            class="asst-diff-row"
+            [class.is-ins]="row.kind === 'added'"
+            [class.is-del]="row.kind === 'removed'"
+            [class.is-move]="row.kind === 'moved'"
+            [attr.data-type]="row.type"
+            [attr.data-kind]="row.kind"
+            data-testid="assistant-script-draft-row"
           >
-            <ds-icon [name]="typeOf(row).icon" [size]="13" />
-          </span>
-          <div class="asst-draft-body">
-            @if (row.speaker !== '' || row.paren !== '') {
-              <div class="t-sm t-mute" data-testid="assistant-script-draft-row-who">
-                @if (row.speaker !== '') {
-                  <span class="t-ink">{{ row.speaker }}</span>
-                }
-                @if (row.paren !== '') {
-                  <span>({{ row.paren }})</span>
-                }
-              </div>
-            }
-            <span data-testid="assistant-script-draft-row-text">{{ row.text }}</span>
-          </div>
-          @if (row.kept) {
-            <span class="t-sm t-mute" data-testid="assistant-script-draft-row-kept">
-              {{ 'assistant.draft.rowKept' | t }}
+            <span
+              class="asst-diff-sign"
+              [attr.title]="labelOf(row) | t"
+              data-testid="assistant-script-draft-row-sign"
+            >
+              {{ signOf(row) }}
             </span>
-          }
-        </li>
+            @if (typeOf(row); as type) {
+              <span
+                class="asst-draft-type"
+                [attr.title]="type.labelKey | t"
+                data-testid="assistant-script-draft-row-type"
+              >
+                <ds-icon [name]="type.icon" [size]="13" />
+              </span>
+            }
+            <div class="asst-draft-body">
+              @if (row.speaker !== '' || row.paren !== '') {
+                <div class="t-sm t-mute" data-testid="assistant-script-draft-row-who">
+                  @if (row.speaker !== '') {
+                    <span class="t-ink">{{ row.speaker }}</span>
+                  }
+                  @if (row.paren !== '') {
+                    <span>({{ row.paren }})</span>
+                  }
+                </div>
+              }
+              <span data-testid="assistant-script-draft-row-text">{{ row.text }}</span>
+            </div>
+          </li>
+        }
       }
     </ol>
     @if (hiddenCount() > 0) {

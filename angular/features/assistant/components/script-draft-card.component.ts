@@ -4,10 +4,16 @@ import { BLOCK_TYPES } from '@features/scripting/scripting.rules';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 
+import { DIFF_ROW_KEYS, DIFF_SIGNS, draftDiff } from '../assistant.diff';
+import {
+  ProposalResolution,
+  ProposalStatus,
+  ScriptDraft,
+  ScriptDraftDiff,
+  ScriptDraftDiffRow,
+} from '../assistant.models';
 // prettier-ignore
-import { ProposalResolution, ProposalStatus, ScriptDraft, ScriptDraftRow, ScriptDraftView } from '../assistant.models';
-// prettier-ignore
-import { canApplyDraft, changedDraftBlocks, DRAFT_COLLAPSED_ROWS, draftRows, isNewSpeaker, STATUS_KEYS } from '../assistant.proposals';
+import { canApplyDraft, changedDraftBlocks, DRAFT_COLLAPSED_ROWS, isNewSpeaker, STATUS_KEYS } from '../assistant.proposals';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,9 +27,8 @@ export class AssistantScriptDraftCard {
   readonly busy = input(false);
   readonly resolved = output<ProposalResolution>();
 
-  readonly view = signal<ScriptDraftView>('after');
   readonly expanded = signal(false);
-  readonly rows = computed(this.buildRows.bind(this));
+  readonly diff = computed(this.buildDiff.bind(this));
   readonly visibleRows = computed(this.buildVisibleRows.bind(this));
   readonly hiddenCount = computed(this.buildHiddenCount.bind(this));
   readonly changed = computed(this.buildChanged.bind(this));
@@ -33,17 +38,20 @@ export class AssistantScriptDraftCard {
     return STATUS_KEYS[status];
   }
 
-  typeOf(row: ScriptDraftRow): { icon: string; labelKey: LanguageKey } {
-    return BLOCK_TYPES[row.type];
+  typeOf(row: ScriptDraftDiffRow): { icon: string; labelKey: LanguageKey } | null {
+    return row.type === null ? null : BLOCK_TYPES[row.type];
+  }
+
+  signOf(row: ScriptDraftDiffRow): string {
+    return DIFF_SIGNS[row.kind];
+  }
+
+  labelOf(row: ScriptDraftDiffRow): LanguageKey {
+    return DIFF_ROW_KEYS[row.kind];
   }
 
   isNew(id: string): boolean {
     return isNewSpeaker(this.draft(), id);
-  }
-
-  show(view: ScriptDraftView): void {
-    this.view.set(view);
-    this.expanded.set(false);
   }
 
   expand(): void {
@@ -66,17 +74,17 @@ export class AssistantScriptDraftCard {
     this.resolved.emit({ messageId: this.messageId(), itemIds: [this.draft().id], status });
   }
 
-  private buildRows(): ScriptDraftRow[] {
-    return draftRows(this.draft(), this.view());
+  private buildDiff(): ScriptDraftDiff {
+    return draftDiff(this.draft());
   }
 
-  private buildVisibleRows(): ScriptDraftRow[] {
-    const rows = this.rows();
+  private buildVisibleRows(): ScriptDraftDiffRow[] {
+    const rows = this.diff().rows;
     return this.expanded() ? rows : rows.slice(0, DRAFT_COLLAPSED_ROWS);
   }
 
   private buildHiddenCount(): number {
-    return this.rows().length - this.visibleRows().length;
+    return this.diff().rows.length - this.visibleRows().length;
   }
 
   private buildChanged(): number {

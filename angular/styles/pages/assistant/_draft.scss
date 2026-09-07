@@ -32,21 +32,18 @@ app-assistant-script-draft-card {
   border-radius: var(--r-sm);
   background: var(--canvas-soft);
 }
-.asst-draft-row {
-  display: flex;
+.asst-draft-rows .asst-diff-row {
   align-items: flex-start;
-  gap: var(--sp-sm);
-  padding: var(--sp-xs) var(--sp-sm);
-  min-width: 0;
   font-size: 12.5px;
   line-height: 19px;
-  color: var(--body);
 }
-.asst-draft-row.is-kept {
-  color: var(--mute);
+.asst-diff-row.is-move {
+  background: var(--warning-soft);
 }
-.asst-draft-row[data-type='dialogue'] {
-  background: var(--primary-soft);
+.asst-draft-gap {
+  padding: var(--sp-xs) var(--sp-sm);
+  text-align: center;
+  border-block: 1px dashed var(--hairline);
 }
 .asst-draft-type {
   flex: none;

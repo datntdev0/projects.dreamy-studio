@@ -75,24 +75,27 @@
   @if (filtersOpen()) {
     <div class="ex-sec-body" role="tree" data-testid="project-explorer-filters-body">
       <div class="nf-label">{{ 'project.explorer.filters.template' | t }}</div>
-      <div class="nf-pills" data-testid="project-explorer-templates">
-        @for (entry of projects.templateCounts(); track entry.template) {
-          <button
-            type="button"
-            class="nf-pill"
-            [class.is-on]="isTemplateOn(entry.template)"
-            [attr.aria-pressed]="isTemplateOn(entry.template)"
-            [attr.title]="
-              'project.explorer.filters.pill'
-                | t: { value: (labels.templateKey(entry.template) | t), count: entry.count }
-            "
-            data-testid="project-explorer-template"
-            (click)="projects.toggleTemplateFilter(entry.template)"
-          >
-            <span class="nf-t">{{ labels.templateKey(entry.template) | t }}</span>
-            <span class="nf-n mono">{{ entry.count }}</span>
-          </button>
-        }
+      <div class="nf-sel" data-testid="project-explorer-templates">
+        <select
+          class="select"
+          [value]="selectedTemplate()"
+          [attr.aria-label]="'project.explorer.filters.template' | t"
+          data-testid="project-explorer-template-select"
+          (change)="setTemplateFilter($event)"
+        >
+          <option value="" data-testid="project-explorer-template-all">
+            {{ 'project.explorer.filters.allTemplates' | t }} ({{ projects.totals().projects }})
+          </option>
+          @for (entry of projects.templateCounts(); track entry.template) {
+            <option
+              [value]="entry.template"
+              [attr.data-template]="entry.template"
+              data-testid="project-explorer-template"
+            >
+              {{ labels.templateKey(entry.template) | t }} ({{ entry.count }})
+            </option>
+          }
+        </select>
       </div>
       <div class="nf-label">{{ 'project.explorer.filters.status' | t }}</div>
       <div class="nf-pills" data-testid="project-explorer-statuses">

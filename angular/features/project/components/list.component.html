@@ -1,7 +1,7 @@
 <div class="nv" data-testid="project-list">
   <div class="nv-bar" data-testid="project-list-toolbar">
     <div class="nv-bar-l" data-testid="project-list-toolbar-left">
-      <label class="search">
+      <label class="search pj-search">
         <span class="sr-only">{{ 'project.catalog.search' | t }}</span>
         <input
           class="input"
@@ -65,20 +65,6 @@
     </div>
     <span class="spacer"></span>
     <div class="nv-bar-r" data-testid="project-list-toolbar-right">
-      <select
-        class="select"
-        [value]="projects.sort()"
-        [attr.aria-label]="'project.catalog.sort' | t"
-        data-testid="project-list-sort"
-        (change)="onSort($event)"
-      >
-        <option value="updated" [selected]="projects.sort() === 'updated'">
-          {{ 'project.catalog.sort.updated' | t }}
-        </option>
-        <option value="name" [selected]="projects.sort() === 'name'">
-          {{ 'project.catalog.sort.name' | t }}
-        </option>
-      </select>
       <div
         class="seg"
         role="group"
@@ -189,9 +175,6 @@
               <div class="pj-card-b">
                 <div class="pj-card-t">
                   <span class="t-ink pj-card-n">{{ project.name }}</span>
-                  <span class="badge" [class.badge-running]="!project.archived">
-                    {{ labels.statusKey(project) | t }}
-                  </span>
                 </div>
                 <div class="t-sm t-mute ellip">{{ labels.sourceLine(project) }}</div>
               </div>
@@ -204,7 +187,6 @@
             <tr>
               <th>{{ 'project.catalog.column.project' | t }}</th>
               <th>{{ 'project.catalog.column.template' | t }}</th>
-              <th>{{ 'project.catalog.column.status' | t }}</th>
               <th>{{ 'project.catalog.column.updated' | t }}</th>
             </tr>
           </thead>
@@ -234,11 +216,6 @@
                   <span class="type-tag">
                     <ds-icon [name]="labels.iconOf(project.template)" [size]="13" />
                     {{ labels.templateKey(project.template) | t }}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge" [class.badge-running]="!project.archived">
-                    {{ labels.statusKey(project) | t }}
                   </span>
                 </td>
                 <td class="mono t-mute">{{ labels.dateOf(project.updatedAt) }}</td>

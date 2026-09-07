@@ -1,4 +1,7 @@
 use crate::features::project::models::ProjectSummary;
+use crate::features::project::modules::decode_modules;
+use crate::features::project::modules::effective_modules;
+use crate::features::project::modules::encode_modules;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::Row;
@@ -6,7 +9,7 @@ use rusqlite::params;
 
 const SUMMARY: &str = "SELECT p.id, p.name, 'projects/' || p.id, p.template, p.description, p.novel_id, \
     CASE WHEN p.novel_id IS NOT NULL AND n.id IS NULL THEN 1 ELSE 0 END, p.src_kind, p.src_lang, \
-    p.range_from, p.range_to, p.archived, p.created_at, p.updated_at, p.opened_at \
+    p.range_from, p.range_to, p.archived, p.created_at, p.updated_at, p.opened_at, p.modules \
     FROM ws_projects p LEFT JOIN ws_novels n ON n.id = p.novel_id";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +19,7 @@ pub struct ProjectRow {
     pub folder: String,
     pub template: String,
     pub description: String,
+    pub modules: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,7 +58,7 @@ impl<'a> ProjectRepository<'a> {
     pub fn find_project(&self, id: i64) -> rusqlite::Result<Option<ProjectRow>> {
         self.conn
             .query_row(
-                "SELECT id, name, 'projects/' || id, template, description FROM ws_projects WHERE id = ?1",
+                "SELECT id, name, 'projects/' || id, template, description, modules FROM ws_projects WHERE id = ?1",
                 [id],
                 |row| {
                     Ok(ProjectRow {
@@ -63,6 +67,7 @@ impl<'a> ProjectRepository<'a> {
                         folder: row.get(2)?,
                         template: row.get(3)?,
                         description: row.get(4)?,
+                        modules: decode_modules(&row.get::<_, String>(5)?),
                     })
                 },
             )
@@ -87,8 +92,8 @@ impl<'a> ProjectRepository<'a> {
 
     pub fn update(&self, row: &ProjectRow, now: &str) -> rusqlite::Result<()> {
         self.conn.execute(
-            "UPDATE ws_projects SET name = ?2, description = ?3, updated_at = ?4 WHERE id = ?1",
-            params![row.id, row.name, row.description, now],
+            "UPDATE ws_projects SET name = ?2, description = ?3, modules = ?4, updated_at = ?5 WHERE id = ?1",
+            params![row.id, row.name, row.description, encode_modules(&row.modules), now],
         )?;
         Ok(())
     }
@@ -118,11 +123,13 @@ impl<'a> ProjectRepository<'a> {
 }
 
 fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<ProjectSummary> {
+    let template: String = row.get(3)?;
+    let modules = effective_modules(&template, &decode_modules(&row.get::<_, String>(15)?));
     Ok(ProjectSummary {
         id: row.get(0)?,
         name: row.get(1)?,
         folder: row.get(2)?,
-        template: row.get(3)?,
+        template,
         description: row.get(4)?,
         novel_id: row.get(5)?,
         novel_missing: row.get::<_, i64>(6)? != 0,
@@ -131,6 +138,7 @@ fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<ProjectSummary> {
         range_from: row.get(9)?,
         range_to: row.get(10)?,
         archived: row.get::<_, i64>(11)? != 0,
+        modules,
         created_at: row.get(12)?,
         updated_at: row.get(13)?,
         opened_at: row.get(14)?,

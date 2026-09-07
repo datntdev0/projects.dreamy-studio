@@ -6,6 +6,7 @@ import { project } from '@testing/fixtures';
 import { setupWorld, warmWorld } from '@testing/world';
 import { describe, expect, it } from 'vitest';
 
+import { PROJECT_MODULES } from '../project.rules';
 import { ProjectModuleFrame } from './module-frame.component';
 import { ProjectModuleHost } from './module-host.component';
 import { ProjectModulePlaceholder } from './module-placeholder.component';
@@ -16,11 +17,11 @@ async function warm(): Promise<void> {
 }
 
 describe('project module components', () => {
-  it('renders every module row and opens only implemented modules', async () => {
+  it('renders every module row and opens each module, including coming-soon ones', async () => {
     setupWorld();
     const mounted = await mount(
       ProjectModules,
-      { project: project({ id: 1, name: 'Alpha' }) },
+      { project: project({ id: 1, name: 'Alpha', modules: PROJECT_MODULES.map((m) => m.id) }) },
       warm,
     );
     const rows = allById(mounted.root, 'project-modules-row');
@@ -42,20 +43,19 @@ describe('project module components', () => {
       'idle',
       'idle',
     ]);
-    const disabled = rows.filter((row) => row.getAttribute('aria-disabled') === 'true');
-    expect(disabled.map((row) => row.dataset['moduleId'])).toEqual([
+    const soon = rows.filter((row) => row.classList.contains('is-soon'));
+    expect(soon.map((row) => row.dataset['moduleId'])).toEqual([
       'character',
       'world',
       'storyboard',
       'canvas',
       'video',
     ]);
-    expect(disabled.every((row) => Boolean(row.getAttribute('title')))).toBe(true);
+    expect(soon.every((row) => Boolean(row.getAttribute('title')))).toBe(true);
     expect(rows[0].getAttribute('title')).toBeNull();
     const tabs = TestBed.inject(TabsService);
-    disabled[0].click();
-    disabled[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(tabs.activeId()).toBe('home');
+    soon[0].click();
+    expect(tabs.activeId()).toBe('pmod:1:character');
     rows[0].click();
     expect(tabs.activeId()).toBe('pmod:1:scripting');
     rows[4].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -67,6 +67,14 @@ describe('project module components', () => {
         .filter((row) => row.classList.contains('is-selected'))
         .map((row) => row.dataset['moduleId']),
     ).toEqual(['audiobook']);
+  });
+
+  it('lists only the modules enabled for the project', async () => {
+    setupWorld();
+    const mounted = await mount(ProjectModules, { project: project({ id: 1 }) }, warm);
+    expect(
+      allById(mounted.root, 'project-modules-row').map((row) => row.dataset['moduleId']),
+    ).toEqual(['scripting', 'audiobook']);
   });
 
   it('wraps the module host in the frame with a back button and state badge', async () => {

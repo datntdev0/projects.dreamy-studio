@@ -1,12 +1,12 @@
 import { NovelSummary } from '@features/novel/novel.models';
 import {
-  DirEntry,
   ProjectModuleId,
   ProjectModuleState,
   ProjectModuleStatus,
   ProjectSummary,
   ProjectTemplateId,
 } from '@features/project/project.models';
+import { templateModules } from '@features/project/project.rules';
 
 const WORKSPACE_ROOT = 'D:/Dreamy/Harrowmere/projects';
 
@@ -46,6 +46,7 @@ function projectOf(seed: ProjectSeed): ProjectSummary {
     rangeFrom: seed.range ? seed.range[0] : null,
     rangeTo: seed.range ? seed.range[1] : null,
     archived: seed.archived,
+    modules: templateModules(seed.template),
     createdAt: seed.createdAt,
     updatedAt: seed.updatedAt,
     openedAt: seed.openedAt,
@@ -216,13 +217,6 @@ export const PROJECT_FIXTURES: ProjectSummary[] = SEEDS.map(projectOf);
 export const PROJECT_NOVELS: NovelSummary[] = [
   novelOf(2, 'Ash Under the Glass Sea', 'Tomas Hale', 'EN', 8),
   novelOf(3, 'Gió Muộn Trên Đồi Thông', 'Nguyễn Hạ', 'VI', 5),
-];
-
-export const PROJECT_DIRECTORY: DirEntry[] = [
-  { name: 'scripts', kind: 'dir', size: 0 },
-  { name: 'audio', kind: 'dir', size: 0 },
-  { name: 'images', kind: 'dir', size: 0 },
-  { name: 'project.json', kind: 'file', size: 1204 },
 ];
 
 export function projectModuleStatesFor(projectId: number): ProjectModuleState[] {

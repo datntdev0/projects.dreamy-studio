@@ -45,10 +45,6 @@ export class ProjectPanel {
     void this.projects.setArchived([project.id], !project.archived);
   }
 
-  openFolder(project: ProjectSummary): void {
-    void this.projects.folderOpen(project.id);
-  }
-
   remove(project: ProjectSummary): void {
     this.confirms.deleteProjects([project.id]);
   }

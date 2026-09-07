@@ -7,7 +7,7 @@ import { AUDIOBOOK_CLOUD_ACCOUNTS } from './audiobook.fixtures';
 import { audiobookHandlers } from './audiobook.mocks';
 import { knowledgeScreenHandlers } from './novel-knowledge.mocks';
 // prettier-ignore
-import { PROJECT_DIRECTORY, PROJECT_FIXTURES, PROJECT_NOVELS, projectCoverFor, projectModuleStatesFor } from './project-management.fixtures';
+import { PROJECT_FIXTURES, PROJECT_NOVELS, projectCoverFor, projectModuleStatesFor } from './project-management.fixtures';
 import { IpcHandlers, withScreen } from './screen.mocks';
 import { createScriptingState, scriptingHandlers } from './scripting.mocks';
 
@@ -39,7 +39,6 @@ function projectHandlers(projects: ProjectSummary[]): IpcHandlers {
     project_list: () => projects,
     project_open: (args) => findProject(projects, Number(args['id'])),
     project_modules: (args) => projectModuleStatesFor(Number(args['projectId'])),
-    project_dir_list: () => PROJECT_DIRECTORY,
     project_cover_get: (args) => projectCoverFor(Number(args['id'])),
   };
 }

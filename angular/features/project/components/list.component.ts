@@ -34,10 +34,6 @@ export class ProjectList {
     this.projects.setQuery(fieldValue(event));
   }
 
-  onSort(event: Event): void {
-    this.projects.setSort(fieldValue(event) as 'updated' | 'name');
-  }
-
   isViewActive(view: ProjectViewMode): boolean {
     return this.projects.view() === view;
   }

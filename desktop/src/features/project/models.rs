@@ -18,6 +18,7 @@ pub struct ProjectSummary {
     pub range_from: Option<i64>,
     pub range_to: Option<i64>,
     pub archived: bool,
+    pub modules: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
     pub opened_at: String,
@@ -49,14 +50,8 @@ pub struct ProjectPatch {
     pub name: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DirEntry {
-    pub name: String,
-    pub kind: String,
-    pub size: u64,
+    #[serde(default)]
+    pub modules: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -89,7 +84,6 @@ pub enum ProjectErrorCode {
     InvalidInput,
     RangeInvalid,
     NovelNotFound,
-    PathInvalid,
     CoverInvalid,
     CoverTooLarge,
     BackendFailed,
@@ -106,7 +100,6 @@ impl ProjectErrorCode {
             Self::InvalidInput => "invalid_input",
             Self::RangeInvalid => "range_invalid",
             Self::NovelNotFound => "novel_not_found",
-            Self::PathInvalid => "path_invalid",
             Self::CoverInvalid => "cover_invalid",
             Self::CoverTooLarge => "cover_too_large",
             Self::BackendFailed => "backend_failed",

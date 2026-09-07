@@ -8,8 +8,6 @@ export type ProjectStatus = 'active' | 'archived';
 
 export type ProjectViewMode = 'grid' | 'list';
 
-export type ProjectSort = 'updated' | 'name';
-
 export interface ProjectSummary {
   id: number;
   name: string;
@@ -23,6 +21,7 @@ export interface ProjectSummary {
   rangeFrom: number | null;
   rangeTo: number | null;
   archived: boolean;
+  modules: ProjectModuleId[];
   createdAt: string;
   updatedAt: string;
   openedAt: string;
@@ -44,12 +43,7 @@ export type ProjectTextVersion = 'original' | TargetLang;
 export interface ProjectPatch {
   name?: string;
   description?: string;
-}
-
-export interface DirEntry {
-  name: string;
-  kind: 'dir' | 'file';
-  size: number;
+  modules?: ProjectModuleId[];
 }
 
 export interface ProjectError {
@@ -65,6 +59,7 @@ export interface ProjectFilters {
 export interface ProjectTemplate {
   id: ProjectTemplateId;
   icon: string;
+  modules: ProjectModuleId[];
   labelKey: `project.template.${ProjectTemplateId}`;
   blurbKey: `project.template.${ProjectTemplateId}.blurb`;
 }

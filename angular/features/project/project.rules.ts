@@ -2,24 +2,27 @@ import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { DirEntry, ProjectError, ProjectFilters, ProjectModule, ProjectModuleId, ProjectModuleRow, ProjectModuleStage, ProjectModuleState, ProjectModuleStatus, ProjectStatus, ProjectSummary, ProjectTemplate, ProjectTemplateId } from './project.models';
+import { ProjectError, ProjectFilters, ProjectModule, ProjectModuleId, ProjectModuleRow, ProjectModuleStage, ProjectModuleState, ProjectModuleStatus, ProjectStatus, ProjectSummary, ProjectTemplate, ProjectTemplateId } from './project.models';
 
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   {
     id: 'audiobook',
     icon: 'mic',
+    modules: ['scripting', 'audiobook'],
     labelKey: 'project.template.audiobook',
     blurbKey: 'project.template.audiobook.blurb',
   },
   {
     id: 'filmseries',
     icon: 'film',
+    modules: ['scripting', 'character', 'world', 'storyboard', 'canvas', 'video'],
     labelKey: 'project.template.filmseries',
     blurbKey: 'project.template.filmseries.blurb',
   },
   {
     id: 'blank',
     icon: 'folder',
+    modules: [],
     labelKey: 'project.template.blank',
     blurbKey: 'project.template.blank.blurb',
   },
@@ -68,22 +71,8 @@ function matchesProject(project: ProjectSummary, filters: ProjectFilters, needle
   return templateOk && statusOk && queryOk;
 }
 
-function compareProjectNames(a: ProjectSummary, b: ProjectSummary): number {
-  return (
-    Number(a.archived) - Number(b.archived) ||
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-  );
-}
-
 function compareProjectUpdates(a: ProjectSummary, b: ProjectSummary): number {
   return Number(a.archived) - Number(b.archived) || b.updatedAt.localeCompare(a.updatedAt);
-}
-
-function compareDirectoryEntries(a: DirEntry, b: DirEntry): number {
-  return (
-    Number(b.kind === 'dir') - Number(a.kind === 'dir') ||
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-  );
 }
 
 export function validateProjectName(name: string): 'empty' | null {
@@ -126,19 +115,8 @@ export function filterProjects(
   return visible;
 }
 
-export function sortProjects(
-  projects: ProjectSummary[],
-  sort: 'updated' | 'name',
-): ProjectSummary[] {
-  return [...projects].sort(sort === 'name' ? compareProjectNames : compareProjectUpdates);
-}
-
-export function sortDirEntries(entries: DirEntry[]): DirEntry[] {
-  return [...entries].sort(compareDirectoryEntries);
-}
-
-export function treeKey(projectId: number, path: string): string {
-  return `${projectId}:${path.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}`;
+export function sortProjects(projects: ProjectSummary[]): ProjectSummary[] {
+  return [...projects].sort(compareProjectUpdates);
 }
 
 function isProjectError(value: unknown): value is ProjectError {
@@ -239,4 +217,91 @@ export function moduleStateKey(status: ProjectModuleStatus): LanguageKey {
 
 export function moduleBadgeClass(status: ProjectModuleStatus): string {
   return MODULE_BADGE_CLASSES[status];
+}
+
+export function moduleFraction(state: ProjectModuleState): number {
+  if (state.state === 'idle') return 0;
+  if (state.state === 'done') return 1;
+  return state.total > 0 ? Math.min(0.99, state.done / state.total) : 0.5;
+}
+
+function addFraction(sum: number, state: ProjectModuleState): number {
+  return sum + moduleFraction(state);
+}
+
+export function projectPercent(states: ProjectModuleState[]): number {
+  if (states.length === 0) return 0;
+  return Math.round((states.reduce(addFraction, 0) / states.length) * 100);
+}
+
+function isDone(state: ProjectModuleState): boolean {
+  return state.state === 'done';
+}
+
+export function doneModuleCount(states: ProjectModuleState[]): number {
+  return states.filter(isDone).length;
+}
+
+function inStage(stage: ProjectModuleStage, row: ProjectModuleRow): boolean {
+  return row.module.stage === stage;
+}
+
+export function stageModuleRows(
+  rows: ProjectModuleRow[],
+  stage: ProjectModuleStage,
+): ProjectModuleRow[] {
+  return rows.filter(inStage.bind(null, stage));
+}
+
+export function templateModules(id: ProjectTemplateId): ProjectModuleId[] {
+  return PROJECT_TEMPLATES.find(hasTemplateId.bind(null, id))?.modules ?? [];
+}
+
+function hasTemplateId(id: ProjectTemplateId, template: ProjectTemplate): boolean {
+  return template.id === id;
+}
+
+export function isModuleRequired(project: ProjectSummary, id: ProjectModuleId): boolean {
+  return templateModules(project.template).includes(id);
+}
+
+export function isModuleEnabled(project: ProjectSummary, id: ProjectModuleId): boolean {
+  return isModuleRequired(project, id) || project.modules.includes(id);
+}
+
+export function withModuleEnabled(
+  project: ProjectSummary,
+  id: ProjectModuleId,
+  enabled: boolean,
+): ProjectModuleId[] {
+  const next: ProjectModuleId[] = [];
+  for (const module of PROJECT_MODULES) {
+    const on = module.id === id ? enabled : isModuleEnabled(project, module.id);
+    if (on || isModuleRequired(project, module.id)) {
+      next.push(module.id);
+    }
+  }
+  return next;
+}
+
+function isRowEnabled(project: ProjectSummary, row: ProjectModuleRow): boolean {
+  return isModuleEnabled(project, row.module.id);
+}
+
+export function enabledModuleRows(
+  project: ProjectSummary,
+  rows: ProjectModuleRow[],
+): ProjectModuleRow[] {
+  return rows.filter(isRowEnabled.bind(null, project));
+}
+
+function isStateEnabled(project: ProjectSummary, state: ProjectModuleState): boolean {
+  return isModuleEnabled(project, state.id);
+}
+
+export function enabledModuleStates(
+  project: ProjectSummary,
+  states: ProjectModuleState[],
+): ProjectModuleState[] {
+  return states.filter(isStateEnabled.bind(null, project));
 }

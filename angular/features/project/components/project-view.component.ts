@@ -8,18 +8,19 @@ import { ToastService } from '@shared/toast/toast.service';
 
 import { ProjectConfirmService } from '../project.confirm.service';
 import { ProjectLabels } from '../project.labels';
-import { ProjectSummary } from '../project.models';
-import { toProjectError, validateProjectName } from '../project.rules';
+import { ProjectModule, ProjectSummary } from '../project.models';
+// prettier-ignore
+import { isModuleEnabled, isModuleRequired, PROJECT_MODULES, toProjectError, validateProjectName } from '../project.rules';
 import { ProjectService } from '../project.service';
-import { ProjectTree } from './tree.component';
+import { ProjectOverview } from './overview.component';
 
-type ProjectViewTab = 'files' | 'settings';
+type ProjectViewTab = 'overview' | 'settings';
 type EditableElement = HTMLInputElement | HTMLTextAreaElement;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-project-view',
-  imports: [Icon, CoreModule, ProjectTree],
+  imports: [Icon, CoreModule, ProjectOverview],
   templateUrl: './project-view.component.html',
 })
 export class ProjectView {
@@ -33,7 +34,8 @@ export class ProjectView {
   readonly projectId = input.required<number>();
   readonly project = computed(this.findProject.bind(this));
   readonly missing = signal(false);
-  readonly tab = signal<ProjectViewTab>('files');
+  readonly tab = signal<ProjectViewTab>('overview');
+  readonly modules = PROJECT_MODULES;
   private readonly openedIds = new Set<number>();
 
   constructor() {
@@ -46,18 +48,6 @@ export class ProjectView {
 
   backToCatalog(): void {
     this.tabs.openProjects();
-  }
-
-  refreshTree(): void {
-    this.projects.refreshTree(this.projectId());
-  }
-
-  async openFolder(): Promise<void> {
-    try {
-      await this.projects.folderOpen(this.projectId());
-    } catch (cause) {
-      this.fail(cause);
-    }
   }
 
   async saveName(event: Event): Promise<void> {
@@ -103,6 +93,24 @@ export class ProjectView {
       await this.projects.update(project.id, { description: element.value });
     } catch (cause) {
       element.value = project.description;
+      this.fail(cause);
+    }
+  }
+
+  isEnabled(project: ProjectSummary, module: ProjectModule): boolean {
+    return isModuleEnabled(project, module.id);
+  }
+
+  isRequired(project: ProjectSummary, module: ProjectModule): boolean {
+    return isModuleRequired(project, module.id);
+  }
+
+  async toggleModule(project: ProjectSummary, module: ProjectModule, event: Event): Promise<void> {
+    const element = event.target as HTMLInputElement;
+    try {
+      await this.projects.setModuleEnabled(project, module.id, element.checked);
+    } catch (cause) {
+      element.checked = isModuleEnabled(project, module.id);
       this.fail(cause);
     }
   }

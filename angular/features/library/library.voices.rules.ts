@@ -3,6 +3,7 @@ import { TtsModel, TtsVoicePreset } from '@features/settings/backend.models';
 import { CloudAccount } from '@features/settings/cloud.models';
 import { SettingsSectionId } from '@features/settings/settings.models';
 import { LanguageKey, LanguageParams } from '@shared/language/language.models';
+import { nameWords } from '@shared/utils/monogram';
 
 import { CollectionFilter } from './library.models';
 import { durationText, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
@@ -217,12 +218,8 @@ export function voiceById(items: LibraryVoice[], id: number): LibraryVoice | nul
   return items.find(hasVoiceId.bind(null, id)) ?? null;
 }
 
-function toChars(word: string): string[] {
-  return Array.from(word);
-}
-
 export function voiceMonogram(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean).map(toChars);
+  const words = nameWords(name);
   if (words.length === 0) return '?';
   const first = words[0];
   const last = words[words.length - 1];

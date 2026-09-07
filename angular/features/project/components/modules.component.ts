@@ -5,7 +5,7 @@ import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
 
 import { ProjectModuleRow, ProjectSummary } from '../project.models';
-import { moduleRows } from '../project.rules';
+import { enabledModuleRows, moduleRows } from '../project.rules';
 import { ProjectService } from '../project.service';
 
 @Component({
@@ -30,9 +30,7 @@ export class ProjectModules {
   }
 
   open(row: ProjectModuleRow): void {
-    if (row.module.implemented) {
-      this.tabs.openModule(this.project().id, this.project().name, row.module.id);
-    }
+    this.tabs.openModule(this.project().id, this.project().name, row.module.id);
   }
 
   onKeydown(row: ProjectModuleRow, event: KeyboardEvent): void {
@@ -47,6 +45,9 @@ export class ProjectModules {
   }
 
   private buildRows(): ProjectModuleRow[] {
-    return moduleRows(this.projects.moduleStates(this.project().id));
+    return enabledModuleRows(
+      this.project(),
+      moduleRows(this.projects.moduleStates(this.project().id)),
+    );
   }
 }

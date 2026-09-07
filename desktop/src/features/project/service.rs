@@ -10,6 +10,7 @@ use crate::features::project::models::ProjectInput;
 use crate::features::project::models::ProjectPatch;
 use crate::features::project::models::ProjectResult;
 use crate::features::project::models::ProjectSummary;
+use crate::features::project::modules::extra_modules;
 use crate::features::project::repository::NewProject;
 use crate::features::project::repository::ProjectRepository;
 use crate::features::project::repository::ProjectRow;
@@ -199,6 +200,9 @@ impl ProjectWorkspace {
         if let Some(description) = description {
             row.description = description;
         }
+        if let Some(modules) = patch.modules.as_deref() {
+            row.modules = extra_modules(&row.template, modules)?;
+        }
         repo.update(&row, &now_text())?;
         let summary = repo
             .find_summary(id)?
@@ -291,22 +295,6 @@ impl ProjectWorkspace {
         self.files().clear_cover(id)?;
         repo.update(&row, &now_text())?;
         require_summary(&repo, id)
-    }
-
-    pub fn dir_list(
-        &self,
-        id: i64,
-        path: &str,
-    ) -> ProjectResult<Vec<crate::features::project::models::DirEntry>> {
-        let db = self.database()?;
-        let project = require_project(&ProjectRepository::new(db.connection()), id)?;
-        self.files().list(&project.folder, path)
-    }
-
-    pub fn folder_path(&self, id: i64) -> ProjectResult<PathBuf> {
-        let db = self.database()?;
-        let project = require_project(&ProjectRepository::new(db.connection()), id)?;
-        Ok(self.files().project_dir(&project.folder))
     }
 
     pub fn with_project<T>(

@@ -40,22 +40,8 @@ export const NESTED = 'Chen';
 export const VI_HERO = 'Lâm Phong';
 export const NARRATOR_ID = 'narr';
 
-export const MODULE_LABELS = [
-  'Scripting',
-  'Character',
-  'World',
-  'Storyboard',
-  'Audiobook',
-  'Canvas',
-  'Video editor',
-];
-export const UNSUPPORTED_MODULES: readonly ModuleId[] = [
-  'character',
-  'world',
-  'storyboard',
-  'canvas',
-  'video',
-];
+export const MODULE_LABELS = ['Scripting', 'Audiobook'];
+export const ENABLED_MODULE_LABELS = ['Scripting', 'Audiobook', 'Video editor'];
 
 export const COMING_SOON = 'Coming soon';
 
@@ -115,7 +101,7 @@ const PROJECTS: readonly SeedProject[] = [
   { name: AUDIO_PROJECT, novel: SAMPLE_TITLE, range: [1, 4] },
   { name: VIET_PROJECT, novel: SAMPLE_TITLE, range: [1, 2], translation: 'VI' },
   { name: LOOSE_PROJECT },
-  { name: BLANK_PROJECT, template: 'blank' },
+  { name: BLANK_PROJECT, template: 'blank', modules: ['scripting', 'audiobook'] },
   { name: SINGLE_PROJECT, novel: SAMPLE_TITLE, range: [3, 4] },
   { name: WHOLE_PROJECT, novel: SAMPLE_TITLE },
 ];
@@ -178,7 +164,7 @@ export async function expandProject(ui: Ui, name: string): Promise<void> {
   if ((await explorer.modules(name).count()) === 0) {
     await explorer.expand(name).click();
   }
-  await expect(explorer.modules(name)).toHaveCount(MODULE_LABELS.length);
+  await expect(explorer.modules(name).first()).toBeVisible();
 }
 
 export async function openScriptingWorkspace(

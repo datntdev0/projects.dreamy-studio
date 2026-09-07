@@ -92,6 +92,7 @@ export function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary
     rangeFrom: null,
     rangeTo: null,
     archived: false,
+    modules: ['scripting', 'audiobook'],
     createdAt: '2026-01-02T03:04:00Z',
     updatedAt: '2026-01-02T03:04:00Z',
     openedAt: '2026-01-02T03:04:00Z',

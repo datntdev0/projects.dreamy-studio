@@ -175,12 +175,3 @@ export function fileNameOf(path: string): string {
   const last = segments[segments.length - 1];
   return last || path;
 }
-const AVATAR_TONES = 4;
-const FNV_OFFSET = 2166136261;
-const FNV_PRIME = 16777619;
-function fnvStep(hash: number, character: string): number {
-  return Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME);
-}
-export function nameTone(name: string): number {
-  return ([...name].reduce(fnvStep, FNV_OFFSET) >>> 0) % AVATAR_TONES;
-}

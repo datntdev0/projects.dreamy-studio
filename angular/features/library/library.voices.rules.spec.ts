@@ -1,9 +1,9 @@
 import { TtsModel } from '@features/settings/backend.models';
 import { CloudAccount } from '@features/settings/cloud.models';
+import { nameTone } from '@shared/utils/monogram';
 import { librarySound, libraryVoice } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
-import { nameTone } from './library.rules';
 import { LibraryVoice, VoiceEngine } from './library.voices.models';
 // prettier-ignore
 import { buildVoiceEngines, buildVoiceReference, engineGroupKey, engineIcon, engineName, engineOptionText, engineReady, engineSection, engineSources, engineSupportsSource, filterPresets, filterVoices, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetFilterOptions, presetMetaText, presetName, presetSampleSlug, presetSampleUrl, sortVoices, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, voiceById, voiceGenderKey, voiceGenderOptions, voiceLanguageCodes, voiceLanguageKey, voiceLanguageText, voiceMonogram, voiceReferenceName, voiceSourceDetail, voiceSourceKey, voiceSourceNameKey } from './library.voices.rules';

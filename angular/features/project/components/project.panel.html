@@ -1,5 +1,36 @@
 <section class="pj-project-panel" data-testid="project-panel">
   @if (project(); as item) {
+  <section class="ins-panel-actions" data-testid="project-panel-actions">
+    <button
+      type="button"
+      class="btn btn-sm"
+      data-testid="project-panel-archive"
+      (click)="archive(item)"
+    >
+      <ds-icon name="archive" [size]="15" />
+      {{ (item.archived ? 'project.action.unarchive' : 'project.action.archive') | t }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm btn-danger"
+      data-testid="project-panel-delete"
+      (click)="remove(item)"
+    >
+      <ds-icon name="trash" [size]="15" />
+      {{ "project.action.delete" | t }}
+    </button>
+    @if (showOpen()) {
+    <button
+      type="button"
+      class="btn btn-sm btn-primary"
+      data-testid="project-panel-open"
+      (click)="open(item)"
+    >
+      <ds-icon name="folder-open" [size]="15" />
+      {{ "project.action.open" | t }}
+    </button>
+    }
+  </section>
   <section class="ins-sec pj-ins-top" data-testid="project-panel-summary">
     <app-project-thumb kind="hero" [project]="item" data-testid="project-panel-thumb">
       <span class="cover-actions" data-testid="project-panel-cover-actions">
@@ -36,9 +67,6 @@
     </app-project-thumb>
     <div class="ins-hero-t" data-testid="project-panel-name">{{ item.name }}</div>
     <div class="ins-hero-m" data-testid="project-panel-badges">
-      <span class="badge" [class.badge-running]="!item.archived">
-        {{ labels.statusKey(item) | t }}
-      </span>
       <span class="type-tag">
         <ds-icon [name]="labels.iconOf(item.template)" [size]="13" />
         {{ labels.templateKey(item.template) | t }}
@@ -70,41 +98,6 @@
       <dt>{{ "project.panel.updated" | t }}</dt>
       <dd><span class="mono">{{ labels.stampOf(item.updatedAt) }}</span></dd>
     </dl>
-  </section>
-  <section class="ins-sec ins-actions" data-testid="project-panel-actions">
-    @if (showOpen()) {
-    <button
-      type="button"
-      class="btn btn-primary"
-      data-testid="project-panel-open"
-      (click)="open(item)"
-    >
-      <ds-icon name="folder-open" [size]="16" />
-      {{ "project.action.open" | t }}
-    </button>
-    }
-    <button
-      type="button"
-      class="btn"
-      data-testid="project-panel-open-folder"
-      (click)="openFolder(item)"
-    >
-      <ds-icon name="folder-open" [size]="16" />
-      {{ "project.action.openFolder" | t }}
-    </button>
-    <button type="button" class="btn" data-testid="project-panel-archive" (click)="archive(item)">
-      <ds-icon name="archive" [size]="16" />
-      {{ (item.archived ? 'project.action.unarchive' : 'project.action.archive') | t }}
-    </button>
-    <button
-      type="button"
-      class="btn btn-danger"
-      data-testid="project-panel-delete"
-      (click)="remove(item)"
-    >
-      <ds-icon name="trash" [size]="16" />
-      {{ "project.action.delete" | t }}
-    </button>
   </section>
   } @else {
   <div class="ins-empty" data-testid="project-panel-missing">

@@ -3,10 +3,9 @@
     <div
       class="tree-row nx-child"
       [class.is-selected]="isActive(row)"
-      [class.is-disabled]="!row.module.implemented"
+      [class.is-soon]="!row.module.implemented"
       role="treeitem"
-      [attr.tabindex]="row.module.implemented ? 0 : -1"
-      [attr.aria-disabled]="!row.module.implemented"
+      tabindex="0"
       [attr.aria-selected]="isActive(row)"
       [attr.title]="row.module.implemented ? null : ('project.module.soon' | t)"
       [attr.data-module-id]="row.module.id"

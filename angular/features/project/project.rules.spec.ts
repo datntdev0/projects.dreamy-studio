@@ -3,7 +3,7 @@ import { project, projectModuleState } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { completeModuleStates, filterProjects, idleModuleState, isProjectModuleId, isProjectTemplate, moduleBadgeClass, moduleRows, moduleStateKey, PROJECT_MODULE_STAGES, PROJECT_MODULES, PROJECT_TEMPLATES, projectCode, projectModule, projectStatus, sortDirEntries, sortProjects, templateIcon, toggled, toProjectError, treeKey, validateProjectName, validateRange } from './project.rules';
+import { completeModuleStates, doneModuleCount, enabledModuleRows, enabledModuleStates, filterProjects, idleModuleState, isModuleEnabled, isModuleRequired, isProjectModuleId, isProjectTemplate, moduleBadgeClass, moduleFraction, moduleRows, moduleStateKey, PROJECT_MODULE_STAGES, PROJECT_MODULES, PROJECT_TEMPLATES, projectCode, projectModule, projectPercent, projectStatus, sortProjects, stageModuleRows, templateIcon, templateModules, toggled, toProjectError, validateProjectName, validateRange, withModuleEnabled } from './project.rules';
 
 describe('project.rules', () => {
   it('validates names and ranges', () => {
@@ -34,28 +34,13 @@ describe('project.rules', () => {
     expect(filterProjects(list, { templates: [], status: [] }, ' TALES ')).toEqual([list[0]]);
   });
 
-  it('sorts projects by name or update, archived last', () => {
+  it('sorts projects by most recent update, archived last', () => {
     const list = [
       project({ id: 1, name: 'b', updatedAt: '2026-01-01' }),
       project({ id: 2, name: 'A', updatedAt: '2026-02-01' }),
       project({ id: 3, name: '0', archived: true, updatedAt: '2026-03-01' }),
     ];
-    expect(sortProjects(list, 'name').map((item) => item.id)).toEqual([2, 1, 3]);
-    expect(sortProjects(list, 'updated').map((item) => item.id)).toEqual([2, 1, 3]);
-  });
-
-  it('sorts directory entries with folders first', () => {
-    const entries = [
-      { name: 'b.txt', kind: 'file' as const, size: 1 },
-      { name: 'z', kind: 'dir' as const, size: 0 },
-      { name: 'a', kind: 'dir' as const, size: 0 },
-    ];
-    expect(sortDirEntries(entries).map((entry) => entry.name)).toEqual(['a', 'z', 'b.txt']);
-  });
-
-  it('normalizes tree keys', () => {
-    expect(treeKey(3, '\\a\\b/')).toBe('3:a/b');
-    expect(treeKey(3, '')).toBe('3:');
+    expect(sortProjects(list).map((item) => item.id)).toEqual([2, 1, 3]);
   });
 
   it('converts errors', () => {
@@ -122,5 +107,65 @@ describe('project.rules', () => {
     expect(moduleBadgeClass('doing')).toBe('badge-running');
     expect(moduleBadgeClass('done')).toBe('badge-success');
     expect(moduleBadgeClass('stale')).toBe('badge-warning');
+  });
+
+  it('measures module and project progress', () => {
+    expect(moduleFraction(projectModuleState({ state: 'idle', done: 3, total: 4 }))).toBe(0);
+    expect(moduleFraction(projectModuleState({ state: 'done', done: 0, total: 0 }))).toBe(1);
+    expect(moduleFraction(projectModuleState({ state: 'doing', done: 1, total: 4 }))).toBe(0.25);
+    expect(moduleFraction(projectModuleState({ state: 'doing', done: 4, total: 4 }))).toBe(0.99);
+    expect(moduleFraction(projectModuleState({ state: 'stale', done: 0, total: 0 }))).toBe(0.5);
+    const states = [
+      projectModuleState({ id: 'scripting', state: 'done' }),
+      projectModuleState({ id: 'audiobook', state: 'doing', done: 1, total: 2 }),
+      projectModuleState({ id: 'video', state: 'idle' }),
+      projectModuleState({ id: 'canvas', state: 'idle' }),
+    ];
+    expect(projectPercent(states)).toBe(38);
+    expect(projectPercent([])).toBe(0);
+    expect(doneModuleCount(states)).toBe(1);
+  });
+
+  it('groups module rows by stage', () => {
+    const rows = moduleRows([]);
+    expect(stageModuleRows(rows, 'pre').map((row) => row.module.id)).toEqual([
+      'scripting',
+      'character',
+      'world',
+      'storyboard',
+    ]);
+    expect(stageModuleRows(rows, 'prod').map((row) => row.module.id)).toEqual([
+      'audiobook',
+      'canvas',
+    ]);
+    expect(stageModuleRows(rows, 'post').map((row) => row.module.id)).toEqual(['video']);
+  });
+
+  it('keeps template modules enabled and toggles optional ones', () => {
+    expect(templateModules('audiobook')).toEqual(['scripting', 'audiobook']);
+    expect(templateModules('blank')).toEqual([]);
+    const book = project({ template: 'audiobook', modules: ['scripting', 'audiobook', 'video'] });
+    expect(isModuleRequired(book, 'audiobook')).toBe(true);
+    expect(isModuleRequired(book, 'video')).toBe(false);
+    expect(isModuleEnabled(book, 'video')).toBe(true);
+    expect(isModuleEnabled(book, 'canvas')).toBe(false);
+    expect(isModuleEnabled(project({ template: 'audiobook', modules: [] }), 'scripting')).toBe(
+      true,
+    );
+    expect(withModuleEnabled(book, 'character', true)).toEqual([
+      'scripting',
+      'character',
+      'audiobook',
+      'video',
+    ]);
+    expect(withModuleEnabled(book, 'video', false)).toEqual(['scripting', 'audiobook']);
+    expect(withModuleEnabled(book, 'audiobook', false)).toEqual([
+      'scripting',
+      'audiobook',
+      'video',
+    ]);
+    const rows = enabledModuleRows(book, moduleRows([]));
+    expect(rows.map((row) => row.module.id)).toEqual(['scripting', 'audiobook', 'video']);
+    expect(enabledModuleStates(book, completeModuleStates(null))).toHaveLength(3);
   });
 });

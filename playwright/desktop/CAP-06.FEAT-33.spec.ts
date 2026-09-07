@@ -7,7 +7,7 @@ import { expect, test } from '../scripts/fixtures.ts';
 import { COVER_CHANGED, COVER_REMOVED, IMAGE_TOO_LARGE, NOT_AN_IMAGE } from '../scripts/messages.ts';
 import { PNG_BYTES } from '../scripts/novels.ts';
 // prettier-ignore
-import { ACTIVE, ARCHIVED, HARBOR_CHAPTERS, NO_NOVEL, NOVEL_DELETED, openProjectSettings, openProjectsView, openSettings, ORIGINAL, PROJECT_NAME_REQUIRED, projectFolder, readProjects, selectProject, showCatalog,SOURCE_NOTE } from '../scripts/project.ts';
+import { ARCHIVE, HARBOR_CHAPTERS, NO_NOVEL, NOVEL_DELETED, openProjectSettings, openProjectsView, openSettings, ORIGINAL, PROJECT_NAME_REQUIRED, projectFolder, readProjects, RESTORE, selectProject, showCatalog,SOURCE_NOTE } from '../scripts/project.ts';
 
 const COVER_LIMIT = 8 * 1024 * 1024;
 
@@ -154,18 +154,18 @@ test.describe('CAP-06 Project Management', () => {
         await selectProject(ui, 'Beta Audio');
         await project.panel.archive.click();
 
-        await expect(project.catalog.card('Beta Audio')).toContainText(ARCHIVED);
-        await expect(project.panel.badges).toContainText(ARCHIVED);
+        await expect(project.catalog.card('Beta Audio')).toHaveClass(/is-archived/);
+        await expect(project.panel.archive).toHaveText(RESTORE);
         await expect(project.catalog.cards).toContainText(['Alpha Audio', 'Beta Audio']);
         expect(readProjects(folder)[1]?.archived).toBe(true);
         expect(await readFile(draft, 'utf8')).toBe('keep me');
       });
 
-      await test.step('returns the project to the active status when it is restored', async () => {
+      await test.step('returns the project to the active projects when it is restored', async () => {
         await project.panel.archive.click();
 
-        await expect(project.catalog.card('Beta Audio')).toContainText(ACTIVE);
-        await expect(project.panel.badges).toContainText(ACTIVE);
+        await expect(project.catalog.card('Beta Audio')).not.toHaveClass(/is-archived/);
+        await expect(project.panel.archive).toHaveText(ARCHIVE);
         await expect(project.catalog.cards).toContainText(['Beta Audio', 'Alpha Audio']);
         expect(readProjects(folder)[1]?.archived).toBe(false);
       });

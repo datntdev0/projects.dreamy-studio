@@ -4,6 +4,7 @@ import { projectTabId } from '@layout/layout.models';
 import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
+import { fieldValue } from '@shared/utils/dom';
 
 import { ProjectLabels } from '../project.labels';
 import { ProjectStatus, ProjectSummary, ProjectTemplateId } from '../project.models';
@@ -39,8 +40,13 @@ export class ProjectExplorer {
     return `project.status.${status}`;
   }
 
-  isTemplateOn(template: ProjectTemplateId): boolean {
-    return this.projects.filters().templates.includes(template);
+  selectedTemplate(): ProjectTemplateId | '' {
+    return this.projects.filters().templates[0] ?? '';
+  }
+
+  setTemplateFilter(event: Event): void {
+    const value = fieldValue(event);
+    this.projects.setTemplateFilter(value === '' ? null : (value as ProjectTemplateId));
   }
 
   isStatusOn(status: ProjectStatus): boolean {

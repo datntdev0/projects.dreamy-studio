@@ -1,7 +1,7 @@
 import { expect, test } from '../scripts/fixtures.ts';
 import { switchWorkspace } from '../scripts/flows.ts';
 // prettier-ignore
-import { ACTIVE, ARCHIVED, AUDIOBOOK, COLUMN_PROJECT, COLUMN_STATUS, COLUMN_TYPE, COLUMN_UPDATED, FILMSERIES, HARBOR_CHAPTERS, openProjectsView, ORIGINAL, selectProject, showCatalog } from '../scripts/project.ts';
+import { ARCHIVED, AUDIOBOOK, COLUMN_PROJECT, COLUMN_TYPE, COLUMN_UPDATED, FILMSERIES, HARBOR_CHAPTERS, openProjectsView, ORIGINAL, selectProject, showCatalog } from '../scripts/project.ts';
 
 test.describe('CAP-06 Project Management', () => {
   test.describe('FEAT-32 Project Browsing', () => {
@@ -31,31 +31,24 @@ test.describe('CAP-06 Project Management', () => {
       });
       const catalog = ui.main.project.catalog;
 
-      await test.step('shows the projects as a grid with their template, status, content source and the total count', async () => {
+      await test.step('shows the projects as a grid with their template, content source and the total count', async () => {
         await expect(catalog.grid).toBeVisible();
         await expect(catalog.cards).toHaveCount(3);
         await expect(catalog.count).toHaveText('3 projects');
         await expect(catalog.card('Harbor Audio')).toContainText(AUDIOBOOK);
-        await expect(catalog.card('Harbor Audio')).toContainText(ACTIVE);
         await expect(catalog.card('Harbor Audio')).toContainText('Harbor Lights');
         await expect(catalog.card('Harbor Audio')).toContainText(ORIGINAL);
         await expect(catalog.card('Iron Film')).toContainText(FILMSERIES);
-        await expect(catalog.card('Old Draft')).toContainText(ARCHIVED);
+        await expect(catalog.card('Old Draft')).toHaveClass(/is-archived/);
       });
 
-      await test.step('shows the projects as a table with the project, type, status and updated columns', async () => {
+      await test.step('shows the projects as a table with the project, type and updated columns', async () => {
         await catalog.listView.click();
 
         await expect(catalog.table).toBeVisible();
-        await expect(catalog.headers).toHaveText([
-          COLUMN_PROJECT,
-          COLUMN_TYPE,
-          COLUMN_STATUS,
-          COLUMN_UPDATED,
-        ]);
+        await expect(catalog.headers).toHaveText([COLUMN_PROJECT, COLUMN_TYPE, COLUMN_UPDATED]);
         await expect(catalog.rows).toHaveCount(3);
         await expect(catalog.row('Harbor Audio')).toContainText(AUDIOBOOK);
-        await expect(catalog.row('Harbor Audio')).toContainText(ACTIVE);
         await expect(catalog.row('Harbor Audio')).toContainText('2026-01-03');
       });
 
@@ -122,7 +115,7 @@ test.describe('CAP-06 Project Management', () => {
       });
 
       await test.step('keeps only the projects of the chosen template and status, with a removable chip for each filter', async () => {
-        await explorer.template(AUDIOBOOK).click();
+        await explorer.templateSelect.selectOption('audiobook');
         await expect(catalog.cards).toHaveCount(2);
         await expect(catalog.chipTemplates).toHaveCount(1);
 
@@ -133,6 +126,7 @@ test.describe('CAP-06 Project Management', () => {
 
         await catalog.chipRemove(catalog.chipTemplates).click();
         await expect(catalog.chipTemplates).toHaveCount(0);
+        await expect(explorer.templateSelect).toHaveValue('');
         await expect(catalog.chipStatuses).toHaveCount(1);
         await expect(catalog.cards).toHaveCount(1);
 
@@ -141,23 +135,7 @@ test.describe('CAP-06 Project Management', () => {
         await expect(catalog.cards).toHaveCount(4);
       });
 
-      await test.step('orders the projects by most recent or by name and always places archived projects last', async () => {
-        await expect(catalog.cards).toContainText([
-          'Iron Film',
-          'Harbor Audio',
-          'Zen Blank',
-          'Old Audio',
-        ]);
-
-        await catalog.sort.selectOption('name');
-        await expect(catalog.cards).toContainText([
-          'Harbor Audio',
-          'Iron Film',
-          'Zen Blank',
-          'Old Audio',
-        ]);
-
-        await catalog.sort.selectOption('updated');
+      await test.step('orders the projects by most recent and always places archived projects last', async () => {
         await expect(catalog.cards).toContainText([
           'Iron Film',
           'Harbor Audio',
@@ -168,7 +146,7 @@ test.describe('CAP-06 Project Management', () => {
 
       await test.step('reports that no project matches and offers a button that clears the filters', async () => {
         await catalog.search.fill('zzz');
-        await explorer.template(FILMSERIES).click();
+        await explorer.templateSelect.selectOption('filmseries');
 
         await expect(catalog.noMatch).toBeVisible();
         await catalog.noMatchClear.click();
@@ -200,12 +178,11 @@ test.describe('CAP-06 Project Management', () => {
       });
       const project = ui.main.project;
 
-      await test.step('shows the code, type, status, source, folder, created and updated dates of the selected project', async () => {
+      await test.step('shows the code, type, source, folder, created and updated dates of the selected project', async () => {
         await selectProject(ui, 'Harbor Audio');
 
         await expect(project.panel.meta).toContainText('PRJ-0001');
         await expect(project.panel.meta).toContainText(AUDIOBOOK);
-        await expect(project.panel.badges).toContainText(ACTIVE);
         await expect(project.panel.source).toContainText('Harbor Lights');
         await expect(project.panel.source).toContainText('Ch.2–4');
         await expect(project.panel.meta).toContainText('projects\\1\\');
@@ -217,14 +194,14 @@ test.describe('CAP-06 Project Management', () => {
         await project.panel.open.click();
         await expect(project.view.tabs).toHaveCount(1);
         await expect(project.view.title).toHaveText('Harbor Audio');
-        await expect(project.view.tabFiles).toBeVisible();
+        await expect(project.view.tabOverview).toBeVisible();
         await expect(project.view.tabSettings).toBeVisible();
 
         await showCatalog(ui);
         await project.catalog.card('Iron Film').dblclick();
         await expect(project.view.tabs).toHaveCount(2);
         await expect(project.view.title).toHaveText('Iron Film');
-        await expect(project.view.tabFiles).toBeVisible();
+        await expect(project.view.tabOverview).toBeVisible();
         await expect(project.view.tabSettings).toBeVisible();
       });
     });

@@ -84,6 +84,37 @@ fn creates_the_project_folder_named_after_the_incremental_id() {
 }
 
 #[test]
+fn enables_optional_modules_while_keeping_template_modules() {
+    let (_dir, service) = workspace();
+    let project = service.create(input("Modules")).unwrap();
+    assert_eq!(project.modules, vec!["scripting", "audiobook"]);
+    let patch = |modules: &[&str]| ProjectPatch {
+        modules: Some(modules.iter().map(|id| (*id).to_string()).collect()),
+        ..ProjectPatch::default()
+    };
+    let enabled = service
+        .update(project.id, patch(&["video", "character"]))
+        .unwrap();
+    assert_eq!(
+        enabled.modules,
+        vec!["scripting", "character", "audiobook", "video"]
+    );
+    let disabled = service.update(project.id, patch(&[])).unwrap();
+    assert_eq!(disabled.modules, vec!["scripting", "audiobook"]);
+    assert_eq!(
+        service
+            .update(project.id, patch(&["unknown"]))
+            .unwrap_err()
+            .code,
+        ProjectErrorCode::InvalidInput
+    );
+    assert_eq!(
+        service.list().unwrap()[0].modules,
+        vec!["scripting", "audiobook"]
+    );
+}
+
+#[test]
 fn update_archive_open_and_delete_update_rows_and_files() {
     let (dir, service) = workspace();
     let project = service.create(input("One")).unwrap();
@@ -93,6 +124,7 @@ fn update_archive_open_and_delete_update_rows_and_files() {
             ProjectPatch {
                 name: Some(" Two ".to_string()),
                 description: Some(" text ".to_string()),
+                modules: None,
             },
         )
         .unwrap();
@@ -166,7 +198,6 @@ fn cover_is_stored_outside_the_project_folder_and_removed_with_the_project() {
         service.cover_get(project.id).unwrap().as_deref(),
         Some(cover)
     );
-    assert!(service.dir_list(project.id, "").unwrap().is_empty());
     assert_eq!(
         service
             .cover_set(project.id, "data:image/gif;base64,AAAA")
@@ -183,58 +214,6 @@ fn cover_is_stored_outside_the_project_folder_and_removed_with_the_project() {
         .join("project-covers")
         .join(format!("{}.png", project.id));
     assert!(!leftover.exists());
-}
-
-#[test]
-fn lists_one_directory_level_in_sorted_order_and_rejects_unsafe_paths() {
-    let (dir, service) = workspace();
-    let project = service.create(input("Files")).unwrap();
-    let root = dir.path().join(&project.folder);
-    std::fs::create_dir(root.join("Z folder")).unwrap();
-    std::fs::write(root.join("b.txt"), b"12").unwrap();
-    std::fs::write(root.join("A.txt"), b"1").unwrap();
-    let entries = service.dir_list(project.id, "").unwrap();
-    assert_eq!(
-        entries
-            .iter()
-            .map(|entry| entry.name.as_str())
-            .collect::<Vec<_>>(),
-        vec!["Z folder", "A.txt", "b.txt"]
-    );
-    assert_eq!(entries[1].size, 1);
-    assert_eq!(
-        service.dir_list(project.id, "Z folder").unwrap(),
-        Vec::new()
-    );
-    assert_eq!(
-        service.dir_list(project.id, "../").unwrap_err().code,
-        ProjectErrorCode::PathInvalid
-    );
-    assert_eq!(
-        service
-            .dir_list(project.id, root.to_str().unwrap())
-            .unwrap_err()
-            .code,
-        ProjectErrorCode::PathInvalid
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn rejects_a_directory_path_through_an_external_symlink() {
-    use std::os::unix::fs::symlink;
-    let (dir, service) = workspace();
-    let project = service.create(input("Files")).unwrap();
-    let outside = TempDir::new().unwrap();
-    std::fs::write(outside.path().join("secret.txt"), b"secret").unwrap();
-    let link = dir.path().join(&project.folder).join("outside");
-    if symlink(outside.path(), &link).is_ok() {
-        assert_eq!(
-            service.dir_list(project.id, "outside").unwrap_err().code,
-            ProjectErrorCode::PathInvalid
-        );
-        assert_eq!(service.dir_list(project.id, "").unwrap()[0].name, "outside");
-    }
 }
 
 #[test]

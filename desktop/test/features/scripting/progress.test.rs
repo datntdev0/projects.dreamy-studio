@@ -17,6 +17,7 @@ fn project(range_from: Option<i64>, range_to: Option<i64>) -> ProjectSummary {
         range_from,
         range_to,
         archived: false,
+        modules: Vec::new(),
         created_at: String::new(),
         updated_at: String::new(),
         opened_at: String::new(),

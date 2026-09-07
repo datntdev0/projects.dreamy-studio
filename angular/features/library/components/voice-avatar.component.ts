@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { nameTone } from '@shared/utils/monogram';
 
-import { nameTone } from '../library.rules';
 import { LibraryVoice } from '../library.voices.models';
 import { voiceMonogram } from '../library.voices.rules';
 

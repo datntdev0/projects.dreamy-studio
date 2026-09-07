@@ -2,14 +2,16 @@
 import { castVoices, generateChapter, NARRATOR_VOICE, openAudiobookOf, switchModule } from '../scripts/audiobook.ts';
 import { expect, test } from '../scripts/backend.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, COMING_SOON, expandProject, generateDefault, MODULE_LABELS, moduleState, NARRATOR_ID, openScripting, openScriptingWorkspace, PROJECT_IDS, showProjectExplorer, startWriting, UNSUPPORTED_MODULES } from '../scripts/scripting.ts';
+import { openProjectSettings } from '../scripts/project.ts';
+// prettier-ignore
+import { AUDIO_PROJECT, COMING_SOON, ENABLED_MODULE_LABELS, expandProject, generateDefault, MODULE_LABELS, moduleState, NARRATOR_ID, openScripting, openScriptingWorkspace, PROJECT_IDS, showProjectExplorer, startWriting } from '../scripts/scripting.ts';
 
 const AUDIO_ID = PROJECT_IDS[AUDIO_PROJECT] ?? 1;
 const EDITED = 'Lin Feng arrived late at the gates.';
 
 test.describe('CAP-06 Project Management', () => {
   test.describe('FEAT-53 Project Modules', () => {
-    test('US-0142 lists the project modules in production order and opens the supported ones in their own tab', async ({
+    test('US-0142 lists the enabled project modules in production order and opens each one in its own tab', async ({
       ui,
       picker,
       sandbox,
@@ -18,19 +20,9 @@ test.describe('CAP-06 Project Management', () => {
       const project = ui.main.project;
       const explorer = project.explorer;
 
-      await test.step('shows Scripting, Character, World, Storyboard, Audiobook, Canvas and Video editor in order when the project is expanded', async () => {
+      await test.step('shows the Scripting and Audiobook modules of the audiobook template in order when the project is expanded', async () => {
         await expandProject(ui, AUDIO_PROJECT);
         await expect(explorer.moduleLabels(AUDIO_PROJECT)).toHaveText(MODULE_LABELS);
-      });
-
-      await test.step('locks the unsupported modules with a coming soon note and does not open them', async () => {
-        for (const moduleId of UNSUPPORTED_MODULES) {
-          const row = explorer.module(AUDIO_PROJECT, moduleId);
-          await expect(row).toHaveAttribute('aria-disabled', 'true');
-          await expect(row).toHaveAttribute('title', COMING_SOON);
-          await row.click({ force: true });
-        }
-        await expect(project.moduleTabs).toHaveCount(0);
       });
 
       await test.step('opens Scripting on click and Audiobook on Enter in their own tabs and highlights the module row', async () => {
@@ -72,6 +64,43 @@ test.describe('CAP-06 Project Management', () => {
         await ui.main.scripting.back.click();
         await expect(project.projectTab(AUDIO_ID)).toHaveAttribute('aria-selected', 'true');
         await expect(project.view.title).toHaveText(AUDIO_PROJECT);
+      });
+    });
+
+    test('US-0173 turns optional project modules on and off in the project settings while keeping the template modules', async ({
+      ui,
+      picker,
+      sandbox,
+    }) => {
+      await openScriptingWorkspace(ui, picker, sandbox);
+      const project = ui.main.project;
+      const explorer = project.explorer;
+      await openProjectSettings(ui, AUDIO_PROJECT);
+
+      await test.step('locks the modules of the audiobook template so they cannot be turned off', async () => {
+        await expect(project.view.moduleToggle('scripting')).toBeChecked();
+        await expect(project.view.moduleToggle('scripting')).toBeDisabled();
+        await expect(project.view.moduleToggle('audiobook')).toBeChecked();
+        await expect(project.view.moduleToggle('audiobook')).toBeDisabled();
+        await expect(project.view.moduleToggle('video')).not.toBeChecked();
+        await expect(project.view.moduleToggle('video')).toBeEnabled();
+      });
+
+      await test.step('adds the turned on module to the project modules and opens its coming soon page', async () => {
+        await project.view.moduleToggle('video').check();
+        await showProjectExplorer(ui);
+        await expandProject(ui, AUDIO_PROJECT);
+        await expect(explorer.moduleLabels(AUDIO_PROJECT)).toHaveText(ENABLED_MODULE_LABELS);
+        await explorer.module(AUDIO_PROJECT, 'video').click();
+        await expect(project.moduleTab(AUDIO_ID, 'video')).toHaveAttribute('aria-selected', 'true');
+        await expect(project.moduleSoon).toHaveText(COMING_SOON);
+      });
+
+      await test.step('removes the module from the project modules after it is turned off', async () => {
+        await openProjectSettings(ui, AUDIO_PROJECT);
+        await project.view.moduleToggle('video').uncheck();
+        await showProjectExplorer(ui);
+        await expect(explorer.moduleLabels(AUDIO_PROJECT)).toHaveText(MODULE_LABELS);
       });
     });
 

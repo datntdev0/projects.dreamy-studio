@@ -60,8 +60,10 @@ describe('ProjectService', () => {
     expect(projects.filters().templates).toEqual(['blank']);
     projects.clearFilters();
     expect(projects.filterActive()).toBe(false);
-    projects.setSort('name');
-    expect(projects.visible()[0].name).toBe('Alpha');
+    projects.setTemplateFilter('blank');
+    expect(projects.filters().templates).toEqual(['blank']);
+    projects.setTemplateFilter(null);
+    expect(projects.filters().templates).toEqual([]);
   });
 
   it('persists the view mode', () => {
@@ -103,6 +105,13 @@ describe('ProjectService', () => {
     ipc.on('project_update', project({ id: 3, name: 'Renamed' }));
     await projects.update(3, { name: 'Renamed' });
     expect(projects.projectById(3)?.name).toBe('Renamed');
+    ipc.on('project_update', project({ id: 3, modules: ['scripting', 'audiobook', 'video'] }));
+    await projects.setModuleEnabled(project({ id: 3 }), 'video', true);
+    expect(ipc.lastArgs('project_update')).toEqual({
+      id: 3,
+      patch: { modules: ['scripting', 'audiobook', 'video'] },
+    });
+    expect(projects.projectById(3)?.modules).toContain('video');
     await projects.setArchived([3], true);
     expect(projects.projectById(3)?.archived).toBe(true);
     ipc.on('project_open', project({ id: 3, name: 'Opened' }));
@@ -113,8 +122,6 @@ describe('ProjectService', () => {
     expect(await projects.remove([3])).toBe(1);
     expect(projects.projectById(3)).toBeUndefined();
     expect(projects.selectedId()).toBeNull();
-    await projects.folderOpen(1);
-    expect(ipc.called('project_folder_open')).toBe(1);
   });
 
   it('keeps the selection when removing another project', async () => {
@@ -191,40 +198,15 @@ describe('ProjectService', () => {
     expect(projects.coverUrl(1)).toBeNull();
   });
 
-  it('loads and caches directory listings', async () => {
-    ipc.on('project_dir_list', [
-      { name: 'b', kind: 'file', size: 1 },
-      { name: 'a', kind: 'dir', size: 0 },
-    ]);
-    expect(projects.dirEntries(1, '')).toEqual([]);
-    const [first, second] = await Promise.all([
-      projects.ensureDir(1, ''),
-      projects.ensureDir(1, ''),
-    ]);
-    expect(first[0].name).toBe('a');
-    expect(second).toEqual(first);
-    expect(projects.dirEntries(1, '').length).toBe(2);
-    expect((await projects.ensureDir(1, '')).length).toBe(2);
-    expect(ipc.called('project_dir_list')).toBe(1);
-    ipc.fail('project_dir_list', { code: 'x', detail: 'y' });
-    expect(await projects.ensureDir(1, 'sub')).toEqual([]);
-    expect(projects.error()?.code).toBe('x');
-  });
-
-  it('toggles and refreshes the tree', async () => {
-    ipc.on('project_dir_list', []);
-    await projects.ensureDir(1, '');
-    await projects.ensureDir(2, '');
-    projects.toggleExpanded('1:a');
-    projects.toggleExpanded('2:b');
-    expect(projects.isExpanded('1:a')).toBe(true);
-    projects.refreshTree(1);
-    expect(projects.expandedKeys()).toEqual(['1:a']);
-    projects.refreshTree();
-    expect(projects.expandedKeys()).toEqual([]);
-    projects.toggleExpanded('2:b');
-    projects.toggleExpanded('2:b');
-    expect(projects.isExpanded('2:b')).toBe(false);
+  it('toggles expanded rows and collapses removed projects', async () => {
+    projects.toggleExpanded('1:');
+    projects.toggleExpanded('2:');
+    expect(projects.isExpanded('1:')).toBe(true);
+    ipc.on('project_delete', 1);
+    await projects.remove([1]);
+    expect(projects.expandedKeys()).toEqual(['2:']);
+    projects.toggleExpanded('2:');
+    expect(projects.isExpanded('2:')).toBe(false);
   });
 
   it('resets when the workspace changes', async () => {

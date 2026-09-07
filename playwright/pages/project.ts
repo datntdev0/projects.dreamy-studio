@@ -12,16 +12,12 @@ export class ProjectExplorer {
     return this.page.getByTestId('project-explorer-catalog');
   }
 
-  get templates(): Locator {
-    return this.page.getByTestId('project-explorer-template');
+  get templateSelect(): Locator {
+    return this.page.getByTestId('project-explorer-template-select');
   }
 
   get statuses(): Locator {
     return this.page.getByTestId('project-explorer-status');
-  }
-
-  template(label: string): Locator {
-    return this.templates.filter({ hasText: label });
   }
 
   status(label: string): Locator {
@@ -72,10 +68,6 @@ export class ProjectCatalog {
 
   get count(): Locator {
     return this.page.getByTestId('project-list-count');
-  }
-
-  get sort(): Locator {
-    return this.page.getByTestId('project-list-sort');
   }
 
   get gridView(): Locator {
@@ -278,28 +270,22 @@ export class ProjectView {
     return this.page.getByTestId('project-view-title');
   }
 
-  get tabFiles(): Locator {
-    return this.page.getByTestId('project-view-tab-files');
+  get tabOverview(): Locator {
+    return this.page.getByTestId('project-view-tab-overview');
+  }
+
+  moduleToggle(moduleId: ModuleId): Locator {
+    return this.page
+      .locator(`[data-testid=project-view-module][data-module-id="${moduleId}"]`)
+      .getByTestId('project-view-module-toggle');
   }
 
   get tabSettings(): Locator {
     return this.page.getByTestId('project-view-tab-settings');
   }
 
-  get openFolder(): Locator {
-    return this.page.getByTestId('project-view-open-folder');
-  }
-
-  get files(): Locator {
-    return this.page.getByTestId('project-view-files');
-  }
-
-  get refresh(): Locator {
-    return this.page.getByTestId('project-view-refresh');
-  }
-
-  get entries(): Locator {
-    return this.page.getByTestId('project-tree-entry');
+  get overview(): Locator {
+    return this.page.getByTestId('project-view-overview');
   }
 
   get settings(): Locator {
@@ -324,10 +310,6 @@ export class ProjectView {
 
   get sourceList(): Locator {
     return this.page.getByTestId('project-view-source-list');
-  }
-
-  entry(name: string): Locator {
-    return this.entries.filter({ has: this.page.getByText(name, { exact: true }) });
   }
 
   async setField(field: Locator, value: string): Promise<void> {
@@ -367,6 +349,10 @@ export class ProjectPages {
 
   get rail(): Locator {
     return this.page.locator('[data-testid=railbar-item][data-rail=projects]');
+  }
+
+  get moduleSoon(): Locator {
+    return this.page.getByTestId('project-module-placeholder-soon');
   }
 
   get moduleTabs(): Locator {

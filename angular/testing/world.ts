@@ -427,10 +427,6 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
     projectModuleState({ id: 'audiobook', state: 'stale', done: 1, total: 3 }),
     projectModuleState({ id: 'character', state: 'done', done: 4, total: 4 }),
   ]);
-  ipc.on('project_dir_list', [
-    { name: 'audio', kind: 'dir', size: 0 },
-    { name: 'notes.txt', kind: 'file', size: 12 },
-  ]);
   ipc.on('novel_list', novels);
   ipc.on('novel_create', novel({ id: 7, title: 'Created' }));
   ipc.on('novel_update', novels[0]);

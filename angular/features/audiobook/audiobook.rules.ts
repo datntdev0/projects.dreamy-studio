@@ -5,7 +5,7 @@ import { ProjectModuleState } from '../project/project.models';
 import { CastMember, Script, ScriptBlock, ScriptUnit } from '../scripting/scripting.models';
 import { countWords } from '../scripting/scripting.rules';
 // prettier-ignore
-import { Audiobook, AudiobookMessage, AudiobookView, AudioEnv, AudioRecord, Blocker, MetaState, MixField, MixSettings, SegmentDisplayState, SegmentInfo, SegmentState, SpeakerVoice, StaleReason, UnitAudio, UnitAudioState, UnitStat, UnitSummary, VoiceAvailability, VoiceIssue, Voicing } from './audiobook.models';
+import { Audiobook, AudiobookMessage, AudiobookView, AudioEnv, AudioRecord, AudioStats, Blocker, MetaState, MixField, MixSettings, SegmentDisplayState, SegmentInfo, SegmentState, SpeakerVoice, StaleReason, UnitAudio, UnitAudioState, UnitStat, UnitSummary, VoiceAvailability, VoiceIssue, Voicing } from './audiobook.models';
 
 export const VOICED_TYPES: ScriptBlock['type'][] = ['heading', 'narration', 'dialogue'];
 
@@ -345,4 +345,20 @@ export function excerptTitle(unitTitle: string, text: string): string {
 
 export function stampNow(): string {
   return new Date().toISOString();
+}
+
+function addUnitAudio(stats: AudioStats, unit: UnitAudio): AudioStats {
+  const records = Object.values(unit.audio);
+  return {
+    clips: stats.clips + records.length,
+    seconds: stats.seconds + records.reduce(addRecordDuration, 0),
+  };
+}
+
+function addRecordDuration(sum: number, record: AudioRecord): number {
+  return sum + record.dur;
+}
+
+export function bookAudioStats(book: Audiobook): AudioStats {
+  return Object.values(book.units).reduce(addUnitAudio, { clips: 0, seconds: 0 });
 }

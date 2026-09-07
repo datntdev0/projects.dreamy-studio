@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Icon } from '@components/icon';
-
-import { nameTone } from '../library.rules';
+import { nameTone } from '@shared/utils/monogram';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

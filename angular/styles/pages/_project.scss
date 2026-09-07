@@ -1,6 +1,5 @@
 app-project-list,
 app-project-explorer,
-app-project-tree,
 app-project-modules,
 app-project-module-host,
 app-project-module-frame,
@@ -111,6 +110,43 @@ app-project-panel {
   background: var(--canvas-soft);
   color: var(--mute);
 }
+.pj-mono {
+  font: 600 10px/1 var(--font);
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pj-th.is-xs .pj-mono {
+  font-size: 6px;
+  letter-spacing: 0;
+}
+.pj-th.is-md .pj-mono {
+  font-size: 12px;
+}
+.pj-thumb .pj-mono {
+  font-size: 30px;
+  letter-spacing: 1px;
+}
+.pj-ins-thumb .pj-mono {
+  font-size: 40px;
+  letter-spacing: 1.5px;
+}
+app-project-thumb .is-empty.tone-0 {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+app-project-thumb .is-empty.tone-1 {
+  background: var(--secondary-soft);
+  color: var(--secondary-text);
+}
+app-project-thumb .is-empty.tone-2 {
+  background: var(--info-soft);
+  color: var(--info);
+}
+app-project-thumb .is-empty.tone-3 {
+  background: var(--success-soft);
+  color: var(--success);
+}
 .pj-ins-thumb:hover .cover-actions,
 .pj-ins-thumb:focus-within .cover-actions {
   opacity: 1;
@@ -140,27 +176,6 @@ app-project-thumb {
 .ins-actions .btn {
   flex: 1;
   justify-content: center;
-}
-.pj-tree {
-  min-width: 0;
-}
-.pj-tree-row {
-  gap: var(--sp-xs);
-}
-.pj-tree-row .tree-label {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pj-tree-indent {
-  width: 14px;
-  flex: none;
-}
-.pj-tree-size {
-  flex: none;
-  font-size: 10px;
-  color: var(--mute);
 }
 
 .pjc {
@@ -291,17 +306,6 @@ app-project-view {
 .pw-danger-r + .pw-danger-r {
   border-top: 1px solid var(--hairline);
 }
-.pj-view-root {
-  cursor: default;
-}
-.pj-view-root:hover {
-  background: transparent;
-}
-.pj-view-root .tree-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: none;
-}
 .pj-ctx {
   display: grid;
   gap: 2px;
@@ -311,10 +315,14 @@ app-project-view {
   border-radius: var(--r-sm);
   width: 100%;
 }
-.tree-row.nx-child.is-disabled {
-  opacity: 0.5;
-  cursor: default;
+.tree-row.nx-child.is-soon .tree-label {
+  color: var(--mute);
 }
-.tree-row.nx-child.is-disabled:hover {
-  background: transparent;
+.search.pj-search {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.search.pj-search .input {
+  width: 300px;
+  max-width: 100%;
 }

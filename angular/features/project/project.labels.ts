@@ -4,7 +4,7 @@ import { LanguageService } from '@shared/language/language.service';
 
 import { displayName, formatMonthDay, formatStamp } from '../novel/novel.rules';
 import { NovelService } from '../novel/novel.service';
-import { ProjectStatus, ProjectSummary, ProjectTemplateId } from './project.models';
+import { ProjectSummary, ProjectTemplateId } from './project.models';
 import { templateIcon } from './project.rules';
 
 @Injectable({ providedIn: 'root' })
@@ -77,13 +77,5 @@ export class ProjectLabels {
 
   templateKey(template: ProjectTemplateId): LanguageKey {
     return `project.template.${template}`;
-  }
-
-  statusOf(project: ProjectSummary): ProjectStatus {
-    return project.archived ? 'archived' : 'active';
-  }
-
-  statusKey(project: ProjectSummary): LanguageKey {
-    return `project.status.${this.statusOf(project)}`;
   }
 }

@@ -330,3 +330,8 @@ export interface AudiobookDialogRequestFlag {
   projectId: number;
   blockId: string;
 }
+
+export interface AudioStats {
+  clips: number;
+  seconds: number;
+}

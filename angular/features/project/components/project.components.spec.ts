@@ -11,10 +11,10 @@ import { ProjectLibraryPanel } from './library.panel';
 import { ProjectList } from './list.component';
 import { ProjectModuleHost } from './module-host.component';
 import { ProjectModules } from './modules.component';
+import { ProjectOverview } from './overview.component';
 import { ProjectPanel } from './project.panel';
 import { ProjectView } from './project-view.component';
 import { ProjectThumb } from './thumb.component';
-import { ProjectTree } from './tree.component';
 
 async function warm(): Promise<void> {
   await warmWorld();
@@ -39,6 +39,12 @@ const cases: ComponentCase[] = [
     inputs: { projectId: 2 },
     before: warm,
   },
+  {
+    name: 'ProjectOverview',
+    type: ProjectOverview,
+    inputs: { project: project({ id: 1, description: 'Night tales' }) },
+    before: warm,
+  },
   { name: 'ProjectPanel', type: ProjectPanel, inputs: { projectId: 1 }, before: warm },
   {
     name: 'ProjectModules',
@@ -52,7 +58,6 @@ const cases: ComponentCase[] = [
     inputs: { projectId: 1, moduleId: 'scripting' },
     before: warm,
   },
-  { name: 'ProjectTree', type: ProjectTree, inputs: { projectId: 1 }, before: warm },
   {
     name: 'ProjectThumb',
     type: ProjectThumb,

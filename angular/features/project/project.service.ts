@@ -3,9 +3,9 @@ import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
 import { WorkspaceService } from '../workspace/workspace.service';
 // prettier-ignore
-import { DirEntry, ProjectError, ProjectFilters, ProjectInput, ProjectModuleId, ProjectModuleState, ProjectPatch, ProjectSort, ProjectStatus, ProjectStatusCount, ProjectSummary, ProjectTemplateCount, ProjectTemplateId, ProjectTotals, ProjectViewMode } from './project.models';
+import { ProjectError, ProjectFilters, ProjectInput, ProjectModuleId, ProjectModuleState, ProjectPatch, ProjectStatus, ProjectStatusCount, ProjectSummary, ProjectTemplateCount, ProjectTemplateId, ProjectTotals, ProjectViewMode } from './project.models';
 // prettier-ignore
-import { completeModuleStates, filterProjects, idleModuleState, PROJECT_TEMPLATES, sortDirEntries, sortProjects, toggled, toProjectError, treeKey } from './project.rules';
+import { completeModuleStates, filterProjects, idleModuleState, PROJECT_TEMPLATES, sortProjects, toggled, toProjectError, withModuleEnabled } from './project.rules';
 
 const VIEW_STORAGE_KEY = 'ds.pj.view';
 
@@ -126,8 +126,8 @@ function withoutModules(
   return next;
 }
 
-function hasTreePrefix(prefix: string, key: string): boolean {
-  return key.startsWith(prefix);
+function isExpandedKeyKept(removed: Set<number>, key: string): boolean {
+  return !removed.has(Number(key.split(':')[0]));
 }
 
 @Injectable({ providedIn: 'root' })
@@ -138,16 +138,12 @@ export class ProjectService {
   private readonly selected = signal<number | null>(null);
   private readonly rawTemplates = signal<ProjectTemplateId[]>([]);
   private readonly rawStatuses = signal<ProjectStatus[]>([]);
-  private readonly directoryCache = signal<Record<string, DirEntry[]>>({});
-  private readonly loadedDirectories = signal<Record<string, true>>({});
-  private readonly pendingDirectories = new Map<string, Promise<DirEntry[]>>();
   private readonly expanded = signal<string[]>([]);
   private readonly covers = signal<Record<number, string | null>>({});
   private readonly pendingCovers = new Set<number>();
   private readonly modules = signal<Record<number, ProjectModuleState[]>>({});
   private readonly pendingModules = new Map<number, Promise<ProjectModuleState[]>>();
   private epoch = 0;
-  private treeEpoch = 0;
   private workspacePath: string | null | undefined = undefined;
 
   readonly projects = this.items.asReadonly();
@@ -156,7 +152,6 @@ export class ProjectService {
   readonly error = signal<ProjectError | null>(null);
   readonly view = signal<ProjectViewMode>(readViewMode());
   readonly query = signal('');
-  readonly sort = signal<ProjectSort>('updated');
   readonly filters = computed(this.buildFilters.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
   readonly visible = computed(this.buildVisible.bind(this));
@@ -216,6 +211,14 @@ export class ProjectService {
     return next;
   }
 
+  setModuleEnabled(
+    project: ProjectSummary,
+    moduleId: ProjectModuleId,
+    enabled: boolean,
+  ): Promise<ProjectSummary> {
+    return this.update(project.id, { modules: withModuleEnabled(project, moduleId, enabled) });
+  }
+
   async setArchived(ids: number[], archived: boolean): Promise<void> {
     await this.ipc.invoke<void>('project_archive', { ids, archived });
     const selectedIds = new Set(ids);
@@ -229,7 +232,7 @@ export class ProjectService {
     this.selected.set(this.selectionAfterRemoval(removed));
     this.covers.set(withoutCovers(this.covers(), removed));
     this.modules.set(withoutModules(this.modules(), removed));
-    this.refreshTreeForIds(ids);
+    this.expanded.set(this.expanded().filter(isExpandedKeyKept.bind(null, removed)));
     return count;
   }
 
@@ -265,10 +268,6 @@ export class ProjectService {
     return opened;
   }
 
-  folderOpen(id: number): Promise<void> {
-    return this.ipc.invoke<void>('project_folder_open', { id });
-  }
-
   isDuplicateName(name: string, exceptId?: number): boolean {
     const needle = name.trim().toLocaleLowerCase();
     if (!needle) {
@@ -291,8 +290,8 @@ export class ProjectService {
     this.query.set(value);
   }
 
-  setSort(value: ProjectSort): void {
-    this.sort.set(value);
+  setTemplateFilter(template: ProjectTemplateId | null): void {
+    this.rawTemplates.set(template === null ? [] : [template]);
   }
 
   toggleTemplateFilter(template: ProjectTemplateId): void {
@@ -329,29 +328,6 @@ export class ProjectService {
     return this.expanded().includes(key);
   }
 
-  dirEntries(projectId: number, path: string): DirEntry[] {
-    const key = treeKey(projectId, path);
-    return this.loadedDirectories()[key] ? (this.directoryCache()[key] ?? []) : [];
-  }
-
-  async ensureDir(projectId: number, path: string): Promise<DirEntry[]> {
-    const key = treeKey(projectId, path);
-    if (this.loadedDirectories()[key]) {
-      return this.directoryCache()[key] ?? [];
-    }
-    const pending = this.pendingDirectories.get(key);
-    if (pending) {
-      return pending;
-    }
-    const request = this.fetchDirectory(projectId, path, key, this.treeEpoch);
-    this.pendingDirectories.set(key, request);
-    const entries = await request;
-    if (this.pendingDirectories.get(key) === request) {
-      this.pendingDirectories.delete(key);
-    }
-    return entries;
-  }
-
   moduleStates(projectId: number): ProjectModuleState[] {
     return this.modules()[projectId] ?? completeModuleStates(null);
   }
@@ -380,38 +356,18 @@ export class ProjectService {
     return this.requestModules(projectId);
   }
 
-  refreshTree(projectId?: number): void {
-    this.treeEpoch += 1;
-    this.pendingDirectories.clear();
-    if (projectId === undefined) {
-      this.directoryCache.set({});
-      this.loadedDirectories.set({});
-      this.expanded.set([]);
-      return;
-    }
-    const prefix = `${projectId}:`;
-    this.directoryCache.set(this.withoutTreePrefix(this.directoryCache(), prefix));
-    this.loadedDirectories.set(this.withoutTreePrefix(this.loadedDirectories(), prefix));
-    this.expanded.set(this.expanded().filter(hasTreePrefix.bind(null, prefix)));
-  }
-
   reset(): void {
     this.epoch += 1;
-    this.treeEpoch += 1;
     this.items.set([]);
     this.selected.set(null);
     this.rawTemplates.set([]);
     this.rawStatuses.set([]);
-    this.directoryCache.set({});
-    this.loadedDirectories.set({});
-    this.pendingDirectories.clear();
     this.expanded.set([]);
     this.covers.set({});
     this.pendingCovers.clear();
     this.modules.set({});
     this.pendingModules.clear();
     this.query.set('');
-    this.sort.set('updated');
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
@@ -455,30 +411,6 @@ export class ProjectService {
     return states;
   }
 
-  private async fetchDirectory(
-    projectId: number,
-    path: string,
-    key: string,
-    treeEpoch: number,
-  ): Promise<DirEntry[]> {
-    try {
-      const entries = await this.ipc.invoke<DirEntry[]>('project_dir_list', {
-        id: projectId,
-        path,
-      });
-      if (treeEpoch === this.treeEpoch) {
-        this.directoryCache.set({ ...this.directoryCache(), [key]: sortDirEntries(entries) });
-        this.loadedDirectories.set({ ...this.loadedDirectories(), [key]: true });
-      }
-      return sortDirEntries(entries);
-    } catch (cause) {
-      if (treeEpoch === this.treeEpoch) {
-        this.error.set(toProjectError(cause));
-      }
-      return [];
-    }
-  }
-
   private syncWorkspace(): void {
     const path = this.workspace.current()?.path ?? null;
     untracked(this.applyWorkspace.bind(this, path));
@@ -492,22 +424,6 @@ export class ProjectService {
     this.reset();
     if (path !== null) {
       void this.load();
-    }
-  }
-
-  private withoutTreePrefix<T>(record: Record<string, T>, prefix: string): Record<string, T> {
-    const next: Record<string, T> = {};
-    for (const key of Object.keys(record)) {
-      if (!hasTreePrefix(prefix, key)) {
-        next[key] = record[key] as T;
-      }
-    }
-    return next;
-  }
-
-  private refreshTreeForIds(ids: number[]): void {
-    for (const id of ids) {
-      this.refreshTree(id);
     }
   }
 
@@ -541,7 +457,7 @@ export class ProjectService {
   }
 
   private buildVisible(): ProjectSummary[] {
-    return sortProjects(filterProjects(this.items(), this.filters(), this.query()), this.sort());
+    return sortProjects(filterProjects(this.items(), this.filters(), this.query()));
   }
 
   private buildSelectedId(): number | null {

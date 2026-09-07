@@ -373,3 +373,17 @@ describe('formatting', () => {
     expect(rules.stampNow()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
+
+describe('audio stats', () => {
+  it('counts generated clips and sums their duration across units', () => {
+    expect(rules.bookAudioStats(audiobook())).toEqual({ clips: 0, seconds: 0 });
+    const book = audiobook({
+      units: {
+        U01: { audio: { B1: audioRecord({ dur: 2 }), B2: audioRecord({ dur: 3.5 }) }, meta: null },
+        U02: { audio: { B3: audioRecord({ dur: 4 }) }, meta: null },
+        U03: { audio: {}, meta: null },
+      },
+    });
+    expect(rules.bookAudioStats(book)).toEqual({ clips: 3, seconds: 9.5 });
+  });
+});

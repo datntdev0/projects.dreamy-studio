@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { expect, type Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 import type { TemplateId } from '../pages/project.ts';
 import type { Ui } from './fixtures.ts';
@@ -27,7 +27,8 @@ export const BLANK = 'Blank project';
 export const AUDIOBOOK_BLURB = 'Turn chapters into audio with a narrator.';
 export const FILMSERIES_BLURB = 'Build a multi-episode film from scripts, characters and worlds.';
 export const BLANK_BLURB = 'Start empty and add what you need.';
-export const ACTIVE = 'Active';
+export const ARCHIVE = 'Archive';
+export const RESTORE = 'Restore';
 export const ARCHIVED = 'Archived';
 export const ORIGINAL = 'Original';
 export const NO_NOVEL = 'No novel linked';
@@ -35,7 +36,6 @@ export const NOVEL_DELETED = 'Source novel deleted';
 export const SOURCE_NOTE = 'A project is tied to the text version chosen when it was created.';
 export const COLUMN_PROJECT = 'Project';
 export const COLUMN_TYPE = 'Type';
-export const COLUMN_STATUS = 'Status';
 export const COLUMN_UPDATED = 'Updated';
 
 export const HARBOR_CHAPTERS = [
@@ -48,7 +48,6 @@ export const HARBOR_CHAPTERS = [
 
 const DEFAULT_STAMP = '2026-01-01T12:00:00.000Z';
 const MISSING_NOVEL_ID = 999;
-const FOLDER_OPEN_COMMAND = 'project_folder_open';
 
 export interface SeedProject {
   readonly name: string;
@@ -59,6 +58,7 @@ export interface SeedProject {
   readonly range?: readonly [number, number];
   readonly translation?: 'VI' | 'EN';
   readonly archived?: boolean;
+  readonly modules?: readonly string[];
   readonly updatedAt?: string;
   readonly dirs?: readonly string[];
   readonly files?: Readonly<Record<string, string>>;
@@ -81,10 +81,6 @@ export interface ProjectRecord {
   readonly rangeFrom: number | null;
   readonly rangeTo: number | null;
   readonly archived: boolean;
-}
-
-interface FolderOpenWindow {
-  __dreamyFolderOpens?: unknown[];
 }
 
 export function projectFolder(workspace: string, id: number): string {
@@ -134,7 +130,7 @@ export async function seedProjects(
   const ids: number[] = [];
   try {
     const insert = database.prepare(
-      'INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived, created_at, updated_at, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived, modules, created_at, updated_at, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const project of projects) {
       const novel = novelRef(database, project);
@@ -152,6 +148,7 @@ export async function seedProjects(
         from,
         to,
         project.archived ? 1 : 0,
+        JSON.stringify(project.modules ?? []),
         DEFAULT_STAMP,
         stamp,
         stamp,
@@ -220,9 +217,9 @@ export async function openProjectSettings(ui: Ui, name: string): Promise<void> {
   await openSettings(ui);
 }
 
-export async function openProjectFiles(ui: Ui, name: string): Promise<void> {
+export async function openProjectOverview(ui: Ui, name: string): Promise<void> {
   await openProjectTab(ui, name);
-  await expect(ui.main.project.view.files).toBeVisible();
+  await expect(ui.main.project.view.overview).toBeVisible();
 }
 
 export function readProjects(workspace: string): ProjectRecord[] {
@@ -263,38 +260,4 @@ export function removeNovel(workspace: string, title: string): void {
   } finally {
     database.close();
   }
-}
-
-function wrapFolderOpen(command: string): void {
-  const scope = window as unknown as FolderOpenWindow;
-  if (scope.__dreamyFolderOpens) {
-    return;
-  }
-  const calls: unknown[] = [];
-  scope.__dreamyFolderOpens = calls;
-  const original = window.fetch.bind(window);
-  window.fetch = (input, init) => {
-    const target = new URL(
-      input instanceof Request ? input.url : String(input),
-      window.location.href,
-    );
-    if (target.hostname !== 'ipc.localhost' || target.pathname !== `/${command}`) {
-      return original(input, init);
-    }
-    calls.push(typeof init?.body === 'string' ? JSON.parse(init.body) : null);
-    const headers = { 'Content-Type': 'application/json', 'Tauri-Response': 'ok' };
-    return Promise.resolve(new Response('null', { headers }));
-  };
-}
-
-function readFolderOpens(): unknown[] {
-  return (window as unknown as FolderOpenWindow).__dreamyFolderOpens ?? [];
-}
-
-export async function stubFolderOpen(page: Page): Promise<void> {
-  await page.evaluate(wrapFolderOpen, FOLDER_OPEN_COMMAND);
-}
-
-export function folderOpens(page: Page): Promise<unknown[]> {
-  return page.evaluate(readFolderOpens);
 }

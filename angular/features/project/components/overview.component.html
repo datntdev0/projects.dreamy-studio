@@ -1,0 +1,102 @@
+<div class="pw" data-testid="project-overview-root">
+  <section class="pw-hero" data-testid="project-overview-hero">
+    <div class="pw-hero-b">
+      <h1 class="t-display-sm" data-testid="project-overview-name">{{ project().name }}</h1>
+      <div class="pw-src" data-testid="project-overview-source">
+        @if (novel()) {
+          <ds-cover size="md" [image]="novelCover()" />
+        } @else {
+          <span class="pw-src-i" data-testid="project-overview-source-icon">
+            <ds-icon name="book" [size]="16" />
+          </span>
+        }
+        <div class="pw-src-b">
+          <div class="t-ink" data-testid="project-overview-source-name">
+            {{ labels.sourceOf(project()) }}
+          </div>
+          <div class="t-sm t-mute" data-testid="project-overview-source-note">
+            {{ sourceNote() }}
+          </div>
+        </div>
+      </div>
+      @if (project().description) {
+        <p class="t-sm pw-desc" data-testid="project-overview-description">
+          {{ project().description }}
+        </p>
+      }
+    </div>
+    <div class="pw-stats" data-testid="project-overview-stats">
+      @for (metric of metrics(); track metric.id) {
+        <div class="pw-tile" [attr.data-metric]="metric.id" data-testid="project-overview-metric">
+          <span class="eyebrow">{{ metric.labelKey | t }}</span>
+          <b data-testid="project-overview-metric-value">{{ metric.value }}</b>
+          <span class="t-sm t-mute" data-testid="project-overview-metric-note">
+            {{ metric.note }}
+          </span>
+        </div>
+      }
+    </div>
+  </section>
+  <section class="pw-flow" data-testid="project-overview-flow">
+    @for (stage of stages(); track stage.id) {
+      <div class="pw-col" [attr.data-stage]="stage.id" data-testid="project-overview-stage">
+        <header class="pw-col-h">
+          <span class="eyebrow">{{ stage.labelKey | t }}</span>
+          <span class="mono t-mute" data-testid="project-overview-stage-count">
+            {{ stage.rows.length }}/{{ stage.total }}
+          </span>
+        </header>
+        @for (row of stage.rows; track row.module.id) {
+          <div
+            class="pw-mod"
+            [class]="'is-' + row.state.state"
+            role="button"
+            tabindex="0"
+            [attr.data-module-id]="row.module.id"
+            [attr.data-state]="row.state.state"
+            data-testid="project-overview-module"
+            (click)="open(row)"
+            (keydown)="onKeydown(row, $event)"
+          >
+            <div class="pw-mod-h">
+              <ds-icon [name]="row.module.icon" [size]="16" />
+              <b>{{ row.module.labelKey | t }}</b>
+              <span class="spacer"></span>
+              @if (row.module.implemented) {
+                <span
+                  class="badge"
+                  [class]="badgeClass(row)"
+                  data-testid="project-overview-module-state"
+                >
+                  {{ stateKey(row) | t }}
+                </span>
+              } @else {
+                <span class="badge badge-info" data-testid="project-overview-module-soon">
+                  {{ 'project.module.soon' | t }}
+                </span>
+              }
+            </div>
+            <div class="t-sm t-mute pw-mod-n">
+              {{ row.state.note || (row.module.blurbKey | t) }}
+            </div>
+            <div class="progress" [class.is-done]="row.state.state === 'done'">
+              <i [style.width.%]="percentOf(row)"></i>
+            </div>
+          </div>
+        }
+        @for (module of stage.available; track module.id) {
+          <button
+            type="button"
+            class="pw-mod is-off"
+            [attr.data-module-id]="module.id"
+            data-testid="project-overview-module-add"
+            (click)="enable(module)"
+          >
+            <ds-icon name="plus" [size]="14" />
+            <span>{{ 'project.overview.addModule' | t: { name: (module.labelKey | t) } }}</span>
+          </button>
+        }
+      </div>
+    }
+  </section>
+</div>

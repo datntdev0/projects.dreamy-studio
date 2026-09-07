@@ -5,11 +5,14 @@
   [class.pj-thumb]="kind() === 'card'"
   [class.pj-ins-thumb]="kind() === 'hero'"
   [class.is-empty]="!image()"
+  [class]="tone()"
   [style.background]="background()"
   data-testid="project-thumb"
 >
   @if (!image()) {
-    <ds-icon class="cover-ph" name="image" [size]="placeholderSize()" />
+    <span class="cover-ph pj-mono" aria-hidden="true" data-testid="project-thumb-monogram">
+      {{ monogram() }}
+    </span>
   }
   <ng-content></ng-content>
 </span>

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { coverBackground } from '@components/cover';
-import { Icon } from '@components/icon';
+import { leadingMonogram, nameTone } from '@shared/utils/monogram';
 
 import { ProjectSummary } from '../project.models';
 import { ProjectService } from '../project.service';
@@ -8,12 +8,11 @@ import { ProjectService } from '../project.service';
 export type ProjectThumbKind = 'th' | 'card' | 'hero';
 export type ProjectThumbSize = '' | 'xs' | 'md';
 
-const PLACEHOLDER_SIZES: Record<string, number> = { xs: 10, th: 16, md: 20, card: 32, hero: 40 };
+const PROJECT_MONOGRAM_LETTERS = 3;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-project-thumb',
-  imports: [Icon],
   templateUrl: './thumb.component.html',
 })
 export class ProjectThumb {
@@ -23,7 +22,8 @@ export class ProjectThumb {
   readonly size = input<ProjectThumbSize>('');
   readonly image = computed(this.buildImage.bind(this));
   readonly background = computed(this.buildBackground.bind(this));
-  readonly placeholderSize = computed(this.buildPlaceholderSize.bind(this));
+  readonly monogram = computed(this.buildMonogram.bind(this));
+  readonly tone = computed(this.buildTone.bind(this));
 
   constructor() {
     effect(this.syncCover.bind(this));
@@ -37,9 +37,12 @@ export class ProjectThumb {
     return coverBackground(this.image());
   }
 
-  private buildPlaceholderSize(): number {
-    const key = this.kind() === 'th' ? this.size() || 'th' : this.kind();
-    return PLACEHOLDER_SIZES[key];
+  private buildMonogram(): string {
+    return leadingMonogram(this.project().name, PROJECT_MONOGRAM_LETTERS);
+  }
+
+  private buildTone(): string {
+    return this.image() ? '' : `tone-${nameTone(this.project().name)}`;
   }
 
   private syncCover(): void {

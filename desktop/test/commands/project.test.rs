@@ -17,24 +17,15 @@ fn project_payloads_serialize_as_camel_case() {
         range_from: Some(1),
         range_to: Some(2),
         archived: false,
+        modules: Vec::new(),
         created_at: "a".to_string(),
         updated_at: "b".to_string(),
         opened_at: "c".to_string(),
-    };
-    let entry = DirEntry {
-        name: "cover.png".to_string(),
-        kind: "file".to_string(),
-        size: 12,
     };
     let serialized = serde_json::to_value(summary).unwrap();
     assert_eq!(serialized["novelId"], json!(8));
     assert_eq!(serialized["novelMissing"], json!(true));
     assert_eq!(serialized["rangeFrom"], json!(1));
-    let serialized_entry = serde_json::to_value(entry).unwrap();
-    assert_eq!(
-        serialized_entry,
-        json!({"name":"cover.png","kind":"file","size":12})
-    );
 }
 
 #[test]
@@ -59,14 +50,12 @@ fn every_project_command_reports_no_workspace_through_ipc() {
             ("project_archive", json!({ "ids": [1], "archived": true })),
             ("project_delete", json!({ "ids": [1] })),
             ("project_open", json!({ "id": 1 })),
-            ("project_dir_list", json!({ "id": 1, "path": "" })),
             ("project_cover_get", json!({ "id": 1 })),
             (
                 "project_cover_set",
                 json!({ "id": 1, "dataUrl": "data:image/png;base64,AA==" }),
             ),
             ("project_cover_clear", json!({ "id": 1 })),
-            ("project_folder_open", json!({ "id": 1 })),
         ],
         "no_workspace",
     );
@@ -89,9 +78,6 @@ fn projects_are_created_listed_updated_archived_and_deleted_through_ipc() {
         .unwrap();
     let listed = host.invoke("project_list", json!({})).unwrap();
     let opened = host.invoke("project_open", json!({ "id": id })).unwrap();
-    let entries = host
-        .invoke("project_dir_list", json!({ "id": id, "path": "" }))
-        .unwrap();
     let cover = host
         .invoke("project_cover_get", json!({ "id": id }))
         .unwrap();
@@ -105,7 +91,6 @@ fn projects_are_created_listed_updated_archived_and_deleted_through_ipc() {
     assert_eq!(updated["name"], "Renamed");
     assert_eq!(listed.as_array().unwrap().len(), 1);
     assert_eq!(opened["id"], id);
-    assert!(entries.is_array());
     assert!(cover.is_null());
     assert_eq!(deleted, 1);
     assert!(

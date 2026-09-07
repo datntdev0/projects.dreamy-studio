@@ -1,5 +1,4 @@
 use crate::commands::blocking::run_blocking_with;
-use crate::features::project::models::DirEntry;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectErrorCode;
 use crate::features::project::models::ProjectInput;
@@ -13,7 +12,6 @@ use crate::features::workspace::session::WorkspaceSession;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
-use tauri_plugin_opener::OpenerExt;
 
 pub fn list_projects(
     service: &ProjectService,
@@ -62,15 +60,6 @@ pub fn open_project(
     id: i64,
 ) -> ProjectResult<ProjectSummary> {
     service.open(session)?.open_project(id)
-}
-
-pub fn list_project_dir(
-    service: &ProjectService,
-    session: &WorkspaceSession,
-    id: i64,
-    path: &str,
-) -> ProjectResult<Vec<DirEntry>> {
-    service.open(session)?.dir_list(id, path)
 }
 
 pub fn get_project_cover(
@@ -180,18 +169,6 @@ pub async fn project_open<R: Runtime>(app: AppHandle<R>, id: i64) -> ProjectResu
 }
 
 #[tauri::command]
-pub async fn project_dir_list<R: Runtime>(
-    app: AppHandle<R>,
-    id: i64,
-    path: String,
-) -> ProjectResult<Vec<DirEntry>> {
-    run_blocking(app, move |service, session| {
-        list_project_dir(service, session, id, &path)
-    })
-    .await
-}
-
-#[tauri::command]
 pub async fn project_cover_get<R: Runtime>(
     app: AppHandle<R>,
     id: i64,
@@ -223,17 +200,6 @@ pub async fn project_cover_clear<R: Runtime>(
         clear_project_cover(service, session, id)
     })
     .await
-}
-
-#[tauri::command]
-pub async fn project_folder_open<R: Runtime>(app: AppHandle<R>, id: i64) -> ProjectResult<()> {
-    let path = run_blocking(app.clone(), move |service, session| {
-        service.open(session)?.folder_path(id)
-    })
-    .await?;
-    app.opener()
-        .reveal_item_in_dir(path)
-        .map_err(|error| ProjectError::new(ProjectErrorCode::Io, error.to_string()))
 }
 
 #[tauri::command]

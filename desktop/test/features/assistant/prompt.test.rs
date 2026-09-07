@@ -2,6 +2,7 @@ use super::*;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::tools::PROJECT_TOOLS;
 use crate::testing::assistant::FakeNovels;
 
 fn workspace() -> AssistantScope {
@@ -63,6 +64,36 @@ fn a_novel_scope_keeps_its_focus_line_and_has_no_project_line() {
 "
     ));
     assert!(!prompt.contains("Focus on the project"));
+}
+
+#[test]
+fn workspace_and_project_prompts_describe_every_project_tool() {
+    for scope in [workspace(), AssistantScope::project(3)] {
+        let prompt = opening(&scope, &[], "q", &novels(), None);
+        for tool in PROJECT_TOOLS {
+            assert!(prompt.contains(&format!("`{tool}`")), "{tool} missing");
+        }
+        assert!(prompt.contains("\n\n## Rules\n"));
+    }
+}
+
+#[test]
+fn a_novel_prompt_does_not_mention_project_tools() {
+    let prompt = opening(&AssistantScope::novel(7), &[], "q", &novels(), None);
+    for tool in PROJECT_TOOLS {
+        assert!(!prompt.contains(tool), "{tool} listed");
+    }
+    assert!(prompt.contains("\n\n## Rules\n"));
+}
+
+#[test]
+fn a_project_prompt_asks_to_read_scripts_and_cite_blocks() {
+    let prompt = opening(&AssistantScope::project(3), &[], "q", &novels(), Some(7));
+    assert!(prompt.contains("Read the script with `read_script` and `read_script_unit`"));
+    assert!(prompt.contains("their id and position `p`"));
+    assert!(
+        !opening(&workspace(), &[], "q", &novels(), None).contains("before you answer about it")
+    );
 }
 
 #[test]

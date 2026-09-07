@@ -1,3 +1,4 @@
+pub mod cast;
 pub mod chapters;
 pub mod files;
 pub mod models;

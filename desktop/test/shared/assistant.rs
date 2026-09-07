@@ -4,11 +4,18 @@ use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
 use crate::features::assistant::service::AssistantLlm;
+use crate::features::assistant::sources::AudiobookSource;
 use crate::features::assistant::sources::KnowledgeSource;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::ProjectSource;
+use crate::features::assistant::sources::ScriptSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::TranslationSource;
+use crate::features::audiobook::models::AudioRecord;
+use crate::features::audiobook::models::Audiobook;
+use crate::features::audiobook::models::MixSettings;
+use crate::features::audiobook::models::SpeakerVoice;
+use crate::features::audiobook::models::UnitAudio;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::KnowledgeEntity;
@@ -22,7 +29,13 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::pipeline::llm::Turn;
+use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectSummary;
+use crate::features::scripting::chapters::ProjectChapter;
+use crate::features::scripting::models::Script;
+use crate::features::scripting::models::ScriptBlock;
+use crate::features::scripting::models::ScriptUnit;
+use crate::features::scripting::models::UnitMeta;
 use crate::features::translation::models::DictEntry;
 use crate::features::translation::models::DictInput;
 use crate::features::translation::models::DictPatch;
@@ -31,6 +44,9 @@ use crate::features::translation::service::DictChange;
 use crate::features::translation::service::NovelTranslation;
 use crate::features::translation::service::PassageTranslation;
 use crate::features::translation::warnings::TranslationWarning;
+use crate::testing::script::chapter;
+use crate::testing::script::linked_unit;
+use crate::testing::script::script;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -858,11 +874,144 @@ pub fn sources_with_projects(
     translation: &FakeTranslation,
     projects: &FakeProjects,
 ) -> Sources {
+    sources_with_project_data(
+        novels,
+        knowledge,
+        translation,
+        projects,
+        &FakeScripts::default(),
+        &FakeAudiobooks::default(),
+    )
+}
+
+pub fn sources_with_project_data(
+    novels: &FakeNovels,
+    knowledge: &FakeKnowledge,
+    translation: &FakeTranslation,
+    projects: &FakeProjects,
+    scripts: &FakeScripts,
+    audiobooks: &FakeAudiobooks,
+) -> Sources {
     Sources {
         novels: Box::new(novels.clone()),
         knowledge: Box::new(knowledge.clone()),
         translation: Box::new(translation.clone()),
         projects: Box::new(projects.clone()),
+        scripts: Box::new(scripts.clone()),
+        audiobooks: Box::new(audiobooks.clone()),
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct FakeScripts {
+    pub chapters: Vec<ProjectChapter>,
+    pub script: Option<Script>,
+    pub modules: Vec<ProjectModuleState>,
+}
+
+impl FakeScripts {
+    pub fn with_script(script: Script, chapters: Vec<ProjectChapter>) -> Self {
+        Self {
+            chapters,
+            script: Some(script),
+            modules: Vec::new(),
+        }
+    }
+}
+
+impl ScriptSource for FakeScripts {
+    fn chapters(&self, _project_id: i64) -> Result<Vec<ProjectChapter>, String> {
+        Ok(self.chapters.clone())
+    }
+
+    fn script(&self, _project_id: i64) -> Result<Option<Script>, String> {
+        Ok(self.script.clone())
+    }
+
+    fn modules(&self, _project_id: i64) -> Result<Vec<ProjectModuleState>, String> {
+        Ok(self.modules.clone())
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct FakeAudiobooks {
+    pub book: Option<Audiobook>,
+}
+
+impl FakeAudiobooks {
+    pub fn with_book(book: Audiobook) -> Self {
+        Self { book: Some(book) }
+    }
+}
+
+impl AudiobookSource for FakeAudiobooks {
+    fn book(&self, _project_id: i64) -> Result<Option<Audiobook>, String> {
+        Ok(self.book.clone())
+    }
+}
+
+pub fn project_chapter_fixture() -> ProjectChapter {
+    chapter("c1", 1)
+}
+
+pub fn script_block(id: &str, kind: &str, text: &str, who: &str) -> ScriptBlock {
+    ScriptBlock {
+        id: id.to_string(),
+        kind: kind.to_string(),
+        text: text.to_string(),
+        who: who.to_string(),
+        ..ScriptBlock::default()
+    }
+}
+
+pub fn script_fixture() -> Script {
+    let blocks = vec![
+        script_block("b1", "narration", "The gate opened at dawn.", ""),
+        script_block("b2", "dialogue", "Who goes there?", "kb-1"),
+        script_block("b3", "dialogue", "A friend.", "x1"),
+    ];
+    let unit = ScriptUnit {
+        no: 1,
+        ch: Some(1),
+        title: "Title 1".to_string(),
+        meta: Some(UnitMeta {
+            blocks: 3,
+            words: 9,
+        }),
+        blocks: Some(blocks),
+        updated: "2026-01-01T00:00:00Z".to_string(),
+        ..linked_unit("c1")
+    };
+    script(vec![unit])
+}
+
+pub fn audiobook_fixture() -> Audiobook {
+    let record = AudioRecord {
+        text: "Who goes there?".to_string(),
+        speaker: Some("kb-1".to_string()),
+        voice: Some(7),
+        speed: 1.0,
+        paren: String::new(),
+        dur: 1.5,
+        at: "2026-01-01T00:00:00Z".to_string(),
+        flag: String::new(),
+    };
+    Audiobook {
+        voices: BTreeMap::from([(
+            "kb-1".to_string(),
+            SpeakerVoice {
+                voice: Some(7),
+                speed: 1.0,
+            },
+        )]),
+        mix: MixSettings::default(),
+        units: BTreeMap::from([(
+            "c1".to_string(),
+            UnitAudio {
+                audio: BTreeMap::from([("b2".to_string(), record)]),
+                meta: None,
+            },
+        )]),
     }
 }
 

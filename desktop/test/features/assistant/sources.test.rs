@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::audiobook::models::AudiobookConfig;
 use crate::features::knowledge::files::KnowledgeFiles;
 use crate::features::knowledge::models::AnalysisEntity;
 use crate::features::knowledge::models::AnalysisEvidence;
@@ -12,11 +13,18 @@ use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::infra::storage::database::Database;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
+use crate::testing::assistant::FakeAudiobooks;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeScripts;
 use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::NovelWrite;
 use crate::testing::assistant::TranslationWrite;
+use crate::testing::assistant::audiobook_fixture;
+use crate::testing::assistant::project_chapter_fixture;
+use crate::testing::assistant::script_fixture;
+use crate::testing::project::create_project;
+use crate::testing::project::project_workspace;
 use std::sync::atomic::AtomicBool;
 use tempfile::TempDir;
 
@@ -599,4 +607,99 @@ fn failing_fake_translation_rejects_every_call() {
         "boom"
     );
     assert_eq!(source.dict_delete(1, 1).unwrap_err(), "boom");
+}
+
+#[test]
+fn script_adapter_reads_the_saved_script_and_its_module_states() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    ScriptingWorkspace::new(projects.clone())
+        .save(project_id, script_fixture())
+        .unwrap();
+    let source: &dyn ScriptSource = &ProjectScripts::new(projects);
+
+    let script = source.script(project_id).unwrap().unwrap();
+    let modules = source.modules(project_id).unwrap();
+
+    assert_eq!(script.units.len(), 1);
+    assert_eq!(script.units[0].blocks.as_ref().unwrap().len(), 3);
+    assert_eq!(script.cfg.preset, "audiobook");
+    assert_eq!(
+        modules
+            .iter()
+            .map(|state| state.id.as_str())
+            .collect::<Vec<_>>(),
+        ["scripting", "audiobook"]
+    );
+}
+
+#[test]
+fn script_adapter_has_no_script_and_no_chapters_for_a_fresh_project_without_a_novel() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let source: &dyn ScriptSource = &ProjectScripts::new(projects);
+
+    assert!(source.script(project_id).unwrap().is_none());
+    assert!(source.chapters(project_id).unwrap().is_empty());
+}
+
+#[test]
+fn script_adapter_reports_an_unknown_project_as_text() {
+    let (_dir, projects) = project_workspace();
+    let source: &dyn ScriptSource = &ProjectScripts::new(projects);
+
+    assert!(source.chapters(404).is_err());
+    assert!(source.script(404).is_err());
+    assert!(source.modules(404).is_err());
+}
+
+#[test]
+fn audiobook_adapter_reads_the_configured_voices_and_empty_units() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let workspace = AudiobookWorkspace::new(projects);
+    let source: &dyn AudiobookSource = &workspace;
+    assert!(source.book(project_id).unwrap().is_none());
+
+    let voices = audiobook_fixture().voices;
+    workspace
+        .config_save(
+            project_id,
+            AudiobookConfig {
+                voices: voices.clone(),
+                ..AudiobookConfig::default()
+            },
+        )
+        .unwrap();
+
+    let book = source.book(project_id).unwrap().unwrap();
+    assert_eq!(book.voices, voices);
+}
+
+#[test]
+fn audiobook_adapter_reports_an_unknown_project_as_text() {
+    let (_dir, projects) = project_workspace();
+    let source: &dyn AudiobookSource = &AudiobookWorkspace::new(projects);
+
+    assert!(source.book(404).is_err());
+}
+
+#[test]
+fn fake_scripts_serve_the_configured_script_chapters_and_modules() {
+    let fake = FakeScripts::with_script(script_fixture(), vec![project_chapter_fixture()]);
+    let source: &dyn ScriptSource = &fake;
+
+    assert_eq!(source.chapters(1).unwrap().len(), 1);
+    assert_eq!(source.script(1).unwrap().unwrap().units.len(), 1);
+    assert!(source.modules(1).unwrap().is_empty());
+    assert!(FakeScripts::default().script(1).unwrap().is_none());
+}
+
+#[test]
+fn fake_audiobooks_serve_the_book_and_its_units() {
+    let fake = FakeAudiobooks::with_book(audiobook_fixture());
+    let source: &dyn AudiobookSource = &fake;
+
+    assert_eq!(source.book(1).unwrap().unwrap().units.len(), 1);
+    assert!(FakeAudiobooks::default().book(1).unwrap().is_none());
 }

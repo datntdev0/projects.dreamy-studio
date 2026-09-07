@@ -1,3 +1,6 @@
+use super::knowledge::MAX_ISSUES;
+use super::paging::PAGE_CHARS;
+use super::paging::PAGE_PARAGRAPHS;
 use super::*;
 use crate::features::translation::warnings::TranslationWarning;
 use crate::features::translation::warnings::WarningKind;
@@ -8,21 +11,14 @@ use crate::testing::assistant::RecordingSink;
 use crate::testing::assistant::sources_of;
 use crate::testing::assistant::sources_with;
 use serde_json::from_str;
+use serde_json::json;
 
 fn workspace() -> AssistantScope {
-    AssistantScope {
-        kind: ScopeKind::Workspace,
-        novel_id: None,
-        project_id: None,
-    }
+    AssistantScope::workspace()
 }
 
 fn novel_scope(id: i64) -> AssistantScope {
-    AssistantScope {
-        kind: ScopeKind::Novel,
-        novel_id: Some(id),
-        project_id: None,
-    }
+    AssistantScope::novel(id)
 }
 
 fn texts(count: usize) -> Vec<String> {
@@ -112,7 +108,7 @@ fn positions(page: &Value) -> Vec<i64> {
 
 #[test]
 fn definitions_describe_the_tools() {
-    let tools = definitions();
+    let tools = definitions(&novel_scope(1));
     let list = tools.as_array().unwrap();
     let names: Vec<&str> = list
         .iter()

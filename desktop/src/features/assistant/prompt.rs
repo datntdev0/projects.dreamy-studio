@@ -6,6 +6,18 @@ use crate::features::novel::models::NovelSummary;
 
 const HISTORY_CHARS: usize = 600;
 
+const PROJECT_TOOLS: &str = concat!(
+    "- `list_project`: list every project with its id, name, template, linked novel id, modules and archived flag.\n",
+    "- `read_project`: read one project by `projectId`: its metadata, the text version it works from (`srcKind`, `srcLang`), the linked novel, the progress of its modules and its chapters with the id of the script unit written for each.\n",
+    "- `read_script`: read the script of one project by `projectId`: the configuration `cfg` (the block types allowed), the cast (the speaker ids a dialogue block names in `who`) and the outline of the script units.\n",
+    "- `read_script_unit`: read the blocks of one script unit by `projectId` and `unitId`. A page holds a limited number of blocks; when the result has a `next` value, call the tool again with `from` set to it to read on. Pass `withSource` to see the source paragraphs each block refers to.\n",
+    "- `search_project`: search the text, speaker and location of the script blocks of one project by `projectId` and `query`, optionally within one `unitId`.\n",
+    "- `read_audiobook`: read the voices, the mix and the audio progress of every unit of one project by `projectId`.\n",
+    "- `read_audiobook_unit`: read the audio state (none, done, stale or flag) of the voiced blocks of one unit by `projectId` and `unitId`.\n",
+);
+
+const PROJECT_READING_RULE: &str = "- Read the script with `read_script` and `read_script_unit` before you answer about it, and point to blocks by their id and position `p`.\n";
+
 const CITATION_FORMAT: &str =
     "<citations>[{\"novelId\":1,\"chapter\":3,\"p\":6,\"quote\":\"verbatim text\"}]</citations>";
 
@@ -32,7 +44,9 @@ pub fn opening(
     prompt.push_str("- `read_novel_knowledge`: read the knowledge of one novel by `novelId` and `lang` (`src`, `VI` or `EN`), optionally filtered by `query` and `type`. When the result has a `next` offset, call the tool again with `offset` set to it to read on.\n");
     prompt.push_str("- `edit_novel`: change the metadata fields of one novel by `novelId`.\n");
     prompt.push_str("- `edit_novel_chapter`: change one chapter by `novelId` and `chapter`, with an optional new `title` and `paragraphs`, a list of `{p, expected, text}` where `expected` must be the exact current text of paragraph `p` and `text` is its replacement.\n");
-    prompt.push_str("- `edit_novel_knowledge`: change the knowledge of one novel by `novelId` and `lang`, with `edits`, a list of edits each carrying a `k` tag that names its kind.\n\n");
+    prompt.push_str("- `edit_novel_knowledge`: change the knowledge of one novel by `novelId` and `lang`, with `edits`, a list of edits each carrying a `k` tag that names its kind.\n");
+    prompt.push_str(project_tools(scope));
+    prompt.push('\n');
     prompt.push_str("## Rules\n");
     prompt.push_str("- Answer in the user's language.\n");
     prompt.push_str("- State only facts you read through the tools. If you did not read it or you are unsure, say so instead of guessing.\n");
@@ -69,13 +83,18 @@ pub fn follow_up(text: &str) -> String {
     )
 }
 
+fn project_tools(scope: &AssistantScope) -> &'static str {
+    if scope.kind == ScopeKind::Novel {
+        ""
+    } else {
+        PROJECT_TOOLS
+    }
+}
+
 fn scope_rules(scope: &AssistantScope, linked_novel: Option<i64>) -> String {
     match (scope.kind, scope.novel_id, scope.project_id) {
         (ScopeKind::Novel, Some(novel_id), _) => {
-            format!(
-                "- Focus on the novel with id {novel_id}.
-"
-            )
+            format!("- Focus on the novel with id {novel_id}.\n")
         }
         (ScopeKind::Project, _, Some(project_id)) => project_rules(project_id, linked_novel),
         _ => String::new(),
@@ -83,20 +102,16 @@ fn scope_rules(scope: &AssistantScope, linked_novel: Option<i64>) -> String {
 }
 
 fn project_rules(project_id: i64, linked_novel: Option<i64>) -> String {
-    let focus = format!(
-        "- Focus on the project with id {project_id}.
-"
-    );
-    match linked_novel {
+    let focus = format!("- Focus on the project with id {project_id}.\n");
+    let novel = match linked_novel {
         Some(novel_id) => format!(
-            "{focus}- The project is linked to the novel with id {novel_id}; the novel tools accept only that novel.
-"
+            "- The project is linked to the novel with id {novel_id}; the novel tools accept only that novel.\n"
         ),
-        None => format!(
-            "{focus}- The project has no linked novel, so the novel tools are unavailable.
-"
-        ),
-    }
+        None => {
+            "- The project has no linked novel, so the novel tools are unavailable.\n".to_string()
+        }
+    };
+    format!("{focus}{novel}{PROJECT_READING_RULE}")
 }
 
 fn novel_list(novels: &[NovelSummary]) -> String {

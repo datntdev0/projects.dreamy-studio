@@ -85,7 +85,7 @@ struct GrantCaller<'a> {
 
 impl ToolCaller for GrantCaller<'_> {
     fn tools(&self) -> Value {
-        tools::definitions()
+        tools::definitions(&self.grant.scope)
     }
 
     fn call(&self, name: &str, args: &Value) -> Result<String, String> {

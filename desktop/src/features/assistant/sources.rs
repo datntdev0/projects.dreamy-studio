@@ -1,5 +1,7 @@
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
+use crate::features::audiobook::models::Audiobook;
+use crate::features::audiobook::service::AudiobookWorkspace;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::WireKnowledge;
@@ -9,8 +11,13 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::novel::service::NovelWorkspace;
+use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectSummary;
 use crate::features::project::service::ProjectWorkspace;
+use crate::features::scripting::chapters::ProjectChapter;
+use crate::features::scripting::chapters::project_chapters;
+use crate::features::scripting::models::Script;
+use crate::features::scripting::service::ScriptingWorkspace;
 use crate::features::translation::models::DictInput;
 use crate::features::translation::models::DictPatch;
 use crate::features::translation::service::ChapterTranslation;
@@ -81,11 +88,23 @@ pub trait ProjectSource {
     }
 }
 
+pub trait ScriptSource {
+    fn chapters(&self, project_id: i64) -> Result<Vec<ProjectChapter>, String>;
+    fn script(&self, project_id: i64) -> Result<Option<Script>, String>;
+    fn modules(&self, project_id: i64) -> Result<Vec<ProjectModuleState>, String>;
+}
+
+pub trait AudiobookSource {
+    fn book(&self, project_id: i64) -> Result<Option<Audiobook>, String>;
+}
+
 pub struct Sources {
     pub novels: Box<dyn NovelSource>,
     pub knowledge: Box<dyn KnowledgeSource>,
     pub translation: Box<dyn TranslationSource>,
     pub projects: Box<dyn ProjectSource>,
+    pub scripts: Box<dyn ScriptSource>,
+    pub audiobooks: Box<dyn AudiobookSource>,
 }
 
 pub fn linked_novel(
@@ -204,6 +223,48 @@ impl TranslationSource for TranslationWorkspace {
 impl ProjectSource for ProjectWorkspace {
     fn list(&self) -> Result<Vec<ProjectSummary>, String> {
         ProjectWorkspace::list(self).map_err(|error| error.to_string())
+    }
+}
+
+pub struct ProjectScripts {
+    projects: ProjectWorkspace,
+    scripting: ScriptingWorkspace,
+}
+
+impl ProjectScripts {
+    pub fn new(projects: ProjectWorkspace) -> Self {
+        let scripting = ScriptingWorkspace::new(projects.clone());
+        Self {
+            projects,
+            scripting,
+        }
+    }
+}
+
+impl ScriptSource for ProjectScripts {
+    fn chapters(&self, project_id: i64) -> Result<Vec<ProjectChapter>, String> {
+        let root = self.projects.dir().to_path_buf();
+        self.projects
+            .with_project(project_id, |project, _| project_chapters(&root, project))
+            .map_err(|error| error.to_string())
+    }
+
+    fn script(&self, project_id: i64) -> Result<Option<Script>, String> {
+        self.scripting
+            .get(project_id)
+            .map_err(|error| error.to_string())
+    }
+
+    fn modules(&self, project_id: i64) -> Result<Vec<ProjectModuleState>, String> {
+        self.scripting
+            .modules(project_id)
+            .map_err(|error| error.to_string())
+    }
+}
+
+impl AudiobookSource for AudiobookWorkspace {
+    fn book(&self, project_id: i64) -> Result<Option<Audiobook>, String> {
+        AudiobookWorkspace::get(self, project_id).map_err(|error| error.to_string())
     }
 }
 

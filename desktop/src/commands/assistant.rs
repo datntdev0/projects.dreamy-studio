@@ -11,7 +11,9 @@ use crate::features::assistant::models::AssistantSessionSummary;
 use crate::features::assistant::models::Decision;
 use crate::features::assistant::server::McpHost;
 use crate::features::assistant::service::AssistantService;
+use crate::features::assistant::sources::ProjectScripts;
 use crate::features::assistant::sources::Sources;
+use crate::features::audiobook::service::AudiobookWorkspace;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
@@ -87,6 +89,8 @@ fn build_sources(services: &SourceServices, session: &WorkspaceSession) -> Resul
         novels: Box::new(novels),
         knowledge: Box::new(knowledge),
         translation: Box::new(translation),
+        scripts: Box::new(ProjectScripts::new(projects.clone())),
+        audiobooks: Box::new(AudiobookWorkspace::new(projects.clone())),
         projects: Box::new(projects),
     })
 }

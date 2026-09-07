@@ -1,5 +1,6 @@
 use super::*;
 use crate::features::assistant::models::AssistantScope;
+use crate::features::assistant::tools::PROJECT_TOOLS;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
 use crate::testing::assistant::FakeProjects;
@@ -188,19 +189,36 @@ fn initialize_returns_json() {
     assert_eq!(value["result"]["serverInfo"]["name"], "dreamy-studio");
 }
 
-#[test]
-fn tools_list_returns_the_read_and_edit_tools() {
-    let fixture = Fixture::new();
-    let token = fixture.issue("ws");
+const NOVEL_TOOLS: usize = 14;
+
+fn listed_tools(fixture: &Fixture, scope: AssistantScope) -> usize {
+    let token = fixture.issue_scoped("ws", scope);
     let (status, body) = fixture.post(
         Some(&token),
         &json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}),
     );
     assert_eq!(status, 200);
+    parsed(&body)["result"]["tools"].as_array().unwrap().len()
+}
+
+#[test]
+fn tools_list_returns_the_read_and_edit_tools() {
+    let fixture = Fixture::new();
     assert_eq!(
-        parsed(&body)["result"]["tools"].as_array().unwrap().len(),
-        14
+        listed_tools(&fixture, AssistantScope::novel(1)),
+        NOVEL_TOOLS
     );
+}
+
+#[test]
+fn tools_list_adds_the_project_tools_outside_a_novel_scope() {
+    let fixture = Fixture::new();
+    let expected = NOVEL_TOOLS + PROJECT_TOOLS.len();
+    assert_eq!(
+        listed_tools(&fixture, AssistantScope::workspace()),
+        expected
+    );
+    assert_eq!(listed_tools(&fixture, AssistantScope::project(5)), expected);
 }
 
 #[test]

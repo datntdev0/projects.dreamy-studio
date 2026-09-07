@@ -17,7 +17,6 @@ export const PROJECT_WORKSPACE_NAME = 'projects';
 export const PROJECT_NAME_REQUIRED = 'Enter a project name.';
 export const PROJECT_CREATED = 'Created project';
 export const PROJECT_DELETED = 'Deleted project';
-export const RANGE_INVALID = 'The chapter range is invalid.';
 export const SOURCE_NOVEL_NOT_FOUND =
   'The selected source novel could not be found. Choose a novel again.';
 export const DELETE_NOTE = 'Library resources and source novels are not affected.';
@@ -55,7 +54,6 @@ export interface SeedProject {
   readonly description?: string;
   readonly novel?: string;
   readonly missingNovel?: boolean;
-  readonly range?: readonly [number, number];
   readonly translation?: 'VI' | 'EN';
   readonly archived?: boolean;
   readonly modules?: readonly string[];
@@ -78,8 +76,6 @@ export interface ProjectRecord {
   readonly novelId: number | null;
   readonly srcKind: string | null;
   readonly srcLang: string | null;
-  readonly rangeFrom: number | null;
-  readonly rangeTo: number | null;
   readonly archived: boolean;
 }
 
@@ -130,14 +126,12 @@ export async function seedProjects(
   const ids: number[] = [];
   try {
     const insert = database.prepare(
-      'INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived, modules, created_at, updated_at, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, archived, modules, created_at, updated_at, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     for (const project of projects) {
       const novel = novelRef(database, project);
       const stamp = project.updatedAt ?? DEFAULT_STAMP;
       const kind = sourceKind(project, novel.id);
-      const [from, to] =
-        novel.id === null || project.range === undefined ? [null, null] : project.range;
       const result = insert.run(
         project.name,
         project.template ?? 'audiobook',
@@ -145,8 +139,6 @@ export async function seedProjects(
         novel.id,
         kind,
         novel.lang,
-        from,
-        to,
         project.archived ? 1 : 0,
         JSON.stringify(project.modules ?? []),
         DEFAULT_STAMP,
@@ -226,7 +218,7 @@ export function readProjects(workspace: string): ProjectRecord[] {
   const database = new DatabaseSync(join(workspace, WORKSPACE_DB_FILE), { readOnly: true });
   try {
     const sql =
-      'SELECT id, name, template, description, novel_id, src_kind, src_lang, range_from, range_to, archived FROM ws_projects ORDER BY id';
+      'SELECT id, name, template, description, novel_id, src_kind, src_lang, archived FROM ws_projects ORDER BY id';
     return database
       .prepare(sql)
       .all()
@@ -238,8 +230,6 @@ export function readProjects(workspace: string): ProjectRecord[] {
         novelId: row['novel_id'] === null ? null : Number(row['novel_id']),
         srcKind: row['src_kind'] === null ? null : String(row['src_kind']),
         srcLang: row['src_lang'] === null ? null : String(row['src_lang']),
-        rangeFrom: row['range_from'] === null ? null : Number(row['range_from']),
-        rangeTo: row['range_to'] === null ? null : Number(row['range_to']),
         archived: Number(row['archived']) === 1,
       }));
   } finally {

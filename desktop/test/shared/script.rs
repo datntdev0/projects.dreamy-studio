@@ -1,3 +1,4 @@
+use crate::features::scripting::chapters::ProjectChapter;
 use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
 use crate::features::scripting::models::ScriptBlock;
@@ -25,6 +26,7 @@ pub fn block(id: &str) -> ScriptBlock {
 pub fn unit(id: &str, no: i64) -> ScriptUnit {
     ScriptUnit {
         id: id.to_string(),
+        chapter_id: None,
         no,
         ch: Some(no),
         chs: None,
@@ -44,6 +46,34 @@ pub fn written_unit(id: &str, no: i64) -> ScriptUnit {
         }),
         updated: "2026-11-23T10:00:00Z".to_string(),
         ..unit(id, no)
+    }
+}
+
+pub fn chapter(id: &str, seq: i64) -> ProjectChapter {
+    ProjectChapter {
+        id: id.to_string(),
+        seq,
+        title: format!("Title {seq}"),
+    }
+}
+
+pub fn linked_unit(chapter_id: &str) -> ScriptUnit {
+    ScriptUnit {
+        id: chapter_id.to_string(),
+        chapter_id: Some(chapter_id.to_string()),
+        ..ScriptUnit::default()
+    }
+}
+
+pub fn written_linked_unit(chapter_id: &str) -> ScriptUnit {
+    ScriptUnit {
+        blocks: Some(vec![block("b1")]),
+        meta: Some(UnitMeta {
+            blocks: 1,
+            words: 1,
+        }),
+        updated: "2026-11-23T10:00:00Z".to_string(),
+        ..linked_unit(chapter_id)
     }
 }
 

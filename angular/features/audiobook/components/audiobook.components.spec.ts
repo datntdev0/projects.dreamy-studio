@@ -106,9 +106,9 @@ describe('Audiobook production editor', () => {
       `${ctx.railSummary.done}/${ctx.railSummary.total} generated`,
     );
     expect(mounted.root.querySelectorAll('.sc-unit')).toHaveLength(12);
-    expect(byId(mounted.root, 'ab-unit-U02')?.classList.contains('is-active')).toBe(true);
-    expect(textOf(mounted, 'ab-unit-U02')).toContain('8/12 segments');
-    expect(textOf(mounted, 'ab-unit-U10')).toContain('Not generated');
+    expect(byId(mounted.root, 'ab-unit-ch-2')?.classList.contains('is-active')).toBe(true);
+    expect(textOf(mounted, 'ab-unit-ch-2')).toContain('8/12 segments');
+    expect(textOf(mounted, 'ab-unit-ch-10')).toContain('Not generated');
     expect(textOf(mounted, 'audiobook-subbar-number')).toBe('CHAPTERS 02');
     expect(byId(mounted.root, 'audiobook-subbar-lock')).toBeNull();
     expect(byId(mounted.root, 'audiobook-rail-unlocked')).toBeNull();
@@ -225,7 +225,7 @@ describe('Audiobook production editor', () => {
 
   it('disables the listen card for a chapter without audio', async () => {
     const mounted = await open(scriptChapterFour);
-    await clickAndSettle(mounted, 'ab-unit-U04');
+    await clickAndSettle(mounted, 'ab-unit-ch-4');
     expect(context().canPlay).toBe(false);
     expect(listenButton(mounted).disabled).toBe(true);
     expect(byId(mounted.root, 'ab-listen')?.classList.contains('is-off')).toBe(true);
@@ -331,8 +331,8 @@ describe('Audiobook production editor', () => {
 
   it('selects another chapter from the rail without any lock state', async () => {
     const mounted = await open();
-    await clickAndSettle(mounted, 'ab-unit-U03');
-    expect(byId(mounted.root, 'ab-unit-U03')?.classList.contains('is-active')).toBe(true);
+    await clickAndSettle(mounted, 'ab-unit-ch-3');
+    expect(byId(mounted.root, 'ab-unit-ch-3')?.classList.contains('is-active')).toBe(true);
     expect(byId(mounted.root, 'audiobook-subbar-lock')).toBeNull();
     expect(byId(mounted.root, 'audiobook-rail-unlocked')).toBeNull();
     expect(mounted.root.querySelectorAll('[data-testid^="ab-ban-"]')).toHaveLength(0);
@@ -342,11 +342,11 @@ describe('Audiobook production editor', () => {
     const mounted = await open((state) => {
       state.scripts[PROJECT].units[3].meta = null;
     });
-    await clickAndSettle(mounted, 'ab-unit-U04');
+    await clickAndSettle(mounted, 'ab-unit-ch-4');
     expect(textOf(mounted, 'audiobook-empty')).toContain('Write the narration script');
     await clickAndSettle(mounted, 'ab-empty-script-btn');
     expect(TestBed.inject(TabsService).activeId()).toBe(moduleTabId(PROJECT, 'scripting'));
-    expect(TestBed.inject(ScriptingService).viewOf(PROJECT).unit).toBe('U04');
+    expect(TestBed.inject(ScriptingService).viewOf(PROJECT).unit).toBe('ch-4');
   });
 
   it('opens Scripting at the segment from the edit button', async () => {
@@ -361,7 +361,7 @@ describe('Audiobook production editor', () => {
 
   it('shows the placeholder state for a chapter without sample content', async () => {
     const mounted = await open();
-    await clickAndSettle(mounted, 'ab-unit-U05');
+    await clickAndSettle(mounted, 'ab-unit-ch-5');
     expect(textOf(mounted, 'audiobook-empty')).toContain('has audio that needs regeneration');
     expect(byId(mounted.root, 'ab-play-all-btn')).toBeNull();
     expect(byId(mounted.root, 'ab-listen')).toBeNull();

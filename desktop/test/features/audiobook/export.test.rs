@@ -11,6 +11,7 @@ use crate::testing::audio::record_for;
 use crate::testing::audio::tone_wav;
 use crate::testing::audio::voiced_book;
 use crate::testing::audio::with_records;
+use crate::testing::script::chapter;
 use tempfile::TempDir;
 
 const RATE: u32 = 8_000;
@@ -222,7 +223,7 @@ fn single_unit_export_writes_wav_and_srt() {
     let units = [story()];
     write_project(dir.path(), &units, &done_book(&units));
 
-    let (wav, srt) = export_units(dir.path(), "Book", &ids(&["U01"])).unwrap();
+    let (wav, srt) = export_units(dir.path(), "Book", &[], &ids(&["U01"])).unwrap();
 
     assert_eq!(
         wav,
@@ -262,7 +263,7 @@ fn chapters_are_exported_together_in_script_order() {
     )
     .unwrap();
 
-    let (wav, srt) = export_units(dir.path(), "My Book", &ids(&["U02", "U01"])).unwrap();
+    let (wav, srt) = export_units(dir.path(), "My Book", &[], &ids(&["U02", "U01"])).unwrap();
 
     assert_eq!(wav, dir.path().join("audiobook/exports/my-book-1-2.wav"));
     assert!(srt.ends_with("my-book-1-2.srt"));
@@ -288,10 +289,10 @@ fn export_validates_the_selection() {
     let units = [story(), sequel()];
     write_project(dir.path(), &units, &done_book(&units));
 
-    let empty = export_units(dir.path(), "Book", &[]).unwrap_err();
-    let twice = export_units(dir.path(), "Book", &ids(&["U01", "U01"])).unwrap_err();
-    let unsafe_id = export_units(dir.path(), "Book", &ids(&["../U"])).unwrap_err();
-    let unknown = export_units(dir.path(), "Book", &ids(&["U01", "U77"])).unwrap_err();
+    let empty = export_units(dir.path(), "Book", &[], &[]).unwrap_err();
+    let twice = export_units(dir.path(), "Book", &[], &ids(&["U01", "U01"])).unwrap_err();
+    let unsafe_id = export_units(dir.path(), "Book", &[], &ids(&["../U"])).unwrap_err();
+    let unknown = export_units(dir.path(), "Book", &[], &ids(&["U01", "U77"])).unwrap_err();
 
     for error in [empty, twice, unsafe_id] {
         assert_eq!(error.code, ProjectErrorCode::InvalidInput);
@@ -308,9 +309,59 @@ fn export_refuses_any_stale_chapter() {
     book.units.get_mut("U02").unwrap().audio.remove("c2");
     write_project(dir.path(), &units, &book);
 
-    let stale = export_units(dir.path(), "Book", &ids(&["U01", "U02"])).unwrap_err();
+    let stale = export_units(dir.path(), "Book", &[], &ids(&["U01", "U02"])).unwrap_err();
 
     assert_eq!(stale.code, ProjectErrorCode::InvalidInput);
     assert!(stale.detail.contains("Chapter Two"), "{}", stale.detail);
     assert!(!dir.path().join("audiobook/exports").exists());
+}
+
+#[test]
+fn chapter_units_take_their_number_and_title_from_the_derived_chapters() {
+    let dir = TempDir::new().unwrap();
+    let stored = ScriptUnit {
+        id: "U01".to_string(),
+        chapter_id: Some("U01".to_string()),
+        no: 0,
+        ch: None,
+        title: String::new(),
+        ..story()
+    };
+    let units = [stored.clone()];
+    write_project(dir.path(), &units, &done_book(&units));
+    let chapters = [ProjectChapter {
+        id: "U01".to_string(),
+        seq: 7,
+        title: "Seven Winds".to_string(),
+    }];
+
+    let resolved = read_script_units(dir.path(), &chapters, &ids(&["U01"])).unwrap();
+    let (wav, _) = export_units(dir.path(), "Book", &chapters, &ids(&["U01"])).unwrap();
+
+    assert_eq!((resolved[0].no, resolved[0].ch), (7, Some(7)));
+    assert_eq!(resolved[0].title, "Seven Winds");
+    assert_eq!(wav, dir.path().join("audiobook/exports/7-seven-winds.wav"));
+}
+
+#[test]
+fn chapter_units_are_exported_in_chapter_order() {
+    let dir = TempDir::new().unwrap();
+    let first = ScriptUnit {
+        chapter_id: Some("U01".to_string()),
+        ..story()
+    };
+    let second = ScriptUnit {
+        chapter_id: Some("U02".to_string()),
+        ..sequel()
+    };
+    let units = [second.clone(), first.clone()];
+    write_project(dir.path(), &units, &done_book(&units));
+    let chapters = [chapter("U01", 4), chapter("U02", 9)];
+
+    let resolved = read_script_units(dir.path(), &chapters, &ids(&["U01", "U02"])).unwrap();
+
+    assert_eq!(
+        resolved.iter().map(|unit| unit.no).collect::<Vec<_>>(),
+        vec![4, 9]
+    );
 }

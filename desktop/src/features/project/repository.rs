@@ -9,7 +9,7 @@ use rusqlite::params;
 
 const SUMMARY: &str = "SELECT p.id, p.name, 'projects/' || p.id, p.template, p.description, p.novel_id, \
     CASE WHEN p.novel_id IS NOT NULL AND n.id IS NULL THEN 1 ELSE 0 END, p.src_kind, p.src_lang, \
-    p.range_from, p.range_to, p.archived, p.created_at, p.updated_at, p.opened_at, p.modules \
+    p.archived, p.created_at, p.updated_at, p.opened_at, p.modules \
     FROM ws_projects p LEFT JOIN ws_novels n ON n.id = p.novel_id";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,8 +30,6 @@ pub struct NewProject<'a> {
     pub novel_id: Option<i64>,
     pub src_kind: Option<&'a str>,
     pub src_lang: Option<&'a str>,
-    pub range_from: Option<i64>,
-    pub range_to: Option<i64>,
     pub now: &'a str,
 }
 
@@ -74,18 +72,18 @@ impl<'a> ProjectRepository<'a> {
             .optional()
     }
 
-    pub fn novel(&self, id: i64) -> rusqlite::Result<Option<(String, i64)>> {
-        self.conn.query_row(
-            "SELECT n.lang, COUNT(c.id) FROM ws_novels n LEFT JOIN ws_novel_chapters c ON c.novel_id = n.id WHERE n.id = ?1 GROUP BY n.id",
-            [id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        ).optional()
+    pub fn novel_lang(&self, id: i64) -> rusqlite::Result<Option<String>> {
+        self.conn
+            .query_row("SELECT lang FROM ws_novels WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })
+            .optional()
     }
 
     pub fn insert(&self, project: &NewProject) -> rusqlite::Result<i64> {
         self.conn.execute(
-            "INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, range_from, range_to, created_at, updated_at, opened_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9, ?9)",
-            params![project.name, project.template, project.description, project.novel_id, project.src_kind, project.src_lang, project.range_from, project.range_to, project.now],
+            "INSERT INTO ws_projects (name, template, description, novel_id, src_kind, src_lang, created_at, updated_at, opened_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?7)",
+            params![project.name, project.template, project.description, project.novel_id, project.src_kind, project.src_lang, project.now],
         )?;
         Ok(self.conn.last_insert_rowid())
     }
@@ -124,7 +122,7 @@ impl<'a> ProjectRepository<'a> {
 
 fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<ProjectSummary> {
     let template: String = row.get(3)?;
-    let modules = effective_modules(&template, &decode_modules(&row.get::<_, String>(15)?));
+    let modules = effective_modules(&template, &decode_modules(&row.get::<_, String>(13)?));
     Ok(ProjectSummary {
         id: row.get(0)?,
         name: row.get(1)?,
@@ -135,12 +133,10 @@ fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<ProjectSummary> {
         novel_missing: row.get::<_, i64>(6)? != 0,
         src_kind: row.get(7)?,
         src_lang: row.get(8)?,
-        range_from: row.get(9)?,
-        range_to: row.get(10)?,
-        archived: row.get::<_, i64>(11)? != 0,
+        archived: row.get::<_, i64>(9)? != 0,
         modules,
-        created_at: row.get(12)?,
-        updated_at: row.get(13)?,
-        opened_at: row.get(14)?,
+        created_at: row.get(10)?,
+        updated_at: row.get(11)?,
+        opened_at: row.get(12)?,
     })
 }

@@ -28,8 +28,6 @@ pub fn create_project(workspace: &ProjectWorkspace) -> i64 {
         novel_id: None,
         src_kind: None,
         src_lang: None,
-        range_from: None,
-        range_to: None,
     };
     workspace.create(input).unwrap().id
 }

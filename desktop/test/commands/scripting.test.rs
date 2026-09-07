@@ -95,20 +95,36 @@ fn units_and_cast_are_saved_through_ipc() {
         json!({ "projectId": id, "extraCast": [] }),
     )
     .unwrap();
-    let unknown = host
+    let linked = json!({
+        "id": "c1",
+        "chapterId": "c1",
+        "blocks": [{ "id": "b1", "type": "narration", "text": "Hi" }],
+        "updated": "now",
+    });
+    host.invoke(
+        "scripting_unit_save",
+        json!({ "projectId": id, "unit": linked, "seq": 13 }),
+    )
+    .unwrap();
+    let mismatched = host
         .invoke(
             "scripting_unit_save",
-            json!({ "projectId": id, "unit": { "id": "U99" }, "seq": 1 }),
+            json!({ "projectId": id, "unit": { "id": "U99", "chapterId": "c9" }, "seq": 1 }),
         )
         .unwrap_err();
     let stored = host
         .invoke("scripting_get", json!({ "projectId": id }))
         .unwrap();
 
-    assert_eq!(stored["seq"], 12);
+    assert_eq!(stored["seq"], 13);
     assert_eq!(stored["units"][1], edited);
+    assert_eq!(stored["units"][2]["chapterId"], "c1");
+    assert_eq!(stored["units"][2]["blocks"][0]["text"], "Hi");
+    assert_eq!(stored["units"][2]["no"], 0);
+    assert_eq!(stored["units"][2]["title"], "");
+    assert!(stored["units"][0]["chapterId"].is_null());
     assert_eq!(stored["extraCast"], json!([]));
-    assert_eq!(unknown["code"], "not_found");
+    assert_eq!(mismatched["code"], "invalid_input");
 }
 
 #[test]

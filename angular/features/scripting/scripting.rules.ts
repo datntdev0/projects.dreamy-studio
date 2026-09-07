@@ -201,6 +201,7 @@ export function makeUnit(script: Script, overrides: Partial<ScriptUnit> = {}): S
   const useq = script.useq + 1;
   return {
     id: `U${pad2(useq)}`,
+    chapterId: null,
     no: useq,
     ch: null,
     chs: null,

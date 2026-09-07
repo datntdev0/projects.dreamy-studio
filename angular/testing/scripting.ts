@@ -23,6 +23,7 @@ export function scriptBlock(overrides: Partial<ScriptBlock> = {}): ScriptBlock {
 export function scriptUnit(overrides: Partial<ScriptUnit> = {}): ScriptUnit {
   return {
     id: 'U01',
+    chapterId: null,
     no: 1,
     ch: 1,
     chs: null,

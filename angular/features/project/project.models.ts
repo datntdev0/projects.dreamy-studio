@@ -18,8 +18,6 @@ export interface ProjectSummary {
   novelMissing: boolean;
   srcKind: ProjectSrcKind | null;
   srcLang: string | null;
-  rangeFrom: number | null;
-  rangeTo: number | null;
   archived: boolean;
   modules: ProjectModuleId[];
   createdAt: string;
@@ -34,8 +32,6 @@ export interface ProjectInput {
   novelId: number | null;
   srcKind: ProjectSrcKind | null;
   srcLang: TargetLang | null;
-  rangeFrom: number | null;
-  rangeTo: number | null;
 }
 
 export type ProjectTextVersion = 'original' | TargetLang;

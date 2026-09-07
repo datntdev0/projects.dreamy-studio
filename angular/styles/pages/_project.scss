@@ -203,24 +203,6 @@ app-project-thumb {
   height: 16px;
   color: var(--primary-text);
 }
-.pjc-range {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-xl);
-  flex-wrap: wrap;
-}
-.pjc-rg {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  font-size: 13px;
-}
-.pjc-rg.is-off {
-  opacity: 0.5;
-}
-.pjc-rg .input {
-  width: 72px;
-}
 .select.is-invalid {
   border-color: var(--danger);
 }

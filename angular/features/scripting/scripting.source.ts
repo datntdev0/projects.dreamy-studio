@@ -1,8 +1,7 @@
 import { ParagraphRow } from '../novel/novel.models';
 import { PassageTranslation } from '../novel/novel.translation.models';
 import { ProjectSummary } from '../project/project.models';
-// prettier-ignore
-import { ChapterRange, Script, ScriptSource, ScriptUnit, SourceParagraph } from './scripting.models';
+import { Script, ScriptSource, ScriptUnit, SourceParagraph } from './scripting.models';
 import { appendUnit, chaptersOf, makeSource, newScript, presetOfTemplate } from './scripting.rules';
 
 export interface ChapterSourceInput {
@@ -60,52 +59,8 @@ export function chapterTitleOf(input: ChapterTitleInput): string {
   return translated || input.originalTitle || `Chapter ${input.seq}`;
 }
 
-export function projectChapters(
-  project: ProjectSummary,
-  novelChapters: number,
-): ChapterRange | null {
-  if (project.rangeFrom !== null && project.rangeTo !== null) {
-    return [project.rangeFrom, project.rangeTo];
-  }
-  return project.novelId !== null && novelChapters > 0 ? [1, novelChapters] : null;
-}
-
-export function needsChapterUnits(
-  project: ProjectSummary,
-  script: Script,
-  novelChapters: number,
-): boolean {
-  const [unit, ...rest] = script.units;
-  return (
-    presetOfTemplate(project.template) === 'audiobook' &&
-    projectChapters(project, novelChapters) !== null &&
-    rest.length === 0 &&
-    unit !== undefined &&
-    unit.ch === null &&
-    unit.chs === null &&
-    unit.blocks === null &&
-    script.extraCast.length === 0 &&
-    !script.choose
-  );
-}
-
-export function initialScript(
-  project: ProjectSummary,
-  titles: Record<number, string>,
-  novelChapters = 0,
-): Script {
+export function initialScript(project: ProjectSummary): Script {
   const preset = presetOfTemplate(project.template);
   const base = newScript(preset ?? 'audiobook', { choose: preset === null });
-  const range = projectChapters(project, novelChapters);
-  if (preset === 'film') {
-    return appendUnit(base, { chs: projectChapters(project, 0) });
-  }
-  if (!range) {
-    return appendUnit(base);
-  }
-  let script = base;
-  for (let seq = range[0]; seq <= range[1]; seq += 1) {
-    script = appendUnit(script, { no: seq, ch: seq, title: titles[seq] ?? `Chapter ${seq}` });
-  }
-  return script;
+  return preset === 'film' ? appendUnit(base) : base;
 }

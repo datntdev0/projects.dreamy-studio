@@ -11,12 +11,12 @@ import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
-import { fieldChecked, fieldValue } from '@shared/utils/dom';
+import { fieldValue } from '@shared/utils/dom';
 
 import { ProjectDialogsService } from '../project.dialogs.service';
 import { ProjectInput, ProjectTemplateId, ProjectTextVersion } from '../project.models';
 // prettier-ignore
-import { PROJECT_TEMPLATES, toProjectError, validateProjectName, validateRange } from '../project.rules';
+import { PROJECT_TEMPLATES, toProjectError, validateProjectName } from '../project.rules';
 import { ProjectService } from '../project.service';
 
 interface CreateForm {
@@ -24,9 +24,6 @@ interface CreateForm {
   template: ProjectTemplateId;
   novelId: number | null;
   version: ProjectTextVersion;
-  allChapters: boolean;
-  rangeFrom: number | null;
-  rangeTo: number | null;
 }
 
 const EMPTY_FORM: CreateForm = {
@@ -34,9 +31,6 @@ const EMPTY_FORM: CreateForm = {
   template: 'audiobook',
   novelId: null,
   version: 'original',
-  allChapters: true,
-  rangeFrom: 1,
-  rangeTo: 1,
 };
 
 @Component({
@@ -60,7 +54,6 @@ export class ProjectCreateDialog {
   readonly form = signal<CreateForm>({ ...EMPTY_FORM });
   readonly busy = signal(false);
   readonly nameError = signal<LanguageKey | null>(null);
-  readonly rangeError = signal<LanguageKey | null>(null);
   readonly formError = signal('');
   readonly templates = PROJECT_TEMPLATES;
   readonly selectedNovel = computed(this.buildSelectedNovel.bind(this));
@@ -103,31 +96,8 @@ export class ProjectCreateDialog {
   onNovel(event: Event): void {
     const raw = fieldValue(event);
     const novelId = raw ? Number(raw) : null;
-    const novel = novelId === null ? undefined : this.novels.novelById(novelId);
-    this.form.set({
-      ...this.form(),
-      novelId,
-      version: 'original',
-      allChapters: true,
-      rangeFrom: 1,
-      rangeTo: novel?.chapterCount ?? 1,
-    });
-    this.rangeError.set(null);
+    this.form.set({ ...this.form(), novelId, version: 'original' });
     this.formError.set('');
-  }
-
-  onAllChapters(event: Event): void {
-    const allChapters = fieldChecked(event);
-    const count = this.selectedNovel()?.chapterCount ?? 1;
-    this.form.set({ ...this.form(), allChapters, rangeFrom: 1, rangeTo: count });
-    this.rangeError.set(null);
-  }
-
-  onRange(field: 'rangeFrom' | 'rangeTo', event: Event): void {
-    const raw = fieldValue(event);
-    const value = raw === '' ? null : Number(raw);
-    this.form.set({ ...this.form(), [field]: value });
-    this.rangeError.set(null);
   }
 
   async submit(): Promise<void> {
@@ -136,17 +106,7 @@ export class ProjectCreateDialog {
     }
     const value = this.form();
     const validName = this.validateName();
-    const novel = this.selectedNovel();
-    const validRange =
-      !novel ||
-      value.allChapters ||
-      (validateRange(value.rangeFrom, value.rangeTo) &&
-        value.rangeTo !== null &&
-        value.rangeTo <= novel.chapterCount);
-    if (!validRange) {
-      this.rangeError.set('project.create.rangeInvalid');
-    }
-    if (!validName || !validRange) {
+    if (!validName) {
       return;
     }
     this.busy.set(true);
@@ -182,8 +142,6 @@ export class ProjectCreateDialog {
       novelId: novel?.id ?? null,
       srcKind: novel ? (form.version === 'original' ? 'original' : 'translation') : null,
       srcLang: novel && form.version !== 'original' ? form.version : null,
-      rangeFrom: novel && !form.allChapters ? form.rangeFrom : null,
-      rangeTo: novel && !form.allChapters ? form.rangeTo : null,
     };
   }
 
@@ -222,10 +180,6 @@ export class ProjectCreateDialog {
 
   private applyBackendError(cause: unknown): void {
     const code = toProjectError(cause).code;
-    if (code === 'range_invalid') {
-      this.rangeError.set('project.create.rangeInvalid');
-      return;
-    }
     if (code === 'novel_not_found') {
       this.formError.set(this.languageService.translate('project.create.novelMissing'));
       return;
@@ -245,7 +199,6 @@ export class ProjectCreateDialog {
   private resetForm(): void {
     this.form.set({ ...EMPTY_FORM });
     this.nameError.set(null);
-    this.rangeError.set(null);
     this.formError.set('');
     this.busy.set(false);
   }

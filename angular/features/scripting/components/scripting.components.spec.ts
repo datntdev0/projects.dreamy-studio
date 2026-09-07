@@ -16,7 +16,7 @@ const AUDIOBOOK = 1;
 const BLANK = 2;
 const FILM = 3;
 
-const INITIAL_UNITS: Record<number, string> = { [AUDIOBOOK]: 'U03' };
+const INITIAL_UNITS: Record<number, string> = { [AUDIOBOOK]: 'ch-3' };
 
 async function loadScripting(projectId: number, unitId: string | null): Promise<void> {
   TestBed.inject(LanguageService).setLanguage('en');
@@ -109,11 +109,11 @@ function change(mounted: Mounted<unknown>, id: string, value: string): Promise<v
 describe('Scripting audiobook editor', () => {
   it('opens on the first chapter without any status marks', async () => {
     const mounted = await open(AUDIOBOOK, false, null);
-    expect(byId(mounted.root, 'sc-unit-U01')?.classList.contains('is-active')).toBe(true);
+    expect(byId(mounted.root, 'sc-unit-ch-1')?.classList.contains('is-active')).toBe(true);
     expect(textOf(mounted, 'sc-unit-title')).toBe('Ngọn đèn cuối cùng');
     expect(textOf(mounted, 'sc-rail-count')).toBe('12/12 done');
     expect(mounted.root.querySelectorAll('[data-testid="scripting-rail-mark"]')).toHaveLength(0);
-    expect(byId(mounted.root, 'sc-status-U01')).toBeNull();
+    expect(byId(mounted.root, 'sc-status-ch-1')).toBeNull();
   });
 
   it('renders the bar, the rail, the sub bar and the flat source page', async () => {
@@ -126,11 +126,11 @@ describe('Scripting audiobook editor', () => {
     expect(textOf(mounted, 'sc-rail-count')).toBe('12/12 done');
     expect(allById(mounted.root, 'sc-units')).toHaveLength(1);
     expect(mounted.root.querySelectorAll('.sc-unit')).toHaveLength(12);
-    expect(byId(mounted.root, 'sc-unit-U03')?.classList.contains('is-active')).toBe(true);
-    expect(textOf(mounted, 'sc-unit-U01')).toContain('13 blocks · 192 words');
+    expect(byId(mounted.root, 'sc-unit-ch-3')?.classList.contains('is-active')).toBe(true);
+    expect(textOf(mounted, 'sc-unit-ch-1')).toContain('13 blocks · 192 words');
     expect(byId(mounted.root, 'sc-unit-add-btn')).toBeNull();
-    expect(textOf(mounted, 'sc-unit-title')).toBe('Điều thủy triều trả lại');
-    expect(byId(mounted.root, 'sc-status-U03')).toBeNull();
+    expect(textOf(mounted, 'sc-unit-title')).toBe('Điều con nước trả lại');
+    expect(byId(mounted.root, 'sc-status-ch-3')).toBeNull();
     expect(byId(mounted.root, 'sc-stats')).toBeNull();
     expect(textOf(mounted, 'scripting-subbar-number')).toBe('CHAPTERS 03');
     expect(byId(mounted.root, 'sc-chs')).toBeNull();
@@ -331,8 +331,8 @@ describe('Scripting audiobook editor', () => {
 
   it('switches the unit and keeps it editable', async () => {
     const mounted = await open(AUDIOBOOK);
-    await clickAndSettle(mounted, 'sc-unit-U01');
-    expect(byId(mounted.root, 'sc-unit-U01')?.classList.contains('is-active')).toBe(true);
+    await clickAndSettle(mounted, 'sc-unit-ch-1');
+    expect(byId(mounted.root, 'sc-unit-ch-1')?.classList.contains('is-active')).toBe(true);
     expect(byId(mounted.root, 'sc-add-btn')).not.toBeNull();
     expect(mounted.root.querySelector('.sc-tools')).not.toBeNull();
     const field = mounted.root.querySelector('.sc-t') as HTMLElement;
@@ -344,7 +344,7 @@ describe('Scripting audiobook editor', () => {
 
   it('shows the placeholder state of a unit without loaded content and starts rewriting', async () => {
     const mounted = await open(AUDIOBOOK);
-    await clickAndSettle(mounted, 'sc-unit-U04');
+    await clickAndSettle(mounted, 'sc-unit-ch-4');
     expect(textOf(mounted, 'scripting-empty')).toContain('8 blocks, 128 words');
     expect(byId(mounted.root, 'sc-empty-unlock-btn')).toBeNull();
     expect(byId(mounted.root, 'sc-empty-draft-btn')).toBeNull();
@@ -355,7 +355,7 @@ describe('Scripting audiobook editor', () => {
 
   it('offers the default and scratch actions for an empty chapter', async () => {
     const mounted = await open(5, true);
-    await clickAndSettle(mounted, 'sc-unit-U02');
+    await clickAndSettle(mounted, 'sc-unit-ch-2');
     expect(byId(mounted.root, 'sc-empty-draft-btn')).toBeNull();
     expect(byId(mounted.root, 'sc-empty-start-btn')).not.toBeNull();
     const dialogs = TestBed.inject(ScriptingDialogsService);

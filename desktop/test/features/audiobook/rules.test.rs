@@ -6,6 +6,7 @@ use crate::testing::audio::pause_block;
 use crate::testing::audio::record_for;
 use crate::testing::audio::voiced_book;
 use crate::testing::audio::with_records;
+use crate::testing::script::chapter;
 use crate::testing::script::script;
 use crate::testing::script::unit;
 
@@ -190,10 +191,10 @@ fn progress_reports_idle_doing_done_and_stale() {
     let mut stale = done_all.clone();
     stale.voices.get_mut("narr").unwrap().speed = 1.3;
 
-    let idle = audiobook_progress(&base, &plan);
-    let doing = audiobook_progress(&doing_second, &plan);
-    let done = audiobook_progress(&done_all, &plan);
-    let review = audiobook_progress(&stale, &plan);
+    let idle = audiobook_progress(&base, &[], &plan);
+    let doing = audiobook_progress(&doing_second, &[], &plan);
+    let done = audiobook_progress(&done_all, &[], &plan);
+    let review = audiobook_progress(&stale, &[], &plan);
 
     assert_eq!((idle.state.as_str(), idle.done, idle.total), ("idle", 0, 2));
     assert_eq!(idle.note, "0/2 chapters");
@@ -203,4 +204,30 @@ fn progress_reports_idle_doing_done_and_stale() {
     assert_eq!((review.state.as_str(), review.done), ("stale", 0));
     assert_eq!(review.note, "0/2 chapters · 2 need review");
     assert_eq!(review.id, AUDIOBOOK_MODULE);
+}
+
+#[test]
+fn progress_counts_derived_chapters_that_have_no_stored_unit() {
+    let linked = ScriptUnit {
+        chapter_id: Some("c1".to_string()),
+        ..two_segment_unit("c1")
+    };
+    let plan = script(vec![linked.clone()]);
+    let chapters = [chapter("c1", 1), chapter("c2", 2), chapter("c3", 3)];
+    let book = with_records(
+        voiced_book(&["narr", "kb-1"]),
+        "c1",
+        vec![
+            ("b1", record(&linked, 0, "narr")),
+            ("b2", record(&linked, 1, "kb-1")),
+        ],
+    );
+
+    let progress = audiobook_progress(&book, &chapters, &plan);
+
+    assert_eq!(
+        (progress.state.as_str(), progress.done, progress.total),
+        ("doing", 1, 3)
+    );
+    assert_eq!(progress.note, "1/3 chapters");
 }

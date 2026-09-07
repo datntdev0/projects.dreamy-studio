@@ -112,13 +112,7 @@ impl ProjectWorkspace {
         if !TEMPLATES.contains(&input.template.as_str()) {
             return Err(ProjectError::invalid("unsupported project template"));
         }
-        if input.range_from.is_some() != input.range_to.is_some() {
-            return Err(ProjectError::new(
-                ProjectErrorCode::RangeInvalid,
-                "both chapter range endpoints are required",
-            ));
-        }
-        if input.novel_id.is_none() && (input.src_kind.is_some() || input.range_from.is_some()) {
+        if input.novel_id.is_none() && input.src_kind.is_some() {
             return Err(ProjectError::invalid("source settings require a novel"));
         }
         let src_kind = match (&input.novel_id, input.src_kind.as_deref()) {
@@ -138,20 +132,12 @@ impl ProjectWorkspace {
         let repo = ProjectRepository::new(&tx);
         let src_lang = match input.novel_id {
             Some(id) => {
-                let (lang, count) = repo.novel(id)?.ok_or_else(|| {
+                let lang = repo.novel_lang(id)?.ok_or_else(|| {
                     ProjectError::new(
                         ProjectErrorCode::NovelNotFound,
                         format!("novel {id} does not exist"),
                     )
                 })?;
-                if let (Some(from), Some(to)) = (input.range_from, input.range_to)
-                    && (from < 1 || from > to || to > count)
-                {
-                    return Err(ProjectError::new(
-                        ProjectErrorCode::RangeInvalid,
-                        "chapter range is outside the novel",
-                    ));
-                }
                 Some(source_lang(src_kind, &lang, input.src_lang.as_deref())?)
             }
             None => None,
@@ -165,8 +151,6 @@ impl ProjectWorkspace {
             novel_id: input.novel_id,
             src_kind,
             src_lang: src_lang.as_deref(),
-            range_from: input.range_from,
-            range_to: input.range_to,
             now: &now,
         })?;
         let folder = format!("{PROJECTS_DIR}/{id}");

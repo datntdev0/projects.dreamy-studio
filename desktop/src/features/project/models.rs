@@ -1,3 +1,4 @@
+use crate::features::translation::models::TranslationError;
 use crate::infra::storage::StorageError;
 use serde::Deserialize;
 use serde::Serialize;
@@ -15,8 +16,6 @@ pub struct ProjectSummary {
     pub novel_missing: bool,
     pub src_kind: Option<String>,
     pub src_lang: Option<String>,
-    pub range_from: Option<i64>,
-    pub range_to: Option<i64>,
     pub archived: bool,
     pub modules: Vec<String>,
     pub created_at: String,
@@ -37,10 +36,6 @@ pub struct ProjectInput {
     pub src_kind: Option<String>,
     #[serde(default)]
     pub src_lang: Option<String>,
-    #[serde(default)]
-    pub range_from: Option<i64>,
-    #[serde(default)]
-    pub range_to: Option<i64>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -82,7 +77,6 @@ pub enum ProjectErrorCode {
     NoWorkspace,
     NotFound,
     InvalidInput,
-    RangeInvalid,
     NovelNotFound,
     CoverInvalid,
     CoverTooLarge,
@@ -98,7 +92,6 @@ impl ProjectErrorCode {
             Self::NoWorkspace => "no_workspace",
             Self::NotFound => "not_found",
             Self::InvalidInput => "invalid_input",
-            Self::RangeInvalid => "range_invalid",
             Self::NovelNotFound => "novel_not_found",
             Self::CoverInvalid => "cover_invalid",
             Self::CoverTooLarge => "cover_too_large",
@@ -152,6 +145,12 @@ impl From<std::io::Error> for ProjectError {
 impl From<rusqlite::Error> for ProjectError {
     fn from(error: rusqlite::Error) -> Self {
         Self::new(ProjectErrorCode::Db, error.to_string())
+    }
+}
+
+impl From<TranslationError> for ProjectError {
+    fn from(error: TranslationError) -> Self {
+        Self::new(ProjectErrorCode::Io, error.to_string())
     }
 }
 

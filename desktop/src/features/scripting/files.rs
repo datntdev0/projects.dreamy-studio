@@ -44,6 +44,11 @@ impl ScriptFiles {
         write_json(&self.unit_path(unit_id)?, body)
     }
 
+    pub fn remove_unit(&self, unit_id: &str) -> ProjectResult<()> {
+        remove_if_exists(&self.unit_path(unit_id)?)?;
+        Ok(())
+    }
+
     pub fn remove_orphans(&self, keep: &BTreeSet<String>) -> ProjectResult<()> {
         let entries = match fs::read_dir(self.units_dir()) {
             Ok(entries) => entries,

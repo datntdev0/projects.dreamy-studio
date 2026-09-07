@@ -2,8 +2,10 @@ use super::*;
 use crate::features::project::models::ProjectErrorCode;
 use crate::testing::project::create_project;
 use crate::testing::project::project_workspace;
+use crate::testing::script::linked_unit;
 use crate::testing::script::script;
 use crate::testing::script::unit;
+use crate::testing::script::written_linked_unit;
 use crate::testing::script::written_unit;
 use std::fs;
 use std::path::PathBuf;
@@ -93,21 +95,99 @@ fn saves_a_unit_and_the_block_sequence() {
 }
 
 #[test]
-fn reports_unknown_units_and_missing_scripts_as_not_found() {
+fn reports_missing_scripts_and_projects_as_not_found() {
     let (_dir, projects) = project_workspace();
     let id = create_project(&projects);
     let scripting = ScriptingWorkspace::new(projects);
 
     let no_script = scripting.unit_save(id, unit("U01", 1), 1).unwrap_err();
     let no_cast = scripting.cast_save(id, Vec::new()).unwrap_err();
-    scripting.save(id, script(vec![unit("U01", 1)])).unwrap();
-    let unknown = scripting.unit_save(id, unit("U09", 9), 1).unwrap_err();
     let no_project = scripting.get(id + 1).unwrap_err();
 
     assert_eq!(no_script.code, ProjectErrorCode::NotFound);
     assert_eq!(no_cast.code, ProjectErrorCode::NotFound);
-    assert_eq!(unknown.code, ProjectErrorCode::NotFound);
     assert_eq!(no_project.code, ProjectErrorCode::NotFound);
+}
+
+#[test]
+fn saving_an_unknown_unit_appends_it() {
+    let (_dir, projects) = project_workspace();
+    let id = create_project(&projects);
+    let scripting = ScriptingWorkspace::new(projects);
+    scripting.save(id, script(vec![unit("U01", 1)])).unwrap();
+
+    scripting.unit_save(id, unit("U09", 9), 3).unwrap();
+
+    let stored = scripting.get(id).unwrap().unwrap();
+    assert_eq!(stored.seq, 3);
+    assert_eq!(stored.units, vec![unit("U01", 1), unit("U09", 9)]);
+}
+
+#[test]
+fn chapter_units_persist_only_their_reference_and_content() {
+    let (dir, projects) = project_workspace();
+    let id = create_project(&projects);
+    let scripting = ScriptingWorkspace::new(projects);
+    let mut written = written_linked_unit("c1");
+    written.no = 4;
+    written.ch = Some(4);
+    written.title = "Derived".to_string();
+
+    scripting
+        .save(id, script(vec![written, linked_unit("c2"), unit("U01", 1)]))
+        .unwrap();
+
+    let stored = scripting.get(id).unwrap().unwrap();
+    assert_eq!(stored.units.len(), 2);
+    assert_eq!(stored.units[0], written_linked_unit("c1"));
+    assert_eq!(stored.units[1], unit("U01", 1));
+    let root = scripting_dir(dir.path(), id);
+    let head = fs::read_to_string(root.join("script.json")).unwrap();
+    assert!(head.contains("\"chapterId\": \"c1\""));
+    assert!(!head.contains("Derived"));
+    assert!(root.join("units").join("c1.json").exists());
+    assert!(!root.join("units").join("c2.json").exists());
+}
+
+#[test]
+fn a_chapter_unit_saved_without_content_is_dropped() {
+    let (dir, projects) = project_workspace();
+    let id = create_project(&projects);
+    let scripting = ScriptingWorkspace::new(projects);
+    scripting.save(id, script(Vec::new())).unwrap();
+
+    scripting
+        .unit_save(id, written_linked_unit("c1"), 1)
+        .unwrap();
+    let appended = scripting.get(id).unwrap().unwrap().units;
+    scripting.unit_save(id, linked_unit("c1"), 2).unwrap();
+    let cleared = scripting.get(id).unwrap().unwrap();
+
+    assert_eq!(appended, vec![written_linked_unit("c1")]);
+    assert!(cleared.units.is_empty());
+    assert_eq!(cleared.seq, 2);
+    assert!(
+        !scripting_dir(dir.path(), id)
+            .join("units")
+            .join("c1.json")
+            .exists()
+    );
+}
+
+#[test]
+fn a_chapter_unit_id_must_equal_its_chapter_id() {
+    let (_dir, projects) = project_workspace();
+    let id = create_project(&projects);
+    let scripting = ScriptingWorkspace::new(projects);
+    let mut mismatched = written_linked_unit("c1");
+    mismatched.chapter_id = Some("c2".to_string());
+
+    let saved = scripting.save(id, script(vec![mismatched.clone()]));
+    scripting.save(id, script(Vec::new())).unwrap();
+    let unit = scripting.unit_save(id, mismatched, 1);
+
+    assert_eq!(saved.unwrap_err().code, ProjectErrorCode::InvalidInput);
+    assert_eq!(unit.unwrap_err().code, ProjectErrorCode::InvalidInput);
 }
 
 #[test]

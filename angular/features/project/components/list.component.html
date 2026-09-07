@@ -176,7 +176,7 @@
                 <div class="pj-card-t">
                   <span class="t-ink pj-card-n">{{ project.name }}</span>
                 </div>
-                <div class="t-sm t-mute ellip">{{ labels.sourceLine(project) }}</div>
+                <div class="t-sm t-mute ellip">{{ labels.sourceOf(project) }}</div>
               </div>
             </div>
           }
@@ -208,7 +208,7 @@
                     <app-project-thumb [project]="project" />
                     <div>
                       <div class="t-ink">{{ project.name }}</div>
-                      <div class="t-sm t-mute ellip">{{ labels.sourceLine(project) }}</div>
+                      <div class="t-sm t-mute ellip">{{ labels.sourceOf(project) }}</div>
                     </div>
                   </div>
                 </td>

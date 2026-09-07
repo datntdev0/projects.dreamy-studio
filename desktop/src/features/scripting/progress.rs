@@ -1,19 +1,39 @@
 use crate::features::audiobook::models::Audiobook;
 use crate::features::audiobook::rules::audiobook_progress;
 use crate::features::project::models::ProjectModuleState;
-use crate::features::project::models::ProjectSummary;
+use crate::features::scripting::chapters::ProjectChapter;
 use crate::features::scripting::models::Script;
+use crate::features::scripting::models::ScriptUnit;
+use std::collections::HashMap;
 
 pub const SCRIPTING_MODULE: &str = "scripting";
 pub const AUDIOBOOK_MODULE: &str = "audiobook";
 
-pub fn script_progress(script: &Script) -> ProjectModuleState {
-    let done = script
+pub fn unit_slots<'a>(
+    chapters: &[ProjectChapter],
+    script: &'a Script,
+) -> Vec<Option<&'a ScriptUnit>> {
+    let linked: HashMap<&str, &ScriptUnit> = script
         .units
         .iter()
+        .filter_map(|unit| unit.chapter_id.as_deref().map(|id| (id, unit)))
+        .collect();
+    let free = script.units.iter().filter(|unit| unit.chapter_id.is_none());
+    chapters
+        .iter()
+        .map(|chapter| linked.get(chapter.id.as_str()).copied())
+        .chain(free.map(Some))
+        .collect()
+}
+
+pub fn script_progress(chapters: &[ProjectChapter], script: &Script) -> ProjectModuleState {
+    let slots = unit_slots(chapters, script);
+    let done = slots
+        .iter()
+        .flatten()
         .filter(|unit| unit.has_content())
         .count();
-    let total = script.units.len();
+    let total = slots.len();
     let state = if done == total {
         "done"
     } else if done > 0 {
@@ -31,23 +51,19 @@ pub fn script_progress(script: &Script) -> ProjectModuleState {
 }
 
 pub fn module_states(
-    project: &ProjectSummary,
+    chapters: &[ProjectChapter],
     script: Option<&Script>,
     book: &Audiobook,
 ) -> Vec<ProjectModuleState> {
     match script {
-        Some(script) => vec![script_progress(script), audiobook_progress(book, script)],
-        None => vec![
-            ProjectModuleState::idle(SCRIPTING_MODULE, range_len(project)),
-            ProjectModuleState::idle(AUDIOBOOK_MODULE, 0),
+        Some(script) => vec![
+            script_progress(chapters, script),
+            audiobook_progress(book, chapters, script),
         ],
-    }
-}
-
-fn range_len(project: &ProjectSummary) -> usize {
-    match (project.range_from, project.range_to) {
-        (Some(from), Some(to)) if to >= from => usize::try_from(to - from + 1).unwrap_or(0),
-        _ => 0,
+        None => vec![
+            ProjectModuleState::idle(SCRIPTING_MODULE, chapters.len()),
+            ProjectModuleState::idle(AUDIOBOOK_MODULE, chapters.len()),
+        ],
     }
 }
 

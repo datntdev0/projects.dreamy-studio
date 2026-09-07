@@ -87,9 +87,7 @@
       <dd data-testid="project-panel-source">
         @if (item.novelId === null) {
         <span class="t-mute">{{ labels.sourceOf(item) }}</span>
-        } @else { {{ labels.sourceOf(item) }} @if (labels.rangeOf(item)) {
-        <div class="t-sm t-mute">{{ labels.rangeOf(item) }}</div>
-        } }
+        } @else { {{ labels.sourceOf(item) }} }
       </dd>
       <dt>{{ "project.panel.folder" | t }}</dt>
       <dd><span class="path">{{ labels.pathOf(item) }}</span></dd>

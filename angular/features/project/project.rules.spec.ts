@@ -3,18 +3,12 @@ import { project, projectModuleState } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { completeModuleStates, doneModuleCount, enabledModuleRows, enabledModuleStates, filterProjects, idleModuleState, isModuleEnabled, isModuleRequired, isProjectModuleId, isProjectTemplate, moduleBadgeClass, moduleFraction, moduleRows, moduleStateKey, PROJECT_MODULE_STAGES, PROJECT_MODULES, PROJECT_TEMPLATES, projectCode, projectModule, projectPercent, projectStatus, sortProjects, stageModuleRows, templateIcon, templateModules, toggled, toProjectError, validateProjectName, validateRange, withModuleEnabled } from './project.rules';
+import { completeModuleStates, doneModuleCount, enabledModuleRows, enabledModuleStates, filterProjects, idleModuleState, isModuleEnabled, isModuleRequired, isProjectModuleId, isProjectTemplate, moduleBadgeClass, moduleFraction, moduleRows, moduleStateKey, PROJECT_MODULE_STAGES, PROJECT_MODULES, PROJECT_TEMPLATES, projectCode, projectModule, projectPercent, projectStatus, sortProjects, stageModuleRows, templateIcon, templateModules, toggled, toProjectError, validateProjectName, withModuleEnabled } from './project.rules';
 
 describe('project.rules', () => {
-  it('validates names and ranges', () => {
+  it('validates names', () => {
     expect(validateProjectName('  ')).toBe('empty');
     expect(validateProjectName('a')).toBeNull();
-    expect(validateRange(null, null)).toBe(true);
-    expect(validateRange(1, 3)).toBe(true);
-    expect(validateRange(3, 1)).toBe(false);
-    expect(validateRange(0, 1)).toBe(false);
-    expect(validateRange(1, null)).toBe(false);
-    expect(validateRange(1.5, 2)).toBe(false);
   });
 
   it('toggles values', () => {

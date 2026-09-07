@@ -128,7 +128,7 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 15);
     for table in [
         "ws_library_voices",
         "ws_assistant_sessions",
@@ -194,7 +194,7 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
             "local".to_string()
         )
     );
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 15);
     assert!(!table_exists(
         db.connection(),
         "ws_novel_translation_dictionary"

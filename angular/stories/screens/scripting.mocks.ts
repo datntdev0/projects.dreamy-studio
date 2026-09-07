@@ -12,6 +12,18 @@ import { seedScripts, TEA_WOMAN } from './scripting.fixtures';
 
 const THIRD_CHAPTER = 3;
 
+const BLANK_UNIT: ScriptUnit = {
+  id: '',
+  chapterId: null,
+  no: 0,
+  ch: null,
+  chs: null,
+  title: '',
+  blocks: null,
+  meta: null,
+  updated: '',
+};
+
 export interface ScriptingState {
   scripts: Record<number, Script>;
   progress: Record<number, ProjectModuleState>;
@@ -56,11 +68,11 @@ function saveScript(state: ScriptingState, args: Record<string, unknown>): void 
 function saveUnit(state: ScriptingState, args: Record<string, unknown>): void {
   const projectId = numberArg(args, 'projectId');
   const script = scriptOf(state, args);
-  const unit = clone(args['unit'] as ScriptUnit);
-  if (!findUnit(script, unit.id)) {
-    throw { code: 'not_found', detail: `Unknown unit ${unit.id}.` };
-  }
-  store(state, projectId, { ...replaceUnit(script, unit), seq: numberArg(args, 'seq') });
+  const unit: ScriptUnit = { ...BLANK_UNIT, ...clone(args['unit'] as Partial<ScriptUnit>) };
+  const next = findUnit(script, unit.id)
+    ? replaceUnit(script, unit)
+    : { ...script, units: [...script.units, unit] };
+  store(state, projectId, { ...next, seq: numberArg(args, 'seq') });
 }
 
 function saveCast(state: ScriptingState, args: Record<string, unknown>): void {

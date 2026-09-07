@@ -98,53 +98,7 @@
           </select>
         </div>
       </div>
-      @if (selectedNovel(); as novel) {
-      <div class="field" data-testid="project-create-range-field">
-        <label>{{ "project.create.chapterRange" | t }}</label>
-        <div class="pjc-range" data-testid="project-create-range">
-          <label class="check" data-testid="project-create-all-chapters-label">
-            <input
-              type="checkbox"
-              [checked]="form().allChapters"
-              data-testid="project-create-all-chapters"
-              (change)="onAllChapters($event)"
-            />
-            {{ "project.create.allChapters" | t: { count: novel.chapterCount } }}
-          </label>
-          <span class="pjc-rg" [class.is-off]="form().allChapters">
-            {{ "project.create.from" | t }}
-            <input
-              class="input"
-              type="number"
-              min="1"
-              [max]="novel.chapterCount"
-              [value]="form().rangeFrom ?? ''"
-              [disabled]="form().allChapters"
-              [attr.aria-label]="'project.create.fromLabel' | t"
-              data-testid="project-create-from"
-              (input)="onRange('rangeFrom', $event)"
-            />
-            {{ "project.create.to" | t }}
-            <input
-              class="input"
-              type="number"
-              min="1"
-              [max]="novel.chapterCount"
-              [value]="form().rangeTo ?? ''"
-              [disabled]="form().allChapters"
-              [attr.aria-label]="'project.create.toLabel' | t"
-              data-testid="project-create-to"
-              (input)="onRange('rangeTo', $event)"
-            />
-          </span>
-        </div>
-        @if (rangeError(); as error) {
-        <p class="field-err" data-testid="project-create-range-error">
-          {{ error | t: { count: novel.chapterCount } }}
-        </p>
-        }
-      </div>
-      } @if (formError()) {
+      @if (formError()) {
       <p class="field-err" role="alert" data-testid="project-create-error">{{ formError() }}</p>
       }
     </div>

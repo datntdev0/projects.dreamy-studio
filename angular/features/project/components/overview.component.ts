@@ -114,13 +114,11 @@ export class ProjectOverview {
     if (project.novelId === null) {
       return this.languageService.translate('project.overview.sourceNone');
     }
-    const usage = this.languageService.translate(
+    return this.languageService.translate(
       project.srcKind === 'translation'
         ? 'project.overview.sourceTranslation'
         : 'project.overview.sourceOriginal',
     );
-    const range = this.labels.rangeOf(project);
-    return range ? `${usage} · ${range}` : usage;
   }
 
   private buildRows(): ProjectModuleRow[] {

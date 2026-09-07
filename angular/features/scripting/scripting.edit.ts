@@ -245,13 +245,19 @@ export function addUnitWith(script: Script, chs: ChapterRange | null): Script {
   return appendUnit(script, { chs });
 }
 
+function clearBlocks(unit: ScriptUnit): ScriptUnit {
+  return { ...unit, blocks: null };
+}
+
 export function setPreset(script: Script, preset: ScriptPreset): Script {
-  return {
+  const free = script.units.filter((unit) => unit.chapterId === null).map(clearBlocks);
+  const base: Script = {
     ...script,
     cfg: configOf(preset),
     choose: false,
-    units: script.units.map((unit) => ({ ...unit, blocks: null })),
+    units: preset === 'film' ? free : [],
   };
+  return preset === 'film' && free.length === 0 ? appendUnit(base) : base;
 }
 
 function sameBlock(candidate: ScriptBlock, fresh: ScriptBlock): boolean {

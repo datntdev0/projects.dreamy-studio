@@ -16,6 +16,7 @@ use crate::features::novel::files::write_atomic;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectResult;
 use crate::features::project::service::ProjectWorkspace;
+use crate::features::scripting::chapters::project_chapters;
 use crate::features::scripting::files::require_safe_id;
 use crate::features::workspace::repository::format_timestamp;
 use crate::shared::files::read_if_exists;
@@ -174,8 +175,10 @@ impl AudiobookWorkspace {
     }
 
     pub fn export(&self, project_id: i64, unit_ids: &[String]) -> ProjectResult<ExportReply> {
+        let root = self.projects.dir().to_path_buf();
         let (wav, srt) = self.projects.with_project(project_id, |summary, dir| {
-            export_units(dir, &summary.name, unit_ids)
+            let chapters = project_chapters(&root, summary)?;
+            export_units(dir, &summary.name, &chapters, unit_ids)
         })?;
         Ok(ExportReply {
             wav: wav.to_string_lossy().into_owned(),

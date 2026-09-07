@@ -10,7 +10,7 @@ import { appendUnit, chaptersOf, firstSpeaker, makeBlock, makeUnit, newScript, p
 import { unitSource } from '@features/scripting/scripting.source';
 
 import { evidence, KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS } from './novel-knowledge.fixtures';
-import { LANTERN_CHAPTERS, LANTERN_VI } from './novel-translation.fixtures';
+import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from './novel-translation.fixtures';
 import { PROJECT_FIXTURES } from './project-management.fixtures';
 
 export const SCRIPTING_NOVEL_ID = 1;
@@ -35,12 +35,6 @@ export const SPEAKER_HINTS: Record<string, string> = {
   '1.4': 'E1',
   '2.2': 'E5',
   '2.4': TEA_WOMAN.id,
-};
-
-const VI_TITLES: Record<number, string> = {
-  1: 'Ngọn đèn cuối cùng',
-  2: 'Thư lại từ bến cảng',
-  3: 'Điều thủy triều trả lại',
 };
 
 const ENGLISH_TITLES = [
@@ -106,8 +100,12 @@ function projectOf(id: number): ProjectSummary {
   return project;
 }
 
+function chapterIdOf(chapter: number): string {
+  return `ch-${chapter}`;
+}
+
 function chapterTitle(project: ProjectSummary, chapter: number): string {
-  const translated = project.srcKind === 'translation' ? VI_TITLES[chapter] : undefined;
+  const translated = project.srcKind === 'translation' ? LANTERN_VI_TITLES[chapter - 1] : undefined;
   return translated ?? ENGLISH_TITLES[chapter - 1] ?? `Chapter ${chapter}`;
 }
 
@@ -183,13 +181,15 @@ function audioBlocks(
     : defaultAudioBlocks(ids, paragraphs);
 }
 
-function seedAudio(project: ProjectSummary, split: boolean): Script {
+function seedAudio(project: ProjectSummary, split: boolean, chapters: number): Script {
   const base = newScript('audiobook');
   const cast = castFor(base, MOCK_KB);
   const ids: BlockIds = { seq: 0 };
   let script = base;
-  for (let chapter = project.rangeFrom ?? 1; chapter <= (project.rangeTo ?? 1); chapter += 1) {
+  for (let chapter = 1; chapter <= chapters; chapter += 1) {
     const unit = makeUnit(script, {
+      id: chapterIdOf(chapter),
+      chapterId: chapterIdOf(chapter),
       no: chapter,
       ch: chapter,
       title: chapterTitle(project, chapter),
@@ -343,9 +343,9 @@ function seedFilm(): Script {
     ),
   ];
   const base = newScript('film');
-  const first = makeUnit(base, { no: 1, chs: [1, 2], title: VI_TITLES[1], blocks });
+  const first = makeUnit(base, { no: 1, chs: [1, 2], title: LANTERN_VI_TITLES[0], blocks });
   const withFirst: Script = { ...base, units: [first], useq: 1, seq: ids.seq };
-  return appendUnit(withFirst, { no: 2, chs: [3, 3], title: VI_TITLES[3] });
+  return appendUnit(withFirst, { no: 2, chs: [3, 3], title: LANTERN_VI_TITLES[2] });
 }
 
 function seedPlaceholders(
@@ -358,6 +358,7 @@ function seedPlaceholders(
   let script = newScript(preset);
   for (let no = 1; no <= units; no += 1) {
     script = appendUnit(script, {
+      ...(preset === 'film' ? {} : { id: chapterIdOf(no), chapterId: chapterIdOf(no) }),
       no,
       ch: preset === 'film' ? null : no,
       chs: preset === 'film' ? [no, no] : null,
@@ -370,10 +371,10 @@ function seedPlaceholders(
 
 export function seedScripts(): Record<number, Script> {
   return {
-    1: tuneAudio(seedAudio(projectOf(1), true)),
+    1: tuneAudio(seedAudio(projectOf(1), true, 12)),
     3: seedFilm(),
     4: seedPlaceholders(projectOf(4), 8, 'Chapters', 2230),
-    5: seedAudio(projectOf(5), false),
+    5: seedAudio(projectOf(5), false, SAMPLE_CHAPTERS),
     6: seedPlaceholders(projectOf(6), 2, 'Episode', 2400),
   };
 }

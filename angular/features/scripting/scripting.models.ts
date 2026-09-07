@@ -69,6 +69,7 @@ export type ChapterRange = [number, number];
 
 export interface ScriptUnit {
   id: string;
+  chapterId: string | null;
   no: number;
   ch: number | null;
   chs: ChapterRange | null;

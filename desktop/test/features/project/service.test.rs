@@ -26,8 +26,6 @@ fn input(name: &str) -> ProjectInput {
         novel_id: None,
         src_kind: None,
         src_lang: None,
-        range_from: None,
-        range_to: None,
     }
 }
 
@@ -139,18 +137,11 @@ fn update_archive_open_and_delete_update_rows_and_files() {
 }
 
 #[test]
-fn validates_novel_range_and_marks_deleted_novels_missing() {
+fn links_a_novel_and_marks_deleted_novels_missing() {
     let (dir, service) = workspace();
     let novel_id = insert_novel(&dir, 3);
     let mut request = input("Linked");
     request.novel_id = Some(novel_id);
-    request.range_from = Some(1);
-    request.range_to = Some(4);
-    assert_eq!(
-        service.create(request.clone()).unwrap_err().code,
-        ProjectErrorCode::RangeInvalid
-    );
-    request.range_to = Some(3);
     let linked = service.create(request).unwrap();
     assert_eq!(linked.src_kind.as_deref(), Some("original"));
     assert_eq!(linked.src_lang.as_deref(), Some("ZH"));

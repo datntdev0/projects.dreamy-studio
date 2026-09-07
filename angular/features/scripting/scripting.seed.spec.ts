@@ -33,10 +33,10 @@ describe('scripting seeds: Harrowmere audiobook', () => {
   it('has one unit per chapter', () => {
     expect(script.cfg.preset).toBe('audiobook');
     expect(script.units).toHaveLength(12);
-    expect(script.units.map((unit) => unit.id)[11]).toBe('U12');
+    expect(script.units.map((unit) => unit.id)[11]).toBe('ch-12');
     expect(script.extraCast).toEqual([]);
     expect(script.units[0].title).toBe('Ngọn đèn cuối cùng');
-    expect(script.units[3].title).toBe('The Ledger of Names');
+    expect(script.units[3].title).toBe('Cuốn sổ tên');
     expect(script.useq).toBe(12);
   });
 
@@ -44,10 +44,10 @@ describe('scripting seeds: Harrowmere audiobook', () => {
     const all = script.units.flatMap((unit) => unit.blocks ?? []);
     expect(all).toHaveLength(33);
     expect(script.seq).toBe(33);
-    expect(unitOf(script, 'U01').blocks?.at(0)?.id).toBe('B1');
-    expect(unitOf(script, 'U01').blocks).toHaveLength(13);
-    expect(unitOf(script, 'U02').blocks).toHaveLength(14);
-    expect(unitOf(script, 'U03').blocks?.map((block) => block.id)).toEqual([
+    expect(unitOf(script, 'ch-1').blocks?.at(0)?.id).toBe('B1');
+    expect(unitOf(script, 'ch-1').blocks).toHaveLength(13);
+    expect(unitOf(script, 'ch-2').blocks).toHaveLength(14);
+    expect(unitOf(script, 'ch-3').blocks?.map((block) => block.id)).toEqual([
       'B27',
       'B28',
       'B29',
@@ -55,11 +55,11 @@ describe('scripting seeds: Harrowmere audiobook', () => {
       'B31',
       'B32',
     ]);
-    expect(unitOf(script, 'U02').blocks?.find((block) => block.type === 'note')?.id).toBe('B33');
+    expect(unitOf(script, 'ch-2').blocks?.find((block) => block.type === 'note')?.id).toBe('B33');
   });
 
   it('splits the dialogue with the proto speakers and tones', () => {
-    const first = unitOf(script, 'U01').blocks ?? [];
+    const first = unitOf(script, 'ch-1').blocks ?? [];
     expect(first[0].text).toBe('Chapter one. Ngọn đèn cuối cùng.');
     expect(first[1]).toMatchObject({ type: 'pause', ms: 800 });
     const dialogues = first.filter((block) => block.type === 'dialogue');
@@ -70,7 +70,7 @@ describe('scripting seeds: Harrowmere audiobook', () => {
       ['1.4', SPEAKER_HINTS['1.4'], ''],
     ]);
     expect(dialogues[0].text).toBe('Cô đang phí dầu đấy.');
-    const second = unitOf(script, 'U02').blocks ?? [];
+    const second = unitOf(script, 'ch-2').blocks ?? [];
     expect(second.filter((block) => block.who === 'E5')[0].paren).toBe(
       'reading the letter, formal',
     );
@@ -81,7 +81,7 @@ describe('scripting seeds: Harrowmere audiobook', () => {
   });
 
   it('keeps placeholder content for chapters without sample text', () => {
-    const fourth = unitOf(script, 'U04');
+    const fourth = unitOf(script, 'ch-4');
     expect(fourth.blocks).toBeNull();
     expect(fourth.meta).toEqual({ blocks: 8, words: 128 });
     expect(script.units[11].meta?.words).toBe(117);
@@ -89,7 +89,7 @@ describe('scripting seeds: Harrowmere audiobook', () => {
 
   it('writes chapter 3 from the current source text', () => {
     const owner = project(1);
-    const blocks = unitOf(script, 'U03').blocks ?? [];
+    const blocks = unitOf(script, 'ch-3').blocks ?? [];
     const source = mockSourceOf(owner, 3) ?? [];
     for (const block of blocks.filter((item) => item.ref !== null)) {
       const paragraph = source.find((item) => item.id === block.ref);
@@ -175,7 +175,7 @@ describe('scripting mock backend', () => {
     const initial = backend['project_modules']({ projectId: 1 }) as { id: string; note: string }[];
     expect(initial.find((row) => row.id === 'scripting')?.note).toBe('12/12 chapters');
     const script = backend['scripting_get']({ projectId: 1 }) as Script;
-    const original = unitOf(script, 'U03');
+    const original = unitOf(script, 'ch-3');
     const cleared = { ...original, blocks: [], meta: null };
     backend['scripting_unit_save']({ projectId: 1, unit: cleared, seq: 40 });
     const reduced = backend['project_modules']({ projectId: 1 }) as {
@@ -210,16 +210,28 @@ describe('scripting mock backend', () => {
     expect(handlers()['scripting_draft_generate']).toBeUndefined();
   });
 
-  it('rejects writes to unknown scripts and units', () => {
+  it('rejects writes to unknown scripts', () => {
     const backend = handlers();
     const script = backend['scripting_get']({ projectId: 1 }) as Script;
     expect(() =>
       backend['scripting_unit_save']({ projectId: 2, unit: script.units[0], seq: 1 }),
     ).toThrow();
-    expect(() =>
-      backend['scripting_unit_save']({ projectId: 1, unit: { id: 'zz' }, seq: 1 }),
-    ).toThrow();
     expect(() => backend['scripting_cast_save']({ projectId: 2, extraCast: [] })).toThrow();
+  });
+
+  it('adds a unit that the script does not hold yet when saving a chapter unit', () => {
+    const backend = handlers();
+    const wire = { id: 'ch-40', chapterId: 'ch-40', blocks: [], meta: null, updated: 'now' };
+    backend['scripting_unit_save']({ projectId: 1, unit: wire, seq: 9 });
+    const script = backend['scripting_get']({ projectId: 1 }) as Script;
+    expect(script.units).toHaveLength(13);
+    expect(unitOf(script, 'ch-40')).toMatchObject({
+      chapterId: 'ch-40',
+      no: 0,
+      title: '',
+      blocks: [],
+    });
+    expect(script.seq).toBe(9);
   });
 
   it('adds the third chapter to the Vietnamese translation only once', () => {

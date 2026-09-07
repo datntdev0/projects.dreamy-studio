@@ -1,4 +1,4 @@
-import { effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 
 import { NovelKnowledge } from '../novel/novel.knowledge.models';
@@ -10,6 +10,8 @@ import { ProjectError, ProjectSummary } from '../project/project.models';
 import { toProjectError } from '../project/project.rules';
 import { ProjectService } from '../project/project.service';
 import { WorkspaceService } from '../workspace/workspace.service';
+// prettier-ignore
+import { DerivedChapter, derivedChapters, normalizedScript, storedScript, wireScript, wireUnit, withChapterUnits } from './scripting.chapters';
 import { buildContext, castFor, unitSources } from './scripting.context';
 import * as edit from './scripting.edit';
 import { kbSnapshotOf } from './scripting.knowledge';
@@ -17,8 +19,7 @@ import { kbSnapshotOf } from './scripting.knowledge';
 import { BlockPatch, BlockType, CastAddResult, CastMember, KbSnapshot, MoveDirection, ResetScope, Script, ScriptChange, ScriptContext, ScriptPreset, ScriptSource, ScriptUnit, ScriptView, SourceParagraph, ViewFocus } from './scripting.models';
 // prettier-ignore
 import { activeUnit, chaptersOf, emptyView, findBlock, findUnit, nextChapterRange, nextUnitChapters } from './scripting.rules';
-// prettier-ignore
-import { chapterParagraphs, chapterTitleOf, initialScript, needsChapterUnits, projectChapters, unitSource, usesTranslation } from './scripting.source';
+import { chapterParagraphs, initialScript, unitSource, usesTranslation } from './scripting.source';
 
 type PersistKind = 'unit' | 'script' | 'cast';
 
@@ -71,7 +72,8 @@ export class ScriptingService {
   private readonly translation = inject(NovelTranslationService);
   private readonly knowledge = inject(NovelKnowledgeService);
   private readonly workspace = inject(WorkspaceService);
-  private readonly scripts = signal<Record<number, Script>>({});
+  private readonly stored = signal<Record<number, Script>>({});
+  private readonly scripts = computed(this.buildScripts.bind(this));
   private readonly views = signal<Record<number, ScriptView>>({});
   private readonly originals = signal<Record<string, ParagraphRow[]>>({});
   private readonly loadedIds = signal<Record<number, true>>({});
@@ -130,12 +132,9 @@ export class ScriptingService {
       await this.projects.ensureLoaded();
       const project = this.requireProject(projectId);
       await this.loadNovelData(project);
-      const stored = await this.ipc.invoke<Script | null>('scripting_get', { projectId });
-      const script =
-        stored && !needsChapterUnits(project, stored, this.novelChapters(project))
-          ? stored
-          : await this.createScript(project);
-      this.scripts.set({ ...this.scripts(), [projectId]: script });
+      const saved = await this.ipc.invoke<Script | null>('scripting_get', { projectId });
+      const script = saved ? normalizedScript(saved) : await this.createScript(project);
+      this.stored.set({ ...this.stored(), [projectId]: script });
       this.loadedIds.set({ ...this.loadedIds(), [projectId]: true });
       await this.ensureSources(projectId);
     } catch (cause) {
@@ -431,7 +430,7 @@ export class ScriptingService {
   }
 
   reset(): void {
-    this.scripts.set({});
+    this.stored.set({});
     this.views.set({});
     this.originals.set({});
     this.loadedIds.set({});
@@ -457,13 +456,15 @@ export class ScriptingService {
 
   private commit(projectId: number, change: ScriptChange, persist: Persist): void {
     const before = this.scriptOf(projectId);
-    if (!before || change.script === before) {
+    const previous = this.stored()[projectId];
+    if (!before || !previous || change.script === before) {
       return;
     }
     const pinned = this.pinnedUnit(projectId, before);
-    this.scripts.set({ ...this.scripts(), [projectId]: change.script });
+    const next = storedScript(previous, change.script);
+    this.stored.set({ ...this.stored(), [projectId]: next });
     this.patchView(projectId, { ...pinned, ...change.view });
-    this.enqueue(projectId, this.persist.bind(this, projectId, change.script, persist));
+    this.enqueue(projectId, this.persist.bind(this, projectId, next, persist));
   }
 
   private pinnedUnit(projectId: number, script: Script): Partial<ScriptView> {
@@ -490,16 +491,23 @@ export class ScriptingService {
 
   private async write(projectId: number, script: Script, persist: Persist): Promise<void> {
     if (persist.kind === 'script') {
-      await this.ipc.invoke<void>('scripting_save', { projectId, script });
+      await this.ipc.invoke<void>('scripting_save', { projectId, script: wireScript(script) });
     } else if (persist.kind === 'cast') {
       await this.ipc.invoke<void>('scripting_cast_save', {
         projectId,
         extraCast: script.extraCast,
       });
     } else {
+      await this.writeUnit(projectId, script, persist.unitId);
+    }
+  }
+
+  private async writeUnit(projectId: number, script: Script, unitId: string | null): Promise<void> {
+    const unit = findUnit(script, unitId);
+    if (unit) {
       await this.ipc.invoke<void>('scripting_unit_save', {
         projectId,
-        unit: findUnit(script, persist.unitId),
+        unit: wireUnit(unit),
         seq: script.seq,
       });
     }
@@ -626,29 +634,37 @@ export class ScriptingService {
   }
 
   private async createScript(project: ProjectSummary): Promise<Script> {
-    const script = initialScript(project, this.titlesOf(project), this.novelChapters(project));
-    await this.ipc.invoke<void>('scripting_save', { projectId: project.id, script });
+    const script = initialScript(project);
+    await this.ipc.invoke<void>('scripting_save', {
+      projectId: project.id,
+      script: wireScript(script),
+    });
     return script;
   }
 
-  private titlesOf(project: ProjectSummary): Record<number, string> {
-    const titles: Record<number, string> = {};
+  private buildScripts(): Record<number, Script> {
+    const stored = this.stored();
+    const scripts: Record<number, Script> = {};
+    for (const key of Object.keys(stored)) {
+      const projectId = Number(key);
+      const project = this.projects.projectById(projectId);
+      const chapters = project ? this.derivedChaptersOf(project) : [];
+      scripts[projectId] = withChapterUnits(stored[projectId], chapters);
+    }
+    return scripts;
+  }
+
+  private derivedChaptersOf(project: ProjectSummary): DerivedChapter[] {
     const novelId = project.novelId;
-    const range = projectChapters(project, this.novelChapters(project));
-    if (novelId === null || range === null) {
-      return titles;
+    if (novelId === null) {
+      return [];
     }
-    for (let seq = range[0]; seq <= range[1]; seq += 1) {
-      const row = this.novels.chaptersOf(novelId).find((item) => item.seq === seq);
-      titles[seq] = chapterTitleOf({
-        seq,
-        hasNovel: true,
-        translated: usesTranslation(project),
-        translatedTitle: row ? this.translation.titleOf(novelId, row.id, targetOf(project)) : null,
-        originalTitle: row ? row.title : null,
-      });
-    }
-    return titles;
+    return derivedChapters({
+      rows: this.novels.chaptersOf(novelId),
+      translation: usesTranslation(project)
+        ? this.translation.of(novelId, targetOf(project))
+        : null,
+    });
   }
 
   private novelChapters(project: ProjectSummary): number {

@@ -84,18 +84,6 @@ export function toggled<T>(values: T[], value: T): T[] {
   return index < 0 ? [...values, value] : [...values.slice(0, index), ...values.slice(index + 1)];
 }
 
-export function validateRange(rangeFrom: number | null, rangeTo: number | null): boolean {
-  if (rangeFrom === null && rangeTo === null) {
-    return true;
-  }
-  return (
-    Number.isInteger(rangeFrom) &&
-    Number.isInteger(rangeTo) &&
-    (rangeFrom as number) > 0 &&
-    (rangeTo as number) >= (rangeFrom as number)
-  );
-}
-
 export function projectStatus(project: Pick<ProjectSummary, 'archived'>): ProjectStatus {
   return project.archived ? 'archived' : 'active';
 }

@@ -19,7 +19,6 @@ interface ProjectSeed {
   novelId: number | null;
   srcKind: ProjectSummary['srcKind'];
   srcLang: string | null;
-  range: [number, number] | null;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -43,8 +42,6 @@ function projectOf(seed: ProjectSeed): ProjectSummary {
     novelMissing: false,
     srcKind: seed.srcKind,
     srcLang: seed.srcLang,
-    rangeFrom: seed.range ? seed.range[0] : null,
-    rangeTo: seed.range ? seed.range[1] : null,
     archived: seed.archived,
     modules: templateModules(seed.template),
     createdAt: seed.createdAt,
@@ -97,7 +94,6 @@ const SEEDS: ProjectSeed[] = [
     novelId: 1,
     srcKind: 'translation',
     srcLang: 'VI',
-    range: [1, 12],
     archived: false,
     createdAt: stamp(1, '19:02'),
     updatedAt: stamp(10, '08:40'),
@@ -112,7 +108,6 @@ const SEEDS: ProjectSeed[] = [
     novelId: null,
     srcKind: null,
     srcLang: null,
-    range: null,
     archived: false,
     createdAt: stamp(28, '09:30'),
     updatedAt: stamp(29, '10:42'),
@@ -127,7 +122,6 @@ const SEEDS: ProjectSeed[] = [
     novelId: 1,
     srcKind: 'translation',
     srcLang: 'VI',
-    range: [1, 3],
     archived: false,
     createdAt: stamp(2, '21:00'),
     updatedAt: stamp(6, '17:20'),
@@ -142,7 +136,6 @@ const SEEDS: ProjectSeed[] = [
     novelId: 3,
     srcKind: 'original',
     srcLang: 'VI',
-    range: [1, 5],
     archived: false,
     createdAt: stamp(3, '08:20'),
     updatedAt: stamp(5, '20:40'),
@@ -157,7 +150,6 @@ const SEEDS: ProjectSeed[] = [
     novelId: 1,
     srcKind: 'translation',
     srcLang: 'VI',
-    range: [1, 3],
     archived: false,
     createdAt: stamp(1, '19:00'),
     updatedAt: stamp(4, '20:50'),
@@ -172,7 +164,6 @@ const SEEDS: ProjectSeed[] = [
     novelId: 2,
     srcKind: 'original',
     srcLang: 'EN',
-    range: [1, 2],
     archived: true,
     createdAt: stamp(1, '12:00'),
     updatedAt: stamp(2, '10:00'),

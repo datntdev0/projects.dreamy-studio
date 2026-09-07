@@ -98,11 +98,11 @@ export const VI_TITLE = 'Ngày đến';
 export const VI_SECOND_TITLE = '[VI] The Trial';
 
 const PROJECTS: readonly SeedProject[] = [
-  { name: AUDIO_PROJECT, novel: SAMPLE_TITLE, range: [1, 4] },
-  { name: VIET_PROJECT, novel: SAMPLE_TITLE, range: [1, 2], translation: 'VI' },
+  { name: AUDIO_PROJECT, novel: SAMPLE_TITLE },
+  { name: VIET_PROJECT, novel: SAMPLE_TITLE, translation: 'VI' },
   { name: LOOSE_PROJECT },
   { name: BLANK_PROJECT, template: 'blank', modules: ['scripting', 'audiobook'] },
-  { name: SINGLE_PROJECT, novel: SAMPLE_TITLE, range: [3, 4] },
+  { name: SINGLE_PROJECT, novel: SAMPLE_TITLE },
   { name: WHOLE_PROJECT, novel: SAMPLE_TITLE },
 ];
 

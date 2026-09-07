@@ -36,17 +36,21 @@ function originalRows(chapterId: string) {
   }));
 }
 
+function translatedParagraphs(seq: number) {
+  return originalRows(`ch-${seq}`).map((row) => ({
+    n: row.n,
+    originalHashcheck: row.hashcheck,
+    text: LANTERN_VI[`${seq}.${row.n}`],
+    note: '',
+  }));
+}
+
 function translationWire() {
   const chapters: Record<string, unknown> = {};
-  for (let seq = 1; seq <= SAMPLE_CHAPTERS; seq += 1) {
+  for (let seq = 1; seq <= LANTERN_VI_TITLES.length; seq += 1) {
     chapters[`ch-${seq}`] = {
       title: LANTERN_VI_TITLES[seq - 1],
-      paragraphs: originalRows(`ch-${seq}`).map((row) => ({
-        n: row.n,
-        originalHashcheck: row.hashcheck,
-        text: LANTERN_VI[`${seq}.${row.n}`],
-        note: '',
-      })),
+      paragraphs: translatedParagraphs(seq),
     };
   }
   return { guidelines: '', dict: [], chapters, warnings: [] };

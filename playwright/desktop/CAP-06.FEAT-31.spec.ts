@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { AUDIOBOOK, AUDIOBOOK_BLURB, BLANK, BLANK_BLURB, FILMSERIES, FILMSERIES_BLURB, HARBOR_CHAPTERS, openProjectsView, ORIGINAL, PROJECT_CREATED, PROJECT_NAME_REQUIRED, projectFolder, RANGE_INVALID, readProjects, removeNovel,SOURCE_NOVEL_NOT_FOUND } from '../scripts/project.ts';
+import { AUDIOBOOK, AUDIOBOOK_BLURB, BLANK, BLANK_BLURB, FILMSERIES, FILMSERIES_BLURB, HARBOR_CHAPTERS, openProjectsView, ORIGINAL, PROJECT_CREATED, PROJECT_NAME_REQUIRED, projectFolder, readProjects, removeNovel,SOURCE_NOVEL_NOT_FOUND } from '../scripts/project.ts';
 import { seedTranslation } from '../scripts/translation.ts';
 
 const TRANSLATION_VI = 'Translation VI';
@@ -53,11 +53,7 @@ test.describe('CAP-06 Project Management', () => {
       });
     });
 
-    test('US-0090 links a project to a novel and validates the chapter range', async ({
-      ui,
-      picker,
-      sandbox,
-    }) => {
+    test('US-0090 links a project to a novel', async ({ ui, picker, sandbox }) => {
       const folder = await openProjectsView(ui, picker, sandbox, {
         novels: [{ title: 'Harbor Lights', chapters: HARBOR_CHAPTERS }],
       });
@@ -66,48 +62,22 @@ test.describe('CAP-06 Project Management', () => {
       await expect(project.create.panel).toBeVisible();
       await expect(project.create.version).toBeDisabled();
 
-      await test.step('offers the text version of the chosen source novel and defaults to all of its chapters', async () => {
+      await test.step('offers the text version of the chosen source novel', async () => {
         await project.create.novel.selectOption({ label: 'Harbor Lights' });
 
         await expect(project.create.version).toBeEnabled();
         await expect(project.create.version).toHaveText(ORIGINAL);
-        await expect(project.create.allChapters).toBeChecked();
-        await expect(project.create.allChaptersLabel).toContainText('5');
       });
 
-      await test.step('reports an invalid chapter range and creates no project when it is reversed or beyond the novel', async () => {
+      await test.step('shows the source novel and text version on the created project', async () => {
         await project.create.name.fill('Harbor Run');
-        await project.create.allChapters.uncheck();
-
-        await project.create.from.fill('4');
-        await project.create.to.fill('2');
-        await project.create.submit.click();
-        await expect(project.create.rangeError).toContainText(RANGE_INVALID);
-
-        await project.create.from.fill('1');
-        await project.create.to.fill('9');
-        await project.create.submit.click();
-        await expect(project.create.rangeError).toContainText(RANGE_INVALID);
-
-        await expect(project.create.panel).toBeVisible();
-        expect(readProjects(folder)).toHaveLength(0);
-      });
-
-      await test.step('shows the source novel, text version and chosen chapter range on the created project', async () => {
-        await project.create.from.fill('2');
-        await project.create.to.fill('4');
         await project.create.submit.click();
 
         await expect(project.create.panel).toBeHidden();
         await expect(project.panel.name).toHaveText('Harbor Run');
         await expect(project.panel.source).toContainText('Harbor Lights');
         await expect(project.panel.source).toContainText(ORIGINAL);
-        await expect(project.panel.source).toContainText('Ch.2–4');
-        expect(readProjects(folder)[0]).toMatchObject({
-          srcKind: 'original',
-          rangeFrom: 2,
-          rangeTo: 4,
-        });
+        expect(readProjects(folder)[0]).toMatchObject({ srcKind: 'original' });
       });
 
       await test.step('reports that the source novel is missing and creates no project when the novel was deleted before creating', async () => {

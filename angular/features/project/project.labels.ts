@@ -40,21 +40,6 @@ export class ProjectLabels {
       : `${this.novelNameOf(project)} · ${version}`;
   }
 
-  rangeOf(project: ProjectSummary): string {
-    if (project.novelId === null || project.rangeFrom === null || project.rangeTo === null) {
-      return '';
-    }
-    return this.languageService.translate('project.range', {
-      from: project.rangeFrom,
-      to: project.rangeTo,
-    });
-  }
-
-  sourceLine(project: ProjectSummary): string {
-    const range = this.rangeOf(project);
-    return range ? `${this.sourceOf(project)} · ${range}` : this.sourceOf(project);
-  }
-
   pathOf(project: ProjectSummary): string {
     return `${project.folder.replace(/\//g, '\\')}\\`;
   }

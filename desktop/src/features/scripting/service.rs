@@ -3,12 +3,14 @@ use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectResult;
 use crate::features::project::service::ProjectWorkspace;
+use crate::features::scripting::chapters::project_chapters;
 use crate::features::scripting::files::ScriptFiles;
 use crate::features::scripting::files::require_unit_id;
 use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
 use crate::features::scripting::models::ScriptFile;
 use crate::features::scripting::models::ScriptUnit;
+use crate::features::scripting::models::UnitHead;
 use crate::features::scripting::progress::module_states;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -48,10 +50,12 @@ impl ScriptingWorkspace {
     }
 
     pub fn modules(&self, project_id: i64) -> ProjectResult<Vec<ProjectModuleState>> {
+        let root = self.projects.dir().to_path_buf();
         self.projects.with_project(project_id, |project, dir| {
+            let chapters = project_chapters(&root, project)?;
             let script = read_script(&ScriptFiles::new(dir))?;
             let book = AudiobookFiles::new(dir).read_book()?.unwrap_or_default();
-            Ok(module_states(project, script.as_ref(), &book))
+            Ok(module_states(&chapters, script.as_ref(), &book))
         })
     }
 }
@@ -76,10 +80,15 @@ fn read_script(files: &ScriptFiles) -> ProjectResult<Option<Script>> {
 }
 
 fn write_script(dir: &Path, script: Script) -> ProjectResult<()> {
-    let keep = unique_ids(&script.units)?;
+    let units: Vec<ScriptUnit> = script
+        .units
+        .into_iter()
+        .filter(ScriptUnit::is_persisted)
+        .collect();
+    let keep = unique_ids(&units)?;
     let files = ScriptFiles::new(dir);
-    let mut heads = Vec::with_capacity(script.units.len());
-    for unit in script.units {
+    let mut heads = Vec::with_capacity(units.len());
+    for unit in units {
         let (head, body) = unit.split();
         files.write_unit(&head.id, &body)?;
         heads.push(head);
@@ -96,17 +105,37 @@ fn write_script(dir: &Path, script: Script) -> ProjectResult<()> {
 }
 
 fn write_unit(dir: &Path, unit: ScriptUnit, seq: i64) -> ProjectResult<()> {
-    require_unit_id(&unit.id)?;
+    require_unit(&unit)?;
     let files = ScriptFiles::new(dir);
     let mut stored = require_script(&files)?;
-    let Some(index) = stored.units.iter().position(|head| head.id == unit.id) else {
-        return Err(ProjectError::not_found(format!("unknown unit {}", unit.id)));
-    };
-    let (head, body) = unit.split();
-    files.write_unit(&head.id, &body)?;
-    stored.units[index] = head;
     stored.seq = seq;
+    if unit.is_persisted() {
+        let (head, body) = unit.split();
+        files.write_unit(&head.id, &body)?;
+        upsert_head(&mut stored.units, head);
+    } else {
+        files.remove_unit(&unit.id)?;
+        stored.units.retain(|head| head.id != unit.id);
+    }
     files.write_script(&stored)
+}
+
+fn upsert_head(heads: &mut Vec<UnitHead>, head: UnitHead) {
+    match heads.iter_mut().find(|stored| stored.id == head.id) {
+        Some(stored) => *stored = head,
+        None => heads.push(head),
+    }
+}
+
+fn require_unit(unit: &ScriptUnit) -> ProjectResult<()> {
+    require_unit_id(&unit.id)?;
+    match unit.chapter_id.as_deref() {
+        Some(chapter_id) if chapter_id != unit.id => Err(ProjectError::invalid(format!(
+            "unit {} must use its chapter id {chapter_id}",
+            unit.id
+        ))),
+        _ => Ok(()),
+    }
 }
 
 fn require_script(files: &ScriptFiles) -> ProjectResult<ScriptFile> {
@@ -118,7 +147,7 @@ fn require_script(files: &ScriptFiles) -> ProjectResult<ScriptFile> {
 fn unique_ids(units: &[ScriptUnit]) -> ProjectResult<BTreeSet<String>> {
     let mut seen = BTreeSet::new();
     for unit in units {
-        require_unit_id(&unit.id)?;
+        require_unit(unit)?;
         if !seen.insert(unit.id.clone()) {
             return Err(ProjectError::invalid(format!(
                 "unit id {} is duplicated",

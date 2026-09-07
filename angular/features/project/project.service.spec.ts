@@ -97,8 +97,6 @@ describe('ProjectService', () => {
           novelId: null,
           srcKind: null,
           srcLang: null,
-          rangeFrom: null,
-          rangeTo: null,
         })
       ).id,
     ).toBe(3);

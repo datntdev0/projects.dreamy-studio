@@ -1,6 +1,10 @@
 use serde::Deserialize;
 use serde::Serialize;
 
+fn is_zero(value: &i64) -> bool {
+    *value == 0
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ScriptConfig {
@@ -44,9 +48,15 @@ pub struct UnitMeta {
 #[serde(rename_all = "camelCase", default)]
 pub struct UnitHead {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chapter_id: Option<String>,
+    #[serde(skip_serializing_if = "is_zero")]
     pub no: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ch: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub chs: Option<[i64; 2]>,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub title: String,
 }
 
@@ -62,6 +72,7 @@ pub struct UnitBody {
 #[serde(rename_all = "camelCase", default)]
 pub struct ScriptUnit {
     pub id: String,
+    pub chapter_id: Option<String>,
     pub no: i64,
     pub ch: Option<i64>,
     pub chs: Option<[i64; 2]>,
@@ -75,6 +86,7 @@ impl ScriptUnit {
     pub fn join(head: UnitHead, body: UnitBody) -> Self {
         Self {
             id: head.id,
+            chapter_id: head.chapter_id,
             no: head.no,
             ch: head.ch,
             chs: head.chs,
@@ -86,12 +98,20 @@ impl ScriptUnit {
     }
 
     pub fn split(self) -> (UnitHead, UnitBody) {
-        let head = UnitHead {
-            id: self.id,
-            no: self.no,
-            ch: self.ch,
-            chs: self.chs,
-            title: self.title,
+        let head = match self.chapter_id {
+            Some(chapter_id) => UnitHead {
+                id: self.id,
+                chapter_id: Some(chapter_id),
+                ..UnitHead::default()
+            },
+            None => UnitHead {
+                id: self.id,
+                chapter_id: None,
+                no: self.no,
+                ch: self.ch,
+                chs: self.chs,
+                title: self.title,
+            },
         };
         let body = UnitBody {
             blocks: self.blocks,
@@ -99,6 +119,10 @@ impl ScriptUnit {
             updated: self.updated,
         };
         (head, body)
+    }
+
+    pub fn is_persisted(&self) -> bool {
+        self.chapter_id.is_none() || self.blocks.is_some()
     }
 
     pub fn has_content(&self) -> bool {

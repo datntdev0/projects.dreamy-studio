@@ -64,7 +64,7 @@ describe('AudiobookInspector (chapter panel)', () => {
 
   it('shows a fully generated chapter without blockers or lock rows', async () => {
     const mounted = await openInspector();
-    await showUnit(mounted, 'U01');
+    await showUnit(mounted, 'ch-1');
     expect(byId(mounted.root, 'audiobook-inspector-chapter-locked')).toBeNull();
     expect(byId(mounted.root, 'audiobook-inspector-chapter-unlocked')).toBeNull();
     expect(byId(mounted.root, 'ab-ins-blockers')).toBeNull();
@@ -73,13 +73,13 @@ describe('AudiobookInspector (chapter panel)', () => {
 
   it('treats a chapter without a lock as ready once its voices are usable', async () => {
     const mounted = await openInspector();
-    await showUnit(mounted, 'U03');
+    await showUnit(mounted, 'ch-3');
     expect(byId(mounted.root, 'audiobook-inspector-chapter-blocker')).toBeNull();
   });
 
   it('hides the mix for a chapter without a script', async () => {
     const mounted = await openInspector();
-    await showUnit(mounted, 'U04');
+    await showUnit(mounted, 'ch-4');
     expect(byId(mounted.root, 'ab-ins-mix')).toBeNull();
   });
 
@@ -120,7 +120,7 @@ describe('AudiobookInspector (chapter panel)', () => {
     const mounted = await openInspector();
     type(mounted.root, 'ab-mix-gap', '2.5');
     await settle(mounted.fixture);
-    await showUnit(mounted, 'U01');
+    await showUnit(mounted, 'ch-1');
     expect(inputValue(mounted, 'ab-mix-gap')).toBe('2.5');
     expect(byId(mounted.root, 'ab-export-wav')).toBeNull();
     expect(byId(mounted.root, 'ab-export-hint')).toBeNull();

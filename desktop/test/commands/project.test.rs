@@ -14,8 +14,6 @@ fn project_payloads_serialize_as_camel_case() {
         novel_missing: true,
         src_kind: Some("original".to_string()),
         src_lang: Some("ZH".to_string()),
-        range_from: Some(1),
-        range_to: Some(2),
         archived: false,
         modules: Vec::new(),
         created_at: "a".to_string(),
@@ -25,7 +23,7 @@ fn project_payloads_serialize_as_camel_case() {
     let serialized = serde_json::to_value(summary).unwrap();
     assert_eq!(serialized["novelId"], json!(8));
     assert_eq!(serialized["novelMissing"], json!(true));
-    assert_eq!(serialized["rangeFrom"], json!(1));
+    assert!(serialized.get("rangeFrom").is_none());
 }
 
 #[test]

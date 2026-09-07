@@ -17,6 +17,8 @@ use crate::features::audiobook::subtitles::srt_text;
 use crate::features::novel::files::write_atomic;
 use crate::features::project::models::ProjectError;
 use crate::features::project::models::ProjectResult;
+use crate::features::scripting::chapters::ProjectChapter;
+use crate::features::scripting::chapters::resolve_unit;
 use crate::features::scripting::files::ScriptFiles;
 use crate::features::scripting::files::require_unit_id;
 use crate::features::scripting::models::ScriptUnit;
@@ -215,10 +217,11 @@ fn slot_cues(files: &AudiobookFiles, slot: &Slot) -> ProjectResult<Vec<Cue>> {
 pub fn export_units(
     dir: &Path,
     project_name: &str,
+    chapters: &[ProjectChapter],
     unit_ids: &[String],
 ) -> ProjectResult<(PathBuf, PathBuf)> {
     require_selection(unit_ids)?;
-    let units = read_script_units(dir, unit_ids)?;
+    let units = read_script_units(dir, chapters, unit_ids)?;
     let files = AudiobookFiles::new(dir);
     let book = files.read_book()?.unwrap_or_default();
     for unit in &units {
@@ -254,7 +257,11 @@ fn require_selection(unit_ids: &[String]) -> ProjectResult<()> {
     Ok(())
 }
 
-pub fn read_script_units(dir: &Path, unit_ids: &[String]) -> ProjectResult<Vec<ScriptUnit>> {
+pub fn read_script_units(
+    dir: &Path,
+    chapters: &[ProjectChapter],
+    unit_ids: &[String],
+) -> ProjectResult<Vec<ScriptUnit>> {
     let files = ScriptFiles::new(dir);
     let script = files
         .read_script()?
@@ -273,8 +280,11 @@ pub fn read_script_units(dir: &Path, unit_ids: &[String]) -> ProjectResult<Vec<S
     let mut units = Vec::with_capacity(heads.len());
     for head in heads {
         let body = files.read_unit(&head.id)?;
-        units.push(ScriptUnit::join(head, body));
+        let mut unit = ScriptUnit::join(head, body);
+        resolve_unit(&mut unit, chapters);
+        units.push(unit);
     }
+    units.sort_by_key(|unit| unit.no);
     Ok(units)
 }
 

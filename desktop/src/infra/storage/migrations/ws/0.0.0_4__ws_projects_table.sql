@@ -6,9 +6,8 @@ CREATE TABLE ws_projects (
     novel_id INTEGER,
     src_kind TEXT,
     src_lang TEXT,
-    range_from INTEGER,
-    range_to INTEGER,
     archived INTEGER NOT NULL DEFAULT 0,
+    modules TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     opened_at TEXT NOT NULL

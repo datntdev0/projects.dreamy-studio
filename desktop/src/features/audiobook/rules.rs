@@ -1,10 +1,12 @@
 use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
 use crate::features::project::models::ProjectModuleState;
+use crate::features::scripting::chapters::ProjectChapter;
 use crate::features::scripting::models::Script;
 use crate::features::scripting::models::ScriptBlock;
 use crate::features::scripting::models::ScriptUnit;
 use crate::features::scripting::progress::AUDIOBOOK_MODULE;
+use crate::features::scripting::progress::unit_slots;
 
 pub const NARRATOR_ID: &str = "narr";
 pub const PAUSE_TYPE: &str = "pause";
@@ -120,11 +122,14 @@ fn count_state(states: &[UnitState], wanted: UnitState) -> usize {
     states.iter().filter(|state| **state == wanted).count()
 }
 
-pub fn audiobook_progress(book: &Audiobook, script: &Script) -> ProjectModuleState {
-    let states: Vec<UnitState> = script
-        .units
-        .iter()
-        .map(|unit| unit_stat(book, unit).state)
+pub fn audiobook_progress(
+    book: &Audiobook,
+    chapters: &[ProjectChapter],
+    script: &Script,
+) -> ProjectModuleState {
+    let states: Vec<UnitState> = unit_slots(chapters, script)
+        .into_iter()
+        .map(|slot| slot.map_or(UnitState::None, |unit| unit_stat(book, unit).state))
         .collect();
     let done = count_state(&states, UnitState::Done);
     let stale = count_state(&states, UnitState::Stale);

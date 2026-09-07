@@ -17,7 +17,6 @@ test.describe('CAP-06 Project Management', () => {
             name: 'Harbor Audio',
             template: 'audiobook',
             novel: 'Harbor Lights',
-            range: [2, 4],
             updatedAt: '2026-01-03T12:00:00.000Z',
           },
           { name: 'Iron Film', template: 'filmseries', updatedAt: '2026-01-02T12:00:00.000Z' },
@@ -170,7 +169,6 @@ test.describe('CAP-06 Project Management', () => {
             name: 'Harbor Audio',
             template: 'audiobook',
             novel: 'Harbor Lights',
-            range: [2, 4],
             updatedAt: '2026-01-05T12:00:00.000Z',
           },
           { name: 'Iron Film', template: 'filmseries', updatedAt: '2026-01-04T12:00:00.000Z' },
@@ -184,7 +182,6 @@ test.describe('CAP-06 Project Management', () => {
         await expect(project.panel.meta).toContainText('PRJ-0001');
         await expect(project.panel.meta).toContainText(AUDIOBOOK);
         await expect(project.panel.source).toContainText('Harbor Lights');
-        await expect(project.panel.source).toContainText('Ch.2–4');
         await expect(project.panel.meta).toContainText('projects\\1\\');
         await expect(project.panel.meta).toContainText('2026-01-01');
         await expect(project.panel.meta).toContainText('2026-01-05');

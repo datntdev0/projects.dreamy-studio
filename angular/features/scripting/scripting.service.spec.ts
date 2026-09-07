@@ -1,84 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { FakeIpc } from '@testing/fake-ipc';
-import { ONTOLOGY_VIEW } from '@testing/knowledge';
+import { installScriptingBackend } from '@testing/scripting-backend';
 import { setupApp } from '@testing/service';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { KNOWLEDGE_ANALYZED, KNOWLEDGE_ITEMS } from '../../stories/screens/novel-knowledge.fixtures';
-// prettier-ignore
-import { LANTERN_CHAPTERS, LANTERN_VI, LANTERN_VI_TITLES } from '../../stories/screens/novel-translation.fixtures';
-// prettier-ignore
-import { PROJECT_FIXTURES, projectModuleStatesFor } from '../../stories/screens/project-management.fixtures';
+import { LANTERN_VI_TITLES } from '../../stories/screens/novel-translation.fixtures';
 import { TEA_WOMAN } from '../../stories/screens/scripting.fixtures';
-import { scriptingHandlers } from '../../stories/screens/scripting.mocks';
+import { NovelTranslationService } from '../novel/novel.translation.service';
 import { ScriptingService } from './scripting.service';
 
-const STAMP = '2026-11-09T09:15:00Z';
-const SAMPLE_CHAPTERS = 3;
-
-function chapterRows() {
-  return LANTERN_CHAPTERS.map((chapter, index) => ({
-    id: `ch-${index + 1}`,
-    novelId: 1,
-    seq: index + 1,
-    title: chapter.title,
-    wordCount: chapter.words,
-    translationStatus: 'none',
-    analysisStatus: 'none',
-    createdAt: STAMP,
-    updatedAt: STAMP,
-  }));
-}
-
-function originalRows(chapterId: string) {
-  const seq = Number(chapterId.slice(3));
-  const chapter = seq <= SAMPLE_CHAPTERS ? LANTERN_CHAPTERS[seq - 1] : undefined;
-  return (chapter?.paragraphs ?? []).map((text, index) => ({
-    n: index + 1,
-    text,
-    hashcheck: `h-${seq}-${index + 1}`,
-  }));
-}
-
-function translationWire() {
+function titleOnlyWire(seqs: number[]) {
   const chapters: Record<string, unknown> = {};
-  for (let seq = 1; seq <= SAMPLE_CHAPTERS; seq += 1) {
-    chapters[`ch-${seq}`] = {
-      title: LANTERN_VI_TITLES[seq - 1],
-      paragraphs: originalRows(`ch-${seq}`).map((row) => ({
-        n: row.n,
-        originalHashcheck: row.hashcheck,
-        text: LANTERN_VI[`${seq}.${row.n}`],
-        note: '',
-      })),
-    };
+  for (const seq of seqs) {
+    chapters[`ch-${seq}`] = { title: `Translated ${seq}`, paragraphs: [] };
   }
   return { guidelines: '', dict: [], chapters, warnings: [] };
-}
-
-function knowledgeWire() {
-  return {
-    lang: 'VI',
-    ontology: ONTOLOGY_VIEW,
-    items: KNOWLEDGE_ITEMS,
-    analyzed: KNOWLEDGE_ANALYZED,
-  };
-}
-
-function installBackend(ipc: FakeIpc): void {
-  const backend = scriptingHandlers({
-    translation_get: () => translationWire(),
-    knowledge_get: knowledgeWire,
-  });
-  ipc.on('project_list', PROJECT_FIXTURES);
-  ipc.on('novel_chapters', chapterRows());
-  ipc.on('novel_chapter_read', (args) => originalRows(String(args?.['chapterId'])));
-  ipc.on('translation_get', translationWire());
-  for (const [command, handler] of Object.entries(backend)) {
-    ipc.on(command, (args) => handler(args ?? {}));
-  }
-  ipc.on('project_modules', (args) => projectModuleStatesFor(Number(args?.['projectId'])));
 }
 
 describe('ScriptingService', () => {
@@ -93,7 +30,7 @@ describe('ScriptingService', () => {
   beforeEach(() => {
     ipc = setupApp();
     ipc.on('workspace_current', null);
-    installBackend(ipc);
+    installScriptingBackend(ipc);
     scripting = TestBed.inject(ScriptingService);
     TestBed.tick();
   });
@@ -104,7 +41,7 @@ describe('ScriptingService', () => {
       await open(1);
       expect(scripting.isLoaded(1)).toBe(true);
       const ctx = scripting.contextOf(1);
-      expect(ctx?.unit?.id).toBe('U01');
+      expect(ctx?.unit?.id).toBe('ch-1');
       expect(ctx?.cast.map((member) => member.id)).toEqual(['narr', 'E1', 'E3', 'E5', 'E16']);
       expect(ctx?.railSummary).toEqual({ done: 12, total: 12, percent: 100 });
       expect(ctx?.rail[0].active).toBe(true);
@@ -125,13 +62,69 @@ describe('ScriptingService', () => {
       expect(scripting.isLoaded(1)).toBe(false);
     });
 
-    it('creates the first script of a project without one', async () => {
+    it('creates the first script of a project without storing any chapter', async () => {
       ipc.on('scripting_get', null);
       await open(5);
       expect(ipc.called('scripting_save')).toBe(1);
+      expect(ipc.lastArgs('scripting_save')?.['script']).toMatchObject({ units: [] });
       const created = scripting.scriptOf(5);
-      expect(created?.units).toHaveLength(3);
-      expect(created?.units[1].title).toBe(LANTERN_VI_TITLES[1]);
+      expect(created?.units).toHaveLength(12);
+      expect(created?.units[1]).toMatchObject({
+        id: 'ch-2',
+        chapterId: 'ch-2',
+        no: 2,
+        title: LANTERN_VI_TITLES[1],
+      });
+    });
+
+    it('lists the translated chapters in order and grows as more get translated', async () => {
+      ipc.on('translation_get', titleOnlyWire([9, 2, 7, 4, 11]));
+      await open(5);
+      expect(scripting.scriptOf(5)?.units.map((unit) => unit.no)).toEqual([2, 4, 7, 9, 11]);
+      expect(scripting.contextOf(5)?.railSummary.total).toBe(5);
+      ipc.on('translation_get', titleOnlyWire([9, 2, 7, 4, 11, 1, 12, 5]));
+      await TestBed.inject(NovelTranslationService).load(1, 'VI');
+      expect(scripting.scriptOf(5)?.units.map((unit) => unit.no)).toEqual([
+        1, 2, 4, 5, 7, 9, 11, 12,
+      ]);
+      expect(scripting.contextOf(5)?.railSummary.total).toBe(8);
+    });
+
+    it('keeps the stored content linked to its chapter when the list changes', async () => {
+      ipc.on('translation_get', titleOnlyWire([9, 4]));
+      await open(5);
+      scripting.selectUnit(5, 'ch-9');
+      scripting.startWriting(5);
+      await scripting.flush(5);
+      ipc.on('translation_get', titleOnlyWire([9, 4, 1]));
+      await TestBed.inject(NovelTranslationService).load(1, 'VI');
+      const units = scripting.scriptOf(5)?.units ?? [];
+      expect(units.map((unit) => [unit.id, unit.blocks !== null])).toEqual([
+        ['ch-1', true],
+        ['ch-4', false],
+        ['ch-9', true],
+      ]);
+    });
+
+    it('saves the first edit of a derived chapter with only its content fields', async () => {
+      ipc.on('scripting_get', null);
+      await open(5);
+      scripting.selectUnit(5, 'ch-4');
+      scripting.startWriting(5);
+      await scripting.flush(5);
+      const saved = ipc.lastArgs('scripting_unit_save')?.['unit'] as Record<string, unknown>;
+      expect(Object.keys(saved).sort()).toEqual(['blocks', 'chapterId', 'id', 'meta', 'updated']);
+      expect(saved).toMatchObject({ id: 'ch-4', chapterId: 'ch-4' });
+    });
+
+    it('does not store derived chapters without content when saving the script', async () => {
+      ipc.on('translation_get', titleOnlyWire([1, 2, 3, 4, 5]));
+      await open(5);
+      scripting.selectUnit(5, 'ch-1');
+      expect(scripting.resetUnits(5, 'unit')).toBe(1);
+      await scripting.flush(5);
+      const stored = ipc.lastArgs('scripting_save')?.['script'] as { units: { id: string }[] };
+      expect(stored.units.map((unit) => unit.id)).toEqual(['ch-1', 'ch-2', 'ch-3']);
     });
 
     it('asks for the preset of a blank project', async () => {
@@ -193,21 +186,21 @@ describe('ScriptingService', () => {
     });
 
     it('selects units and blocks', async () => {
-      scripting.selectUnit(1, 'U01');
+      scripting.selectUnit(1, 'ch-1');
       await scripting.ensureSources(1);
       const ctx = scripting.contextOf(1);
-      expect(ctx?.unit?.id).toBe('U01');
+      expect(ctx?.unit?.id).toBe('ch-1');
       scripting.selectBlock(1, 'B3');
       expect(scripting.viewOf(1).sel).toBe('B3');
       scripting.selectUnit(1, 'zz');
-      expect(scripting.viewOf(1).unit).toBe('U01');
+      expect(scripting.viewOf(1).unit).toBe('ch-1');
       expect(scripting.viewOf(1).sel).toBe('B3');
-      scripting.selectUnit(1, 'U02');
+      scripting.selectUnit(1, 'ch-2');
       expect(scripting.viewOf(1).sel).toBeNull();
     });
 
     it('jumps to a block', () => {
-      scripting.selectUnit(1, 'U03');
+      scripting.selectUnit(1, 'ch-3');
       scripting.gotoBlock(1, 'B30');
       expect(scripting.viewOf(1)).toMatchObject({ sel: 'B30', goto: 'B30' });
       expect(scripting.consumeFocus(1)).toEqual({ focus: null, goto: 'B30' });
@@ -218,7 +211,7 @@ describe('ScriptingService', () => {
   describe('editing blocks', () => {
     beforeEach(async () => {
       await open(1);
-      scripting.selectUnit(1, 'U03');
+      scripting.selectUnit(1, 'ch-3');
     });
 
     it('adds a block after the selection and persists the unit', async () => {
@@ -231,7 +224,7 @@ describe('ScriptingService', () => {
       await scripting.flush(1);
       const args = ipc.lastArgs('scripting_unit_save');
       expect(args).toMatchObject({ projectId: 1, seq: 34 });
-      expect((args?.['unit'] as { id: string }).id).toBe('U03');
+      expect((args?.['unit'] as { id: string }).id).toBe('ch-3');
       expect(ipc.called('project_modules')).toBe(1);
       expect(scripting.addBlock(1, 'scene')).toBeNull();
     });
@@ -270,7 +263,7 @@ describe('ScriptingService', () => {
     });
 
     it('edits any unit without a lock', async () => {
-      scripting.selectUnit(1, 'U01');
+      scripting.selectUnit(1, 'ch-1');
       scripting.patchBlock(1, 'B3', { text: 'x' });
       expect(scripting.contextOf(1)?.unit?.blocks?.[2].text).toBe('x');
       expect(scripting.addBlock(1, 'note')).not.toBeNull();
@@ -310,7 +303,7 @@ describe('ScriptingService', () => {
 
     it('counts a unit as done while it has content', async () => {
       expect(scripting.contextOf(1)?.railSummary).toEqual({ done: 12, total: 12, percent: 100 });
-      scripting.selectUnit(1, 'U03');
+      scripting.selectUnit(1, 'ch-3');
       for (const block of scripting.contextOf(1)?.unit?.blocks ?? []) {
         scripting.removeBlock(1, block.id);
       }
@@ -322,8 +315,8 @@ describe('ScriptingService', () => {
     });
 
     it('opens the first unit and keeps every unit editable', () => {
-      expect(scripting.contextOf(1)?.unit?.id).toBe('U01');
-      scripting.selectUnit(1, 'U01');
+      expect(scripting.contextOf(1)?.unit?.id).toBe('ch-1');
+      scripting.selectUnit(1, 'ch-1');
       scripting.patchBlock(1, 'B1', { text: 'Edited title.' });
       expect(scripting.contextOf(1)?.unit?.blocks?.[0].text).toBe('Edited title.');
     });
@@ -332,7 +325,7 @@ describe('ScriptingService', () => {
   describe('defaults', () => {
     beforeEach(async () => {
       await open(1);
-      scripting.selectUnit(1, 'U03');
+      scripting.selectUnit(1, 'ch-3');
     });
 
     it('resets to the default for the unit or all units', async () => {
@@ -343,10 +336,14 @@ describe('ScriptingService', () => {
         'narration',
         'narration',
       ]);
-      expect(scripting.resettableUnitsOf(1).map((unit) => unit.id)).toEqual(['U01', 'U02', 'U03']);
+      expect(scripting.resettableUnitsOf(1).map((unit) => unit.id)).toEqual([
+        'ch-1',
+        'ch-2',
+        'ch-3',
+      ]);
       expect(scripting.resetUnits(1, 'all')).toBe(3);
       expect(scripting.resetUnits(1, 'unit')).toBe(1);
-      scripting.selectUnit(1, 'U04');
+      scripting.selectUnit(1, 'ch-4');
       expect(scripting.resetUnits(1, 'unit')).toBe(0);
       expect(scripting.applyDefault(1)).toBe(false);
       await scripting.flush(1);
@@ -379,11 +376,11 @@ describe('ScriptingService', () => {
 
     it('does not edit audiobook titles or add free units', async () => {
       await open(1);
-      scripting.selectUnit(1, 'U03');
+      scripting.selectUnit(1, 'ch-3');
       scripting.setUnitTitle(1, 'x');
       scripting.setUnitChapter(1, 0, 2);
       expect(scripting.addUnit(1)).toBeNull();
-      expect(scripting.contextOf(1)?.unit?.title).toBe('Điều thủy triều trả lại');
+      expect(scripting.contextOf(1)?.unit?.title).toBe('Điều con nước trả lại');
     });
   });
 

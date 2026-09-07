@@ -1,1 +1,0 @@
-ALTER TABLE ws_projects ADD COLUMN modules TEXT NOT NULL DEFAULT '[]';

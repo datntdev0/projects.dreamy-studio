@@ -166,26 +166,6 @@ export class ProjectCreateDialog {
     return this.page.getByTestId('project-create-version-select');
   }
 
-  get allChapters(): Locator {
-    return this.page.getByTestId('project-create-all-chapters');
-  }
-
-  get allChaptersLabel(): Locator {
-    return this.page.getByTestId('project-create-all-chapters-label');
-  }
-
-  get from(): Locator {
-    return this.page.getByTestId('project-create-from');
-  }
-
-  get to(): Locator {
-    return this.page.getByTestId('project-create-to');
-  }
-
-  get rangeError(): Locator {
-    return this.page.getByTestId('project-create-range-error');
-  }
-
   get error(): Locator {
     return this.page.getByTestId('project-create-error');
   }

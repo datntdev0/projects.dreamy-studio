@@ -241,8 +241,6 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
       novelId: 1,
       srcKind: 'original',
       srcLang: 'EN',
-      rangeFrom: 1,
-      rangeTo: 3,
     }),
     project({
       id: 2,

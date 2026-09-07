@@ -179,19 +179,18 @@ test.describe('CAP-06 Project Management', () => {
       await openProjectsView(ui, picker, sandbox, {
         novels: [{ title: 'Harbor Lights', chapters: HARBOR_CHAPTERS }],
         projects: [
-          { name: 'Linked Audio', novel: 'Harbor Lights', range: [2, 5] },
+          { name: 'Linked Audio', novel: 'Harbor Lights' },
           { name: 'Loose Audio' },
-          { name: 'Orphan Audio', missingNovel: true, range: [1, 3] },
+          { name: 'Orphan Audio', missingNovel: true },
         ],
       });
       const project = ui.main.project;
 
-      await test.step('shows the novel, text version, chapter range and the note that the project is tied to that version', async () => {
+      await test.step('shows the novel, text version and the note that the project is tied to that version', async () => {
         await openProjectSettings(ui, 'Linked Audio');
 
         await expect(project.view.sourceList).toContainText('Harbor Lights');
         await expect(project.view.sourceList).toContainText(ORIGINAL);
-        await expect(project.view.sourceList).toContainText('Ch.2–5');
         await expect(project.view.source).toContainText(SOURCE_NOTE);
       });
 

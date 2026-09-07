@@ -22,7 +22,9 @@ use crate::features::assistant::reply;
 use crate::features::assistant::repository::AssistantRepository;
 use crate::features::assistant::skills;
 use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::sources::Sources;
+use crate::features::assistant::sources::linked_novel;
 use crate::features::knowledge::check::KnowledgeIssue;
 use crate::features::knowledge::check::check;
 use crate::features::knowledge::ontology::Ontology;
@@ -214,8 +216,9 @@ impl AssistantWorkspace {
         &self,
         scope: AssistantScope,
         novels: &dyn NovelSource,
+        projects: &dyn ProjectSource,
     ) -> AssistantResult<AssistantSession> {
-        let scope = checked_scope(scope, novels)?;
+        let scope = checked_scope(scope, novels, projects)?;
         let now = now();
         let record = SessionRecord {
             summary: AssistantSessionSummary {
@@ -370,8 +373,10 @@ impl AssistantWorkspace {
             None => {
                 let start = history.len().saturating_sub(HISTORY_LIMIT);
                 let novels = sources.novels.list().unwrap_or_default();
-                let opening =
-                    prompt::opening(&record.summary.scope, &history[start..], text, &novels);
+                let scope = &record.summary.scope;
+                let linked = linked_novel(scope, sources.projects.as_ref())
+                    .map_err(AssistantError::not_found)?;
+                let opening = prompt::opening(scope, &history[start..], text, &novels, linked);
                 llm.start(start_prompt(opening, skill), &token)
             }
         };
@@ -667,24 +672,28 @@ fn skill_prompt(skill: &Skill, opening: Option<String>) -> String {
 fn checked_scope(
     scope: AssistantScope,
     novels: &dyn NovelSource,
+    projects: &dyn ProjectSource,
 ) -> AssistantResult<AssistantScope> {
     match scope.kind {
-        ScopeKind::Workspace => Ok(AssistantScope {
-            kind: ScopeKind::Workspace,
-            novel_id: None,
-        }),
+        ScopeKind::Workspace => Ok(AssistantScope::workspace()),
         ScopeKind::Novel => {
             let id = scope
                 .novel_id
                 .ok_or_else(|| AssistantError::invalid("a novel scope needs a novelId"))?;
             let known = novels.list().map_err(AssistantError::storage)?;
             if known.iter().any(|novel| novel.id == id) {
-                Ok(AssistantScope {
-                    kind: ScopeKind::Novel,
-                    novel_id: Some(id),
-                })
+                Ok(AssistantScope::novel(id))
             } else {
                 Err(AssistantError::invalid(format!("novel {id} not found")))
+            }
+        }
+        ScopeKind::Project => {
+            let id = scope
+                .project_id
+                .ok_or_else(|| AssistantError::invalid("a project scope needs a projectId"))?;
+            match projects.get(id).map_err(AssistantError::storage)? {
+                Some(_) => Ok(AssistantScope::project(id)),
+                None => Err(AssistantError::invalid(format!("project {id} not found"))),
             }
         }
     }

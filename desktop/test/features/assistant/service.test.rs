@@ -10,10 +10,13 @@ use crate::testing::assistant::CallKind;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeLlm;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeProjects;
 use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::RecordingEvents;
+use crate::testing::assistant::project_summary;
 use crate::testing::assistant::sources_of;
 use crate::testing::assistant::sources_with;
+use crate::testing::assistant::sources_with_projects;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -46,10 +49,15 @@ fn fixture() -> Fixture {
     }
 }
 
+fn projects() -> FakeProjects {
+    FakeProjects::with(vec![project_summary(5, Some(1)), project_summary(6, None)])
+}
+
 fn workspace_scope() -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Workspace,
         novel_id: None,
+        project_id: None,
     }
 }
 
@@ -96,6 +104,7 @@ fn novel_scope(novel_id: Option<i64>) -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Novel,
         novel_id,
+        project_id: None,
     }
 }
 
@@ -104,7 +113,7 @@ fn create_accepts_a_novel_scope_for_an_existing_novel() {
     let fixture = fixture();
     let session = fixture
         .workspace
-        .create(novel_scope(Some(1)), &novels())
+        .create(novel_scope(Some(1)), &novels(), &projects())
         .unwrap();
     assert_eq!(session.summary.scope, novel_scope(Some(1)));
     let stored = fixture.workspace.get(&session.summary.id).unwrap();
@@ -116,7 +125,7 @@ fn create_rejects_a_novel_scope_for_an_unknown_novel() {
     let fixture = fixture();
     let error = fixture
         .workspace
-        .create(novel_scope(Some(9)), &novels())
+        .create(novel_scope(Some(9)), &novels(), &projects())
         .unwrap_err();
     assert_eq!(error.code, AssistantErrorCode::Invalid);
     assert!(fixture.workspace.list().unwrap().is_empty());
@@ -127,9 +136,62 @@ fn create_rejects_a_novel_scope_without_a_novel_id() {
     let fixture = fixture();
     let error = fixture
         .workspace
-        .create(novel_scope(None), &novels())
+        .create(novel_scope(None), &novels(), &projects())
         .unwrap_err();
     assert_eq!(error.code, AssistantErrorCode::Invalid);
+}
+
+#[test]
+fn create_accepts_a_project_scope_for_an_existing_project_and_stores_it() {
+    let fixture = fixture();
+    let session = fixture
+        .workspace
+        .create(AssistantScope::project(5), &novels(), &projects())
+        .unwrap();
+    assert_eq!(session.summary.scope, AssistantScope::project(5));
+    let stored = fixture.workspace.get(&session.summary.id).unwrap();
+    assert_eq!(stored.summary.scope, AssistantScope::project(5));
+}
+
+#[test]
+fn create_rejects_a_project_scope_for_an_unknown_project() {
+    let fixture = fixture();
+    let error = fixture
+        .workspace
+        .create(AssistantScope::project(9), &novels(), &projects())
+        .unwrap_err();
+    assert_eq!(error.code, AssistantErrorCode::Invalid);
+    assert!(fixture.workspace.list().unwrap().is_empty());
+}
+
+#[test]
+fn create_rejects_a_project_scope_without_a_project_id() {
+    let fixture = fixture();
+    let scope = AssistantScope {
+        kind: ScopeKind::Project,
+        novel_id: Some(1),
+        project_id: None,
+    };
+    let error = fixture
+        .workspace
+        .create(scope, &novels(), &projects())
+        .unwrap_err();
+    assert_eq!(error.code, AssistantErrorCode::Invalid);
+}
+
+#[test]
+fn create_drops_the_novel_id_of_a_project_scope() {
+    let fixture = fixture();
+    let scope = AssistantScope {
+        kind: ScopeKind::Project,
+        novel_id: Some(1),
+        project_id: Some(5),
+    };
+    let session = fixture
+        .workspace
+        .create(scope, &novels(), &projects())
+        .unwrap();
+    assert_eq!(session.summary.scope, AssistantScope::project(5));
 }
 
 #[test]
@@ -138,8 +200,12 @@ fn create_drops_the_novel_id_of_a_workspace_scope() {
     let scope = AssistantScope {
         kind: ScopeKind::Workspace,
         novel_id: Some(1),
+        project_id: None,
     };
-    let session = fixture.workspace.create(scope, &novels()).unwrap();
+    let session = fixture
+        .workspace
+        .create(scope, &novels(), &projects())
+        .unwrap();
     assert_eq!(session.summary.scope, workspace_scope());
 }
 
@@ -148,7 +214,7 @@ fn create_makes_an_empty_session_hidden_from_the_list() {
     let fixture = fixture();
     let session = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap();
     assert!(session.summary.title.is_empty());
     assert_eq!(session.summary.message_count, 0);
@@ -163,7 +229,7 @@ fn create_stores_editing_as_not_granted() {
     let fixture = fixture();
     let session = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap();
     assert!(!session.summary.edit_granted);
 }
@@ -173,7 +239,7 @@ fn permit_turns_editing_on_and_off_without_touching_updated_at() {
     let fixture = fixture();
     let created = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap();
     let id = created.summary.id.clone();
     let on = fixture.workspace.permit(&id, true).unwrap();
@@ -198,7 +264,7 @@ fn send_keeps_the_edit_grant_set_before_the_turn() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -206,6 +272,46 @@ fn send_keeps_the_edit_grant_set_before_the_turn() {
     let answered = send(&fixture, &id, "Hello", &novels()).unwrap();
     assert!(answered.summary.edit_granted);
     assert!(fixture.workspace.list().unwrap()[0].edit_granted);
+}
+
+#[test]
+fn send_in_a_project_scope_names_the_project_and_its_linked_novel_in_the_opening() {
+    let fixture = fixture();
+    fixture.llm.push_reply("Answer");
+    let id = fixture
+        .workspace
+        .create(AssistantScope::project(5), &novels(), &projects())
+        .unwrap()
+        .summary
+        .id;
+    let sources = sources_with_projects(
+        &novels(),
+        &FakeKnowledge::new(),
+        &FakeTranslation::new(),
+        &projects(),
+    );
+    fixture
+        .workspace
+        .send(&id, "Hi", None, events(), &sources)
+        .unwrap();
+    let prompt = fixture.llm.calls().pop().unwrap().prompt;
+    assert!(prompt.contains("Focus on the project with id 5."));
+    assert!(prompt.contains("linked to the novel with id 1"));
+}
+
+#[test]
+fn send_in_a_project_scope_fails_when_the_project_no_longer_exists() {
+    let fixture = fixture();
+    let id = fixture
+        .workspace
+        .create(AssistantScope::project(5), &novels(), &projects())
+        .unwrap()
+        .summary
+        .id;
+    let result = send(&fixture, &id, "Hi", &novels());
+    assert_eq!(code(result), AssistantErrorCode::NotFound);
+    assert!(fixture.llm.calls().is_empty());
+    assert!(fixture.workspace.get(&id).unwrap().messages.is_empty());
 }
 
 #[test]
@@ -223,7 +329,7 @@ fn send_sets_title_and_preview_and_starts_then_resumes() {
     fixture.llm.push_reply("Second answer");
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -263,7 +369,7 @@ fn long_title_and_preview_are_trimmed_with_an_ellipsis() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -282,7 +388,7 @@ fn provider_switch_starts_a_new_cli_session_with_history() {
     let source = novels();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -307,7 +413,7 @@ fn history_in_the_opening_prompt_is_limited_to_the_last_ten_messages() {
     let source = novels();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -366,7 +472,7 @@ fn send_review(
 fn novel_session(fixture: &Fixture, novel_id: i64) -> String {
     fixture
         .workspace
-        .create(novel_scope(Some(novel_id)), &review_novels())
+        .create(novel_scope(Some(novel_id)), &review_novels(), &projects())
         .unwrap()
         .summary
         .id
@@ -377,7 +483,7 @@ fn a_review_context_in_workspace_scope_is_invalid() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -711,7 +817,7 @@ fn resolve_in_a_workspace_scope_is_invalid() {
     let translation = review_translation();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -769,7 +875,7 @@ fn empty_text_is_invalid_and_calls_nothing() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -795,7 +901,7 @@ fn concurrent_send_is_busy_and_releases_afterwards() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -819,7 +925,7 @@ fn busy_guard_is_released_after_a_failure() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -834,7 +940,7 @@ fn llm_failure_removes_the_user_message_and_keeps_the_record() {
     let source = novels();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -856,7 +962,7 @@ fn llm_failure_on_the_first_turn_leaves_an_empty_unstarted_session() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -877,7 +983,7 @@ fn provider_failure_is_an_llm_error_and_rolls_back() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -897,7 +1003,7 @@ fn activities_are_stored_on_the_reply_and_emitted_to_the_sink() {
     );
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -939,7 +1045,7 @@ fn the_grant_carries_the_workspace_and_scope_only_during_the_turn() {
     });
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -965,7 +1071,7 @@ fn the_grant_copies_the_edit_flag_from_the_session_at_the_start_of_each_turn() {
     });
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -994,7 +1100,7 @@ fn changes_are_forwarded_to_the_event_sink_without_becoming_activities() {
     });
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -1012,7 +1118,7 @@ fn the_token_is_revoked_after_success_and_after_failure() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -1044,7 +1150,7 @@ fn invalid_citations_are_dropped_and_the_block_is_stripped() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -1073,7 +1179,7 @@ fn delete_forgets_the_cli_session_only_for_the_same_provider() {
     let source = novels();
     let same = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -1086,7 +1192,7 @@ fn delete_forgets_the_cli_session_only_for_the_same_provider() {
     );
     let other = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;
@@ -1145,7 +1251,7 @@ fn a_knowledge_review_context_in_workspace_scope_is_invalid() {
     let fixture = fixture();
     let id = fixture
         .workspace
-        .create(workspace_scope(), &novels())
+        .create(workspace_scope(), &novels(), &projects())
         .unwrap()
         .summary
         .id;

@@ -57,7 +57,7 @@ pub fn submit_translation_review(
     let target = required_target(args)?;
     let seq = required_int(args, "chapter")?;
     let novels = sources.novels.as_ref();
-    find_novel(ctx.scope, novels, novel_id)?;
+    find_novel(ctx, novels, novel_id)?;
     let chapter = chapter_by_seq(novels, novel_id, seq)?;
     let book = sources.translation.get(novel_id, target.as_str())?;
     let translated = book
@@ -262,7 +262,7 @@ pub fn submit_knowledge_changes(
     if items.is_empty() {
         return Err("argument 'changes' must contain at least one change".to_string());
     }
-    find_novel(ctx.scope, sources.novels.as_ref(), novel_id)?;
+    find_novel(ctx, sources.novels.as_ref(), novel_id)?;
     let mut changes = Vec::new();
     let mut edits = Vec::new();
     let mut raw = Vec::new();

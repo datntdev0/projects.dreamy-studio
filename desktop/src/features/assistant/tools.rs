@@ -32,6 +32,7 @@ pub const MAX_ISSUES: usize = 50;
 
 pub struct ToolContext<'a> {
     pub scope: &'a AssistantScope,
+    pub linked_novel: Option<i64>,
     pub can_edit: bool,
     pub sink: &'a dyn TurnSink,
 }
@@ -404,29 +405,30 @@ pub fn call(
 ) -> Result<ToolOutput, String> {
     let novels = sources.novels.as_ref();
     match name {
-        "list_novel" => list_novel(ctx.scope, novels),
-        "read_novel" => read_novel(args, ctx.scope, novels),
-        "read_novel_chapter" => read_novel_chapter(args, ctx.scope, novels),
-        "read_novel_knowledge" => read_novel_knowledge(args, ctx.scope, sources),
-        "read_translation" => read_translation(args, ctx.scope, sources),
-        "read_translation_guide" => read_translation_guide(args, ctx.scope, sources),
+        "list_novel" => list_novel(ctx, novels),
+        "read_novel" => read_novel(args, ctx, novels),
+        "read_novel_chapter" => read_novel_chapter(args, ctx, novels),
+        "read_novel_knowledge" => read_novel_knowledge(args, ctx, sources),
+        "read_translation" => read_translation(args, ctx, sources),
+        "read_translation_guide" => read_translation_guide(args, ctx, sources),
         "edit_novel" => edits::edit_novel(args, ctx, novels),
         "edit_novel_chapter" => edits::edit_novel_chapter(args, ctx, novels),
         "edit_novel_knowledge" => edits::edit_novel_knowledge(args, ctx, sources),
         "edit_translation_passage" => edits::edit_translation_passage(args, ctx, sources),
         "edit_dictionary" => edits::edit_dictionary(args, ctx, sources),
-        "read_knowledge_issues" => read_knowledge_issues(args, ctx.scope, sources),
+        "read_knowledge_issues" => read_knowledge_issues(args, ctx, sources),
         "submit_translation_review" => proposals::submit_translation_review(args, ctx, sources),
         "submit_knowledge_changes" => proposals::submit_knowledge_changes(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
 
-fn list_novel(scope: &AssistantScope, source: &dyn NovelSource) -> Result<ToolOutput, String> {
+fn list_novel(ctx: &ToolContext, source: &dyn NovelSource) -> Result<ToolOutput, String> {
+    let limit = novel_limit(ctx)?;
     let novels = source.list()?;
     let items: Vec<Value> = novels
         .iter()
-        .filter(|novel| allowed(scope, novel.id))
+        .filter(|novel| allowed(limit, novel.id))
         .map(novel_json)
         .collect();
     let label = format!("list_novel() → {} novel", items.len());
@@ -435,11 +437,11 @@ fn list_novel(scope: &AssistantScope, source: &dyn NovelSource) -> Result<ToolOu
 
 fn read_novel(
     args: &Value,
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     source: &dyn NovelSource,
 ) -> Result<ToolOutput, String> {
     let novel_id = required_int(args, "novelId")?;
-    let novel = find_novel(scope, source, novel_id)?;
+    let novel = find_novel(ctx, source, novel_id)?;
     let chapters = source.chapters(novel_id)?;
     let outline: Vec<Value> = chapters.iter().map(chapter_json).collect();
     let label = format!("read_novel(novel {novel_id}) → {} chương", outline.len());
@@ -450,14 +452,14 @@ fn read_novel(
 
 fn read_novel_chapter(
     args: &Value,
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     source: &dyn NovelSource,
 ) -> Result<ToolOutput, String> {
     let novel_id = required_int(args, "novelId")?;
     let seq = required_int(args, "chapter")?;
     let from = optional_int(args, "from")?;
     let to = optional_int(args, "to")?;
-    find_novel(scope, source, novel_id)?;
+    find_novel(ctx, source, novel_id)?;
     let chapters = source.chapters(novel_id)?;
     let chapter = chapters
         .iter()
@@ -495,7 +497,7 @@ fn read_novel_chapter(
 
 fn read_novel_knowledge(
     args: &Value,
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     sources: &Sources,
 ) -> Result<ToolOutput, String> {
     let novel_id = required_int(args, "novelId")?;
@@ -509,7 +511,7 @@ fn read_novel_knowledge(
     let limit = optional_int(args, "limit")?.map_or(PAGE_ENTITIES, |value| {
         value.clamp(1, MAX_PAGE_ENTITIES as i64) as usize
     });
-    find_novel(scope, sources.novels.as_ref(), novel_id)?;
+    find_novel(ctx, sources.novels.as_ref(), novel_id)?;
     let knowledge = sources.knowledge.get(novel_id, lang.as_str())?;
     let entities: Vec<&KnowledgeEntity> = knowledge
         .items
@@ -558,7 +560,7 @@ fn read_novel_knowledge(
 
 fn read_knowledge_issues(
     args: &Value,
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     sources: &Sources,
 ) -> Result<ToolOutput, String> {
     let novel_id = required_int(args, "novelId")?;
@@ -566,7 +568,7 @@ fn read_knowledge_issues(
     let lang = parse_lang(&raw_lang).map_err(|error| error.to_string())?;
     let wanted = optional_strings(args, "issueIds")?;
     let rule = optional_str(args, "rule")?;
-    find_novel(scope, sources.novels.as_ref(), novel_id)?;
+    find_novel(ctx, sources.novels.as_ref(), novel_id)?;
     let knowledge = sources.knowledge.get(novel_id, lang.as_str())?;
     let issues = check(Ontology::get(), &knowledge.items);
     let matching: Vec<&KnowledgeIssue> = issues
@@ -640,7 +642,7 @@ fn evidence_json(evidence: &[KnowledgeEvidence]) -> Vec<Value> {
 
 fn read_translation(
     args: &Value,
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     sources: &Sources,
 ) -> Result<ToolOutput, String> {
     let novel_id = required_int(args, "novelId")?;
@@ -649,7 +651,7 @@ fn read_translation(
     let from = optional_int(args, "from")?;
     let to = optional_int(args, "to")?;
     let novels = sources.novels.as_ref();
-    find_novel(scope, novels, novel_id)?;
+    find_novel(ctx, novels, novel_id)?;
     let chapter = chapter_by_seq(novels, novel_id, seq)?;
     let rows = novels.chapter_read(novel_id, &chapter.id)?;
     let book = sources.translation.get(novel_id, target.as_str())?;
@@ -704,13 +706,13 @@ fn read_translation(
 
 fn read_translation_guide(
     args: &Value,
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     sources: &Sources,
 ) -> Result<ToolOutput, String> {
     let novel_id = required_int(args, "novelId")?;
     let target = required_target(args)?;
     let novels = sources.novels.as_ref();
-    find_novel(scope, novels, novel_id)?;
+    find_novel(ctx, novels, novel_id)?;
     let chapters = novels.chapters(novel_id)?;
     let book = sources.translation.get(novel_id, target.as_str())?;
     let dictionary: Vec<Value> = book.dict.iter().map(dict_json).collect();
@@ -844,19 +846,27 @@ fn clamp_position(value: i64, low: usize, high: usize) -> usize {
     value.clamp(low as i64, high as i64) as usize
 }
 
-fn allowed(scope: &AssistantScope, novel_id: i64) -> bool {
-    match (scope.kind, scope.novel_id) {
-        (ScopeKind::Novel, Some(id)) => id == novel_id,
-        _ => true,
+fn novel_limit(ctx: &ToolContext) -> Result<Option<i64>, String> {
+    match ctx.scope.kind {
+        ScopeKind::Workspace => Ok(None),
+        ScopeKind::Novel => Ok(ctx.scope.novel_id),
+        ScopeKind::Project => ctx
+            .linked_novel
+            .map(Some)
+            .ok_or_else(|| "the project has no linked novel".to_string()),
     }
 }
 
+fn allowed(limit: Option<i64>, novel_id: i64) -> bool {
+    limit.is_none_or(|id| id == novel_id)
+}
+
 pub(crate) fn find_novel(
-    scope: &AssistantScope,
+    ctx: &ToolContext,
     source: &dyn NovelSource,
     novel_id: i64,
 ) -> Result<NovelSummary, String> {
-    if !allowed(scope, novel_id) {
+    if !allowed(novel_limit(ctx)?, novel_id) {
         return Err(format!("novel {novel_id} is outside the current scope"));
     }
     source

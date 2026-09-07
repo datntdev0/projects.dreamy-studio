@@ -23,7 +23,7 @@ export const ASSISTANT_PROVIDER = { features: ['assistant'] } as const;
 
 export const SCOPE_WORKSPACE = 'Whole workspace';
 export const SCOPE_WORKSPACE_COUNT = '3 novels';
-export const SCOPE_NO_MATCH = 'No novels match.';
+export const SCOPE_NO_MATCH = 'No novels or projects match.';
 export const HISTORY_TITLE_TODAY = 'Today';
 export const HISTORY_TITLE_YESTERDAY = 'Yesterday';
 export const HISTORY_TITLE_WEEK = 'Previous 7 days';

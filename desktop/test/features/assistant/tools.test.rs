@@ -13,6 +13,7 @@ fn workspace() -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Workspace,
         novel_id: None,
+        project_id: None,
     }
 }
 
@@ -20,6 +21,7 @@ fn novel_scope(id: i64) -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Novel,
         novel_id: Some(id),
+        project_id: None,
     }
 }
 
@@ -53,10 +55,36 @@ fn invoke_with(
     let sink = RecordingSink::new();
     let ctx = ToolContext {
         scope,
+        linked_novel: None,
         can_edit: false,
         sink: &sink,
     };
     call(name, args, &ctx, &sources_of(novels, knowledge))
+}
+
+fn invoke_in_project(
+    name: &str,
+    args: &Value,
+    linked_novel: Option<i64>,
+    novels: &FakeNovels,
+) -> Result<ToolOutput, String> {
+    let sink = RecordingSink::new();
+    let scope = AssistantScope::project(5);
+    let ctx = ToolContext {
+        scope: &scope,
+        linked_novel,
+        can_edit: false,
+        sink: &sink,
+    };
+    call(name, args, &ctx, &sources_of(novels, &FakeKnowledge::new()))
+}
+
+fn two_novels() -> FakeNovels {
+    FakeNovels::new()
+        .with_novel(1, "First")
+        .with_chapter(1, 1, "One", &["a"])
+        .with_novel(2, "Second")
+        .with_chapter(2, 1, "One", &["b"])
 }
 
 fn run(
@@ -387,6 +415,47 @@ fn novel_scope_lists_only_its_novel() {
 }
 
 #[test]
+fn project_scope_lists_only_its_linked_novel() {
+    let output = invoke_in_project("list_novel", &json!({}), Some(2), &two_novels()).unwrap();
+    let value: Value = serde_json::from_str(&output.text).unwrap();
+    let items = value.as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["novelId"], 2);
+}
+
+#[test]
+fn project_scope_rejects_novels_other_than_the_linked_one() {
+    let source = two_novels();
+    let cases = [
+        ("read_novel", json!({"novelId": 2})),
+        ("read_novel_chapter", json!({"novelId": 2, "chapter": 1})),
+        ("read_novel_knowledge", json!({"novelId": 2, "lang": "src"})),
+        (
+            "read_translation_guide",
+            json!({"novelId": 2, "target": "VI"}),
+        ),
+    ];
+    for (name, args) in cases {
+        let error = invoke_in_project(name, &args, Some(1), &source).unwrap_err();
+        assert!(
+            error.contains("outside the current scope"),
+            "{name}: {error}"
+        );
+    }
+    let allowed = invoke_in_project("read_novel", &json!({"novelId": 1}), Some(1), &source);
+    assert!(allowed.is_ok());
+}
+
+#[test]
+fn project_scope_without_a_linked_novel_refuses_every_novel_tool() {
+    let source = two_novels();
+    let listed = invoke_in_project("list_novel", &json!({}), None, &source).unwrap_err();
+    assert!(listed.contains("no linked novel"));
+    let read = invoke_in_project("read_novel", &json!({"novelId": 1}), None, &source).unwrap_err();
+    assert!(read.contains("no linked novel"));
+}
+
+#[test]
 fn novel_scope_rejects_other_novels() {
     let source = FakeNovels::new()
         .with_novel(1, "First")
@@ -694,6 +763,7 @@ fn translation_tool(
     let sink = RecordingSink::new();
     let ctx = ToolContext {
         scope,
+        linked_novel: None,
         can_edit: false,
         sink: &sink,
     };

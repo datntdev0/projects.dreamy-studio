@@ -37,7 +37,7 @@ pub fn edit_novel(
 ) -> Result<ToolOutput, String> {
     ensure_editable(ctx)?;
     let novel_id = required_int(args, "novelId")?;
-    find_novel(ctx.scope, novels, novel_id)?;
+    find_novel(ctx, novels, novel_id)?;
     let patch = NovelPatch {
         title: optional_str(args, "title")?,
         name: optional_str(args, "name")?,
@@ -83,7 +83,7 @@ pub fn edit_novel_chapter(
     if title.as_deref().is_some_and(|text| text.trim().is_empty()) {
         return Err("argument 'title' must not be empty".to_string());
     }
-    find_novel(ctx.scope, novels, novel_id)?;
+    find_novel(ctx, novels, novel_id)?;
     let chapter = novels
         .chapters(novel_id)?
         .into_iter()
@@ -166,7 +166,7 @@ pub fn edit_novel_knowledge(
     if edits.is_empty() {
         return Err("argument 'edits' must contain at least one edit".to_string());
     }
-    find_novel(ctx.scope, sources.novels.as_ref(), novel_id)?;
+    find_novel(ctx, sources.novels.as_ref(), novel_id)?;
     let count = edits.len();
     let result = sources.knowledge.edit(novel_id, lang.as_str(), edits)?;
     ctx.sink.changed(AssistantChange {
@@ -201,7 +201,7 @@ pub fn edit_translation_passage(
     let expected = required_str(args, "expected")?;
     let text = required_str(args, "text")?;
     let novels = sources.novels.as_ref();
-    find_novel(ctx.scope, novels, novel_id)?;
+    find_novel(ctx, novels, novel_id)?;
     let chapter = chapter_by_seq(novels, novel_id, seq)?;
     let current = passage_text(sources, novel_id, target.as_str(), &chapter.id, p)?;
     if current != expected {
@@ -239,7 +239,7 @@ pub fn edit_dictionary(
     if plan.is_empty() {
         return Err("pass at least one of add, update or remove".to_string());
     }
-    find_novel(ctx.scope, sources.novels.as_ref(), novel_id)?;
+    find_novel(ctx, sources.novels.as_ref(), novel_id)?;
     let book = sources.translation.get(novel_id, target.as_str())?;
     plan.check(&book.dict)?;
     let mut done = DictionaryOutcome::default();

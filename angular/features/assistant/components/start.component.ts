@@ -5,13 +5,15 @@ import { Icon } from '@components/icon';
 import { NovelSummary } from '@features/novel/novel.models';
 import { displayName, formatCount } from '@features/novel/novel.rules';
 import { NovelService } from '@features/novel/novel.service';
+import { ProjectSummary } from '@features/project/project.models';
+import { ProjectService } from '@features/project/project.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageService } from '@shared/language/language.service';
 import { fieldValue } from '@shared/utils/dom';
 
 import { AssistantScope, AssistantSessionSummary } from '../assistant.models';
 // prettier-ignore
-import { NOVEL_SCOPES, novelScope, sameScope, scopeNovels, shortStamp, WORKSPACE_SCOPE } from '../assistant.rules';
+import { NOVEL_SCOPES, novelScope, projectScope, sameScope, scopeNovels, scopeProjects, shortStamp, WORKSPACE_SCOPE } from '../assistant.rules';
 import { AssistantService } from '../assistant.service';
 import { AssistantComposer } from './composer.component';
 
@@ -31,11 +33,13 @@ export class AssistantStart {
 
   readonly assistant = inject(AssistantService);
   readonly novels = inject(NovelService);
+  readonly projects = inject(ProjectService);
   readonly workspaceScope = WORKSPACE_SCOPE;
   readonly novelScopes = NOVEL_SCOPES;
   readonly expanded = signal(false);
   readonly query = signal('');
   readonly options = computed(this.buildOptions.bind(this));
+  readonly projectOptions = computed(this.buildProjectOptions.bind(this));
 
   isChosen(scope: AssistantScope): boolean {
     return sameScope(this.assistant.draftScope(), scope);
@@ -43,6 +47,10 @@ export class AssistantStart {
 
   isNovelChosen(novel: NovelSummary): boolean {
     return this.isChosen(novelScope(novel.id));
+  }
+
+  isProjectChosen(project: ProjectSummary): boolean {
+    return this.isChosen(projectScope(project.id));
   }
 
   toggle(): void {
@@ -60,6 +68,10 @@ export class AssistantStart {
 
   chooseNovel(novel: NovelSummary): void {
     this.choose(novelScope(novel.id));
+  }
+
+  chooseProject(project: ProjectSummary): void {
+    this.choose(projectScope(project.id));
   }
 
   onQuery(event: Event): void {
@@ -97,7 +109,23 @@ export class AssistantStart {
   currentMeta(): string {
     const scope = this.assistant.draftScope();
     const novel = scope.novelId === null ? null : this.novels.novelById(scope.novelId);
+    const project = scope.projectId === null ? null : this.projects.projectById(scope.projectId);
+    if (project) {
+      return this.projectMeta(project);
+    }
     return novel ? this.novelMeta(novel) : this.workspaceMeta();
+  }
+
+  projectMeta(project: ProjectSummary): string {
+    return this.languageService.translate('assistant.scope.projectMeta', {
+      count: project.modules.length,
+    });
+  }
+
+  projectShort(project: ProjectSummary): string {
+    return this.languageService.translate('assistant.scope.projectShort', {
+      count: project.modules.length,
+    });
   }
 
   novelMeta(novel: NovelSummary): string {
@@ -159,5 +187,13 @@ export class AssistantStart {
 
   private buildOptions(): NovelSummary[] {
     return scopeNovels(this.novels.novels(), this.query(), this.assistant.contextScope().novelId);
+  }
+
+  private buildProjectOptions(): ProjectSummary[] {
+    return scopeProjects(
+      this.projects.projects(),
+      this.query(),
+      this.assistant.contextScope().projectId,
+    );
   }
 }

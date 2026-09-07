@@ -4,13 +4,13 @@ import { TabsService } from '@layout/tabs.service';
 import { DialogService } from '@shared/dialog/dialog.service';
 import { ToastService } from '@shared/toast/toast.service';
 import { FakeIpc } from '@testing/fake-ipc';
-import { chapter, novel, session } from '@testing/fixtures';
+import { chapter, novel, project, session } from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceService } from '../workspace/workspace.service';
 import { AssistantEvent, AssistantMessage } from './assistant.models';
-import { novelScope } from './assistant.rules';
+import { novelScope, projectScope, WORKSPACE_SCOPE } from './assistant.rules';
 import { AssistantService } from './assistant.service';
 
 describe('AssistantService', () => {
@@ -22,6 +22,10 @@ describe('AssistantService', () => {
   beforeEach(async () => {
     ipc = setupApp();
     ipc.on('novel_list', [novel({ id: 1, title: 'Alpha' })]);
+    ipc.on('project_list', [
+      project({ id: 5, name: 'Audio Five' }),
+      project({ id: 6, name: 'Archived Six', archived: true }),
+    ]);
     ipc.on('novel_chapters', [chapter()]);
     ipc.on('novel_chapter_read', []);
     ipc.on('assistant_session_list', [
@@ -53,11 +57,23 @@ describe('AssistantService', () => {
   });
 
   it('resolves the context scope', () => {
-    expect(assistant.contextScope()).toEqual({ kind: 'workspace', novelId: null });
+    expect(assistant.contextScope()).toEqual(WORKSPACE_SCOPE);
     TestBed.inject(TabsService).openNovel(1, 'Alpha');
     expect(assistant.contextScope()).toEqual(novelScope(1));
     TestBed.inject(TabsService).openNovel(99, 'Missing');
-    expect(assistant.contextScope()).toEqual({ kind: 'workspace', novelId: null });
+    expect(assistant.contextScope()).toEqual(WORKSPACE_SCOPE);
+  });
+
+  it('resolves the project context scope from the active project tab', () => {
+    const tabs = TestBed.inject(TabsService);
+    tabs.openProject(5, 'Audio Five');
+    expect(assistant.contextScope()).toEqual(projectScope(5));
+    tabs.openProject(99, 'Missing');
+    expect(assistant.contextScope()).toEqual(WORKSPACE_SCOPE);
+  });
+
+  it('loads the projects together with the sessions', () => {
+    expect(ipc.called('project_list')).toBe(1);
   });
 
   it('navigates views', async () => {
@@ -258,11 +274,20 @@ describe('AssistantService', () => {
   });
 
   it('labels scopes', () => {
-    expect(assistant.scopeLabel({ kind: 'workspace', novelId: null })).toBeTruthy();
+    expect(assistant.scopeLabel(WORKSPACE_SCOPE)).toBeTruthy();
     expect(assistant.scopeLabel(novelScope(1))).toBe('Alpha');
     expect(assistant.scopeLabel(novelScope(99))).toBe('#99');
+    expect(assistant.scopeLabel(projectScope(5))).toBe('Audio Five');
+    expect(assistant.scopeLabel(projectScope(99))).toBe('#99');
     expect(assistant.scopeIcon(novelScope(1))).toBe('book');
-    expect(assistant.scopeIcon({ kind: 'workspace', novelId: null })).toBe('globe');
+    expect(assistant.scopeIcon(projectScope(5))).toBe('folder');
+    expect(assistant.scopeIcon(WORKSPACE_SCOPE)).toBe('globe');
+  });
+
+  it('sends the project scope when creating a session', async () => {
+    assistant.chooseScope(projectScope(5));
+    await assistant.send('hello');
+    expect(ipc.lastArgs('assistant_session_create')?.['scope']).toEqual(projectScope(5));
   });
 
   it('resets when the workspace changes', async () => {

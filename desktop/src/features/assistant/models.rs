@@ -8,6 +8,7 @@ use std::fmt;
 pub enum ScopeKind {
     Workspace,
     Novel,
+    Project,
 }
 
 impl ScopeKind {
@@ -15,12 +16,14 @@ impl ScopeKind {
         match self {
             ScopeKind::Workspace => "workspace",
             ScopeKind::Novel => "novel",
+            ScopeKind::Project => "project",
         }
     }
 
     pub fn parse(value: &str) -> Self {
         match value {
             "novel" => ScopeKind::Novel,
+            "project" => ScopeKind::Project,
             _ => ScopeKind::Workspace,
         }
     }
@@ -32,6 +35,34 @@ pub struct AssistantScope {
     pub kind: ScopeKind,
     #[serde(default)]
     pub novel_id: Option<i64>,
+    #[serde(default)]
+    pub project_id: Option<i64>,
+}
+
+impl AssistantScope {
+    pub fn workspace() -> Self {
+        Self {
+            kind: ScopeKind::Workspace,
+            novel_id: None,
+            project_id: None,
+        }
+    }
+
+    pub fn novel(id: i64) -> Self {
+        Self {
+            kind: ScopeKind::Novel,
+            novel_id: Some(id),
+            project_id: None,
+        }
+    }
+
+    pub fn project(id: i64) -> Self {
+        Self {
+            kind: ScopeKind::Project,
+            novel_id: None,
+            project_id: Some(id),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

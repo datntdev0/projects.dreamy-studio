@@ -1,5 +1,6 @@
 // prettier-ignore
 import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from '@features/assistant/assistant.models';
+import { novelScope, WORKSPACE_SCOPE } from '@features/assistant/assistant.rules';
 import { NovelSummary } from '@features/novel/novel.models';
 import type { Decorator } from '@storybook/angular-vite';
 
@@ -40,10 +41,6 @@ interface Turn {
 
 function ago(ms: number): string {
   return new Date(Date.now() - ms).toISOString();
-}
-
-function novelScope(novelId: number): AssistantScope {
-  return { kind: 'novel', novelId };
 }
 
 function message(id: string, turn: Turn, createdAt: string): AssistantMessage {
@@ -250,7 +247,7 @@ function seedSessions(): AssistantSession[] {
     session(
       's-workspace',
       'Tiến độ dịch toàn workspace',
-      { kind: 'workspace', novelId: null },
+      WORKSPACE_SCOPE,
       DAY_MS + 2 * HOUR_MS,
       WORKSPACE_TURNS,
     ),

@@ -8,6 +8,7 @@ fn workspace() -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Workspace,
         novel_id: None,
+        project_id: None,
     }
 }
 
@@ -34,8 +35,39 @@ fn message(role: Role, text: &str) -> AssistantMessage {
 }
 
 #[test]
+fn a_project_scope_names_the_project_and_its_linked_novel() {
+    let prompt = opening(&AssistantScope::project(3), &[], "q", &novels(), Some(7));
+    assert!(prompt.contains(
+        "- Focus on the project with id 3.
+"
+    ));
+    assert!(prompt.contains("linked to the novel with id 7"));
+    assert!(!prompt.contains("Focus on the novel"));
+}
+
+#[test]
+fn a_project_scope_without_a_linked_novel_says_so() {
+    let prompt = opening(&AssistantScope::project(3), &[], "q", &novels(), None);
+    assert!(prompt.contains(
+        "- Focus on the project with id 3.
+"
+    ));
+    assert!(prompt.contains("no linked novel"));
+}
+
+#[test]
+fn a_novel_scope_keeps_its_focus_line_and_has_no_project_line() {
+    let prompt = opening(&AssistantScope::novel(7), &[], "q", &novels(), None);
+    assert!(prompt.contains(
+        "- Focus on the novel with id 7.
+"
+    ));
+    assert!(!prompt.contains("Focus on the project"));
+}
+
+#[test]
 fn opening_names_tools_rules_and_format() {
-    let prompt = opening(&workspace(), &[], "Hello?", &novels());
+    let prompt = opening(&workspace(), &[], "Hello?", &novels(), None);
     assert!(prompt.contains("list_novel"));
     assert!(prompt.contains("read_novel"));
     assert!(prompt.contains("read_novel_chapter"));
@@ -59,14 +91,14 @@ fn opening_names_tools_rules_and_format() {
 
 #[test]
 fn opening_lists_novels_with_display_name_and_chapters() {
-    let prompt = opening(&workspace(), &[], "q", &novels());
+    let prompt = opening(&workspace(), &[], "q", &novels(), None);
     assert!(prompt.contains("id 7: Seven name (2 chapters)"));
     assert!(prompt.contains("id 9: Nine name (0 chapters)"));
 }
 
 #[test]
 fn opening_handles_empty_workspace() {
-    let prompt = opening(&workspace(), &[], "q", &[]);
+    let prompt = opening(&workspace(), &[], "q", &[], None);
     assert!(prompt.contains("(no novels)"));
 }
 
@@ -76,7 +108,7 @@ fn opening_includes_history_when_given() {
         message(Role::User, "first question"),
         message(Role::Assistant, "first answer"),
     ];
-    let prompt = opening(&workspace(), &history, "next", &novels());
+    let prompt = opening(&workspace(), &history, "next", &novels(), None);
     assert!(prompt.contains("Conversation so far"));
     assert!(prompt.contains("User: first question"));
     assert!(prompt.contains("Assistant: first answer"));
@@ -85,14 +117,20 @@ fn opening_includes_history_when_given() {
 
 #[test]
 fn opening_omits_history_section_when_empty() {
-    let prompt = opening(&workspace(), &[], "next", &novels());
+    let prompt = opening(&workspace(), &[], "next", &novels(), None);
     assert!(!prompt.contains("Conversation so far"));
 }
 
 #[test]
 fn opening_truncates_long_history_messages() {
     let long = "x".repeat(2_000);
-    let prompt = opening(&workspace(), &[message(Role::User, &long)], "q", &novels());
+    let prompt = opening(
+        &workspace(),
+        &[message(Role::User, &long)],
+        "q",
+        &novels(),
+        None,
+    );
     assert!(prompt.contains(&format!("{}…", "x".repeat(600))));
     assert!(!prompt.contains(&"x".repeat(601)));
 }

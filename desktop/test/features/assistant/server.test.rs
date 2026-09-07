@@ -1,10 +1,12 @@
 use super::*;
 use crate::features::assistant::models::AssistantScope;
-use crate::features::assistant::models::ScopeKind;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeProjects;
+use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::RecordingSink;
-use crate::testing::assistant::sources_of;
+use crate::testing::assistant::project_summary;
+use crate::testing::assistant::sources_with_projects;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
@@ -23,7 +25,14 @@ impl McpHost for FakeHost {
             &["first", "second"],
         );
         let knowledge = FakeKnowledge::new().with_entity("e1", "persona", "Lan", &[], &[], &[1]);
-        Ok(sources_of(&novels, &knowledge))
+        let projects =
+            FakeProjects::with(vec![project_summary(5, Some(1)), project_summary(6, None)]);
+        Ok(sources_with_projects(
+            &novels,
+            &knowledge,
+            &FakeTranslation::new(),
+            &projects,
+        ))
     }
 }
 
@@ -45,12 +54,13 @@ impl Fixture {
     }
 
     fn issue(&self, workspace: &str) -> String {
+        self.issue_scoped(workspace, AssistantScope::workspace())
+    }
+
+    fn issue_scoped(&self, workspace: &str, scope: AssistantScope) -> String {
         self.grants.issue(Grant {
             workspace: workspace.to_string(),
-            scope: AssistantScope {
-                kind: ScopeKind::Workspace,
-                novel_id: None,
-            },
+            scope,
             can_edit: false,
             sink: self.sink.clone(),
         })
@@ -209,6 +219,72 @@ fn a_tool_call_returns_json_and_records_the_activity() {
     let labels = fixture.sink.labels();
     assert_eq!(labels.len(), 1);
     assert!(labels[0].starts_with("list_novel"));
+}
+
+#[test]
+fn a_project_grant_reaches_the_linked_novel_only() {
+    let fixture = Fixture::new();
+    let token = fixture.issue_scoped("ws", AssistantScope::project(5));
+    let (status, body) = fixture.post(
+        Some(&token),
+        &json!({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"read_novel","arguments":{"novelId":1}}}),
+    );
+    assert_eq!(status, 200);
+    let value = parsed(&body);
+    assert_eq!(value["result"]["isError"], false);
+    assert!(
+        value["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Alpha")
+    );
+    let (_, other) = fixture.post(
+        Some(&token),
+        &json!({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"read_novel","arguments":{"novelId":2}}}),
+    );
+    let refused = parsed(&other);
+    assert_eq!(refused["result"]["isError"], true);
+    assert!(
+        refused["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("outside the current scope")
+    );
+}
+
+#[test]
+fn a_project_grant_without_a_linked_novel_is_a_tool_error() {
+    let fixture = Fixture::new();
+    let token = fixture.issue_scoped("ws", AssistantScope::project(6));
+    let (_, body) = fixture.post(
+        Some(&token),
+        &json!({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"list_novel","arguments":{}}}),
+    );
+    let value = parsed(&body);
+    assert_eq!(value["result"]["isError"], true);
+    assert!(
+        value["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("no linked novel")
+    );
+    assert!(fixture.sink.labels().is_empty());
+}
+
+#[test]
+fn a_project_grant_for_a_vanished_project_is_a_tool_error() {
+    let fixture = Fixture::new();
+    let token = fixture.issue_scoped("ws", AssistantScope::project(99));
+    let (_, body) = fixture.post(
+        Some(&token),
+        &json!({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"list_novel","arguments":{}}}),
+    );
+    let value = parsed(&body);
+    assert_eq!(value["result"]["isError"], true);
+    assert_eq!(
+        value["result"]["content"][0]["text"],
+        "project 99 not found"
+    );
 }
 
 #[test]

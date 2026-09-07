@@ -38,6 +38,7 @@ fn record(id: &str, count: i64, updated_at: &str) -> SessionRecord {
             scope: AssistantScope {
                 kind: ScopeKind::Workspace,
                 novel_id: None,
+                project_id: None,
             },
             created_at: "2026-11-01T00:00:00+00:00".to_string(),
             updated_at: updated_at.to_string(),
@@ -72,6 +73,7 @@ fn round_trips_a_session_record() {
     stored.summary.scope = AssistantScope {
         kind: ScopeKind::Novel,
         novel_id: Some(7),
+        project_id: None,
     };
     repo.insert_session(&stored).unwrap();
     assert_eq!(repo.find("s1").unwrap(), Some(stored.clone()));
@@ -84,6 +86,23 @@ fn round_trips_a_session_record() {
     stored.cli_session = None;
     repo.update_session(&stored).unwrap();
     assert_eq!(repo.find("s1").unwrap(), Some(stored));
+}
+
+#[test]
+fn round_trips_the_project_scope_and_lists_it() {
+    let fixture = fixture();
+    let repo = AssistantRepository::new(fixture.database.connection());
+    let mut stored = record("s1", 1, "2026-11-01T00:00:00+00:00");
+    stored.summary.scope = AssistantScope::project(4);
+    repo.insert_session(&stored).unwrap();
+    assert_eq!(repo.find("s1").unwrap(), Some(stored.clone()));
+    assert_eq!(repo.list().unwrap()[0].scope, AssistantScope::project(4));
+    stored.summary.scope = AssistantScope::project(8);
+    repo.update_session(&stored).unwrap();
+    assert_eq!(
+        repo.find("s1").unwrap().unwrap().summary.scope,
+        AssistantScope::project(8)
+    );
 }
 
 #[test]
@@ -281,7 +300,7 @@ fn serializes_session_in_wire_format() {
     assert_eq!(value["editGranted"], false);
     assert_eq!(
         value["scope"],
-        json!({"kind": "workspace", "novelId": null})
+        json!({"kind": "workspace", "novelId": null, "projectId": null})
     );
     assert_eq!(value["messages"][0]["role"], "user");
     assert_eq!(

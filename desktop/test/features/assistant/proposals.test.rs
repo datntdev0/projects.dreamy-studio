@@ -20,6 +20,7 @@ fn workspace() -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Workspace,
         novel_id: None,
+        project_id: None,
     }
 }
 
@@ -27,6 +28,7 @@ fn novel_scope(id: i64) -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Novel,
         novel_id: Some(id),
+        project_id: None,
     }
 }
 
@@ -91,6 +93,7 @@ fn submit_in(scope: &AssistantScope, can_edit: bool, args: &Value) -> Run {
     let translation = translation();
     let ctx = ToolContext {
         scope,
+        linked_novel: None,
         can_edit,
         sink: &sink,
     };
@@ -265,6 +268,7 @@ fn every_submit_attaches_so_the_collector_can_keep_the_last_one() {
     let scope = workspace();
     let ctx = ToolContext {
         scope: &scope,
+        linked_novel: None,
         can_edit: false,
         sink: &sink,
     };
@@ -717,6 +721,7 @@ fn submit_changes_in(scope: &AssistantScope, knowledge: FakeKnowledge, args: &Va
     let sink = RecordingSink::new();
     let ctx = ToolContext {
         scope,
+        linked_novel: None,
         can_edit: false,
         sink: &sink,
     };

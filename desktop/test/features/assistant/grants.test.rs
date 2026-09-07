@@ -10,6 +10,7 @@ fn grant(workspace: &str, sink: Arc<RecordingSink>) -> Grant {
         scope: AssistantScope {
             kind: ScopeKind::Workspace,
             novel_id: None,
+            project_id: None,
         },
         can_edit: false,
         sink,

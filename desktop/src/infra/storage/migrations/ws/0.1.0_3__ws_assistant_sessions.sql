@@ -9,6 +9,7 @@ CREATE TABLE ws_assistant_sessions (
     preview TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    edit_granted INTEGER NOT NULL DEFAULT 0
+    edit_granted INTEGER NOT NULL DEFAULT 0,
+    project_id INTEGER
 );
 CREATE INDEX ix_ws_assistant_sessions_updated ON ws_assistant_sessions (updated_at);

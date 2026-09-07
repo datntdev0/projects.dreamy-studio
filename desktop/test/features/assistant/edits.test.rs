@@ -16,6 +16,7 @@ fn workspace() -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Workspace,
         novel_id: None,
+        project_id: None,
     }
 }
 
@@ -23,6 +24,7 @@ fn novel_scope(id: i64) -> AssistantScope {
     AssistantScope {
         kind: ScopeKind::Novel,
         novel_id: Some(id),
+        project_id: None,
     }
 }
 
@@ -44,6 +46,7 @@ fn invoke(
     let sink = RecordingSink::new();
     let ctx = ToolContext {
         scope,
+        linked_novel: None,
         can_edit,
         sink: &sink,
     };
@@ -417,6 +420,7 @@ fn translation_edit(
     let sink = RecordingSink::new();
     let ctx = ToolContext {
         scope,
+        linked_novel: None,
         can_edit,
         sink: &sink,
     };

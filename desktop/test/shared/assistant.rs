@@ -6,6 +6,7 @@ use crate::features::assistant::models::AssistantEventSink;
 use crate::features::assistant::service::AssistantLlm;
 use crate::features::assistant::sources::KnowledgeSource;
 use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::TranslationSource;
 use crate::features::knowledge::models::KnowledgeEdit;
@@ -21,6 +22,7 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::pipeline::llm::Turn;
+use crate::features::project::models::ProjectSummary;
 use crate::features::translation::models::DictEntry;
 use crate::features::translation::models::DictInput;
 use crate::features::translation::models::DictPatch;
@@ -847,10 +849,60 @@ pub fn sources_with(
     knowledge: &FakeKnowledge,
     translation: &FakeTranslation,
 ) -> Sources {
+    sources_with_projects(novels, knowledge, translation, &FakeProjects::new())
+}
+
+pub fn sources_with_projects(
+    novels: &FakeNovels,
+    knowledge: &FakeKnowledge,
+    translation: &FakeTranslation,
+    projects: &FakeProjects,
+) -> Sources {
     Sources {
         novels: Box::new(novels.clone()),
         knowledge: Box::new(knowledge.clone()),
         translation: Box::new(translation.clone()),
+        projects: Box::new(projects.clone()),
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct FakeProjects {
+    projects: Vec<ProjectSummary>,
+}
+
+impl FakeProjects {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with(projects: Vec<ProjectSummary>) -> Self {
+        Self { projects }
+    }
+}
+
+impl ProjectSource for FakeProjects {
+    fn list(&self) -> Result<Vec<ProjectSummary>, String> {
+        Ok(self.projects.clone())
+    }
+}
+
+pub fn project_summary(id: i64, novel_id: Option<i64>) -> ProjectSummary {
+    ProjectSummary {
+        id,
+        name: format!("Project {id}"),
+        folder: format!("project-{id}"),
+        template: "audiobook".to_string(),
+        description: String::new(),
+        novel_id,
+        novel_missing: false,
+        src_kind: None,
+        src_lang: None,
+        archived: false,
+        modules: Vec::new(),
+        created_at: "2026-11-01T00:00:00+00:00".to_string(),
+        updated_at: "2026-11-01T00:00:00+00:00".to_string(),
+        opened_at: "2026-11-01T00:00:00+00:00".to_string(),
     }
 }
 

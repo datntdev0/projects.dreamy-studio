@@ -175,3 +175,38 @@ fn a_decision_parses_only_applied_and_rejected() {
     assert_eq!(Decision::Applied.as_str(), "applied");
     assert_eq!(Decision::Rejected.as_str(), "rejected");
 }
+
+#[test]
+fn scope_kinds_parse_and_print_their_names() {
+    for (kind, name) in [
+        (ScopeKind::Workspace, "workspace"),
+        (ScopeKind::Novel, "novel"),
+        (ScopeKind::Project, "project"),
+    ] {
+        assert_eq!(kind.as_str(), name);
+        assert_eq!(ScopeKind::parse(name), kind);
+    }
+    assert_eq!(ScopeKind::parse("unknown"), ScopeKind::Workspace);
+}
+
+#[test]
+fn a_project_scope_round_trips_in_camel_case() {
+    let scope = AssistantScope::project(7);
+
+    let value = serde_json::to_value(&scope).unwrap();
+    let parsed: AssistantScope = serde_json::from_value(value.clone()).unwrap();
+
+    assert_eq!(
+        value,
+        json!({ "kind": "project", "novelId": null, "projectId": 7 })
+    );
+    assert_eq!(parsed, scope);
+}
+
+#[test]
+fn a_scope_without_a_project_id_still_deserializes() {
+    let parsed: AssistantScope =
+        serde_json::from_value(json!({ "kind": "novel", "novelId": 3 })).unwrap();
+
+    assert_eq!(parsed, AssistantScope::novel(3));
+}

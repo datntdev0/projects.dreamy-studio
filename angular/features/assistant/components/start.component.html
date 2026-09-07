@@ -143,10 +143,43 @@
                     }
                   </button>
                 }
+                @for (project of projectOptions(); track project.id) {
+                  <button
+                    type="button"
+                    role="option"
+                    class="asst-pick-opt"
+                    [class.is-active]="isProjectChosen(project)"
+                    [attr.aria-selected]="isProjectChosen(project)"
+                    [attr.title]="project.name"
+                    data-nav
+                    [attr.data-scope]="'project-' + project.id"
+                    data-testid="assistant-scope-option"
+                    (click)="chooseProject(project)"
+                  >
+                    <ds-icon name="folder" [size]="14" />
+                    <span class="asst-pick-name" data-testid="assistant-scope-option-name">
+                      {{ project.name }}
+                    </span>
+                    <span
+                      class="asst-pick-meta t-sm t-mute"
+                      data-testid="assistant-scope-option-meta"
+                    >
+                      {{ projectShort(project) }}
+                    </span>
+                    @if (isProjectChosen(project)) {
+                      <ds-icon name="check" [size]="14" />
+                    }
+                  </button>
+                }
               </div>
             }
           </div>
-          @if (novelScopes && options().length === 0 && query().trim() !== '') {
+          @if (
+            novelScopes &&
+            options().length === 0 &&
+            projectOptions().length === 0 &&
+            query().trim() !== ''
+          ) {
             <p
               class="asst-pick-empty t-sm t-mute"
               role="status"

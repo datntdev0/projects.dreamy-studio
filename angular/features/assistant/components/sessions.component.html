@@ -51,6 +51,14 @@
           {{ nameOf(novel) }}
         </option>
       }
+      @for (project of projects.projects(); track project.id) {
+        <option
+          [value]="'project-' + project.id"
+          [selected]="filterValue() === 'project-' + project.id"
+        >
+          {{ project.name }}
+        </option>
+      }
     </select>
   </div>
   <div class="asst-body asst-list" data-testid="assistant-sessions-body">

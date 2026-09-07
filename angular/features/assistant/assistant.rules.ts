@@ -1,21 +1,54 @@
 import { NovelSummary } from '@features/novel/novel.models';
 import { displayName, formatMonthDay, formatStamp } from '@features/novel/novel.rules';
+import { ProjectSummary } from '@features/project/project.models';
 import { marked } from 'marked';
 
-import { AssistantScope, AssistantScopeFilter, AssistantSessionSummary } from './assistant.models';
+// prettier-ignore
+import { AssistantScope, AssistantScopeFilter, AssistantScopeTarget, AssistantSessionSummary } from './assistant.models';
 
 export const RECENT_SESSIONS = 3;
 
 export const NOVEL_SCOPES = true;
 
-export const WORKSPACE_SCOPE: AssistantScope = { kind: 'workspace', novelId: null };
+export const WORKSPACE_SCOPE: AssistantScope = {
+  kind: 'workspace',
+  novelId: null,
+  projectId: null,
+};
+
+const SCOPED_FILTER = /^(novel|project)-(\d+)$/;
 
 export function novelScope(novelId: number): AssistantScope {
-  return { kind: 'novel', novelId };
+  return { kind: 'novel', novelId, projectId: null };
+}
+
+export function projectScope(projectId: number): AssistantScope {
+  return { kind: 'project', novelId: null, projectId };
 }
 
 export function sameScope(left: AssistantScope, right: AssistantScope): boolean {
-  return left.kind === right.kind && left.novelId === right.novelId;
+  return (
+    left.kind === right.kind && left.novelId === right.novelId && left.projectId === right.projectId
+  );
+}
+
+export function scopeTargetId(scope: AssistantScope): number | null {
+  if (scope.kind === 'novel') {
+    return scope.novelId;
+  }
+  return scope.kind === 'project' ? scope.projectId : null;
+}
+
+export function scopeFilterValue(filter: AssistantScopeFilter): string {
+  return typeof filter === 'string' ? filter : `${filter.kind}-${filter.id}`;
+}
+
+export function parseScopeFilter(value: string): AssistantScopeFilter {
+  const match = SCOPED_FILTER.exec(value);
+  if (match) {
+    return { kind: match[1] as AssistantScopeTarget['kind'], id: Number(match[2]) };
+  }
+  return value === 'workspace' ? 'workspace' : 'all';
 }
 
 export function matchesNovelQuery(query: string, novel: NovelSummary): boolean {
@@ -27,12 +60,29 @@ export function matchesNovelQuery(query: string, novel: NovelSummary): boolean {
   );
 }
 
-function compareNovelRecent(left: NovelSummary, right: NovelSummary): number {
+export function matchesProjectQuery(query: string, project: ProjectSummary): boolean {
+  const needle = query.trim().toLowerCase();
+  return needle === '' || project.name.toLowerCase().includes(needle);
+}
+
+function isActiveProject(project: ProjectSummary): boolean {
+  return !project.archived;
+}
+
+function compareUpdatedFirst<T extends { updatedAt: string }>(left: T, right: T): number {
   return right.updatedAt.localeCompare(left.updatedAt);
 }
 
-function hasNovelId(novelId: number | null, novel: NovelSummary): boolean {
-  return novel.id === novelId;
+function hasId(id: number | null, item: { id: number }): boolean {
+  return item.id === id;
+}
+
+function contextFirst<T extends { id: number }>(items: T[], contextId: number | null): T[] {
+  const index = items.findIndex(hasId.bind(null, contextId));
+  if (index > 0) {
+    items.unshift(...items.splice(index, 1));
+  }
+  return items;
 }
 
 export function scopeNovels(
@@ -40,12 +90,20 @@ export function scopeNovels(
   query: string,
   contextNovelId: number | null,
 ): NovelSummary[] {
-  const sorted = novels.filter(matchesNovelQuery.bind(null, query)).sort(compareNovelRecent);
-  const index = sorted.findIndex(hasNovelId.bind(null, contextNovelId));
-  if (index > 0) {
-    sorted.unshift(...sorted.splice(index, 1));
-  }
-  return sorted;
+  const sorted = novels.filter(matchesNovelQuery.bind(null, query)).sort(compareUpdatedFirst);
+  return contextFirst(sorted, contextNovelId);
+}
+
+export function scopeProjects(
+  projects: ProjectSummary[],
+  query: string,
+  contextProjectId: number | null,
+): ProjectSummary[] {
+  const sorted = projects
+    .filter(isActiveProject)
+    .filter(matchesProjectQuery.bind(null, query))
+    .sort(compareUpdatedFirst);
+  return contextFirst(sorted, contextProjectId);
 }
 
 export function compareRecentFirst(
@@ -65,7 +123,7 @@ export function matchesScopeFilter(
   if (filter === 'workspace') {
     return session.scope.kind === 'workspace';
   }
-  return session.scope.kind === 'novel' && session.scope.novelId === filter;
+  return session.scope.kind === filter.kind && scopeTargetId(session.scope) === filter.id;
 }
 
 export function matchesSessionQuery(session: AssistantSessionSummary, query: string): boolean {

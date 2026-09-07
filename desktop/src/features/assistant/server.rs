@@ -3,6 +3,7 @@ use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::protocol;
 use crate::features::assistant::protocol::ToolCaller;
 use crate::features::assistant::sources::Sources;
+use crate::features::assistant::sources::linked_novel;
 use crate::features::assistant::tools;
 use crate::features::assistant::tools::ToolContext;
 use serde_json::Value;
@@ -91,6 +92,7 @@ impl ToolCaller for GrantCaller<'_> {
         let sources = self.host.open(self.grant)?;
         let ctx = ToolContext {
             scope: &self.grant.scope,
+            linked_novel: linked_novel(&self.grant.scope, sources.projects.as_ref())?,
             can_edit: self.grant.can_edit,
             sink: self.grant.sink.as_ref(),
         };

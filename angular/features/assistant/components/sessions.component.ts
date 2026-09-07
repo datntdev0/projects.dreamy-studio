@@ -4,12 +4,14 @@ import { Icon } from '@components/icon';
 import { NovelSummary } from '@features/novel/novel.models';
 import { displayName } from '@features/novel/novel.rules';
 import { NovelService } from '@features/novel/novel.service';
+import { ProjectService } from '@features/project/project.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 import { fieldValue } from '@shared/utils/dom';
 
 import { AssistantScopeFilter, AssistantSessionSummary } from '../assistant.models';
-import { dayKey, matchesScopeFilter, matchesSessionQuery, shortStamp } from '../assistant.rules';
+// prettier-ignore
+import { dayKey, matchesScopeFilter, matchesSessionQuery, parseScopeFilter, scopeFilterValue, shortStamp } from '../assistant.rules';
 import { AssistantService } from '../assistant.service';
 import { AssistantPaneHeader } from './pane-header.component';
 
@@ -39,6 +41,7 @@ const DAY_KEYS: Record<DayGroup, LanguageKey> = {
 export class AssistantSessions {
   readonly assistant = inject(AssistantService);
   readonly novels = inject(NovelService);
+  readonly projects = inject(ProjectService);
   readonly query = signal('');
   readonly filter = signal<AssistantScopeFilter>('all');
   readonly visible = computed(this.buildVisible.bind(this));
@@ -50,8 +53,7 @@ export class AssistantSessions {
   }
 
   filterValue(): string {
-    const filter = this.filter();
-    return typeof filter === 'number' ? `novel-${filter}` : filter;
+    return scopeFilterValue(this.filter());
   }
 
   stampOf(session: AssistantSessionSummary): string {
@@ -67,10 +69,7 @@ export class AssistantSessions {
   }
 
   onFilter(event: Event): void {
-    const value = fieldValue(event);
-    this.filter.set(
-      value.startsWith('novel-') ? Number(value.slice(6)) : (value as AssistantScopeFilter),
-    );
+    this.filter.set(parseScopeFilter(fieldValue(event)));
   }
 
   clearFilters(): void {

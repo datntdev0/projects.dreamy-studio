@@ -1,14 +1,20 @@
-export type AssistantScopeKind = 'workspace' | 'novel';
+export type AssistantScopeKind = 'workspace' | 'novel' | 'project';
 
 export type AssistantRole = 'user' | 'assistant';
 
 export type AssistantView = 'start' | 'sessions' | 'chat';
 
-export type AssistantScopeFilter = 'all' | 'workspace' | number;
+export interface AssistantScopeTarget {
+  kind: 'novel' | 'project';
+  id: number;
+}
+
+export type AssistantScopeFilter = 'all' | 'workspace' | AssistantScopeTarget;
 
 export interface AssistantScope {
   kind: AssistantScopeKind;
   novelId: number | null;
+  projectId: number | null;
 }
 
 export interface AssistantCitation {

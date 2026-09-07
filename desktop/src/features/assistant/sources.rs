@@ -1,3 +1,5 @@
+use crate::features::assistant::models::AssistantScope;
+use crate::features::assistant::models::ScopeKind;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::WireKnowledge;
@@ -7,6 +9,8 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::novel::service::NovelWorkspace;
+use crate::features::project::models::ProjectSummary;
+use crate::features::project::service::ProjectWorkspace;
 use crate::features::translation::models::DictInput;
 use crate::features::translation::models::DictPatch;
 use crate::features::translation::service::ChapterTranslation;
@@ -66,10 +70,35 @@ pub trait TranslationSource {
     fn dict_delete(&self, novel_id: i64, id: i64) -> Result<(), String>;
 }
 
+pub trait ProjectSource {
+    fn list(&self) -> Result<Vec<ProjectSummary>, String>;
+
+    fn get(&self, project_id: i64) -> Result<Option<ProjectSummary>, String> {
+        Ok(self
+            .list()?
+            .into_iter()
+            .find(|project| project.id == project_id))
+    }
+}
+
 pub struct Sources {
     pub novels: Box<dyn NovelSource>,
     pub knowledge: Box<dyn KnowledgeSource>,
     pub translation: Box<dyn TranslationSource>,
+    pub projects: Box<dyn ProjectSource>,
+}
+
+pub fn linked_novel(
+    scope: &AssistantScope,
+    projects: &dyn ProjectSource,
+) -> Result<Option<i64>, String> {
+    let (ScopeKind::Project, Some(project_id)) = (scope.kind, scope.project_id) else {
+        return Ok(None);
+    };
+    let project = projects
+        .get(project_id)?
+        .ok_or_else(|| format!("project {project_id} not found"))?;
+    Ok(project.novel_id)
 }
 
 impl NovelSource for NovelWorkspace {
@@ -169,6 +198,12 @@ impl TranslationSource for TranslationWorkspace {
 
     fn dict_delete(&self, novel_id: i64, id: i64) -> Result<(), String> {
         TranslationWorkspace::dict_delete(self, novel_id, id).map_err(|error| error.to_string())
+    }
+}
+
+impl ProjectSource for ProjectWorkspace {
+    fn list(&self) -> Result<Vec<ProjectSummary>, String> {
+        ProjectWorkspace::list(self).map_err(|error| error.to_string())
     }
 }
 

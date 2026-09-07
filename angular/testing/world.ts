@@ -204,7 +204,7 @@ export function worldSession(
     preview: 'Here is',
     editGranted: true,
     messages,
-    scope: { kind: 'novel', novelId: 1 },
+    scope: { kind: 'novel', novelId: 1, projectId: null },
     ...overrides,
   });
 }
@@ -645,7 +645,7 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
     worldSession('s1'),
     worldSession('s2', {
       title: 'Second',
-      scope: { kind: 'workspace', novelId: null },
+      scope: { kind: 'workspace', novelId: null, projectId: null },
       editGranted: false,
     }),
   ]);

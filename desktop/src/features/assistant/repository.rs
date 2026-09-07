@@ -11,8 +11,8 @@ use rusqlite::Row;
 use rusqlite::params;
 use serde::de::DeserializeOwned;
 
-const SESSION_COLUMNS: &str =
-    "id, title, scope_kind, novel_id, message_count, preview, created_at, updated_at, edit_granted";
+const SESSION_COLUMNS: &str = "id, title, scope_kind, novel_id, project_id, message_count, \
+     preview, created_at, updated_at, edit_granted";
 
 pub struct AssistantRepository<'a> {
     conn: &'a Connection,
@@ -27,14 +27,15 @@ impl<'a> AssistantRepository<'a> {
         let summary = &record.summary;
         self.conn.execute(
             "INSERT INTO ws_assistant_sessions \
-             (id, title, scope_kind, novel_id, provider, cli_session, message_count, preview, \
-              created_at, updated_at, edit_granted) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             (id, title, scope_kind, novel_id, project_id, provider, cli_session, message_count, \
+              preview, created_at, updated_at, edit_granted) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 summary.id,
                 summary.title,
                 summary.scope.kind.as_str(),
                 summary.scope.novel_id,
+                summary.scope.project_id,
                 record.provider,
                 record.cli_session,
                 summary.message_count,
@@ -51,14 +52,16 @@ impl<'a> AssistantRepository<'a> {
         let summary = &record.summary;
         self.conn.execute(
             "UPDATE ws_assistant_sessions \
-             SET title = ?2, scope_kind = ?3, novel_id = ?4, provider = ?5, cli_session = ?6, \
-                 message_count = ?7, preview = ?8, updated_at = ?9, edit_granted = ?10 \
+             SET title = ?2, scope_kind = ?3, novel_id = ?4, project_id = ?5, provider = ?6, \
+                 cli_session = ?7, message_count = ?8, preview = ?9, updated_at = ?10, \
+                 edit_granted = ?11 \
              WHERE id = ?1",
             params![
                 summary.id,
                 summary.title,
                 summary.scope.kind.as_str(),
                 summary.scope.novel_id,
+                summary.scope.project_id,
                 record.provider,
                 record.cli_session,
                 summary.message_count,
@@ -90,8 +93,8 @@ impl<'a> AssistantRepository<'a> {
                 |row| {
                     Ok(SessionRecord {
                         summary: row_to_summary(row)?,
-                        provider: row.get(9)?,
-                        cli_session: row.get(10)?,
+                        provider: row.get(10)?,
+                        cli_session: row.get(11)?,
                     })
                 },
             )
@@ -189,12 +192,13 @@ fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<AssistantSessionSummary> {
         scope: AssistantScope {
             kind: ScopeKind::parse(&kind),
             novel_id: row.get(3)?,
+            project_id: row.get(4)?,
         },
-        message_count: row.get(4)?,
-        preview: row.get(5)?,
-        created_at: row.get(6)?,
-        updated_at: row.get(7)?,
-        edit_granted: row.get(8)?,
+        message_count: row.get(5)?,
+        preview: row.get(6)?,
+        created_at: row.get(7)?,
+        updated_at: row.get(8)?,
+        edit_granted: row.get(9)?,
     })
 }
 

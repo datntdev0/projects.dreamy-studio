@@ -15,6 +15,8 @@ use crate::features::assistant::sources::Sources;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
+use crate::features::project::models::ProjectError;
+use crate::features::project::service::ProjectService;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::session::WorkspaceSession;
 use serde_json::Value;
@@ -41,39 +43,51 @@ impl<R: Runtime> McpHost for AppMcpHost<R> {
         let novels = self.0.state::<NovelService>();
         let knowledge = self.0.state::<KnowledgeService>();
         let translation = self.0.state::<TranslationService>();
+        let projects = self.0.state::<ProjectService>();
         let session = self.0.state::<WorkspaceSession>();
-        open_sources(&novels, &knowledge, &translation, &session, grant)
+        let services = SourceServices {
+            novels: &novels,
+            knowledge: &knowledge,
+            translation: &translation,
+            projects: &projects,
+        };
+        open_sources(&services, &session, grant)
     }
 }
 
 pub fn open_sources(
-    novels: &NovelService,
-    knowledge: &KnowledgeService,
-    translation: &TranslationService,
+    services: &SourceServices,
     session: &WorkspaceSession,
     grant: &Grant,
 ) -> Result<Sources, String> {
     if !session.is_current(&grant.workspace) {
         return Err(WORKSPACE_CLOSED.to_string());
     }
-    build_sources(novels, knowledge, translation, session)
+    build_sources(services, session)
 }
 
-fn build_sources(
-    novels: &NovelService,
-    knowledge: &KnowledgeService,
-    translation: &TranslationService,
-    session: &WorkspaceSession,
-) -> Result<Sources, String> {
-    let novels = novels.open(session).map_err(|error| error.to_string())?;
-    let knowledge = knowledge.open(session).map_err(|error| error.to_string())?;
-    let translation = translation
+fn build_sources(services: &SourceServices, session: &WorkspaceSession) -> Result<Sources, String> {
+    let novels = services
+        .novels
+        .open(session)
+        .map_err(|error| error.to_string())?;
+    let knowledge = services
+        .knowledge
+        .open(session)
+        .map_err(|error| error.to_string())?;
+    let translation = services
+        .translation
+        .open(session)
+        .map_err(|error| error.to_string())?;
+    let projects = services
+        .projects
         .open(session)
         .map_err(|error| error.to_string())?;
     Ok(Sources {
         novels: Box::new(novels),
         knowledge: Box::new(knowledge),
         translation: Box::new(translation),
+        projects: Box::new(projects),
     })
 }
 
@@ -95,12 +109,14 @@ pub fn get_session(
 pub fn create_session(
     service: &AssistantService,
     novels: &NovelService,
+    projects: &ProjectService,
     session: &WorkspaceSession,
     scope: AssistantScope,
 ) -> AssistantResult<AssistantSession> {
     let workspace = service.open(session)?;
-    let source = novels.open(session).map_err(novel_failure)?;
-    workspace.create(scope, &source)
+    let novel_source = novels.open(session).map_err(novel_failure)?;
+    let project_source = projects.open(session).map_err(project_failure)?;
+    workspace.create(scope, &novel_source, &project_source)
 }
 
 pub fn permit_session(
@@ -130,6 +146,7 @@ pub struct SourceServices<'a> {
     pub novels: &'a NovelService,
     pub knowledge: &'a KnowledgeService,
     pub translation: &'a TranslationService,
+    pub projects: &'a ProjectService,
 }
 
 pub fn send_message(
@@ -141,13 +158,7 @@ pub fn send_message(
 ) -> AssistantResult<AssistantSession> {
     let workspace = service.open(session)?;
     let context = parse_context(input.context)?;
-    let sources = build_sources(
-        services.novels,
-        services.knowledge,
-        services.translation,
-        session,
-    )
-    .map_err(AssistantError::storage)?;
+    let sources = build_sources(services, session).map_err(AssistantError::storage)?;
     workspace.send(input.session_id, input.text, context, sink, &sources)
 }
 
@@ -167,13 +178,7 @@ pub fn resolve_proposal(
     let workspace = service.open(session)?;
     let status = Decision::parse(input.status)
         .ok_or_else(|| AssistantError::invalid(format!("unknown decision '{}'", input.status)))?;
-    let sources = build_sources(
-        services.novels,
-        services.knowledge,
-        services.translation,
-        session,
-    )
-    .map_err(AssistantError::storage)?;
+    let sources = build_sources(services, session).map_err(AssistantError::storage)?;
     workspace.resolve(
         input.session_id,
         input.message_id,
@@ -193,6 +198,10 @@ fn parse_context(context: Option<Value>) -> AssistantResult<Option<AssistantCont
 }
 
 fn novel_failure(error: NovelError) -> AssistantError {
+    AssistantError::storage(error.to_string())
+}
+
+fn project_failure(error: ProjectError) -> AssistantError {
     AssistantError::storage(error.to_string())
 }
 
@@ -239,8 +248,10 @@ pub async fn assistant_session_create<R: Runtime>(
     app: AppHandle<R>,
     scope: AssistantScope,
 ) -> AssistantResult<AssistantSession> {
+    let handle = app.clone();
     run_blocking(app, move |service, novels, session| {
-        create_session(service, novels, session, scope)
+        let projects = handle.state::<ProjectService>();
+        create_session(service, novels, &projects, session, scope)
     })
     .await
 }
@@ -258,10 +269,12 @@ pub async fn assistant_message_send<R: Runtime>(
     run_blocking(app, move |service, novels, session| {
         let knowledge = handle.state::<KnowledgeService>();
         let translation = handle.state::<TranslationService>();
+        let projects = handle.state::<ProjectService>();
         let services = SourceServices {
             novels,
             knowledge: &knowledge,
             translation: &translation,
+            projects: &projects,
         };
         let input = SendInput {
             session_id: &session_id,
@@ -285,10 +298,12 @@ pub async fn assistant_proposal_resolve<R: Runtime>(
     run_blocking(app, move |service, novels, session| {
         let knowledge = handle.state::<KnowledgeService>();
         let translation = handle.state::<TranslationService>();
+        let projects = handle.state::<ProjectService>();
         let services = SourceServices {
             novels,
             knowledge: &knowledge,
             translation: &translation,
+            projects: &projects,
         };
         let input = ResolveInput {
             session_id: &session_id,

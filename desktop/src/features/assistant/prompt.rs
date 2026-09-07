@@ -14,6 +14,7 @@ pub fn opening(
     history: &[AssistantMessage],
     text: &str,
     novels: &[NovelSummary],
+    linked_novel: Option<i64>,
 ) -> String {
     let mut prompt = String::new();
     prompt.push_str(
@@ -37,11 +38,7 @@ pub fn opening(
     prompt.push_str("- State only facts you read through the tools. If you did not read it or you are unsure, say so instead of guessing.\n");
     prompt.push_str("- Keep the answer concise and in plain text.\n");
     prompt.push_str("- Edit only when the user asks you to change something. Read before you edit. If an edit tool says editing is not enabled, tell the user to turn it on in the assistant panel.\n");
-    if scope.kind == ScopeKind::Novel
-        && let Some(novel_id) = scope.novel_id
-    {
-        prompt.push_str(&format!("- Focus on the novel with id {novel_id}.\n"));
-    }
+    prompt.push_str(&scope_rules(scope, linked_novel));
     prompt.push_str("\n## Citations\n");
     prompt.push_str("After the answer you may append exactly one block, with nothing after it:\n");
     prompt.push_str(CITATION_FORMAT);
@@ -70,6 +67,36 @@ pub fn follow_up(text: &str) -> String {
         "{}\n\n(If you cite paragraphs you read, end with one block like {CITATION_FORMAT}, quotes verbatim and at most 120 characters.)",
         text.trim()
     )
+}
+
+fn scope_rules(scope: &AssistantScope, linked_novel: Option<i64>) -> String {
+    match (scope.kind, scope.novel_id, scope.project_id) {
+        (ScopeKind::Novel, Some(novel_id), _) => {
+            format!(
+                "- Focus on the novel with id {novel_id}.
+"
+            )
+        }
+        (ScopeKind::Project, _, Some(project_id)) => project_rules(project_id, linked_novel),
+        _ => String::new(),
+    }
+}
+
+fn project_rules(project_id: i64, linked_novel: Option<i64>) -> String {
+    let focus = format!(
+        "- Focus on the project with id {project_id}.
+"
+    );
+    match linked_novel {
+        Some(novel_id) => format!(
+            "{focus}- The project is linked to the novel with id {novel_id}; the novel tools accept only that novel.
+"
+        ),
+        None => format!(
+            "{focus}- The project has no linked novel, so the novel tools are unavailable.
+"
+        ),
+    }
 }
 
 fn novel_list(novels: &[NovelSummary]) -> String {

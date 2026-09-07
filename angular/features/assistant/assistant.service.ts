@@ -6,6 +6,7 @@ import { NovelReaderService } from '@features/novel/novel.reader.service';
 import { displayName, toNovelError } from '@features/novel/novel.rules';
 import { NovelService } from '@features/novel/novel.service';
 import { NovelTranslationService } from '@features/novel/novel.translation.service';
+import { ProjectService } from '@features/project/project.service';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { LayoutService } from '@layout/layout.service';
 import { TabsService } from '@layout/tabs.service';
@@ -17,7 +18,13 @@ import { ToastService } from '@shared/toast/toast.service';
 // prettier-ignore
 import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from './assistant.models';
 // prettier-ignore
-import { compareRecentFirst, NOVEL_SCOPES, novelScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
+import { compareRecentFirst, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
+
+const SCOPE_ICONS: Record<AssistantScope['kind'], string> = {
+  workspace: 'globe',
+  novel: 'book',
+  project: 'folder',
+};
 
 function summaryOf(session: AssistantSession): AssistantSessionSummary {
   return {
@@ -39,6 +46,7 @@ export class AssistantService {
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly novels = inject(NovelService);
+  private readonly projects = inject(ProjectService);
   private readonly reader = inject(NovelReaderService);
   private readonly knowledge = inject(NovelKnowledgeService);
   private readonly translation = inject(NovelTranslationService);
@@ -81,7 +89,7 @@ export class AssistantService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      await this.novels.ensureLoaded();
+      await Promise.all([this.novels.ensureLoaded(), this.projects.ensureLoaded()]);
       const rows = await this.ipc.invoke<AssistantSessionSummary[]>('assistant_session_list');
       if (epoch === this.epoch) {
         this.items.set(rows ?? []);
@@ -102,9 +110,13 @@ export class AssistantService {
     if (!NOVEL_SCOPES) {
       return WORKSPACE_SCOPE;
     }
-    const novelId = this.tabs.active().novelId ?? this.novels.selectedId();
-    return novelId !== null && this.novels.novelById(novelId)
-      ? novelScope(novelId)
+    const tab = this.tabs.active();
+    const novelId = tab.novelId ?? this.novels.selectedId();
+    if (novelId !== null && this.novels.novelById(novelId)) {
+      return novelScope(novelId);
+    }
+    return tab.projectId !== null && this.projects.projectById(tab.projectId)
+      ? projectScope(tab.projectId)
       : WORKSPACE_SCOPE;
   }
 
@@ -308,15 +320,18 @@ export class AssistantService {
   }
 
   scopeLabel(scope: AssistantScope): string {
-    if (scope.kind === 'workspace' || scope.novelId === null) {
-      return this.languageService.translate('assistant.scope.workspace');
+    if (scope.kind === 'project' && scope.projectId !== null) {
+      return this.projects.projectById(scope.projectId)?.name ?? `#${scope.projectId}`;
     }
-    const novel = this.novels.novelById(scope.novelId);
-    return novel ? displayName(novel) : `#${scope.novelId}`;
+    if (scope.kind === 'novel' && scope.novelId !== null) {
+      const novel = this.novels.novelById(scope.novelId);
+      return novel ? displayName(novel) : `#${scope.novelId}`;
+    }
+    return this.languageService.translate('assistant.scope.workspace');
   }
 
   scopeIcon(scope: AssistantScope): string {
-    return scope.kind === 'novel' ? 'book' : 'globe';
+    return SCOPE_ICONS[scope.kind];
   }
 
   reset(): void {

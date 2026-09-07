@@ -221,7 +221,7 @@ export function session(overrides: Partial<AssistantSession> = {}): AssistantSes
   return {
     id: 's1',
     title: 'Session',
-    scope: { kind: 'workspace', novelId: null },
+    scope: { kind: 'workspace', novelId: null, projectId: null },
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     messageCount: 0,

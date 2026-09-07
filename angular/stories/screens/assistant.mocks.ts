@@ -406,7 +406,7 @@ async function send(state: MockState, args: Record<string, unknown>): Promise<As
   return clone(target);
 }
 
-function decideAttachment(
+export function decideAttachment(
   attachment: AssistantAttachment,
   ids: Set<string>,
   status: ProposalDecision,

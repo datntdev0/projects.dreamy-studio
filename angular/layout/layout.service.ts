@@ -7,7 +7,7 @@ import { TabsService } from './tabs.service';
 
 export const PANEL_LIMITS: Record<PanelId, { min: number; max: number; initial: number }> = {
   explorer: { min: 200, max: 420, initial: 264 },
-  inspector: { min: 240, max: 480, initial: 320 },
+  inspector: { min: 240, max: 720, initial: 320 },
   bottom: { min: 120, max: 520, initial: 160 },
 };
 

@@ -1,6 +1,7 @@
 import {
   KnowledgeChangeSet,
   PipelineRun,
+  ScriptDraft,
   TranslationReview,
 } from '@features/assistant/assistant.models';
 
@@ -199,5 +200,79 @@ export function pipelineRun(): PipelineRun {
     totalTasks: 2,
     status: 'pending',
     pipelineId: null,
+  };
+}
+
+export function scriptDraft(): ScriptDraft {
+  return {
+    kind: 'script_draft',
+    id: 'sd1',
+    projectId: 1,
+    title: 'Audiobook Harrowmere',
+    unitId: 'ch-1',
+    unitTitle: 'Chương 1 · Người giữ đèn',
+    chapter: 1,
+    summary: 'Viết lại theo lối dẫn truyện, tách lời thoại cho từng nhân vật.',
+    baseRev: 'rev-1',
+    current: [
+      {
+        id: 'B1',
+        type: 'narration',
+        text: 'Cô sống một mình trên đỉnh Tháp Đèn.',
+        who: 'narr',
+        paren: '',
+      },
+      { id: 'B2', type: 'dialogue', text: 'Ai đó ở dưới kia không?', who: '', paren: '' },
+    ],
+    currentTruncated: false,
+    blocks: [
+      block({
+        id: 'B1',
+        type: 'narration',
+        text: 'Cô sống một mình trên đỉnh Tháp Đèn.',
+        who: 'narr',
+        kept: true,
+      }),
+      block({
+        type: 'narration',
+        text: 'Đêm đó, tiếng gõ cửa vang lên giữa cơn bão.',
+        who: 'narr',
+      }),
+      block({
+        type: 'dialogue',
+        text: 'Ai đó ở dưới kia không?',
+        who: 'kb-1',
+        paren: 'khẽ hỏi',
+      }),
+      block({ type: 'dialogue', text: 'Cho tôi trú nhờ một đêm.', who: 'x1' }),
+    ],
+    extraCast: [{ id: 'x1', name: 'Người lạ' }],
+    speakers: [
+      { id: 'narr', name: 'Người dẫn truyện', blocks: 2 },
+      { id: 'kb-1', name: 'Ilse', blocks: 1 },
+      { id: 'x1', name: 'Người lạ', blocks: 1 },
+    ],
+    stats: { blocks: 4, voiced: 4, words: 32, narration: 2, dialogue: 2, kept: 1, staleAudio: 1 },
+    unresolved: 0,
+    warnings: [],
+    status: 'pending',
+  };
+}
+
+function block(overrides: Partial<ScriptDraft['blocks'][number]>): ScriptDraft['blocks'][number] {
+  return {
+    id: null,
+    type: 'narration',
+    text: '',
+    who: '',
+    paren: '',
+    ms: 0,
+    loc: '',
+    time: '',
+    beat: '',
+    refs: [],
+    chars: [],
+    kept: false,
+    ...overrides,
   };
 }

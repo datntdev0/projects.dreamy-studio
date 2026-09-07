@@ -126,7 +126,8 @@ fn edit_novel_patches_fields_and_emits_novel() {
         sink.changes(),
         vec![AssistantChange {
             target: ChangeTarget::Novel,
-            novel_id: 1,
+            novel_id: Some(1),
+            project_id: None,
             chapter_id: None,
             lang: None,
             translation_target: None,
@@ -195,7 +196,7 @@ fn edit_novel_chapter_without_rename_emits_only_chapter() {
     let changes = sink.changes();
     assert_eq!(changes.len(), 1);
     assert_eq!(changes[0].target, ChangeTarget::Chapter);
-    assert_eq!(changes[0].novel_id, 1);
+    assert_eq!(changes[0].novel_id, Some(1));
 }
 
 #[test]
@@ -311,7 +312,8 @@ fn edit_novel_knowledge_applies_edits_and_emits_knowledge() {
         sink.changes(),
         vec![AssistantChange {
             target: ChangeTarget::Knowledge,
-            novel_id: 1,
+            novel_id: Some(1),
+            project_id: None,
             chapter_id: None,
             lang: Some("VI".to_string()),
             translation_target: None,
@@ -451,7 +453,8 @@ fn passage_args(p: i64, expected: &str, text: &str) -> Value {
 fn translation_change(target: &str) -> AssistantChange {
     AssistantChange {
         target: ChangeTarget::Translation,
-        novel_id: 1,
+        novel_id: Some(1),
+        project_id: None,
         chapter_id: Some(CHAPTER_ID.to_string()),
         lang: None,
         translation_target: Some(target.to_string()),
@@ -461,7 +464,8 @@ fn translation_change(target: &str) -> AssistantChange {
 fn dictionary_change() -> AssistantChange {
     AssistantChange {
         target: ChangeTarget::Translation,
-        novel_id: 1,
+        novel_id: Some(1),
+        project_id: None,
         chapter_id: None,
         lang: None,
         translation_target: Some("VI".to_string()),

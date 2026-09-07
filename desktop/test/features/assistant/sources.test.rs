@@ -10,6 +10,8 @@ use crate::features::knowledge::text::text_hash;
 use crate::features::novel::models::NovelInput;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::TaskRequest;
+use crate::features::scripting::models::CastMember;
+use crate::features::scripting::models::ScriptUnit;
 use crate::features::translation::service::TranslatedRun;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::infra::storage::database::Database;
@@ -24,6 +26,7 @@ use crate::testing::assistant::NovelWrite;
 use crate::testing::assistant::TranslationWrite;
 use crate::testing::assistant::audiobook_fixture;
 use crate::testing::assistant::project_chapter_fixture;
+use crate::testing::assistant::script_block;
 use crate::testing::assistant::script_fixture;
 use crate::testing::project::create_project;
 use crate::testing::project::project_workspace;
@@ -644,6 +647,77 @@ fn script_adapter_has_no_script_and_no_chapters_for_a_fresh_project_without_a_no
 
     assert!(source.script(project_id).unwrap().is_none());
     assert!(source.chapters(project_id).unwrap().is_empty());
+}
+
+#[test]
+fn script_adapter_saves_a_unit_and_the_extra_cast_through_the_workspace() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    ScriptingWorkspace::new(projects.clone())
+        .save(project_id, script_fixture())
+        .unwrap();
+    let source: &dyn ScriptSource = &ProjectScripts::new(projects);
+    let mut unit = source.script(project_id).unwrap().unwrap().units.remove(0);
+    unit.blocks = Some(vec![script_block("B9", "narration", "Rewritten.", "")]);
+    let cast = vec![CastMember {
+        id: "spk1".to_string(),
+        name: "Gatekeeper".to_string(),
+        kind: "extra".to_string(),
+        c: 1,
+    }];
+
+    source.cast_save(project_id, cast.clone()).unwrap();
+    source.unit_save(project_id, unit, 9).unwrap();
+
+    let saved = source.script(project_id).unwrap().unwrap();
+    assert_eq!(saved.extra_cast, cast);
+    assert_eq!(saved.seq, 9);
+    let blocks = saved.units[0].blocks.as_ref().unwrap();
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].id, "B9");
+}
+
+#[test]
+fn script_adapter_cannot_save_before_a_script_exists() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let source: &dyn ScriptSource = &ProjectScripts::new(projects);
+    let unit = ScriptUnit {
+        id: "c1".to_string(),
+        chapter_id: Some("c1".to_string()),
+        blocks: Some(Vec::new()),
+        ..ScriptUnit::default()
+    };
+
+    assert!(source.unit_save(project_id, unit, 1).is_err());
+    assert!(source.cast_save(project_id, Vec::new()).is_err());
+    assert!(source.unit_save(404, ScriptUnit::default(), 1).is_err());
+}
+
+#[test]
+fn fake_scripts_record_their_writes_in_order() {
+    let fake = FakeScripts::with_script(script_fixture(), vec![project_chapter_fixture()]);
+    let source: &dyn ScriptSource = &fake;
+
+    source.cast_save(1, Vec::new()).unwrap();
+    source.unit_save(1, ScriptUnit::default(), 7).unwrap();
+
+    assert_eq!(fake.write_order(), ["cast", "unit"]);
+    assert_eq!(fake.saved_casts(), vec![Vec::<CastMember>::new()]);
+    assert_eq!(fake.saved_units()[0].1, 7);
+}
+
+#[test]
+fn failing_fake_scripts_reject_only_unit_saves() {
+    let fake = FakeScripts::default().failing_unit_saves();
+    let source: &dyn ScriptSource = &fake;
+
+    assert_eq!(
+        source.unit_save(1, ScriptUnit::default(), 1).unwrap_err(),
+        "disk is full"
+    );
+    assert!(source.cast_save(1, Vec::new()).is_ok());
+    assert!(fake.saved_units().is_empty());
 }
 
 #[test]

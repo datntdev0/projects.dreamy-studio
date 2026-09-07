@@ -7,15 +7,20 @@ use crate::features::assistant::models::Decision;
 use crate::infra::storage::migrator::Migrator;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::assistant::CallKind;
+use crate::testing::assistant::FakeAudiobooks;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeLlm;
 use crate::testing::assistant::FakeNovels;
 use crate::testing::assistant::FakeProjects;
+use crate::testing::assistant::FakeScripts;
 use crate::testing::assistant::FakeTranslation;
 use crate::testing::assistant::RecordingEvents;
+use crate::testing::assistant::project_chapter_fixture;
 use crate::testing::assistant::project_summary;
+use crate::testing::assistant::script_fixture;
 use crate::testing::assistant::sources_of;
 use crate::testing::assistant::sources_with;
+use crate::testing::assistant::sources_with_project_data;
 use crate::testing::assistant::sources_with_projects;
 use serde_json::json;
 use tempfile::TempDir;
@@ -1094,7 +1099,8 @@ fn changes_are_forwarded_to_the_event_sink_without_becoming_activities() {
     let fixture = fixture();
     let change = AssistantChange {
         target: ChangeTarget::Chapter,
-        novel_id: 1,
+        novel_id: Some(1),
+        project_id: None,
         chapter_id: Some("chapter-1-1".to_string()),
         lang: None,
         translation_target: None,
@@ -1649,4 +1655,386 @@ fn resolving_an_unknown_card_outside_a_novel_scope_is_not_found() {
     assert!(error.detail.contains("pr9"));
     let stored = fixture.workspace.get(&id).unwrap();
     assert_eq!(stored.messages[1].attachments[0]["status"], "pending");
+}
+
+fn draft_card(id: &str, unit: &str, base: &str) -> Value {
+    json!({
+        "kind": "script_draft",
+        "id": id,
+        "projectId": 5,
+        "title": "Project 5",
+        "unitId": unit,
+        "unitTitle": "Title 1",
+        "chapter": 1,
+        "summary": "",
+        "baseRev": base,
+        "current": [],
+        "currentTruncated": false,
+        "blocks": [{
+            "id": null,
+            "type": "narration",
+            "text": "New.",
+            "who": "",
+            "paren": "",
+            "ms": 0,
+            "loc": "",
+            "time": "MORNING",
+            "beat": "",
+            "refs": [],
+            "chars": [],
+            "kept": false
+        }],
+        "extraCast": [],
+        "speakers": [],
+        "stats": {
+            "blocks": 1,
+            "voiced": 1,
+            "words": 1,
+            "narration": 1,
+            "dialogue": 0,
+            "kept": 0,
+            "staleAudio": 0
+        },
+        "unresolved": 0,
+        "warnings": [],
+        "status": "pending"
+    })
+}
+
+fn stored_scripts() -> FakeScripts {
+    FakeScripts::with_script(script_fixture(), vec![project_chapter_fixture()])
+}
+
+fn script_sources(scripts: &FakeScripts) -> Sources {
+    sources_with_project_data(
+        &novels(),
+        &FakeKnowledge::new(),
+        &FakeTranslation::new(),
+        &projects(),
+        scripts,
+        &FakeAudiobooks::default(),
+    )
+}
+
+fn current_rev() -> String {
+    let script = script_fixture();
+    let blocks = script.units[0].blocks.clone().unwrap();
+    drafts::base_rev(&blocks, &script.extra_cast)
+}
+
+fn scoped_session(fixture: &Fixture, scope: AssistantScope) -> String {
+    fixture
+        .workspace
+        .create(scope, &novels(), &projects())
+        .unwrap()
+        .summary
+        .id
+}
+
+fn drafted(fixture: &Fixture, scope: AssistantScope, cards: Vec<Value>) -> (String, String) {
+    let grants = fixture.grants.clone();
+    fixture.llm.set_hook(move |token| {
+        let sink = grants.get(token).unwrap().sink;
+        for card in &cards {
+            sink.attach(card.clone());
+        }
+    });
+    let id = scoped_session(fixture, scope);
+    let session = fixture
+        .workspace
+        .send(
+            &id,
+            "Rewrite it",
+            None,
+            events(),
+            &script_sources(&stored_scripts()),
+        )
+        .unwrap();
+    let message = session.messages[1].id.clone();
+    (id, message)
+}
+
+fn resolve_drafts(
+    fixture: &Fixture,
+    ids: (&str, &str),
+    cards: &[&str],
+    status: Decision,
+    scripts: &FakeScripts,
+) -> AssistantResult<AssistantSession> {
+    let cards: Vec<String> = cards.iter().map(|card| card.to_string()).collect();
+    fixture
+        .workspace
+        .resolve(ids.0, ids.1, &cards, status, None, &script_sources(scripts))
+}
+
+#[test]
+fn a_later_draft_of_the_same_unit_replaces_the_earlier_card_only() {
+    let fixture = fixture();
+    let rev = current_rev();
+
+    let (id, _) = drafted(
+        &fixture,
+        AssistantScope::project(5),
+        vec![
+            draft_card("sd1", "c1", &rev),
+            draft_card("sd2", "c2", &rev),
+            draft_card("sd3", "c1", &rev),
+            run_card("pr1"),
+        ],
+    );
+
+    let attachments = &fixture.workspace.get(&id).unwrap().messages[1].attachments;
+    let cards: Vec<(&str, &str)> = attachments
+        .iter()
+        .map(|item| (item["kind"].as_str().unwrap(), item["id"].as_str().unwrap()))
+        .collect();
+    assert_eq!(
+        cards,
+        [
+            ("script_draft", "sd3"),
+            ("script_draft", "sd2"),
+            ("pipeline_run", "pr1")
+        ]
+    );
+}
+
+#[test]
+fn draft_card_numbers_stay_unique_after_a_replacement() {
+    let sink = Collector {
+        labels: Mutex::new(Vec::new()),
+        attachments: Mutex::new(Vec::new()),
+        sink: events(),
+    };
+    sink.attach(draft_card("sd1", "c1", "r"));
+    sink.attach(draft_card("sd2", "c2", "r"));
+    sink.attach(draft_card("sd3", "c1", "r"));
+
+    assert_eq!(sink.next_card(DRAFT_KIND), 4);
+    assert_eq!(sink.attached(DRAFT_KIND), 2);
+    assert_eq!(sink.next_card(RUN_KIND), 1);
+}
+
+#[test]
+fn resolving_a_draft_applies_it_in_a_project_scope_and_persists_the_status() {
+    let fixture = fixture();
+    let (id, message) = drafted(
+        &fixture,
+        AssistantScope::project(5),
+        vec![draft_card("sd1", "c1", &current_rev())],
+    );
+    let scripts = stored_scripts();
+
+    let session = resolve_drafts(
+        &fixture,
+        (&id, &message),
+        &["sd1"],
+        Decision::Applied,
+        &scripts,
+    )
+    .unwrap();
+
+    assert_eq!(session.messages[1].attachments[0]["status"], "applied");
+    assert_eq!(scripts.saved_units().len(), 1);
+    assert_eq!(
+        scripts.saved_units()[0].0.blocks.as_ref().unwrap()[0].id,
+        "B5"
+    );
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0]["status"], "applied");
+}
+
+#[test]
+fn resolving_a_draft_works_from_the_workspace_scope_too() {
+    let fixture = fixture();
+    let (id, message) = drafted(
+        &fixture,
+        workspace_scope(),
+        vec![draft_card("sd1", "c1", &current_rev())],
+    );
+    let scripts = stored_scripts();
+
+    let session = resolve_drafts(
+        &fixture,
+        (&id, &message),
+        &["sd1"],
+        Decision::Applied,
+        &scripts,
+    )
+    .unwrap();
+
+    assert_eq!(session.messages[1].attachments[0]["status"], "applied");
+    assert_eq!(scripts.saved_units().len(), 1);
+}
+
+#[test]
+fn rejecting_a_draft_writes_nothing() {
+    let fixture = fixture();
+    let (id, message) = drafted(
+        &fixture,
+        AssistantScope::project(5),
+        vec![draft_card("sd1", "c1", &current_rev())],
+    );
+    let scripts = stored_scripts();
+
+    let session = resolve_drafts(
+        &fixture,
+        (&id, &message),
+        &["sd1"],
+        Decision::Rejected,
+        &scripts,
+    )
+    .unwrap();
+
+    assert_eq!(session.messages[1].attachments[0]["status"], "rejected");
+    assert!(scripts.saved_units().is_empty());
+}
+
+#[test]
+fn a_stale_draft_conflicts_and_stays_pending() {
+    let fixture = fixture();
+    let (id, message) = drafted(
+        &fixture,
+        AssistantScope::project(5),
+        vec![draft_card("sd1", "c1", "stale")],
+    );
+    let scripts = stored_scripts();
+
+    let result = resolve_drafts(
+        &fixture,
+        (&id, &message),
+        &["sd1"],
+        Decision::Applied,
+        &scripts,
+    );
+
+    assert_eq!(code(result), AssistantErrorCode::Conflict);
+    assert!(scripts.saved_units().is_empty());
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0]["status"], "pending");
+}
+
+#[test]
+fn resolving_an_unknown_draft_is_not_found_in_a_project_scope() {
+    let fixture = fixture();
+    let (id, message) = drafted(
+        &fixture,
+        AssistantScope::project(5),
+        vec![draft_card("sd1", "c1", &current_rev())],
+    );
+
+    let result = resolve_drafts(
+        &fixture,
+        (&id, &message),
+        &["sd9"],
+        Decision::Applied,
+        &stored_scripts(),
+    );
+
+    assert_eq!(code(result), AssistantErrorCode::NotFound);
+}
+
+fn rewrite_context(unit_id: &str, note: Option<&str>) -> Option<AssistantContext> {
+    Some(AssistantContext::ScriptRewrite {
+        unit_id: unit_id.to_string(),
+        note: note.map(str::to_string),
+    })
+}
+
+fn send_rewrite(
+    fixture: &Fixture,
+    id: &str,
+    context: Option<AssistantContext>,
+    scripts: &FakeScripts,
+) -> AssistantResult<AssistantSession> {
+    fixture.workspace.send(
+        id,
+        "Rewrite chapter 1",
+        context,
+        events(),
+        &script_sources(scripts),
+    )
+}
+
+#[test]
+fn a_script_rewrite_context_replaces_the_prompt_and_keeps_the_opening_when_starting() {
+    let fixture = fixture();
+    let id = scoped_session(&fixture, AssistantScope::project(5));
+
+    send_rewrite(
+        &fixture,
+        &id,
+        rewrite_context("c1", Some(" shorter ")),
+        &stored_scripts(),
+    )
+    .unwrap();
+
+    let prompt = fixture.llm.calls().pop().unwrap().prompt;
+    assert!(prompt.contains("You are the Dreamy Studio assistant"));
+    assert!(prompt.contains("## Skill: rewrite_script_unit"));
+    assert!(prompt.contains("unit `c1` (\"Title 1\", chapter 1)"));
+    assert!(prompt.contains("project with id 5 (\"Project 5\")"));
+    assert!(prompt.contains("The user adds: shorter"));
+}
+
+#[test]
+fn a_script_rewrite_context_when_resuming_sends_only_the_skill() {
+    let fixture = fixture();
+    let id = scoped_session(&fixture, AssistantScope::project(5));
+    let scripts = stored_scripts();
+    send_rewrite(&fixture, &id, rewrite_context("c1", None), &scripts).unwrap();
+
+    send_rewrite(&fixture, &id, rewrite_context("c1", None), &scripts).unwrap();
+
+    let calls = fixture.llm.calls();
+    assert_eq!(calls[1].kind, CallKind::Resume);
+    assert!(calls[1].prompt.contains("## Skill: rewrite_script_unit"));
+    assert!(
+        !calls[1]
+            .prompt
+            .contains("You are the Dreamy Studio assistant")
+    );
+}
+
+#[test]
+fn a_script_rewrite_needs_a_project_scope() {
+    let fixture = fixture();
+    let workspace = scoped_session(&fixture, workspace_scope());
+    let novel = scoped_session(&fixture, novel_scope(Some(1)));
+
+    for id in [workspace, novel] {
+        let result = send_rewrite(
+            &fixture,
+            &id,
+            rewrite_context("c1", None),
+            &stored_scripts(),
+        );
+        let error = result.unwrap_err();
+        assert_eq!(error.code, AssistantErrorCode::Invalid);
+        assert!(error.detail.contains("needs a project scope"));
+        assert!(fixture.workspace.get(&id).unwrap().messages.is_empty());
+    }
+    assert!(fixture.llm.calls().is_empty());
+}
+
+#[test]
+fn a_script_rewrite_of_an_unknown_unit_or_without_a_script_is_invalid() {
+    let fixture = fixture();
+    let id = scoped_session(&fixture, AssistantScope::project(5));
+
+    let unknown = send_rewrite(
+        &fixture,
+        &id,
+        rewrite_context("nope", None),
+        &stored_scripts(),
+    );
+    let no_script = send_rewrite(
+        &fixture,
+        &id,
+        rewrite_context("c1", None),
+        &FakeScripts::with_chapters(vec![project_chapter_fixture()]),
+    );
+
+    assert_eq!(code(unknown), AssistantErrorCode::Invalid);
+    assert_eq!(code(no_script), AssistantErrorCode::Invalid);
+    assert!(fixture.llm.calls().is_empty());
 }

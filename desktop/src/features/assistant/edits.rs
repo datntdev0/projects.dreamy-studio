@@ -125,7 +125,8 @@ pub fn edit_novel_chapter(
     if written || renamed {
         ctx.sink.changed(AssistantChange {
             target: ChangeTarget::Chapter,
-            novel_id,
+            novel_id: Some(novel_id),
+            project_id: None,
             chapter_id: Some(chapter.id.clone()),
             lang: None,
             translation_target: None,
@@ -171,7 +172,8 @@ pub fn edit_novel_knowledge(
     let result = sources.knowledge.edit(novel_id, lang.as_str(), edits)?;
     ctx.sink.changed(AssistantChange {
         target: ChangeTarget::Knowledge,
-        novel_id,
+        novel_id: Some(novel_id),
+        project_id: None,
         chapter_id: None,
         lang: Some(lang.as_str().to_string()),
         translation_target: None,
@@ -249,7 +251,8 @@ pub fn edit_dictionary(
     if done.touched() {
         ctx.sink.changed(AssistantChange {
             target: ChangeTarget::Translation,
-            novel_id,
+            novel_id: Some(novel_id),
+            project_id: None,
             chapter_id: None,
             lang: None,
             translation_target: Some(target.as_str().to_string()),
@@ -315,7 +318,8 @@ pub(crate) fn add_dictionary(
 pub(crate) fn translation_change(novel_id: i64, chapter_id: &str, target: &str) -> AssistantChange {
     AssistantChange {
         target: ChangeTarget::Translation,
-        novel_id,
+        novel_id: Some(novel_id),
+        project_id: None,
         chapter_id: Some(chapter_id.to_string()),
         lang: None,
         translation_target: Some(target.to_string()),
@@ -447,7 +451,8 @@ fn ensure_editable(ctx: &ToolContext) -> Result<(), String> {
 fn change(target: ChangeTarget, novel_id: i64) -> AssistantChange {
     AssistantChange {
         target,
-        novel_id,
+        novel_id: Some(novel_id),
+        project_id: None,
         chapter_id: None,
         lang: None,
         translation_target: None,

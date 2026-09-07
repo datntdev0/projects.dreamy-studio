@@ -7,7 +7,7 @@ import { CoreModule } from '@shared/core.module';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 // prettier-ignore
-import { AssistantAttachment, AssistantMessage, AssistantSession, KnowledgeChangeSet, PipelineRun, PipelineRunLaunch, ProposalResolution, TranslationReview } from '../assistant.models';
+import { AssistantAttachment, AssistantMessage, AssistantSession, KnowledgeChangeSet, PipelineRun, PipelineRunLaunch, ProposalResolution, ScriptDraft, TranslationReview } from '../assistant.models';
 import { renderMarkdown } from '../assistant.rules';
 import { AssistantService } from '../assistant.service';
 import { AssistantChangesCard } from './changes-card.component';
@@ -15,6 +15,7 @@ import { AssistantComposer } from './composer.component';
 import { AssistantPaneHeader } from './pane-header.component';
 import { AssistantPipelineCard } from './pipeline-card.component';
 import { AssistantReviewCard } from './review-card.component';
+import { AssistantScriptDraftCard } from './script-draft-card.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +29,7 @@ import { AssistantReviewCard } from './review-card.component';
     AssistantPaneHeader,
     AssistantPipelineCard,
     AssistantReviewCard,
+    AssistantScriptDraftCard,
   ],
   templateUrl: './chat.component.html',
 })
@@ -86,6 +88,10 @@ export class AssistantChat {
 
   asPipelineRun(attachment: AssistantAttachment): PipelineRun | null {
     return attachment.kind === 'pipeline_run' ? attachment : null;
+  }
+
+  asScriptDraft(attachment: AssistantAttachment): ScriptDraft | null {
+    return attachment.kind === 'script_draft' ? attachment : null;
   }
 
   isResolving(message: AssistantMessage): boolean {

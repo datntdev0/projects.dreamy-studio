@@ -1,7 +1,7 @@
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { DictProposal, FindingCategory, FindingSeverity, KnowledgeChangeOp, MarkedText, PipelineJobKind, PipelineRun, ProposalStatus, TranslationFinding, TranslationReview } from './assistant.models';
+import { DictProposal, FindingCategory, FindingSeverity, KnowledgeChangeOp, MarkedText, PipelineJobKind, PipelineRun, ProposalStatus, ScriptDraft, ScriptDraftRow, ScriptDraftView, TranslationFinding, TranslationReview } from './assistant.models';
 
 export const SEVERITY_KEYS: Record<FindingSeverity, LanguageKey> = {
   error: 'assistant.review.severity.error',
@@ -118,4 +118,47 @@ export function runItemIds(run: PipelineRun): string[] {
 
 export function runKindOf(run: PipelineRun): string {
   return PIPELINE_RUN_KINDS[run.job];
+}
+
+export const DRAFT_COLLAPSED_ROWS = 12;
+
+export function canApplyDraft(draft: ScriptDraft): boolean {
+  return draft.status === 'pending' && draft.blocks.length > 0;
+}
+
+export function changedDraftBlocks(draft: ScriptDraft): number {
+  return Math.max(draft.blocks.length - draft.stats.kept, 0);
+}
+
+export function isNewSpeaker(draft: ScriptDraft, id: string): boolean {
+  return draft.extraCast.some((member) => member.id === id);
+}
+
+export function draftSpeakerName(draft: ScriptDraft, who: string): string {
+  const speaker = draft.speakers.find((item) => item.id === who);
+  if (speaker) {
+    return speaker.name;
+  }
+  return draft.extraCast.find((member) => member.id === who)?.name ?? who;
+}
+
+export function draftRows(draft: ScriptDraft, view: ScriptDraftView): ScriptDraftRow[] {
+  if (view === 'before') {
+    return draft.current.map((block) => ({
+      key: block.id,
+      type: block.type,
+      text: block.text,
+      paren: block.paren,
+      speaker: draftSpeakerName(draft, block.who),
+      kept: false,
+    }));
+  }
+  return draft.blocks.map((block, index) => ({
+    key: `${index}:${block.id ?? 'new'}`,
+    type: block.type,
+    text: block.text,
+    paren: block.paren,
+    speaker: draftSpeakerName(draft, block.who),
+    kept: block.kept,
+  }));
 }

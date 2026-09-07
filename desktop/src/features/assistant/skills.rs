@@ -1,6 +1,8 @@
 use crate::features::knowledge::check::KnowledgeIssue;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
+use crate::features::project::models::ProjectSummary;
+use crate::features::scripting::cast::knowledge_lang;
 
 pub fn review_translation(
     novel: &NovelSummary,
@@ -102,6 +104,76 @@ fn json_text<T: serde::Serialize>(value: &T) -> String {
         .ok()
         .and_then(|item| item.as_str().map(str::to_string))
         .unwrap_or_default()
+}
+
+pub struct ScriptRewrite<'a> {
+    pub project: &'a ProjectSummary,
+    pub unit_id: &'a str,
+    pub unit_title: &'a str,
+    pub chapter: Option<i64>,
+    pub note: Option<&'a str>,
+}
+
+pub fn rewrite_script_unit(rewrite: &ScriptRewrite, opening: Option<String>) -> String {
+    let ScriptRewrite {
+        project,
+        unit_id,
+        unit_title,
+        chapter,
+        note,
+    } = rewrite;
+    let mut prompt = opening.unwrap_or_default();
+    if !prompt.is_empty() {
+        prompt.push('\n');
+    }
+    prompt.push_str("## Skill: rewrite_script_unit\n");
+    prompt.push_str(&format!(
+        "Rewrite the script unit `{unit_id}` (\"{unit_title}\"{}) of the project with id {} (\"{}\") with narration and dialogue, choosing the right speaker for every line of dialogue.\n",
+        chapter_label(*chapter),
+        project.id,
+        project.name
+    ));
+    if let Some(note) = note {
+        prompt.push_str(&format!("The user adds: {note}\n"));
+    }
+    prompt.push_str("\nFollow these steps with the MCP tools of the `dreamy` server:\n");
+    prompt.push_str(&format!(
+        "1. Call `read_script` with projectId {} to learn `cfg.types` (the block types you may use) and the cast (the speaker ids you may put in `who`).\n",
+        project.id
+    ));
+    prompt.push_str(&format!(
+        "2. Call `read_script_unit` with projectId {}, unitId \"{unit_id}\" and `withSource` true, and read every page: while the result has a `next` value, call it again with `from` set to `next`. This shows what is written now and the source paragraphs it comes from.\n",
+        project.id
+    ));
+    prompt.push_str(&knowledge_step(project));
+    prompt.push_str("4. Rewrite the unit from the source text, in reading order:\n");
+    prompt.push_str("   - Put the narration in `narration` blocks, and use `heading` and `pause` blocks where `cfg.types` allows them. Keep the facts and the order of the source; do not invent events.\n");
+    prompt.push_str("   - Put every spoken line in a `dialogue` block with the speaker in `who`, taken from the cast. Choose the speaker only from evidence in the text (dialogue tags, addressing, context). When you are not sure, leave `who` empty and say so in your summary; never guess.\n");
+    prompt.push_str("   - Declare a speaker in `extraCast` (a unique `ref` and a `name`) only when that speaker is missing from the cast, and use the `ref` as `who`.\n");
+    prompt.push_str("   - Put in `refs` the source paragraphs (`chapter.paragraph`, for example 3.12) a block is written from.\n");
+    prompt.push_str("   - Keep blocks that are already good unchanged: a block with the same type, text, speaker and parenthetical keeps its generated audio.\n");
+    prompt.push_str(&format!(
+        "5. Call `submit_script_draft` exactly once with projectId {}, unitId \"{unit_id}\", a short `summary`, `extraCast` and `blocks`.\n",
+        project.id
+    ));
+    prompt.push_str("   - If the result lists `dropped` blocks, fix them and call the tool once more; the last call replaces the earlier draft.\n");
+    prompt.push_str("6. Do not edit the script yourself. The user applies or rejects the whole draft on the card, so do not say the script has changed.\n");
+    prompt.push_str("7. Finish with a summary of two or three sentences in the user's language: what you changed, which speakers you were unsure about and which new characters you proposed.\n");
+    prompt
+}
+
+fn chapter_label(chapter: Option<i64>) -> String {
+    chapter.map_or_else(String::new, |seq| format!(", chapter {seq}"))
+}
+
+fn knowledge_step(project: &ProjectSummary) -> String {
+    match project.novel_id {
+        Some(novel_id) => format!(
+            "3. Call `read_novel_knowledge` with novelId {novel_id} and lang \"{}\" (filter `type` \"character\") to learn who the characters are and how they speak, so you can attribute the dialogue.\n",
+            knowledge_lang(project)
+        ),
+        None => "3. The project has no linked novel, so there is no knowledge base: attribute the dialogue from the source text alone.\n".to_string(),
+    }
 }
 
 #[cfg(test)]

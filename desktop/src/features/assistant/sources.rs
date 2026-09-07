@@ -20,7 +20,9 @@ use crate::features::project::models::ProjectSummary;
 use crate::features::project::service::ProjectWorkspace;
 use crate::features::scripting::chapters::ProjectChapter;
 use crate::features::scripting::chapters::project_chapters;
+use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
+use crate::features::scripting::models::ScriptUnit;
 use crate::features::scripting::service::ScriptingWorkspace;
 use crate::features::translation::models::DictInput;
 use crate::features::translation::models::DictPatch;
@@ -99,6 +101,8 @@ pub trait ScriptSource {
     fn chapters(&self, project_id: i64) -> Result<Vec<ProjectChapter>, String>;
     fn script(&self, project_id: i64) -> Result<Option<Script>, String>;
     fn modules(&self, project_id: i64) -> Result<Vec<ProjectModuleState>, String>;
+    fn unit_save(&self, project_id: i64, unit: ScriptUnit, seq: i64) -> Result<(), String>;
+    fn cast_save(&self, project_id: i64, extra_cast: Vec<CastMember>) -> Result<(), String>;
 }
 
 pub trait AudiobookSource {
@@ -273,6 +277,18 @@ impl ScriptSource for ProjectScripts {
     fn modules(&self, project_id: i64) -> Result<Vec<ProjectModuleState>, String> {
         self.scripting
             .modules(project_id)
+            .map_err(|error| error.to_string())
+    }
+
+    fn unit_save(&self, project_id: i64, unit: ScriptUnit, seq: i64) -> Result<(), String> {
+        self.scripting
+            .unit_save(project_id, unit, seq)
+            .map_err(|error| error.to_string())
+    }
+
+    fn cast_save(&self, project_id: i64, extra_cast: Vec<CastMember>) -> Result<(), String> {
+        self.scripting
+            .cast_save(project_id, extra_cast)
             .map_err(|error| error.to_string())
     }
 }

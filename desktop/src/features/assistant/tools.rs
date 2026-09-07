@@ -9,6 +9,7 @@ use serde_json::Value;
 mod args;
 mod audiobook;
 mod definitions;
+mod draft;
 mod knowledge;
 mod novel;
 mod paging;
@@ -27,10 +28,11 @@ pub(crate) use args::required_int;
 pub(crate) use args::required_str;
 pub(crate) use scope::chapter_by_seq;
 pub(crate) use scope::find_novel;
+pub(crate) use script::unit_target;
 pub(crate) use translation::dict_json;
 pub(crate) use translation::required_target;
 
-pub const PROJECT_TOOLS: [&str; 7] = [
+pub const PROJECT_TOOLS: [&str; 8] = [
     "list_project",
     "read_project",
     "read_script",
@@ -38,6 +40,7 @@ pub const PROJECT_TOOLS: [&str; 7] = [
     "search_project",
     "read_audiobook",
     "read_audiobook_unit",
+    "submit_script_draft",
 ];
 
 pub const PIPELINE_TOOLS: [&str; 6] = [
@@ -68,6 +71,7 @@ pub fn definitions(scope: &AssistantScope) -> Value {
         tools.extend(project::definitions());
         tools.extend(script::definitions());
         tools.extend(audiobook::definitions());
+        tools.extend(draft::definitions());
     }
     tools.extend(pipeline_definitions(scope.kind));
     Value::Array(tools)
@@ -138,6 +142,7 @@ fn call_project_tool(
         "read_audiobook" => audiobook::read_audiobook(args, ctx, sources),
         "read_audiobook_unit" => audiobook::read_audiobook_unit(args, ctx, sources),
         "search_project" => script::search_project(args, ctx, sources),
+        "submit_script_draft" => draft::submit_script_draft(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
@@ -187,3 +192,7 @@ mod synthesis_tests;
 #[cfg(test)]
 #[path = "../../../test/features/assistant/tools/pipeline.test.rs"]
 mod pipeline_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/draft.test.rs"]
+mod draft_tests;

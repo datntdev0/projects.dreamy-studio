@@ -546,7 +546,8 @@ fn apply_set(
         .map_err(AssistantError::storage)?;
     Ok(AssistantChange {
         target: ChangeTarget::Knowledge,
-        novel_id,
+        novel_id: Some(novel_id),
+        project_id: None,
         chapter_id: None,
         lang: Some(lang.to_string()),
         translation_target: None,

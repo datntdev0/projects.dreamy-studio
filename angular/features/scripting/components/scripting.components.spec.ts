@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { projectScope } from '@features/assistant/assistant.rules';
+import { AssistantService } from '@features/assistant/assistant.service';
 import { LayoutService } from '@layout/layout.service';
 import { LanguageService } from '@shared/language/language.service';
 import { allById, byId, click } from '@testing/dom';
 import { mount, Mounted, settle } from '@testing/exercise';
 import { installScriptingBackend } from '@testing/scripting-backend';
 import { setupApp } from '@testing/service';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ScriptingDialogsService } from '../scripting.dialogs.service';
 import { ScriptBlock } from '../scripting.models';
@@ -327,6 +329,42 @@ describe('Scripting audiobook editor', () => {
       kind: 'reset',
       projectId: AUDIOBOOK,
     });
+  });
+
+  it('asks the assistant to rewrite the selected unit', async () => {
+    const mounted = await open(AUDIOBOOK);
+    const ask = vi.spyOn(TestBed.inject(AssistantService), 'ask').mockResolvedValue(true);
+    expect((byId(mounted.root, 'sc-rewrite-btn') as HTMLButtonElement).disabled).toBe(false);
+    await clickAndSettle(mounted, 'sc-rewrite-btn');
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask).toHaveBeenCalledWith(
+      projectScope(AUDIOBOOK),
+      expect.stringContaining('Điều con nước trả lại'),
+      {
+        kind: 'script_rewrite',
+        unitId: 'ch-3',
+      },
+    );
+  });
+
+  it('cannot ask for a rewrite while the assistant is busy', async () => {
+    const mounted = await open(AUDIOBOOK);
+    const assistant = TestBed.inject(AssistantService);
+    const ask = vi.spyOn(assistant, 'ask').mockResolvedValue(true);
+    assistant.sending.set(true);
+    await settle(mounted.fixture);
+    expect((byId(mounted.root, 'sc-rewrite-btn') as HTMLButtonElement).disabled).toBe(true);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('cannot ask for a rewrite when the project has no linked novel', async () => {
+    const mounted = await open(BLANK, true);
+    await clickAndSettle(mounted, 'sc-pick-film');
+    await clickAndSettle(mounted, 'sc-unit-add-btn');
+    const ask = vi.spyOn(TestBed.inject(AssistantService), 'ask').mockResolvedValue(true);
+    expect((byId(mounted.root, 'sc-rewrite-btn') as HTMLButtonElement).disabled).toBe(true);
+    click(mounted.root, 'sc-rewrite-btn');
+    expect(ask).not.toHaveBeenCalled();
   });
 
   it('switches the unit and keeps it editable', async () => {

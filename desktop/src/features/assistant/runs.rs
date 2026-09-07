@@ -1,5 +1,5 @@
+use crate::features::assistant::cards;
 use crate::features::assistant::grants::TurnSink;
-use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantResult;
 use crate::features::assistant::models::Decision;
 use crate::features::assistant::tools::ToolOutput;
@@ -9,7 +9,6 @@ use serde_json::Value;
 use serde_json::json;
 
 pub const RUN_KIND: &str = "pipeline_run";
-const PENDING: &str = "pending";
 const CARD_PREFIX: &str = "pr";
 const WAITING_NOTE: &str = "waiting for the user to confirm on the card";
 
@@ -118,7 +117,7 @@ pub fn submit(plan: &RunPlan, call: &str, sink: &dyn TurnSink) -> Result<ToolOut
         id: &id,
         plan,
         total_tasks: plan.total_tasks(),
-        status: PENDING,
+        status: cards::PENDING,
         pipeline_id: None,
     };
     sink.attach(serde_json::to_value(&card).map_err(|error| error.to_string())?);
@@ -129,7 +128,7 @@ pub fn submit(plan: &RunPlan, call: &str, sink: &dyn TurnSink) -> Result<ToolOut
         "items": plan.items,
         "skipped": plan.skipped,
         "warnings": plan.warnings,
-        "status": PENDING,
+        "status": cards::PENDING,
         "note": WAITING_NOTE,
     });
     let label = format!("{call} → {} tác vụ, chờ xác nhận", plan.total_tasks());
@@ -142,14 +141,9 @@ pub fn resolve(
     status: Decision,
     pipeline_id: Option<i64>,
 ) -> AssistantResult<()> {
-    let picked: Vec<usize> = attachments
-        .iter()
-        .enumerate()
-        .filter(|(_, attachment)| is_run(attachment) && is_wanted(attachment, item_ids))
-        .map(|(index, _)| index)
-        .collect();
+    let picked = cards::picked(attachments, RUN_KIND, item_ids);
     for index in &picked {
-        require_pending(&attachments[*index])?;
+        cards::require_pending(&attachments[*index])?;
     }
     for index in picked {
         let attachment = &mut attachments[index];
@@ -159,49 +153,6 @@ pub fn resolve(
         }
     }
     Ok(())
-}
-
-pub fn require_cards(attachments: &[Value], item_ids: &[String]) -> AssistantResult<()> {
-    let unknown: Vec<&str> = item_ids
-        .iter()
-        .filter(|id| {
-            !attachments
-                .iter()
-                .any(|attachment| is_run(attachment) && id_of(attachment) == Some(id.as_str()))
-        })
-        .map(String::as_str)
-        .collect();
-    if unknown.is_empty() {
-        return Ok(());
-    }
-    Err(AssistantError::not_found(format!(
-        "no confirmation card matches: {}",
-        unknown.join(", ")
-    )))
-}
-
-fn require_pending(attachment: &Value) -> AssistantResult<()> {
-    let status = attachment.get("status").and_then(Value::as_str);
-    if status == Some(PENDING) {
-        return Ok(());
-    }
-    Err(AssistantError::conflict(format!(
-        "card {} is already {}",
-        id_of(attachment).unwrap_or_default(),
-        status.unwrap_or("resolved")
-    )))
-}
-
-fn is_run(attachment: &Value) -> bool {
-    attachment.get("kind").and_then(Value::as_str) == Some(RUN_KIND)
-}
-
-fn is_wanted(attachment: &Value, item_ids: &[String]) -> bool {
-    id_of(attachment).is_some_and(|id| item_ids.iter().any(|wanted| wanted == id))
-}
-
-fn id_of(attachment: &Value) -> Option<&str> {
-    attachment.get("id").and_then(Value::as_str)
 }
 
 #[cfg(test)]

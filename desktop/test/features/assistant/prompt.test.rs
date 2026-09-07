@@ -218,3 +218,48 @@ fn the_prompt_requires_the_user_to_confirm_every_run() {
     assert!(prompt.find("## Tools").unwrap() < prompt.find("`start_translation`").unwrap());
     assert!(prompt.find("`cancel_pipeline`").unwrap() < prompt.find("## Rules").unwrap());
 }
+
+fn project_scope() -> AssistantScope {
+    AssistantScope::project(5)
+}
+
+#[test]
+fn a_project_prompt_explains_how_script_drafts_work() {
+    let prompt = opening(
+        &project_scope(),
+        &[],
+        "Rewrite chapter 1",
+        &novels(),
+        Some(7),
+    );
+
+    assert!(prompt.contains("`submit_script_draft`: propose a rewrite of one script unit"));
+    assert!(prompt.contains("send the whole new unit once with `submit_script_draft`"));
+    assert!(prompt.contains("the script changes only when the user applies it"));
+    assert!(prompt.contains("never say the script has changed before that"));
+    assert!(prompt.contains("ask which one"));
+    assert!(prompt.contains("leave `who` empty when unsure"));
+}
+
+#[test]
+fn a_workspace_prompt_lists_the_draft_tool_without_the_project_rules() {
+    let prompt = opening(&workspace(), &[], "hi", &novels(), None);
+
+    assert!(prompt.contains("`submit_script_draft`"));
+    assert!(prompt.contains("nothing is written until the user applies it"));
+    assert!(!prompt.contains("send the whole new unit once"));
+}
+
+#[test]
+fn a_novel_prompt_never_mentions_script_drafts() {
+    let scope = AssistantScope {
+        kind: ScopeKind::Novel,
+        novel_id: Some(7),
+        project_id: None,
+    };
+
+    let prompt = opening(&scope, &[], "hi", &novels(), None);
+
+    assert!(!prompt.contains("submit_script_draft"));
+    assert!(!prompt.contains("script draft"));
+}

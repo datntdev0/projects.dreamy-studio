@@ -1,5 +1,6 @@
 use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::grants::TurnSink;
+use crate::features::assistant::grants::next_card_number;
 use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
@@ -42,6 +43,7 @@ use crate::features::pipeline::models::TaskStatus;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectSummary;
 use crate::features::scripting::chapters::ProjectChapter;
+use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
 use crate::features::scripting::models::ScriptBlock;
 use crate::features::scripting::models::ScriptUnit;
@@ -1048,11 +1050,20 @@ pub fn pipeline_run(
     }
 }
 
+#[derive(Default)]
+struct ScriptWrites {
+    units: Vec<(ScriptUnit, i64)>,
+    casts: Vec<Vec<CastMember>>,
+    order: Vec<&'static str>,
+    fail_units: bool,
+}
+
 #[derive(Clone, Default)]
 pub struct FakeScripts {
     pub chapters: Vec<ProjectChapter>,
     pub script: Option<Script>,
     pub modules: Vec<ProjectModuleState>,
+    writes: Arc<Mutex<ScriptWrites>>,
 }
 
 impl FakeScripts {
@@ -1061,7 +1072,32 @@ impl FakeScripts {
             chapters,
             script: Some(script),
             modules: Vec::new(),
+            writes: Arc::default(),
         }
+    }
+
+    pub fn with_chapters(chapters: Vec<ProjectChapter>) -> Self {
+        Self {
+            chapters,
+            ..Self::default()
+        }
+    }
+
+    pub fn failing_unit_saves(self) -> Self {
+        guard(&self.writes).fail_units = true;
+        self
+    }
+
+    pub fn saved_units(&self) -> Vec<(ScriptUnit, i64)> {
+        guard(&self.writes).units.clone()
+    }
+
+    pub fn saved_casts(&self) -> Vec<Vec<CastMember>> {
+        guard(&self.writes).casts.clone()
+    }
+
+    pub fn write_order(&self) -> Vec<&'static str> {
+        guard(&self.writes).order.clone()
     }
 }
 
@@ -1076,6 +1112,23 @@ impl ScriptSource for FakeScripts {
 
     fn modules(&self, _project_id: i64) -> Result<Vec<ProjectModuleState>, String> {
         Ok(self.modules.clone())
+    }
+
+    fn unit_save(&self, _project_id: i64, unit: ScriptUnit, seq: i64) -> Result<(), String> {
+        let mut writes = guard(&self.writes);
+        if writes.fail_units {
+            return Err("disk is full".to_string());
+        }
+        writes.order.push("unit");
+        writes.units.push((unit, seq));
+        Ok(())
+    }
+
+    fn cast_save(&self, _project_id: i64, extra_cast: Vec<CastMember>) -> Result<(), String> {
+        let mut writes = guard(&self.writes);
+        writes.order.push("cast");
+        writes.casts.push(extra_cast);
+        Ok(())
     }
 }
 
@@ -1260,6 +1313,10 @@ impl TurnSink for RecordingSink {
             .iter()
             .filter(|item| item["kind"] == kind)
             .count()
+    }
+
+    fn next_card(&self, kind: &str) -> usize {
+        next_card_number(&guard(&self.attachments), kind)
     }
 }
 

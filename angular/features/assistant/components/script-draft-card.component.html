@@ -1,0 +1,198 @@
+@let data = draft();
+<section
+  class="asst-card"
+  [class]="'asst-card is-' + data.status"
+  [attr.aria-label]="'assistant.draft.label' | t"
+  data-testid="assistant-script-draft-card"
+>
+  <header class="asst-card-head" data-testid="assistant-script-draft-head">
+    <span class="asst-card-ico" data-testid="assistant-script-draft-icon">
+      <ds-icon name="pen" [size]="15" />
+    </span>
+    <div class="asst-card-title" data-testid="assistant-script-draft-title">
+      <span class="t-ink" data-testid="assistant-script-draft-name">{{ data.unitTitle }}</span>
+      <span class="t-sm t-mute" data-testid="assistant-script-draft-meta">
+        {{ data.title }}
+        @if (data.chapter !== null) {
+          · {{ 'assistant.draft.chapter' | t: { n: data.chapter } }}
+        }
+      </span>
+    </div>
+  </header>
+
+  @if (data.summary !== '') {
+    <p class="t-sm asst-draft-summary" data-testid="assistant-script-draft-summary">
+      {{ data.summary }}
+    </p>
+  }
+
+  <div class="asst-card-stats" data-testid="assistant-script-draft-stats">
+    <span class="badge badge-info" data-testid="assistant-script-draft-blocks">
+      {{ 'assistant.draft.blocks' | t: { count: data.stats.blocks } }}
+    </span>
+    <span class="badge" data-testid="assistant-script-draft-narration">
+      {{ 'assistant.draft.narration' | t: { count: data.stats.narration } }}
+    </span>
+    <span class="badge" data-testid="assistant-script-draft-dialogue">
+      {{ 'assistant.draft.dialogue' | t: { count: data.stats.dialogue } }}
+    </span>
+    <span class="badge" data-testid="assistant-script-draft-words">
+      {{ 'assistant.draft.words' | t: { count: data.stats.words } }}
+    </span>
+    <span class="badge" data-testid="assistant-script-draft-kept">
+      {{ 'assistant.draft.kept' | t: { count: data.stats.kept } }}
+    </span>
+    @if (data.stats.staleAudio > 0) {
+      <span class="badge badge-warning" data-testid="assistant-script-draft-stale">
+        {{ 'assistant.draft.staleAudio' | t: { count: data.stats.staleAudio } }}
+      </span>
+    }
+  </div>
+
+  @if (data.speakers.length > 0) {
+    <ul class="asst-draft-speakers" data-testid="assistant-script-draft-speakers">
+      @for (speaker of data.speakers; track speaker.id) {
+        <li class="chip is-static" data-testid="assistant-script-draft-speaker">
+          <span class="t-ink">{{ speaker.name }}</span>
+          <span class="t-mute">{{ speaker.blocks }}</span>
+          @if (isNew(speaker.id)) {
+            <span class="badge badge-info" data-testid="assistant-script-draft-speaker-new">
+              {{ 'assistant.draft.newSpeaker' | t }}
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  @if (data.unresolved > 0) {
+    <div class="asst-valid is-warn" data-testid="assistant-script-draft-unresolved">
+      <ds-icon name="alert" [size]="14" />
+      <span>{{ 'assistant.draft.unresolved' | t: { count: data.unresolved } }}</span>
+    </div>
+  }
+
+  @for (warning of data.warnings; track $index) {
+    <div class="asst-valid is-warn" data-testid="assistant-script-draft-warning">
+      <ds-icon name="alert" [size]="14" />
+      <span>{{ warning }}</span>
+    </div>
+  }
+
+  <div class="seg" role="group" data-testid="assistant-script-draft-views">
+    <button
+      type="button"
+      [class.is-active]="view() === 'after'"
+      [attr.aria-pressed]="view() === 'after'"
+      data-testid="assistant-script-draft-view-after"
+      (click)="show('after')"
+    >
+      {{ 'assistant.draft.after' | t: { count: data.blocks.length } }}
+    </button>
+    <button
+      type="button"
+      [class.is-active]="view() === 'before'"
+      [attr.aria-pressed]="view() === 'before'"
+      data-testid="assistant-script-draft-view-before"
+      (click)="show('before')"
+    >
+      {{ 'assistant.draft.before' | t: { count: data.current.length } }}
+    </button>
+  </div>
+
+  @if (view() === 'before' && data.currentTruncated) {
+    <div class="asst-valid" data-testid="assistant-script-draft-truncated">
+      <ds-icon name="info" [size]="14" />
+      <span>{{ 'assistant.draft.truncated' | t }}</span>
+    </div>
+  }
+
+  @if (rows().length === 0) {
+    <p class="t-sm t-mute" data-testid="assistant-script-draft-empty">
+      {{ 'assistant.draft.empty' | t }}
+    </p>
+  } @else {
+    <ol class="asst-draft-rows" data-testid="assistant-script-draft-rows">
+      @for (row of visibleRows(); track row.key) {
+        <li
+          class="asst-draft-row"
+          [class.is-kept]="row.kept"
+          [attr.data-type]="row.type"
+          data-testid="assistant-script-draft-row"
+        >
+          <span
+            class="asst-draft-type"
+            [attr.title]="typeOf(row).labelKey | t"
+            data-testid="assistant-script-draft-row-type"
+          >
+            <ds-icon [name]="typeOf(row).icon" [size]="13" />
+          </span>
+          <div class="asst-draft-body">
+            @if (row.speaker !== '' || row.paren !== '') {
+              <div class="t-sm t-mute" data-testid="assistant-script-draft-row-who">
+                @if (row.speaker !== '') {
+                  <span class="t-ink">{{ row.speaker }}</span>
+                }
+                @if (row.paren !== '') {
+                  <span>({{ row.paren }})</span>
+                }
+              </div>
+            }
+            <span data-testid="assistant-script-draft-row-text">{{ row.text }}</span>
+          </div>
+          @if (row.kept) {
+            <span class="t-sm t-mute" data-testid="assistant-script-draft-row-kept">
+              {{ 'assistant.draft.rowKept' | t }}
+            </span>
+          }
+        </li>
+      }
+    </ol>
+    @if (hiddenCount() > 0) {
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost"
+        data-testid="assistant-script-draft-more"
+        (click)="expand()"
+      >
+        {{ 'assistant.draft.more' | t: { count: hiddenCount() } }}
+      </button>
+    }
+  }
+
+  <footer class="asst-card-foot" data-testid="assistant-script-draft-foot">
+    @if (data.status === 'pending') {
+      <span class="t-sm t-mute asst-card-note" data-testid="assistant-script-draft-note">
+        {{ 'assistant.draft.note' | t: { changed: changed() } }}
+      </span>
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost"
+        [disabled]="busy()"
+        data-testid="assistant-script-draft-reject"
+        (click)="reject()"
+      >
+        {{ 'assistant.proposal.reject' | t }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-primary"
+        [disabled]="busy() || !applicable()"
+        data-testid="assistant-script-draft-apply"
+        (click)="apply()"
+      >
+        <ds-icon name="check" [size]="14" />
+        {{ 'assistant.draft.apply' | t }}
+      </button>
+    } @else {
+      <span
+        class="asst-status"
+        [class]="'asst-status is-' + data.status"
+        data-testid="assistant-script-draft-status"
+      >
+        <ds-icon [name]="data.status === 'applied' ? 'check-circle' : 'x-circle'" [size]="13" />
+        {{ statusKey(data.status) | t }}
+      </span>
+    }
+  </footer>
+</section>

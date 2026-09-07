@@ -10,6 +10,22 @@ pub trait TurnSink: Send + Sync {
     fn changed(&self, change: AssistantChange);
     fn attach(&self, attachment: serde_json::Value);
     fn attached(&self, kind: &str) -> usize;
+    fn next_card(&self, kind: &str) -> usize;
+}
+
+pub fn next_card_number(attachments: &[serde_json::Value], kind: &str) -> usize {
+    attachments
+        .iter()
+        .filter(|item| item.get("kind").and_then(serde_json::Value::as_str) == Some(kind))
+        .filter_map(|item| item.get("id").and_then(serde_json::Value::as_str))
+        .filter_map(trailing_number)
+        .max()
+        .map_or(1, |highest| highest + 1)
+}
+
+fn trailing_number(id: &str) -> Option<usize> {
+    let digits = id.len() - id.trim_end_matches(|c: char| c.is_ascii_digit()).len();
+    id[id.len() - digits..].parse().ok()
 }
 
 #[derive(Clone)]

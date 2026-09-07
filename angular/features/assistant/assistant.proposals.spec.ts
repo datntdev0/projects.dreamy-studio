@@ -1,9 +1,9 @@
-import { pipelineRun } from '@testing/fixtures';
+import { pipelineRun, scriptDraft } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 import { DictProposal, TranslationFinding, TranslationReview } from './assistant.models';
 // prettier-ignore
-import { canRun, countResolved, countSeverity, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
+import { canApplyDraft, canRun, changedDraftBlocks, countResolved, countSeverity, DRAFT_COLLAPSED_ROWS, draftRows, draftSpeakerName, isNewSpeaker, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
 
 const finding = (
   id: string,
@@ -82,5 +82,47 @@ describe('assistant.proposals', () => {
     expect(overwritesAudio(pipelineRun({ mode: 'all' }))).toBe(true);
     expect(overwritesAudio(pipelineRun({ mode: 'missing', overwrite: true }))).toBe(true);
     expect(Object.keys(PIPELINE_MODE_KEYS)).toEqual(['missing', 'all']);
+  });
+
+  it('applies a script draft only while it is pending and has blocks', () => {
+    expect(canApplyDraft(scriptDraft())).toBe(true);
+    expect(canApplyDraft(scriptDraft({ blocks: [] }))).toBe(false);
+    expect(canApplyDraft(scriptDraft({ status: 'applied' }))).toBe(false);
+    expect(canApplyDraft(scriptDraft({ status: 'rejected' }))).toBe(false);
+  });
+
+  it('counts the blocks a draft changes', () => {
+    expect(changedDraftBlocks(scriptDraft())).toBe(2);
+    const untouched = scriptDraft();
+    untouched.stats.kept = 9;
+    expect(changedDraftBlocks(untouched)).toBe(0);
+    expect(DRAFT_COLLAPSED_ROWS).toBeGreaterThan(0);
+  });
+
+  it('flags new speakers and resolves speaker names', () => {
+    const draft = scriptDraft();
+    expect(isNewSpeaker(draft, 'x1')).toBe(true);
+    expect(isNewSpeaker(draft, 'kb-1')).toBe(false);
+    expect(draftSpeakerName(draft, 'kb-1')).toBe('Lin Mo');
+    expect(draftSpeakerName(draft, 'x1')).toBe('Innkeeper');
+    expect(draftSpeakerName(draft, 'ghost')).toBe('ghost');
+    expect(draftSpeakerName(draft, '')).toBe('');
+    const unlisted = scriptDraft({ speakers: [] });
+    expect(draftSpeakerName(unlisted, 'x1')).toBe('Innkeeper');
+  });
+
+  it('lists the proposed rows with kept flags and unique keys', () => {
+    const rows = draftRows(scriptDraft(), 'after');
+    expect(rows.map((row) => row.kept)).toEqual([true, false, false]);
+    expect(rows.map((row) => row.speaker)).toEqual(['Narrator', 'Lin Mo', 'Innkeeper']);
+    expect(rows[1]).toMatchObject({ type: 'dialogue', text: 'Hello there', paren: 'softly' });
+    expect(new Set(rows.map((row) => row.key)).size).toBe(3);
+  });
+
+  it('lists the current rows as never kept', () => {
+    const rows = draftRows(scriptDraft(), 'before');
+    expect(rows.map((row) => row.key)).toEqual(['b1', 'b2']);
+    expect(rows.every((row) => !row.kept)).toBe(true);
+    expect(rows[1]).toMatchObject({ type: 'dialogue', text: 'Old line', speaker: 'Lin Mo' });
   });
 });

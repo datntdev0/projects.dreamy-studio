@@ -4,7 +4,8 @@ use serde_json::json;
 fn change(target: ChangeTarget) -> AssistantChange {
     AssistantChange {
         target,
-        novel_id: 4,
+        novel_id: Some(4),
+        project_id: None,
         chapter_id: Some("chapter-1".to_string()),
         lang: None,
         translation_target: None,
@@ -23,6 +24,7 @@ fn changed_event_is_flattened_under_the_changed_kind() {
             "kind": "changed",
             "target": "chapter",
             "novelId": 4,
+            "projectId": null,
             "chapterId": "chapter-1",
             "lang": null,
             "translationTarget": null,
@@ -59,7 +61,8 @@ fn change_targets_serialize_in_snake_case() {
 fn knowledge_change_carries_the_lang() {
     let event = AssistantEvent::Changed(AssistantChange {
         target: ChangeTarget::Knowledge,
-        novel_id: 2,
+        novel_id: Some(2),
+        project_id: None,
         chapter_id: None,
         lang: Some("VI".to_string()),
         translation_target: None,
@@ -76,7 +79,8 @@ fn knowledge_change_carries_the_lang() {
 fn translation_change_carries_the_translation_target() {
     let event = AssistantEvent::Changed(AssistantChange {
         target: ChangeTarget::Translation,
-        novel_id: 2,
+        novel_id: Some(2),
+        project_id: None,
         chapter_id: Some("chapter-1".to_string()),
         lang: None,
         translation_target: Some("VI".to_string()),
@@ -90,6 +94,7 @@ fn translation_change_carries_the_translation_target() {
             "kind": "changed",
             "target": "translation",
             "novelId": 2,
+            "projectId": null,
             "chapterId": "chapter-1",
             "lang": null,
             "translationTarget": "VI",
@@ -209,4 +214,73 @@ fn a_scope_without_a_project_id_still_deserializes() {
         serde_json::from_value(json!({ "kind": "novel", "novelId": 3 })).unwrap();
 
     assert_eq!(parsed, AssistantScope::novel(3));
+}
+
+#[test]
+fn a_script_change_names_the_project_and_the_unit() {
+    let event = AssistantEvent::Changed(AssistantChange {
+        target: ChangeTarget::Script,
+        novel_id: None,
+        project_id: Some(5),
+        chapter_id: Some("U01".to_string()),
+        lang: None,
+        translation_target: None,
+    });
+
+    let value = serde_json::to_value(&event).unwrap();
+
+    assert_eq!(
+        value,
+        json!({
+            "kind": "changed",
+            "target": "script",
+            "novelId": null,
+            "projectId": 5,
+            "chapterId": "U01",
+            "lang": null,
+            "translationTarget": null,
+        })
+    );
+}
+
+#[test]
+fn a_script_rewrite_context_reads_camel_case_fields() {
+    let context: AssistantContext = serde_json::from_value(json!({
+        "kind": "script_rewrite",
+        "unitId": "U01",
+        "note": "keep it short"
+    }))
+    .unwrap();
+
+    assert_eq!(
+        context,
+        AssistantContext::ScriptRewrite {
+            unit_id: "U01".to_string(),
+            note: Some("keep it short".to_string()),
+        }
+    );
+}
+
+#[test]
+fn the_note_of_a_script_rewrite_context_is_optional() {
+    let context: AssistantContext = serde_json::from_value(json!({
+        "kind": "script_rewrite",
+        "unitId": "U01"
+    }))
+    .unwrap();
+
+    assert_eq!(
+        context,
+        AssistantContext::ScriptRewrite {
+            unit_id: "U01".to_string(),
+            note: None,
+        }
+    );
+}
+
+#[test]
+fn a_script_rewrite_context_needs_a_unit() {
+    let parsed = serde_json::from_value::<AssistantContext>(json!({ "kind": "script_rewrite" }));
+
+    assert!(parsed.is_err());
 }

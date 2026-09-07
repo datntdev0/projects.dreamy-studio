@@ -444,7 +444,7 @@ fn applying_writes_each_finding_and_dictionary_item_and_marks_them_applied() {
             .iter()
             .all(|change| change.target == ChangeTarget::Translation)
     );
-    assert!(changes.iter().all(|change| change.novel_id == 1));
+    assert!(changes.iter().all(|change| change.novel_id == Some(1)));
     assert!(
         changes
             .iter()
@@ -1006,7 +1006,8 @@ fn applying_a_change_set_edits_the_knowledge_and_reports_the_change() {
         changes,
         vec![AssistantChange {
             target: ChangeTarget::Knowledge,
-            novel_id: 1,
+            novel_id: Some(1),
+            project_id: None,
             chapter_id: None,
             lang: Some("src".to_string()),
             translation_target: None,

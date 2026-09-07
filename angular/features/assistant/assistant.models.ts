@@ -1,3 +1,5 @@
+import { BlockType } from '@features/scripting/scripting.models';
+
 export type AssistantScopeKind = 'workspace' | 'novel' | 'project';
 
 export type AssistantRole = 'user' | 'assistant';
@@ -24,11 +26,12 @@ export interface AssistantCitation {
   quote: string;
 }
 
-export type AssistantChangeTarget = 'novel' | 'chapter' | 'knowledge' | 'translation';
+export type AssistantChangeTarget = 'novel' | 'chapter' | 'knowledge' | 'translation' | 'script';
 
 export interface AssistantChange {
   target: AssistantChangeTarget;
-  novelId: number;
+  novelId: number | null;
+  projectId: number | null;
   chapterId: string | null;
   lang: string | null;
   translationTarget: string | null;
@@ -163,11 +166,89 @@ export interface PipelineRunLaunch {
   run: PipelineRun;
 }
 
-export type AssistantAttachment = TranslationReview | KnowledgeChangeSet | PipelineRun;
+export interface ScriptDraftCurrentBlock {
+  id: string;
+  type: BlockType;
+  text: string;
+  who: string;
+  paren: string;
+}
+
+export interface ScriptDraftBlock {
+  id: string | null;
+  type: BlockType;
+  text: string;
+  who: string;
+  paren: string;
+  ms: number;
+  loc: string;
+  time: string;
+  beat: string;
+  refs: string[];
+  chars: string[];
+  kept: boolean;
+}
+
+export interface ScriptDraftCast {
+  id: string;
+  name: string;
+}
+
+export interface ScriptDraftSpeaker {
+  id: string;
+  name: string;
+  blocks: number;
+}
+
+export interface ScriptDraftStats {
+  blocks: number;
+  voiced: number;
+  words: number;
+  narration: number;
+  dialogue: number;
+  kept: number;
+  staleAudio: number;
+}
+
+export interface ScriptDraft {
+  kind: 'script_draft';
+  id: string;
+  projectId: number;
+  title: string;
+  unitId: string;
+  unitTitle: string;
+  chapter: number | null;
+  summary: string;
+  baseRev: string;
+  current: ScriptDraftCurrentBlock[];
+  currentTruncated: boolean;
+  blocks: ScriptDraftBlock[];
+  extraCast: ScriptDraftCast[];
+  speakers: ScriptDraftSpeaker[];
+  stats: ScriptDraftStats;
+  unresolved: number;
+  warnings: string[];
+  status: ProposalStatus;
+}
+
+export type ScriptDraftView = 'after' | 'before';
+
+export interface ScriptDraftRow {
+  key: string;
+  type: BlockType;
+  text: string;
+  paren: string;
+  speaker: string;
+  kept: boolean;
+}
+
+export type AssistantAttachment =
+  TranslationReview | KnowledgeChangeSet | PipelineRun | ScriptDraft;
 
 export type AssistantContext =
   | { kind: 'translation_review'; chapterId: string; target: string }
-  | { kind: 'knowledge_review'; lang: string; issueIds: string[] };
+  | { kind: 'knowledge_review'; lang: string; issueIds: string[] }
+  | { kind: 'script_rewrite'; unitId: string; note?: string };
 
 export interface ProposalResolution {
   messageId: string;

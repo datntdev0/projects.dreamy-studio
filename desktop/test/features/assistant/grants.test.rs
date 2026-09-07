@@ -80,7 +80,8 @@ fn grant_sink_receives_changes() {
     let token = grants.issue(grant("ws-1", sink.clone()));
     let change = AssistantChange {
         target: ChangeTarget::Novel,
-        novel_id: 3,
+        novel_id: Some(3),
+        project_id: None,
         chapter_id: None,
         lang: None,
         translation_target: None,
@@ -98,4 +99,41 @@ fn grant_keeps_the_edit_flag() {
     let off = grants.issue(grant("ws-1", Arc::new(RecordingSink::new())));
     assert!(grants.get(&on).unwrap().can_edit);
     assert!(!grants.get(&off).unwrap().can_edit);
+}
+
+fn card(kind: &str, id: &str) -> serde_json::Value {
+    serde_json::json!({ "kind": kind, "id": id })
+}
+
+#[test]
+fn card_numbers_start_at_one() {
+    assert_eq!(next_card_number(&[], "script_draft"), 1);
+    assert_eq!(
+        next_card_number(&[card("pipeline_run", "pr4")], "script_draft"),
+        1
+    );
+}
+
+#[test]
+fn card_numbers_follow_the_highest_number_of_the_kind() {
+    let cards = [
+        card("script_draft", "sd1"),
+        card("script_draft", "sd7"),
+        card("script_draft", "sd3"),
+        card("pipeline_run", "pr9"),
+    ];
+
+    assert_eq!(next_card_number(&cards, "script_draft"), 8);
+    assert_eq!(next_card_number(&cards, "pipeline_run"), 10);
+}
+
+#[test]
+fn card_ids_without_a_number_are_ignored() {
+    let cards = [card("script_draft", "sd"), card("script_draft", "sd2")];
+
+    assert_eq!(next_card_number(&cards, "script_draft"), 3);
+    assert_eq!(
+        next_card_number(&[card("script_draft", "draft")], "script_draft"),
+        1
+    );
 }

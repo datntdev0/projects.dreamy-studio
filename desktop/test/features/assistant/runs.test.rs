@@ -172,18 +172,3 @@ fn other_attachments_and_unknown_ids_are_left_alone() {
     assert_eq!(attachments[0]["status"], "pending");
     assert_eq!(attachments[1]["status"], "pending");
 }
-
-#[test]
-fn unknown_cards_are_reported_by_require_cards() {
-    let attachments = vec![
-        card("pr1", "pending"),
-        json!({ "kind": "translation_review", "id": "pr2" }),
-    ];
-
-    assert!(require_cards(&attachments, &ids(&["pr1"])).is_ok());
-
-    let error = require_cards(&attachments, &ids(&["pr1", "pr2", "x"])).unwrap_err();
-
-    assert_eq!(error.code, AssistantErrorCode::NotFound);
-    assert_eq!(error.detail, "no confirmation card matches: pr2, x");
-}

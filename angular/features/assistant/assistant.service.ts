@@ -9,6 +9,7 @@ import { NovelService } from '@features/novel/novel.service';
 import { NovelTranslationService } from '@features/novel/novel.translation.service';
 import { PipelineService } from '@features/pipeline/pipeline.service';
 import { ProjectService } from '@features/project/project.service';
+import { ScriptingService } from '@features/scripting/scripting.service';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { LayoutService } from '@layout/layout.service';
 import { TabsService } from '@layout/tabs.service';
@@ -19,7 +20,7 @@ import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
 // prettier-ignore
-import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution } from './assistant.models';
+import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution, ScriptDraft } from './assistant.models';
 import { overwritesAudio, runItemIds } from './assistant.proposals';
 // prettier-ignore
 import { compareRecentFirst, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
@@ -37,6 +38,23 @@ function resolveToastKey(resolution: ProposalResolution): LanguageKey {
   return resolution.pipelineId === undefined
     ? 'assistant.toast.applied'
     : 'assistant.toast.pipelineStarted';
+}
+
+function resolveErrorKey(code: string, scriptDraft: boolean): LanguageKey {
+  if (code !== 'conflict') {
+    return 'assistant.error.resolve';
+  }
+  return scriptDraft ? 'assistant.error.draftConflict' : 'assistant.error.conflict';
+}
+
+function draftOf(session: AssistantSession, resolution: ProposalResolution): ScriptDraft | null {
+  const message = session.messages.find((item) => item.id === resolution.messageId);
+  for (const attachment of message?.attachments ?? []) {
+    if (attachment.kind === 'script_draft' && resolution.itemIds.includes(attachment.id)) {
+      return attachment;
+    }
+  }
+  return null;
 }
 
 function summaryOf(session: AssistantSession): AssistantSessionSummary {
@@ -64,6 +82,7 @@ export class AssistantService {
   private readonly knowledge = inject(NovelKnowledgeService);
   private readonly translation = inject(NovelTranslationService);
   private readonly audiobook = inject(AudiobookService);
+  private readonly scripting = inject(ScriptingService);
   private readonly pipelines = inject(PipelineService);
   private readonly tabs = inject(TabsService);
   private readonly layout = inject(LayoutService);
@@ -210,8 +229,12 @@ export class AssistantService {
       return;
     }
     const epoch = this.epoch;
+    const draft = draftOf(session, resolution);
     this.resolving.set(resolution.messageId);
     try {
+      if (draft !== null && resolution.status === 'applied') {
+        await this.scripting.flush(draft.projectId);
+      }
       const next = await this.ipc.invoke<AssistantSession>('assistant_proposal_resolve', {
         sessionId: session.id,
         ...resolution,
@@ -231,7 +254,7 @@ export class AssistantService {
       );
     } catch (cause) {
       if (epoch === this.epoch) {
-        this.showResolveError(cause);
+        this.showResolveError(cause, draft !== null);
       }
     } finally {
       if (epoch === this.epoch) {
@@ -407,19 +430,39 @@ export class AssistantService {
   }
 
   private async refresh(change: AssistantChange): Promise<void> {
+    if (change.target === 'script') {
+      await this.refreshScript(change.projectId);
+    } else if (change.novelId !== null) {
+      await this.refreshNovel(change, change.novelId);
+    }
+  }
+
+  private async refreshScript(projectId: number | null): Promise<void> {
+    if (projectId !== null) {
+      await this.reloadScript(projectId);
+    }
+  }
+
+  private async reloadScript(projectId: number): Promise<void> {
+    if (this.scripting.isLoaded(projectId)) {
+      await this.scripting.load(projectId);
+    }
+  }
+
+  private async refreshNovel(change: AssistantChange, novelId: number): Promise<void> {
     if (change.target === 'novel') {
       await this.novels.load();
     } else if (change.target === 'chapter') {
-      await this.novels.loadChapters(change.novelId);
+      await this.novels.loadChapters(novelId);
       if (change.chapterId !== null) {
-        await this.reader.invalidate(change.novelId, change.chapterId);
+        await this.reader.invalidate(novelId, change.chapterId);
       }
     } else if (change.target === 'translation') {
       if (change.translationTarget !== null) {
-        await this.translation.load(change.novelId, change.translationTarget as TargetLang);
+        await this.translation.load(novelId, change.translationTarget as TargetLang);
       }
     } else if (change.lang !== null) {
-      await this.knowledge.load(change.novelId, change.lang as KnowledgeLang);
+      await this.knowledge.load(novelId, change.lang as KnowledgeLang);
     }
   }
 
@@ -458,10 +501,14 @@ export class AssistantService {
     this.toasts.show(this.languageService.translate(key, { detail }), 'danger');
   }
 
-  private showResolveError(cause: unknown): void {
+  private showResolveError(cause: unknown, scriptDraft: boolean): void {
     const error = toNovelError(cause);
-    const key = error.code === 'conflict' ? 'assistant.error.conflict' : 'assistant.error.resolve';
-    this.toasts.show(this.languageService.translate(key, { detail: error.detail }), 'danger');
+    this.toasts.show(
+      this.languageService.translate(resolveErrorKey(error.code, scriptDraft), {
+        detail: error.detail,
+      }),
+      'danger',
+    );
   }
 
   private ignoreReload(): void {
@@ -480,6 +527,10 @@ export class AssistantService {
       if (novelId !== null && changes.lang !== undefined) {
         await this.knowledge.load(novelId, changes.lang as KnowledgeLang);
       }
+    }
+    const draft = message?.attachments?.find((item) => item.kind === 'script_draft');
+    if (draft?.kind === 'script_draft' && draft.status === 'applied') {
+      await this.reloadScript(draft.projectId);
     }
   }
 

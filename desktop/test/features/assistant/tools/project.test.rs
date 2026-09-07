@@ -399,10 +399,7 @@ fn read_script_lists_chapters_without_a_unit_and_free_units() {
 #[test]
 fn read_script_before_any_script_exists_lists_the_chapters_only() {
     let mut world = World::new();
-    world.scripts = FakeScripts {
-        chapters: vec![chapter("c1", 1)],
-        ..FakeScripts::default()
-    };
+    world.scripts = FakeScripts::with_chapters(vec![chapter("c1", 1)]);
     let script = world.ask("read_script", json!({ "projectId": PROJECT }));
     assert_eq!(script["cfg"], Value::Null);
     assert_eq!(script["cast"], json!([]));

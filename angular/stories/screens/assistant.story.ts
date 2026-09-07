@@ -86,3 +86,8 @@ export const PipelineRun: Story = screen({}, async (root) => {
   await openSession(root, 's-pipeline');
   await waitFor(root, '[data-testid="assistant-pipeline-card"]');
 });
+
+export const ScriptDraft: Story = screen({}, async (root) => {
+  await openSession(root, 's-script');
+  await waitFor(root, '[data-testid="assistant-script-draft-card"]');
+});

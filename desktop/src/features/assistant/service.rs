@@ -1,6 +1,10 @@
+use crate::features::assistant::cards;
+use crate::features::assistant::drafts;
+use crate::features::assistant::drafts::DRAFT_KIND;
 use crate::features::assistant::grants::Grant;
 use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::grants::TurnSink;
+use crate::features::assistant::grants::next_card_number;
 use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantCitation;
 use crate::features::assistant::models::AssistantContext;
@@ -27,6 +31,7 @@ use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::linked_novel;
+use crate::features::assistant::tools::unit_target;
 use crate::features::knowledge::check::KnowledgeIssue;
 use crate::features::knowledge::check::check;
 use crate::features::knowledge::ontology::Ontology;
@@ -39,6 +44,7 @@ use crate::features::pipeline::llm::LlmClient;
 use crate::features::pipeline::llm::Turn;
 use crate::features::pipeline::log::RunLog;
 use crate::features::pipeline::log::TaskLog;
+use crate::features::project::models::ProjectSummary;
 use crate::features::settings::home;
 use crate::features::settings::llm::spec;
 use crate::features::settings::repository::SettingsRepository;
@@ -478,6 +484,13 @@ struct Exchange {
 }
 
 enum Skill {
+    Script {
+        project: ProjectSummary,
+        unit_id: String,
+        unit_title: String,
+        chapter: Option<i64>,
+        note: Option<String>,
+    },
     Translation {
         novel: NovelSummary,
         chapter: ChapterRow,
@@ -529,13 +542,8 @@ impl TurnSink for Collector {
 
     fn attach(&self, attachment: Value) {
         let mut stored = lock(&self.attachments);
-        let kind = attachment.get("kind").cloned();
-        let repeatable = kind.as_ref().and_then(Value::as_str) == Some(RUN_KIND);
-        let existing = stored
-            .iter_mut()
-            .find(|item| !repeatable && item.get("kind") == kind.as_ref());
-        match existing {
-            Some(slot) => *slot = attachment,
+        match slot_of(&stored, &attachment) {
+            Some(index) => stored[index] = attachment,
             None => stored.push(attachment),
         }
     }
@@ -546,6 +554,21 @@ impl TurnSink for Collector {
             .filter(|item| item.get("kind").and_then(Value::as_str) == Some(kind))
             .count()
     }
+
+    fn next_card(&self, kind: &str) -> usize {
+        next_card_number(&lock(&self.attachments), kind)
+    }
+}
+
+fn slot_of(stored: &[Value], attachment: &Value) -> Option<usize> {
+    let kind = attachment.get("kind");
+    if kind.and_then(Value::as_str) == Some(RUN_KIND) {
+        return None;
+    }
+    let draft = kind.and_then(Value::as_str) == Some(DRAFT_KIND);
+    stored.iter().position(|item| {
+        item.get("kind") == kind && (!draft || item.get("unitId") == attachment.get("unitId"))
+    })
 }
 
 struct Resolution<'a> {
@@ -571,9 +594,9 @@ fn resolve_attachments(
             proposals::resolve(attachments, item_ids, status, sources, novel_id)
         }
         _ => {
-            runs::require_cards(attachments, item_ids)?;
+            cards::require_cards(attachments, item_ids, &[RUN_KIND, DRAFT_KIND])?;
             runs::resolve(attachments, item_ids, status, pipeline_id)?;
-            Ok(Vec::new())
+            drafts::resolve(attachments, item_ids, status, sources)
         }
     }
 }
@@ -589,6 +612,9 @@ fn skill_of(
         }
         AssistantContext::KnowledgeReview { lang, issue_ids } => {
             knowledge_skill(&lang, &issue_ids, scope, sources)
+        }
+        AssistantContext::ScriptRewrite { unit_id, note } => {
+            script_skill(&unit_id, note, scope, sources)
         }
     }
 }
@@ -676,6 +702,51 @@ fn knowledge_skill(
     })
 }
 
+fn script_skill(
+    unit_id: &str,
+    note: Option<String>,
+    scope: &AssistantScope,
+    sources: &Sources,
+) -> AssistantResult<Skill> {
+    let project_id = match (scope.kind, scope.project_id) {
+        (ScopeKind::Project, Some(id)) => id,
+        _ => {
+            return Err(AssistantError::invalid(
+                "a script rewrite needs a project scope",
+            ));
+        }
+    };
+    let project = sources
+        .projects
+        .get(project_id)
+        .map_err(AssistantError::storage)?
+        .ok_or_else(|| AssistantError::invalid(format!("project {project_id} not found")))?;
+    let script = sources
+        .scripts
+        .script(project_id)
+        .map_err(AssistantError::storage)?
+        .ok_or_else(|| {
+            AssistantError::invalid(
+                "the project has no script yet; open its scripting module once to create it",
+            )
+        })?;
+    let chapters = sources
+        .scripts
+        .chapters(project_id)
+        .map_err(AssistantError::storage)?;
+    let target =
+        unit_target(&script, &chapters, project_id, unit_id).map_err(AssistantError::invalid)?;
+    Ok(Skill::Script {
+        project,
+        unit_id: unit_id.to_string(),
+        unit_title: target.title,
+        chapter: target.chapter,
+        note: note
+            .map(|text| text.trim().to_string())
+            .filter(|text| !text.is_empty()),
+    })
+}
+
 fn start_prompt(opening: String, skill: Option<&Skill>) -> String {
     match skill {
         Some(skill) => skill_prompt(skill, Some(opening)),
@@ -692,6 +763,22 @@ fn resume_prompt(text: &str, skill: Option<&Skill>) -> String {
 
 fn skill_prompt(skill: &Skill, opening: Option<String>) -> String {
     match skill {
+        Skill::Script {
+            project,
+            unit_id,
+            unit_title,
+            chapter,
+            note,
+        } => skills::rewrite_script_unit(
+            &skills::ScriptRewrite {
+                project,
+                unit_id,
+                unit_title,
+                chapter: *chapter,
+                note: note.as_deref(),
+            },
+            opening,
+        ),
         Skill::Translation {
             novel,
             chapter,

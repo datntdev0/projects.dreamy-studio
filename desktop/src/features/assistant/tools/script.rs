@@ -218,6 +218,36 @@ pub(super) fn block_page(
     page_bounds(&sizes, from, to)
 }
 
+pub(crate) struct UnitTarget<'a> {
+    pub unit: Option<&'a ScriptUnit>,
+    pub title: String,
+    pub chapter: Option<i64>,
+}
+
+pub(crate) fn unit_target<'a>(
+    script: &'a Script,
+    chapters: &[ProjectChapter],
+    project_id: i64,
+    unit_id: &str,
+) -> Result<UnitTarget<'a>, String> {
+    if let Some(unit) = script.units.iter().find(|unit| unit.id == unit_id) {
+        return Ok(UnitTarget {
+            unit: Some(unit),
+            title: unit_title(unit, chapters),
+            chapter: unit_seq(unit, chapters),
+        });
+    }
+    let chapter = chapters
+        .iter()
+        .find(|chapter| chapter.id == unit_id)
+        .ok_or_else(|| format!("unit {unit_id} not found in project {project_id}"))?;
+    Ok(UnitTarget {
+        unit: None,
+        title: chapter.title.clone(),
+        chapter: Some(chapter.seq),
+    })
+}
+
 pub(super) fn unit_for_chapter<'a>(
     script: Option<&'a Script>,
     chapter_id: &str,
@@ -377,24 +407,49 @@ fn block_refs(block: &ScriptBlock) -> Vec<(i64, usize)> {
         .collect()
 }
 
-fn parse_ref(text: &str) -> Option<(i64, usize)> {
-    let (chapter, p) = text.trim().split_once('.')?;
-    Some((chapter.parse().ok()?, p.parse().ok()?))
-}
-
 fn source_texts(
     project: &ProjectSummary,
     sources: &Sources,
     page: &[ScriptBlock],
 ) -> Result<SourceTexts, String> {
-    let novel_id = project
-        .novel_id
-        .ok_or_else(|| "the project has no linked novel".to_string())?;
     let seqs: BTreeSet<i64> = page
         .iter()
         .flat_map(block_refs)
         .map(|(chapter, _)| chapter)
         .collect();
+    source_texts_of(project, sources, &seqs)
+}
+
+pub(super) fn paragraph_counts(
+    project: &ProjectSummary,
+    sources: &Sources,
+    seqs: &BTreeSet<i64>,
+) -> Result<Option<BTreeMap<i64, usize>>, String> {
+    if project.novel_id.is_none() || project.novel_missing {
+        return Ok(None);
+    }
+    let texts = source_texts_of(project, sources, seqs)?;
+    Ok(Some(
+        texts
+            .into_iter()
+            .map(|(seq, paragraphs)| (seq, paragraphs.len()))
+            .collect(),
+    ))
+}
+
+pub(super) fn parse_ref(text: &str) -> Option<(i64, usize)> {
+    let (chapter, p) = text.trim().split_once('.')?;
+    Some((chapter.parse().ok()?, p.parse().ok()?))
+}
+
+fn source_texts_of(
+    project: &ProjectSummary,
+    sources: &Sources,
+    seqs: &BTreeSet<i64>,
+) -> Result<SourceTexts, String> {
+    let novel_id = project
+        .novel_id
+        .ok_or_else(|| "the project has no linked novel".to_string())?;
     let chapters = sources.novels.chapters(novel_id)?;
     let target = translation_target(project)?;
     let book = match &target {

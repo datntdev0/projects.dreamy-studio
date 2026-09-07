@@ -1,4 +1,4 @@
-import { AssistantSession, PipelineRun } from '@features/assistant/assistant.models';
+import { AssistantSession, PipelineRun, ScriptDraft } from '@features/assistant/assistant.models';
 import { LibraryImage } from '@features/library/library.images.models';
 import { LibraryCollection } from '@features/library/library.models';
 import { LibraryPrompt } from '@features/library/library.prompts.models';
@@ -251,6 +251,67 @@ export function pipelineRun(overrides: Partial<PipelineRun> = {}): PipelineRun {
     totalTasks: 2,
     status: 'pending',
     pipelineId: null,
+    ...overrides,
+  };
+}
+
+export function scriptDraft(overrides: Partial<ScriptDraft> = {}): ScriptDraft {
+  return {
+    kind: 'script_draft',
+    id: 'sd1',
+    projectId: 1,
+    title: 'Audiobook project',
+    unitId: 'c1',
+    unitTitle: 'Opening',
+    chapter: 1,
+    summary: 'Narration with two speakers',
+    baseRev: 'rev-1',
+    current: [
+      { id: 'b1', type: 'narration', text: 'Old narration', who: 'narr', paren: '' },
+      { id: 'b2', type: 'dialogue', text: 'Old line', who: 'kb-1', paren: '' },
+    ],
+    currentTruncated: false,
+    blocks: [
+      block({ id: 'b1', text: 'Old narration', who: 'narr', kept: true }),
+      block({ id: null, type: 'dialogue', text: 'Hello there', who: 'kb-1', paren: 'softly' }),
+      block({ id: null, type: 'dialogue', text: 'Welcome', who: 'x1' }),
+    ],
+    extraCast: [{ id: 'x1', name: 'Innkeeper' }],
+    speakers: [
+      { id: 'narr', name: 'Narrator', blocks: 1 },
+      { id: 'kb-1', name: 'Lin Mo', blocks: 1 },
+      { id: 'x1', name: 'Innkeeper', blocks: 1 },
+    ],
+    stats: {
+      blocks: 3,
+      voiced: 3,
+      words: 5,
+      narration: 1,
+      dialogue: 2,
+      kept: 1,
+      staleAudio: 0,
+    },
+    unresolved: 0,
+    warnings: [],
+    status: 'pending',
+    ...overrides,
+  };
+}
+
+function block(overrides: Partial<ScriptDraft['blocks'][number]>): ScriptDraft['blocks'][number] {
+  return {
+    id: null,
+    type: 'narration',
+    text: '',
+    who: '',
+    paren: '',
+    ms: 0,
+    loc: '',
+    time: '',
+    beat: '',
+    refs: [],
+    chars: [],
+    kept: false,
     ...overrides,
   };
 }

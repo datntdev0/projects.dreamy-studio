@@ -14,6 +14,7 @@ const PROJECT_TOOLS: &str = concat!(
     "- `search_project`: search the text, speaker and location of the script blocks of one project by `projectId` and `query`, optionally within one `unitId`.\n",
     "- `read_audiobook`: read the voices, the mix and the audio progress of every unit of one project by `projectId`.\n",
     "- `read_audiobook_unit`: read the audio state (none, done, stale or flag) of the voiced blocks of one unit by `projectId` and `unitId`.\n",
+    "- `submit_script_draft`: propose a rewrite of one script unit by `projectId`, `unitId`, `blocks` and optional `extraCast`; the user reviews it on a card and nothing is written until the user applies it.\n",
 );
 
 const RUN_TOOLS: &str = concat!(
@@ -45,6 +46,12 @@ const PIPELINE_RULES: &str = concat!(
 );
 
 const PROJECT_READING_RULE: &str = "- Read the script with `read_script` and `read_script_unit` before you answer about it, and point to blocks by their id and position `p`.\n";
+
+const DRAFT_RULES: &str = concat!(
+    "- To rewrite or write a script unit, read it first with `read_script` and `read_script_unit`, then send the whole new unit once with `submit_script_draft`. Never edit the script any other way.\n",
+    "- `submit_script_draft` shows a card and the script changes only when the user applies it: never say the script has changed before that, and tell the user to review the card.\n",
+    "- When the user does not say which unit to rewrite and several could match, ask which one. Choose speakers only from evidence in the text and leave `who` empty when unsure.\n",
+);
 
 const CITATION_FORMAT: &str =
     "<citations>[{\"novelId\":1,\"chapter\":3,\"p\":6,\"quote\":\"verbatim text\"}]</citations>";
@@ -150,7 +157,7 @@ fn project_rules(project_id: i64, linked_novel: Option<i64>) -> String {
             "- The project has no linked novel, so the novel tools are unavailable.\n".to_string()
         }
     };
-    format!("{focus}{novel}{PROJECT_READING_RULE}")
+    format!("{focus}{novel}{PROJECT_READING_RULE}{DRAFT_RULES}")
 }
 
 fn novel_list(novels: &[NovelSummary]) -> String {

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ComponentCase, describeComponents } from '@testing/exercise';
-import { pipelineRun } from '@testing/fixtures';
+import { pipelineRun, scriptDraft } from '@testing/fixtures';
 import { setupWorld, warmWorld, worldSession } from '@testing/world';
 
 import { KnowledgeChangeSet, TranslationReview } from '../assistant.models';
@@ -11,6 +11,7 @@ import { AssistantComposer } from './composer.component';
 import { AssistantPanel } from './panel.component';
 import { AssistantPipelineCard } from './pipeline-card.component';
 import { AssistantReviewCard } from './review-card.component';
+import { AssistantScriptDraftCard } from './script-draft-card.component';
 import { AssistantSessions } from './sessions.component';
 import { AssistantStart } from './start.component';
 
@@ -70,6 +71,12 @@ const cases: ComponentCase[] = [
     name: 'AssistantPipelineCard',
     type: AssistantPipelineCard,
     inputs: { run: pipelineRun(), messageId: 'm2' },
+    before: chatting,
+  },
+  {
+    name: 'AssistantScriptDraftCard',
+    type: AssistantScriptDraftCard,
+    inputs: { draft: scriptDraft(), messageId: 'm2' },
     before: chatting,
   },
 ];

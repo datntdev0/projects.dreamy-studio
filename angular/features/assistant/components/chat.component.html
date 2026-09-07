@@ -143,6 +143,13 @@
                   (resolved)="onResolved($event)"
                   (opened)="onOpened($event)"
                 />
+              } @else if (asScriptDraft(attachment); as scriptDraft) {
+                <app-assistant-script-draft-card
+                  [draft]="scriptDraft"
+                  [messageId]="message.id"
+                  [busy]="isResolving(message)"
+                  (resolved)="onResolved($event)"
+                />
               }
             }
           </article>

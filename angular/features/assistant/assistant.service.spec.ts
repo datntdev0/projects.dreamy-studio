@@ -1,13 +1,22 @@
 import { TestBed } from '@angular/core/testing';
 import { AudiobookService } from '@features/audiobook/audiobook.service';
 import { PipelineService } from '@features/pipeline/pipeline.service';
+import { ScriptingService } from '@features/scripting/scripting.service';
 import { LayoutService } from '@layout/layout.service';
 import { TabsService } from '@layout/tabs.service';
 import { DialogService } from '@shared/dialog/dialog.service';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 import { FakeIpc } from '@testing/fake-ipc';
-import { chapter, novel, pipeline, pipelineRun, project, session } from '@testing/fixtures';
+import {
+  chapter,
+  novel,
+  pipeline,
+  pipelineRun,
+  project,
+  scriptDraft,
+  session,
+} from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -131,6 +140,7 @@ describe('AssistantService', () => {
     const base = {
       kind: 'changed' as const,
       novelId: 1,
+      projectId: null,
       chapterId: null,
       lang: null,
       translationTarget: null,
@@ -144,6 +154,48 @@ describe('AssistantService', () => {
     emit({ ...base, target: 'knowledge' });
     await vi.waitFor(() => expect(ipc.called('translation_get')).toBe(1));
     await vi.waitFor(() => expect(ipc.called('knowledge_get')).toBe(1));
+  });
+
+  it('reloads an open script when the assistant changes it', async () => {
+    await assistant.send('go');
+    const scripting = TestBed.inject(ScriptingService);
+    const isLoaded = vi.spyOn(scripting, 'isLoaded').mockReturnValue(true);
+    const load = vi.spyOn(scripting, 'load').mockResolvedValue();
+    const base = {
+      kind: 'changed' as const,
+      target: 'script' as const,
+      novelId: null,
+      chapterId: 'c1',
+      lang: null,
+      translationTarget: null,
+    };
+    emit({ ...base, projectId: 5 });
+    await vi.waitFor(() => expect(load).toHaveBeenCalledWith(5));
+    isLoaded.mockReturnValue(false);
+    emit({ ...base, projectId: 6 });
+    emit({ ...base, projectId: null });
+    await flushEffects();
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores novel changes that carry no novel id', async () => {
+    await assistant.send('go');
+    const base = {
+      kind: 'changed' as const,
+      novelId: null,
+      projectId: 5,
+      chapterId: 'c1',
+      lang: 'src',
+      translationTarget: 'VI',
+    };
+    emit({ ...base, target: 'novel' });
+    emit({ ...base, target: 'chapter' });
+    emit({ ...base, target: 'translation' });
+    emit({ ...base, target: 'knowledge' });
+    await flushEffects();
+    expect(ipc.called('translation_get')).toBe(0);
+    expect(ipc.called('knowledge_get')).toBe(0);
+    expect(ipc.called('novel_chapters')).toBe(0);
   });
 
   it('surfaces send failures', async () => {
@@ -235,6 +287,102 @@ describe('AssistantService', () => {
     assistant.active.set(null);
     await assistant.resolve({ messageId: 'm1', itemIds: ['a'], status: 'applied' });
     expect(assistant.resolving()).toBeNull();
+  });
+
+  describe('script drafts', () => {
+    function draftMessage(status: 'pending' | 'applied'): AssistantMessage {
+      return {
+        id: 'm1',
+        role: 'assistant',
+        text: 'Rewritten.',
+        createdAt: '2026-01-01T00:00:00Z',
+        activities: [],
+        citations: [],
+        attachments: [scriptDraft({ status })],
+      };
+    }
+
+    function withDraft(status: 'pending' | 'applied') {
+      return session({ id: 'new', scope: projectScope(5), messages: [draftMessage(status)] });
+    }
+
+    it('flushes pending script writes, applies the draft and reloads the script', async () => {
+      const scripting = TestBed.inject(ScriptingService);
+      const order: string[] = [];
+      vi.spyOn(scripting, 'flush').mockImplementation(() => {
+        order.push('flush');
+        return Promise.resolve();
+      });
+      vi.spyOn(scripting, 'isLoaded').mockReturnValue(true);
+      const load = vi.spyOn(scripting, 'load').mockImplementation(() => {
+        order.push('load');
+        return Promise.resolve();
+      });
+      ipc.on('assistant_proposal_resolve', () => {
+        order.push('resolve');
+        return withDraft('applied');
+      });
+      assistant.active.set(withDraft('pending'));
+      await assistant.resolve({ messageId: 'm1', itemIds: ['sd1'], status: 'applied' });
+      await vi.waitFor(() => expect(load).toHaveBeenCalledWith(1));
+      expect(order).toEqual(['flush', 'resolve', 'load']);
+      expect(assistant.active()?.messages[0].attachments?.[0]).toMatchObject({
+        status: 'applied',
+      });
+      expect(toasts.items().at(-1)?.tone).toBe('success');
+    });
+
+    it('does not reload a script that was never opened', async () => {
+      const scripting = TestBed.inject(ScriptingService);
+      vi.spyOn(scripting, 'isLoaded').mockReturnValue(false);
+      const load = vi.spyOn(scripting, 'load').mockResolvedValue();
+      ipc.on('assistant_proposal_resolve', withDraft('applied'));
+      assistant.active.set(withDraft('pending'));
+      await assistant.resolve({ messageId: 'm1', itemIds: ['sd1'], status: 'applied' });
+      await flushEffects();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('skips the flush and the reload when the draft is rejected', async () => {
+      const scripting = TestBed.inject(ScriptingService);
+      const flush = vi.spyOn(scripting, 'flush');
+      const load = vi.spyOn(scripting, 'load').mockResolvedValue();
+      ipc.on('assistant_proposal_resolve', withDraft('pending'));
+      assistant.active.set(withDraft('pending'));
+      await assistant.resolve({ messageId: 'm1', itemIds: ['sd1'], status: 'rejected' });
+      expect(flush).not.toHaveBeenCalled();
+      expect(load).not.toHaveBeenCalled();
+      expect(toasts.items().at(-1)?.tone).toBe('info');
+    });
+
+    it('leaves the draft pending and advises asking again on a conflict', async () => {
+      const scripting = TestBed.inject(ScriptingService);
+      const load = vi.spyOn(scripting, 'load').mockResolvedValue();
+      ipc.fail('assistant_proposal_resolve', { code: 'conflict', detail: 'unit moved on' });
+      assistant.active.set(withDraft('pending'));
+      await assistant.resolve({ messageId: 'm1', itemIds: ['sd1'], status: 'applied' });
+      const toast = toasts.items().at(-1);
+      expect(toast?.tone).toBe('danger');
+      expect(toast?.message).toBe(
+        TestBed.inject(LanguageService).translate('assistant.error.draftConflict', {
+          detail: 'unit moved on',
+        }),
+      );
+      expect(assistant.active()?.messages[0].attachments?.[0]).toMatchObject({
+        status: 'pending',
+      });
+      expect(load).not.toHaveBeenCalled();
+      expect(assistant.resolving()).toBeNull();
+    });
+
+    it('uses the plain conflict message for other proposals', async () => {
+      ipc.fail('assistant_proposal_resolve', { code: 'conflict', detail: 'stale' });
+      assistant.active.set(session({ id: 'new', messages: [] }));
+      await assistant.resolve({ messageId: 'm1', itemIds: ['a'], status: 'applied' });
+      expect(toasts.items().at(-1)?.message).toBe(
+        TestBed.inject(LanguageService).translate('assistant.error.conflict', { detail: 'stale' }),
+      );
+    });
   });
 
   it('toggles edit permission', async () => {

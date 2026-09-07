@@ -147,6 +147,12 @@ pub enum AssistantContext {
         lang: String,
         issue_ids: Vec<String>,
     },
+    #[serde(rename_all = "camelCase")]
+    ScriptRewrite {
+        unit_id: String,
+        #[serde(default)]
+        note: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -186,13 +192,15 @@ pub enum ChangeTarget {
     Chapter,
     Knowledge,
     Translation,
+    Script,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantChange {
     pub target: ChangeTarget,
-    pub novel_id: i64,
+    pub novel_id: Option<i64>,
+    pub project_id: Option<i64>,
     pub chapter_id: Option<String>,
     pub lang: Option<String>,
     pub translation_target: Option<String>,

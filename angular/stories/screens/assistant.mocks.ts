@@ -1,10 +1,15 @@
 // prettier-ignore
 import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from '@features/assistant/assistant.models';
-import { novelScope, WORKSPACE_SCOPE } from '@features/assistant/assistant.rules';
+import { novelScope, projectScope, WORKSPACE_SCOPE } from '@features/assistant/assistant.rules';
 import { NovelSummary } from '@features/novel/novel.models';
 import type { Decorator } from '@storybook/angular-vite';
 
-import { knowledgeChanges, pipelineRun, translationReview } from './assistant.fixtures';
+import {
+  knowledgeChanges,
+  pipelineRun,
+  scriptDraft,
+  translationReview,
+} from './assistant.fixtures';
 import { knowledgeScreenHandlers } from './novel-knowledge.mocks';
 import { LANTERN_VI_TITLES } from './novel-translation.fixtures';
 import { NOVEL_ID } from './novel-translation.mocks';
@@ -215,6 +220,19 @@ const PIPELINE_TURNS: Turn[] = [
   },
 ];
 
+const SCRIPT_TURNS: Turn[] = [
+  {
+    role: 'user',
+    text: 'Viết lại chương 1 theo lối dẫn truyện, có lời thoại và chọn đúng người nói.',
+  },
+  {
+    role: 'assistant',
+    text: 'Mình đã viết lại chương 1: giữ nguyên đoạn mở đầu, thêm phần dẫn truyện và tách hai lời thoại. Người lạ chưa có trong dàn nhân vật nên mình đề xuất thêm vào cast. Bản này chỉ được ghi khi bạn bấm Áp dụng.',
+    activities: ['read_script → 1 unit', 'read_novel_chapter(1) → 14 đoạn'],
+    attachments: [scriptDraft()],
+  },
+];
+
 const WORKSPACE_TURNS: Turn[] = [
   { role: 'user', text: 'Novel nào còn nhiều chương chưa dịch?' },
   {
@@ -234,6 +252,7 @@ function seedSessions(): AssistantSession[] {
       REVIEW_TURNS,
     ),
     session('s-pipeline', 'Dịch chương 3–4', novelScope(NOVEL_ID), 10 * 60 * 1000, PIPELINE_TURNS),
+    session('s-script', 'Viết lại script chương 1', projectScope(1), 12 * 60 * 1000, SCRIPT_TURNS),
     session(
       's-kb-fix',
       'Sửa xung đột knowledgebase',
@@ -400,7 +419,7 @@ function decideAttachment(
     }
     return;
   }
-  if (attachment.kind === 'knowledge_changes') {
+  if (attachment.kind === 'knowledge_changes' || attachment.kind === 'script_draft') {
     if (ids.has(attachment.id) && attachment.status === 'pending') {
       attachment.status = status;
     }

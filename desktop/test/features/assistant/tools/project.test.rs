@@ -152,7 +152,10 @@ fn workspace_and_project_scopes_offer_the_project_tools() {
     ] {
         let tools = definitions(&scope);
         let listed = names(&tools);
-        assert_eq!(listed.len(), 14 + PROJECT_TOOLS.len());
+        assert_eq!(
+            listed.len(),
+            14 + PROJECT_TOOLS.len() + PIPELINE_TOOLS.len()
+        );
         for tool in PROJECT_TOOLS {
             assert!(listed.contains(&tool), "{tool} missing");
         }
@@ -163,7 +166,7 @@ fn workspace_and_project_scopes_offer_the_project_tools() {
 fn novel_scope_offers_no_project_tool() {
     let tools = definitions(&AssistantScope::novel(1));
     let listed = names(&tools);
-    assert_eq!(listed.len(), 14);
+    assert_eq!(listed.len(), 14 + 5);
     assert!(PROJECT_TOOLS.iter().all(|tool| !listed.contains(tool)));
 }
 
@@ -171,9 +174,15 @@ fn novel_scope_offers_no_project_tool() {
 fn project_definitions_match_the_dispatch_list() {
     let tools = definitions(&AssistantScope::workspace());
     let listed = names(&tools);
-    let project_names: Vec<&str> = listed[14..].to_vec();
+    let project_names: Vec<&str> = listed[14..14 + PROJECT_TOOLS.len()].to_vec();
     assert_eq!(project_names, PROJECT_TOOLS);
-    for tool in tools.as_array().unwrap().iter().skip(14) {
+    for tool in tools
+        .as_array()
+        .unwrap()
+        .iter()
+        .skip(14)
+        .take(PROJECT_TOOLS.len())
+    {
         assert!(!tool["description"].as_str().unwrap().is_empty());
         assert_eq!(tool["inputSchema"]["additionalProperties"], json!(false));
     }
@@ -182,7 +191,13 @@ fn project_definitions_match_the_dispatch_list() {
 #[test]
 fn project_tools_require_a_project_id_except_the_listing() {
     let tools = definitions(&AssistantScope::workspace());
-    for tool in tools.as_array().unwrap().iter().skip(14) {
+    for tool in tools
+        .as_array()
+        .unwrap()
+        .iter()
+        .skip(14)
+        .take(PROJECT_TOOLS.len())
+    {
         let required = &tool["inputSchema"]["required"];
         let has_project = required
             .as_array()

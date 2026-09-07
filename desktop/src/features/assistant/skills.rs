@@ -18,7 +18,7 @@ pub fn review_translation(
         chapter.seq,
         chapter.title,
         novel.id,
-        display_name(novel)
+        novel.display_name()
     ));
     prompt.push_str("Follow these steps with the MCP tools of the `dreamy` server:\n");
     prompt.push_str(&format!(
@@ -62,7 +62,7 @@ pub fn review_knowledgebase(
     prompt.push_str(&format!(
         "Review the knowledge base (lang \"{lang}\") of the novel with id {} (\"{}\"). The user selected {} issue(s) found by the knowledge checker and wants you to fix them.\n\n",
         novel.id,
-        display_name(novel),
+        novel.display_name(),
         issues.len()
     ));
     prompt.push_str("Selected issues:\n");
@@ -102,11 +102,6 @@ fn json_text<T: serde::Serialize>(value: &T) -> String {
         .ok()
         .and_then(|item| item.as_str().map(str::to_string))
         .unwrap_or_default()
-}
-
-fn display_name(novel: &NovelSummary) -> &str {
-    let name = novel.name.trim();
-    if name.is_empty() { &novel.title } else { name }
 }
 
 #[cfg(test)]

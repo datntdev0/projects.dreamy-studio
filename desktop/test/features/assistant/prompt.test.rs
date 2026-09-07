@@ -2,6 +2,7 @@ use super::*;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::tools::PIPELINE_TOOLS;
 use crate::features::assistant::tools::PROJECT_TOOLS;
 use crate::testing::assistant::FakeNovels;
 
@@ -174,4 +175,46 @@ fn follow_up_is_short_and_reminds_the_format() {
     assert!(prompt.contains("</citations>"));
     assert!(prompt.len() < 400);
     assert!(!prompt.contains("list_novel"));
+}
+
+#[test]
+fn every_scope_describes_the_run_and_status_tools() {
+    for scope in [
+        workspace(),
+        AssistantScope::novel(7),
+        AssistantScope::project(3),
+    ] {
+        let prompt = opening(&scope, &[], "q", &novels(), None);
+        for tool in PIPELINE_TOOLS
+            .iter()
+            .filter(|tool| **tool != "start_synthesis")
+        {
+            assert!(prompt.contains(&format!("`{tool}`")), "{tool} missing");
+        }
+    }
+}
+
+#[test]
+fn start_synthesis_is_described_outside_a_novel_scope_only() {
+    for scope in [workspace(), AssistantScope::project(3)] {
+        let prompt = opening(&scope, &[], "q", &novels(), None);
+        assert!(prompt.contains("- `start_synthesis`:"));
+    }
+    let prompt = opening(&AssistantScope::novel(7), &[], "q", &novels(), None);
+    assert!(!prompt.contains("start_synthesis"));
+}
+
+#[test]
+fn the_prompt_requires_the_user_to_confirm_every_run() {
+    let prompt = opening(&workspace(), &[], "q", &novels(), None);
+    assert!(prompt.contains("never start a job"));
+    assert!(prompt.contains("confirmation card"));
+    assert!(
+        prompt
+            .contains("Never say that a job has started or finished before the user confirmed it")
+    );
+    assert!(prompt.contains("only when the user asks about the status of a run"));
+    assert!(prompt.contains("Queue only the chapters or units the user asked for"));
+    assert!(prompt.find("## Tools").unwrap() < prompt.find("`start_translation`").unwrap());
+    assert!(prompt.find("`cancel_pipeline`").unwrap() < prompt.find("## Rules").unwrap());
 }

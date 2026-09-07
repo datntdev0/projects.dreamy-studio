@@ -1,7 +1,7 @@
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { DictProposal, FindingCategory, FindingSeverity, KnowledgeChangeOp, MarkedText, ProposalStatus, TranslationFinding, TranslationReview } from './assistant.models';
+import { DictProposal, FindingCategory, FindingSeverity, KnowledgeChangeOp, MarkedText, PipelineJobKind, PipelineRun, ProposalStatus, TranslationFinding, TranslationReview } from './assistant.models';
 
 export const SEVERITY_KEYS: Record<FindingSeverity, LanguageKey> = {
   error: 'assistant.review.severity.error',
@@ -55,6 +55,17 @@ export const STATUS_KEYS: Record<ProposalStatus, LanguageKey> = {
   rejected: 'assistant.proposal.rejected',
 };
 
+export const PIPELINE_RUN_KINDS: Record<PipelineJobKind, string> = {
+  translation: 'translation',
+  analysis: 'analysis',
+  synthesis: 'audio',
+};
+
+export const PIPELINE_MODE_KEYS: Record<string, LanguageKey> = {
+  missing: 'assistant.pipeline.mode.missing',
+  all: 'assistant.pipeline.mode.all',
+};
+
 export function markText(text: string, needle: string): MarkedText {
   const index = needle === '' ? -1 : text.indexOf(needle);
   if (index < 0) {
@@ -91,4 +102,20 @@ export function countResolved(items: Array<TranslationFinding | DictProposal>): 
     }
   }
   return count;
+}
+
+export function canRun(run: PipelineRun): boolean {
+  return run.status === 'pending' && run.totalTasks > 0;
+}
+
+export function overwritesAudio(run: PipelineRun): boolean {
+  return run.overwrite || run.mode === 'all';
+}
+
+export function runItemIds(run: PipelineRun): string[] {
+  return run.items.map((item) => item.id);
+}
+
+export function runKindOf(run: PipelineRun): string {
+  return PIPELINE_RUN_KINDS[run.job];
 }

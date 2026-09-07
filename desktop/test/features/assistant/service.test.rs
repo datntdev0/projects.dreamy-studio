@@ -647,9 +647,14 @@ fn resolve(
     status: Decision,
 ) -> AssistantResult<AssistantSession> {
     let items: Vec<String> = items.iter().map(|item| item.to_string()).collect();
-    fixture
-        .workspace
-        .resolve(ids.0, ids.1, &items, status, &resolve_sources(translation))
+    fixture.workspace.resolve(
+        ids.0,
+        ids.1,
+        &items,
+        status,
+        None,
+        &resolve_sources(translation),
+    )
 }
 
 fn item_statuses(session: &AssistantSession, list: &str) -> Vec<String> {
@@ -812,7 +817,7 @@ fn resolve_unknown_session_or_message_is_not_found() {
 }
 
 #[test]
-fn resolve_in_a_workspace_scope_is_invalid() {
+fn resolve_in_a_workspace_scope_has_no_proposal_to_find() {
     let fixture = fixture();
     let translation = review_translation();
     let id = fixture
@@ -831,7 +836,7 @@ fn resolve_in_a_workspace_scope_is_invalid() {
         Decision::Applied,
     );
 
-    assert_eq!(code(result), AssistantErrorCode::Invalid);
+    assert_eq!(code(result), AssistantErrorCode::NotFound);
 }
 
 #[test]
@@ -851,6 +856,7 @@ fn resolve_is_busy_while_a_turn_runs_and_free_afterwards() {
             &message_id,
             &items,
             Decision::Applied,
+            None,
             &resolve_sources(&probe),
         );
         *seen.lock().unwrap() = Some(code(result));
@@ -1396,7 +1402,7 @@ fn resolve_changes(
     let sources = sources_with(&review_novels(), knowledge, &review_translation());
     fixture
         .workspace
-        .resolve(ids.0, ids.1, &["cs1".to_string()], status, &sources)
+        .resolve(ids.0, ids.1, &["cs1".to_string()], status, None, &sources)
 }
 
 #[test]
@@ -1445,4 +1451,202 @@ fn resolve_rejects_a_change_set_without_touching_the_knowledge() {
     assert_eq!(session.messages[1].attachments[0]["status"], "rejected");
     assert!(knowledge.calls().is_empty());
     assert!(knowledge.previews().is_empty());
+}
+
+fn run_card(id: &str) -> Value {
+    json!({
+        "kind": "pipeline_run",
+        "id": id,
+        "job": "translation",
+        "owner": { "novelId": 1, "projectId": null },
+        "title": "Alpha",
+        "target": "VI",
+        "mode": null,
+        "overwrite": false,
+        "items": [],
+        "skipped": [],
+        "warnings": [],
+        "totalTasks": 1,
+        "status": "pending",
+        "pipelineId": null
+    })
+}
+
+fn project_sources() -> Sources {
+    sources_with_projects(
+        &novels(),
+        &FakeKnowledge::new(),
+        &FakeTranslation::new(),
+        &projects(),
+    )
+}
+
+fn carded(fixture: &Fixture, scope: AssistantScope, cards: &[&str]) -> (String, String) {
+    let grants = fixture.grants.clone();
+    let cards: Vec<Value> = cards.iter().map(|id| run_card(id)).collect();
+    fixture.llm.set_hook(move |token| {
+        let sink = grants.get(token).unwrap().sink;
+        for card in &cards {
+            sink.attach(card.clone());
+        }
+    });
+    let id = fixture
+        .workspace
+        .create(scope, &novels(), &projects())
+        .unwrap()
+        .summary
+        .id;
+    let session = fixture
+        .workspace
+        .send(&id, "Run it", None, events(), &project_sources())
+        .unwrap();
+    let message = session.messages[1].id.clone();
+    (id, message)
+}
+
+fn resolve_cards(
+    fixture: &Fixture,
+    ids: (&str, &str),
+    cards: &[&str],
+    outcome: (Decision, Option<i64>),
+) -> AssistantResult<AssistantSession> {
+    let cards: Vec<String> = cards.iter().map(|card| card.to_string()).collect();
+    fixture.workspace.resolve(
+        ids.0,
+        ids.1,
+        &cards,
+        outcome.0,
+        outcome.1,
+        &project_sources(),
+    )
+}
+
+#[test]
+fn every_run_card_of_a_turn_is_kept_and_other_kinds_still_replace_each_other() {
+    let fixture = fixture();
+    let grants = fixture.grants.clone();
+    fixture.llm.set_hook(move |token| {
+        let sink = grants.get(token).unwrap().sink;
+        sink.attach(run_card("pr1"));
+        sink.attach(pending_review());
+        sink.attach(run_card("pr2"));
+        sink.attach(pending_review());
+    });
+    let id = novel_session(&fixture, 1);
+
+    let session = fixture
+        .workspace
+        .send(&id, "Go", None, events(), &sources(&review_novels()))
+        .unwrap();
+
+    let kinds: Vec<&str> = session.messages[1]
+        .attachments
+        .iter()
+        .map(|item| item["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        kinds,
+        ["pipeline_run", "translation_review", "pipeline_run"]
+    );
+}
+
+#[test]
+fn resolve_marks_a_run_card_applied_with_its_pipeline_id_in_a_project_scope() {
+    let fixture = fixture();
+    let (id, message) = carded(&fixture, AssistantScope::project(5), &["pr1"]);
+
+    let session = resolve_cards(
+        &fixture,
+        (&id, &message),
+        &["pr1"],
+        (Decision::Applied, Some(12)),
+    )
+    .unwrap();
+
+    let card = &session.messages[1].attachments[0];
+    assert_eq!(card["status"], "applied");
+    assert_eq!(card["pipelineId"], 12);
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0], *card);
+}
+
+#[test]
+fn resolve_rejects_a_run_card_in_a_workspace_scope_without_a_pipeline() {
+    let fixture = fixture();
+    let (id, message) = carded(&fixture, AssistantScope::workspace(), &["pr1", "pr2"]);
+
+    let session = resolve_cards(
+        &fixture,
+        (&id, &message),
+        &["pr2"],
+        (Decision::Rejected, Some(3)),
+    )
+    .unwrap();
+
+    let cards = &session.messages[1].attachments;
+    assert_eq!(cards[0]["status"], "pending");
+    assert_eq!(cards[1]["status"], "rejected");
+    assert_eq!(cards[1]["pipelineId"], Value::Null);
+}
+
+#[test]
+fn resolve_applies_a_run_card_in_a_novel_scope() {
+    let fixture = fixture();
+    let (id, message) = carded(&fixture, novel_scope(Some(1)), &["pr1"]);
+
+    let session = resolve_cards(
+        &fixture,
+        (&id, &message),
+        &["pr1"],
+        (Decision::Applied, Some(8)),
+    )
+    .unwrap();
+
+    assert_eq!(session.messages[1].attachments[0]["status"], "applied");
+    assert_eq!(session.messages[1].attachments[0]["pipelineId"], 8);
+}
+
+#[test]
+fn resolving_a_run_card_twice_conflicts_and_keeps_the_first_outcome() {
+    let fixture = fixture();
+    let (id, message) = carded(&fixture, AssistantScope::project(5), &["pr1"]);
+    resolve_cards(
+        &fixture,
+        (&id, &message),
+        &["pr1"],
+        (Decision::Applied, Some(12)),
+    )
+    .unwrap();
+
+    let error = resolve_cards(
+        &fixture,
+        (&id, &message),
+        &["pr1"],
+        (Decision::Rejected, None),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::Conflict);
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0]["status"], "applied");
+    assert_eq!(stored.messages[1].attachments[0]["pipelineId"], 12);
+}
+
+#[test]
+fn resolving_an_unknown_card_outside_a_novel_scope_is_not_found() {
+    let fixture = fixture();
+    let (id, message) = carded(&fixture, AssistantScope::project(5), &["pr1"]);
+
+    let error = resolve_cards(
+        &fixture,
+        (&id, &message),
+        &["pr1", "pr9"],
+        (Decision::Applied, Some(1)),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.code, AssistantErrorCode::NotFound);
+    assert!(error.detail.contains("pr9"));
+    let stored = fixture.workspace.get(&id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0]["status"], "pending");
 }

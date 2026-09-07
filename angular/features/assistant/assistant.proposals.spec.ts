@@ -1,8 +1,9 @@
+import { pipelineRun } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 import { DictProposal, TranslationFinding, TranslationReview } from './assistant.models';
 // prettier-ignore
-import { countResolved, countSeverity, markText, OP_ICONS, OP_KEYS, pendingIds, STATUS_KEYS } from './assistant.proposals';
+import { canRun, countResolved, countSeverity, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
 
 const finding = (
   id: string,
@@ -57,5 +58,29 @@ describe('assistant.proposals', () => {
   it('covers every operation and status', () => {
     expect(Object.keys(OP_KEYS)).toEqual(Object.keys(OP_ICONS));
     expect(STATUS_KEYS.pending).toBe('assistant.proposal.pending');
+  });
+
+  it('runs a pipeline proposal only while it is pending and has tasks', () => {
+    expect(canRun(pipelineRun())).toBe(true);
+    expect(canRun(pipelineRun({ totalTasks: 0 }))).toBe(false);
+    expect(canRun(pipelineRun({ status: 'applied' }))).toBe(false);
+    expect(canRun(pipelineRun({ status: 'rejected' }))).toBe(false);
+  });
+
+  it('lists the item ids and maps the job to the pipeline kind', () => {
+    expect(runItemIds(pipelineRun())).toEqual(['c1', 'c2']);
+    expect(runItemIds(pipelineRun({ items: [] }))).toEqual([]);
+    expect(runKindOf(pipelineRun({ job: 'translation' }))).toBe('translation');
+    expect(runKindOf(pipelineRun({ job: 'analysis' }))).toBe('analysis');
+    expect(runKindOf(pipelineRun({ job: 'synthesis' }))).toBe('audio');
+    expect(Object.keys(PIPELINE_RUN_KINDS)).toEqual(['translation', 'analysis', 'synthesis']);
+  });
+
+  it('overwrites audio for the all mode or an explicit overwrite', () => {
+    expect(overwritesAudio(pipelineRun({ mode: 'missing' }))).toBe(false);
+    expect(overwritesAudio(pipelineRun({ mode: null }))).toBe(false);
+    expect(overwritesAudio(pipelineRun({ mode: 'all' }))).toBe(true);
+    expect(overwritesAudio(pipelineRun({ mode: 'missing', overwrite: true }))).toBe(true);
+    expect(Object.keys(PIPELINE_MODE_KEYS)).toEqual(['missing', 'all']);
   });
 });

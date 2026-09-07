@@ -35,6 +35,47 @@ pub(crate) fn optional_strings(args: &Value, key: &str) -> Result<Option<Vec<Str
     }
 }
 
+pub(crate) fn required_ints(args: &Value, key: &str) -> Result<Vec<i64>, String> {
+    let items = required_list(args, key)?;
+    let mut values = Vec::new();
+    for item in items {
+        let value = item
+            .as_i64()
+            .ok_or_else(|| format!("argument '{key}' must be an array of integers"))?;
+        if !values.contains(&value) {
+            values.push(value);
+        }
+    }
+    non_empty(values, key)
+}
+
+pub(crate) fn required_strings(args: &Value, key: &str) -> Result<Vec<String>, String> {
+    let items = required_list(args, key)?;
+    let mut values = Vec::new();
+    for item in items {
+        let value = item
+            .as_str()
+            .ok_or_else(|| format!("argument '{key}' must be an array of strings"))?;
+        if !values.iter().any(|known| known == value) {
+            values.push(value.to_string());
+        }
+    }
+    non_empty(values, key)
+}
+
+fn required_list<'a>(args: &'a Value, key: &str) -> Result<&'a Vec<Value>, String> {
+    args.get(key)
+        .and_then(Value::as_array)
+        .ok_or_else(|| format!("missing array argument '{key}'"))
+}
+
+fn non_empty<T>(values: Vec<T>, key: &str) -> Result<Vec<T>, String> {
+    if values.is_empty() {
+        return Err(format!("argument '{key}' must list at least one item"));
+    }
+    Ok(values)
+}
+
 pub(crate) fn optional_bool(args: &Value, key: &str) -> Result<Option<bool>, String> {
     match args.get(key) {
         None | Some(Value::Null) => Ok(None),

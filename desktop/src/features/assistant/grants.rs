@@ -9,6 +9,7 @@ pub trait TurnSink: Send + Sync {
     fn record(&self, label: String);
     fn changed(&self, change: AssistantChange);
     fn attach(&self, attachment: serde_json::Value);
+    fn attached(&self, kind: &str) -> usize;
 }
 
 #[derive(Clone)]

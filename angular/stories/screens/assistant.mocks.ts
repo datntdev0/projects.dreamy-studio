@@ -4,7 +4,7 @@ import { novelScope, WORKSPACE_SCOPE } from '@features/assistant/assistant.rules
 import { NovelSummary } from '@features/novel/novel.models';
 import type { Decorator } from '@storybook/angular-vite';
 
-import { knowledgeChanges, translationReview } from './assistant.fixtures';
+import { knowledgeChanges, pipelineRun, translationReview } from './assistant.fixtures';
 import { knowledgeScreenHandlers } from './novel-knowledge.mocks';
 import { LANTERN_VI_TITLES } from './novel-translation.fixtures';
 import { NOVEL_ID } from './novel-translation.mocks';
@@ -205,6 +205,16 @@ const KNOWLEDGE_TURNS: Turn[] = [
   knowledgeTurn(5),
 ];
 
+const PIPELINE_TURNS: Turn[] = [
+  { role: 'user', text: 'Dịch tiếp chương 3 và 4 sang tiếng Việt giúp tôi.' },
+  {
+    role: 'assistant',
+    text: 'Chương 2 đã có bản dịch VI nên mình bỏ qua. Chương 3 và 4 chưa dịch, mỗi chương một tác vụ. Việc dịch dùng provider đã cấu hình và chỉ bắt đầu khi bạn bấm Chạy.',
+    activities: ['novel_outline → 12 chương', 'translation_status(VI) → 1/12 đã dịch'],
+    attachments: [pipelineRun()],
+  },
+];
+
 const WORKSPACE_TURNS: Turn[] = [
   { role: 'user', text: 'Novel nào còn nhiều chương chưa dịch?' },
   {
@@ -223,6 +233,7 @@ function seedSessions(): AssistantSession[] {
       8 * 60 * 1000,
       REVIEW_TURNS,
     ),
+    session('s-pipeline', 'Dịch chương 3–4', novelScope(NOVEL_ID), 10 * 60 * 1000, PIPELINE_TURNS),
     session(
       's-kb-fix',
       'Sửa xung đột knowledgebase',
@@ -380,7 +391,15 @@ function decideAttachment(
   attachment: AssistantAttachment,
   ids: Set<string>,
   status: ProposalDecision,
+  pipelineId: number | null,
 ): void {
+  if (attachment.kind === 'pipeline_run') {
+    if (ids.has(attachment.id) && attachment.status === 'pending') {
+      attachment.status = status;
+      attachment.pipelineId = status === 'applied' ? pipelineId : null;
+    }
+    return;
+  }
   if (attachment.kind === 'knowledge_changes') {
     if (ids.has(attachment.id) && attachment.status === 'pending') {
       attachment.status = status;
@@ -408,8 +427,9 @@ async function resolveProposal(
     throw { code: 'not_found', detail: `message ${String(args['messageId'])}` };
   }
   const ids = new Set((args['itemIds'] as string[]) ?? []);
+  const pipelineId = typeof args['pipelineId'] === 'number' ? args['pipelineId'] : null;
   for (const attachment of owner.attachments ?? []) {
-    decideAttachment(attachment, ids, args['status'] as ProposalDecision);
+    decideAttachment(attachment, ids, args['status'] as ProposalDecision, pipelineId);
   }
   return clone(target);
 }

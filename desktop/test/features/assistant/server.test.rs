@@ -1,5 +1,6 @@
 use super::*;
 use crate::features::assistant::models::AssistantScope;
+use crate::features::assistant::tools::PIPELINE_TOOLS;
 use crate::features::assistant::tools::PROJECT_TOOLS;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
@@ -190,6 +191,7 @@ fn initialize_returns_json() {
 }
 
 const NOVEL_TOOLS: usize = 14;
+const NOVEL_SCOPE_PIPELINE_TOOLS: usize = 5;
 
 fn listed_tools(fixture: &Fixture, scope: AssistantScope) -> usize {
     let token = fixture.issue_scoped("ws", scope);
@@ -206,14 +208,14 @@ fn tools_list_returns_the_read_and_edit_tools() {
     let fixture = Fixture::new();
     assert_eq!(
         listed_tools(&fixture, AssistantScope::novel(1)),
-        NOVEL_TOOLS
+        NOVEL_TOOLS + NOVEL_SCOPE_PIPELINE_TOOLS
     );
 }
 
 #[test]
 fn tools_list_adds_the_project_tools_outside_a_novel_scope() {
     let fixture = Fixture::new();
-    let expected = NOVEL_TOOLS + PROJECT_TOOLS.len();
+    let expected = NOVEL_TOOLS + PROJECT_TOOLS.len() + PIPELINE_TOOLS.len();
     assert_eq!(
         listed_tools(&fixture, AssistantScope::workspace()),
         expected

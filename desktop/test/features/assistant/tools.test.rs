@@ -130,7 +130,12 @@ fn definitions_describe_the_tools() {
             "edit_dictionary",
             "submit_translation_review",
             "read_knowledge_issues",
-            "submit_knowledge_changes"
+            "submit_knowledge_changes",
+            "start_translation",
+            "start_analysis",
+            "list_pipeline",
+            "read_pipeline",
+            "cancel_pipeline"
         ]
     );
     for tool in list {

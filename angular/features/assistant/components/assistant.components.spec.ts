@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ComponentCase, describeComponents } from '@testing/exercise';
+import { pipelineRun } from '@testing/fixtures';
 import { setupWorld, warmWorld, worldSession } from '@testing/world';
 
 import { KnowledgeChangeSet, TranslationReview } from '../assistant.models';
@@ -8,6 +9,7 @@ import { AssistantChangesCard } from './changes-card.component';
 import { AssistantChat } from './chat.component';
 import { AssistantComposer } from './composer.component';
 import { AssistantPanel } from './panel.component';
+import { AssistantPipelineCard } from './pipeline-card.component';
 import { AssistantReviewCard } from './review-card.component';
 import { AssistantSessions } from './sessions.component';
 import { AssistantStart } from './start.component';
@@ -62,6 +64,12 @@ const cases: ComponentCase[] = [
     name: 'AssistantChangesCard',
     type: AssistantChangesCard,
     inputs: { changeSet: changes, messageId: 'm2' },
+    before: chatting,
+  },
+  {
+    name: 'AssistantPipelineCard',
+    type: AssistantPipelineCard,
+    inputs: { run: pipelineRun(), messageId: 'm2' },
     before: chatting,
   },
 ];

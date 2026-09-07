@@ -10,7 +10,7 @@ use crate::features::scripting::progress::unit_slots;
 
 pub const NARRATOR_ID: &str = "narr";
 pub const PAUSE_TYPE: &str = "pause";
-const DIALOGUE_TYPE: &str = "dialogue";
+pub const DIALOGUE_TYPE: &str = "dialogue";
 const VOICED_TYPES: [&str; 3] = ["heading", "narration", DIALOGUE_TYPE];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

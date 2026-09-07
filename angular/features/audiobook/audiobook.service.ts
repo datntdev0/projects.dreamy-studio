@@ -21,7 +21,7 @@ import * as edit from './audiobook.edit';
 // prettier-ignore
 import { AUDIO_KIND, audioJobsOf, audioStartOf, generateChaptersOf, generatePlanOf, pipelineUnits, segmentRequestOf } from './audiobook.generate';
 // prettier-ignore
-import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, ExportReply, GenerateChapter, GenerateOptions, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
+import { Audiobook, AudiobookConfig, AudiobookContext, AudiobookMessage, AudiobookMode, AudiobookView, AudioEnv, AudioRecord, AudioStart, ExportReply, GenerateChapter, GenerateOptions, GeneratePlan, GenerationJob, MixField, MixSettings, RegenerateResult, StaleReason, UnitAudio, VoiceAvailability, VoiceIssue } from './audiobook.models';
 import {
   blockersOf,
   DEFAULT_MIX,
@@ -281,14 +281,7 @@ export class AudiobookService {
     }
     await this.flush(projectId);
     try {
-      const snapshot = await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
-        kind: AUDIO_KIND,
-        projectId,
-        tasks: start.tasks,
-        params: { requests: start.requests },
-        onEvent: this.ipc.channel<PipelineEvent>(this.handleAudioEvent.bind(this, projectId)),
-      });
-      this.trackStarted(snapshot);
+      const snapshot = await this.launch(projectId, start);
       if (exportAfter) {
         this.pendingExports.set(snapshot.id, unitIds);
       }
@@ -297,6 +290,25 @@ export class AudiobookService {
       this.showFailure(cause);
       return 0;
     }
+  }
+
+  async startGeneration(
+    projectId: number,
+    unitIds: string[],
+    overwrite: boolean,
+  ): Promise<number | null> {
+    await this.ensureLoaded(projectId);
+    const ctx = this.contextOf(projectId);
+    if (!ctx) {
+      return null;
+    }
+    const start = audioStartOf(envOf(ctx), this.startableUnits(ctx, unitIds), overwrite);
+    if (start.tasks.length === 0) {
+      return null;
+    }
+    await this.flush(projectId);
+    const snapshot = await this.launch(projectId, start);
+    return snapshot.id;
   }
 
   regenerate(projectId: number, blockId: string): RegenerateResult {
@@ -479,6 +491,18 @@ export class AudiobookService {
     if (book) {
       this.storeBook(projectId, edit.putRecord(book, job.unitId, job.blockId, record));
     }
+  }
+
+  private async launch(projectId: number, start: AudioStart): Promise<PipelineSnapshot> {
+    const snapshot = await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
+      kind: AUDIO_KIND,
+      projectId,
+      tasks: start.tasks,
+      params: { requests: start.requests },
+      onEvent: this.ipc.channel<PipelineEvent>(this.handleAudioEvent.bind(this, projectId)),
+    });
+    this.trackStarted(snapshot);
+    return snapshot;
   }
 
   private startableUnits(ctx: AudiobookContext, unitIds: string[]): ScriptUnit[] {

@@ -1,4 +1,8 @@
-import { KnowledgeChangeSet, TranslationReview } from '@features/assistant/assistant.models';
+import {
+  KnowledgeChangeSet,
+  PipelineRun,
+  TranslationReview,
+} from '@features/assistant/assistant.models';
 
 import { NOVEL_ID } from './novel-translation.mocks';
 
@@ -165,5 +169,35 @@ export function knowledgeChanges(): KnowledgeChangeSetRecord {
         ],
       },
     ],
+  };
+}
+
+export function pipelineRun(): PipelineRun {
+  return {
+    kind: 'pipeline_run',
+    id: 'pr1',
+    job: 'translation',
+    owner: { novelId: NOVEL_ID, projectId: null },
+    title: 'Dịch chương 3–4 sang tiếng Việt',
+    target: 'VI',
+    mode: null,
+    overwrite: false,
+    items: [
+      { id: 'ch-3', seq: 3, title: 'Con tàu cuối mùa', tasks: 1, note: null },
+      {
+        id: 'ch-4',
+        seq: 4,
+        title: 'Tiếng chuông dưới nước',
+        tasks: 1,
+        note: 'chương dài, ~3.200 từ',
+      },
+    ],
+    skipped: [
+      { id: 'ch-2', seq: 2, title: 'Viên thư lại từ bến cảng', reason: 'Đã có bản dịch VI' },
+    ],
+    warnings: [],
+    totalTasks: 2,
+    status: 'pending',
+    pipelineId: null,
   };
 }

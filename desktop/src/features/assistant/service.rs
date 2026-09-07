@@ -20,6 +20,8 @@ use crate::features::assistant::prompt;
 use crate::features::assistant::proposals;
 use crate::features::assistant::reply;
 use crate::features::assistant::repository::AssistantRepository;
+use crate::features::assistant::runs;
+use crate::features::assistant::runs::RUN_KIND;
 use crate::features::assistant::skills;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::ProjectSource;
@@ -309,27 +311,23 @@ impl AssistantWorkspace {
         message_id: &str,
         item_ids: &[String],
         status: Decision,
+        pipeline_id: Option<i64>,
         sources: &Sources,
     ) -> AssistantResult<AssistantSession> {
         let _guard = self.claim(session_id)?;
         let record = self.load(session_id)?;
-        let novel_id = match (record.summary.scope.kind, record.summary.scope.novel_id) {
-            (ScopeKind::Novel, Some(id)) => id,
-            _ => {
-                return Err(AssistantError::invalid(
-                    "proposals can only be resolved in a novel scope",
-                ));
-            }
-        };
         let mut message = self
             .message(session_id, message_id)?
             .ok_or_else(|| AssistantError::not_found(format!("message {message_id} not found")))?;
-        let outcome = proposals::resolve(
+        let outcome = resolve_attachments(
+            &record.summary.scope,
             &mut message.attachments,
-            item_ids,
-            status,
+            Resolution {
+                item_ids,
+                status,
+                pipeline_id,
+            },
             sources,
-            novel_id,
         );
         let _gate = lock(&self.service.gate);
         let db = self.database()?;
@@ -532,12 +530,50 @@ impl TurnSink for Collector {
     fn attach(&self, attachment: Value) {
         let mut stored = lock(&self.attachments);
         let kind = attachment.get("kind").cloned();
-        match stored
+        let repeatable = kind.as_ref().and_then(Value::as_str) == Some(RUN_KIND);
+        let existing = stored
             .iter_mut()
-            .find(|item| item.get("kind") == kind.as_ref())
-        {
+            .find(|item| !repeatable && item.get("kind") == kind.as_ref());
+        match existing {
             Some(slot) => *slot = attachment,
             None => stored.push(attachment),
+        }
+    }
+
+    fn attached(&self, kind: &str) -> usize {
+        lock(&self.attachments)
+            .iter()
+            .filter(|item| item.get("kind").and_then(Value::as_str) == Some(kind))
+            .count()
+    }
+}
+
+struct Resolution<'a> {
+    item_ids: &'a [String],
+    status: Decision,
+    pipeline_id: Option<i64>,
+}
+
+fn resolve_attachments(
+    scope: &AssistantScope,
+    attachments: &mut [Value],
+    resolution: Resolution,
+    sources: &Sources,
+) -> AssistantResult<Vec<AssistantChange>> {
+    let Resolution {
+        item_ids,
+        status,
+        pipeline_id,
+    } = resolution;
+    match (scope.kind, scope.novel_id) {
+        (ScopeKind::Novel, Some(novel_id)) => {
+            runs::resolve(attachments, item_ids, status, pipeline_id)?;
+            proposals::resolve(attachments, item_ids, status, sources, novel_id)
+        }
+        _ => {
+            runs::require_cards(attachments, item_ids)?;
+            runs::resolve(attachments, item_ids, status, pipeline_id)?;
+            Ok(Vec::new())
         }
     }
 }

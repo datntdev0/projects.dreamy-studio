@@ -5,6 +5,7 @@ use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::models::AssistantErrorCode;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::novel::models::NovelInput;
+use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::project::models::ProjectInput;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::load::LoadEvent;
@@ -28,6 +29,7 @@ struct Fixture {
     knowledge: KnowledgeService,
     translation: TranslationService,
     projects: ProjectService,
+    executor: PipelineExecutor,
     service: AssistantService,
 }
 
@@ -58,6 +60,7 @@ fn entered_fixture() -> Fixture {
         knowledge: KnowledgeService::new(),
         translation: TranslationService::new(),
         projects: ProjectService::new(),
+        executor: PipelineExecutor::new(),
         service: service(),
     }
 }
@@ -68,6 +71,7 @@ fn services(fixture: &Fixture) -> SourceServices<'_> {
         knowledge: &fixture.knowledge,
         translation: &fixture.translation,
         projects: &fixture.projects,
+        executor: &fixture.executor,
     }
 }
 
@@ -298,11 +302,13 @@ fn every_operation_reports_no_workspace_without_a_current_workspace() {
     let knowledge = KnowledgeService::new();
     let translation = TranslationService::new();
     let projects = ProjectService::new();
+    let executor = PipelineExecutor::new();
     let services = SourceServices {
         novels: &novels,
         knowledge: &knowledge,
         translation: &translation,
         projects: &projects,
+        executor: &executor,
     };
     let session = WorkspaceSession::new();
     let sink = Arc::new(RecordingEvents::new());
@@ -362,11 +368,13 @@ fn host_refuses_every_grant_when_no_workspace_is_open() {
     let knowledge = KnowledgeService::new();
     let translation = TranslationService::new();
     let projects = ProjectService::new();
+    let executor = PipelineExecutor::new();
     let services = SourceServices {
         novels: &novels,
         knowledge: &knowledge,
         translation: &translation,
         projects: &projects,
+        executor: &executor,
     };
 
     let refused = open_sources(&services, &WorkspaceSession::new(), &grant);
@@ -451,6 +459,7 @@ fn resolve_input<'a>(
         message_id,
         item_ids: NO_ITEMS,
         status,
+        pipeline_id: None,
     }
 }
 
@@ -521,9 +530,7 @@ fn an_unknown_decision_is_invalid() {
     }
 }
 
-#[test]
-fn resolving_in_a_workspace_scope_is_invalid() {
-    let fixture = entered_fixture();
+fn workspace_message(fixture: &Fixture) -> (String, String) {
     let created = create_session(
         &fixture.service,
         &fixture.novels,
@@ -534,22 +541,72 @@ fn resolving_in_a_workspace_scope_is_invalid() {
     .unwrap();
     let answered = send_message(
         &fixture.service,
-        &services(&fixture),
+        &services(fixture),
         &fixture.session,
         input(&created.summary.id, "hi", None),
         Arc::new(RecordingEvents::new()),
     )
     .unwrap();
+    (created.summary.id, answered.messages[1].id.clone())
+}
+
+#[test]
+fn resolving_an_unknown_card_in_a_workspace_scope_is_not_found() {
+    let fixture = entered_fixture();
+    let (id, message) = workspace_message(&fixture);
+    let items = vec!["pr1".to_string()];
+    let resolve = ResolveInput {
+        item_ids: &items,
+        ..resolve_input(&id, &message, "applied")
+    };
 
     let error = resolve_proposal(
         &fixture.service,
         &services(&fixture),
         &fixture.session,
-        resolve_input(&created.summary.id, &answered.messages[1].id, "applied"),
+        resolve,
     )
     .unwrap_err();
 
-    assert_eq!(error.code, AssistantErrorCode::Invalid);
+    assert_eq!(error.code, AssistantErrorCode::NotFound);
+}
+
+#[test]
+fn resolving_a_run_card_stores_the_pipeline_id_the_app_started() {
+    let mut fixture = entered_fixture();
+    let llm = Arc::new(FakeLlm::new());
+    let grants = McpGrants::new();
+    fixture.service = AssistantService::new(llm.clone(), grants.clone());
+    llm.set_hook(move |token| {
+        let card = json!({
+            "kind": "pipeline_run",
+            "id": "pr1",
+            "status": "pending",
+            "pipelineId": null,
+        });
+        grants.get(token).unwrap().sink.attach(card);
+    });
+    let (id, message) = workspace_message(&fixture);
+    let items = vec!["pr1".to_string()];
+    let resolve = ResolveInput {
+        item_ids: &items,
+        pipeline_id: Some(31),
+        ..resolve_input(&id, &message, "applied")
+    };
+
+    let resolved = resolve_proposal(
+        &fixture.service,
+        &services(&fixture),
+        &fixture.session,
+        resolve,
+    )
+    .unwrap();
+
+    let card = &resolved.messages[1].attachments[0];
+    assert_eq!(card["status"], "applied");
+    assert_eq!(card["pipelineId"], 31);
+    let stored = get_session(&fixture.service, &fixture.session, &id).unwrap();
+    assert_eq!(stored.messages[1].attachments[0], *card);
 }
 
 #[test]
@@ -581,6 +638,7 @@ fn rejecting_a_proposal_updates_the_stored_review() {
         message_id: &answered.messages[1].id,
         item_ids: &items,
         status: "rejected",
+        pipeline_id: None,
     };
 
     let resolved = resolve_proposal(

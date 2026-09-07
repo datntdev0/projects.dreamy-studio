@@ -8,6 +8,8 @@ use crate::features::knowledge::models::KnowledgeItem;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::text::text_hash;
 use crate::features::novel::models::NovelInput;
+use crate::features::pipeline::models::PipelineStatus;
+use crate::features::pipeline::models::TaskRequest;
 use crate::features::translation::service::TranslatedRun;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::infra::storage::database::Database;
@@ -25,6 +27,7 @@ use crate::testing::assistant::project_chapter_fixture;
 use crate::testing::assistant::script_fixture;
 use crate::testing::project::create_project;
 use crate::testing::project::project_workspace;
+use rusqlite::Connection;
 use std::sync::atomic::AtomicBool;
 use tempfile::TempDir;
 
@@ -702,4 +705,81 @@ fn fake_audiobooks_serve_the_book_and_its_units() {
 
     assert_eq!(source.book(1).unwrap().unwrap().units.len(), 1);
     assert!(FakeAudiobooks::default().book(1).unwrap().is_none());
+}
+
+const NOW: &str = "2026-11-17T00:00:00Z";
+
+fn pipeline_source() -> (TempDir, WorkspacePipelines, i64, i64) {
+    let (dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let connection = Connection::open(dir.path().join(WORKSPACE_DB_FILE)).unwrap();
+    connection
+        .execute(
+            "INSERT INTO ws_novels (title, name, author, lang, description, origin, created_at,              updated_at) VALUES ('Novel', '', 'Author', 'ZH', '', 'created', ?1, ?1)",
+            [NOW],
+        )
+        .unwrap();
+    let novel_id = connection.last_insert_rowid();
+    let source = WorkspacePipelines::new(dir.path().to_path_buf(), PipelineExecutor::new());
+    (dir, source, novel_id, project_id)
+}
+
+fn insert_run(dir: &TempDir, owner: JobOwner, status: PipelineStatus) -> i64 {
+    let connection = Connection::open(dir.path().join(WORKSPACE_DB_FILE)).unwrap();
+    let tasks = [TaskRequest {
+        chapter_id: "chapter-one".to_string(),
+        passage: None,
+        segment_id: None,
+    }];
+    PipelineRepository::new(&connection)
+        .insert_pipeline(owner, "translation", "VI", status, &tasks, NOW)
+        .unwrap()
+}
+
+#[test]
+fn pipeline_adapter_lists_the_history_of_one_owner_or_of_everyone() {
+    let (dir, source, novel_id, project_id) = pipeline_source();
+    let novel_run = insert_run(&dir, JobOwner::Novel(novel_id), PipelineStatus::Running);
+    let project_run = insert_run(&dir, JobOwner::Project(project_id), PipelineStatus::Queued);
+
+    let everyone = source.history(None, 10).unwrap();
+    assert_eq!(
+        everyone.iter().map(|run| run.id).collect::<Vec<_>>(),
+        [project_run, novel_run]
+    );
+    let novel = source.history(Some(JobOwner::Novel(novel_id)), 10).unwrap();
+    assert_eq!(novel.len(), 1);
+    assert_eq!(novel[0].tasks.len(), 1);
+    let limited = source.history(None, 1).unwrap();
+    assert_eq!(limited[0].id, project_run);
+}
+
+#[test]
+fn pipeline_adapter_reads_a_snapshot_or_nothing() {
+    let (dir, source, novel_id, _) = pipeline_source();
+    let run = insert_run(&dir, JobOwner::Novel(novel_id), PipelineStatus::Running);
+
+    let snapshot = source.snapshot(run).unwrap().unwrap();
+
+    assert_eq!(snapshot.id, run);
+    assert_eq!(snapshot.novel_id, Some(novel_id));
+    assert_eq!(snapshot.kind, "translation");
+    assert_eq!(snapshot.tasks[0].chapter_id, "chapter-one");
+    assert!(source.snapshot(run + 100).unwrap().is_none());
+}
+
+#[test]
+fn pipeline_adapter_reports_a_missing_database_as_text() {
+    let dir = TempDir::new().unwrap();
+    let source = WorkspacePipelines::new(dir.path().to_path_buf(), PipelineExecutor::new());
+
+    assert!(source.history(None, 10).is_err());
+    assert!(source.snapshot(1).is_err());
+}
+
+#[test]
+fn pipeline_adapter_cancels_through_the_executor() {
+    let (_dir, source, _, _) = pipeline_source();
+
+    assert!(!source.cancel(404));
 }

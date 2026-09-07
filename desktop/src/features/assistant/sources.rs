@@ -11,6 +11,10 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::novel::service::NovelWorkspace;
+use crate::features::pipeline::executor::PipelineExecutor;
+use crate::features::pipeline::models::JobOwner;
+use crate::features::pipeline::models::PipelineSnapshot;
+use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectSummary;
 use crate::features::project::service::ProjectWorkspace;
@@ -24,6 +28,9 @@ use crate::features::translation::service::ChapterTranslation;
 use crate::features::translation::service::DictChange;
 use crate::features::translation::service::NovelTranslation;
 use crate::features::translation::service::TranslationWorkspace;
+use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
+use crate::infra::storage::database::Database;
+use std::path::PathBuf;
 
 pub trait NovelSource {
     fn list(&self) -> Result<Vec<NovelSummary>, String>;
@@ -98,6 +105,13 @@ pub trait AudiobookSource {
     fn book(&self, project_id: i64) -> Result<Option<Audiobook>, String>;
 }
 
+pub trait PipelineSource {
+    fn history(&self, owner: Option<JobOwner>, limit: i64)
+    -> Result<Vec<PipelineSnapshot>, String>;
+    fn snapshot(&self, pipeline_id: i64) -> Result<Option<PipelineSnapshot>, String>;
+    fn cancel(&self, pipeline_id: i64) -> bool;
+}
+
 pub struct Sources {
     pub novels: Box<dyn NovelSource>,
     pub knowledge: Box<dyn KnowledgeSource>,
@@ -105,6 +119,7 @@ pub struct Sources {
     pub projects: Box<dyn ProjectSource>,
     pub scripts: Box<dyn ScriptSource>,
     pub audiobooks: Box<dyn AudiobookSource>,
+    pub pipelines: Box<dyn PipelineSource>,
 }
 
 pub fn linked_novel(
@@ -265,6 +280,44 @@ impl ScriptSource for ProjectScripts {
 impl AudiobookSource for AudiobookWorkspace {
     fn book(&self, project_id: i64) -> Result<Option<Audiobook>, String> {
         AudiobookWorkspace::get(self, project_id).map_err(|error| error.to_string())
+    }
+}
+
+pub struct WorkspacePipelines {
+    dir: PathBuf,
+    executor: PipelineExecutor,
+}
+
+impl WorkspacePipelines {
+    pub fn new(dir: PathBuf, executor: PipelineExecutor) -> Self {
+        Self { dir, executor }
+    }
+
+    fn read<T>(
+        &self,
+        query: impl FnOnce(&PipelineRepository) -> rusqlite::Result<T>,
+    ) -> Result<T, String> {
+        let database = Database::open_read_only(&self.dir.join(WORKSPACE_DB_FILE))
+            .map_err(|error| error.to_string())?;
+        query(&PipelineRepository::new(database.connection())).map_err(|error| error.to_string())
+    }
+}
+
+impl PipelineSource for WorkspacePipelines {
+    fn history(
+        &self,
+        owner: Option<JobOwner>,
+        limit: i64,
+    ) -> Result<Vec<PipelineSnapshot>, String> {
+        self.read(|repository| repository.list_history(owner, limit))
+    }
+
+    fn snapshot(&self, pipeline_id: i64) -> Result<Option<PipelineSnapshot>, String> {
+        self.read(|repository| repository.snapshot(pipeline_id))
+    }
+
+    fn cancel(&self, pipeline_id: i64) -> bool {
+        self.executor.cancel_pipeline(pipeline_id)
     }
 }
 

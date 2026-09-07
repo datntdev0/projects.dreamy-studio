@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { AudiobookService } from '@features/audiobook/audiobook.service';
+import { PipelineService } from '@features/pipeline/pipeline.service';
 import { LayoutService } from '@layout/layout.service';
 import { TabsService } from '@layout/tabs.service';
 import { DialogService } from '@shared/dialog/dialog.service';
+import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 import { FakeIpc } from '@testing/fake-ipc';
-import { chapter, novel, project, session } from '@testing/fixtures';
+import { chapter, novel, pipeline, pipelineRun, project, session } from '@testing/fixtures';
 import { flushEffects, setupApp } from '@testing/service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -288,6 +291,139 @@ describe('AssistantService', () => {
     assistant.chooseScope(projectScope(5));
     await assistant.send('hello');
     expect(ipc.lastArgs('assistant_session_create')?.['scope']).toEqual(projectScope(5));
+  });
+
+  describe('pipeline runs', () => {
+    function startedToast(): string {
+      return TestBed.inject(LanguageService).translate('assistant.toast.pipelineStarted');
+    }
+
+    beforeEach(async () => {
+      ipc.on('pipeline_start', pipeline({ id: 9 }));
+      ipc.on('assistant_proposal_resolve', session({ id: 'new' }));
+      await assistant.send('go');
+    });
+
+    it('starts a translation with the card target and resolves it with the pipeline id', async () => {
+      await assistant.runPipelineRun('m1', pipelineRun({ target: 'EN' }));
+      expect(ipc.lastArgs('pipeline_start')).toMatchObject({
+        novelId: 1,
+        target: 'EN',
+        tasks: [
+          { chapterId: 'c1', passage: null },
+          { chapterId: 'c2', passage: null },
+        ],
+      });
+      expect(ipc.lastArgs('assistant_proposal_resolve')).toMatchObject({
+        sessionId: 'new',
+        messageId: 'm1',
+        itemIds: ['pr1'],
+        status: 'applied',
+        pipelineId: 9,
+      });
+      expect(toasts.items().at(-1)).toMatchObject({ tone: 'success', message: startedToast() });
+      expect(assistant.launching()).toBeNull();
+      expect(assistant.resolving()).toBeNull();
+    });
+
+    it('starts an analysis in the card language and defaults to the source text', async () => {
+      await assistant.runPipelineRun('m1', pipelineRun({ job: 'analysis', target: 'VI' }));
+      expect(ipc.lastArgs('pipeline_start')).toMatchObject({ kind: 'analysis', lang: 'VI' });
+      await assistant.runPipelineRun(
+        'm1',
+        pipelineRun({ id: 'pr2', job: 'analysis', target: null }),
+      );
+      expect(ipc.lastArgs('pipeline_start')).toMatchObject({ kind: 'analysis', lang: 'src' });
+    });
+
+    it('starts the synthesis of the card units and maps the mode to overwrite', async () => {
+      const start = vi
+        .spyOn(TestBed.inject(AudiobookService), 'startGeneration')
+        .mockResolvedValue(77);
+      const owner = { novelId: null, projectId: 5 };
+      const items = [
+        { id: 'u1', seq: 1, title: 'One', tasks: 3, note: null },
+        { id: 'u2', seq: 2, title: 'Two', tasks: 2, note: null },
+      ];
+      const base = { job: 'synthesis' as const, owner, items, target: null };
+      const modes = [
+        { id: 'a', mode: 'all' },
+        { id: 'b', mode: 'missing' },
+        { id: 'c', mode: 'missing', overwrite: true },
+      ];
+      for (const mode of modes) {
+        await assistant.runPipelineRun('m1', pipelineRun({ ...base, ...mode }));
+      }
+      expect(start.mock.calls).toEqual([
+        [5, ['u1', 'u2'], true],
+        [5, ['u1', 'u2'], false],
+        [5, ['u1', 'u2'], true],
+      ]);
+      expect(ipc.lastArgs('assistant_proposal_resolve')).toMatchObject({ pipelineId: 77 });
+    });
+
+    it('keeps the card pending and reports a start failure', async () => {
+      ipc.fail('pipeline_start', { code: 'pipeline_busy', detail: 'busy' });
+      await assistant.runPipelineRun('m1', pipelineRun());
+      expect(toasts.items().at(-1)?.tone).toBe('danger');
+      expect(ipc.called('assistant_proposal_resolve')).toBe(0);
+      expect(assistant.launching()).toBeNull();
+      ipc.on('pipeline_start', pipeline({ id: 10 }));
+      await assistant.runPipelineRun('m1', pipelineRun());
+      expect(ipc.lastArgs('assistant_proposal_resolve')).toMatchObject({ pipelineId: 10 });
+    });
+
+    it('keeps the card pending when nothing can be started', async () => {
+      vi.spyOn(TestBed.inject(AudiobookService), 'startGeneration').mockResolvedValue(null);
+      const synthesis = pipelineRun({ job: 'synthesis', owner: { novelId: null, projectId: 5 } });
+      await assistant.runPipelineRun('m1', synthesis);
+      await assistant.runPipelineRun(
+        'm1',
+        pipelineRun({ owner: { novelId: null, projectId: null } }),
+      );
+      await assistant.runPipelineRun('m1', pipelineRun({ target: null }));
+      expect(toasts.items().map((item) => item.tone)).toEqual(['danger', 'danger', 'danger']);
+      expect(ipc.called('pipeline_start')).toBe(0);
+      expect(ipc.called('assistant_proposal_resolve')).toBe(0);
+    });
+
+    it('does not start twice when only the resolve failed', async () => {
+      ipc.fail('assistant_proposal_resolve', { code: 'other', detail: 'broken' });
+      await assistant.runPipelineRun('m1', pipelineRun());
+      expect(toasts.items().at(-1)?.tone).toBe('danger');
+      ipc.on('assistant_proposal_resolve', session({ id: 'new' }));
+      await assistant.runPipelineRun('m1', pipelineRun());
+      expect(ipc.called('pipeline_start')).toBe(1);
+      expect(ipc.called('assistant_proposal_resolve')).toBe(2);
+      expect(ipc.lastArgs('assistant_proposal_resolve')).toMatchObject({ pipelineId: 9 });
+    });
+
+    it('ignores cards that are not pending and runs that overlap', async () => {
+      await assistant.runPipelineRun('m1', pipelineRun({ status: 'applied', pipelineId: 3 }));
+      await assistant.runPipelineRun('m1', pipelineRun({ status: 'rejected' }));
+      expect(ipc.called('pipeline_start')).toBe(0);
+      const first = assistant.runPipelineRun('m1', pipelineRun());
+      const second = assistant.runPipelineRun('m1', pipelineRun());
+      await Promise.all([first, second]);
+      expect(ipc.called('pipeline_start')).toBe(1);
+      expect(ipc.called('assistant_proposal_resolve')).toBe(1);
+    });
+
+    it('forgets the started runs when the assistant resets', async () => {
+      ipc.fail('assistant_proposal_resolve', { code: 'other', detail: 'broken' });
+      await assistant.runPipelineRun('m1', pipelineRun());
+      assistant.reset();
+      ipc.on('assistant_proposal_resolve', session({ id: 'new' }));
+      await assistant.send('again');
+      await assistant.runPipelineRun('m1', pipelineRun());
+      expect(ipc.called('pipeline_start')).toBe(2);
+    });
+
+    it('opens the pipeline tab on the started pipeline', () => {
+      assistant.openPipeline(9);
+      expect(TestBed.inject(TabsService).active().id).toBe('pipelines');
+      expect(TestBed.inject(PipelineService).selectedId()).toBe(9);
+    });
   });
 
   it('resets when the workspace changes', async () => {

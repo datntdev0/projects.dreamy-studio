@@ -1,6 +1,7 @@
 use crate::features::assistant::edits;
 use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantScope;
+use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::proposals;
 use crate::features::assistant::sources::Sources;
 use serde_json::Value;
@@ -11,9 +12,12 @@ mod definitions;
 mod knowledge;
 mod novel;
 mod paging;
+mod pipeline;
 mod project;
+mod run;
 mod scope;
 mod script;
+mod synthesis;
 mod translation;
 
 pub(crate) use args::optional_int;
@@ -36,6 +40,15 @@ pub const PROJECT_TOOLS: [&str; 7] = [
     "read_audiobook_unit",
 ];
 
+pub const PIPELINE_TOOLS: [&str; 6] = [
+    "start_translation",
+    "start_analysis",
+    "start_synthesis",
+    "list_pipeline",
+    "read_pipeline",
+    "cancel_pipeline",
+];
+
 pub struct ToolContext<'a> {
     pub scope: &'a AssistantScope,
     pub linked_novel: Option<i64>,
@@ -56,7 +69,21 @@ pub fn definitions(scope: &AssistantScope) -> Value {
         tools.extend(script::definitions());
         tools.extend(audiobook::definitions());
     }
+    tools.extend(pipeline_definitions(scope.kind));
     Value::Array(tools)
+}
+
+fn pipeline_definitions(kind: ScopeKind) -> Vec<Value> {
+    run::definitions()
+        .into_iter()
+        .chain(synthesis::definitions())
+        .chain(pipeline::definitions())
+        .filter(|tool| {
+            tool["name"]
+                .as_str()
+                .is_some_and(|name| scope::offers_pipeline_tool(kind, name))
+        })
+        .collect()
 }
 
 pub fn call(
@@ -68,7 +95,30 @@ pub fn call(
     if PROJECT_TOOLS.contains(&name) {
         return call_project_tool(name, args, ctx, sources);
     }
+    if PIPELINE_TOOLS.contains(&name) {
+        return call_pipeline_tool(name, args, ctx, sources);
+    }
     call_novel_tool(name, args, ctx, sources)
+}
+
+fn call_pipeline_tool(
+    name: &str,
+    args: &Value,
+    ctx: &ToolContext,
+    sources: &Sources,
+) -> Result<ToolOutput, String> {
+    if !scope::offers_pipeline_tool(ctx.scope.kind, name) {
+        return Err(format!("tool '{name}' is not available in this scope"));
+    }
+    match name {
+        "start_translation" => run::start_translation(args, ctx, sources),
+        "start_analysis" => run::start_analysis(args, ctx, sources),
+        "start_synthesis" => synthesis::start_synthesis(args, ctx, sources),
+        "list_pipeline" => pipeline::list_pipeline(args, ctx, sources),
+        "read_pipeline" => pipeline::read_pipeline(args, ctx, sources),
+        "cancel_pipeline" => pipeline::cancel_pipeline(args, ctx, sources),
+        other => Err(format!("unknown tool '{other}'")),
+    }
 }
 
 fn call_project_tool(
@@ -125,3 +175,15 @@ mod tests;
 #[cfg(test)]
 #[path = "../../../test/features/assistant/tools/project.test.rs"]
 mod project_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/run.test.rs"]
+mod run_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/synthesis.test.rs"]
+mod synthesis_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/pipeline.test.rs"]
+mod pipeline_tests;

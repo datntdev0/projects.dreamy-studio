@@ -81,3 +81,8 @@ export const KnowledgeReview: Story = screen({}, async (root) => {
   await openSession(root, 's-kb-fix');
   await waitFor(root, '[data-testid="assistant-changes-card"]');
 });
+
+export const PipelineRun: Story = screen({}, async (root) => {
+  await openSession(root, 's-pipeline');
+  await waitFor(root, '[data-testid="assistant-pipeline-card"]');
+});

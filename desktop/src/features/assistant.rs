@@ -6,6 +6,7 @@ pub mod proposals;
 pub mod protocol;
 pub mod reply;
 pub mod repository;
+pub mod runs;
 pub mod server;
 pub mod service;
 pub mod skills;

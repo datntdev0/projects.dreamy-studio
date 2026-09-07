@@ -505,6 +505,53 @@ describe('AudiobookService', () => {
       expect(ipc.called('audiobook_unit_get')).toBe(fetches + 1);
     });
 
+    it('starts a generation and returns the pipeline id', async () => {
+      voiceTeaWoman();
+      vi.useFakeTimers();
+      ipc.on('pipeline_start', (args) => {
+        const tasks = args?.['tasks'] as { chapterId: string; segmentId: string }[];
+        return audioPipeline(
+          tasks.map((item, index) => audioTask(item.chapterId, item.segmentId, index + 1)),
+          { id: 77 },
+        );
+      });
+      const todoIds = context().todo.map((block) => block.id);
+      expect(await service.startGeneration(PROJECT, [currentId()], false)).toBe(77);
+      const tasks = ipc.lastArgs('pipeline_start')?.['tasks'] as { segmentId: string }[];
+      expect(tasks.map((item) => item.segmentId)).toEqual(todoIds);
+      expect(service.isGenerating(PROJECT)).toBe(true);
+      await drain();
+    });
+
+    it('starts nothing when no unit can be generated', async () => {
+      expect(await service.startGeneration(PROJECT, [currentId()], false)).toBeNull();
+      expect(await service.startGeneration(PROJECT, ['missing'], false)).toBeNull();
+      expect(await service.startGeneration(99, [currentId()], false)).toBeNull();
+      expect(ipc.called('pipeline_start')).toBe(0);
+    });
+
+    it('overwrites finished segments only when asked to', async () => {
+      voiceTeaWoman();
+      await generateAll();
+      const finished = context().segments.filter((row) => row.record).length;
+      expect(finished).toBeGreaterThan(0);
+      expect(await service.startGeneration(PROJECT, [currentId()], false)).toBeNull();
+      ipc.on('pipeline_start', audioPipeline([], { id: 78 }));
+      expect(await service.startGeneration(PROJECT, [currentId()], true)).toBe(78);
+      const tasks = ipc.lastArgs('pipeline_start')?.['tasks'] as unknown[];
+      expect(tasks.length).toBeGreaterThanOrEqual(finished);
+    });
+
+    it('lets a failed start reach the caller', async () => {
+      voiceTeaWoman();
+      ipc.fail('pipeline_start', { code: 'pipeline_busy', detail: 'busy' });
+      await expect(service.startGeneration(PROJECT, [currentId()], false)).rejects.toEqual({
+        code: 'pipeline_busy',
+        detail: 'busy',
+      });
+      expect(toasts('danger')).toEqual([]);
+    });
+
     it('reports a pipeline that cannot start', async () => {
       voiceTeaWoman();
       ipc.fail('pipeline_start', { code: 'pipeline_busy', detail: 'busy' });

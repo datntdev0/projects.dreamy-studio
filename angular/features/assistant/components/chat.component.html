@@ -134,6 +134,15 @@
                   [busy]="isResolving(message)"
                   (resolved)="onResolved($event)"
                 />
+              } @else if (asPipelineRun(attachment); as pipelineRun) {
+                <app-assistant-pipeline-card
+                  [run]="pipelineRun"
+                  [messageId]="message.id"
+                  [busy]="isResolving(message)"
+                  (launched)="onLaunched($event)"
+                  (resolved)="onResolved($event)"
+                  (opened)="onOpened($event)"
+                />
               }
             }
           </article>

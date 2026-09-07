@@ -1,4 +1,4 @@
-import { AssistantSession } from '@features/assistant/assistant.models';
+import { AssistantSession, PipelineRun } from '@features/assistant/assistant.models';
 import { LibraryImage } from '@features/library/library.images.models';
 import { LibraryCollection } from '@features/library/library.models';
 import { LibraryPrompt } from '@features/library/library.prompts.models';
@@ -228,6 +228,29 @@ export function session(overrides: Partial<AssistantSession> = {}): AssistantSes
     preview: '',
     editGranted: false,
     messages: [],
+    ...overrides,
+  };
+}
+
+export function pipelineRun(overrides: Partial<PipelineRun> = {}): PipelineRun {
+  return {
+    kind: 'pipeline_run',
+    id: 'pr1',
+    job: 'translation',
+    owner: { novelId: 1, projectId: null },
+    title: 'Translate chapters 1-2',
+    target: 'VI',
+    mode: null,
+    overwrite: false,
+    items: [
+      { id: 'c1', seq: 1, title: 'Opening', tasks: 1, note: null },
+      { id: 'c2', seq: 2, title: 'Tide', tasks: 1, note: 'long chapter' },
+    ],
+    skipped: [{ id: 'c3', seq: 3, title: 'Empty', reason: 'no paragraphs' }],
+    warnings: [],
+    totalTasks: 2,
+    status: 'pending',
+    pipelineId: null,
     ...overrides,
   };
 }

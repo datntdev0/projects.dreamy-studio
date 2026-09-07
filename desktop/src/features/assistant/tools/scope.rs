@@ -4,6 +4,7 @@ use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::tools::ToolContext;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelSummary;
+use crate::features::pipeline::models::PipelineSnapshot;
 use crate::features::project::models::ProjectSummary;
 
 pub(crate) fn chapter_by_seq(
@@ -74,4 +75,30 @@ pub(crate) fn find_project(
 
 pub(super) fn offers_project_tools(kind: ScopeKind) -> bool {
     kind != ScopeKind::Novel
+}
+
+pub(super) fn offers_pipeline_tool(kind: ScopeKind, name: &str) -> bool {
+    name != "start_synthesis" || offers_project_tools(kind)
+}
+
+pub(super) fn owns_pipeline(
+    ctx: &ToolContext,
+    novel_id: Option<i64>,
+    project_id: Option<i64>,
+) -> bool {
+    match ctx.scope.kind {
+        ScopeKind::Workspace => true,
+        ScopeKind::Novel => same_id(novel_id, ctx.scope.novel_id),
+        ScopeKind::Project => {
+            same_id(project_id, ctx.scope.project_id) || same_id(novel_id, ctx.linked_novel)
+        }
+    }
+}
+
+pub(super) fn owns_snapshot(ctx: &ToolContext, snapshot: &PipelineSnapshot) -> bool {
+    owns_pipeline(ctx, snapshot.novel_id, snapshot.project_id)
+}
+
+fn same_id(actual: Option<i64>, wanted: Option<i64>) -> bool {
+    actual.is_some() && actual == wanted
 }

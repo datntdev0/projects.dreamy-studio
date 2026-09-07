@@ -1,4 +1,5 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { AudiobookService } from '@features/audiobook/audiobook.service';
 import { KnowledgeLang } from '@features/novel/novel.knowledge.models';
 import { NovelKnowledgeService } from '@features/novel/novel.knowledge.service';
 import { TargetLang } from '@features/novel/novel.models';
@@ -6,17 +7,20 @@ import { NovelReaderService } from '@features/novel/novel.reader.service';
 import { displayName, toNovelError } from '@features/novel/novel.rules';
 import { NovelService } from '@features/novel/novel.service';
 import { NovelTranslationService } from '@features/novel/novel.translation.service';
+import { PipelineService } from '@features/pipeline/pipeline.service';
 import { ProjectService } from '@features/project/project.service';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { LayoutService } from '@layout/layout.service';
 import { TabsService } from '@layout/tabs.service';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { DialogService } from '@shared/dialog/dialog.service';
+import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
 // prettier-ignore
-import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, ProposalResolution } from './assistant.models';
+import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution } from './assistant.models';
+import { overwritesAudio, runItemIds } from './assistant.proposals';
 // prettier-ignore
 import { compareRecentFirst, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
 
@@ -25,6 +29,15 @@ const SCOPE_ICONS: Record<AssistantScope['kind'], string> = {
   novel: 'book',
   project: 'folder',
 };
+
+function resolveToastKey(resolution: ProposalResolution): LanguageKey {
+  if (resolution.status === 'rejected') {
+    return 'assistant.toast.rejected';
+  }
+  return resolution.pipelineId === undefined
+    ? 'assistant.toast.applied'
+    : 'assistant.toast.pipelineStarted';
+}
 
 function summaryOf(session: AssistantSession): AssistantSessionSummary {
   return {
@@ -50,10 +63,13 @@ export class AssistantService {
   private readonly reader = inject(NovelReaderService);
   private readonly knowledge = inject(NovelKnowledgeService);
   private readonly translation = inject(NovelTranslationService);
+  private readonly audiobook = inject(AudiobookService);
+  private readonly pipelines = inject(PipelineService);
   private readonly tabs = inject(TabsService);
   private readonly layout = inject(LayoutService);
   private readonly workspace = inject(WorkspaceService);
   private readonly items = signal<AssistantSessionSummary[]>([]);
+  private readonly launched = new Map<string, number>();
   private epoch = 0;
   private workspacePath: string | null | undefined = undefined;
 
@@ -68,6 +84,7 @@ export class AssistantService {
   readonly liveActivities = signal<string[]>([]);
   readonly sendError = signal<string | null>(null);
   readonly resolving = signal<string | null>(null);
+  readonly launching = signal<string | null>(null);
   readonly permitting = signal(false);
   readonly draft = signal('');
   readonly draftScope = signal<AssistantScope>(WORKSPACE_SCOPE);
@@ -206,10 +223,10 @@ export class AssistantService {
       if (resolution.status === 'applied') {
         void this.reloadReview(next, resolution.messageId).catch(this.ignoreReload.bind(this));
       }
-      const key =
-        resolution.status === 'applied' ? 'assistant.toast.applied' : 'assistant.toast.rejected';
       this.toasts.show(
-        this.languageService.translate(key, { count: resolution.itemIds.length }),
+        this.languageService.translate(resolveToastKey(resolution), {
+          count: resolution.itemIds.length,
+        }),
         resolution.status === 'applied' ? 'success' : 'info',
       );
     } catch (cause) {
@@ -221,6 +238,32 @@ export class AssistantService {
         this.resolving.set(null);
       }
     }
+  }
+
+  async runPipelineRun(messageId: string, run: PipelineRun): Promise<void> {
+    if (run.status !== 'pending' || this.launching() !== null || this.resolving() !== null) {
+      return;
+    }
+    const key = `${messageId}:${run.id}`;
+    this.launching.set(messageId);
+    try {
+      const pipelineId = this.launched.get(key) ?? (await this.startRun(key, run));
+      if (pipelineId !== null) {
+        await this.resolve({
+          messageId,
+          itemIds: [run.id],
+          status: 'applied',
+          pipelineId,
+        });
+      }
+    } finally {
+      this.launching.set(null);
+    }
+  }
+
+  openPipeline(pipelineId: number): void {
+    this.tabs.openPipelines();
+    this.pipelines.select(pipelineId);
   }
 
   async setEdit(granted: boolean): Promise<void> {
@@ -347,6 +390,8 @@ export class AssistantService {
     this.liveActivities.set([]);
     this.sendError.set(null);
     this.resolving.set(null);
+    this.launching.set(null);
+    this.launched.clear();
     this.permitting.set(false);
     this.draft.set('');
     this.draftScope.set(WORKSPACE_SCOPE);
@@ -376,6 +421,41 @@ export class AssistantService {
     } else if (change.lang !== null) {
       await this.knowledge.load(change.novelId, change.lang as KnowledgeLang);
     }
+  }
+
+  private async startRun(key: string, run: PipelineRun): Promise<number | null> {
+    const epoch = this.epoch;
+    try {
+      const pipelineId = await this.launchRun(run);
+      if (pipelineId === null) {
+        this.showPipelineFailure('assistant.error.pipelineEmpty', run.title);
+      } else if (epoch === this.epoch) {
+        this.launched.set(key, pipelineId);
+      }
+      return pipelineId;
+    } catch (cause) {
+      this.showPipelineFailure('assistant.error.pipelineStart', toNovelError(cause).detail);
+      return null;
+    }
+  }
+
+  private launchRun(run: PipelineRun): Promise<number | null> {
+    const { novelId, projectId } = run.owner;
+    const ids = runItemIds(run);
+    if (run.job === 'synthesis' && projectId !== null) {
+      return this.audiobook.startGeneration(projectId, ids, overwritesAudio(run));
+    }
+    if (run.job === 'analysis' && novelId !== null) {
+      return this.translation.startAnalysis(novelId, run.target ?? 'src', ids);
+    }
+    if (run.job === 'translation' && novelId !== null && run.target !== null) {
+      return this.translation.translate(novelId, ids, run.target as TargetLang);
+    }
+    return Promise.resolve(null);
+  }
+
+  private showPipelineFailure(key: LanguageKey, detail: string): void {
+    this.toasts.show(this.languageService.translate(key, { detail }), 'danger');
   }
 
   private showResolveError(cause: unknown): void {

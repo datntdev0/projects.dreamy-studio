@@ -296,12 +296,13 @@ export class NovelTranslationService {
     novelId: number,
     chapterIds: string[],
     target: TargetLang = this.targetOf(novelId),
-  ): Promise<void> {
+  ): Promise<number> {
     const tasks: TaskRequest[] = [];
     for (const chapterId of chapterIds) {
       tasks.push({ chapterId, passage: null });
     }
-    await this.startPipeline(novelId, target, tasks);
+    const snapshot = await this.startPipeline(novelId, target, tasks);
+    return snapshot.id;
   }
 
   async retranslate(novelId: number, warningId: string): Promise<void> {
@@ -327,16 +328,17 @@ export class NovelTranslationService {
     }
   }
 
-  async startAnalysis(novelId: number, lang: string, chapterIds: string[]): Promise<void> {
+  async startAnalysis(novelId: number, lang: string, chapterIds: string[]): Promise<number> {
     const tasks: TaskRequest[] = chapterIds.map((chapterId) => ({ chapterId, passage: null }));
     const channel = this.ipc.channel<PipelineEvent>(this.handlePipelineEvent.bind(this));
-    await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
+    const snapshot = await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
       kind: ANALYSIS_KIND,
       novelId,
       lang,
       tasks,
       onEvent: channel,
     });
+    return snapshot.id;
   }
 
   reset(): void {
@@ -383,9 +385,9 @@ export class NovelTranslationService {
     novelId: number,
     target: TargetLang,
     tasks: TaskRequest[],
-  ): Promise<void> {
+  ): Promise<PipelineSnapshot> {
     const channel = this.ipc.channel<PipelineEvent>(this.handlePipelineEvent.bind(this));
-    await this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
+    return this.ipc.invoke<PipelineSnapshot>('pipeline_start', {
       novelId,
       target,
       tasks,

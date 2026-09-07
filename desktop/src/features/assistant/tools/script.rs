@@ -16,6 +16,7 @@ use crate::features::project::models::ProjectSummary;
 use crate::features::scripting::cast::knowledge_lang;
 use crate::features::scripting::cast::project_cast;
 use crate::features::scripting::chapters::ProjectChapter;
+use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
 use crate::features::scripting::models::ScriptBlock;
 use crate::features::scripting::models::ScriptUnit;
@@ -235,6 +236,13 @@ pub(super) fn unit_title(unit: &ScriptUnit, chapters: &[ProjectChapter]) -> Stri
     }
 }
 
+pub(super) fn unit_seq(unit: &ScriptUnit, chapters: &[ProjectChapter]) -> Option<i64> {
+    match chapter_of(unit, chapters) {
+        Some(chapter) => Some(chapter.seq),
+        None => unit.ch,
+    }
+}
+
 fn chapter_of<'a>(unit: &ScriptUnit, chapters: &'a [ProjectChapter]) -> Option<&'a ProjectChapter> {
     let chapter_id = unit.chapter_id.as_deref()?;
     chapters.iter().find(|chapter| chapter.id == chapter_id)
@@ -298,11 +306,19 @@ fn cast_json(
     let Some(script) = script else {
         return Ok(Vec::new());
     };
-    let knowledge = cast_knowledge(project, sources)?;
-    Ok(project_cast(script, knowledge.as_ref())
+    Ok(cast_members(script, project, sources)?
         .iter()
         .map(|member| json!({ "id": member.id, "name": member.name, "kind": member.kind }))
         .collect())
+}
+
+pub(super) fn cast_members(
+    script: &Script,
+    project: &ProjectSummary,
+    sources: &Sources,
+) -> Result<Vec<CastMember>, String> {
+    let knowledge = cast_knowledge(project, sources)?;
+    Ok(project_cast(script, knowledge.as_ref()))
 }
 
 fn cast_knowledge(

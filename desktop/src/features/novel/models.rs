@@ -22,6 +22,13 @@ pub struct NovelSummary {
     pub tags: Vec<String>,
 }
 
+impl NovelSummary {
+    pub fn display_name(&self) -> &str {
+        let name = self.name.trim();
+        if name.is_empty() { &self.title } else { name }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NovelInput {

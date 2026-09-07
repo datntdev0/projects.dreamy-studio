@@ -119,7 +119,51 @@ export interface KnowledgeChangeSet {
   novelId?: number;
 }
 
-export type AssistantAttachment = TranslationReview | KnowledgeChangeSet;
+export type PipelineJobKind = 'translation' | 'analysis' | 'synthesis';
+
+export interface PipelineRunOwner {
+  novelId: number | null;
+  projectId: number | null;
+}
+
+export interface PipelineRunItem {
+  id: string;
+  seq: number | null;
+  title: string;
+  tasks: number;
+  note: string | null;
+}
+
+export interface PipelineRunSkipped {
+  id: string;
+  seq: number | null;
+  title: string;
+  reason: string;
+}
+
+export interface PipelineRun {
+  kind: 'pipeline_run';
+  id: string;
+  job: PipelineJobKind;
+  owner: PipelineRunOwner;
+  title: string;
+  target: string | null;
+  mode: string | null;
+  overwrite: boolean;
+  items: PipelineRunItem[];
+  skipped: PipelineRunSkipped[];
+  warnings: string[];
+  totalTasks: number;
+  status: ProposalStatus;
+  pipelineId: number | null;
+}
+
+export interface PipelineRunLaunch {
+  messageId: string;
+  run: PipelineRun;
+}
+
+export type AssistantAttachment = TranslationReview | KnowledgeChangeSet | PipelineRun;
 
 export type AssistantContext =
   | { kind: 'translation_review'; chapterId: string; target: string }
@@ -129,6 +173,7 @@ export interface ProposalResolution {
   messageId: string;
   itemIds: string[];
   status: ProposalDecision;
+  pipelineId?: number;
 }
 
 export interface MarkedText {

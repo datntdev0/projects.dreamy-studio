@@ -149,6 +149,16 @@ describe('NovelTranslationService', () => {
     expect(ipc.lastArgs('pipeline_cancel')).toEqual({ pipelineId: 5 });
   });
 
+  it('returns the id of the pipeline it starts without touching the selected target', async () => {
+    ipc.on('pipeline_start', pipeline({ id: 7 }));
+    expect(await service.translate(1, ['c1'], 'EN')).toBe(7);
+    expect(ipc.lastArgs('pipeline_start')).toMatchObject({ novelId: 1, target: 'EN' });
+    expect(service.targetOf(1)).toBe('VI');
+    ipc.on('pipeline_start', pipeline({ id: 8 }));
+    expect(await service.startAnalysis(1, 'src', ['c1'])).toBe(8);
+    expect(ipc.lastArgs('pipeline_start')).toMatchObject({ kind: 'analysis', lang: 'src' });
+  });
+
   it('follows pipeline events', async () => {
     await service.load(1);
     await service.translate(1, ['c1', 'c2']);

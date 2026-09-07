@@ -7,12 +7,13 @@ import { CoreModule } from '@shared/core.module';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 // prettier-ignore
-import { AssistantAttachment, AssistantMessage, AssistantSession, KnowledgeChangeSet, ProposalResolution, TranslationReview } from '../assistant.models';
+import { AssistantAttachment, AssistantMessage, AssistantSession, KnowledgeChangeSet, PipelineRun, PipelineRunLaunch, ProposalResolution, TranslationReview } from '../assistant.models';
 import { renderMarkdown } from '../assistant.rules';
 import { AssistantService } from '../assistant.service';
 import { AssistantChangesCard } from './changes-card.component';
 import { AssistantComposer } from './composer.component';
 import { AssistantPaneHeader } from './pane-header.component';
+import { AssistantPipelineCard } from './pipeline-card.component';
 import { AssistantReviewCard } from './review-card.component';
 
 @Component({
@@ -25,6 +26,7 @@ import { AssistantReviewCard } from './review-card.component';
     AssistantChangesCard,
     AssistantComposer,
     AssistantPaneHeader,
+    AssistantPipelineCard,
     AssistantReviewCard,
   ],
   templateUrl: './chat.component.html',
@@ -82,8 +84,20 @@ export class AssistantChat {
     return attachment.kind === 'knowledge_changes' ? attachment : null;
   }
 
+  asPipelineRun(attachment: AssistantAttachment): PipelineRun | null {
+    return attachment.kind === 'pipeline_run' ? attachment : null;
+  }
+
   isResolving(message: AssistantMessage): boolean {
-    return this.assistant.resolving() === message.id;
+    return this.assistant.resolving() === message.id || this.assistant.launching() === message.id;
+  }
+
+  onLaunched(launch: PipelineRunLaunch): void {
+    void this.assistant.runPipelineRun(launch.messageId, launch.run);
+  }
+
+  onOpened(pipelineId: number): void {
+    this.assistant.openPipeline(pipelineId);
   }
 
   onResolved(resolution: ProposalResolution): void {

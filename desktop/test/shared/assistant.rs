@@ -3,19 +3,24 @@ use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
+use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::service::AssistantLlm;
 use crate::features::assistant::sources::AudiobookSource;
 use crate::features::assistant::sources::KnowledgeSource;
 use crate::features::assistant::sources::NovelSource;
+use crate::features::assistant::sources::PipelineSource;
 use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::sources::ScriptSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::TranslationSource;
+use crate::features::assistant::tools::ToolContext;
+use crate::features::assistant::tools::call;
 use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
 use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::models::SpeakerVoice;
 use crate::features::audiobook::models::UnitAudio;
+use crate::features::knowledge::models::AnalyzedChapter;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::KnowledgeEntity;
@@ -29,6 +34,11 @@ use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
 use crate::features::novel::models::ParagraphRow;
 use crate::features::pipeline::llm::Turn;
+use crate::features::pipeline::models::JobOwner;
+use crate::features::pipeline::models::PipelineSnapshot;
+use crate::features::pipeline::models::PipelineStatus;
+use crate::features::pipeline::models::PipelineTask;
+use crate::features::pipeline::models::TaskStatus;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectSummary;
 use crate::features::scripting::chapters::ProjectChapter;
@@ -324,6 +334,7 @@ struct KnowledgeState {
     preview_items: Option<Vec<KnowledgeItem>>,
     preview_failure: Option<String>,
     failure: Option<String>,
+    analyzed: BTreeMap<i64, AnalyzedChapter>,
 }
 
 #[derive(Clone)]
@@ -341,6 +352,7 @@ impl FakeKnowledge {
                 preview_items: None,
                 preview_failure: None,
                 failure: None,
+                analyzed: BTreeMap::new(),
             })),
         }
     }
@@ -389,6 +401,19 @@ impl FakeKnowledge {
         self
     }
 
+    pub fn with_analyzed(self, seq: i64, stale: bool) -> Self {
+        guard(&self.state).analyzed.insert(
+            seq,
+            AnalyzedChapter {
+                at: "2026-01-01T00:00:00Z".to_string(),
+                entities: 4,
+                facts: 6,
+                stale,
+            },
+        );
+        self
+    }
+
     pub fn with_knowledge(self, knowledge: WireKnowledge) -> Self {
         guard(&self.state).items = knowledge.items;
         self
@@ -418,7 +443,8 @@ impl FakeKnowledge {
     }
 
     fn snapshot(&self, lang: &str) -> WireKnowledge {
-        self.snapshot_of(lang, guard(&self.state).items.clone())
+        let items = guard(&self.state).items.clone();
+        self.snapshot_of(lang, items)
     }
 
     fn snapshot_of(&self, lang: &str, items: Vec<KnowledgeItem>) -> WireKnowledge {
@@ -426,7 +452,7 @@ impl FakeKnowledge {
             lang: lang.to_string(),
             ontology: Ontology::get().view(),
             items,
-            analyzed: BTreeMap::new(),
+            analyzed: guard(&self.state).analyzed.clone(),
         }
     }
 }
@@ -892,13 +918,133 @@ pub fn sources_with_project_data(
     scripts: &FakeScripts,
     audiobooks: &FakeAudiobooks,
 ) -> Sources {
+    sources_with_pipelines(
+        novels,
+        knowledge,
+        translation,
+        projects,
+        (scripts, audiobooks),
+        &FakePipelines::default(),
+    )
+}
+
+pub fn sources_with_pipelines(
+    novels: &FakeNovels,
+    knowledge: &FakeKnowledge,
+    translation: &FakeTranslation,
+    projects: &FakeProjects,
+    project_data: (&FakeScripts, &FakeAudiobooks),
+    pipelines: &FakePipelines,
+) -> Sources {
     Sources {
         novels: Box::new(novels.clone()),
         knowledge: Box::new(knowledge.clone()),
         translation: Box::new(translation.clone()),
         projects: Box::new(projects.clone()),
-        scripts: Box::new(scripts.clone()),
-        audiobooks: Box::new(audiobooks.clone()),
+        scripts: Box::new(project_data.0.clone()),
+        audiobooks: Box::new(project_data.1.clone()),
+        pipelines: Box::new(pipelines.clone()),
+    }
+}
+
+#[derive(Default)]
+struct PipelineState {
+    runs: Vec<PipelineSnapshot>,
+    cancelled: Vec<i64>,
+}
+
+#[derive(Clone, Default)]
+pub struct FakePipelines {
+    state: Arc<Mutex<PipelineState>>,
+}
+
+impl FakePipelines {
+    pub fn with_runs(runs: Vec<PipelineSnapshot>) -> Self {
+        let pipelines = Self::default();
+        guard(&pipelines.state).runs = runs;
+        pipelines
+    }
+
+    pub fn cancelled(&self) -> Vec<i64> {
+        guard(&self.state).cancelled.clone()
+    }
+}
+
+impl PipelineSource for FakePipelines {
+    fn history(
+        &self,
+        owner: Option<JobOwner>,
+        limit: i64,
+    ) -> Result<Vec<PipelineSnapshot>, String> {
+        let mut runs: Vec<PipelineSnapshot> = guard(&self.state)
+            .runs
+            .iter()
+            .filter(|run| owner.is_none_or(|owner| owner_of(run) == Some(owner)))
+            .cloned()
+            .collect();
+        runs.sort_by(|left, right| right.id.cmp(&left.id));
+        runs.truncate(usize::try_from(limit).unwrap_or_default());
+        Ok(runs)
+    }
+
+    fn snapshot(&self, pipeline_id: i64) -> Result<Option<PipelineSnapshot>, String> {
+        Ok(guard(&self.state)
+            .runs
+            .iter()
+            .find(|run| run.id == pipeline_id)
+            .cloned())
+    }
+
+    fn cancel(&self, pipeline_id: i64) -> bool {
+        guard(&self.state).cancelled.push(pipeline_id);
+        true
+    }
+}
+
+fn owner_of(run: &PipelineSnapshot) -> Option<JobOwner> {
+    match (run.novel_id, run.project_id) {
+        (Some(id), None) => Some(JobOwner::Novel(id)),
+        (None, Some(id)) => Some(JobOwner::Project(id)),
+        _ => None,
+    }
+}
+
+pub fn pipeline_run(
+    id: i64,
+    owner: JobOwner,
+    kind: &str,
+    status: PipelineStatus,
+) -> PipelineSnapshot {
+    PipelineSnapshot {
+        id,
+        novel_id: match owner {
+            JobOwner::Novel(novel_id) => Some(novel_id),
+            JobOwner::Project(_) => None,
+        },
+        project_id: match owner {
+            JobOwner::Project(project_id) => Some(project_id),
+            JobOwner::Novel(_) => None,
+        },
+        kind: kind.to_string(),
+        target: "VI".to_string(),
+        status,
+        total: 2,
+        done: 1,
+        failed: 0,
+        created_at: "2026-01-01T00:00:00Z".to_string(),
+        started_at: None,
+        finished_at: None,
+        tasks: vec![PipelineTask {
+            id: id * 10,
+            chapter_id: "chapter-1-1".to_string(),
+            segment_id: None,
+            passage: None,
+            status: TaskStatus::Running,
+            progress: 40,
+            error: String::new(),
+            started_at: None,
+            finished_at: None,
+        }],
     }
 }
 
@@ -1108,6 +1254,13 @@ impl TurnSink for RecordingSink {
     fn attach(&self, attachment: serde_json::Value) {
         guard(&self.attachments).push(attachment);
     }
+
+    fn attached(&self, kind: &str) -> usize {
+        guard(&self.attachments)
+            .iter()
+            .filter(|item| item["kind"] == kind)
+            .count()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1265,4 +1418,93 @@ impl AssistantEventSink for RecordingEvents {
 
 fn guard<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|error| error.into_inner())
+}
+
+pub struct ToolWorld {
+    pub novels: FakeNovels,
+    pub knowledge: FakeKnowledge,
+    pub translation: FakeTranslation,
+    pub projects: FakeProjects,
+    pub scripts: FakeScripts,
+    pub audiobooks: FakeAudiobooks,
+    pub pipelines: FakePipelines,
+    pub linked_novel: Option<i64>,
+}
+
+impl ToolWorld {
+    pub fn new() -> Self {
+        Self {
+            novels: FakeNovels::new()
+                .with_novel(1, "First")
+                .with_chapter(1, 1, "One", &["a one", "a two", "a three"])
+                .with_chapter(1, 2, "Two", &["b one", "b two"])
+                .with_chapter(1, 3, "Three", &[])
+                .with_novel(2, "Second")
+                .with_chapter(2, 1, "Other", &["c one"]),
+            knowledge: FakeKnowledge::new()
+                .with_entity("kb-1", "character", "Lin Mo", &[], &[], &[1])
+                .with_analyzed(1, false)
+                .with_analyzed(2, true),
+            translation: FakeTranslation::new().with_translated_chapter(
+                1,
+                "VI",
+                "chapter-1-1",
+                "Một",
+                &["một", "hai"],
+            ),
+            projects: FakeProjects::with(vec![
+                project_summary(5, Some(1)),
+                project_summary(6, None),
+            ]),
+            scripts: FakeScripts::with_script(script_fixture(), vec![project_chapter_fixture()]),
+            audiobooks: FakeAudiobooks::with_book(audiobook_fixture()),
+            pipelines: FakePipelines::default(),
+            linked_novel: Some(1),
+        }
+    }
+
+    pub fn sources(&self) -> Sources {
+        sources_with_pipelines(
+            &self.novels,
+            &self.knowledge,
+            &self.translation,
+            &self.projects,
+            (&self.scripts, &self.audiobooks),
+            &self.pipelines,
+        )
+    }
+
+    pub fn run(
+        &self,
+        name: &str,
+        args: serde_json::Value,
+        scope: &AssistantScope,
+    ) -> (Result<serde_json::Value, String>, RecordingSink) {
+        let sink = RecordingSink::new();
+        let result = self.run_in(&sink, name, args, scope);
+        (result, sink)
+    }
+
+    pub fn run_in(
+        &self,
+        sink: &RecordingSink,
+        name: &str,
+        args: serde_json::Value,
+        scope: &AssistantScope,
+    ) -> Result<serde_json::Value, String> {
+        let ctx = ToolContext {
+            scope,
+            linked_novel: self.linked_novel,
+            can_edit: false,
+            sink,
+        };
+        let output = call(name, &args, &ctx, &self.sources())?;
+        Ok(serde_json::from_str(&output.text).unwrap())
+    }
+}
+
+impl Default for ToolWorld {
+    fn default() -> Self {
+        Self::new()
+    }
 }

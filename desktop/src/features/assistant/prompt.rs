@@ -16,6 +16,34 @@ const PROJECT_TOOLS: &str = concat!(
     "- `read_audiobook_unit`: read the audio state (none, done, stale or flag) of the voiced blocks of one unit by `projectId` and `unitId`.\n",
 );
 
+const RUN_TOOLS: &str = concat!(
+    "- `start_translation`: prepare the translation of whole chapters by `novelId`, `target` (`VI` or `EN`) and `chapters` (chapter numbers), with `overwrite` only when the user wants chapters that already have a translation translated again.
+",
+    "- `start_analysis`: prepare the knowledge analysis of whole chapters by `novelId`, `lang` (`src`, `VI` or `EN`) and `chapters`, with `overwrite` only when the user wants analyzed chapters analyzed again.
+",
+);
+
+const SYNTHESIS_TOOL: &str = "- `start_synthesis`: prepare the audio generation of script units by `projectId` and `units` (unit ids), with `mode` `missing` (every block without up-to-date audio, the default) or `all`.
+";
+
+const PIPELINE_STATUS_TOOLS: &str = concat!(
+    "- `list_pipeline`: list the latest runs of translation, analysis and audio generation with their status and progress.
+",
+    "- `read_pipeline`: read one run by `pipelineId` with the state of each of its tasks.
+",
+    "- `cancel_pipeline`: cancel a queued or running run by `pipelineId`.
+",
+);
+
+const PIPELINE_RULES: &str = concat!(
+    "- The `start_*` tools never start a job: they show a confirmation card and the job starts only when the user presses Run on it. Never say that a job has started or finished before the user confirmed it, and tell the user to confirm on the card.
+",
+    "- Queue only the chapters or units the user asked for. When a `start_*` tool reports that nothing is left to run or that a voice is missing, tell the user and ask before you use `overwrite` or another `mode`.
+",
+    "- Use `list_pipeline` and `read_pipeline` only when the user asks about the status of a run, and `cancel_pipeline` only when the user asks to stop one.
+",
+);
+
 const PROJECT_READING_RULE: &str = "- Read the script with `read_script` and `read_script_unit` before you answer about it, and point to blocks by their id and position `p`.\n";
 
 const CITATION_FORMAT: &str =
@@ -46,12 +74,14 @@ pub fn opening(
     prompt.push_str("- `edit_novel_chapter`: change one chapter by `novelId` and `chapter`, with an optional new `title` and `paragraphs`, a list of `{p, expected, text}` where `expected` must be the exact current text of paragraph `p` and `text` is its replacement.\n");
     prompt.push_str("- `edit_novel_knowledge`: change the knowledge of one novel by `novelId` and `lang`, with `edits`, a list of edits each carrying a `k` tag that names its kind.\n");
     prompt.push_str(project_tools(scope));
+    prompt.push_str(&pipeline_tools(scope));
     prompt.push('\n');
     prompt.push_str("## Rules\n");
     prompt.push_str("- Answer in the user's language.\n");
     prompt.push_str("- State only facts you read through the tools. If you did not read it or you are unsure, say so instead of guessing.\n");
     prompt.push_str("- Keep the answer concise and in plain text.\n");
     prompt.push_str("- Edit only when the user asks you to change something. Read before you edit. If an edit tool says editing is not enabled, tell the user to turn it on in the assistant panel.\n");
+    prompt.push_str(PIPELINE_RULES);
     prompt.push_str(&scope_rules(scope, linked_novel));
     prompt.push_str("\n## Citations\n");
     prompt.push_str("After the answer you may append exactly one block, with nothing after it:\n");
@@ -91,6 +121,15 @@ fn project_tools(scope: &AssistantScope) -> &'static str {
     }
 }
 
+fn pipeline_tools(scope: &AssistantScope) -> String {
+    let synthesis = if scope.kind == ScopeKind::Novel {
+        ""
+    } else {
+        SYNTHESIS_TOOL
+    };
+    format!("{RUN_TOOLS}{synthesis}{PIPELINE_STATUS_TOOLS}")
+}
+
 fn scope_rules(scope: &AssistantScope, linked_novel: Option<i64>) -> String {
     match (scope.kind, scope.novel_id, scope.project_id) {
         (ScopeKind::Novel, Some(novel_id), _) => {
@@ -123,16 +162,11 @@ fn novel_list(novels: &[NovelSummary]) -> String {
         lines.push_str(&format!(
             "- id {}: {} ({} chapters)\n",
             novel.id,
-            display_name(novel),
+            novel.display_name(),
             novel.chapter_count
         ));
     }
     lines
-}
-
-fn display_name(novel: &NovelSummary) -> &str {
-    let name = novel.name.trim();
-    if name.is_empty() { &novel.title } else { name }
 }
 
 fn label(role: Role) -> &'static str {

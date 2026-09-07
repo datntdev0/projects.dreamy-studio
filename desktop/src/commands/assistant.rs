@@ -13,15 +13,18 @@ use crate::features::assistant::server::McpHost;
 use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::sources::ProjectScripts;
 use crate::features::assistant::sources::Sources;
+use crate::features::assistant::sources::WorkspacePipelines;
 use crate::features::audiobook::service::AudiobookWorkspace;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
+use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::project::models::ProjectError;
 use crate::features::project::service::ProjectService;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::session::WorkspaceSession;
 use serde_json::Value;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -46,12 +49,14 @@ impl<R: Runtime> McpHost for AppMcpHost<R> {
         let knowledge = self.0.state::<KnowledgeService>();
         let translation = self.0.state::<TranslationService>();
         let projects = self.0.state::<ProjectService>();
+        let executor = self.0.state::<PipelineExecutor>();
         let session = self.0.state::<WorkspaceSession>();
         let services = SourceServices {
             novels: &novels,
             knowledge: &knowledge,
             translation: &translation,
             projects: &projects,
+            executor: &executor,
         };
         open_sources(&services, &session, grant)
     }
@@ -85,12 +90,19 @@ fn build_sources(services: &SourceServices, session: &WorkspaceSession) -> Resul
         .projects
         .open(session)
         .map_err(|error| error.to_string())?;
+    let workspace = session
+        .current()
+        .ok_or_else(|| WORKSPACE_CLOSED.to_string())?;
     Ok(Sources {
         novels: Box::new(novels),
         knowledge: Box::new(knowledge),
         translation: Box::new(translation),
         scripts: Box::new(ProjectScripts::new(projects.clone())),
         audiobooks: Box::new(AudiobookWorkspace::new(projects.clone())),
+        pipelines: Box::new(WorkspacePipelines::new(
+            PathBuf::from(workspace.path),
+            services.executor.clone(),
+        )),
         projects: Box::new(projects),
     })
 }
@@ -151,6 +163,7 @@ pub struct SourceServices<'a> {
     pub knowledge: &'a KnowledgeService,
     pub translation: &'a TranslationService,
     pub projects: &'a ProjectService,
+    pub executor: &'a PipelineExecutor,
 }
 
 pub fn send_message(
@@ -171,6 +184,7 @@ pub struct ResolveInput<'a> {
     pub message_id: &'a str,
     pub item_ids: &'a [String],
     pub status: &'a str,
+    pub pipeline_id: Option<i64>,
 }
 
 pub fn resolve_proposal(
@@ -188,6 +202,7 @@ pub fn resolve_proposal(
         input.message_id,
         input.item_ids,
         status,
+        input.pipeline_id,
         &sources,
     )
 }
@@ -274,11 +289,13 @@ pub async fn assistant_message_send<R: Runtime>(
         let knowledge = handle.state::<KnowledgeService>();
         let translation = handle.state::<TranslationService>();
         let projects = handle.state::<ProjectService>();
+        let executor = handle.state::<PipelineExecutor>();
         let services = SourceServices {
             novels,
             knowledge: &knowledge,
             translation: &translation,
             projects: &projects,
+            executor: &executor,
         };
         let input = SendInput {
             session_id: &session_id,
@@ -297,23 +314,27 @@ pub async fn assistant_proposal_resolve<R: Runtime>(
     message_id: String,
     item_ids: Vec<String>,
     status: String,
+    pipeline_id: Option<i64>,
 ) -> AssistantResult<AssistantSession> {
     let handle = app.clone();
     run_blocking(app, move |service, novels, session| {
         let knowledge = handle.state::<KnowledgeService>();
         let translation = handle.state::<TranslationService>();
         let projects = handle.state::<ProjectService>();
+        let executor = handle.state::<PipelineExecutor>();
         let services = SourceServices {
             novels,
             knowledge: &knowledge,
             translation: &translation,
             projects: &projects,
+            executor: &executor,
         };
         let input = ResolveInput {
             session_id: &session_id,
             message_id: &message_id,
             item_ids: &item_ids,
             status: &status,
+            pipeline_id,
         };
         resolve_proposal(service, &services, session, input)
     })

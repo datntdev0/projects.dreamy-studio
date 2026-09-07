@@ -4,9 +4,11 @@ import { ProjectSummary } from '@features/project/project.models';
 import { marked } from 'marked';
 
 // prettier-ignore
-import { AssistantScope, AssistantScopeFilter, AssistantScopeTarget, AssistantSessionSummary } from './assistant.models';
+import { AssistantChangeTarget, AssistantScope, AssistantScopeFilter, AssistantScopeTarget, AssistantSessionSummary } from './assistant.models';
 
 export const RECENT_SESSIONS = 3;
+
+const PROJECT_TARGETS: AssistantChangeTarget[] = ['script', 'project', 'audiobook'];
 
 export const NOVEL_SCOPES = true;
 
@@ -24,6 +26,10 @@ export function novelScope(novelId: number): AssistantScope {
 
 export function projectScope(projectId: number): AssistantScope {
   return { kind: 'project', novelId: null, projectId };
+}
+
+export function isProjectChange(target: AssistantChangeTarget): boolean {
+  return PROJECT_TARGETS.includes(target);
 }
 
 export function sameScope(left: AssistantScope, right: AssistantScope): boolean {

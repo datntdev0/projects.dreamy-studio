@@ -193,6 +193,8 @@ pub enum ChangeTarget {
     Knowledge,
     Translation,
     Script,
+    Project,
+    Audiobook,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -204,6 +206,19 @@ pub struct AssistantChange {
     pub chapter_id: Option<String>,
     pub lang: Option<String>,
     pub translation_target: Option<String>,
+}
+
+impl AssistantChange {
+    pub fn in_project(target: ChangeTarget, project_id: i64, chapter_id: Option<String>) -> Self {
+        Self {
+            target,
+            novel_id: None,
+            project_id: Some(project_id),
+            chapter_id,
+            lang: None,
+            translation_target: None,
+        }
+    }
 }
 
 pub trait AssistantEventSink: Send + Sync {

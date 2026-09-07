@@ -440,7 +440,7 @@ pub(crate) fn list_of<'a>(args: &'a Value, key: &str) -> Result<&'a [Value], Str
     }
 }
 
-fn ensure_editable(ctx: &ToolContext) -> Result<(), String> {
+pub(crate) fn ensure_editable(ctx: &ToolContext) -> Result<(), String> {
     if ctx.can_edit {
         Ok(())
     } else {

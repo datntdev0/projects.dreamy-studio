@@ -23,7 +23,7 @@ import { ToastService } from '@shared/toast/toast.service';
 import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution, ScriptDraft } from './assistant.models';
 import { overwritesAudio, runItemIds } from './assistant.proposals';
 // prettier-ignore
-import { compareRecentFirst, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
+import { compareRecentFirst, isProjectChange, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
 
 const SCOPE_ICONS: Record<AssistantScope['kind'], string> = {
   workspace: 'globe',
@@ -430,22 +430,41 @@ export class AssistantService {
   }
 
   private async refresh(change: AssistantChange): Promise<void> {
-    if (change.target === 'script') {
-      await this.refreshScript(change.projectId);
+    if (isProjectChange(change.target)) {
+      await this.refreshProject(change);
     } else if (change.novelId !== null) {
       await this.refreshNovel(change, change.novelId);
     }
   }
 
-  private async refreshScript(projectId: number | null): Promise<void> {
-    if (projectId !== null) {
+  private async refreshProject(change: AssistantChange): Promise<void> {
+    const projectId = change.projectId;
+    if (projectId === null) {
+      return;
+    }
+    if (change.target === 'script') {
       await this.reloadScript(projectId);
+    } else if (change.target === 'project') {
+      await this.projects.load();
+    } else {
+      await this.reloadAudiobook(projectId, change.chapterId);
     }
   }
 
   private async reloadScript(projectId: number): Promise<void> {
     if (this.scripting.isLoaded(projectId)) {
       await this.scripting.load(projectId);
+    }
+  }
+
+  private async reloadAudiobook(projectId: number, unitId: string | null): Promise<void> {
+    if (!this.audiobook.isLoaded(projectId)) {
+      return;
+    }
+    if (unitId === null) {
+      await this.audiobook.load(projectId);
+    } else {
+      await this.audiobook.reloadUnit(projectId, unitId);
     }
   }
 

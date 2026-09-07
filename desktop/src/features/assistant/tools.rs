@@ -7,9 +7,13 @@ use crate::features::assistant::sources::Sources;
 use serde_json::Value;
 
 mod args;
+mod audio_edit;
 mod audiobook;
 mod definitions;
 mod draft;
+mod edit_cast;
+mod edit_project;
+mod edit_unit;
 mod knowledge;
 mod novel;
 mod paging;
@@ -20,6 +24,7 @@ mod scope;
 mod script;
 mod synthesis;
 mod translation;
+mod voice;
 
 pub(crate) use args::optional_int;
 pub(crate) use args::optional_str;
@@ -32,7 +37,7 @@ pub(crate) use script::unit_target;
 pub(crate) use translation::dict_json;
 pub(crate) use translation::required_target;
 
-pub const PROJECT_TOOLS: [&str; 8] = [
+pub const PROJECT_TOOLS: [&str; 15] = [
     "list_project",
     "read_project",
     "read_script",
@@ -41,6 +46,13 @@ pub const PROJECT_TOOLS: [&str; 8] = [
     "read_audiobook",
     "read_audiobook_unit",
     "submit_script_draft",
+    "edit_project",
+    "edit_script_unit",
+    "edit_script_cast",
+    "list_voice",
+    "edit_audiobook_voices",
+    "edit_audiobook_mix",
+    "flag_audio_segment",
 ];
 
 pub const PIPELINE_TOOLS: [&str; 6] = [
@@ -72,6 +84,11 @@ pub fn definitions(scope: &AssistantScope) -> Value {
         tools.extend(script::definitions());
         tools.extend(audiobook::definitions());
         tools.extend(draft::definitions());
+        tools.extend(edit_project::definitions());
+        tools.extend(edit_unit::definitions());
+        tools.extend(edit_cast::definitions());
+        tools.extend(voice::definitions());
+        tools.extend(audio_edit::definitions());
     }
     tools.extend(pipeline_definitions(scope.kind));
     Value::Array(tools)
@@ -143,6 +160,13 @@ fn call_project_tool(
         "read_audiobook_unit" => audiobook::read_audiobook_unit(args, ctx, sources),
         "search_project" => script::search_project(args, ctx, sources),
         "submit_script_draft" => draft::submit_script_draft(args, ctx, sources),
+        "edit_project" => edit_project::edit_project(args, ctx, sources),
+        "edit_script_unit" => edit_unit::edit_script_unit(args, ctx, sources),
+        "edit_script_cast" => edit_cast::edit_script_cast(args, ctx, sources),
+        "list_voice" => voice::list_voice(sources),
+        "edit_audiobook_voices" => voice::edit_audiobook_voices(args, ctx, sources),
+        "edit_audiobook_mix" => audio_edit::edit_audiobook_mix(args, ctx, sources),
+        "flag_audio_segment" => audio_edit::flag_audio_segment(args, ctx, sources),
         other => Err(format!("unknown tool '{other}'")),
     }
 }
@@ -196,3 +220,23 @@ mod pipeline_tests;
 #[cfg(test)]
 #[path = "../../../test/features/assistant/tools/draft.test.rs"]
 mod draft_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/edit_project.test.rs"]
+mod edit_project_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/edit_cast.test.rs"]
+mod edit_cast_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/edit_unit.test.rs"]
+mod edit_unit_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/voice.test.rs"]
+mod voice_tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/audio_edit.test.rs"]
+mod audio_edit_tests;

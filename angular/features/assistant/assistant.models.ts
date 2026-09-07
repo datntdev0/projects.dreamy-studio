@@ -26,7 +26,8 @@ export interface AssistantCitation {
   quote: string;
 }
 
-export type AssistantChangeTarget = 'novel' | 'chapter' | 'knowledge' | 'translation' | 'script';
+export type AssistantChangeTarget =
+  'novel' | 'chapter' | 'knowledge' | 'translation' | 'script' | 'project' | 'audiobook';
 
 export interface AssistantChange {
   target: AssistantChangeTarget;

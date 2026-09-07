@@ -144,3 +144,26 @@ fn translation_projects_use_the_knowledge_of_their_language() {
     project.src_lang = None;
     assert_eq!(knowledge_lang(&project), "VI");
 }
+
+#[test]
+fn radix_writes_base_36_digits() {
+    assert_eq!(radix(0), "0");
+    assert_eq!(radix(35), "z");
+    assert_eq!(radix(36), "10");
+    assert_eq!(radix(1_295), "zz");
+}
+
+#[test]
+fn extra_members_get_unique_ids_and_the_given_color() {
+    let mut taken = HashSet::from(["spk0".to_string()]);
+
+    let first = extra_member("Old man", 3, &mut taken);
+    let second = extra_member("Old woman", 4, &mut taken);
+
+    assert_eq!(first.kind, "extra");
+    assert_eq!(first.name, "Old man");
+    assert_eq!(first.c, 3);
+    assert!(first.id.starts_with("spk"));
+    assert_ne!(first.id, second.id);
+    assert_eq!(taken.len(), 3);
+}

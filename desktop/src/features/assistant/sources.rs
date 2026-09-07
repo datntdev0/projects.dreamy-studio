@@ -1,11 +1,16 @@
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
+use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
+use crate::features::audiobook::models::AudiobookConfig;
+use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::service::AudiobookWorkspace;
 use crate::features::knowledge::models::KnowledgeEdit;
 use crate::features::knowledge::models::KnowledgeEditResult;
 use crate::features::knowledge::models::WireKnowledge;
 use crate::features::knowledge::service::KnowledgeWorkspace;
+use crate::features::library::models::LibraryVoice;
+use crate::features::library::service::LibraryWorkspace;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
@@ -16,6 +21,7 @@ use crate::features::pipeline::models::JobOwner;
 use crate::features::pipeline::models::PipelineSnapshot;
 use crate::features::pipeline::repository::PipelineRepository;
 use crate::features::project::models::ProjectModuleState;
+use crate::features::project::models::ProjectPatch;
 use crate::features::project::models::ProjectSummary;
 use crate::features::project::service::ProjectWorkspace;
 use crate::features::scripting::chapters::ProjectChapter;
@@ -95,6 +101,8 @@ pub trait ProjectSource {
             .into_iter()
             .find(|project| project.id == project_id))
     }
+
+    fn update(&self, project_id: i64, patch: ProjectPatch) -> Result<ProjectSummary, String>;
 }
 
 pub trait ScriptSource {
@@ -107,6 +115,19 @@ pub trait ScriptSource {
 
 pub trait AudiobookSource {
     fn book(&self, project_id: i64) -> Result<Option<Audiobook>, String>;
+    fn config_save(&self, project_id: i64, config: AudiobookConfig) -> Result<(), String>;
+    fn mix_save(&self, project_id: i64, mix: MixSettings) -> Result<MixSettings, String>;
+    fn flag_set(
+        &self,
+        project_id: i64,
+        unit_id: &str,
+        block_id: &str,
+        flag: &str,
+    ) -> Result<AudioRecord, String>;
+}
+
+pub trait VoiceSource {
+    fn list(&self) -> Result<Vec<LibraryVoice>, String>;
 }
 
 pub trait PipelineSource {
@@ -123,6 +144,7 @@ pub struct Sources {
     pub projects: Box<dyn ProjectSource>,
     pub scripts: Box<dyn ScriptSource>,
     pub audiobooks: Box<dyn AudiobookSource>,
+    pub voices: Box<dyn VoiceSource>,
     pub pipelines: Box<dyn PipelineSource>,
 }
 
@@ -243,6 +265,10 @@ impl ProjectSource for ProjectWorkspace {
     fn list(&self) -> Result<Vec<ProjectSummary>, String> {
         ProjectWorkspace::list(self).map_err(|error| error.to_string())
     }
+
+    fn update(&self, project_id: i64, patch: ProjectPatch) -> Result<ProjectSummary, String> {
+        ProjectWorkspace::update(self, project_id, patch).map_err(|error| error.to_string())
+    }
 }
 
 pub struct ProjectScripts {
@@ -296,6 +322,31 @@ impl ScriptSource for ProjectScripts {
 impl AudiobookSource for AudiobookWorkspace {
     fn book(&self, project_id: i64) -> Result<Option<Audiobook>, String> {
         AudiobookWorkspace::get(self, project_id).map_err(|error| error.to_string())
+    }
+
+    fn config_save(&self, project_id: i64, config: AudiobookConfig) -> Result<(), String> {
+        AudiobookWorkspace::config_save(self, project_id, config).map_err(|error| error.to_string())
+    }
+
+    fn mix_save(&self, project_id: i64, mix: MixSettings) -> Result<MixSettings, String> {
+        AudiobookWorkspace::mix_save(self, project_id, mix).map_err(|error| error.to_string())
+    }
+
+    fn flag_set(
+        &self,
+        project_id: i64,
+        unit_id: &str,
+        block_id: &str,
+        flag: &str,
+    ) -> Result<AudioRecord, String> {
+        AudiobookWorkspace::flag_set(self, project_id, unit_id, block_id, flag)
+            .map_err(|error| error.to_string())
+    }
+}
+
+impl VoiceSource for LibraryWorkspace {
+    fn list(&self) -> Result<Vec<LibraryVoice>, String> {
+        LibraryWorkspace::voice_list(self).map_err(|error| error.to_string())
     }
 }
 

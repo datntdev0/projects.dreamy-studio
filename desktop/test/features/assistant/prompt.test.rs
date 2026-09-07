@@ -242,6 +242,43 @@ fn a_project_prompt_explains_how_script_drafts_work() {
 }
 
 #[test]
+fn a_project_prompt_explains_edits_voices_and_outdated_audio() {
+    let prompt = opening(&project_scope(), &[], "q", &novels(), Some(7));
+
+    assert!(prompt.contains("use `edit_script_unit`"));
+    assert!(prompt.contains("change only what the user asked for"));
+    assert!(prompt.contains("To assign voices, read `read_audiobook`"));
+    assert!(prompt.contains("read `read_novel_knowledge` for the traits of the characters"));
+    assert!(prompt.contains("Use only voice ids from `list_voice`, never invent one"));
+    assert!(prompt.contains("`staleAudio` or `outdatedAudio`"));
+    assert!(prompt.contains("the audio must be generated again"));
+    assert!(!prompt.contains("Never edit the script any other way"));
+}
+
+#[test]
+fn project_and_workspace_prompts_list_every_edit_tool_but_only_a_project_adds_the_rules() {
+    let edit_tools = [
+        "edit_project",
+        "edit_script_unit",
+        "edit_script_cast",
+        "list_voice",
+        "edit_audiobook_voices",
+        "edit_audiobook_mix",
+        "flag_audio_segment",
+    ];
+
+    let workspace_prompt = opening(&workspace(), &[], "q", &novels(), None);
+    let project_prompt = opening(&project_scope(), &[], "q", &novels(), Some(7));
+
+    for tool in edit_tools {
+        assert!(workspace_prompt.contains(&format!("`{tool}`")), "{tool}");
+        assert!(project_prompt.contains(&format!("`{tool}`")), "{tool}");
+    }
+    assert!(!workspace_prompt.contains("To assign voices"));
+    assert!(!workspace_prompt.contains("use `edit_script_unit`"));
+}
+
+#[test]
 fn a_workspace_prompt_lists_the_draft_tool_without_the_project_rules() {
     let prompt = opening(&workspace(), &[], "hi", &novels(), None);
 

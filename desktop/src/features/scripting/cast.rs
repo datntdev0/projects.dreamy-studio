@@ -4,6 +4,8 @@ use crate::features::knowledge::models::WireKnowledge;
 use crate::features::project::models::ProjectSummary;
 use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
+use chrono::Utc;
+use std::collections::HashSet;
 
 pub const NARRATOR_ID: &str = "narr";
 pub const SOURCE_LANG: &str = "src";
@@ -15,6 +17,9 @@ const KNOWLEDGE_KIND: &str = "kb";
 const TRANSLATION_KIND: &str = "translation";
 const ENGLISH: &str = "EN";
 const VIETNAMESE: &str = "VI";
+const EXTRA_KIND: &str = "extra";
+const MEMBER_PREFIX: &str = "spk";
+const RADIX: u64 = 36;
 
 pub fn knowledge_lang(project: &ProjectSummary) -> &'static str {
     if project.src_kind.as_deref() != Some(TRANSLATION_KIND) {
@@ -34,6 +39,34 @@ pub fn project_cast(script: &Script, knowledge: Option<&WireKnowledge>) -> Vec<C
         .chain(knowledge_members(knowledge))
         .chain(script.extra_cast.iter().cloned())
         .collect()
+}
+
+pub fn extra_member(name: &str, color: i64, taken: &mut HashSet<String>) -> CastMember {
+    let stamp = radix(Utc::now().timestamp_millis().unsigned_abs());
+    let mut id = format!("{MEMBER_PREFIX}{stamp}");
+    while taken.contains(&id) {
+        id.push('x');
+    }
+    taken.insert(id.clone());
+    CastMember {
+        id,
+        name: name.to_string(),
+        kind: EXTRA_KIND.to_string(),
+        c: color,
+    }
+}
+
+fn radix(mut value: u64) -> String {
+    if value == 0 {
+        return "0".to_string();
+    }
+    let mut digits = Vec::new();
+    while value > 0 {
+        let digit = (value % RADIX) as u32;
+        digits.push(char::from_digit(digit, RADIX as u32).unwrap_or('0'));
+        value /= RADIX;
+    }
+    digits.iter().rev().collect()
 }
 
 fn narrator_member() -> CastMember {

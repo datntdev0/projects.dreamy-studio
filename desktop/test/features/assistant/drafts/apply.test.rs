@@ -321,11 +321,3 @@ fn new_member_ids_never_collide_with_stored_or_sibling_ids() {
     assert_eq!(members[0].1.c, 1);
     assert_eq!(members[1].1.c, 2);
 }
-
-#[test]
-fn radix_writes_base_36_digits() {
-    assert_eq!(radix(0), "0");
-    assert_eq!(radix(35), "z");
-    assert_eq!(radix(36), "10");
-    assert_eq!(radix(1_295), "zz");
-}

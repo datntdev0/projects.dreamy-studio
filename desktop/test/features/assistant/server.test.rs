@@ -89,16 +89,33 @@ impl Fixture {
             .nth(1)
             .and_then(|value| value.parse().ok())
             .unwrap();
-        let body = raw
-            .split_once("\r\n\r\n")
-            .map(|parts| parts.1)
-            .unwrap_or("");
+        let (head, body) = raw.split_once("\r\n\r\n").unwrap_or((&raw, ""));
+        if head.to_lowercase().contains("transfer-encoding: chunked") {
+            return (status, dechunk(body));
+        }
         (status, body.to_string())
     }
 
     fn post(&self, token: Option<&str>, body: &Value) -> (u16, String) {
         self.request("POST", MCP_PATH, token, &body.to_string())
     }
+}
+
+fn dechunk(body: &str) -> String {
+    let mut rest = body.as_bytes();
+    let mut text = Vec::new();
+    while let Some(end) = rest.windows(2).position(|pair| pair == b"\r\n") {
+        let size = std::str::from_utf8(&rest[..end])
+            .ok()
+            .and_then(|digits| usize::from_str_radix(digits.trim(), 16).ok())
+            .unwrap_or(0);
+        if size == 0 {
+            break;
+        }
+        text.extend_from_slice(&rest[end + 2..end + 2 + size]);
+        rest = &rest[end + 2 + size + 2..];
+    }
+    String::from_utf8_lossy(&text).into_owned()
 }
 
 fn parsed(body: &str) -> Value {

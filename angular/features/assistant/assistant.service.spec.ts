@@ -178,6 +178,67 @@ describe('AssistantService', () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
+  describe('project and audiobook changes', () => {
+    const base = {
+      kind: 'changed' as const,
+      novelId: null,
+      chapterId: null,
+      lang: null,
+      translationTarget: null,
+    };
+
+    it('reloads the projects when the assistant edits a project', async () => {
+      await assistant.send('go');
+      const before = ipc.called('project_list');
+      emit({ ...base, target: 'project', projectId: 5 });
+      await vi.waitFor(() => expect(ipc.called('project_list')).toBe(before + 1));
+    });
+
+    it('ignores a project change without a project id', async () => {
+      await assistant.send('go');
+      const before = ipc.called('project_list');
+      emit({ ...base, target: 'project', projectId: null });
+      emit({ ...base, target: 'audiobook', projectId: null });
+      await flushEffects();
+      expect(ipc.called('project_list')).toBe(before);
+    });
+
+    it('reloads a loaded audiobook when its voices or mix change', async () => {
+      await assistant.send('go');
+      const audiobook = TestBed.inject(AudiobookService);
+      vi.spyOn(audiobook, 'isLoaded').mockReturnValue(true);
+      const load = vi.spyOn(audiobook, 'load').mockResolvedValue();
+      const reloadUnit = vi.spyOn(audiobook, 'reloadUnit').mockResolvedValue();
+      emit({ ...base, target: 'audiobook', projectId: 5 });
+      await vi.waitFor(() => expect(load).toHaveBeenCalledWith(5));
+      expect(reloadUnit).not.toHaveBeenCalled();
+    });
+
+    it('reloads only the flagged unit when a segment flag changes', async () => {
+      await assistant.send('go');
+      const audiobook = TestBed.inject(AudiobookService);
+      vi.spyOn(audiobook, 'isLoaded').mockReturnValue(true);
+      const load = vi.spyOn(audiobook, 'load').mockResolvedValue();
+      const reloadUnit = vi.spyOn(audiobook, 'reloadUnit').mockResolvedValue();
+      emit({ ...base, target: 'audiobook', projectId: 5, chapterId: 'c1' });
+      await vi.waitFor(() => expect(reloadUnit).toHaveBeenCalledWith(5, 'c1'));
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('leaves an audiobook that is not loaded alone', async () => {
+      await assistant.send('go');
+      const audiobook = TestBed.inject(AudiobookService);
+      vi.spyOn(audiobook, 'isLoaded').mockReturnValue(false);
+      const load = vi.spyOn(audiobook, 'load').mockResolvedValue();
+      const reloadUnit = vi.spyOn(audiobook, 'reloadUnit').mockResolvedValue();
+      emit({ ...base, target: 'audiobook', projectId: 5 });
+      emit({ ...base, target: 'audiobook', projectId: 5, chapterId: 'c1' });
+      await flushEffects();
+      expect(load).not.toHaveBeenCalled();
+      expect(reloadUnit).not.toHaveBeenCalled();
+    });
+  });
+
   it('ignores novel changes that carry no novel id', async () => {
     await assistant.send('go');
     const base = {

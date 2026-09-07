@@ -33,12 +33,37 @@ fn changed_event_is_flattened_under_the_changed_kind() {
 }
 
 #[test]
+fn a_project_change_carries_the_project_and_no_novel() {
+    let value = serde_json::to_value(AssistantChange::in_project(
+        ChangeTarget::Audiobook,
+        5,
+        Some("c1".to_string()),
+    ))
+    .unwrap();
+
+    assert_eq!(
+        value,
+        json!({
+            "target": "audiobook",
+            "novelId": null,
+            "projectId": 5,
+            "chapterId": "c1",
+            "lang": null,
+            "translationTarget": null,
+        })
+    );
+}
+
+#[test]
 fn change_targets_serialize_in_snake_case() {
     let targets = [
         ChangeTarget::Novel,
         ChangeTarget::Chapter,
         ChangeTarget::Knowledge,
         ChangeTarget::Translation,
+        ChangeTarget::Script,
+        ChangeTarget::Project,
+        ChangeTarget::Audiobook,
     ];
 
     let values: Vec<_> = targets
@@ -52,7 +77,10 @@ fn change_targets_serialize_in_snake_case() {
             json!("novel"),
             json!("chapter"),
             json!("knowledge"),
-            json!("translation")
+            json!("translation"),
+            json!("script"),
+            json!("project"),
+            json!("audiobook")
         ]
     );
 }

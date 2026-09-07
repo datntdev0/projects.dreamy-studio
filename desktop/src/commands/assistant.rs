@@ -16,6 +16,7 @@ use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::WorkspacePipelines;
 use crate::features::audiobook::service::AudiobookWorkspace;
 use crate::features::knowledge::service::KnowledgeService;
+use crate::features::library::service::LibraryService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::executor::PipelineExecutor;
@@ -49,6 +50,7 @@ impl<R: Runtime> McpHost for AppMcpHost<R> {
         let knowledge = self.0.state::<KnowledgeService>();
         let translation = self.0.state::<TranslationService>();
         let projects = self.0.state::<ProjectService>();
+        let library = self.0.state::<LibraryService>();
         let executor = self.0.state::<PipelineExecutor>();
         let session = self.0.state::<WorkspaceSession>();
         let services = SourceServices {
@@ -56,6 +58,7 @@ impl<R: Runtime> McpHost for AppMcpHost<R> {
             knowledge: &knowledge,
             translation: &translation,
             projects: &projects,
+            library: &library,
             executor: &executor,
         };
         open_sources(&services, &session, grant)
@@ -90,6 +93,10 @@ fn build_sources(services: &SourceServices, session: &WorkspaceSession) -> Resul
         .projects
         .open(session)
         .map_err(|error| error.to_string())?;
+    let library = services
+        .library
+        .open(session)
+        .map_err(|error| error.to_string())?;
     let workspace = session
         .current()
         .ok_or_else(|| WORKSPACE_CLOSED.to_string())?;
@@ -99,6 +106,7 @@ fn build_sources(services: &SourceServices, session: &WorkspaceSession) -> Resul
         translation: Box::new(translation),
         scripts: Box::new(ProjectScripts::new(projects.clone())),
         audiobooks: Box::new(AudiobookWorkspace::new(projects.clone())),
+        voices: Box::new(library),
         pipelines: Box::new(WorkspacePipelines::new(
             PathBuf::from(workspace.path),
             services.executor.clone(),
@@ -163,6 +171,7 @@ pub struct SourceServices<'a> {
     pub knowledge: &'a KnowledgeService,
     pub translation: &'a TranslationService,
     pub projects: &'a ProjectService,
+    pub library: &'a LibraryService,
     pub executor: &'a PipelineExecutor,
 }
 
@@ -289,12 +298,14 @@ pub async fn assistant_message_send<R: Runtime>(
         let knowledge = handle.state::<KnowledgeService>();
         let translation = handle.state::<TranslationService>();
         let projects = handle.state::<ProjectService>();
+        let library = handle.state::<LibraryService>();
         let executor = handle.state::<PipelineExecutor>();
         let services = SourceServices {
             novels,
             knowledge: &knowledge,
             translation: &translation,
             projects: &projects,
+            library: &library,
             executor: &executor,
         };
         let input = SendInput {
@@ -321,12 +332,14 @@ pub async fn assistant_proposal_resolve<R: Runtime>(
         let knowledge = handle.state::<KnowledgeService>();
         let translation = handle.state::<TranslationService>();
         let projects = handle.state::<ProjectService>();
+        let library = handle.state::<LibraryService>();
         let executor = handle.state::<PipelineExecutor>();
         let services = SourceServices {
             novels,
             knowledge: &knowledge,
             translation: &translation,
             projects: &projects,
+            library: &library,
             executor: &executor,
         };
         let input = ResolveInput {

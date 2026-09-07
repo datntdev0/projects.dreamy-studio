@@ -595,6 +595,10 @@ export class AudiobookService {
     }
   }
 
+  reloadUnit(projectId: number, unitId: string): Promise<void> {
+    return this.refreshUnit(projectId, unitId);
+  }
+
   private refreshUnit(projectId: number, unitId: string): Promise<void> {
     return this.enqueue(projectId, this.fetchUnit.bind(this, projectId, unitId));
   }

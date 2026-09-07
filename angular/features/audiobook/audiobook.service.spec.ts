@@ -137,6 +137,16 @@ describe('AudiobookService', () => {
       expect(ipc.called('audiobook_get')).toBe(2);
     });
 
+    it('refetches the audio of one unit without reloading the whole book', async () => {
+      const unitId = context().unit?.id ?? '';
+      const gets = ipc.called('audiobook_get');
+      const fetches = ipc.called('audiobook_unit_get');
+      await service.reloadUnit(PROJECT, unitId);
+      expect(ipc.called('audiobook_unit_get')).toBe(fetches + 1);
+      expect(ipc.called('audiobook_get')).toBe(gets);
+      expect(service.error()).toBeNull();
+    });
+
     it('starts from an empty book when nothing is stored', async () => {
       await service.load(4);
       expect(service.bookOf(4)?.units).not.toEqual({});

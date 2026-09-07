@@ -9,6 +9,7 @@ use crate::features::assistant::drafts::Rules;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::tools::ToolContext;
 use crate::features::assistant::tools::ToolOutput;
+use crate::features::assistant::tools::args::array_of;
 use crate::features::assistant::tools::args::optional_str;
 use crate::features::assistant::tools::args::output;
 use crate::features::assistant::tools::args::required_str;
@@ -73,7 +74,7 @@ pub(super) fn definitions() -> Vec<Value> {
     })]
 }
 
-fn block_schema() -> Value {
+pub(super) fn block_schema() -> Value {
     json!({
         "type": "object",
         "properties": {
@@ -127,12 +128,6 @@ pub(super) fn submit_script_draft(
     Ok(result_of(&card, &plan))
 }
 
-fn array_of<'a>(args: &'a Value, key: &str) -> &'a [Value] {
-    args.get(key)
-        .and_then(Value::as_array)
-        .map_or(&[], Vec::as_slice)
-}
-
 fn script_of(sources: &Sources, project_id: i64) -> Result<Script, String> {
     sources.scripts.script(project_id)?.ok_or_else(|| {
         format!(
@@ -141,7 +136,7 @@ fn script_of(sources: &Sources, project_id: i64) -> Result<Script, String> {
     })
 }
 
-fn allowed_types(script: &Script) -> Result<Vec<String>, String> {
+pub(super) fn allowed_types(script: &Script) -> Result<Vec<String>, String> {
     if script.cfg.types.is_empty() {
         return Err("the script configuration allows no block type".to_string());
     }

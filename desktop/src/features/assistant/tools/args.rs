@@ -86,6 +86,16 @@ pub(crate) fn optional_bool(args: &Value, key: &str) -> Result<Option<bool>, Str
     }
 }
 
+pub(crate) fn optional_number(args: &Value, key: &str) -> Result<Option<f64>, String> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => value
+            .as_f64()
+            .map(Some)
+            .ok_or_else(|| format!("argument '{key}' must be a number")),
+    }
+}
+
 pub(crate) fn optional_int(args: &Value, key: &str) -> Result<Option<i64>, String> {
     match args.get(key) {
         None | Some(Value::Null) => Ok(None),
@@ -94,6 +104,12 @@ pub(crate) fn optional_int(args: &Value, key: &str) -> Result<Option<i64>, Strin
             .map(Some)
             .ok_or_else(|| format!("argument '{key}' must be an integer")),
     }
+}
+
+pub(crate) fn array_of<'a>(args: &'a Value, key: &str) -> &'a [Value] {
+    args.get(key)
+        .and_then(Value::as_array)
+        .map_or(&[], Vec::as_slice)
 }
 
 pub(crate) fn output(value: Value, label: String) -> ToolOutput {

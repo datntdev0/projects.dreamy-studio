@@ -7,6 +7,7 @@ use crate::features::audiobook::rules::DIALOGUE_TYPE;
 use crate::features::audiobook::rules::is_current;
 use crate::features::audiobook::rules::is_voiced;
 use crate::features::scripting::models::CastMember;
+use crate::features::scripting::models::ScriptBlock;
 
 const NARRATION_TYPE: &str = "narration";
 
@@ -55,6 +56,14 @@ pub fn unresolved_of(blocks: &[DraftBlock]) -> usize {
 }
 
 pub fn stale_audio(book: Option<&Audiobook>, unit_id: &str, blocks: &[DraftBlock]) -> usize {
+    let kept: Vec<ScriptBlock> = blocks
+        .iter()
+        .filter_map(|block| block.id.clone().map(|id| block.to_script(id)))
+        .collect();
+    outdated_audio(book, unit_id, &kept)
+}
+
+pub fn outdated_audio(book: Option<&Audiobook>, unit_id: &str, blocks: &[ScriptBlock]) -> usize {
     let Some(book) = book else {
         return 0;
     };
@@ -66,8 +75,7 @@ pub fn stale_audio(book: Option<&Audiobook>, unit_id: &str, blocks: &[DraftBlock
         .filter(|(block_id, record)| {
             !blocks
                 .iter()
-                .filter(|block| block.id.as_deref() == Some(block_id.as_str()))
-                .any(|block| is_current(book, &block.to_script((*block_id).clone()), record))
+                .any(|block| block.id == **block_id && is_current(book, block, record))
         })
         .count()
 }

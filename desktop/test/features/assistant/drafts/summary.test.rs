@@ -179,3 +179,35 @@ fn units_without_audio_have_no_stale_audio() {
     assert_eq!(stale_audio(None, "c1", &blocks), 0);
     assert_eq!(stale_audio(Some(&book("x")), "other", &blocks), 0);
 }
+
+fn script_block_of(id: &str, text: &str) -> ScriptBlock {
+    ScriptBlock {
+        id: id.to_string(),
+        kind: "dialogue".to_string(),
+        text: text.to_string(),
+        who: "kb-1".to_string(),
+        ..ScriptBlock::default()
+    }
+}
+
+#[test]
+fn outdated_audio_counts_records_whose_script_block_no_longer_matches() {
+    let book = book("Who goes there?");
+
+    let current = [script_block_of("b2", "Who goes there?")];
+    let changed = [script_block_of("b2", "Who is there?")];
+    let gone = [script_block_of("b9", "Who goes there?")];
+
+    assert_eq!(outdated_audio(Some(&book), "c1", &current), 0);
+    assert_eq!(outdated_audio(Some(&book), "c1", &changed), 1);
+    assert_eq!(outdated_audio(Some(&book), "c1", &gone), 1);
+    assert_eq!(outdated_audio(Some(&book), "c1", &[]), 1);
+}
+
+#[test]
+fn outdated_audio_is_zero_without_a_book_or_unit_audio() {
+    let blocks = [script_block_of("b2", "x")];
+
+    assert_eq!(outdated_audio(None, "c1", &blocks), 0);
+    assert_eq!(outdated_audio(Some(&book("x")), "other", &blocks), 0);
+}

@@ -4,6 +4,7 @@ use crate::container::AppContainer;
 use crate::features::assistant::grants::McpGrants;
 use crate::features::assistant::models::AssistantErrorCode;
 use crate::features::assistant::models::ScopeKind;
+use crate::features::library::service::LibraryService;
 use crate::features::novel::models::NovelInput;
 use crate::features::pipeline::executor::PipelineExecutor;
 use crate::features::project::models::ProjectInput;
@@ -29,6 +30,7 @@ struct Fixture {
     knowledge: KnowledgeService,
     translation: TranslationService,
     projects: ProjectService,
+    library: LibraryService,
     executor: PipelineExecutor,
     service: AssistantService,
 }
@@ -60,6 +62,7 @@ fn entered_fixture() -> Fixture {
         knowledge: KnowledgeService::new(),
         translation: TranslationService::new(),
         projects: ProjectService::new(),
+        library: LibraryService::new(),
         executor: PipelineExecutor::new(),
         service: service(),
     }
@@ -71,6 +74,7 @@ fn services(fixture: &Fixture) -> SourceServices<'_> {
         knowledge: &fixture.knowledge,
         translation: &fixture.translation,
         projects: &fixture.projects,
+        library: &fixture.library,
         executor: &fixture.executor,
     }
 }
@@ -302,12 +306,14 @@ fn every_operation_reports_no_workspace_without_a_current_workspace() {
     let knowledge = KnowledgeService::new();
     let translation = TranslationService::new();
     let projects = ProjectService::new();
+    let library = LibraryService::new();
     let executor = PipelineExecutor::new();
     let services = SourceServices {
         novels: &novels,
         knowledge: &knowledge,
         translation: &translation,
         projects: &projects,
+        library: &library,
         executor: &executor,
     };
     let session = WorkspaceSession::new();
@@ -368,12 +374,14 @@ fn host_refuses_every_grant_when_no_workspace_is_open() {
     let knowledge = KnowledgeService::new();
     let translation = TranslationService::new();
     let projects = ProjectService::new();
+    let library = LibraryService::new();
     let executor = PipelineExecutor::new();
     let services = SourceServices {
         novels: &novels,
         knowledge: &knowledge,
         translation: &translation,
         projects: &projects,
+        library: &library,
         executor: &executor,
     };
 

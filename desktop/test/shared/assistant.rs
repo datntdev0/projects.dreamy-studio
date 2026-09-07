@@ -14,10 +14,12 @@ use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::sources::ScriptSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::TranslationSource;
+use crate::features::assistant::sources::VoiceSource;
 use crate::features::assistant::tools::ToolContext;
 use crate::features::assistant::tools::call;
 use crate::features::audiobook::models::AudioRecord;
 use crate::features::audiobook::models::Audiobook;
+use crate::features::audiobook::models::AudiobookConfig;
 use crate::features::audiobook::models::MixSettings;
 use crate::features::audiobook::models::SpeakerVoice;
 use crate::features::audiobook::models::UnitAudio;
@@ -30,6 +32,11 @@ use crate::features::knowledge::models::KnowledgeFact;
 use crate::features::knowledge::models::KnowledgeItem;
 use crate::features::knowledge::models::WireKnowledge;
 use crate::features::knowledge::ontology::Ontology;
+use crate::features::library::models::AssetRights;
+use crate::features::library::models::LibraryVoice;
+use crate::features::library::models::VoiceEngineKind;
+use crate::features::library::models::VoiceGender;
+use crate::features::library::models::VoiceSource as VoiceOrigin;
 use crate::features::novel::models::ChapterRow;
 use crate::features::novel::models::NovelPatch;
 use crate::features::novel::models::NovelSummary;
@@ -41,6 +48,7 @@ use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::PipelineTask;
 use crate::features::pipeline::models::TaskStatus;
 use crate::features::project::models::ProjectModuleState;
+use crate::features::project::models::ProjectPatch;
 use crate::features::project::models::ProjectSummary;
 use crate::features::scripting::chapters::ProjectChapter;
 use crate::features::scripting::models::CastMember;
@@ -926,7 +934,7 @@ pub fn sources_with_project_data(
         translation,
         projects,
         (scripts, audiobooks),
-        &FakePipelines::default(),
+        (&FakePipelines::default(), &FakeVoices::default()),
     )
 }
 
@@ -936,7 +944,7 @@ pub fn sources_with_pipelines(
     translation: &FakeTranslation,
     projects: &FakeProjects,
     project_data: (&FakeScripts, &FakeAudiobooks),
-    pipelines: &FakePipelines,
+    extras: (&FakePipelines, &FakeVoices),
 ) -> Sources {
     Sources {
         novels: Box::new(novels.clone()),
@@ -945,7 +953,8 @@ pub fn sources_with_pipelines(
         projects: Box::new(projects.clone()),
         scripts: Box::new(project_data.0.clone()),
         audiobooks: Box::new(project_data.1.clone()),
-        pipelines: Box::new(pipelines.clone()),
+        voices: Box::new(extras.1.clone()),
+        pipelines: Box::new(extras.0.clone()),
     }
 }
 
@@ -1132,20 +1141,119 @@ impl ScriptSource for FakeScripts {
     }
 }
 
+#[derive(Default)]
+struct AudioWrites {
+    configs: Vec<AudiobookConfig>,
+    mixes: Vec<MixSettings>,
+    flags: Vec<(String, String, String)>,
+}
+
 #[derive(Clone, Default)]
 pub struct FakeAudiobooks {
     pub book: Option<Audiobook>,
+    writes: Arc<Mutex<AudioWrites>>,
 }
 
 impl FakeAudiobooks {
     pub fn with_book(book: Audiobook) -> Self {
-        Self { book: Some(book) }
+        Self {
+            book: Some(book),
+            writes: Arc::default(),
+        }
+    }
+
+    pub fn saved_configs(&self) -> Vec<AudiobookConfig> {
+        guard(&self.writes).configs.clone()
+    }
+
+    pub fn saved_mixes(&self) -> Vec<MixSettings> {
+        guard(&self.writes).mixes.clone()
+    }
+
+    pub fn flag_calls(&self) -> Vec<(String, String, String)> {
+        guard(&self.writes).flags.clone()
     }
 }
 
 impl AudiobookSource for FakeAudiobooks {
     fn book(&self, _project_id: i64) -> Result<Option<Audiobook>, String> {
         Ok(self.book.clone())
+    }
+
+    fn config_save(&self, _project_id: i64, config: AudiobookConfig) -> Result<(), String> {
+        guard(&self.writes).configs.push(config);
+        Ok(())
+    }
+
+    fn mix_save(&self, _project_id: i64, mix: MixSettings) -> Result<MixSettings, String> {
+        let mix = mix.clamped();
+        guard(&self.writes).mixes.push(mix);
+        Ok(mix)
+    }
+
+    fn flag_set(
+        &self,
+        _project_id: i64,
+        unit_id: &str,
+        block_id: &str,
+        flag: &str,
+    ) -> Result<AudioRecord, String> {
+        let record = self
+            .book
+            .as_ref()
+            .and_then(|book| book.unit(unit_id))
+            .and_then(|unit| unit.audio.get(block_id))
+            .ok_or_else(|| format!("block {block_id} has no audio record"))?;
+        guard(&self.writes).flags.push((
+            unit_id.to_string(),
+            block_id.to_string(),
+            flag.trim().to_string(),
+        ));
+        Ok(AudioRecord {
+            flag: flag.trim().to_string(),
+            ..record.clone()
+        })
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct FakeVoices {
+    voices: Vec<LibraryVoice>,
+}
+
+impl FakeVoices {
+    pub fn with(voices: Vec<LibraryVoice>) -> Self {
+        Self { voices }
+    }
+}
+
+impl VoiceSource for FakeVoices {
+    fn list(&self) -> Result<Vec<LibraryVoice>, String> {
+        Ok(self.voices.clone())
+    }
+}
+
+pub fn voice_fixture(id: i64, name: &str, gender: VoiceGender) -> LibraryVoice {
+    LibraryVoice {
+        id,
+        name: name.to_string(),
+        description: String::new(),
+        engine: "edge-read-aloud".to_string(),
+        engine_kind: VoiceEngineKind::Cloud,
+        source: VoiceOrigin::Preset,
+        language: "vi".to_string(),
+        gender,
+        preset: Some(format!("preset-{id}")),
+        reference_kind: None,
+        reference_sound_id: None,
+        reference_name: String::new(),
+        prompt: String::new(),
+        sample_text: String::new(),
+        rights: AssetRights::Own,
+        collection_id: None,
+        tags: Vec::new(),
+        created_at: "2026-11-01T00:00:00+00:00".to_string(),
+        updated_at: "2026-11-01T00:00:00+00:00".to_string(),
     }
 }
 
@@ -1216,7 +1324,8 @@ pub fn audiobook_fixture() -> Audiobook {
 
 #[derive(Clone, Default)]
 pub struct FakeProjects {
-    projects: Vec<ProjectSummary>,
+    projects: Arc<Mutex<Vec<ProjectSummary>>>,
+    updates: Arc<Mutex<Vec<(i64, ProjectPatch)>>>,
 }
 
 impl FakeProjects {
@@ -1225,13 +1334,37 @@ impl FakeProjects {
     }
 
     pub fn with(projects: Vec<ProjectSummary>) -> Self {
-        Self { projects }
+        Self {
+            projects: Arc::new(Mutex::new(projects)),
+            updates: Arc::default(),
+        }
+    }
+
+    pub fn updates(&self) -> Vec<(i64, ProjectPatch)> {
+        guard(&self.updates).clone()
     }
 }
 
 impl ProjectSource for FakeProjects {
     fn list(&self) -> Result<Vec<ProjectSummary>, String> {
-        Ok(self.projects.clone())
+        Ok(guard(&self.projects).clone())
+    }
+
+    fn update(&self, project_id: i64, patch: ProjectPatch) -> Result<ProjectSummary, String> {
+        let mut projects = guard(&self.projects);
+        let project = projects
+            .iter_mut()
+            .find(|project| project.id == project_id)
+            .ok_or_else(|| format!("project {project_id} does not exist"))?;
+        if let Some(name) = patch.name.as_deref() {
+            project.name = name.trim().to_string();
+        }
+        if let Some(description) = patch.description.as_deref() {
+            project.description = description.trim().to_string();
+        }
+        let updated = project.clone();
+        guard(&self.updates).push((project_id, patch));
+        Ok(updated)
     }
 }
 
@@ -1485,6 +1618,7 @@ pub struct ToolWorld {
     pub scripts: FakeScripts,
     pub audiobooks: FakeAudiobooks,
     pub pipelines: FakePipelines,
+    pub voices: FakeVoices,
     pub linked_novel: Option<i64>,
 }
 
@@ -1516,6 +1650,10 @@ impl ToolWorld {
             scripts: FakeScripts::with_script(script_fixture(), vec![project_chapter_fixture()]),
             audiobooks: FakeAudiobooks::with_book(audiobook_fixture()),
             pipelines: FakePipelines::default(),
+            voices: FakeVoices::with(vec![
+                voice_fixture(7, "Mai Anh", VoiceGender::Female),
+                voice_fixture(8, "Hai Dang", VoiceGender::Male),
+            ]),
             linked_novel: Some(1),
         }
     }
@@ -1527,7 +1665,7 @@ impl ToolWorld {
             &self.translation,
             &self.projects,
             (&self.scripts, &self.audiobooks),
-            &self.pipelines,
+            (&self.pipelines, &self.voices),
         )
     }
 
@@ -1542,6 +1680,17 @@ impl ToolWorld {
         (result, sink)
     }
 
+    pub fn run_editing(
+        &self,
+        name: &str,
+        args: serde_json::Value,
+        scope: &AssistantScope,
+    ) -> (Result<serde_json::Value, String>, RecordingSink) {
+        let sink = RecordingSink::new();
+        let result = self.run_with(&sink, true, name, args, scope);
+        (result, sink)
+    }
+
     pub fn run_in(
         &self,
         sink: &RecordingSink,
@@ -1549,10 +1698,21 @@ impl ToolWorld {
         args: serde_json::Value,
         scope: &AssistantScope,
     ) -> Result<serde_json::Value, String> {
+        self.run_with(sink, false, name, args, scope)
+    }
+
+    fn run_with(
+        &self,
+        sink: &RecordingSink,
+        can_edit: bool,
+        name: &str,
+        args: serde_json::Value,
+        scope: &AssistantScope,
+    ) -> Result<serde_json::Value, String> {
         let ctx = ToolContext {
             scope,
             linked_novel: self.linked_novel,
-            can_edit: false,
+            can_edit,
             sink,
         };
         let output = call(name, &args, &ctx, &self.sources())?;

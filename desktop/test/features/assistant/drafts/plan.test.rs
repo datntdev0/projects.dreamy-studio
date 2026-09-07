@@ -477,3 +477,36 @@ fn reference_chapters_are_collected_from_every_block() {
 
     assert_eq!(chapters.into_iter().collect::<Vec<_>>(), [2, 3]);
 }
+
+#[test]
+fn shape_all_returns_one_result_per_block_and_counts_the_warnings() {
+    let allowed: Vec<String> = ALL_TYPES.iter().map(|kind| kind.to_string()).collect();
+    let cast = cast();
+    let counts = paragraphs();
+    let rules = Rules {
+        allowed: &allowed,
+        cast: &cast,
+        paragraphs: Some(&counts),
+    };
+    let raw = [
+        json!({ "type": "narration", "text": "One.", "refs": ["1.1", "1.9"] }),
+        json!({ "type": "dialogue", "text": "Two.", "who": "nobody" }),
+        json!({ "type": "narration", "text": "Three.", "chars": ["ghost"] }),
+    ];
+
+    let shaped = shape_all(&raw, &rules, &[]);
+    let warnings = shaped.warnings(&rules);
+
+    assert_eq!(shaped.results.len(), 3);
+    assert!(shaped.results[0].is_ok());
+    assert!(
+        shaped.results[1]
+            .as_ref()
+            .unwrap_err()
+            .contains("unknown speaker")
+    );
+    assert!(shaped.results[2].is_ok());
+    assert_eq!(warnings.len(), 2);
+    assert!(warnings[0].contains("1 source reference(s)"));
+    assert!(warnings[1].contains("1 character id(s)"));
+}

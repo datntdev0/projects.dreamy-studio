@@ -1191,3 +1191,54 @@ fn read_knowledge_issues_labels_the_activity() {
             .starts_with("read_knowledge_issues(novel 1, src)")
     );
 }
+
+const WRITE_PROJECT_TOOLS: [&str; 6] = [
+    "edit_project",
+    "edit_script_unit",
+    "edit_script_cast",
+    "edit_audiobook_voices",
+    "edit_audiobook_mix",
+    "flag_audio_segment",
+];
+
+#[test]
+fn every_project_write_tool_says_that_editing_is_required() {
+    let definitions = definitions(&AssistantScope::project(5));
+    let tools = definitions.as_array().unwrap();
+
+    for name in WRITE_PROJECT_TOOLS {
+        let tool = tools.iter().find(|tool| tool["name"] == name).unwrap();
+        let description = tool["description"].as_str().unwrap();
+        assert!(
+            description.contains("Requires editing to be enabled"),
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn the_project_write_tools_are_offered_in_the_workspace_and_project_scopes_only() {
+    for name in WRITE_PROJECT_TOOLS.iter().chain(&["list_voice"]) {
+        assert!(PROJECT_TOOLS.contains(name), "{name}");
+        for scope in [AssistantScope::workspace(), AssistantScope::project(5)] {
+            let listed = definitions(&scope);
+            assert!(
+                listed
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|tool| tool["name"] == *name),
+                "{name}"
+            );
+        }
+        let novel = definitions(&novel_scope(1));
+        assert!(
+            novel
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|tool| tool["name"] != *name),
+            "{name}"
+        );
+    }
+}

@@ -28,6 +28,7 @@ use serde_json::from_str;
 use serde_json::json;
 
 const PROJECT: i64 = 5;
+const PROJECTLESS_TOOLS: [&str; 2] = ["list_project", "list_voice"];
 
 struct World {
     novels: FakeNovels,
@@ -87,7 +88,7 @@ impl World {
         let ctx = ToolContext {
             scope,
             linked_novel: Some(1),
-            can_edit: false,
+            can_edit: true,
             sink: &sink,
         };
         let output = call(name, &args, &ctx, &self.sources())?;
@@ -202,7 +203,10 @@ fn project_tools_require_a_project_id_except_the_listing() {
         let has_project = required
             .as_array()
             .is_some_and(|items| items.contains(&json!("projectId")));
-        assert_eq!(has_project, tool["name"] != "list_project");
+        assert_eq!(
+            has_project,
+            !PROJECTLESS_TOOLS.contains(&tool["name"].as_str().unwrap())
+        );
     }
 }
 
@@ -309,7 +313,10 @@ fn read_project_marks_a_linked_novel_that_is_gone() {
 #[test]
 fn project_tools_reject_other_projects_in_a_project_scope() {
     let world = World::new();
-    for tool in PROJECT_TOOLS.iter().filter(|tool| **tool != "list_project") {
+    for tool in PROJECT_TOOLS
+        .iter()
+        .filter(|tool| !PROJECTLESS_TOOLS.contains(tool))
+    {
         let args = json!({ "projectId": 6, "unitId": "c1", "query": "x" });
         let error = world
             .run(tool, args, &AssistantScope::project(PROJECT))

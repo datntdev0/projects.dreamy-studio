@@ -94,6 +94,43 @@ pub fn parse_members(raw: &[Value], cast: &[CastMember]) -> Result<Vec<DraftMemb
     Ok(members)
 }
 
+pub struct Shaped {
+    pub results: Vec<Result<DraftBlock, String>>,
+    tally: Tally,
+}
+
+impl Shaped {
+    pub fn warnings(&self, rules: &Rules) -> Vec<String> {
+        let tally = &self.tally;
+        let mut warnings = Vec::new();
+        if tally.refs > 0 {
+            warnings.push(refs_warning(tally.refs, rules.paragraphs.is_some()));
+        }
+        if tally.chars > 0 {
+            warnings.push(format!(
+                "{} character id(s) were removed because they are not in the cast",
+                tally.chars
+            ));
+        }
+        if tally.times > 0 {
+            warnings.push(format!(
+                "{} scene time(s) were reset to {DEFAULT_SCENE_TIME}",
+                tally.times
+            ));
+        }
+        warnings
+    }
+}
+
+pub fn shape_all(raw: &[Value], rules: &Rules, members: &[DraftMember]) -> Shaped {
+    let mut tally = Tally::default();
+    let results = raw
+        .iter()
+        .map(|value| shape_block(value, rules, members, &mut tally))
+        .collect();
+    Shaped { results, tally }
+}
+
 pub fn build(
     raw: &[Value],
     members: &[DraftMember],
@@ -109,11 +146,12 @@ pub fn build(
             raw.len()
         ));
     }
-    let mut tally = Tally::default();
+    let shaped = shape_all(raw, rules, members);
+    let mut warnings = shaped.warnings(rules);
     let mut blocks = Vec::new();
     let mut dropped = Vec::new();
-    for (index, value) in raw.iter().enumerate() {
-        match shape_block(value, rules, members, &mut tally) {
+    for (index, result) in shaped.results.into_iter().enumerate() {
+        match result {
             Ok(block) => blocks.push(block),
             Err(reason) => dropped.push(Dropped { index, reason }),
         }
@@ -123,7 +161,7 @@ pub fn build(
     }
     reuse_ids(&mut blocks, current);
     let (members, unused) = used_members(members, &blocks);
-    let warnings = warnings_of(&tally, &unused, rules);
+    warnings.extend(unused.iter().map(|name| unused_warning(name)));
     Ok(Plan {
         blocks,
         members,
@@ -399,29 +437,8 @@ fn mentions(block: &DraftBlock, id: &str) -> bool {
     block.who == id || block.chars.iter().any(|item| item == id)
 }
 
-fn warnings_of(tally: &Tally, unused: &[String], rules: &Rules) -> Vec<String> {
-    let mut warnings = Vec::new();
-    if tally.refs > 0 {
-        warnings.push(refs_warning(tally.refs, rules.paragraphs.is_some()));
-    }
-    if tally.chars > 0 {
-        warnings.push(format!(
-            "{} character id(s) were removed because they are not in the cast",
-            tally.chars
-        ));
-    }
-    if tally.times > 0 {
-        warnings.push(format!(
-            "{} scene time(s) were reset to {DEFAULT_SCENE_TIME}",
-            tally.times
-        ));
-    }
-    for name in unused {
-        warnings.push(format!(
-            "the extraCast member '{name}' speaks in no block and was left out"
-        ));
-    }
-    warnings
+fn unused_warning(name: &str) -> String {
+    format!("the extraCast member '{name}' speaks in no block and was left out")
 }
 
 fn refs_warning(count: usize, has_source: bool) -> String {

@@ -1,8 +1,9 @@
 import { novel, project, session } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
+import { AssistantChangeTarget } from './assistant.models';
 // prettier-ignore
-import { compareRecentFirst, dayKey, matchesNovelQuery, matchesProjectQuery, matchesScopeFilter, matchesSessionQuery, novelScope, parseScopeFilter, projectScope, renderMarkdown, sameScope, scopeFilterValue, scopeNovels, scopeProjects, scopeTargetId, shortStamp, WORKSPACE_SCOPE } from './assistant.rules';
+import { compareRecentFirst, dayKey, isProjectChange, matchesNovelQuery, matchesProjectQuery, matchesScopeFilter, matchesSessionQuery, novelScope, parseScopeFilter, projectScope, renderMarkdown, sameScope, scopeFilterValue, scopeNovels, scopeProjects, scopeTargetId, shortStamp, WORKSPACE_SCOPE } from './assistant.rules';
 
 describe('assistant.rules', () => {
   it('builds and compares scopes', () => {
@@ -16,6 +17,13 @@ describe('assistant.rules', () => {
     expect(sameScope(projectScope(1), projectScope(1))).toBe(true);
     expect(sameScope(projectScope(1), projectScope(2))).toBe(false);
     expect(sameScope(projectScope(1), novelScope(1))).toBe(false);
+  });
+
+  it('tells project changes from novel changes', () => {
+    const projectTargets: AssistantChangeTarget[] = ['script', 'project', 'audiobook'];
+    const novelTargets: AssistantChangeTarget[] = ['novel', 'chapter', 'knowledge', 'translation'];
+    expect(projectTargets.every(isProjectChange)).toBe(true);
+    expect(novelTargets.some(isProjectChange)).toBe(false);
   });
 
   it('reads the target id of a scope', () => {

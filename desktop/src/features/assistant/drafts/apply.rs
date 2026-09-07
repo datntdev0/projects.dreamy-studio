@@ -7,6 +7,7 @@ use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantResult;
 use crate::features::assistant::models::ChangeTarget;
 use crate::features::assistant::sources::Sources;
+use crate::features::scripting::cast::extra_member;
 use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::Script;
 use crate::features::scripting::models::ScriptBlock;
@@ -16,10 +17,7 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-const EXTRA_KIND: &str = "extra";
-const MEMBER_PREFIX: &str = "spk";
 const BLOCK_PREFIX: &str = "B";
-const RADIX: u64 = 36;
 
 pub fn apply(card: &DraftCard, sources: &Sources) -> AssistantResult<AssistantChange> {
     let script = require_script(card, sources)?;
@@ -35,7 +33,7 @@ pub fn apply(card: &DraftCard, sources: &Sources) -> AssistantResult<AssistantCh
     }
     let members = new_members(&card.extra_cast, &script.extra_cast);
     let (blocks, seq) = materialize(card, &members, &script, current)?;
-    let unit = unit_of(stored, &card.unit_id, blocks);
+    let unit = rewritten_unit(stored, &card.unit_id, blocks);
     save(card, &script, &members, unit, seq, sources)?;
     Ok(change_of(card))
 }
@@ -71,38 +69,17 @@ fn require_unit(
 
 fn new_members(drafted: &[DraftMember], stored: &[CastMember]) -> Vec<(String, CastMember)> {
     let mut taken: HashSet<String> = stored.iter().map(|member| member.id.clone()).collect();
-    let stamp = radix(Utc::now().timestamp_millis().unsigned_abs());
-    let mut members = Vec::new();
-    for (offset, member) in drafted.iter().enumerate() {
-        let mut id = format!("{MEMBER_PREFIX}{stamp}");
-        while taken.contains(&id) {
-            id.push('x');
-        }
-        taken.insert(id.clone());
-        members.push((
-            member.id.clone(),
-            CastMember {
-                id,
-                name: member.name.clone(),
-                kind: EXTRA_KIND.to_string(),
-                c: (stored.len() + offset) as i64,
-            },
-        ));
-    }
-    members
-}
-
-fn radix(mut value: u64) -> String {
-    if value == 0 {
-        return "0".to_string();
-    }
-    let mut digits = Vec::new();
-    while value > 0 {
-        let digit = (value % RADIX) as u32;
-        digits.push(char::from_digit(digit, RADIX as u32).unwrap_or('0'));
-        value /= RADIX;
-    }
-    digits.iter().rev().collect()
+    drafted
+        .iter()
+        .enumerate()
+        .map(|(offset, member)| {
+            let color = (stored.len() + offset) as i64;
+            (
+                member.id.clone(),
+                extra_member(&member.name, color, &mut taken),
+            )
+        })
+        .collect()
 }
 
 fn materialize(
@@ -131,14 +108,18 @@ fn block_id(
     taken: &mut HashSet<String>,
     seq: &mut i64,
 ) -> AssistantResult<String> {
-    if let Some(kept) = &block.id {
-        return require_kept(kept, current);
+    match &block.id {
+        Some(kept) => require_kept(kept, current),
+        None => Ok(fresh_block_id(taken, seq)),
     }
+}
+
+pub fn fresh_block_id(taken: &mut HashSet<String>, seq: &mut i64) -> String {
     loop {
         *seq += 1;
         let id = format!("{BLOCK_PREFIX}{seq}");
         if taken.insert(id.clone()) {
-            return Ok(id);
+            return id;
         }
     }
 }
@@ -169,7 +150,11 @@ fn renamed_id(id: &str, renames: &HashMap<&str, &str>) -> String {
         .map_or_else(|| id.to_string(), |new| (*new).to_string())
 }
 
-fn unit_of(stored: Option<&ScriptUnit>, unit_id: &str, blocks: Vec<ScriptBlock>) -> ScriptUnit {
+pub fn rewritten_unit(
+    stored: Option<&ScriptUnit>,
+    unit_id: &str,
+    blocks: Vec<ScriptBlock>,
+) -> ScriptUnit {
     let updated = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
     match stored {
         Some(unit) => ScriptUnit {
@@ -215,14 +200,11 @@ fn save(
 }
 
 fn change_of(card: &DraftCard) -> AssistantChange {
-    AssistantChange {
-        target: ChangeTarget::Script,
-        novel_id: None,
-        project_id: Some(card.project_id),
-        chapter_id: Some(card.unit_id.clone()),
-        lang: None,
-        translation_target: None,
-    }
+    AssistantChange::in_project(
+        ChangeTarget::Script,
+        card.project_id,
+        Some(card.unit_id.clone()),
+    )
 }
 
 #[cfg(test)]

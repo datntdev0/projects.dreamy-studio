@@ -7,6 +7,10 @@ use crate::features::knowledge::models::ChapterAnalysis;
 use crate::features::knowledge::models::KnowledgeItem;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::text::text_hash;
+use crate::features::library::models::VoiceEngineKind;
+use crate::features::library::models::VoiceGender;
+use crate::features::library::models::VoiceInput;
+use crate::features::library::models::VoiceSource as VoiceOrigin;
 use crate::features::novel::models::NovelInput;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::TaskRequest;
@@ -20,17 +24,23 @@ use crate::infra::storage::migrator::workspace_scripts;
 use crate::testing::assistant::FakeAudiobooks;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
+use crate::testing::assistant::FakeProjects;
 use crate::testing::assistant::FakeScripts;
 use crate::testing::assistant::FakeTranslation;
+use crate::testing::assistant::FakeVoices;
 use crate::testing::assistant::NovelWrite;
 use crate::testing::assistant::TranslationWrite;
 use crate::testing::assistant::audiobook_fixture;
 use crate::testing::assistant::project_chapter_fixture;
+use crate::testing::assistant::project_summary;
 use crate::testing::assistant::script_block;
 use crate::testing::assistant::script_fixture;
+use crate::testing::assistant::voice_fixture;
 use crate::testing::project::create_project;
 use crate::testing::project::project_workspace;
 use rusqlite::Connection;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use tempfile::TempDir;
 
@@ -779,6 +789,152 @@ fn fake_audiobooks_serve_the_book_and_its_units() {
 
     assert_eq!(source.book(1).unwrap().unwrap().units.len(), 1);
     assert!(FakeAudiobooks::default().book(1).unwrap().is_none());
+}
+
+#[test]
+fn project_adapter_updates_the_name_and_the_description() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let source: &dyn ProjectSource = &projects;
+    let patch = ProjectPatch {
+        name: Some(" Renamed ".to_string()),
+        description: Some("About it".to_string()),
+        modules: None,
+    };
+
+    let updated = source.update(project_id, patch).unwrap();
+
+    assert_eq!(updated.name, "Renamed");
+    assert_eq!(updated.description, "About it");
+    assert_eq!(source.get(project_id).unwrap().unwrap().name, "Renamed");
+}
+
+#[test]
+fn project_adapter_refuses_an_empty_name_and_an_unknown_project() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let source: &dyn ProjectSource = &projects;
+    let blank = ProjectPatch {
+        name: Some("  ".to_string()),
+        ..ProjectPatch::default()
+    };
+
+    assert!(source.update(project_id, blank).is_err());
+    assert!(source.update(404, ProjectPatch::default()).is_err());
+    assert_eq!(source.get(project_id).unwrap().unwrap().name, "Book");
+}
+
+#[test]
+fn audiobook_adapter_saves_a_clamped_mix_and_the_voices() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let workspace = AudiobookWorkspace::new(projects);
+    let source: &dyn AudiobookSource = &workspace;
+    let wide = MixSettings {
+        gap: 99.0,
+        ..MixSettings::default()
+    };
+
+    let stored = source.mix_save(project_id, wide).unwrap();
+    let voices = audiobook_fixture().voices;
+    let config = AudiobookConfig {
+        voices: voices.clone(),
+        mix: stored,
+    };
+    source.config_save(project_id, config).unwrap();
+
+    assert_eq!(stored.gap, 5.0);
+    let book = source.book(project_id).unwrap().unwrap();
+    assert_eq!(book.mix.gap, 5.0);
+    assert_eq!(book.voices, voices);
+}
+
+#[test]
+fn audiobook_adapter_cannot_flag_a_block_without_audio() {
+    let (_dir, projects) = project_workspace();
+    let project_id = create_project(&projects);
+    let source: &dyn AudiobookSource = &AudiobookWorkspace::new(projects);
+
+    assert!(source.flag_set(project_id, "c1", "b2", "echo").is_err());
+    assert!(source.flag_set(404, "c1", "b2", "echo").is_err());
+}
+
+#[test]
+fn voice_adapter_lists_the_voices_of_the_library() {
+    let (dir, _projects) = project_workspace();
+    let workspace = LibraryWorkspace::with_gate(dir.path().to_path_buf(), Arc::new(Mutex::new(())));
+    let source: &dyn VoiceSource = &workspace;
+    assert!(source.list().unwrap().is_empty());
+    let input = VoiceInput {
+        name: "Mai Anh".to_string(),
+        description: String::new(),
+        engine: "vieneu-turbo".to_string(),
+        engine_kind: VoiceEngineKind::Local,
+        source: VoiceOrigin::Preset,
+        language: "vi".to_string(),
+        gender: VoiceGender::Female,
+        preset: Some("Mai Anh".to_string()),
+        reference: None,
+        prompt: String::new(),
+    };
+    let created = workspace.voice_create(input).unwrap();
+
+    let listed = source.list().unwrap();
+
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].id, created.id);
+    assert_eq!(listed[0].name, "Mai Anh");
+}
+
+#[test]
+fn fake_projects_apply_and_record_an_update() {
+    let fake = FakeProjects::with(vec![project_summary(1, None)]);
+    let source: &dyn ProjectSource = &fake;
+    let patch = ProjectPatch {
+        name: Some(" New ".to_string()),
+        ..ProjectPatch::default()
+    };
+
+    let updated = source.update(1, patch).unwrap();
+
+    assert_eq!(updated.name, "New");
+    assert_eq!(source.get(1).unwrap().unwrap().name, "New");
+    assert_eq!(fake.updates().len(), 1);
+    assert!(source.update(2, ProjectPatch::default()).is_err());
+}
+
+#[test]
+fn fake_audiobooks_record_their_writes() {
+    let fake = FakeAudiobooks::with_book(audiobook_fixture());
+    let source: &dyn AudiobookSource = &fake;
+
+    let mix = source
+        .mix_save(
+            1,
+            MixSettings {
+                gap: 99.0,
+                ..MixSettings::default()
+            },
+        )
+        .unwrap();
+    source.config_save(1, AudiobookConfig::default()).unwrap();
+    let flagged = source.flag_set(1, "c1", "b2", " echo ").unwrap();
+
+    assert_eq!(mix.gap, 5.0);
+    assert_eq!(flagged.flag, "echo");
+    assert_eq!(fake.saved_mixes().len(), 1);
+    assert_eq!(fake.saved_configs().len(), 1);
+    assert_eq!(fake.flag_calls().len(), 1);
+    assert!(source.flag_set(1, "c1", "missing", "x").is_err());
+}
+
+#[test]
+fn fake_voices_serve_the_configured_library() {
+    let fake = FakeVoices::with(vec![voice_fixture(7, "Mai Anh", VoiceGender::Female)]);
+    let source: &dyn VoiceSource = &fake;
+
+    assert_eq!(source.list().unwrap().len(), 1);
+    assert!(FakeVoices::default().list().unwrap().is_empty());
 }
 
 const NOW: &str = "2026-11-17T00:00:00Z";

@@ -209,24 +209,6 @@
     </div>`;
   }
 
-  function renderHome() {
-    const cards = Object.entries(D.NAV).map(([id, r]) => {
-      const first = r.sections[0].items[0].id;
-      const items = r.sections.flatMap((s) => s.items);
-      return `<button class="card home-card" data-act="rail-open" data-v="${id}" data-id="${first}">
-        <span class="top">${ic(r.icon)}${esc(r.label)}<span class="spacer"></span><span class="badge badge-info">COMING SOON</span></span>
-        <ul>${items.map((i) => `<li>${esc(i.title)}</li>`).join("")}</ul></button>`;
-    }).join("");
-    return `<div class="home">
-      <div class="home-head">
-        <span class="eyebrow">Workspace</span>
-        <h1 class="t-display-md">${esc(S.workspace.name)}</h1>
-        <span class="path t-mute">${esc(S.workspace.path)}</span>
-      </div>
-      <div class="home-grid">${cards}</div>
-    </div>`;
-  }
-
   function saveScroll() {
     if (!S.renderedFor) return;
     const ed = $("#editor");
@@ -244,8 +226,7 @@
     const ed = $("#editor");
     const view = VIEWS[viewKey(S.active)];
     ed.classList.toggle("is-fill", !!view?.fill);
-    if (S.active === "home") ed.innerHTML = renderHome();
-    else if (view) { ed.innerHTML = view.render(S.active); view.mount?.(ed, S.active); }
+    if (view) { ed.innerHTML = view.render(S.active); view.mount?.(ed, S.active); }
     else ed.innerHTML = comingSoon(ITEMS[S.active]);
     S.renderedFor = S.active;
     restoreScroll();

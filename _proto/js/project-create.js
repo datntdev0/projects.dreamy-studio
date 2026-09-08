@@ -43,11 +43,11 @@
     D.to = n.chapters;
   }
 
-  function openCreate(from) {
+  function openCreate(from, tpl = "audiobook-video") {
     if (from) {
       D = { dup: true, tpl: from.template, name: uniqueName(`${from.name} (copy)`), novel: from.novel || "", ver: from.src?.kind || "", all: !from.range, from: from.range?.[0] || 1, to: from.range?.[1] || 1, modules: [...from.modules] };
       if (D.novel && !U.novelById(D.novel)) pickNovel("");
-    } else D = { dup: false, tpl: "audiobook-video", name: "", novel: "", ver: "", all: true, from: 1, to: 1, modules: [...PJ.TEMPLATES["audiobook-video"].modules] };
+    } else D = { dup: false, tpl, name: "", novel: "", ver: "", all: true, from: 1, to: 1, modules: [...PJ.TEMPLATES[tpl].modules] };
     draw();
   }
 
@@ -150,7 +150,7 @@
   }
 
   Object.assign(A.ACT, {
-    "pj-new": () => openCreate(),
+    "pj-new": (el) => openCreate(null, PJ.TEMPLATES[el?.dataset?.v] ? el.dataset.v : undefined),
     "pj-dup": (el) => { const p = api.byId(el.dataset.id); if (p) openCreate(p); },
     "pj-c-submit": submit,
     "pj-del": (el) => openDelete(el?.dataset?.id ? [el.dataset.id] : api.selIds()),

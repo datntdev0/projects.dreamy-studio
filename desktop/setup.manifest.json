@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "id": "python",
+      "group": "runtime",
+      "version": "3.12.16",
+      "build": "20261124",
+      "file": "cpython-3.12.16+20261124-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "urls": [
+        "https://github.com/astral-sh/python-build-standalone/releases/download/20261124/cpython-3.12.16%2B20261124-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+      ],
+      "sha256": "96694b50dcfde13d56e40346ddaa552a9cd650290e9b933cecf83c1d82226960",
+      "size": 22388338,
+      "format": "tar.gz",
+      "root": "python",
+      "include": [],
+      "entry": "python.exe"
+    },
+    {
+      "id": "ffmpeg",
+      "group": "toolbox",
+      "version": "9.1",
+      "build": "essentials",
+      "file": "ffmpeg-9.1-essentials_build.zip",
+      "urls": [
+        "https://github.com/GyanD/codexffmpeg/releases/download/9.1/ffmpeg-9.1-essentials_build.zip"
+      ],
+      "sha256": "b9bbbb3acece000cbeec994f856649354e52c773807841e78908374b24d658fd",
+      "size": 119467219,
+      "format": "zip",
+      "root": "ffmpeg-9.1-essentials_build/bin",
+      "include": [
+        "ffmpeg.exe"
+      ],
+      "entry": "ffmpeg.exe"
+    }
+  ]
+}

@@ -24,6 +24,11 @@ pub fn app_info<R: Runtime>(app: AppHandle<R>) -> AppInfo {
     AppInfo::new(package.name.clone(), package.version.to_string())
 }
 
+#[tauri::command]
+pub fn app_quit<R: Runtime>(app: AppHandle<R>) {
+    app.exit(0);
+}
+
 #[cfg(test)]
 #[path = "../../test/commands/app.test.rs"]
 mod tests;

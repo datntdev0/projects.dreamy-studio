@@ -1,7 +1,6 @@
 #[cfg(windows)]
 use crate::shared::process::CREATE_NO_WINDOW;
 use crate::shared::process::hide_window;
-use std::env::current_exe;
 use std::fmt;
 use std::fs::File;
 use std::io::ErrorKind;
@@ -21,6 +20,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use crate::infra::backend_client::BackendClient;
+use crate::shared::config::install_dir;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const POLL_INTERVAL: Duration = Duration::from_millis(100);
@@ -28,8 +28,6 @@ const PROBE_TIMEOUT: Duration = Duration::from_millis(300);
 const STDERR_FILE: &str = "backend-stderr.log";
 
 const BACKEND_DIR: &str = "backend";
-const PYTHON_DIR: &str = "python";
-const RESOURCES_DIR: &str = "resources";
 pub const DEFAULT_DEVICE: &str = "cpu";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,16 +75,16 @@ pub struct BackendLaunch {
 }
 
 impl BackendLaunch {
-    pub fn resolve(data_dir: PathBuf, log_dir: PathBuf) -> Self {
+    pub fn resolve(data_dir: PathBuf, log_dir: PathBuf, runtime_python: PathBuf) -> Self {
         let launch = if cfg!(debug_assertions) {
-            Self::development(log_dir)
+            Self::development(log_dir, &runtime_python)
         } else {
-            Self::packaged(log_dir)
+            Self::packaged(log_dir, runtime_python)
         };
         Self { data_dir, ..launch }
     }
 
-    fn development(log_dir: PathBuf) -> Self {
+    fn development(log_dir: PathBuf, runtime_python: &Path) -> Self {
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
         let root = match manifest.parent() {
             Some(parent) => parent,
@@ -95,7 +93,7 @@ impl BackendLaunch {
         let backend = root.join("backend");
         Self {
             program: venv_python(&backend),
-            args: development_args(&bundled_python(&manifest.join(RESOURCES_DIR))),
+            args: development_args(runtime_python),
             working_dir: Some(backend),
             run_mode: "dev",
             log_dir,
@@ -104,12 +102,11 @@ impl BackendLaunch {
         }
     }
 
-    fn packaged(log_dir: PathBuf) -> Self {
-        let root = install_dir();
+    fn packaged(log_dir: PathBuf, runtime_python: PathBuf) -> Self {
         Self {
-            program: bundled_python(&root),
+            program: runtime_python,
             args: ["-E", "-s", "-m", "app"].map(String::from).to_vec(),
-            working_dir: Some(root.join(BACKEND_DIR)),
+            working_dir: Some(install_dir().join(BACKEND_DIR)),
             run_mode: "prod",
             log_dir,
             data_dir: PathBuf::new(),
@@ -139,25 +136,6 @@ fn venv_python(backend: &Path) -> PathBuf {
 #[cfg(not(windows))]
 fn venv_python(backend: &Path) -> PathBuf {
     backend.join(".venv").join("bin").join("python")
-}
-
-#[cfg(windows)]
-fn bundled_python(root: &Path) -> PathBuf {
-    root.join(PYTHON_DIR).join("python.exe")
-}
-
-#[cfg(not(windows))]
-fn bundled_python(root: &Path) -> PathBuf {
-    root.join(PYTHON_DIR).join("bin").join("python3")
-}
-
-fn install_dir() -> PathBuf {
-    let mut path = match current_exe() {
-        Ok(path) => path,
-        Err(_) => PathBuf::new(),
-    };
-    path.pop();
-    path
 }
 
 struct Running {

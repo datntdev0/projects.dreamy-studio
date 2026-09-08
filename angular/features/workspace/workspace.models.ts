@@ -1,3 +1,5 @@
+import { Translatable } from '@features/setup/setup.models';
+
 export interface AppInfo {
   name: string;
   version: string;
@@ -19,7 +21,7 @@ export interface RecentWorkspace {
 
 export type LoadMode = 'create' | 'open';
 
-export type LoadStepId = 'application' | 'backend' | 'llm' | 'workspace';
+export type LoadStepId = 'folder' | 'database';
 
 export type LoadStepState = 'running' | 'done' | 'error';
 
@@ -129,4 +131,5 @@ export interface LoadState {
   steps: LoadStepItem[];
   percent: number;
   status: LoadStatus;
+  error: Translatable | null;
 }

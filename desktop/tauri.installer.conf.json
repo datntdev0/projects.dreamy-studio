@@ -1,8 +1,8 @@
 {
   "bundle": {
     "resources": {
-      "resources/python": "python",
-      "resources/backend": "backend"
+      "../_output/desktop/build/backend": "backend",
+      "../_output/desktop/build/vcruntime": "vcruntime"
     }
   }
 }

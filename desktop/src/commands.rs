@@ -12,5 +12,6 @@ pub mod pipeline;
 pub mod project;
 pub mod scripting;
 pub mod settings;
+pub mod setup;
 pub mod translation;
 pub mod workspace;

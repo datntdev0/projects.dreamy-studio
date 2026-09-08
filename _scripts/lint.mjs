@@ -1,6 +1,5 @@
-import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, run } from "./common.mjs";
+import { ROOT, buildPython, run } from "./common.mjs";
 
 const ESLINT = join(ROOT, "node_modules", "eslint", "bin", "eslint.js");
 const args = process.argv.slice(2);
@@ -11,13 +10,7 @@ if (args.some((arg) => !["--fix", "--angular", "--backend", "--desktop"].include
 } else {
   const fix = args.includes("--fix");
   const allTargets = targets.size === 0;
-  const venvPython = join(
-    "backend",
-    ".venv",
-    process.platform === "win32" ? "Scripts" : "bin",
-    process.platform === "win32" ? "python.exe" : "python",
-  );
-  const python = process.env.PYTHON ?? (existsSync(venvPython) ? venvPython : "python");
+  const python = buildPython();
 
   let failed = false;
   function lint(label, command, commandArgs, options = {}) {

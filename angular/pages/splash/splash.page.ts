@@ -3,41 +3,25 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { Badge } from '@components/badge';
 import { Button } from '@components/button';
 import { Icon } from '@components/icon';
-import { SegmentOption, Segments } from '@components/segments';
-import { SettingsService } from '@features/settings/settings.service';
 import { WorkspaceLoading } from '@features/workspace/components/loading.component';
 import { RecentWorkspaceList } from '@features/workspace/components/recent.component';
 import { AppInfo, RecentWorkspace } from '@features/workspace/workspace.models';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { CoreModule } from '@shared/core.module';
-import { isLanguage, LanguageService } from '@shared/language/language.service';
-import { ThemeService } from '@shared/theme/theme.service';
 
-const LANGUAGE_OPTIONS: SegmentOption[] = [
-  { value: 'vi', label: 'VI' },
-  { value: 'en', label: 'EN' },
-];
+import { SplashTools } from './splash-tools.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-splash-page',
-  imports: [Badge, Button, Icon, Segments, CoreModule, RecentWorkspaceList, WorkspaceLoading],
+  imports: [Badge, Button, Icon, CoreModule, RecentWorkspaceList, SplashTools, WorkspaceLoading],
   templateUrl: './splash.page.html',
 })
 export class SplashPage implements OnInit {
   private readonly workspace = inject(WorkspaceService);
-  private readonly languageService = inject(LanguageService);
-  private readonly themes = inject(ThemeService);
-  private readonly settings = inject(SettingsService);
 
   readonly info = signal<AppInfo | null>(null);
   readonly recent = signal<RecentWorkspace[]>([]);
-  readonly language = this.languageService.language;
-  readonly languageOptions = LANGUAGE_OPTIONS;
-  readonly themeIcon = computed(() => (this.themes.theme() === 'dark' ? 'sun' : 'moon'));
-  readonly themeToggleKey = computed(() =>
-    this.themes.theme() === 'dark' ? 'theme.toLight' : 'theme.toDark',
-  );
   readonly notice = this.workspace.notice;
   readonly state = this.workspace.state;
   readonly lastUsedPath = computed(() => this.firstAccessiblePath(this.recent()));
@@ -45,16 +29,6 @@ export class SplashPage implements OnInit {
   ngOnInit(): void {
     void this.loadInfo();
     void this.refresh();
-  }
-
-  changeLanguage(value: string): void {
-    if (isLanguage(value)) {
-      this.settings.setLanguage(value);
-    }
-  }
-
-  toggleTheme(): void {
-    this.settings.setTheme(this.themes.theme() === 'dark' ? 'light' : 'dark');
   }
 
   async openWorkspace(): Promise<void> {

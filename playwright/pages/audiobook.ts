@@ -1,7 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
 
-import { unitKey } from './scripting.ts';
-
 export type AudiobookMode = 'prod' | 'voices';
 export type MixField = 'gap' | 'intro' | 'outro' | 'vol' | 'sentence';
 export type BannerKind = 'who' | 'voice' | 'engine' | 'changed';
@@ -433,7 +431,10 @@ export class AudiobookPage {
   }
 
   unit(position: number): Locator {
-    return this.page.getByTestId(`ab-unit-${unitKey(position)}`);
+    return this.page
+      .getByTestId('ab-units')
+      .getByRole('treeitem')
+      .nth(position - 1);
   }
 
   unitMeta(position: number): Locator {

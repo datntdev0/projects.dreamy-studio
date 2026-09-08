@@ -1,6 +1,6 @@
 import { expect, test } from '../scripts/fixtures.ts';
 // prettier-ignore
-import { AUDIO_PROJECT, BLANK_PROJECT, CHAPTERS, DEFAULT_CREATED, dragBy, generateDefault, LOOSE_PROJECT, NO_SCRIPT, NOT_DRAFTED, openAudiobook, openScripting, openScriptingOf, paragraphsOf, PICK_TITLE, PRESET_AUDIOBOOK, PRESET_BADGE, PRESET_FILM, RAIL_MAX, RAIL_MIN, railMeta, railWidth, RESET_ALL, RESET_INTRO, RESET_WARNING, SCRATCH_ONLY, SINGLE_PROJECT, startWriting, TYPE_HEADING, TYPE_NARRATION, UNNAMED, VI_SECOND_TITLE, VI_TITLE, VIET_PROJECT, WHOLE_PROJECT } from '../scripts/scripting.ts';
+import { AUDIO_PROJECT, BLANK_PROJECT, CHAPTERS, DEFAULT_CREATED, dragBy, generateDefault, LOOSE_PROJECT, NO_SCRIPT, NOT_DRAFTED, openAudiobook, openScripting, openScriptingOf, paragraphsOf, PICK_TITLE, PRESET_AUDIOBOOK, PRESET_BADGE, PRESET_FILM, RAIL_MAX, RAIL_MIN, railMeta, railWidth, RESET_ALL, RESET_INTRO, RESET_WARNING, SCRATCH_ONLY, SINGLE_PROJECT, startWriting, TYPE_HEADING, TYPE_NARRATION, VI_SECOND_TITLE, VI_TITLE, VIET_PROJECT, WHOLE_PROJECT } from '../scripts/scripting.ts';
 
 const EDITED = 'Lin Feng waited at the gate.';
 
@@ -43,11 +43,9 @@ test.describe('CAP-07 Pre-Production', () => {
         await expect(scripting.unit(2)).toContainText(VI_SECOND_TITLE);
       });
 
-      await test.step('creates one unnamed chapter for an audiobook project without a novel', async () => {
+      await test.step('lists no chapter for an audiobook project without a novel', async () => {
         await openScripting(ui, LOOSE_PROJECT);
-        await expect(scripting.units).toHaveCount(1);
-        await scripting.start.click();
-        await expect(scripting.sheetTitle).toHaveText(UNNAMED);
+        await expect(scripting.units).toHaveCount(0);
       });
 
       await test.step('asks a blank project which product to script and offers an audiobook or a film script', async () => {
@@ -195,7 +193,6 @@ test.describe('CAP-07 Pre-Production', () => {
 
       await test.step('locks the every chapter option when fewer than two chapters can be reset', async () => {
         await openScripting(ui, SINGLE_PROJECT);
-        await scripting.unit(2).click();
         await scripting.unit(1).click();
         await scripting.generate.click();
         await expect(scripting.blocks).toHaveCount(paragraphsOf(3).length);

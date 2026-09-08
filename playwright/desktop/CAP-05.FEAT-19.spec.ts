@@ -13,11 +13,11 @@ test.describe('CAP-05 Asset Library Management', () => {
 
       await test.step('shows each tag with image, sound, video and prompt counts sorted by most used', async () => {
         await expect(tags.names).toHaveText(['forest', 'city', 'ocean', 'forest-night', 'zen']);
-        await expect(tags.counts('forest')).toHaveText(['2', '1', '1', '1']);
-        await expect(tags.counts('city')).toHaveText(['2', '1', '1', '0']);
-        await expect(tags.counts('ocean')).toHaveText(['1', '1', '0', '1']);
-        await expect(tags.counts('forest-night')).toHaveText(['1', '0', '1', '0']);
-        await expect(tags.counts('zen')).toHaveText(['0', '0', '0', '1']);
+        await expect(tags.counts('forest')).toHaveText(['2', '1', '1', '1', '0']);
+        await expect(tags.counts('city')).toHaveText(['2', '1', '1', '0', '0']);
+        await expect(tags.counts('ocean')).toHaveText(['1', '1', '0', '1', '0']);
+        await expect(tags.counts('forest-night')).toHaveText(['1', '0', '1', '0', '0']);
+        await expect(tags.counts('zen')).toHaveText(['0', '0', '0', '1', '0']);
         await expect(tags.total('forest')).toHaveText('5');
         await expect(tags.total('zen')).toHaveText('1');
       });
@@ -46,7 +46,7 @@ test.describe('CAP-05 Asset Library Management', () => {
 
         await expect(tags.row('sea')).toBeVisible();
         await expect(tags.row('ocean')).toHaveCount(0);
-        await expect(tags.counts('sea')).toHaveText(['1', '1', '0', '1']);
+        await expect(tags.counts('sea')).toHaveText(['1', '1', '0', '1', '0']);
         const library = await readLibrary(folder, (db) => ({
           tags: db.tags().map((row) => row.tag),
           imageB: db.image('img-b.png').tags,
@@ -72,7 +72,7 @@ test.describe('CAP-05 Asset Library Management', () => {
 
         await expect(ui.main.confirm.panel).toHaveCount(0);
         await expect(tags.row('forest-night')).toHaveCount(0);
-        await expect(tags.counts('city')).toHaveText(['2', '1', '2', '0']);
+        await expect(tags.counts('city')).toHaveText(['2', '1', '2', '0', '0']);
         const library = await readLibrary(folder, (db) => ({
           tags: db.tags(),
           imageC: db.image('img-c.png').tags,

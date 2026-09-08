@@ -23,6 +23,7 @@ export const LOOSE_PROJECT = 'Loose Audio';
 export const BLANK_PROJECT = 'Blank Draft';
 export const SINGLE_PROJECT = 'Azure Single';
 export const WHOLE_PROJECT = 'Azure Whole';
+export const SINGLE_TITLE = 'Azure Single Chapter';
 
 export const PROJECT_IDS: Readonly<Record<string, number>> = {
   [AUDIO_PROJECT]: 1,
@@ -56,7 +57,6 @@ export const PRESET_BADGE = 'AUDIOBOOK';
 export const PRESET_AUDIOBOOK = 'Audiobook narration';
 export const PRESET_FILM = 'Film script';
 export const PICK_TITLE = 'Which kind of product are you writing a script for?';
-export const UNNAMED = 'Unnamed';
 export const NO_SCRIPT = 'has no script yet';
 export const SCRATCH_ONLY = 'Start writing from scratch.';
 export const NOT_DRAFTED = 'Not drafted';
@@ -102,7 +102,7 @@ const PROJECTS: readonly SeedProject[] = [
   { name: VIET_PROJECT, novel: SAMPLE_TITLE, translation: 'VI' },
   { name: LOOSE_PROJECT },
   { name: BLANK_PROJECT, template: 'blank', modules: ['scripting', 'audiobook'] },
-  { name: SINGLE_PROJECT, novel: SAMPLE_TITLE },
+  { name: SINGLE_PROJECT, novel: SINGLE_TITLE },
   { name: WHOLE_PROJECT, novel: SAMPLE_TITLE },
 ];
 
@@ -135,7 +135,10 @@ export function castId(name: string): string {
 
 export async function seedScripting(folder: string): Promise<void> {
   await seedKnowledgeWorkspace(folder, {
-    novels: [{ title: SAMPLE_TITLE, lang: 'ZH', chapters: CHAPTERS }],
+    novels: [
+      { title: SAMPLE_TITLE, lang: 'ZH', chapters: CHAPTERS },
+      { title: SINGLE_TITLE, lang: 'ZH', chapters: CHAPTERS.slice(2, 3) },
+    ],
     translations: [
       {
         novel: SAMPLE_TITLE,

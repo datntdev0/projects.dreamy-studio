@@ -78,7 +78,7 @@ test.describe('CAP-05 Asset Library Management', () => {
         await dialog.submit.click();
         await expect(dialog.root).toBeHidden();
         await expect(ui.main.library.voices.names.first()).toHaveText('Narrator An');
-        await expect(ui.main.library.voicePanel.name).toHaveText('Narrator An');
+        await expect(ui.main.library.voicePanel.name).toHaveValue('Narrator An');
         expect(readVoices(folder)).toMatchObject([
           {
             name: 'Narrator An',

@@ -6,7 +6,7 @@ import { expect } from '@playwright/test';
 
 import type { AudiobookMode, AudiobookPage, MixField } from '../pages/audiobook.ts';
 import type { ModuleId } from '../pages/project.ts';
-import { type ScriptBlock, unitKey } from '../pages/scripting.ts';
+import type { ScriptBlock } from '../pages/scripting.ts';
 import type { AppSession } from './app.ts';
 import { type BackendStub, openBackendTab, serverPort } from './backend.ts';
 import type { Ui } from './fixtures.ts';
@@ -17,7 +17,9 @@ import type { Sandbox } from './sandbox.ts';
 // prettier-ignore
 import { addBlock, AUDIO_PROJECT, durationText, generateDefault, idByInputValue, openAudiobook, openScripting, openScriptingWorkspace, paragraphsOf, PROJECT_IDS, TYPE_PAUSE } from './scripting.ts';
 import { closeSettings, openGeneralTab, setSlider } from './settings.ts';
+import { SAMPLE_TITLE } from './translation.ts';
 import { readVoices, type SeedVoice, seedVoices } from './voices.ts';
+import { readWorkspace } from './workspaces.ts';
 
 export const AUDIO_ID = PROJECT_IDS[AUDIO_PROJECT] ?? 1;
 
@@ -341,8 +343,22 @@ export function readAudiobook(folder: string): Promise<AudiobookFile | null> {
   return readJson<AudiobookFile>(join(audiobookDir(folder), 'audiobook.json'));
 }
 
-export function readUnitAudio(folder: string, position: number): Promise<UnitAudioFile | null> {
-  return readJson<UnitAudioFile>(join(audiobookDir(folder), 'units', `${unitKey(position)}.json`));
+function chapterIdOf(folder: string, position: number): Promise<string> {
+  return readWorkspace(folder, (db) => {
+    const chapter = db.chapters(SAMPLE_TITLE)[position - 1];
+    if (chapter === undefined) {
+      throw new Error(`no chapter at position ${position}`);
+    }
+    return chapter.id;
+  });
+}
+
+export async function readUnitAudio(
+  folder: string,
+  position: number,
+): Promise<UnitAudioFile | null> {
+  const id = await chapterIdOf(folder, position);
+  return readJson<UnitAudioFile>(join(audiobookDir(folder), 'units', `${id}.json`));
 }
 
 export async function savedVoiceOf(folder: string, speakerId: string): Promise<number | null> {
@@ -403,12 +419,8 @@ function orphanBlock(block: StoredBlock): StoredBlock {
 }
 
 export async function orphanDialogues(folder: string, position: number): Promise<void> {
-  const path = join(
-    projectFolder(folder, AUDIO_ID),
-    'scripting',
-    'units',
-    `${unitKey(position)}.json`,
-  );
+  const id = await chapterIdOf(folder, position);
+  const path = join(projectFolder(folder, AUDIO_ID), 'scripting', 'units', `${id}.json`);
   const unit = JSON.parse(await readFile(path, 'utf8')) as { blocks?: StoredBlock[] };
   const blocks = (unit.blocks ?? []).map(orphanBlock);
   await writeFile(path, JSON.stringify({ ...unit, blocks }, null, 2));

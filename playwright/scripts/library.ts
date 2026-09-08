@@ -677,10 +677,12 @@ export async function expectRowCounts(
   view: CollectionsPage,
   name: string,
   counts: Readonly<Record<LibraryKind, number>>,
+  voices = 0,
 ): Promise<void> {
-  await expect(view.countsOf(view.row(name))).toHaveText(
-    LIBRARY_KINDS.map((kind) => String(counts[kind])),
-  );
+  await expect(view.countsOf(view.row(name))).toHaveText([
+    ...LIBRARY_KINDS.map((kind) => String(counts[kind])),
+    String(voices),
+  ]);
 }
 
 export async function deleteSelectedCollection(ui: Ui, view: CollectionsPage): Promise<void> {

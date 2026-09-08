@@ -4,10 +4,6 @@ export type ScriptPresetId = 'audiobook' | 'film';
 
 export type BlockTool = 'up' | 'down' | 'duplicate' | 'remove';
 
-export function unitKey(position: number): string {
-  return `U${String(position).padStart(2, '0')}`;
-}
-
 export class ScriptBlock {
   constructor(readonly root: Locator) {}
 
@@ -295,7 +291,7 @@ export class ScriptingPage {
   }
 
   unit(position: number): Locator {
-    return this.page.getByTestId(`sc-unit-${unitKey(position)}`);
+    return this.units.nth(position - 1);
   }
 
   block(index: number): ScriptBlock {

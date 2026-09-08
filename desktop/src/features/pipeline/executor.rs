@@ -422,26 +422,37 @@ fn coordinator(context: Arc<CoordinatorContext>, promoted: bool) {
 }
 
 fn worker_loop(context: Arc<CoordinatorContext>, prepare_error: Option<String>) {
-    while let Some(task) = pop_task(&context.tasks) {
-        let Some(_slot) = acquire_slot(&context.inner, &context.cancel) else {
-            context
-                .log
-                .task(task.id, &task_label(&task))
-                .line("cancelled before it started");
-            finish_task(&context, task.id, TaskStatus::Cancelled, String::new());
-            continue;
+    loop {
+        let slot = acquire_slot(&context.inner, &context.cancel);
+        let Some(task) = pop_task(&context.tasks) else {
+            break;
         };
-        set_running(&context, task.id);
-        if let Some(error) = &prepare_error {
-            context
-                .log
-                .task(task.id, &task_label(&task))
-                .line(&format!("failed: {error}"));
-            finish_task(&context, task.id, TaskStatus::Failed, error.clone());
+        if slot.is_none() {
+            cancel_before_start(&context, &task);
             continue;
         }
-        run_task(&context, task);
+        set_running(&context, task.id);
+        match &prepare_error {
+            Some(error) => fail_before_start(&context, &task, error),
+            None => run_task(&context, task),
+        }
     }
+}
+
+fn cancel_before_start(context: &CoordinatorContext, task: &PipelineTask) {
+    context
+        .log
+        .task(task.id, &task_label(task))
+        .line("cancelled before it started");
+    finish_task(context, task.id, TaskStatus::Cancelled, String::new());
+}
+
+fn fail_before_start(context: &CoordinatorContext, task: &PipelineTask, error: &str) {
+    context
+        .log
+        .task(task.id, &task_label(task))
+        .line(&format!("failed: {error}"));
+    finish_task(context, task.id, TaskStatus::Failed, error.to_string());
 }
 
 fn run_task(context: &CoordinatorContext, task: PipelineTask) {

@@ -66,9 +66,9 @@ test.describe('CAP-05 Asset Library Management', () => {
         ).not.toHaveClass(/is-off/);
       });
 
-      await test.step('hides the collection and tag filters because voices do not use them', async () => {
-        await expect(ui.main.library.explorer.filtersHead).toBeHidden();
-        await expect(ui.main.library.explorer.filterCollection).toBeHidden();
+      await test.step('keeps the collection and tag filters because voices belong to collections and tags', async () => {
+        await expect(ui.main.library.explorer.filtersHead).toBeVisible();
+        await expect(ui.main.library.explorer.filterCollection).toBeVisible();
       });
 
       await test.step('shows an empty state with a create button once the library has no voices', async () => {

@@ -154,7 +154,7 @@ export class LibrarySectionList {
   }
 
   get cardNames(): Locator {
-    return this.part('card-name');
+    return this.part(this.kind === 'prompt' ? 'table-name-text' : 'card-name');
   }
 
   card(name: string): Locator {

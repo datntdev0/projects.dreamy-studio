@@ -22,7 +22,7 @@ while os.path.exists(HOLD_FILE) and time.monotonic() < deadline:
 SYNTH_HOLD_FILE = os.path.join(HOOK_DIR, "synth.hold")
 SYNTH_FAIL_FILE = os.path.join(HOOK_DIR, "synth.fail")
 SYNTH_HOLD_LIMIT_S = 120
-SERVICES_MODULE = "app.services"
+SERVICES_MODULE = "app.features.speeches.service"
 ORIGINAL = {}
 
 
@@ -49,7 +49,7 @@ def hold_synthesis(text):
 def fail_synthesis(text):
     rule = read_rule(SYNTH_FAIL_FILE)
     if applies(rule, text):
-        from app.errors import BackendError
+        from app.shared.errors import BackendError
 
         raise BackendError(503, "STUB_REFUSED", str(rule.get("message", "")))
 
@@ -61,8 +61,8 @@ def stub_synthesize(self, request):
 
 
 def patch_services(module):
-    ORIGINAL["synthesize"] = module.Services.synthesize
-    module.Services.synthesize = stub_synthesize
+    ORIGINAL["synthesize"] = module.SpeechService.synthesize
+    module.SpeechService.synthesize = stub_synthesize
 
 
 class ServicesLoader(importlib.abc.Loader):

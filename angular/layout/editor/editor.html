@@ -150,15 +150,9 @@
     <div class="nv-host" data-testid="editor-prompts-host">
       <app-library-prompts data-testid="editor-prompts" />
     </div>
-    } @default { @if (workspace(); as ws) {
-    <section class="home" data-testid="home-panel">
-      <div class="home-head">
-        <span class="eyebrow" data-testid="home-eyebrow">Workspace</span>
-        <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
-        <span class="path t-mute" data-testid="home-workspace-path">{{ ws.path }}</span>
-      </div>
-    </section>
-    } } }
+    } @default {
+    <app-home />
+    } }
   </section>
   @if (layout.bottomOpen()) {
   <app-bottom />

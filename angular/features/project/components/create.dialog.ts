@@ -197,7 +197,10 @@ export class ProjectCreateDialog {
   }
 
   private resetForm(): void {
-    this.form.set({ ...EMPTY_FORM });
+    this.form.set({
+      ...EMPTY_FORM,
+      template: this.dialogs.createTemplate() ?? EMPTY_FORM.template,
+    });
     this.nameError.set(null);
     this.formError.set('');
     this.busy.set(false);

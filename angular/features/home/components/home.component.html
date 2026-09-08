@@ -1,0 +1,281 @@
+@if (workspace(); as ws) {
+  <div class="hm" data-testid="home-panel">
+    <header class="hm-hero" data-testid="home-hero">
+      <div class="hm-hero-text">
+        <span class="eyebrow" data-testid="home-greeting">{{ greeting | t }}</span>
+        <h1 class="t-display-md" data-testid="home-workspace-name">{{ ws.name }}</h1>
+        <button
+          type="button"
+          class="hm-path path"
+          [attr.data-tip]="'home.switchWorkspace' | t"
+          data-testid="home-workspace-path"
+          (click)="switchWorkspace()"
+        >
+          <ds-icon name="hdd" [size]="14" />
+          <span>{{ ws.path }}</span>
+          <ds-icon name="swap" [size]="14" />
+        </button>
+      </div>
+      <div class="hm-hero-acts">
+        <button
+          type="button"
+          class="btn btn-primary"
+          data-testid="home-new-project"
+          (click)="newProject()"
+        >
+          <ds-icon name="plus" [size]="16" />
+          {{ 'home.newProject' | t }}
+        </button>
+        <button type="button" class="btn" data-testid="home-open-novels" (click)="openNovels()">
+          <ds-icon name="book" [size]="16" />
+          {{ 'main.rail.novels' | t }}
+        </button>
+        <button type="button" class="btn" data-testid="home-open-library" (click)="openLibrary()">
+          <ds-icon name="library" [size]="16" />
+          {{ 'main.rail.library' | t }}
+        </button>
+      </div>
+    </header>
+
+    <section class="hm-stats" [attr.aria-label]="'home.stats' | t" data-testid="home-stats">
+      @for (stat of stats(); track stat.id) {
+        <button
+          type="button"
+          class="card hm-stat"
+          [attr.data-stat]="stat.id"
+          data-testid="home-stat"
+          (click)="openStat(stat)"
+        >
+          <span class="hm-stat-top">
+            <ds-icon [name]="stat.icon" [size]="16" />
+            <span class="eyebrow">{{ stat.labelKey | t }}</span>
+          </span>
+          <span class="hm-stat-val t-display-sm" data-testid="home-stat-value">
+            {{ stat.value }}
+          </span>
+          <span class="hm-stat-note t-sm" [class.is-warn]="stat.warn">
+            @if (stat.warn) {
+              <ds-icon name="alert" [size]="14" />
+            }
+            {{ stat.note }}
+          </span>
+        </button>
+      }
+    </section>
+
+    <div class="hm-cols">
+      <div class="hm-col">
+        <section class="hm-sec" data-testid="home-recent">
+          <header class="hm-sec-head">
+            <h2 class="eyebrow">{{ 'home.recent.title' | t }}</h2>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="openProjects()">
+              {{ 'home.viewAll' | t }}
+              <ds-icon name="chev-r" [size]="14" />
+            </button>
+          </header>
+          @if (cards().length) {
+            <div class="hm-proj-list">
+              @for (card of cards(); track card.project.id) {
+                <button
+                  type="button"
+                  class="hm-proj"
+                  [attr.data-project-id]="card.project.id"
+                  data-testid="home-recent-project"
+                  (click)="openProject(card.project)"
+                >
+                  <span class="hm-proj-ico">
+                    <ds-icon [name]="projectIcon(card.project)" [size]="18" />
+                  </span>
+                  <span class="hm-proj-main">
+                    <span class="hm-proj-title">
+                      <span class="hm-proj-name">{{ card.project.name }}</span>
+                      <span class="badge">{{ templateKey(card.project) | t }}</span>
+                    </span>
+                    <span class="hm-proj-desc t-sm">
+                      {{ card.project.description || (templateBlurb(card.project) | t) }}
+                    </span>
+                    <span class="hm-proj-meta">
+                      <span class="hm-mods">
+                        @for (state of card.states; track state.id) {
+                          <span
+                            [class]="'hm-mod hm-mod-' + state.state"
+                            [attr.title]="moduleTitle(state)"
+                          >
+                            <ds-icon [name]="moduleIcon(state.id)" [size]="13" />
+                          </span>
+                        }
+                      </span>
+                      <span class="spacer"></span>
+                      <span class="t-sm t-mute mono">{{ dateOf(card.project.openedAt) }}</span>
+                    </span>
+                    <span class="hm-proj-pg">
+                      <span class="progress" [class.is-done]="card.percent === 100">
+                        <i [style.width.%]="card.percent"></i>
+                      </span>
+                      <span class="mono t-sm" data-testid="home-project-percent">
+                        {{ card.percent }}%
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="card hm-empty" data-testid="home-recent-empty">
+              <p class="t-sm t-mute">{{ 'home.recent.empty' | t }}</p>
+              <button type="button" class="btn btn-primary btn-sm" (click)="newProject()">
+                <ds-icon name="plus" [size]="14" />
+                {{ 'home.newProject' | t }}
+              </button>
+            </div>
+          }
+        </section>
+
+        <section class="hm-sec" data-testid="home-novels">
+          <header class="hm-sec-head">
+            <h2 class="eyebrow">{{ 'home.novels.title' | t }}</h2>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="openNovels()">
+              {{ 'home.viewAll' | t }}
+              <ds-icon name="chev-r" [size]="14" />
+            </button>
+          </header>
+          @if (recentNovels().length) {
+            <div class="hm-novels">
+              @for (novel of recentNovels(); track novel.id) {
+                <button
+                  type="button"
+                  class="hm-novel"
+                  [attr.title]="novelName(novel)"
+                  [attr.data-novel-id]="novel.id"
+                  data-testid="home-novel"
+                  (click)="openNovel(novel)"
+                >
+                  <span class="hm-cover">
+                    <ds-cover [image]="coverOf(novel)" size="lg" />
+                    <span class="badge">{{ novel.lang }}</span>
+                  </span>
+                  <span class="hm-novel-title t-sm">{{ novelName(novel) }}</span>
+                  <span class="hm-novel-sub t-sm t-mute">
+                    {{ novel.author }} ·
+                    {{ 'home.novels.chapters' | t: { count: novel.chapterCount } }}
+                  </span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="card hm-empty" data-testid="home-novels-empty">
+              <p class="t-sm t-mute">{{ 'home.novels.empty' | t }}</p>
+            </div>
+          }
+        </section>
+      </div>
+
+      <aside class="hm-col">
+        <section class="card hm-panel" data-testid="home-attention">
+          <header class="hm-sec-head">
+            <h2 class="eyebrow">{{ 'home.attention.title' | t }}</h2>
+            <span class="spacer"></span>
+            @if (attention().length) {
+              <span class="badge badge-warning" data-testid="home-attention-count">
+                {{ attention().length }}
+              </span>
+            }
+          </header>
+          @if (attention().length) {
+            <div class="hm-issues">
+              @for (item of attention(); track item.id) {
+                <button
+                  type="button"
+                  class="hm-issue"
+                  [attr.data-kind]="item.kind"
+                  data-testid="home-attention-item"
+                  (click)="openAttention(item)"
+                >
+                  <span
+                    class="dot"
+                    [class.dot-warning]="item.level === 'warn'"
+                    [class.dot-danger]="item.level === 'danger'"
+                  ></span>
+                  <span class="hm-issue-main">
+                    <span class="t-sm t-ink">{{ attentionTitle(item) }}</span>
+                    @if (item.detail) {
+                      <span class="t-sm">{{ item.detail }}</span>
+                    }
+                    <span class="t-sm t-mute">{{ item.owner }}</span>
+                  </span>
+                  <ds-icon name="chev-r" [size]="14" />
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="hm-ok t-sm" data-testid="home-attention-empty">
+              <ds-icon name="check-circle" [size]="16" />
+              {{ 'home.attention.empty' | t }}
+            </div>
+          }
+        </section>
+
+        <section class="card hm-panel" data-testid="home-activity">
+          <header class="hm-sec-head">
+            <h2 class="eyebrow">{{ 'home.activity.title' | t }}</h2>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="openPipelines()">
+              {{ 'home.viewAll' | t }}
+              <ds-icon name="chev-r" [size]="14" />
+            </button>
+          </header>
+          @if (activity().length) {
+            <ul class="hm-act">
+              @for (row of activity(); track row.pipeline.id) {
+                <li class="hm-act-row" data-testid="home-activity-item">
+                  <span class="hm-act-ico">
+                    <ds-icon [name]="activityIcon(row.pipeline)" [size]="13" />
+                  </span>
+                  <button type="button" class="hm-act-main" (click)="openPipeline(row.pipeline.id)">
+                    <span class="t-sm t-ink">{{ activityTitle(row) }}</span>
+                    <span class="t-sm t-mute">
+                      {{ row.owner }}
+                      @if (row.pipeline.target) {
+                        · {{ row.pipeline.target }}
+                      }
+                      ·
+                      <span class="mono">{{ clockOf(row.at) }}</span>
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="t-sm t-mute" data-testid="home-activity-empty">
+              {{ 'home.activity.empty' | t }}
+            </p>
+          }
+        </section>
+      </aside>
+    </div>
+
+    <section class="hm-sec" data-testid="home-templates">
+      <header class="hm-sec-head">
+        <h2 class="eyebrow">{{ 'home.templates.title' | t }}</h2>
+      </header>
+      <div class="hm-tpls">
+        @for (template of templates; track template.id) {
+          <button
+            type="button"
+            class="card hm-tpl"
+            [attr.data-template]="template.id"
+            data-testid="home-template"
+            (click)="newProject(template.id)"
+          >
+            <span class="hm-tpl-ico"><ds-icon [name]="templateIcon(template)" [size]="18" /></span>
+            <span class="hm-tpl-name">{{ template.labelKey | t }}</span>
+            <span class="t-sm t-mute">{{ template.blurbKey | t }}</span>
+            <span class="hm-tpl-mods mono">{{ templateModules(template) }}</span>
+          </button>
+        }
+      </div>
+    </section>
+  </div>
+}

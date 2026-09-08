@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, HostListener, inject } from '@angular/core';
 import { Icon } from '@components/icon';
+import { Home } from '@features/home/components/home.component';
 import { LibraryCollectionView } from '@features/library/components/collection.component';
 import { LibraryCollections } from '@features/library/components/collections.component';
 import { LibraryImages } from '@features/library/components/images.component';
@@ -47,6 +48,7 @@ import { TabsService } from '../tabs.service';
     LibraryPrompts,
     LibraryVoices,
     PipelineHistory,
+    Home,
   ],
   templateUrl: './editor.html',
 })

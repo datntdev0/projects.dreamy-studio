@@ -325,12 +325,14 @@ features:
 
   - id: FEAT-26
     name: Pipeline Monitoring
-    caps: [CAP-03]
+    caps: [CAP-03, CAP-08]
     status: done
     description: >-
-      Cho phép người dùng theo dõi các pipeline xử lý nội dung (dịch, phân tích): lịch sử có tìm
-      theo novel và lọc theo trạng thái, danh sách đang chạy với tiến độ từng tác vụ và nút hủy, nhật
-      ký chi tiết, và chỉ báo chạy hoặc rảnh ở thanh trạng thái.
+      Cho phép người dùng theo dõi các pipeline xử lý nội dung (dịch, phân tích, tạo audio
+      audiobook): lịch sử có tìm theo novel hoặc project và lọc theo trạng thái, danh sách đang chạy
+      với tiến độ từng tác vụ và nút hủy, nhật ký chi tiết, và chỉ báo chạy hoặc rảnh ở thanh trạng
+      thái. Pipeline tạo audio gắn với project và chương, mỗi đoạn đọc là một tác vụ; hủy thì giữ
+      các đoạn đã tạo xong.
 
   - id: FEAT-27
     name: Knowledge Extraction
@@ -389,9 +391,9 @@ features:
     status: done
     description: >-
       Hiển thị danh mục project dạng lưới hoặc bảng kèm số lượng theo loại và trạng thái. Người
-      dùng tìm theo tên hoặc mô tả, sắp xếp theo gần nhất hoặc tên, lọc theo loại và trạng thái
-      (đang làm, lưu trữ), xem nhanh thông tin project ở bảng chi tiết và mở project; project đã
-      lưu trữ xếp sau, danh sách trống hoặc không khớp bộ lọc có hướng dẫn.
+      dùng tìm theo tên hoặc mô tả, lọc theo loại và trạng thái (đang làm, lưu trữ), xem nhanh
+      thông tin project ở bảng chi tiết và mở project; project xếp theo cập nhật gần nhất, project
+      đã lưu trữ xếp sau, danh sách trống hoặc không khớp bộ lọc có hướng dẫn.
 
   - id: FEAT-33
     name: Project Information Management
@@ -411,14 +413,6 @@ features:
       Cho phép người dùng xóa project đang chọn sau khi xác nhận. Hộp thoại nêu rõ project
       sắp xóa, cảnh báo thư mục project và mọi thứ bên trong bị xóa khỏi máy tính và không thể hoàn
       tác, đồng thời nêu rõ tài nguyên trong thư viện và novel nguồn không bị ảnh hưởng.
-
-  - id: FEAT-35
-    name: Project Folder Browsing
-    caps: [CAP-06]
-    status: done
-    description: >-
-      Cho phép người dùng xem cây thư mục của project ngay trong ứng dụng (thư mục xếp trước, làm
-      mới được) và mở thư mục project bằng trình quản lý tệp của hệ điều hành.
 
   - id: FEAT-36
     name: Assistant Sessions
@@ -508,3 +502,170 @@ features:
       Cho phép người dùng cấu hình số pipeline chạy đồng thời (1-5) và số task chạy song song trên
       toàn ứng dụng (1-10). Pipeline hoặc task vượt giới hạn chờ trong hàng đợi; giá trị áp dụng
       cho các lần chạy tiếp theo.
+
+  - id: FEAT-45
+    name: Local Backend Server
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Cho phép người dùng theo dõi backend cục bộ chạy model giọng đọc: trạng thái (đang chạy, đang
+      khởi động, đã dừng, lỗi), địa chỉ, phiên bản, Python, thời gian chạy và kết quả kiểm tra sức
+      khỏe. Người dùng kiểm tra lại, khởi động lại (ngắt tác vụ giọng đọc đang chạy) và mở thư mục
+      log; trạng thái tự cập nhật mỗi giây khi có tác vụ đang chạy.
+
+  - id: FEAT-46
+    name: Hardware Acceleration
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Phát hiện GPU NVIDIA (tên, VRAM, driver), cho tải, hủy, thử lại và gỡ CUDA runtime ngay trong
+      ứng dụng, và chọn thiết bị chạy model là CPU hoặc GPU. GPU chỉ chọn được khi có GPU và đã cài
+      CUDA; gỡ CUDA đưa thiết bị về CPU; model khuyến nghị GPU được cảnh báo khi chạy bằng CPU.
+
+  - id: FEAT-47
+    name: Local TTS Models
+    caps: [CAP-12]
+    status: done
+    description: >-
+      Cho phép người dùng xem danh sách model TTS mã nguồn mở (ngôn ngữ, dung lượng, hỗ trợ clone
+      giọng, khuyến nghị GPU), tải kèm tiến độ, hủy, thử lại khi lỗi và gỡ model. Model chỉ lưu
+      trên máy trong thư mục model chỉ đọc, mở được bằng trình quản lý tệp.
+
+  - id: FEAT-48
+    name: Cloud Providers
+    caps: [CAP-12]
+    status: todo
+    description: >-
+      Cho phép người dùng kết nối dịch vụ cloud cho giọng đọc và hình ảnh bằng API key của mình.
+      Key không được để trống, chỉ lưu trên máy, không đi theo workspace, chỉ hiển thị 4 ký tự cuối
+      và dùng chung cho mọi dịch vụ của provider; người dùng thay, gỡ key và kiểm tra kết nối.
+      Provider miễn phí như Edge Read Aloud không cần key và chỉ hỗ trợ giọng có sẵn.
+
+  - id: FEAT-49
+    name: Voice Browsing
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Hiển thị giọng đọc trong thư viện dạng bảng (engine, ngôn ngữ, giới tính, nguồn, độ dài mẫu,
+      ngày cập nhật). Người dùng tìm theo tên hoặc mô tả, lọc engine cục bộ hoặc cloud, sắp xếp theo
+      mới nhất hoặc tên và nghe thử mẫu (mỗi lúc một giọng). Giọng có engine chưa sẵn sàng bị khóa
+      nghe thử; khi chưa có engine nào sẵn sàng, hệ thống dẫn tới Local backend hoặc Cloud
+      providers.
+
+  - id: FEAT-50
+    name: Voice Creation
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng tạo giọng đọc trên một engine đã sẵn sàng từ ba nguồn: giọng có sẵn, clone
+      từ âm thanh mẫu (âm thanh trong thư viện, tệp mp3, wav, aac hoặc ghi âm tối đa 30 giây, phải
+      xác nhận có quyền sử dụng) hoặc thiết kế bằng mô tả. Giọng có tên bắt buộc (tối đa 255 ký tự),
+      ngôn ngữ, giới tính và mô tả; engine chỉ hỗ trợ giọng có sẵn sẽ khóa clone và thiết kế.
+
+  - id: FEAT-51
+    name: Voice Information Management
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng xem chi tiết giọng, sửa câu mẫu và mô tả, nhân bản giọng thành bản sao có
+      hậu tố copy. Tên, engine, nguồn, ngôn ngữ và giới tính không đổi được sau khi tạo; bản sao của
+      giọng clone từ tệp tải lên hoặc ghi âm không mang theo âm thanh mẫu.
+
+  - id: FEAT-52
+    name: Voice Deletion
+    caps: [CAP-05]
+    status: done
+    description: >-
+      Cho phép người dùng xóa giọng đọc bằng nút xóa hoặc phím Delete sau khi xác nhận. Hộp thoại
+      nêu tên, engine của giọng và cảnh báo không thể hoàn tác; hủy thì không có gì thay đổi.
+
+  - id: FEAT-53
+    name: Project Modules
+    caps: [CAP-06]
+    status: done
+    description: >-
+      Hiển thị các module đang bật của project theo thứ tự sản xuất (Scripting, Character, World,
+      Storyboard, Audiobook, Canvas, Video editor); module của template luôn bật, các module khác
+      bật hoặc tắt được trong cài đặt project. Hiện mới dùng được Scripting và Audiobook, các module
+      khác mở trang sắp ra mắt. Mỗi module mở trong tab riêng, có trạng thái chưa bắt đầu, đang
+      làm, hoàn thành hoặc cần rà soát kèm tiến độ theo chương.
+
+  - id: FEAT-54
+    name: Audiobook Script Drafting
+    caps: [CAP-07]
+    status: done
+    description: >-
+      Tự tạo khung kịch bản audiobook theo khoảng chương của project, tiêu đề lấy theo phiên bản văn
+      bản đã chọn, và hiển thị tiến độ từng chương. Người dùng tạo kịch bản mặc định (mỗi đoạn văn
+      nguồn thành một block lời kể), bắt đầu viết từ đầu, hoặc đưa một hay mọi chương về mặc định
+      sau khi xác nhận, giữ audio của block không đổi nội dung. Template trống được hỏi loại kịch
+      bản.
+
+  - id: FEAT-55
+    name: Script Block Editing
+    caps: [CAP-07]
+    status: done
+    description: >-
+      Cho phép người dùng soạn kịch bản bằng block tiêu đề, lời kể, lời thoại (nhân vật, sắc thái),
+      ngắt nghỉ (0 đến 30 giây, mặc định 0,8 giây) và ghi chú không đưa vào sản xuất. Hỗ trợ thêm,
+      đổi loại, di chuyển, nhân bản, xóa block, phím tắt Enter, Shift+Enter, Backspace, Tab và mũi
+      tên; mọi thay đổi được lưu tự động.
+
+  - id: FEAT-56
+    name: Script Cast Management
+    caps: [CAP-07]
+    status: done
+    description: >-
+      Danh sách nhân vật gồm người kể, nhân vật từ tri thức của novel (chỉ đọc) và nhân vật người
+      dùng tự thêm. Tên thêm mới không trùng (không phân biệt hoa thường), đổi tên rỗng thì giữ tên
+      cũ, chỉ xóa được nhân vật tự thêm chưa dùng; danh sách dùng chung với module Audiobook.
+
+  - id: FEAT-57
+    name: Audiobook Voice Casting
+    caps: [CAP-08]
+    status: done
+    description: >-
+      Cho phép người dùng gán giọng trong thư viện và tốc độ đọc (0,6 đến 1,5) cho người kể và từng
+      nhân vật, nghe thử giọng, thêm hoặc xóa người nói, xem trạng thái sẵn sàng của engine (model
+      đã cài, provider đã kết nối) và lời thoại chưa gán nhân vật. Đổi giọng hoặc tốc độ đánh dấu
+      các đoạn đã tạo của người nói cần tạo lại.
+
+  - id: FEAT-58
+    name: Audiobook Segment Review
+    caps: [CAP-08]
+    status: done
+    description: >-
+      Chia kịch bản thành các đoạn đọc theo chương, hiển thị trạng thái từng đoạn (chưa tạo, đã tạo,
+      cần tạo lại kèm lý do, lỗi, đang tạo) và tiến độ từng chương. Hệ thống báo vấn đề chặn việc
+      tạo audio (lời thoại chưa gán nhân vật, người nói chưa có giọng, model cục bộ chưa cài hoặc
+      provider cloud chưa kết nối; không kiểm tra trạng thái chạy của backend) và cho đánh dấu đoạn
+      đọc lỗi kèm ghi chú.
+
+  - id: FEAT-59
+    name: Audiobook Generation
+    caps: [CAP-08]
+    status: done
+    description: >-
+      Cho phép người dùng tạo audio cho mọi đoạn chưa xong của chương hoặc tạo lại một đoạn khi
+      không còn vấn đề chặn. Hộp thoại nêu số đoạn, nhóm theo Local TTS hoặc provider cloud, cảnh
+      báo văn bản gửi tới provider và chi phí ước tính. Tạo tất cả chạy như một pipeline audiobook
+      với một task cho mỗi đoạn, theo dõi và hủy được trong Pipelines, tuân theo giới hạn chạy đồng
+      thời và giữ nguyên đoạn đã tạo không đổi. Ứng dụng gọi trực tiếp backend mà không kiểm tra
+      trước; lỗi backend trả về được báo bằng toast và task đó thất bại.
+
+  - id: FEAT-60
+    name: Audiobook Playback
+    caps: [CAP-08]
+    status: done
+    description: >-
+      Cho phép người dùng nghe từng đoạn hoặc cả chương (các đoạn có audio xen kẽ ngắt nghỉ của kịch
+      bản) qua thanh phát có tạm dừng, tiến độ, thời gian và nút dừng.
+
+  - id: FEAT-61
+    name: Audiobook Chapter Assembly and Export
+    caps: [CAP-08, CAP-09]
+    status: done
+    description: >-
+      Cho phép người dùng chỉnh khoảng lặng giữa đoạn (0 đến 5 giây), đầu và cuối chương (0 đến 10
+      giây) và âm lượng (-12 đến +6 dB) riêng cho từng chương, rồi xuất chương ra WAV và phụ đề SRT
+      khi mọi đoạn đã tạo xong.

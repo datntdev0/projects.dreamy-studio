@@ -54,10 +54,10 @@ stories:
       - given: Workspace có project.
         when: Tôi mở danh mục project.
         then: >-
-          Tôi thấy project dạng lưới kèm template, trạng thái, nguồn nội dung và tổng số project.
+          Tôi thấy project dạng lưới kèm template, nguồn nội dung và tổng số project.
       - given: Danh mục đang ở dạng lưới.
         when: Tôi chuyển sang dạng danh sách.
-        then: Project hiển thị dạng bảng với các cột project, loại, trạng thái và cập nhật.
+        then: Project hiển thị dạng bảng với các cột project, loại và cập nhật.
       - given: Workspace chưa có project.
         when: Tôi mở danh mục project.
         then: Hệ thống hiển thị trạng thái trống kèm nút tạo project.
@@ -65,8 +65,7 @@ stories:
   - id: US-0092
     feat: FEAT-32
     story: >-
-      Là một content creator, tôi muốn tìm, sắp xếp và lọc project để nhanh chóng thấy project cần
-      làm.
+      Là một content creator, tôi muốn tìm và lọc project để nhanh chóng thấy project cần làm.
     acceptance:
       - given: Workspace có nhiều project.
         when: Tôi tìm theo một phần tên hoặc mô tả.
@@ -75,8 +74,8 @@ stories:
         when: Tôi lọc theo template hoặc trạng thái.
         then: Chỉ project thuộc bộ lọc được hiển thị kèm thẻ lọc có thể gỡ từng cái.
       - given: Workspace có nhiều project.
-        when: Tôi sắp xếp theo gần nhất hoặc theo tên.
-        then: Project xếp theo thứ tự đã chọn và project đã lưu trữ luôn xếp sau.
+        when: Tôi xem danh mục.
+        then: Project xếp theo cập nhật gần nhất và project đã lưu trữ luôn xếp sau.
       - given: Tìm kiếm hoặc bộ lọc không khớp project nào.
         when: Tôi xem danh mục.
         then: Hệ thống báo không tìm thấy project phù hợp và có nút xóa bộ lọc.
@@ -90,7 +89,7 @@ stories:
       - given: Danh mục có project.
         when: Tôi chọn một project.
         then: >-
-          Bảng chi tiết hiển thị mã, loại, trạng thái, nguồn, thư mục, ngày tạo và ngày cập nhật.
+          Bảng chi tiết hiển thị mã, loại, nguồn, thư mục, ngày tạo và ngày cập nhật.
       - given: Tôi đã chọn một project.
         when: Tôi bấm mở hoặc nhấp đúp vào project.
         then: Project mở trong một tab riêng với các mục Tệp và Cài đặt.
@@ -139,11 +138,10 @@ stories:
       - given: Project đang làm.
         when: Tôi lưu trữ project.
         then: >-
-          Project có trạng thái lưu trữ, xếp sau các project đang làm và toàn bộ tệp được giữ
-          nguyên.
+          Project được làm mờ, xếp sau các project đang làm và toàn bộ tệp được giữ nguyên.
       - given: Project đã lưu trữ.
         when: Tôi khôi phục project.
-        then: Project trở lại trạng thái đang làm.
+        then: Project trở lại danh sách project đang làm.
 
   - id: US-0097
     feat: FEAT-33
@@ -184,26 +182,63 @@ stories:
           Project biến mất khỏi danh mục, thư mục project bị xóa, hệ thống thông báo đã xóa và tài
           nguyên trong thư viện cùng novel nguồn vẫn còn.
 
-  # FEAT-35 Project Folder Browsing
-  - id: US-0099
-    feat: FEAT-35
+  # FEAT-53 Project Modules
+  - id: US-0142
+    feat: FEAT-53
     story: >-
-      Là một content creator, tôi muốn xem các tệp trong thư mục project ngay trong ứng dụng để
-      biết project đã tạo ra những gì.
+      Là một content creator, tôi muốn xem các module của project theo thứ tự sản xuất để biết cần
+      làm bước nào tiếp theo.
     acceptance:
-      - given: Project có thư mục và tệp bên trong.
-        when: Tôi mở mục Tệp của project.
-        then: Tôi thấy cây thư mục, thư mục xếp trước tệp và mở rộng được từng thư mục.
-      - given: Thư mục project thay đổi từ bên ngoài ứng dụng.
-        when: Tôi bấm làm mới tệp.
-        then: Cây thư mục hiển thị nội dung mới nhất.
+      - given: Workspace có project.
+        when: Tôi mở rộng một project trong explorer.
+        then: >-
+          Tôi thấy các module đang bật của project theo thứ tự Scripting, Character, World,
+          Storyboard, Audiobook, Canvas và Video editor.
+      - given: Tôi đang xem danh sách module.
+        when: Tôi bấm hoặc nhấn Enter trên một module.
+        then: Module mở trong một tab riêng và dòng module được tô sáng.
+      - given: Module chưa được hỗ trợ.
+        when: Tôi mở module đó.
+        then: Tab của module hiển thị trang sắp ra mắt.
+      - given: Tôi đang ở trong một module.
+        when: Tôi bấm nút quay lại mang tên project.
+        then: Tab của project được mở lại.
 
-  - id: US-0100
-    feat: FEAT-35
+  - id: US-0173
+    feat: FEAT-53
     story: >-
-      Là một content creator, tôi muốn mở thư mục project bằng trình quản lý tệp của hệ điều hành để
-      làm việc với tệp bên ngoài ứng dụng.
+      Là một content creator, tôi muốn bật hoặc tắt các module của project trong phần cài đặt để
+      project chỉ hiển thị những bước tôi cần.
     acceptance:
-      - given: Tôi đang xem một project.
-        when: Tôi bấm mở thư mục.
-        then: Trình quản lý tệp của hệ điều hành mở đúng thư mục của project.
+      - given: Project được tạo từ một template.
+        when: Tôi mở phần cài đặt của project.
+        then: Các module của template luôn bật và không thể tắt.
+      - given: Tôi đang ở phần cài đặt của project.
+        when: Tôi bật một module ngoài template.
+        then: Module xuất hiện trong danh sách module và trang tổng quan của project.
+      - given: Một module ngoài template đang bật.
+        when: Tôi tắt module đó.
+        then: Module biến mất khỏi danh sách module của project.
+
+  - id: US-0143
+    feat: FEAT-53
+    story: >-
+      Là một content creator, tôi muốn thấy tiến độ của từng module để nắm tình trạng project mà
+      không cần mở module.
+    acceptance:
+      - given: Chưa chương nào có kịch bản.
+        when: Tôi xem module Scripting.
+        then: Module hiển thị chưa bắt đầu.
+      - given: Một số chương đã có kịch bản.
+        when: Tôi xem module Scripting.
+        then: Module hiển thị đang làm kèm số chương đã có kịch bản trên tổng số chương.
+      - given: Mọi chương đã có kịch bản.
+        when: Tôi xem module Scripting.
+        then: Module hiển thị hoàn thành.
+      - given: Có chương audiobook cần tạo lại do kịch bản hoặc giọng đã đổi.
+        when: Tôi xem module Audiobook.
+        then: >-
+          Module hiển thị cần rà soát kèm số chương đã tạo xong trên tổng và số chương cần rà soát.
+      - given: Tôi vừa sửa nội dung ảnh hưởng tiến độ.
+        when: Tôi xem lại danh sách module.
+        then: Trạng thái module được cập nhật.

@@ -1,0 +1,244 @@
+# User Stories for CAP-07 Pre-Production
+# Breakline when the content exceeds the width of the page 100 characters
+
+cap: CAP-07
+
+stories:
+  # FEAT-54 Audiobook Script Drafting
+  - id: US-0144
+    feat: FEAT-54
+    story: >-
+      Là một content creator, tôi muốn module Scripting tự chia kịch bản theo chương của novel để
+      bắt đầu viết kịch bản audiobook ngay.
+    acceptance:
+      - given: Project audiobook gắn với novel và khoảng chương.
+        when: Tôi mở Scripting lần đầu.
+        then: >-
+          Mỗi chương trong khoảng có một mục cùng số chương và tiêu đề lấy từ bản dịch hoặc bản gốc
+          theo phiên bản văn bản của project.
+      - given: Project audiobook không gắn novel.
+        when: Tôi mở Scripting lần đầu.
+        then: Kịch bản có một chương chưa đặt tên.
+      - given: Project tạo từ template dự án trống.
+        when: Tôi mở Scripting lần đầu.
+        then: >-
+          Hệ thống hỏi loại sản phẩm cần viết kịch bản và cho chọn kịch bản audiobook hoặc phim.
+      - given: Tôi đang ở Scripting.
+        when: Tôi xem thanh trên cùng.
+        then: Tôi thấy nút quay lại project, tiêu đề Scripting và nhãn loại kịch bản AUDIOBOOK.
+
+  - id: US-0145
+    feat: FEAT-54
+    story: >-
+      Là một content creator, tôi muốn xem danh sách chương kèm tiến độ để biết chương nào còn chưa
+      có kịch bản.
+    acceptance:
+      - given: Tôi đang ở Scripting.
+        when: Tôi xem danh sách chương bên trái.
+        then: >-
+          Tôi thấy số chương đã có kịch bản trên tổng kèm thanh tiến độ; mỗi chương có số, tiêu đề
+          và số block, số từ hoặc ghi chú chưa soạn.
+      - given: Tôi đang xem danh sách chương.
+        when: Tôi bấm, nhấn Enter hoặc Space trên một chương.
+        then: Chương đó mở trong vùng soạn thảo.
+      - given: Danh sách chương quá hẹp hoặc quá rộng.
+        when: Tôi kéo mép danh sách.
+        then: >-
+          Độ rộng thay đổi trong khoảng 180 đến 420 px và được dùng chung với module Audiobook.
+      - given: Chương đang mở có block.
+        when: Tôi xem thanh thông tin chương.
+        then: Tôi thấy số block, số từ và thời lượng đọc ước tính.
+
+  - id: US-0146
+    feat: FEAT-54
+    story: >-
+      Là một content creator, tôi muốn tạo kịch bản mặc định từ đoạn văn nguồn để có bản nháp nhanh
+      thay vì gõ lại từ đầu.
+    acceptance:
+      - given: Chương chưa có kịch bản và có văn bản nguồn.
+        when: Tôi mở chương đó.
+        then: >-
+          Hệ thống báo chương chưa có kịch bản, có nút tạo từ đoạn văn nguồn và nút bắt đầu viết.
+      - given: Chương chưa có kịch bản và có văn bản nguồn.
+        when: Tôi bấm tạo từ đoạn văn nguồn.
+        then: >-
+          Mỗi đoạn văn nguồn trở thành đúng một block lời kể và hệ thống thông báo đã tạo kịch bản
+          mặc định.
+      - given: Chương chưa có kịch bản.
+        when: Tôi bấm bắt đầu viết.
+        then: Chương có một block tiêu đề được chọn sẵn để tôi nhập.
+      - given: Chương chưa có văn bản nguồn.
+        when: Tôi mở chương đó.
+        then: Hệ thống chỉ cho bắt đầu viết từ đầu.
+
+  - id: US-0147
+    feat: FEAT-54
+    story: >-
+      Là một content creator, tôi muốn đưa kịch bản về mặc định để làm lại từ đoạn văn nguồn khi bản
+      đã sửa không còn phù hợp.
+    acceptance:
+      - given: Chương đang mở có block và có văn bản nguồn.
+        when: Tôi bấm đưa về mặc định.
+        then: >-
+          Hộp thoại giải thích mỗi đoạn nguồn thành một block lời kể và cho chọn chương đang mở hoặc
+          mọi chương có văn bản nguồn.
+      - given: Có ít hơn hai chương đưa về mặc định được.
+        when: Tôi xem hộp thoại.
+        then: Lựa chọn mọi chương bị khóa.
+      - given: Hộp thoại đang mở.
+        when: Tôi xem cảnh báo.
+        then: >-
+          Hệ thống cảnh báo mọi chỉnh sửa trong phạm vi sẽ mất, audio của block có nội dung không
+          đổi được giữ lại.
+      - given: Hộp thoại đang mở.
+        when: Tôi xác nhận.
+        then: >-
+          Các chương trong phạm vi được tạo lại và hệ thống thông báo số chương đã đưa về mặc định;
+          nếu không có nguồn thì báo không có nguồn để đưa về.
+      - given: Hộp thoại đang mở.
+        when: Tôi hủy.
+        then: Kịch bản giữ nguyên.
+
+  # FEAT-55 Script Block Editing
+  - id: US-0148
+    feat: FEAT-55
+    story: >-
+      Là một content creator, tôi muốn soạn kịch bản bằng các block tiêu đề, lời kể, lời thoại, ngắt
+      nghỉ và ghi chú để kiểm soát cách đọc từng đoạn.
+    acceptance:
+      - given: Chương đang mở có block.
+        when: Tôi mở menu thêm block.
+        then: >-
+          Tôi thấy các loại tiêu đề, lời kể, lời thoại, ngắt nghỉ và ghi chú; block mới được chèn
+          sau block đang chọn hoặc cuối chương và được chọn sẵn.
+      - given: Tôi đang xem một block.
+        when: Tôi bấm nút loại block và chọn loại khác.
+        then: Block đổi sang loại mới, loại hiện tại bị khóa trong menu.
+      - given: Tôi đang sửa nội dung block.
+        when: Tôi thay đổi nội dung.
+        then: Thay đổi được lưu tự động.
+      - given: Tôi đang xem block ghi chú.
+        when: Tôi xem chú thích loại block.
+        then: Hệ thống nêu ghi chú chỉ dùng nội bộ và không đưa vào sản xuất.
+
+  - id: US-0149
+    feat: FEAT-55
+    story: >-
+      Là một content creator, tôi muốn gán nhân vật và sắc thái cho lời thoại để audiobook đọc đúng
+      giọng nhân vật.
+    acceptance:
+      - given: Tôi đổi một block sang lời thoại khi chưa có người nói.
+        when: Block được đổi loại.
+        then: Block được gán nhân vật đầu tiên không phải người kể.
+      - given: Tôi đang xem block lời thoại.
+        when: Tôi bấm nhãn nhân vật.
+        then: >-
+          Menu liệt kê các nhân vật, nhân vật hiện tại bị khóa, và có mục quản lý nhân vật mở bảng
+          nhân vật bên phải.
+      - given: Tôi đang xem block lời thoại.
+        when: Tôi nhập sắc thái.
+        then: Sắc thái được lưu cùng lời thoại.
+      - given: Tôi thêm một block lời thoại mới.
+        when: Block được tạo.
+        then: >-
+          Block nhận người nói của lời thoại gần nhất trong chương, nếu không thì nhân vật đầu tiên.
+
+  - id: US-0150
+    feat: FEAT-55
+    story: >-
+      Là một content creator, tôi muốn đặt độ dài ngắt nghỉ để audiobook có nhịp đọc tự nhiên.
+    acceptance:
+      - given: Tôi đổi một block sang ngắt nghỉ.
+        when: Block chưa có độ dài.
+        then: Độ dài mặc định là 0,8 giây.
+      - given: Tôi đang xem block ngắt nghỉ.
+        when: Tôi nhập số giây.
+        then: >-
+          Giá trị được làm tròn theo bước 0,1 giây và giới hạn từ 0 đến 30 giây; giá trị không hợp
+          lệ trở thành 0.
+
+  - id: US-0151
+    feat: FEAT-55
+    story: >-
+      Là một content creator, tôi muốn sắp xếp, nhân bản và xóa block để chỉnh cấu trúc kịch bản
+      nhanh.
+    acceptance:
+      - given: Tôi đang xem một block.
+        when: Tôi bấm lên hoặc xuống.
+        then: Block đổi chỗ với block liền kề; ở đầu hoặc cuối chương thì không đổi.
+      - given: Tôi đang xem một block.
+        when: Tôi bấm nhân bản.
+        then: Bản sao được chèn ngay dưới và được chọn.
+      - given: Tôi đang xem một block.
+        when: Tôi bấm xóa.
+        then: Block bị xóa không cần xác nhận và block phía trước được chọn.
+      - given: Chương không còn block nào.
+        when: Tôi xem vùng soạn thảo.
+        then: Hệ thống nhắc chọn loại block ở thanh phía trên để bắt đầu.
+
+  - id: US-0152
+    feat: FEAT-55
+    story: >-
+      Là một content creator, tôi muốn soạn kịch bản bằng bàn phím để viết liền mạch không cần
+      chuột.
+    acceptance:
+      - given: Tôi đang gõ trong một block.
+        when: Tôi nhấn Enter.
+        then: >-
+          Block mới được tạo phía sau; sau tiêu đề, lời kể, lời thoại, ngắt nghỉ và ghi chú là block
+          lời kể.
+      - given: Tôi đang gõ trong một block.
+        when: Tôi nhấn Shift+Enter.
+        then: Nội dung xuống dòng trong cùng block.
+      - given: Block đang trống.
+        when: Tôi nhấn Backspace.
+        then: Block bị xóa.
+      - given: Tôi đang gõ trong một block.
+        when: Tôi nhấn Tab hoặc Shift+Tab.
+        then: Block đổi lần lượt giữa tiêu đề, lời kể, lời thoại và ghi chú.
+      - given: Con trỏ ở đầu hoặc cuối nội dung block.
+        when: Tôi nhấn mũi tên lên hoặc xuống.
+        then: Con trỏ chuyển sang block trước hoặc sau.
+
+  # FEAT-56 Script Cast Management
+  - id: US-0153
+    feat: FEAT-56
+    story: >-
+      Là một content creator, tôi muốn danh sách nhân vật lấy từ tri thức của novel để không phải
+      nhập lại nhân vật đã có.
+    acceptance:
+      - given: Novel đã được phân tích tri thức.
+        when: Tôi mở bảng nhân vật.
+        then: >-
+          Tôi thấy người kể và các nhân vật trong tri thức theo ngôn ngữ của project, mỗi nhân vật
+          có màu riêng và số lời thoại đang dùng.
+      - given: Tri thức có hai nhân vật mà tên này nằm trong tên kia.
+        when: Tôi xem danh sách nhân vật.
+        then: Chỉ nhân vật có tên dài hơn được giữ lại.
+      - given: Nhân vật đến từ tri thức hoặc là người kể.
+        when: Tôi xem nhân vật đó.
+        then: >-
+          Nhân vật có nhãn KB hoặc NARR, không sửa tên hay xóa được và hệ thống nhắc sửa nhân vật
+          trong tri thức.
+
+  - id: US-0154
+    feat: FEAT-56
+    story: >-
+      Là một content creator, tôi muốn thêm nhân vật chưa có trong tri thức để gán cho lời thoại của
+      nhân vật phụ.
+    acceptance:
+      - given: Tôi đang ở bảng nhân vật.
+        when: Tôi nhập tên rồi bấm thêm hoặc nhấn Enter.
+        then: Nhân vật mới được thêm với tên đã bỏ khoảng trắng thừa.
+      - given: Tên trùng với nhân vật đã có, không phân biệt hoa thường.
+        when: Tôi thêm nhân vật.
+        then: Hệ thống báo nhân vật này đã tồn tại và không thêm.
+      - given: Nhân vật do tôi thêm.
+        when: Tôi đổi tên thành rỗng.
+        then: Tên cũ được giữ nguyên.
+      - given: Nhân vật do tôi thêm đang được dùng trong lời thoại.
+        when: Tôi xem nút xóa.
+        then: Nút xóa bị khóa kèm lý do đang được sử dụng.
+      - given: Nhân vật do tôi thêm chưa được dùng.
+        when: Tôi bấm xóa.
+        then: Nhân vật bị xóa khỏi danh sách ở cả Scripting và Audiobook.

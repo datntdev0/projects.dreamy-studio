@@ -376,3 +376,250 @@ stories:
       - given: Hộp thoại xác nhận đang hiển thị.
         when: Tôi xác nhận.
         then: Tag không còn xuất hiện trong thư viện, các tài nguyên từng mang tag vẫn còn.
+
+  # FEAT-49 Voice Browsing
+  - id: US-0130
+    feat: FEAT-49
+    story: >-
+      Là một content creator, tôi muốn xem toàn bộ giọng đọc trong thư viện để chọn giọng cho dự án
+      của tôi.
+    acceptance:
+      - given: Thư viện có giọng đọc.
+        when: Tôi mở mục Giọng đọc.
+        then: >-
+          Tôi thấy bảng giọng đọc gồm tên kèm mô tả, nút nghe thử, engine, ngôn ngữ, giới tính,
+          nguồn (có sẵn, clone, thiết kế), độ dài mẫu và ngày cập nhật cùng tổng số giọng.
+      - given: Engine của một giọng chưa sẵn sàng.
+        when: Tôi xem giọng đó.
+        then: Engine của giọng bị làm mờ kèm chú thích engine chưa sẵn sàng.
+      - given: Thư viện chưa có giọng đọc.
+        when: Tôi mở mục Giọng đọc.
+        then: >-
+          Hệ thống hiển thị trạng thái trống, gợi ý tạo giọng từ giọng có sẵn, clone hoặc mô tả và
+          có nút tạo giọng mới.
+      - given: Tôi đang ở mục Giọng đọc.
+        when: Tôi xem bộ lọc của thư viện.
+        then: Bộ lọc bộ sưu tập và tag bị ẩn vì giọng đọc không dùng tag và bộ sưu tập.
+
+  - id: US-0131
+    feat: FEAT-49
+    story: >-
+      Là một content creator, tôi muốn tìm, lọc và sắp xếp giọng đọc để nhanh chóng thấy giọng cần
+      dùng.
+    acceptance:
+      - given: Thư viện có nhiều giọng đọc.
+        when: Tôi tìm theo một phần tên hoặc mô tả.
+        then: Chỉ giọng khớp được hiển thị, không phân biệt hoa thường, kèm số giọng khớp trên tổng.
+      - given: Thư viện có giọng chạy cục bộ và giọng cloud.
+        when: Tôi lọc theo tất cả, cục bộ hoặc cloud.
+        then: Chỉ giọng có engine thuộc loại đã chọn được hiển thị.
+      - given: Thư viện có nhiều giọng đọc.
+        when: Tôi sắp xếp theo mới nhất hoặc theo tên.
+        then: Giọng xếp theo ngày tạo giảm dần hoặc theo tên từ A đến Z.
+      - given: Tìm kiếm hoặc bộ lọc không khớp giọng nào.
+        when: Tôi bấm xóa bộ lọc.
+        then: Từ khóa và bộ lọc engine được xóa, cách sắp xếp giữ nguyên.
+
+  - id: US-0132
+    feat: FEAT-49
+    story: >-
+      Là một content creator, tôi muốn nghe thử mẫu giọng để đánh giá giọng trước khi dùng.
+    acceptance:
+      - given: Engine của giọng đã sẵn sàng.
+        when: Tôi bấm nghe thử hoặc nhấp đúp vào giọng.
+        then: Mẫu giọng được phát và tự dừng khi hết mẫu.
+      - given: Một giọng đang phát.
+        when: Tôi nghe thử giọng khác hoặc bấm lại giọng đang phát.
+        then: Giọng đang phát dừng lại; mỗi lúc chỉ phát một giọng.
+      - given: Engine của giọng chưa sẵn sàng.
+        when: Tôi xem nút nghe thử.
+        then: Nút nghe thử bị khóa kèm chú thích engine chưa sẵn sàng.
+
+  - id: US-0133
+    feat: FEAT-49
+    story: >-
+      Là một content creator, tôi muốn được hướng dẫn khi chưa có engine giọng đọc nào sẵn sàng để
+      biết cần cấu hình gì.
+    acceptance:
+      - given: Chưa có model TTS cục bộ nào được cài và chưa kết nối provider cloud nào.
+        when: Tôi mở mục Giọng đọc hoặc hộp thoại tạo giọng.
+        then: >-
+          Hệ thống báo chưa có engine sẵn sàng, cần tải model TTS cục bộ hoặc kết nối provider
+          cloud, kèm nút mở Local backend và Cloud providers.
+      - given: Engine của giọng đang chọn chưa sẵn sàng.
+        when: Tôi xem bảng chi tiết của giọng.
+        then: >-
+          Hệ thống báo engine chưa sẵn sàng trên máy này kèm nút mở đúng mục Local backend hoặc
+          Cloud providers trong Cài đặt.
+
+  # FEAT-50 Voice Creation
+  - id: US-0134
+    feat: FEAT-50
+    story: >-
+      Là một content creator, tôi muốn tạo giọng đọc từ giọng có sẵn để có ngay giọng kể chuyện mà
+      không cần mẫu âm thanh.
+    acceptance:
+      - given: Tôi mở hộp thoại tạo giọng.
+        when: Tôi xem các trường.
+        then: >-
+          Tôi thấy tên, engine, nguồn, ngôn ngữ, giới tính và mô tả; mặc định nguồn có sẵn,
+          giọng nữ đầu tiên của engine, tiếng Việt, giới tính nữ và engine sẵn sàng đầu tiên.
+      - given: Tôi chọn nguồn có sẵn.
+        when: Tôi chọn giọng có sẵn.
+        then: >-
+          Tôi chọn được một giọng có sẵn của engine đã chọn kèm giới tính, vùng miền và phong cách;
+          giới tính đổi theo giọng đã chọn.
+      - given: Tôi đã nhập tên và chọn engine sẵn sàng.
+        when: Tôi bấm tạo.
+        then: Giọng mới xuất hiện đầu danh sách, được chọn và hộp thoại đóng lại.
+      - given: Tên để trống hoặc chỉ có khoảng trắng.
+        when: Tôi xem nút tạo.
+        then: Nút tạo bị khóa.
+      - given: Tạo giọng thất bại.
+        when: Tôi xem kết quả.
+        then: Hệ thống báo không lưu được giọng, hộp thoại vẫn mở và giữ nguyên thông tin đã nhập.
+
+  - id: US-0135
+    feat: FEAT-50
+    story: >-
+      Là một content creator, tôi muốn chọn engine cho giọng đọc để quyết định giọng chạy cục bộ hay
+      trên cloud.
+    acceptance:
+      - given: Tôi mở danh sách engine.
+        when: Tôi xem danh sách.
+        then: >-
+          Engine được nhóm thành cục bộ và cloud; engine chưa sẵn sàng bị khóa kèm ghi chú chưa cài
+          hoặc chưa kết nối.
+      - given: Chưa có engine nào sẵn sàng.
+        when: Tôi xem trường engine.
+        then: Trường engine bị khóa, báo không có engine khả dụng và không tạo được giọng.
+      - given: Tôi chọn engine chỉ hỗ trợ giọng có sẵn như Edge Read Aloud.
+        when: Tôi xem lựa chọn nguồn.
+        then: >-
+          Nguồn clone và thiết kế bị khóa, nguồn chuyển về có sẵn và được khôi phục khi tôi đổi
+          sang engine khác.
+
+  - id: US-0136
+    feat: FEAT-50
+    story: >-
+      Là một content creator, tôi muốn clone giọng từ âm thanh mẫu để nhân vật có giọng riêng như
+      tôi mong muốn.
+    acceptance:
+      - given: Tôi chọn nguồn clone.
+        when: Tôi xem cách lấy âm thanh mẫu.
+        then: >-
+          Tôi chọn được từ thư viện, tải tệp lên hoặc ghi âm, kèm hướng dẫn dùng 5 đến 30 giây lời
+          nói rõ ràng của một người.
+      - given: Tôi chọn lấy mẫu từ thư viện.
+        when: Tôi mở danh sách âm thanh.
+        then: >-
+          Tôi thấy âm thanh trong thư viện kèm thời lượng; nếu thư viện chưa có âm thanh thì hệ
+          thống nhắc thêm âm thanh vào thư viện trước.
+      - given: Tôi chọn tải tệp lên.
+        when: Tôi chọn một tệp mp3, wav hoặc aac.
+        then: Tệp hiển thị tên, dung lượng và nút gỡ; tệp không được thêm vào thư viện âm thanh.
+      - given: Tôi đã chọn âm thanh mẫu.
+        when: Tôi chưa đánh dấu xác nhận có quyền sử dụng giọng này.
+        then: Nút tạo bị khóa.
+      - given: Tôi đã chọn âm thanh mẫu và xác nhận có quyền sử dụng.
+        when: Tôi bấm tạo.
+        then: Giọng clone được tạo và ghi nhận nguồn âm thanh mẫu.
+
+  - id: US-0137
+    feat: FEAT-50
+    story: >-
+      Là một content creator, tôi muốn ghi âm trực tiếp bằng micro để clone giọng mà không phải
+      chuẩn bị tệp trước.
+    acceptance:
+      - given: Tôi chọn ghi âm.
+        when: Tôi bấm bắt đầu ghi âm.
+        then: Hệ thống hiển thị đang ghi kèm thời gian đã ghi trên tối đa 30 giây và nút dừng.
+      - given: Đang ghi âm.
+        when: Thời gian ghi đạt 30 giây.
+        then: Việc ghi âm tự dừng.
+      - given: Đã ghi âm xong.
+        when: Tôi xem bản ghi.
+        then: Tôi nghe lại được bản ghi, thấy thời lượng và có nút ghi lại hoặc bỏ bản ghi.
+      - given: Micro bị từ chối quyền hoặc không có micro.
+        when: Tôi bắt đầu ghi âm.
+        then: Hệ thống báo bị từ chối quyền truy cập micro hoặc không tìm thấy micro.
+      - given: Có bản ghi chưa lưu.
+        when: Tôi đổi nguồn, cách lấy mẫu, engine hoặc đóng hộp thoại.
+        then: Bản ghi bị bỏ và micro được giải phóng.
+
+  - id: US-0138
+    feat: FEAT-50
+    story: >-
+      Là một content creator, tôi muốn thiết kế giọng bằng mô tả để có giọng mới khi không có mẫu âm
+      thanh phù hợp.
+    acceptance:
+      - given: Tôi chọn nguồn thiết kế.
+        when: Tôi xem các trường.
+        then: Tôi thấy ô mô tả giọng kèm ví dụ gợi ý.
+      - given: Ô mô tả giọng để trống.
+        when: Tôi xem nút tạo.
+        then: Nút tạo bị khóa.
+      - given: Tôi đã nhập mô tả giọng và tên.
+        when: Tôi bấm tạo.
+        then: Giọng thiết kế được tạo và lưu mô tả đã nhập.
+
+  # FEAT-51 Voice Information Management
+  - id: US-0139
+    feat: FEAT-51
+    story: >-
+      Là một content creator, tôi muốn xem chi tiết và chỉnh câu mẫu, mô tả của giọng để quản lý
+      giọng dễ hơn.
+    acceptance:
+      - given: Tôi chọn một giọng.
+        when: Tôi xem bảng chi tiết.
+        then: >-
+          Tôi thấy engine, nguồn kèm chi tiết (giọng có sẵn, mô tả thiết kế hoặc âm thanh mẫu),
+          ngôn ngữ, giới tính, ngày tạo, ngày cập nhật, câu mẫu và nút nghe thử.
+      - given: Tôi đang xem chi tiết giọng.
+        when: Tôi sửa câu mẫu hoặc mô tả rồi rời khỏi ô nhập.
+        then: Thay đổi được lưu và hệ thống thông báo đã cập nhật giọng; nếu lỗi thì báo lý do.
+      - given: Tôi đang xem chi tiết giọng.
+        when: Tôi muốn đổi tên, engine, nguồn, ngôn ngữ hoặc giới tính.
+        then: >-
+          Các thông tin này chỉ đọc và hệ thống hướng dẫn tạo giọng mới nếu muốn dùng thiết lập
+          khác.
+      - given: Chưa chọn giọng nào.
+        when: Tôi xem bảng chi tiết.
+        then: Hệ thống nhắc chọn một giọng để xem thông tin.
+
+  - id: US-0140
+    feat: FEAT-51
+    story: >-
+      Là một content creator, tôi muốn nhân bản giọng để thử biến thể mà không làm thay đổi giọng
+      gốc.
+    acceptance:
+      - given: Tôi đang xem chi tiết giọng.
+        when: Tôi bấm nhân bản.
+        then: >-
+          Bản sao có tên kèm hậu tố copy, cùng thiết lập với giọng gốc, được chọn và hệ thống thông
+          báo đã nhân bản.
+      - given: Giọng gốc được clone từ tệp tải lên hoặc bản ghi âm.
+        when: Tôi nhân bản giọng đó.
+        then: Bản sao không mang theo âm thanh mẫu; chỉ âm thanh mẫu từ thư viện được giữ lại.
+
+  # FEAT-52 Voice Deletion
+  - id: US-0141
+    feat: FEAT-52
+    story: >-
+      Là một content creator, tôi muốn xóa giọng không còn dùng và được xác nhận trước để không xóa
+      nhầm.
+    acceptance:
+      - given: Tôi bấm xóa trong bảng chi tiết hoặc nhấn phím Delete khi đang chọn giọng.
+        when: Hộp thoại xác nhận mở.
+        then: >-
+          Hộp thoại nêu tên giọng, engine và cảnh báo hồ sơ giọng bị xóa không thể hoàn tác.
+      - given: Hộp thoại xác nhận đang mở.
+        when: Tôi hủy.
+        then: Giọng giữ nguyên.
+      - given: Hộp thoại xác nhận đang mở.
+        when: Tôi xác nhận xóa.
+        then: >-
+          Giọng biến mất khỏi danh sách, việc nghe thử dừng lại và hệ thống thông báo đã xóa.
+      - given: Tôi đang nhập liệu trong một ô hoặc có hộp thoại khác đang mở.
+        when: Tôi nhấn phím Delete.
+        then: Không có giọng nào bị xóa.

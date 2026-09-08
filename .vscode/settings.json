@@ -9,11 +9,14 @@
         "**/.pytest_cache": true,
         "**/*.egg-info": true,
         "**/.angular": true,
-        "**/desktop/gen/": true,
         "**/node_modules": true,
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
-        "**.ruff_cache": true,
+        "**/.coverage": true,
+        "**/.ruff_cache": true,
+        "**/.playwright-cli": true,
+        "backend/.venv": true,
+        "desktop/gen/": true,
         "desktop/binaries": true,
         "desktop/resources": true
     }

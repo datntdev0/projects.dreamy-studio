@@ -283,3 +283,29 @@ stories:
       - given: Có pipeline đang chạy.
         when: Tôi bấm hủy.
         then: Pipeline chuyển sang đã hủy và thanh trạng thái trở về rảnh khi không còn pipeline nào.
+
+  - id: US-0172
+    feat: FEAT-26
+    story: >-
+      Là một content creator, tôi muốn theo dõi pipeline tạo audio audiobook cùng chỗ với các
+      pipeline khác để quản lý mọi tác vụ nền ở một nơi.
+    acceptance:
+      - given: Tôi bấm tạo tất cả trong module Audiobook và xác nhận.
+        when: Tôi mở bảng pipeline.
+        then: >-
+          Pipeline tạo audio hiển thị tên project, chương và loại tạo audio, mỗi đoạn đọc là một
+          tác vụ kèm tiến độ và số tác vụ đang chờ.
+      - given: Lịch sử có pipeline tạo audio.
+        when: Tôi tìm theo tên project hoặc lọc theo trạng thái.
+        then: Chỉ các pipeline khớp được hiển thị.
+      - given: Một đoạn tạo thất bại vì backend hoặc provider trả lỗi.
+        when: Tôi mở nhật ký của pipeline.
+        then: Nhật ký hiển thị tác vụ của đoạn đó kèm lý do lỗi.
+      - given: Pipeline tạo audio đang chạy.
+        when: Tôi bấm hủy.
+        then: >-
+          Pipeline chuyển sang đã hủy, các đoạn đã tạo xong được giữ và các đoạn chưa xong trở về
+          trạng thái trước khi tạo trong module Audiobook.
+      - given: Pipeline tạo audio kết thúc với một số tác vụ thất bại.
+        when: Tôi xem lịch sử pipeline.
+        then: Pipeline hiển thị trạng thái lỗi kèm số đoạn đã tạo trên tổng số đoạn.

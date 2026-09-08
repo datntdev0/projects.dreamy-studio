@@ -13,9 +13,7 @@ stories:
     acceptance:
       - given: Tôi mở hộp thoại Cài đặt.
         when: Tôi xem các mục.
-        then: >-
-          Tôi thấy các mục General, LLM providers, Python backend, Local TTS models và Speech
-          providers.
+        then: Tôi thấy các mục General, LLM providers, Local backend và Cloud providers.
       - given: Tôi đang ở mục General.
         when: Tôi đổi ngôn ngữ giao diện.
         then: Toàn bộ ứng dụng đổi ngôn ngữ ngay và lựa chọn được giữ khi mở lại ứng dụng.
@@ -24,9 +22,6 @@ stories:
         then: >-
           Giao diện đổi ngay, nút đổi giao diện trên thanh tiêu đề khớp theo và lựa chọn được giữ
           khi mở lại ứng dụng.
-      - given: Tôi mở mục chưa có thiết lập như Python backend.
-        when: Tôi xem mục đó.
-        then: Hệ thống báo mục này sẽ được bổ sung trong phiên bản sau.
 
   - id: US-0113
     feat: FEAT-41
@@ -61,8 +56,8 @@ stories:
       - given: Tôi nhập đường dẫn file chạy của CLI.
         when: Tôi bấm dùng đường dẫn này.
         then: Ứng dụng dùng đường dẫn đó và cập nhật trạng thái của CLI.
-      - given: Tôi xem mục dịch vụ cloud.
-        when: Tôi mở các provider dùng API key.
+      - given: Tôi xem mục dịch vụ cloud trong LLM providers.
+        when: Tôi mở các provider LLM dùng API key.
         then: Hệ thống báo tính năng sắp ra mắt và không cho dùng.
 
   - id: US-0115
@@ -156,3 +151,240 @@ stories:
       - given: Số pipeline đang chạy đã đạt giới hạn.
         when: Tôi bắt đầu thêm một pipeline.
         then: Pipeline mới chờ trong hàng đợi và tự chạy khi còn chỗ.
+
+  # FEAT-45 Local Backend Server
+  - id: US-0120
+    feat: FEAT-45
+    story: >-
+      Là một content creator, tôi muốn xem tình trạng và log của backend cục bộ để biết máy đã sẵn
+      sàng chạy các model giọng đọc hay chưa và tìm nguyên nhân khi backend lỗi.
+    acceptance:
+      - given: Tôi mở mục Local backend.
+        when: Tôi xem thẻ Backend server ở tab General.
+        then: >-
+          Tôi thấy trạng thái (đang chạy, đang khởi động, đã dừng, lỗi), địa chỉ, phiên bản, phiên
+          bản Python và thời gian chạy; thông tin chưa có hiển thị dấu gạch ngang.
+      - given: Backend đang chạy và đã kiểm tra sức khỏe.
+        when: Tôi xem phần trạng thái.
+        then: Hệ thống báo kiểm tra thành công kèm thời gian phản hồi và thời điểm kiểm tra.
+      - given: Backend dừng do lỗi.
+        when: Tôi xem thẻ Backend server.
+        then: Hệ thống báo backend dừng vì lỗi kèm nội dung lỗi.
+      - given: Không đọc được trạng thái backend.
+        when: Tôi mở mục Local backend.
+        then: Backend hiển thị đã dừng, không có GPU, chưa có CUDA và chưa có model nào.
+      - given: Tôi đang ở thẻ Backend server.
+        when: Tôi bấm mở log.
+        then: >-
+          Trình quản lý tệp của hệ điều hành mở thư mục log của backend; nếu không mở được thì hệ
+          thống báo không mở được thư mục.
+
+  - id: US-0121
+    feat: FEAT-45
+    story: >-
+      Là một content creator, tôi muốn kiểm tra và khởi động lại backend để tự khắc phục khi backend
+      gặp sự cố.
+    acceptance:
+      - given: Backend không ở trạng thái đang khởi động.
+        when: Tôi bấm kiểm tra.
+        then: Trạng thái được làm mới; trong lúc kiểm tra nút kiểm tra bị khóa.
+      - given: Backend đã dừng hoặc lỗi.
+        when: Tôi bấm khởi động lại.
+        then: >-
+          Trạng thái chuyển sang đang khởi động, lỗi cũ được xóa và trạng thái tự cập nhật đến khi
+          backend chạy.
+      - given: Backend đang khởi động.
+        when: Tôi xem các nút.
+        then: Nút kiểm tra và khởi động lại bị khóa.
+      - given: Khởi động lại thất bại.
+        when: Tôi xem kết quả.
+        then: Hệ thống báo lỗi kèm lý do và hiển thị trạng thái mới nhất của backend.
+      - given: Tôi đang ở thẻ Backend server.
+        when: Tôi xem ghi chú.
+        then: >-
+          Hệ thống nhắc khởi động lại sẽ ngắt các tác vụ giọng đọc đang chạy và không có CUDA thì
+          model chạy bằng CPU.
+
+  # FEAT-46 Hardware Acceleration
+  - id: US-0122
+    feat: FEAT-46
+    story: >-
+      Là một content creator, tôi muốn biết máy có GPU NVIDIA hay không để chọn cách chạy model phù
+      hợp.
+    acceptance:
+      - given: Máy có GPU NVIDIA.
+        when: Tôi xem thẻ phần cứng.
+        then: GPU hiển thị đã phát hiện kèm tên, dung lượng VRAM tính bằng GB và phiên bản driver.
+      - given: Máy không có GPU NVIDIA.
+        when: Tôi xem thẻ phần cứng.
+        then: Hệ thống báo không tìm thấy GPU NVIDIA trên máy này.
+      - given: Tôi vừa lắp hoặc cập nhật GPU.
+        when: Tôi bấm quét lại.
+        then: Thông tin GPU được cập nhật; trong lúc quét nút quét lại bị khóa.
+
+  - id: US-0123
+    feat: FEAT-46
+    story: >-
+      Là một content creator, tôi muốn tải CUDA runtime ngay trong ứng dụng để model chạy trên GPU
+      mà không phải tự cài.
+    acceptance:
+      - given: Máy không có GPU NVIDIA.
+        when: Tôi xem dòng CUDA runtime.
+        then: Hệ thống báo cần GPU NVIDIA và nút tải bị khóa.
+      - given: Máy có GPU và chưa có CUDA.
+        when: Tôi xem dòng CUDA runtime.
+        then: Tôi thấy phiên bản, dung lượng ước tính và nút tải.
+      - given: Tôi bấm tải CUDA.
+        when: CUDA đang tải.
+        then: Tôi thấy thanh tiến độ, dung lượng đã tải trên tổng dung lượng, phần trăm và nút hủy.
+      - given: CUDA đã cài.
+        when: Tôi bấm gỡ.
+        then: CUDA bị gỡ và thiết bị tính toán chuyển về CPU.
+      - given: Tải CUDA thất bại.
+        when: Tôi xem dòng CUDA runtime.
+        then: Hệ thống báo tải thất bại kèm lý do và có nút thử lại.
+
+  - id: US-0124
+    feat: FEAT-46
+    story: >-
+      Là một content creator, tôi muốn chọn chạy model bằng CPU hoặc GPU để cân bằng tốc độ và khả
+      năng của máy.
+    acceptance:
+      - given: Máy có GPU và đã cài CUDA.
+        when: Tôi chọn GPU (CUDA).
+        then: Thiết bị tính toán được lưu là GPU.
+      - given: Máy không có GPU hoặc chưa cài CUDA.
+        when: Tôi xem lựa chọn thiết bị.
+        then: >-
+          Lựa chọn GPU bị khóa kèm gợi ý không tìm thấy GPU hoặc cần cài CUDA runtime để dùng GPU.
+      - given: Thiết bị đang là CPU và một model được khuyến nghị dùng GPU.
+        when: Tôi xem model đó.
+        then: Hệ thống cảnh báo máy sẽ chạy model bằng CPU và tạo giọng sẽ chậm.
+
+  # FEAT-47 Local TTS Models
+  - id: US-0125
+    feat: FEAT-47
+    story: >-
+      Là một content creator, tôi muốn xem các model TTS mã nguồn mở để chọn model phù hợp với ngôn
+      ngữ và phần cứng của tôi.
+    acceptance:
+      - given: Tôi mở tab TTS models của mục Local backend.
+        when: Tôi xem danh sách.
+        then: >-
+          Mỗi model có tên, nguồn tải, mô tả, ngôn ngữ, dung lượng, nhãn hỗ trợ clone giọng, nhãn
+          khuyến nghị GPU và trạng thái.
+      - given: Model chưa tải.
+        when: Tôi xem model đó.
+        then: Model hiển thị chưa cài kèm nút tải.
+      - given: Model đã cài.
+        when: Tôi xem model đó.
+        then: Model hiển thị sẵn sàng sử dụng.
+
+  - id: US-0126
+    feat: FEAT-47
+    story: >-
+      Là một content creator, tôi muốn tải, gỡ model TTS và biết nơi lưu model để chỉ giữ những
+      model tôi cần và quản lý dung lượng máy.
+    acceptance:
+      - given: Model chưa cài.
+        when: Tôi bấm tải.
+        then: >-
+          Model chuyển sang đang tải, hiển thị thanh tiến độ, dung lượng đã tải, phần trăm và nút
+          hủy; trạng thái tự cập nhật đến khi cài xong.
+      - given: Model đang tải.
+        when: Tôi bấm hủy.
+        then: Việc tải dừng và model trở lại chưa cài.
+      - given: Tải model thất bại.
+        when: Tôi xem model đó.
+        then: Hệ thống báo tải thất bại kèm lý do và có nút thử lại.
+      - given: Model đã cài.
+        when: Tôi bấm gỡ.
+        then: Model trở lại chưa cài.
+      - given: Tôi đang ở tab TTS models.
+        when: Tôi xem phần thư mục model.
+        then: >-
+          Tôi thấy đường dẫn chỉ đọc và ghi chú model đã tải chỉ được lưu trên máy này.
+      - given: Tôi đang ở tab TTS models.
+        when: Tôi bấm mở thư mục model.
+        then: Trình quản lý tệp của hệ điều hành mở thư mục model; nếu thất bại hệ thống báo lỗi.
+
+  # FEAT-48 Cloud Providers
+  - id: US-0127
+    feat: FEAT-48
+    story: >-
+      Là một content creator, tôi muốn xem các dịch vụ cloud theo loại dịch vụ, kể cả provider miễn
+      phí không cần API key, để biết provider nào dùng được cho giọng đọc hoặc hình ảnh.
+    acceptance:
+      - given: Tôi mở mục Cloud providers.
+        when: Tôi xem các tab.
+        then: >-
+          Tôi thấy tab Speech services và Image services, mỗi tab chỉ liệt kê provider có dịch vụ
+          đó kèm mô tả.
+      - given: Tôi đang ở mục Cloud providers.
+        when: Tôi xem ghi chú bảo mật.
+        then: >-
+          Hệ thống nêu API key chỉ lưu trên máy này, không đi theo workspace, nội dung tạo ra được
+          gửi tới provider và chi phí phụ thuộc tài khoản của tôi.
+      - given: Không đọc được danh sách provider.
+        when: Tôi mở mục Cloud providers.
+        then: Hệ thống vẫn hiển thị danh sách provider mặc định.
+      - given: Tôi xem Microsoft Edge Read Aloud.
+        when: Tôi xem provider đó.
+        then: >-
+          Provider hiển thị không cần key, sẵn sàng sử dụng, cần internet, không có ô nhập key và
+          chỉ hỗ trợ giọng có sẵn, không clone hay thiết kế giọng.
+      - given: Tôi bấm kiểm tra provider không cần key.
+        when: Dịch vụ phản hồi.
+        then: Hệ thống báo dịch vụ khả dụng kèm thời điểm kiểm tra; nếu lỗi thì báo lý do.
+
+  - id: US-0128
+    feat: FEAT-48
+    story: >-
+      Là một content creator, tôi muốn lưu, thay hoặc gỡ API key của provider để dùng giọng đọc
+      cloud bằng tài khoản của tôi và đổi tài khoản khi cần.
+    acceptance:
+      - given: Provider cần API key và chưa kết nối.
+        when: Tôi xem provider đó.
+        then: >-
+          Provider hiển thị chưa kết nối, có ô nhập key dạng ẩn, nút hiện hoặc ẩn key và nút lưu.
+      - given: Ô API key để trống hoặc chỉ có khoảng trắng.
+        when: Tôi xem nút lưu.
+        then: Nút lưu bị khóa.
+      - given: Tôi đã nhập API key.
+        when: Tôi bấm lưu hoặc nhấn Enter.
+        then: >-
+          Key được lưu, provider chuyển sang đã kết nối chưa kiểm tra và ô key chỉ hiển thị 4 ký tự
+          cuối.
+      - given: Lưu key thất bại.
+        when: Tôi xem kết quả.
+        then: Hệ thống báo không lưu được API key và provider vẫn chưa kết nối.
+      - given: Provider có cả dịch vụ giọng đọc và hình ảnh.
+        when: Tôi xem provider đó.
+        then: Hệ thống báo một key được dùng chung cho cả hai dịch vụ.
+      - given: Provider đã kết nối.
+        when: Tôi bấm thay key.
+        then: Ô nhập key mở lại kèm nút hủy để giữ key cũ.
+      - given: Provider đã kết nối.
+        when: Tôi bấm gỡ key.
+        then: Provider trở lại chưa kết nối.
+      - given: Gỡ key thất bại.
+        when: Tôi xem kết quả.
+        then: Hệ thống báo không gỡ được API key và key vẫn được giữ.
+
+  - id: US-0129
+    feat: FEAT-48
+    story: >-
+      Là một content creator, tôi muốn kiểm tra kết nối provider để chắc key còn dùng được trước khi
+      tạo giọng.
+    acceptance:
+      - given: Provider đã kết nối.
+        when: Tôi bấm kiểm tra.
+        then: >-
+          Hệ thống hiển thị đang kiểm tra rồi báo đã kết nối kèm thời điểm kiểm tra; trong lúc
+          kiểm tra nút bị khóa.
+      - given: Key không hợp lệ hoặc dịch vụ không phản hồi.
+        when: Tôi kiểm tra.
+        then: Hệ thống báo kiểm tra thất bại kèm lý do.
+      - given: Provider chưa kết nối.
+        when: Tôi xem nút kiểm tra.
+        then: Nút kiểm tra bị khóa.

@@ -1,7 +1,6 @@
 use crate::features::assistant::edits;
 use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::models::AssistantScope;
-use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::proposals;
 use crate::features::assistant::sources::Sources;
 use serde_json::Value;
@@ -19,6 +18,7 @@ mod novel;
 mod paging;
 mod pipeline;
 mod project;
+mod route;
 mod run;
 mod scope;
 mod script;
@@ -86,25 +86,12 @@ pub fn definitions(scope: &AssistantScope) -> Value {
         tools.extend(draft::definitions());
         tools.extend(edit_project::definitions());
         tools.extend(edit_unit::definitions());
-        tools.extend(edit_cast::definitions());
         tools.extend(voice::definitions());
         tools.extend(audio_edit::definitions());
     }
-    tools.extend(pipeline_definitions(scope.kind));
+    tools.push(run::definition(scope::offers_project_tools(scope.kind)));
+    tools.extend(pipeline::definitions());
     Value::Array(tools)
-}
-
-fn pipeline_definitions(kind: ScopeKind) -> Vec<Value> {
-    run::definitions()
-        .into_iter()
-        .chain(synthesis::definitions())
-        .chain(pipeline::definitions())
-        .filter(|tool| {
-            tool["name"]
-                .as_str()
-                .is_some_and(|name| scope::offers_pipeline_tool(kind, name))
-        })
-        .collect()
 }
 
 pub fn call(
@@ -113,13 +100,14 @@ pub fn call(
     ctx: &ToolContext,
     sources: &Sources,
 ) -> Result<ToolOutput, String> {
-    if PROJECT_TOOLS.contains(&name) {
-        return call_project_tool(name, args, ctx, sources);
+    let handler = route::handler(name, args)?;
+    if PROJECT_TOOLS.contains(&handler) {
+        return call_project_tool(handler, args, ctx, sources);
     }
-    if PIPELINE_TOOLS.contains(&name) {
-        return call_pipeline_tool(name, args, ctx, sources);
+    if PIPELINE_TOOLS.contains(&handler) {
+        return call_pipeline_tool(handler, args, ctx, sources);
     }
-    call_novel_tool(name, args, ctx, sources)
+    call_novel_tool(handler, args, ctx, sources)
 }
 
 fn call_pipeline_tool(
@@ -200,6 +188,10 @@ fn call_novel_tool(
 #[cfg(test)]
 #[path = "../../../test/features/assistant/tools.test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "../../../test/features/assistant/tools/route.test.rs"]
+mod route_tests;
 
 #[cfg(test)]
 #[path = "../../../test/features/assistant/tools/project.test.rs"]

@@ -40,7 +40,7 @@ const BLOCK_TYPES: [&str; 7] = [
 pub(super) fn definitions() -> Vec<Value> {
     vec![json!({
         "name": "submit_script_draft",
-        "description": "Submit a rewrite of ONE script unit (the blocks of a chapter or episode) as a draft the user reviews on a card and applies or rejects as a whole. Nothing is written until the user applies the card. Read the unit, the cast and the source chapter first. `blocks` replaces every block of the unit, in reading order. Allowed block `type` values are the `cfg.types` of read_script; `text` is required except for pause and scene; `who` is a speaker id from the cast of read_script (or the `ref` of an `extraCast` member) and only matters for dialogue: leave it empty when the speaker is unclear instead of guessing. `extraCast` declares speakers missing from the cast, each with a unique `ref` and a `name`. `refs` are source paragraph references `chapter.paragraph` that you checked against the source text; wrong ones are removed. A block whose type, text, speaker and parenthetical equal a current block keeps its id, so its generated audio stays valid. Call it once per unit; a later call for the same unit replaces the earlier card. Blocks that fail validation come back in `dropped` with the reason: fix them and submit again. At most 400 blocks.",
+        "description": "Submit a rewrite of ONE script unit as a draft the user reviews on a card and applies or rejects as a whole; nothing is written until then. Read the unit, the cast and the source chapter first. `blocks` replaces every block of the unit, in reading order (at most 400). `type` must be one of the `cfg.types` of read_script; `text` is required except for pause and scene; `who` is a cast id from read_script (or the `ref` of an `extraCast` member) and only matters for dialogue: leave it empty when the speaker is unclear. `extraCast` declares speakers missing from the cast, each with a unique `ref` and a `name`. `refs` are source paragraphs `chapter.paragraph` you checked; wrong ones are removed. A block whose type, text, speaker and parenthetical equal a current block keeps its id and its generated audio. Call it once per unit; a later call replaces the earlier card. Blocks that fail validation come back in `dropped` with the reason: fix them and submit again.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -78,14 +78,14 @@ pub(super) fn block_schema() -> Value {
     json!({
         "type": "object",
         "properties": {
-            "type": { "type": "string", "enum": BLOCK_TYPES, "description": "Block type allowed by cfg.types." },
-            "text": { "type": "string", "description": "Spoken or written text; not used by pause and scene blocks." },
-            "who": { "type": "string", "description": "Speaker id for a dialogue block." },
-            "paren": { "type": "string", "description": "Short delivery note of a dialogue block, for example whispering." },
-            "ms": { "type": "integer", "minimum": 0, "description": "Length of a pause block in milliseconds, default 800." },
+            "type": { "type": "string", "enum": BLOCK_TYPES },
+            "text": { "type": "string", "description": "Not used by pause and scene blocks." },
+            "who": { "type": "string", "description": "Speaker id of a dialogue block." },
+            "paren": { "type": "string", "description": "Delivery note of a dialogue block, for example whispering." },
+            "ms": { "type": "integer", "minimum": 0, "description": "Pause length in milliseconds, default 800." },
             "loc": { "type": "string", "description": "Location of a scene block." },
-            "time": { "type": "string", "description": "Time of day of a scene block: DAWN, MORNING, NOON, AFTERNOON, SUNSET, NIGHT or CONTINUOUS." },
-            "beat": { "type": "string", "description": "Short note about the story beat." },
+            "time": { "type": "string", "description": "Scene time: DAWN, MORNING, NOON, AFTERNOON, SUNSET, NIGHT or CONTINUOUS." },
+            "beat": { "type": "string", "description": "Story beat note." },
             "refs": { "type": "array", "items": { "type": "string" }, "description": "Source paragraphs as chapter.paragraph." },
             "chars": { "type": "array", "items": { "type": "string" }, "description": "Cast ids of the characters present." }
         },

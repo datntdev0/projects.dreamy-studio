@@ -8,7 +8,6 @@ use crate::features::assistant::tools::ToolContext;
 use crate::features::assistant::tools::ToolOutput;
 use crate::features::assistant::tools::args::optional_str;
 use crate::features::assistant::tools::args::required_strings;
-use crate::features::assistant::tools::project::project_id_property;
 use crate::features::assistant::tools::project::project_of;
 use crate::features::assistant::tools::run::MAX_RUN_CHAPTERS;
 use crate::features::assistant::tools::run::submit_plan;
@@ -27,6 +26,7 @@ use crate::features::scripting::chapters::ProjectChapter;
 use crate::features::scripting::models::CastMember;
 use crate::features::scripting::models::ScriptBlock;
 use crate::features::scripting::models::ScriptUnit;
+use serde_json::Map;
 use serde_json::Value;
 use serde_json::json;
 
@@ -69,31 +69,25 @@ struct Selection<'a> {
     regenerated: usize,
 }
 
-pub(super) fn definitions() -> Vec<Value> {
-    vec![json!({
-        "name": "start_synthesis",
-        "description": "Prepare the audio generation of the voiced blocks (heading, narration, dialogue) of some script units of one project. Nothing starts: the app shows a confirmation card and the user decides. `mode` picks the blocks: `missing` (default) takes every block that still lacks up-to-date audio (no audio, outdated or flagged), `all` generates every voiced block again. It fails when a speaker has no voice assigned; tell the user to assign voices in the audiobook module first. The result lists the units that will run with their block counts and the units skipped, with the reason.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "projectId": project_id_property(),
-                "units": {
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": MAX_RUN_CHAPTERS,
-                    "items": { "type": "string" },
-                    "description": "Unit ids from read_script. Pick only the units the user asked for."
-                },
-                "mode": {
-                    "type": "string",
-                    "enum": ["missing", "all"],
-                    "description": "Which blocks to generate, default missing."
-                }
-            },
-            "required": ["projectId", "units"],
-            "additionalProperties": false
+pub(super) fn properties() -> Map<String, Value> {
+    json!({
+        "projectId": { "type": "integer", "description": "Synthesis: project id from read_project." },
+        "units": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": MAX_RUN_CHAPTERS,
+            "items": { "type": "string" },
+            "description": "Synthesis: unit ids from read_script. Pick only the units the user asked for."
+        },
+        "mode": {
+            "type": "string",
+            "enum": ["missing", "all"],
+            "description": "Synthesis: which blocks to generate, default missing."
         }
-    })]
+    })
+    .as_object()
+    .cloned()
+    .unwrap_or_default()
 }
 
 pub(super) fn start_synthesis(

@@ -117,23 +117,17 @@ fn definitions_describe_the_tools() {
     assert_eq!(
         names,
         vec![
-            "list_novel",
             "read_novel",
             "read_novel_chapter",
             "read_novel_knowledge",
             "read_translation",
-            "read_translation_guide",
-            "edit_novel",
-            "edit_novel_chapter",
-            "edit_novel_knowledge",
-            "edit_translation_passage",
-            "edit_dictionary",
-            "submit_translation_review",
             "read_knowledge_issues",
+            "edit_novel",
+            "edit_novel_knowledge",
+            "edit_translation",
+            "submit_translation_review",
             "submit_knowledge_changes",
-            "start_translation",
-            "start_analysis",
-            "list_pipeline",
+            "start_run",
             "read_pipeline",
             "cancel_pipeline"
         ]
@@ -143,37 +137,34 @@ fn definitions_describe_the_tools() {
         assert_eq!(tool["inputSchema"]["type"], "object");
     }
     assert_eq!(
-        list[2]["inputSchema"]["required"],
+        list[1]["inputSchema"]["required"],
         json!(["novelId", "chapter"])
     );
     assert_eq!(
-        list[3]["inputSchema"]["required"],
+        list[2]["inputSchema"]["required"],
         json!(["novelId", "lang"])
     );
     assert_eq!(
-        list[4]["inputSchema"]["required"],
-        json!(["novelId", "target", "chapter"])
+        list[3]["inputSchema"]["required"],
+        json!(["novelId", "target"])
     );
     assert_eq!(
-        list[5]["inputSchema"]["required"],
+        list[4]["inputSchema"]["required"],
+        json!(["novelId", "lang"])
+    );
+    assert_eq!(
+        list[6]["inputSchema"]["required"],
+        json!(["novelId", "lang", "edits"])
+    );
+    assert_eq!(
+        list[7]["inputSchema"]["required"],
         json!(["novelId", "target"])
     );
     assert_eq!(
         list[9]["inputSchema"]["required"],
-        json!(["novelId", "target", "chapter", "p", "expected", "text"])
-    );
-    assert_eq!(
-        list[10]["inputSchema"]["required"],
-        json!(["novelId", "target"])
-    );
-    assert_eq!(
-        list[12]["inputSchema"]["required"],
-        json!(["novelId", "lang"])
-    );
-    assert_eq!(
-        list[13]["inputSchema"]["required"],
         json!(["novelId", "lang", "title", "changes"])
     );
+    assert_eq!(list[10]["inputSchema"]["required"], json!(["kind"]));
 }
 
 #[test]
@@ -246,7 +237,6 @@ fn read_novel_unknown_novel_is_an_error() {
 #[test]
 fn read_novel_requires_an_integer_novel_id() {
     let source = FakeNovels::new().with_novel(1, "First");
-    assert!(invoke("read_novel", &json!({}), &workspace(), &source).is_err());
     assert!(
         invoke(
             "read_novel",
@@ -256,6 +246,14 @@ fn read_novel_requires_an_integer_novel_id() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn read_novel_without_a_novel_id_lists_the_novels() {
+    let source = FakeNovels::new().with_novel(1, "First");
+    let output = invoke("read_novel", &json!({}), &workspace(), &source).unwrap();
+    assert!(output.label.starts_with("list_novel()"));
+    assert_eq!(from_str::<Value>(&output.text).unwrap()[0]["novelId"], 1);
 }
 
 #[test]
@@ -1192,34 +1190,39 @@ fn read_knowledge_issues_labels_the_activity() {
     );
 }
 
-const WRITE_PROJECT_TOOLS: [&str; 6] = [
+const WRITE_PROJECT_TOOLS: [&str; 4] = [
     "edit_project",
-    "edit_script_unit",
-    "edit_script_cast",
-    "edit_audiobook_voices",
-    "edit_audiobook_mix",
+    "edit_script",
+    "edit_audiobook",
     "flag_audio_segment",
 ];
 
 #[test]
-fn every_project_write_tool_says_that_editing_is_required() {
-    let definitions = definitions(&AssistantScope::project(5));
-    let tools = definitions.as_array().unwrap();
+fn every_project_write_tool_refuses_while_editing_is_off() {
+    let cases = [
+        ("edit_project", json!({"projectId": 5, "name": "x"})),
+        (
+            "edit_script",
+            json!({"projectId": 5, "unitId": "u", "ops": []}),
+        ),
+        ("edit_script", json!({"projectId": 5, "add": ["x"]})),
+        ("edit_audiobook", json!({"projectId": 5, "voices": []})),
+        ("edit_audiobook", json!({"projectId": 5, "gap": 1})),
+        (
+            "flag_audio_segment",
+            json!({"projectId": 5, "unitId": "u", "blockId": "b", "flag": "x"}),
+        ),
+    ];
 
-    for name in WRITE_PROJECT_TOOLS {
-        let tool = tools.iter().find(|tool| tool["name"] == name).unwrap();
-        let description = tool["description"].as_str().unwrap();
-        assert!(
-            description.contains("Requires editing to be enabled"),
-            "{name}"
-        );
+    for (name, args) in cases {
+        let error = invoke_in_project(name, &args, Some(1), &FakeNovels::new()).unwrap_err();
+        assert!(error.contains("Editing is not enabled"), "{name}: {error}");
     }
 }
 
 #[test]
 fn the_project_write_tools_are_offered_in_the_workspace_and_project_scopes_only() {
     for name in WRITE_PROJECT_TOOLS.iter().chain(&["list_voice"]) {
-        assert!(PROJECT_TOOLS.contains(name), "{name}");
         for scope in [AssistantScope::workspace(), AssistantScope::project(5)] {
             let listed = definitions(&scope);
             assert!(

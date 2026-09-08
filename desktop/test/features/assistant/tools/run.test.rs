@@ -362,9 +362,10 @@ fn the_start_tools_are_offered_per_scope() {
         .iter()
         .map(|tool| tool["name"].as_str().unwrap())
         .collect();
-    assert!(listed.contains(&"start_translation"));
-    assert!(listed.contains(&"start_analysis"));
-    assert!(!listed.contains(&"start_synthesis"));
+    assert!(listed.contains(&"start_run"));
+    for retired in ["start_translation", "start_analysis", "start_synthesis"] {
+        assert!(!listed.contains(&retired), "{retired}");
+    }
     for tool in definitions(&AssistantScope::project(5)).as_array().unwrap() {
         assert!(!tool["description"].as_str().unwrap().is_empty());
         assert_eq!(tool["inputSchema"]["additionalProperties"], json!(false));

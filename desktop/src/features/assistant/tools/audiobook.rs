@@ -4,6 +4,7 @@ use crate::features::assistant::tools::ToolOutput;
 use crate::features::assistant::tools::args::optional_int;
 use crate::features::assistant::tools::args::output;
 use crate::features::assistant::tools::args::required_str;
+use crate::features::assistant::tools::paging::NEXT_NOTE;
 use crate::features::assistant::tools::paging::next_position;
 use crate::features::assistant::tools::project::project_id_property;
 use crate::features::assistant::tools::project::project_of;
@@ -27,35 +28,21 @@ use serde_json::Value;
 use serde_json::json;
 
 pub(super) fn definitions() -> Vec<Value> {
-    vec![
-        json!({
-            "name": "read_audiobook",
-            "description": "Read the audiobook settings of one project: the voice and speed chosen for each speaker id, the mix settings (gap, intro, outro, vol, sentence) and, for every script unit, how many voiced blocks have audio that is up to date (`done`), outdated or flagged (`stale`) or missing, with the total duration in seconds and a unit `state` of none, doing, stale or done.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "projectId": project_id_property()
-                },
-                "required": ["projectId"],
-                "additionalProperties": false
-            }
-        }),
-        json!({
-            "name": "read_audiobook_unit",
-            "description": "Read the audio state of the voiced blocks of one script unit (heading, narration and dialogue blocks with text). Each segment has the block id, the 1-based block position `p`, the speaker, the text, the voice and speed that would be used, a `state` (none, done, stale or flag), the duration in seconds and the flag note. A page covers at most 60 blocks or 12000 characters; when `next` is not null, call again with from set to `next`.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "projectId": project_id_property(),
-                    "unitId": { "type": "string", "description": "Unit id from read_script." },
-                    "from": { "type": "integer", "minimum": 1, "description": "First block position, default 1." },
-                    "to": { "type": "integer", "minimum": 1, "description": "Last block position, default the end of the unit." }
-                },
-                "required": ["projectId", "unitId"],
-                "additionalProperties": false
-            }
-        }),
-    ]
+    vec![json!({
+        "name": "read_audiobook",
+        "description": format!("Without `unitId`, read the audiobook of one project: the voice and speed of each speaker id, the mix settings (gap, intro, outro, vol, sentence) and, for every script unit, how many voiced blocks have up-to-date audio (`done`), outdated or flagged audio (`stale`) or none (`missing`), the duration in seconds and a unit `state` of none, doing, stale or done. With `unitId`, read the voiced blocks of that unit: block id, position `p`, speaker, text, the voice and speed that would be used, `state` (none, done, stale or flag), duration and flag note. {NEXT_NOTE}"),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "projectId": project_id_property(),
+                "unitId": { "type": "string", "description": "Unit id from read_script; leave out to read every unit." },
+                "from": { "type": "integer", "minimum": 1, "description": "First block position, default 1." },
+                "to": { "type": "integer", "minimum": 1, "description": "Last block position, default the end of the unit." }
+            },
+            "required": ["projectId"],
+            "additionalProperties": false
+        }
+    })]
 }
 
 pub(super) fn read_audiobook(

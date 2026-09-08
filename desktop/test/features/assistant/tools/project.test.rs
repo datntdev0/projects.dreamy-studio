@@ -29,6 +29,21 @@ use serde_json::json;
 
 const PROJECT: i64 = 5;
 const PROJECTLESS_TOOLS: [&str; 2] = ["list_project", "list_voice"];
+const ADVERTISED_PROJECTLESS_TOOLS: [&str; 2] = ["read_project", "list_voice"];
+const NOVEL_TOOLS: usize = 10;
+const NOVEL_SCOPE_PIPELINE_TOOLS: usize = 3;
+const ADVERTISED_PROJECT_TOOLS: [&str; 10] = [
+    "read_project",
+    "read_script",
+    "search_project",
+    "read_audiobook",
+    "submit_script_draft",
+    "edit_project",
+    "edit_script",
+    "list_voice",
+    "edit_audiobook",
+    "flag_audio_segment",
+];
 
 struct World {
     novels: FakeNovels,
@@ -155,9 +170,9 @@ fn workspace_and_project_scopes_offer_the_project_tools() {
         let listed = names(&tools);
         assert_eq!(
             listed.len(),
-            14 + PROJECT_TOOLS.len() + PIPELINE_TOOLS.len()
+            NOVEL_TOOLS + ADVERTISED_PROJECT_TOOLS.len() + NOVEL_SCOPE_PIPELINE_TOOLS
         );
-        for tool in PROJECT_TOOLS {
+        for tool in ADVERTISED_PROJECT_TOOLS {
             assert!(listed.contains(&tool), "{tool} missing");
         }
     }
@@ -167,22 +182,27 @@ fn workspace_and_project_scopes_offer_the_project_tools() {
 fn novel_scope_offers_no_project_tool() {
     let tools = definitions(&AssistantScope::novel(1));
     let listed = names(&tools);
-    assert_eq!(listed.len(), 14 + 5);
-    assert!(PROJECT_TOOLS.iter().all(|tool| !listed.contains(tool)));
+    assert_eq!(listed.len(), NOVEL_TOOLS + NOVEL_SCOPE_PIPELINE_TOOLS);
+    assert!(
+        ADVERTISED_PROJECT_TOOLS
+            .iter()
+            .all(|tool| !listed.contains(tool))
+    );
 }
 
 #[test]
-fn project_definitions_match_the_dispatch_list() {
+fn project_definitions_follow_the_novel_definitions_in_order() {
     let tools = definitions(&AssistantScope::workspace());
     let listed = names(&tools);
-    let project_names: Vec<&str> = listed[14..14 + PROJECT_TOOLS.len()].to_vec();
-    assert_eq!(project_names, PROJECT_TOOLS);
+    let project_names: Vec<&str> =
+        listed[NOVEL_TOOLS..NOVEL_TOOLS + ADVERTISED_PROJECT_TOOLS.len()].to_vec();
+    assert_eq!(project_names, ADVERTISED_PROJECT_TOOLS);
     for tool in tools
         .as_array()
         .unwrap()
         .iter()
-        .skip(14)
-        .take(PROJECT_TOOLS.len())
+        .skip(NOVEL_TOOLS)
+        .take(ADVERTISED_PROJECT_TOOLS.len())
     {
         assert!(!tool["description"].as_str().unwrap().is_empty());
         assert_eq!(tool["inputSchema"]["additionalProperties"], json!(false));
@@ -196,8 +216,8 @@ fn project_tools_require_a_project_id_except_the_listing() {
         .as_array()
         .unwrap()
         .iter()
-        .skip(14)
-        .take(PROJECT_TOOLS.len())
+        .skip(NOVEL_TOOLS)
+        .take(ADVERTISED_PROJECT_TOOLS.len())
     {
         let required = &tool["inputSchema"]["required"];
         let has_project = required
@@ -205,7 +225,7 @@ fn project_tools_require_a_project_id_except_the_listing() {
             .is_some_and(|items| items.contains(&json!("projectId")));
         assert_eq!(
             has_project,
-            !PROJECTLESS_TOOLS.contains(&tool["name"].as_str().unwrap())
+            !ADVERTISED_PROJECTLESS_TOOLS.contains(&tool["name"].as_str().unwrap())
         );
     }
 }

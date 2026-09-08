@@ -1,7 +1,5 @@
 use super::*;
 use crate::features::assistant::models::AssistantScope;
-use crate::features::assistant::tools::PIPELINE_TOOLS;
-use crate::features::assistant::tools::PROJECT_TOOLS;
 use crate::testing::assistant::FakeKnowledge;
 use crate::testing::assistant::FakeNovels;
 use crate::testing::assistant::FakeProjects;
@@ -207,8 +205,9 @@ fn initialize_returns_json() {
     assert_eq!(value["result"]["serverInfo"]["name"], "dreamy-studio");
 }
 
-const NOVEL_TOOLS: usize = 14;
-const NOVEL_SCOPE_PIPELINE_TOOLS: usize = 5;
+const NOVEL_TOOLS: usize = 10;
+const PROJECT_SCOPE_TOOLS: usize = 10;
+const PIPELINE_TOOLS: usize = 3;
 
 fn listed_tools(fixture: &Fixture, scope: AssistantScope) -> usize {
     let token = fixture.issue_scoped("ws", scope);
@@ -225,14 +224,14 @@ fn tools_list_returns_the_read_and_edit_tools() {
     let fixture = Fixture::new();
     assert_eq!(
         listed_tools(&fixture, AssistantScope::novel(1)),
-        NOVEL_TOOLS + NOVEL_SCOPE_PIPELINE_TOOLS
+        NOVEL_TOOLS + PIPELINE_TOOLS
     );
 }
 
 #[test]
 fn tools_list_adds_the_project_tools_outside_a_novel_scope() {
     let fixture = Fixture::new();
-    let expected = NOVEL_TOOLS + PROJECT_TOOLS.len() + PIPELINE_TOOLS.len();
+    let expected = NOVEL_TOOLS + PROJECT_SCOPE_TOOLS + PIPELINE_TOOLS;
     assert_eq!(
         listed_tools(&fixture, AssistantScope::workspace()),
         expected
@@ -246,7 +245,7 @@ fn a_tool_call_returns_json_and_records_the_activity() {
     let token = fixture.issue("ws");
     let (status, body) = fixture.post(
         Some(&token),
-        &json!({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_novel","arguments":{}}}),
+        &json!({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_novel","arguments":{}}}),
     );
     assert_eq!(status, 200);
     let value = parsed(&body);
@@ -295,7 +294,7 @@ fn a_project_grant_without_a_linked_novel_is_a_tool_error() {
     let token = fixture.issue_scoped("ws", AssistantScope::project(6));
     let (_, body) = fixture.post(
         Some(&token),
-        &json!({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"list_novel","arguments":{}}}),
+        &json!({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"read_novel","arguments":{}}}),
     );
     let value = parsed(&body);
     assert_eq!(value["result"]["isError"], true);
@@ -314,7 +313,7 @@ fn a_project_grant_for_a_vanished_project_is_a_tool_error() {
     let token = fixture.issue_scoped("ws", AssistantScope::project(99));
     let (_, body) = fixture.post(
         Some(&token),
-        &json!({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"list_novel","arguments":{}}}),
+        &json!({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"read_novel","arguments":{}}}),
     );
     let value = parsed(&body);
     assert_eq!(value["result"]["isError"], true);
@@ -346,7 +345,7 @@ fn a_host_error_becomes_a_tool_error_without_an_activity() {
     let token = fixture.issue("broken");
     let (status, body) = fixture.post(
         Some(&token),
-        &json!({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"list_novel","arguments":{}}}),
+        &json!({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"read_novel","arguments":{}}}),
     );
     assert_eq!(status, 200);
     let value = parsed(&body);

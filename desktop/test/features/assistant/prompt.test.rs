@@ -2,9 +2,39 @@ use super::*;
 use crate::features::assistant::models::AssistantScope;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::sources::NovelSource;
-use crate::features::assistant::tools::PIPELINE_TOOLS;
-use crate::features::assistant::tools::PROJECT_TOOLS;
+use crate::features::assistant::tools::definitions;
 use crate::testing::assistant::FakeNovels;
+
+const PROJECT_TOOLS: [&str; 10] = [
+    "read_project",
+    "read_script",
+    "search_project",
+    "read_audiobook",
+    "submit_script_draft",
+    "edit_project",
+    "edit_script",
+    "list_voice",
+    "edit_audiobook",
+    "flag_audio_segment",
+];
+
+const PIPELINE_TOOLS: [&str; 3] = ["start_run", "read_pipeline", "cancel_pipeline"];
+
+const RETIRED_TOOLS: [&str; 13] = [
+    "list_novel",
+    "list_project",
+    "read_script_unit",
+    "read_audiobook_unit",
+    "list_pipeline",
+    "edit_novel_chapter",
+    "edit_script_unit",
+    "edit_script_cast",
+    "edit_audiobook_voices",
+    "edit_audiobook_mix",
+    "start_translation",
+    "start_analysis",
+    "start_synthesis",
+];
 
 fn workspace() -> AssistantScope {
     AssistantScope {
@@ -90,7 +120,7 @@ fn a_novel_prompt_does_not_mention_project_tools() {
 #[test]
 fn a_project_prompt_asks_to_read_scripts_and_cite_blocks() {
     let prompt = opening(&AssistantScope::project(3), &[], "q", &novels(), Some(7));
-    assert!(prompt.contains("Read the script with `read_script` and `read_script_unit`"));
+    assert!(prompt.contains("Read the script with `read_script` (the outline first"));
     assert!(prompt.contains("their id and position `p`"));
     assert!(
         !opening(&workspace(), &[], "q", &novels(), None).contains("before you answer about it")
@@ -100,12 +130,11 @@ fn a_project_prompt_asks_to_read_scripts_and_cite_blocks() {
 #[test]
 fn opening_names_tools_rules_and_format() {
     let prompt = opening(&workspace(), &[], "Hello?", &novels(), None);
-    assert!(prompt.contains("list_novel"));
-    assert!(prompt.contains("read_novel"));
+    assert!(prompt.contains("`read_novel`: without `novelId` list every novel"));
     assert!(prompt.contains("read_novel_chapter"));
     assert!(prompt.contains("read_novel_knowledge"));
     assert!(prompt.contains("`edit_novel`"));
-    assert!(prompt.contains("edit_novel_chapter"));
+    assert!(prompt.contains("with `chapter` that chapter"));
     assert!(prompt.contains("edit_novel_knowledge"));
     assert!(prompt.contains("expected"));
     assert!(prompt.contains("Edit only when the user asks you to change something."));
@@ -185,29 +214,58 @@ fn every_scope_describes_the_run_and_status_tools() {
         AssistantScope::project(3),
     ] {
         let prompt = opening(&scope, &[], "q", &novels(), None);
-        for tool in PIPELINE_TOOLS
-            .iter()
-            .filter(|tool| **tool != "start_synthesis")
-        {
+        for tool in PIPELINE_TOOLS {
             assert!(prompt.contains(&format!("`{tool}`")), "{tool} missing");
         }
     }
 }
 
 #[test]
-fn start_synthesis_is_described_outside_a_novel_scope_only() {
+fn synthesis_runs_are_described_outside_a_novel_scope_only() {
     for scope in [workspace(), AssistantScope::project(3)] {
         let prompt = opening(&scope, &[], "q", &novels(), None);
-        assert!(prompt.contains("- `start_synthesis`:"));
+        assert!(prompt.contains("- `start_run` with `kind` `synthesis`:"));
     }
     let prompt = opening(&AssistantScope::novel(7), &[], "q", &novels(), None);
-    assert!(!prompt.contains("start_synthesis"));
+    assert!(!prompt.contains("synthesis"));
+}
+
+#[test]
+fn the_prompt_never_names_a_retired_tool() {
+    for scope in [
+        workspace(),
+        AssistantScope::novel(7),
+        AssistantScope::project(3),
+    ] {
+        let prompt = opening(&scope, &[], "q", &novels(), Some(7));
+        for tool in RETIRED_TOOLS {
+            assert!(!prompt.contains(tool), "{tool} still named");
+        }
+    }
+}
+
+#[test]
+fn the_prompt_names_every_advertised_tool_it_describes() {
+    let scope = project_scope();
+    let prompt = opening(&scope, &[], "q", &novels(), Some(7));
+    let advertised = definitions(&scope);
+    for tool in PROJECT_TOOLS.iter().chain(&PIPELINE_TOOLS) {
+        assert!(
+            advertised
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|item| item["name"] == *tool),
+            "{tool} is not advertised"
+        );
+        assert!(prompt.contains(&format!("`{tool}`")), "{tool} missing");
+    }
 }
 
 #[test]
 fn the_prompt_requires_the_user_to_confirm_every_run() {
     let prompt = opening(&workspace(), &[], "q", &novels(), None);
-    assert!(prompt.contains("never start a job"));
+    assert!(prompt.contains("never starts a job"));
     assert!(prompt.contains("confirmation card"));
     assert!(
         prompt
@@ -215,7 +273,7 @@ fn the_prompt_requires_the_user_to_confirm_every_run() {
     );
     assert!(prompt.contains("only when the user asks about the status of a run"));
     assert!(prompt.contains("Queue only the chapters or units the user asked for"));
-    assert!(prompt.find("## Tools").unwrap() < prompt.find("`start_translation`").unwrap());
+    assert!(prompt.find("## Tools").unwrap() < prompt.find("`start_run`").unwrap());
     assert!(prompt.find("`cancel_pipeline`").unwrap() < prompt.find("## Rules").unwrap());
 }
 
@@ -245,7 +303,7 @@ fn a_project_prompt_explains_how_script_drafts_work() {
 fn a_project_prompt_explains_edits_voices_and_outdated_audio() {
     let prompt = opening(&project_scope(), &[], "q", &novels(), Some(7));
 
-    assert!(prompt.contains("use `edit_script_unit`"));
+    assert!(prompt.contains("use `edit_script`"));
     assert!(prompt.contains("change only what the user asked for"));
     assert!(prompt.contains("To assign voices, read `read_audiobook`"));
     assert!(prompt.contains("read `read_novel_knowledge` for the traits of the characters"));
@@ -259,11 +317,9 @@ fn a_project_prompt_explains_edits_voices_and_outdated_audio() {
 fn project_and_workspace_prompts_list_every_edit_tool_but_only_a_project_adds_the_rules() {
     let edit_tools = [
         "edit_project",
-        "edit_script_unit",
-        "edit_script_cast",
+        "edit_script",
         "list_voice",
-        "edit_audiobook_voices",
-        "edit_audiobook_mix",
+        "edit_audiobook",
         "flag_audio_segment",
     ];
 
@@ -275,7 +331,7 @@ fn project_and_workspace_prompts_list_every_edit_tool_but_only_a_project_adds_th
         assert!(project_prompt.contains(&format!("`{tool}`")), "{tool}");
     }
     assert!(!workspace_prompt.contains("To assign voices"));
-    assert!(!workspace_prompt.contains("use `edit_script_unit`"));
+    assert!(!workspace_prompt.contains("use `edit_script`"));
 }
 
 #[test]

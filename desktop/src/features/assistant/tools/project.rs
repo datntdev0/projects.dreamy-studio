@@ -13,33 +13,21 @@ use serde_json::Value;
 use serde_json::json;
 
 pub(super) fn definitions() -> Vec<Value> {
-    vec![
-        json!({
-            "name": "list_project",
-            "description": "List the projects of the workspace with their id, name, template, description, linked novel id, archived flag, enabled modules and last update.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": false
-            }
-        }),
-        json!({
-            "name": "read_project",
-            "description": "Read one project: its metadata, the text version it works from (`srcKind` original or translation, and `srcLang`), the linked novel, the progress of every enabled module and the chapters of the linked novel with the id of the script unit written for each one (null when none exists yet).",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "projectId": project_id_property()
-                },
-                "required": ["projectId"],
-                "additionalProperties": false
-            }
-        }),
-    ]
+    vec![json!({
+        "name": "read_project",
+        "description": "Without `projectId`, list the projects (id, name, template, description, linked novel id, archived flag, modules, last update). With `projectId`, read one project: its metadata, the text version it works from (`srcKind` original or translation, and `srcLang`), the linked novel, the progress of every enabled module and the chapters of the linked novel with the id of the script unit written for each (null when none yet).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "projectId": { "type": "integer", "description": "Project id; leave out to list the projects." }
+            },
+            "additionalProperties": false
+        }
+    })]
 }
 
 pub(super) fn project_id_property() -> Value {
-    json!({ "type": "integer", "description": "Project id from list_project." })
+    json!({ "type": "integer", "description": "Project id from read_project." })
 }
 
 pub(super) fn list_project(ctx: &ToolContext, sources: &Sources) -> Result<ToolOutput, String> {

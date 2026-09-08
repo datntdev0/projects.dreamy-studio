@@ -14,6 +14,7 @@ use crate::features::assistant::tools::args::required_ints;
 use crate::features::assistant::tools::args::required_str;
 use crate::features::assistant::tools::scope::chapter_by_seq;
 use crate::features::assistant::tools::scope::find_novel;
+use crate::features::assistant::tools::synthesis;
 use crate::features::assistant::tools::translation::required_target;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::models::WireKnowledge;
@@ -22,6 +23,7 @@ use crate::features::novel::models::NovelSummary;
 use crate::features::translation::models::TranslationTarget;
 use crate::features::translation::service::ChapterTranslation;
 use crate::features::translation::service::NovelTranslation;
+use serde_json::Map;
 use serde_json::Value;
 use serde_json::json;
 
@@ -32,43 +34,55 @@ enum Verdict {
     Skip(String),
 }
 
-pub(super) fn definitions() -> Vec<Value> {
-    vec![
-        json!({
-            "name": "start_translation",
-            "description": "Prepare a translation run of whole chapters of one novel into one target language. Nothing starts: the app shows a confirmation card and the user decides. Chapters that already have a translation are skipped unless `overwrite` is true, and chapters without paragraphs are skipped too. The result lists the chapters that will run and those skipped, with the reason.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "novelId": novel_id_property(),
-                    "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation target language." },
-                    "chapters": chapters_property(),
-                    "overwrite": overwrite_property("translate chapters that already have a translation again")
-                },
-                "required": ["novelId", "target", "chapters"],
-                "additionalProperties": false
-            }
-        }),
-        json!({
-            "name": "start_analysis",
-            "description": "Prepare a knowledge analysis run of whole chapters of one novel. Nothing starts: the app shows a confirmation card and the user decides. Chapters that are already analyzed are skipped unless `overwrite` is true; an out of date analysis is always replaced. For lang VI or EN the chapter needs a translation in that language. The result lists the chapters that will run and those skipped, with the reason.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "novelId": novel_id_property(),
-                    "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Knowledge language: src is the original text, VI and EN are translations." },
-                    "chapters": chapters_property(),
-                    "overwrite": overwrite_property("analyze chapters that are already analyzed again")
-                },
-                "required": ["novelId", "lang", "chapters"],
-                "additionalProperties": false
-            }
-        }),
-    ]
+pub(super) fn definition(with_synthesis: bool) -> Value {
+    let mut kinds = vec!["translation", "analysis"];
+    let mut properties = chapter_run_properties();
+    if with_synthesis {
+        kinds.push("synthesis");
+        properties.extend(synthesis::properties());
+    }
+    properties.insert(
+        "kind".to_string(),
+        json!({ "type": "string", "enum": kinds, "description": "What to run." }),
+    );
+    json!({
+        "name": "start_run",
+        "description": run_description(with_synthesis),
+        "inputSchema": {
+            "type": "object",
+            "properties": properties,
+            "required": ["kind"],
+            "additionalProperties": false
+        }
+    })
+}
+
+fn run_description(with_synthesis: bool) -> String {
+    let synthesis = if with_synthesis {
+        " synthesis: generate the audio of the voiced blocks of the `units` of `projectId`; `mode` missing (default) takes every block without up-to-date audio, all generates every voiced block again; it fails when a speaker has no voice, so tell the user to assign voices in the audiobook module first."
+    } else {
+        ""
+    };
+    format!(
+        "Prepare a run of translation, knowledge analysis or audio generation. Nothing starts: the app shows a confirmation card and the user decides. translation: translate the `chapters` of `novelId` into `target`; chapters that already have a translation are skipped unless `overwrite` is true, and chapters without paragraphs are skipped. analysis: analyze the `chapters` of `novelId` for the knowledge `lang`; analyzed chapters are skipped unless `overwrite` is true, an out-of-date analysis is always replaced, and VI or EN needs a translation of the chapter.{synthesis} The result lists what will run and what was skipped, with the reason."
+    )
+}
+
+fn chapter_run_properties() -> Map<String, Value> {
+    json!({
+        "novelId": novel_id_property(),
+        "target": { "type": "string", "enum": ["VI", "EN"], "description": "Translation: target language." },
+        "lang": { "type": "string", "enum": ["src", "VI", "EN"], "description": "Analysis: knowledge language, src is the original text." },
+        "chapters": chapters_property(),
+        "overwrite": overwrite_property()
+    })
+    .as_object()
+    .cloned()
+    .unwrap_or_default()
 }
 
 fn novel_id_property() -> Value {
-    json!({ "type": "integer", "description": "Novel id from list_novel." })
+    json!({ "type": "integer", "description": "Translation and analysis: novel id from read_novel." })
 }
 
 fn chapters_property() -> Value {
@@ -77,12 +91,12 @@ fn chapters_property() -> Value {
         "minItems": 1,
         "maxItems": MAX_RUN_CHAPTERS,
         "items": { "type": "integer" },
-        "description": "Chapter numbers from read_novel. Pick only the chapters the user asked for."
+        "description": "Translation and analysis: chapter numbers from read_novel. Pick only the chapters the user asked for."
     })
 }
 
-fn overwrite_property(what: &str) -> Value {
-    json!({ "type": "boolean", "description": format!("Set to true only when the user wants to {what}. Default false.") })
+fn overwrite_property() -> Value {
+    json!({ "type": "boolean", "description": "Translation and analysis: set to true only when the user wants chapters that already ran to run again. Default false." })
 }
 
 pub(super) fn start_translation(

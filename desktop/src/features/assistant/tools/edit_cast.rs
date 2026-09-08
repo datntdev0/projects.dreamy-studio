@@ -5,7 +5,6 @@ use crate::features::assistant::sources::Sources;
 use crate::features::assistant::tools::ToolContext;
 use crate::features::assistant::tools::ToolOutput;
 use crate::features::assistant::tools::args::output;
-use crate::features::assistant::tools::project::project_id_property;
 use crate::features::assistant::tools::project::project_of;
 use crate::features::assistant::tools::script::cast_members;
 use crate::features::assistant::tools::script::require_script;
@@ -48,42 +47,36 @@ struct Outcome {
     removed: Vec<String>,
 }
 
-pub(super) fn definitions() -> Vec<Value> {
-    vec![json!({
-        "name": "edit_script_cast",
-        "description": "Add, rename and remove the extra members of the cast of a project script, the speakers the user added by hand (kind `extra`). The narrator and the characters taken from the novel knowledge cannot be changed. Names must not be empty or equal, ignoring case, to another cast member. A member can be removed only when no block names it in `who`. Removals run first, then renames, then additions; if anything is invalid nothing is written. Requires editing to be enabled for the session.",
-        "inputSchema": {
+pub(super) fn add_property() -> Value {
+    json!({
+        "type": "array",
+        "description": "Cast: names of the new members.",
+        "items": { "type": "string" }
+    })
+}
+
+pub(super) fn rename_property() -> Value {
+    json!({
+        "type": "array",
+        "description": "Cast: extra members to rename.",
+        "items": {
             "type": "object",
             "properties": {
-                "projectId": project_id_property(),
-                "add": {
-                    "type": "array",
-                    "description": "Names of the new members.",
-                    "items": { "type": "string" }
-                },
-                "rename": {
-                    "type": "array",
-                    "description": "Extra members to rename.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": { "type": "string", "description": "Cast id from read_script." },
-                            "name": { "type": "string", "description": "New name." }
-                        },
-                        "required": ["id", "name"],
-                        "additionalProperties": false
-                    }
-                },
-                "remove": {
-                    "type": "array",
-                    "description": "Cast ids of the extra members to delete.",
-                    "items": { "type": "string" }
-                }
+                "id": { "type": "string", "description": "Cast id from read_script." },
+                "name": { "type": "string", "description": "New name." }
             },
-            "required": ["projectId"],
+            "required": ["id", "name"],
             "additionalProperties": false
         }
-    })]
+    })
+}
+
+pub(super) fn remove_property() -> Value {
+    json!({
+        "type": "array",
+        "description": "Cast: ids of the extra members to delete.",
+        "items": { "type": "string" }
+    })
 }
 
 pub(super) fn edit_script_cast(

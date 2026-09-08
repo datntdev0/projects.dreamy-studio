@@ -23,13 +23,14 @@ fn the_prompt_names_the_tools_the_chapter_and_the_target() {
     let prompt = review_translation(&novel, &chapter, "VI", None);
 
     for tool in [
-        "read_translation_guide",
         "read_translation",
         "read_novel_knowledge",
         "submit_translation_review",
     ] {
         assert!(prompt.contains(tool), "missing {tool}");
     }
+    assert!(prompt.contains("part \"guide\""));
+    assert!(!prompt.contains("read_translation_guide"));
     assert!(prompt.contains("chapter 4"));
     assert!(prompt.contains("The Fog"));
     assert!(prompt.contains("novelId 7"));
@@ -136,14 +137,10 @@ fn the_rewrite_prompt_names_the_tools_the_project_and_the_unit() {
 
     let prompt = rewrite_script_unit(&rewrite(&project, None), None);
 
-    for tool in [
-        "read_script",
-        "read_script_unit",
-        "read_novel_knowledge",
-        "submit_script_draft",
-    ] {
+    for tool in ["read_script", "read_novel_knowledge", "submit_script_draft"] {
         assert!(prompt.contains(tool), "missing {tool}");
     }
+    assert!(!prompt.contains("read_script_unit"));
     assert!(prompt.contains("## Skill: rewrite_script_unit"));
     assert!(prompt.contains("unit `U01` (\"The Gate\", chapter 3)"));
     assert!(prompt.contains("project with id 5 (\"Project 5\")"));

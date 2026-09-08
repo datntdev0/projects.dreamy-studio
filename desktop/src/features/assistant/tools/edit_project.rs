@@ -15,7 +15,7 @@ use serde_json::json;
 pub(super) fn definitions() -> Vec<Value> {
     vec![json!({
         "name": "edit_project",
-        "description": "Change the name and/or the description of one project. Only the fields you pass are changed; modules and the archive state cannot be changed here. Requires editing to be enabled for the session.",
+        "description": "Change the name and/or the description of one project. Only the fields you pass change; modules and the archive state cannot be changed here.",
         "inputSchema": {
             "type": "object",
             "properties": {

@@ -547,7 +547,7 @@ fn a_resumed_cli_session_still_gets_the_skill_prompt() {
     let calls = fixture.llm.calls();
     assert_eq!(calls[1].kind, CallKind::Resume);
     assert!(calls[1].prompt.contains("submit_translation_review"));
-    assert!(calls[1].prompt.contains("read_translation_guide"));
+    assert!(calls[1].prompt.contains("part \"guide\""));
     assert!(
         !calls[1]
             .prompt

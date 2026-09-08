@@ -6,6 +6,7 @@ use crate::features::assistant::tools::args::optional_int;
 use crate::features::assistant::tools::args::optional_str;
 use crate::features::assistant::tools::args::output;
 use crate::features::assistant::tools::args::required_str;
+use crate::features::assistant::tools::paging::NEXT_NOTE;
 use crate::features::assistant::tools::paging::next_position;
 use crate::features::assistant::tools::paging::page_bounds;
 use crate::features::assistant::tools::project::project_id_property;
@@ -36,35 +37,23 @@ pub(super) fn definitions() -> Vec<Value> {
     vec![
         json!({
             "name": "read_script",
-            "description": "Read the script of one project: its configuration `cfg` (the block `types` allowed, the unit kind), the cast (the speakers a dialogue block can name in `who`: the narrator, the characters of the novel knowledge and the extra members the user added) and the outline of the script units. Every outline row pairs a chapter of the linked novel with its script unit (`unit` is null when none is written yet); units that follow no chapter have a null `chapter`.",
+            "description": format!("Without `unitId`, read the script of one project: its configuration `cfg` (the block `types` allowed, the unit kind), the cast (the speaker ids a dialogue block can name in `who`) and the outline of the units; each outline row pairs a chapter of the linked novel with its unit (`unit` is null when none is written yet). With `unitId`, read the blocks of that unit (id, type, text, who, paren, ms, loc, time, ref, beat, refs, chars); positions `p` are 1-based. {NEXT_NOTE} `withSource` adds to every block the source paragraphs its `ref` and `refs` (chapter.paragraph) point to."),
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "projectId": project_id_property()
+                    "projectId": project_id_property(),
+                    "unitId": { "type": "string", "description": "Unit id from the outline; leave out to read the outline." },
+                    "from": { "type": "integer", "minimum": 1, "description": "First block position, default 1." },
+                    "to": { "type": "integer", "minimum": 1, "description": "Last block position, default the end of the unit." },
+                    "withSource": { "type": "boolean", "description": "Attach the referenced source paragraphs to each block, default false." }
                 },
                 "required": ["projectId"],
                 "additionalProperties": false
             }
         }),
         json!({
-            "name": "read_script_unit",
-            "description": "Read the blocks of one script unit. Block positions `p` are 1-based. A page holds at most 60 blocks or 12000 characters; when `next` is not null, call again with from set to `next`. Each block has id, type, text, who (the speaker id from the cast), paren, ms, loc, time, ref, beat, refs and chars. With `withSource` every block also lists the source paragraphs its `ref` and `refs` (format chapter.paragraph) point to, taken from the original text or from the translation when the project works from a translation.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "projectId": project_id_property(),
-                    "unitId": { "type": "string", "description": "Unit id from read_script." },
-                    "from": { "type": "integer", "minimum": 1, "description": "First block position, default 1." },
-                    "to": { "type": "integer", "minimum": 1, "description": "Last block position, default the end of the unit." },
-                    "withSource": { "type": "boolean", "description": "Attach the referenced source paragraphs to each block, default false." }
-                },
-                "required": ["projectId", "unitId"],
-                "additionalProperties": false
-            }
-        }),
-        json!({
             "name": "search_project",
-            "description": "Search the script of one project, case-insensitively, in the text, the speaker (`who`) and the location (`loc`) of every block. At most 50 results are returned with the unit id, block id, 1-based position and a snippet; `truncated` is true when more blocks match.",
+            "description": "Search the script of one project, case-insensitively, in the text, the speaker (`who`) and the location (`loc`) of every block. At most 50 results (unit id, block id, position, snippet); `truncated` is true when more blocks match.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

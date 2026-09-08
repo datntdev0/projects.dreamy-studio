@@ -24,7 +24,7 @@ pub fn review_translation(
     ));
     prompt.push_str("Follow these steps with the MCP tools of the `dreamy` server:\n");
     prompt.push_str(&format!(
-        "1. Call `read_translation_guide` with novelId {} and target \"{target}\" to learn the translation guidelines, the dictionary and the open consistency warnings.\n",
+        "1. Call `read_translation` with novelId {}, target \"{target}\" and part \"guide\" to learn the translation guidelines, the dictionary and the open consistency warnings.\n",
         novel.id
     ));
     prompt.push_str(&format!(
@@ -142,7 +142,7 @@ pub fn rewrite_script_unit(rewrite: &ScriptRewrite, opening: Option<String>) -> 
         project.id
     ));
     prompt.push_str(&format!(
-        "2. Call `read_script_unit` with projectId {}, unitId \"{unit_id}\" and `withSource` true, and read every page: while the result has a `next` value, call it again with `from` set to `next`. This shows what is written now and the source paragraphs it comes from.\n",
+        "2. Call `read_script` again with projectId {}, unitId \"{unit_id}\" and `withSource` true, and read every page: while the result has a `next` value, call it again with `from` set to `next`. This shows what is written now and the source paragraphs it comes from.\n",
         project.id
     ));
     prompt.push_str(&knowledge_step(project));

@@ -43,7 +43,7 @@ pub(super) fn definitions() -> Vec<Value> {
     vec![
         json!({
             "name": "list_voice",
-            "description": "List the voices of the voice library that an audiobook can use: id, name, description, gender, language, engine, engine kind (local or cloud) and source. It does not tell whether the engine is installed or configured on this computer; the app shows that to the user. Use these ids with edit_audiobook_voices and never invent one.",
+            "description": "List the voices of the voice library that an audiobook can use: id, name, description, gender, language, engine, engine kind (local or cloud) and source. It does not tell whether the engine is installed on this computer. Use these ids with edit_audiobook and never invent one.",
             "inputSchema": {
                 "type": "object",
                 "properties": {},
@@ -51,8 +51,8 @@ pub(super) fn definitions() -> Vec<Value> {
             }
         }),
         json!({
-            "name": "edit_audiobook_voices",
-            "description": "Choose the voice and the speed of speakers of a project audiobook. `speaker` is a cast id from read_script, `voice` a voice id from list_voice (null removes the voice of that speaker) and `speed` a number between 0.5 and 2 (1 is natural). Pass `voice`, `speed` or both for each speaker; what you leave out is kept. Speakers you do not list are unchanged, and if any entry is invalid nothing is written. Changing a voice or speed makes the generated audio of that speaker outdated; the result reports how many audio segments became outdated. Requires editing to be enabled for the session.",
+            "name": "edit_audiobook",
+            "description": "Change the audiobook of one project; make one kind of change per call. VOICES: pass `voices`, one entry per speaker with its `speaker` (cast id from read_script) and `voice` (id from list_voice, null removes it) and/or `speed` (0.5 to 2, 1 is natural); what you leave out is kept and unlisted speakers are unchanged. Changing a voice or speed makes the audio of that speaker outdated and the result reports how many segments. MIX: pass any of `gap` (seconds between segments, 0 to 5), `intro` and `outro` (seconds of silence, 0 to 10), `vol` (dB, -12 to 6) and `sentence` (pause between sentences in seconds, 0 to 2); only the fields you pass change and values outside the range are clamped and listed in `adjusted`. If anything is invalid nothing is written.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -60,20 +60,25 @@ pub(super) fn definitions() -> Vec<Value> {
                     "voices": {
                         "type": "array",
                         "minItems": 1,
-                        "description": "Settings per speaker.",
+                        "description": "Voices: settings per speaker.",
                         "items": {
                             "type": "object",
                             "properties": {
                                 "speaker": { "type": "string", "description": "Cast id from read_script." },
                                 "voice": { "type": ["integer", "null"], "description": "Voice id from list_voice, or null to remove the voice." },
-                                "speed": { "type": "number", "minimum": 0.5, "maximum": 2, "description": "Speaking speed, 1 is natural." }
+                                "speed": { "type": "number", "minimum": 0.5, "maximum": 2 }
                             },
                             "required": ["speaker"],
                             "additionalProperties": false
                         }
-                    }
+                    },
+                    "gap": { "type": "number", "description": "Mix: seconds between segments." },
+                    "intro": { "type": "number", "description": "Mix: seconds of silence before the first segment." },
+                    "outro": { "type": "number", "description": "Mix: seconds of silence after the last segment." },
+                    "vol": { "type": "number", "description": "Mix: volume change in dB." },
+                    "sentence": { "type": "number", "description": "Mix: seconds of pause between sentences." }
                 },
-                "required": ["projectId", "voices"],
+                "required": ["projectId"],
                 "additionalProperties": false
             }
         }),

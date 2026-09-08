@@ -3,6 +3,8 @@ use serde_json::json;
 
 pub const PAGE_PARAGRAPHS: usize = 60;
 pub const PAGE_CHARS: usize = 12_000;
+pub(super) const NEXT_NOTE: &str =
+    "Results come in pages: while `next` is not null, call again with `from` set to `next`.";
 
 pub(super) fn page_bounds(sizes: &[usize], from: Option<i64>, to: Option<i64>) -> (usize, usize) {
     let total = sizes.len();

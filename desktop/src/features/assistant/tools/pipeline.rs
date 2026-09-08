@@ -21,33 +21,22 @@ pub const MAX_HISTORY: i64 = 100;
 pub(super) fn definitions() -> Vec<Value> {
     vec![
         json!({
-            "name": "list_pipeline",
-            "description": "List the latest translation, analysis and audio generation runs, newest first, with their kind, target, status and progress counts. Pass `novelId` or `projectId` to look at one owner; without them the runs of the whole current scope are listed. Use it only when the user asks about the status of runs.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "novelId": { "type": "integer", "description": "Only runs of this novel." },
-                    "projectId": { "type": "integer", "description": "Only runs of this project." },
-                    "limit": { "type": "integer", "minimum": 1, "maximum": MAX_HISTORY, "description": "Runs to return, default 20." }
-                },
-                "additionalProperties": false
-            }
-        }),
-        json!({
             "name": "read_pipeline",
-            "description": "Read one run with the status, progress and error of each of its tasks. Use it only when the user asks about the status of a run.",
+            "description": "Check the status of translation, analysis and audio generation runs; use it only when the user asks. Without `pipelineId`, list the latest runs of the current scope, newest first (kind, target, status, progress counts), optionally of one `novelId` or `projectId`. With `pipelineId`, read one run with the status, progress and error of each task.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "pipelineId": pipeline_id_property()
+                    "pipelineId": { "type": "integer", "description": "Run id; leave out to list the runs." },
+                    "novelId": { "type": "integer", "description": "List only runs of this novel." },
+                    "projectId": { "type": "integer", "description": "List only runs of this project." },
+                    "limit": { "type": "integer", "minimum": 1, "maximum": MAX_HISTORY, "description": "Runs to list, default 20." }
                 },
-                "required": ["pipelineId"],
                 "additionalProperties": false
             }
         }),
         json!({
             "name": "cancel_pipeline",
-            "description": "Cancel a queued or running run. Use it only when the user asks to stop a run. It returns `cancelled` false when the run already finished.",
+            "description": "Cancel a queued or running run; use it only when the user asks to stop one. `cancelled` is false when the run already finished.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -61,7 +50,7 @@ pub(super) fn definitions() -> Vec<Value> {
 }
 
 fn pipeline_id_property() -> Value {
-    json!({ "type": "integer", "description": "Run id from list_pipeline." })
+    json!({ "type": "integer", "description": "Run id from read_pipeline." })
 }
 
 pub(super) fn list_pipeline(

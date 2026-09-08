@@ -14,6 +14,7 @@ use crate::features::assistant::tools::args::output;
 use crate::features::assistant::tools::args::required_str;
 use crate::features::assistant::tools::draft::allowed_types;
 use crate::features::assistant::tools::draft::block_schema;
+use crate::features::assistant::tools::edit_cast;
 use crate::features::assistant::tools::project::project_id_property;
 use crate::features::assistant::tools::project::project_of;
 use crate::features::assistant::tools::script::cast_members;
@@ -28,41 +29,44 @@ mod ops;
 
 pub(super) fn definitions() -> Vec<Value> {
     vec![json!({
-        "name": "edit_script_unit",
-        "description": "Make small, precise changes to the blocks of one script unit that already has blocks; use submit_script_draft to rewrite a whole unit instead. `ops` run in order and are all checked first: if one fails, nothing is written. Every op has a `k`: set {id, expected, type?, text?, who?, paren?, ms?, loc?, time?, beat?} changes the given fields of a block; insert {after, ref?, block} adds a block after the block id `after` (null puts it first) and `ref` is a temporary name that later ops of the same call may use as an id and that comes back in `remap` with the real id; delete {id, expected} removes a block; move {id, after} moves a block after the block id `after` (null moves it first). For set and delete `expected` must be the exact current text of the block as read_script_unit returned it (an empty string for blocks without text). Blocks follow the same rules as in submit_script_draft: allowed types are the `cfg.types` of read_script, `who` must be a cast id and only matters for dialogue, refs are checked against the source paragraphs. Changing text, speaker or parenthetical of a block makes its generated audio outdated; the result reports how many audio segments are outdated. Requires editing to be enabled for the session.",
+        "name": "edit_script",
+        "description": "Change the script of one project; make one kind of change per call. BLOCKS: pass `unitId` and `ops` to change a unit that already has blocks in small steps (use submit_script_draft to rewrite a whole unit). `ops` run in order and are all checked first: if one fails, nothing is written. Every op has a `k`: set {id, expected, type?, text?, who?, paren?, ms?, loc?, time?, beat?} changes fields of a block; insert {after, ref?, block} adds a block after the block id `after` (null puts it first), and `ref` is a temporary id that later ops of the call may use and that comes back in `remap` with the real id; delete {id, expected} removes a block; move {id, after} moves a block after the block id `after` (null puts it first). For set and delete `expected` is the exact current text of the block as read_script returned it (an empty string for blocks without text). Blocks follow the rules of submit_script_draft. Changing text, speaker or parenthetical makes the generated audio outdated; the result reports how many segments. CAST: pass `add`, `rename` and/or `remove` to change the extra members of the cast, the speakers the user added by hand (kind `extra`); the narrator and the characters of the novel knowledge cannot be changed. Names must not be empty or equal, ignoring case, to another member, and a member can be removed only when no block names it in `who`. Removals run first, then renames, then additions; if anything is invalid nothing is written.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "projectId": project_id_property(),
-                "unitId": { "type": "string", "description": "Unit id from read_script." },
+                "unitId": { "type": "string", "description": "Unit id from read_script; required with `ops`." },
+                "add": edit_cast::add_property(),
+                "rename": edit_cast::rename_property(),
+                "remove": edit_cast::remove_property(),
                 "ops": {
                     "type": "array",
                     "minItems": 1,
                     "maxItems": ops::MAX_OPS,
-                    "description": "Operations to apply in order.",
+                    "description": "Block operations to apply in order.",
                     "items": {
                         "type": "object",
                         "properties": {
                             "k": { "type": "string", "enum": ["set", "insert", "delete", "move"], "description": "Operation kind." },
-                            "id": { "type": "string", "description": "Block id (set, delete, move), or the ref of a block inserted earlier in this call." },
+                            "id": { "type": "string", "description": "Block id, or the ref of a block inserted earlier in this call." },
                             "expected": { "type": "string", "description": "Exact current text of the block (set, delete)." },
                             "after": { "type": ["string", "null"], "description": "Block id to place the block after (insert, move); null puts it first." },
-                            "ref": { "type": "string", "description": "Temporary name of an inserted block, not equal to any block id." },
+                            "ref": { "type": "string", "description": "Temporary id of an inserted block, not equal to any block id." },
                             "block": block_schema(),
-                            "type": { "type": "string", "description": "New block type (set)." },
-                            "text": { "type": "string", "description": "New text (set)." },
-                            "who": { "type": "string", "description": "New speaker id (set); an empty string clears it." },
-                            "paren": { "type": "string", "description": "New parenthetical (set)." },
-                            "ms": { "type": "integer", "minimum": 0, "description": "New pause length in milliseconds (set)." },
-                            "loc": { "type": "string", "description": "New scene location (set)." },
-                            "time": { "type": "string", "description": "New scene time (set)." },
-                            "beat": { "type": "string", "description": "New story beat note (set)." }
+                            "type": { "type": "string" },
+                            "text": { "type": "string" },
+                            "who": { "type": "string", "description": "An empty string clears the speaker." },
+                            "paren": { "type": "string" },
+                            "ms": { "type": "integer", "minimum": 0 },
+                            "loc": { "type": "string" },
+                            "time": { "type": "string" },
+                            "beat": { "type": "string" }
                         },
                         "required": ["k"]
                     }
                 }
             },
-            "required": ["projectId", "unitId", "ops"],
+            "required": ["projectId"],
             "additionalProperties": false
         }
     })]

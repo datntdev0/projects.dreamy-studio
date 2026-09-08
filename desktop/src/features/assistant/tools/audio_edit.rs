@@ -18,40 +18,21 @@ const MIX_FIELDS: [&str; 5] = ["gap", "intro", "outro", "vol", "sentence"];
 const TOLERANCE: f64 = 1e-9;
 
 pub(super) fn definitions() -> Vec<Value> {
-    vec![
-        json!({
-            "name": "edit_audiobook_mix",
-            "description": "Change the mix settings of a project audiobook. Only the fields you pass are changed: `gap` (seconds between segments, 0 to 5), `intro` and `outro` (seconds of silence, 0 to 10), `vol` (volume in dB, -12 to 6) and `sentence` (pause between sentences in seconds, 0 to 2). Values outside the range are clamped and listed in `adjusted`. Requires editing to be enabled for the session.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "projectId": project_id_property(),
-                    "gap": { "type": "number", "description": "Seconds between segments." },
-                    "intro": { "type": "number", "description": "Seconds of silence before the first segment." },
-                    "outro": { "type": "number", "description": "Seconds of silence after the last segment." },
-                    "vol": { "type": "number", "description": "Volume change in dB." },
-                    "sentence": { "type": "number", "description": "Seconds of pause between sentences." }
-                },
-                "required": ["projectId"],
-                "additionalProperties": false
-            }
-        }),
-        json!({
-            "name": "flag_audio_segment",
-            "description": "Flag the generated audio of one block for review with a short note, or clear the flag with an empty `flag`. A flagged segment is treated as needing regeneration. The block must already have generated audio (see read_audiobook_unit). Requires editing to be enabled for the session.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "projectId": project_id_property(),
-                    "unitId": { "type": "string", "description": "Unit id from read_script." },
-                    "blockId": { "type": "string", "description": "Block id from read_audiobook_unit." },
-                    "flag": { "type": "string", "description": "Short note about the problem; an empty string clears the flag." }
-                },
-                "required": ["projectId", "unitId", "blockId", "flag"],
-                "additionalProperties": false
-            }
-        }),
-    ]
+    vec![json!({
+        "name": "flag_audio_segment",
+        "description": "Flag the generated audio of one block for review with a short note, or clear the flag with an empty `flag`. A flagged segment is treated as needing regeneration. The block must already have generated audio (see read_audiobook).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "projectId": project_id_property(),
+                "unitId": { "type": "string", "description": "Unit id from read_script." },
+                "blockId": { "type": "string", "description": "Block id from read_audiobook." },
+                "flag": { "type": "string", "description": "Short note about the problem; an empty string clears the flag." }
+            },
+            "required": ["projectId", "unitId", "blockId", "flag"],
+            "additionalProperties": false
+        }
+    })]
 }
 
 pub(super) fn edit_audiobook_mix(

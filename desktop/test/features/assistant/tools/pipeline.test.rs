@@ -308,30 +308,54 @@ fn the_pipeline_tools_are_listed_in_every_scope_and_synthesis_only_outside_a_nov
         (AssistantScope::project(5), true),
     ] {
         let tools = definitions(&scope);
-        let names: Vec<&str> = tools
-            .as_array()
-            .unwrap()
+        let list = tools.as_array().unwrap();
+        let names: Vec<&str> = list
             .iter()
             .map(|tool| tool["name"].as_str().unwrap())
             .collect();
-        for tool in PIPELINE_TOOLS {
-            let expected = tool != "start_synthesis" || synthesis;
-            assert_eq!(names.contains(&tool), expected, "{tool}");
+        for tool in ["start_run", "read_pipeline", "cancel_pipeline"] {
+            assert!(names.contains(&tool), "{tool}");
+        }
+        let start = list
+            .iter()
+            .find(|tool| tool["name"] == "start_run")
+            .unwrap();
+        let kinds = &start["inputSchema"]["properties"]["kind"]["enum"];
+        assert_eq!(
+            kinds.as_array().unwrap().contains(&json!("synthesis")),
+            synthesis
+        );
+        let properties = start["inputSchema"]["properties"].as_object().unwrap();
+        for key in ["projectId", "units", "mode"] {
+            assert_eq!(properties.contains_key(key), synthesis, "{key}");
         }
     }
 }
 
 #[test]
-fn a_novel_scope_refuses_start_synthesis() {
+fn a_novel_scope_refuses_a_synthesis_run() {
     let world = world();
 
     let error = run(
         &world,
-        "start_synthesis",
-        json!({ "projectId": 5, "units": ["c1"] }),
+        "start_run",
+        json!({ "kind": "synthesis", "projectId": 5, "units": ["c1"] }),
         &AssistantScope::novel(1),
     )
     .unwrap_err();
 
     assert!(error.contains("not available in this scope"));
+}
+
+#[test]
+fn read_pipeline_lists_the_runs_without_a_pipeline_id_and_reads_one_with_it() {
+    let world = world();
+    let scope = AssistantScope::workspace();
+
+    let runs = run(&world, "read_pipeline", json!({}), &scope).unwrap();
+    let one = run(&world, "read_pipeline", json!({ "pipelineId": 2 }), &scope).unwrap();
+
+    assert_eq!(listed(&runs), [5, 4, 3, 2, 1]);
+    assert_eq!(one["pipelineId"], 2);
+    assert!(one.get("tasks").is_some());
 }

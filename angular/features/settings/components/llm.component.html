@@ -102,6 +102,111 @@
               } @else {
                 <span class="field-hint">{{ 'settings.llm.profile.shared' | t }}</span>
               }
+              <section class="llm-usage" [attr.data-testid]="'settings-llm-' + p.id + '-usage'">
+                <header
+                  class="llm-usage-h"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-usage-head'"
+                >
+                  <span class="t-sm t-ink">{{ 'settings.llm.usage' | t }}</span>
+                  @if (p.usage?.plan; as plan) {
+                    <ds-badge tone="primary" [attr.data-testid]="'settings-llm-' + p.id + '-plan'">
+                      {{ plan }}
+                    </ds-badge>
+                  }
+                  <span class="spacer"></span>
+                  @if (p.usageLoading) {
+                    <span
+                      class="t-sm t-mute llm-usage-state"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-usage-loading'"
+                    >
+                      <span class="dot dot-running"></span>
+                      {{ 'settings.llm.usage.loading' | t }}
+                    </span>
+                  } @else if (usageChecked(p); as time) {
+                    <span
+                      class="t-sm t-mute"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-usage-checked'"
+                    >
+                      {{ 'settings.llm.usage.checked' | t: { time } }}
+                    </span>
+                  }
+                </header>
+                @if (p.usageError) {
+                  <span
+                    class="t-sm t-mute"
+                    [attr.data-testid]="'settings-llm-' + p.id + '-usage-error'"
+                  >
+                    {{ 'settings.llm.usage.failed' | t: { detail: p.usageError } }}
+                  </span>
+                } @else if (p.usage; as usage) {
+                  @for (w of usage.windows; track $index) {
+                    <div
+                      class="llm-usage-row"
+                      [attr.data-tone]="usageTone(w)"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-usage-' + $index"
+                      [attr.data-window]="w.window"
+                    >
+                      @let percent = usagePercent(w);
+                      <span class="t-sm llm-usage-label">
+                        {{ usageWindowKey(w) | t }}
+                        @if (usageGroup(w); as group) {
+                          <small
+                            class="t-mute"
+                            [attr.data-testid]="
+                              'settings-llm-' + p.id + '-usage-' + $index + '-group'
+                            "
+                          >
+                            {{ group }}
+                          </small>
+                        }
+                      </span>
+                      @if (percent !== null) {
+                        <div
+                          class="be-progress"
+                          role="progressbar"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                          [attr.aria-valuenow]="percent"
+                          [attr.aria-label]="usageWindowKey(w) | t"
+                        >
+                          <i [style.width.%]="percent"></i>
+                        </div>
+                        <b
+                          class="mono t-sm"
+                          [attr.data-testid]="
+                            'settings-llm-' + p.id + '-usage-' + $index + '-percent'
+                          "
+                        >
+                          {{ percent }}%
+                        </b>
+                      } @else {
+                        <span class="llm-usage-gap"></span>
+                        <b class="mono t-sm">{{ 'settings.llm.usage.unknown' | t }}</b>
+                      }
+                      <span
+                        class="t-sm t-mute llm-usage-reset"
+                        [attr.data-testid]="'settings-llm-' + p.id + '-usage-' + $index + '-reset'"
+                      >
+                        {{ usageReset(w) }}
+                      </span>
+                    </div>
+                  } @empty {
+                    <span
+                      class="t-sm t-mute"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-usage-none'"
+                    >
+                      {{ 'settings.llm.usage.none' | t }}
+                    </span>
+                  }
+                } @else if (!p.usageLoading) {
+                  <span
+                    class="t-sm t-mute"
+                    [attr.data-testid]="'settings-llm-' + p.id + '-usage-none'"
+                  >
+                    {{ 'settings.llm.usage.none' | t }}
+                  </span>
+                }
+              </section>
               @if (p.status === 'error' && p.error) {
                 <div
                   class="llm-err"

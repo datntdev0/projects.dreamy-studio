@@ -18,6 +18,7 @@ const UNSUPPORTED: &CliSpec = &CliSpec {
     logout_args: None,
     status_args: None,
     token_file: None,
+    update_stamp: None,
 };
 const TOOLS_OFF: Flags = Flags {
     tools_off: true,

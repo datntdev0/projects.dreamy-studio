@@ -78,6 +78,7 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::settings::llm_login,
             commands::settings::llm_install,
             commands::settings::llm_install_cancel,
+            commands::settings::llm_usage,
             commands::settings::llm_logout,
             commands::settings::llm_profile_open,
             commands::settings::window_background_set,

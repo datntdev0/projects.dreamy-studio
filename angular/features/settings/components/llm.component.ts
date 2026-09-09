@@ -1,5 +1,5 @@
 // prettier-ignore
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Badge } from '@components/badge';
 import { Icon } from '@components/icon';
 import { TabOption, Tabs } from '@components/tabs';
@@ -13,7 +13,7 @@ import { downloadPercent } from '../backend.rules';
 import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from '../llm.providers';
 import { isInstalled, isReady, LlmService } from '../llm.service';
 // prettier-ignore
-import { LlmCapability, LlmEffort, LlmFeature, LlmInstall, LlmProvider } from '../settings.models';
+import { LlmCapability, LlmEffort, LlmFeature, LlmInstall, LlmProvider, LlmUsageWindow, LlmUsageWindowId } from '../settings.models';
 
 type LlmTab = 'cli' | 'cloud' | 'features';
 
@@ -54,6 +54,22 @@ function toEffort(value: string): LlmEffort | null {
   return option && option.value !== '' ? option.value : null;
 }
 
+const USAGE_WINDOW_KEYS: Record<LlmUsageWindowId, LanguageKey> = {
+  session: 'settings.llm.usage.session',
+  weekly: 'settings.llm.usage.weekly',
+};
+
+const USAGE_WARNING_PERCENT = 75;
+const USAGE_DANGER_PERCENT = 90;
+
+const RESET_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+};
+
+export type UsageTone = 'ok' | 'warning' | 'danger';
+
 type Tone = 'default' | 'primary' | 'running' | 'success' | 'warning' | 'danger' | 'info';
 
 export interface LlmMessage {
@@ -69,7 +85,7 @@ export interface LlmMessage {
   templateUrl: './llm.component.html',
   host: { 'data-testid': 'settings-llm' },
 })
-export class SettingsLlm {
+export class SettingsLlm implements OnInit {
   private readonly llm = inject(LlmService);
   private readonly languageService = inject(LanguageService);
 
@@ -80,9 +96,56 @@ export class SettingsLlm {
   readonly tab = signal<LlmTab>('cli');
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
+  ngOnInit(): void {
+    void this.llm.refreshUsage();
+  }
+
   onTab(value: string): void {
-    const tab = LLM_TABS.find((item) => item === value);
-    this.tab.set(tab ?? 'cli');
+    const tab = LLM_TABS.find((item) => item === value) ?? 'cli';
+    this.tab.set(tab);
+    if (tab === 'cli') {
+      void this.llm.refreshUsage();
+    }
+  }
+
+  usageWindowKey(window: LlmUsageWindow): LanguageKey {
+    return USAGE_WINDOW_KEYS[window.window];
+  }
+
+  usagePercent(window: LlmUsageWindow): number | null {
+    return window.usedPercent === null
+      ? null
+      : Math.min(100, Math.max(0, Math.round(window.usedPercent)));
+  }
+
+  usageTone(window: LlmUsageWindow): UsageTone {
+    const percent = this.usagePercent(window) ?? 0;
+    if (percent >= USAGE_DANGER_PERCENT) {
+      return 'danger';
+    }
+    return percent >= USAGE_WARNING_PERCENT ? 'warning' : 'ok';
+  }
+
+  usageGroup(window: LlmUsageWindow): string {
+    return window.group ?? '';
+  }
+
+  usageReset(window: LlmUsageWindow): string {
+    const date = window.resetsAt === null ? window.resetsNote : this.resetDate(window.resetsAt);
+    return date ? this.languageService.translate('settings.llm.usage.resets', { date }) : '';
+  }
+
+  private resetDate(resetsAt: string): string {
+    return new Intl.DateTimeFormat(this.languageService.locale(), RESET_FORMAT).format(
+      new Date(resetsAt),
+    );
+  }
+
+  usageChecked(provider: LlmProvider): string {
+    const checkedAtMs = provider.usage?.checkedAtMs ?? 0;
+    return checkedAtMs > 0
+      ? new Date(checkedAtMs).toLocaleTimeString(this.languageService.locale())
+      : '';
   }
 
   installed(provider: LlmProvider): boolean {

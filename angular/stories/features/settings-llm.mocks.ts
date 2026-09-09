@@ -1,10 +1,14 @@
 import { Provider, signal, WritableSignal } from '@angular/core';
 import { LlmService } from '@features/settings/llm.service';
 // prettier-ignore
-import { LlmCapability, LlmFeature, LlmFeatureSettings, LlmInstall, LlmProvider } from '@features/settings/settings.models';
+import { LlmCapability, LlmFeature, LlmFeatureSettings, LlmInstall, LlmProvider, LlmUsage, LlmUsageWindow } from '@features/settings/settings.models';
 
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+const MINUTE_MS = 60 * 1000;
 const INSTALL_TICK_MS = 250;
 const INSTALL_STEPS = 24;
+const USAGE_DELAY_MS = 700;
 const CLAUDE_SIZE = 403083424;
 const AGY_SIZE = 243373976;
 const CODEX_SIZE = 218274372;
@@ -12,8 +16,15 @@ const PROFILE_ROOT = 'C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio\\llm';
 
 export type LlmInstallScenario = 'mixed' | 'missing' | 'downloading' | 'failed';
 
+export type LlmUsageScenario = 'normal' | 'limited' | 'failed';
+
 export interface LlmScenario {
   install?: LlmInstallScenario;
+  usage?: LlmUsageScenario;
+}
+
+function ahead(ms: number): string {
+  return new Date(Date.now() + ms).toISOString();
 }
 
 function installed(version: string, totalBytes: number): LlmInstall {
@@ -58,6 +69,9 @@ export function llmProvider(
     error: '',
     latencyMs: 820,
     checkedAt: '09:30:00',
+    usage: null,
+    usageLoading: false,
+    usageError: '',
     ...overrides,
   };
 }
@@ -134,6 +148,65 @@ export const LLM_FEATURES: LlmFeature[] = [
   { id: 'assistant', provider: null, model: '', effort: null, args: '' },
 ];
 
+function usageWindow(
+  window: LlmUsageWindow['window'],
+  usedPercent: number,
+  reset: Partial<LlmUsageWindow> = {},
+): LlmUsageWindow {
+  return { window, group: null, usedPercent, resetsAt: null, resetsNote: null, ...reset };
+}
+
+function claudeUsage(session: number, weekly: number): LlmUsage {
+  return {
+    plan: null,
+    checkedAtMs: Date.now(),
+    windows: [
+      usageWindow('session', session, { resetsNote: 'Nov 26, 2am (Asia/Ho_Chi_Minh)' }),
+      usageWindow('weekly', weekly, {
+        group: 'all models',
+        resetsNote: 'Nov 28, 12pm (Asia/Ho_Chi_Minh)',
+      }),
+    ],
+  };
+}
+
+function codexUsage(): LlmUsage {
+  return {
+    plan: 'Plus',
+    checkedAtMs: Date.now(),
+    windows: [
+      usageWindow('session', 82, { resetsAt: ahead(3 * HOUR_MS + 5 * MINUTE_MS) }),
+      usageWindow('weekly', 64, { resetsAt: ahead(3 * DAY_MS) }),
+    ],
+  };
+}
+
+function antigravityUsage(): LlmUsage {
+  const gemini = 'Gemini Models';
+  const partner = 'Claude and GPT models';
+  return {
+    plan: null,
+    checkedAtMs: Date.now(),
+    windows: [
+      usageWindow('weekly', 4, { group: gemini, resetsAt: ahead(6 * DAY_MS + 21 * HOUR_MS) }),
+      usageWindow('weekly', 0, { group: partner }),
+      usageWindow('session', 0, { group: partner }),
+    ],
+  };
+}
+
+function usageOf(scenario: LlmScenario, id: string): LlmUsage {
+  const limited = scenario.usage === 'limited';
+  switch (id) {
+    case 'claude':
+      return limited ? claudeUsage(100, 93) : claudeUsage(27, 41);
+    case 'codex':
+      return codexUsage();
+    default:
+      return antigravityUsage();
+  }
+}
+
 interface LlmMockState {
   scenario: LlmScenario;
   providers: WritableSignal<LlmProvider[]>;
@@ -152,6 +225,28 @@ function patchInstall(state: LlmMockState, id: string, change: Partial<LlmInstal
       item.id === id ? { ...item, install: { ...item.install, ...change } } : item,
     ),
   );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function loadUsage(state: LlmMockState, provider: LlmProvider): Promise<void> {
+  patch(state, provider.id, { usageLoading: true, usageError: '' });
+  await delay(USAGE_DELAY_MS);
+  if (state.scenario.usage === 'failed' && provider.id === 'codex') {
+    patch(state, provider.id, {
+      usageLoading: false,
+      usageError: 'codex exited with code 1: /status is not available in exec mode.',
+    });
+    return;
+  }
+  patch(state, provider.id, { usageLoading: false, usage: usageOf(state.scenario, provider.id) });
+}
+
+async function refreshUsage(state: LlmMockState): Promise<void> {
+  const targets = state.providers().filter((item) => item.install.state === 'installed');
+  await Promise.all(targets.map((item) => loadUsage(state, item)));
 }
 
 function stopInstall(state: LlmMockState, id: string): void {
@@ -175,6 +270,7 @@ function finishInstall(state: LlmMockState, id: string): void {
     status: 'ok',
     checkedAt: new Date().toLocaleTimeString(),
   });
+  void loadUsage(state, provider);
 }
 
 function tickInstall(state: LlmMockState, id: string): void {
@@ -245,6 +341,7 @@ export function llmServiceProvider(
     openProfile: () => Promise.resolve(),
     install: install.bind(null, state),
     cancelInstall: cancelInstall.bind(null, state),
+    refreshUsage: refreshUsage.bind(null, state),
   };
   return { provide: LlmService, useValue: mock };
 }

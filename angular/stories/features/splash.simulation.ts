@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 // prettier-ignore
 import { SetupErrorCode, SetupItem, SetupState, StepItem, StepsView, Translatable } from '@features/setup/setup.models';
-import { missingOf, receivedBytes } from '@features/setup/setup.rules';
+import { receivedBytes } from '@features/setup/setup.rules';
 import { LanguageKey } from '@shared/language/language.models';
 
 export const MB = 1024 * 1024;
@@ -16,7 +16,6 @@ const DOWNLOADS: SetupItem[] = [
   {
     id: 'python',
     group: 'runtime',
-    kind: 'download',
     version: '3.12.11',
     state: 'pending',
     received: 0,
@@ -25,7 +24,6 @@ const DOWNLOADS: SetupItem[] = [
   {
     id: 'ffmpeg',
     group: 'toolbox',
-    kind: 'download',
     version: '7.1 LGPL',
     state: 'pending',
     received: 0,
@@ -33,50 +31,8 @@ const DOWNLOADS: SetupItem[] = [
   },
 ];
 
-const DETECTED: SetupItem[] = [
-  {
-    id: 'codex',
-    group: 'toolbox',
-    kind: 'detect',
-    version: null,
-    state: 'checking',
-    received: 0,
-    total: 0,
-  },
-  {
-    id: 'claude',
-    group: 'toolbox',
-    kind: 'detect',
-    version: null,
-    state: 'checking',
-    received: 0,
-    total: 0,
-  },
-  {
-    id: 'antigravity',
-    group: 'toolbox',
-    kind: 'detect',
-    version: null,
-    state: 'checking',
-    received: 0,
-    total: 0,
-  },
-];
-
-const FOUND_VERSIONS: Record<string, string> = {
-  codex: '0.58.0',
-  claude: '2.1.3',
-  antigravity: '1.4.0',
-};
-
 function installed(item: SetupItem): SetupItem {
   return { ...item, state: 'ready', received: item.total };
-}
-
-function detect(missing: string[], item: SetupItem): SetupItem {
-  if (item.kind !== 'detect') return item;
-  if (missing.includes(item.id)) return { ...item, state: 'missing' };
-  return { ...item, state: 'ready', version: FOUND_VERSIONS[item.id] };
 }
 
 function advanceItem(item: SetupItem, budget: number): SetupItem {
@@ -90,13 +46,12 @@ function advanceItem(item: SetupItem, budget: number): SetupItem {
 }
 
 function advanceDownloads(items: SetupItem[], budget: number): SetupItem[] {
-  const index = items.findIndex((item) => item.kind === 'download' && item.state !== 'ready');
+  const index = items.findIndex((item) => item.state !== 'ready');
   if (index < 0) return items;
   return items.map((item, position) => (position === index ? advanceItem(item, budget) : item));
 }
 
 function breakItem(code: SetupErrorCode, item: SetupItem): SetupItem {
-  if (item.kind !== 'download') return item;
   if (code === 'checksum' && item.state === 'verifying')
     return { ...item, state: 'error', received: 0 };
   if (code === 'network' && item.state === 'downloading') return { ...item, state: 'error' };
@@ -108,12 +63,11 @@ function reviveItem(item: SetupItem): SetupItem {
 }
 
 function isDone(item: SetupItem): boolean {
-  return item.kind === 'detect' || item.state === 'ready';
+  return item.state === 'ready';
 }
 
 export interface SetupScenario {
   installed: boolean;
-  missing: string[];
   failure: SetupFailure;
 }
 
@@ -167,10 +121,6 @@ export class SetupSimulation {
     this.resume();
   }
 
-  hasMissing(): boolean {
-    return missingOf(this.state().items).length > 0;
-  }
-
   private recheck(): void {
     this.ticks = 0;
     this.state.set(this.initial());
@@ -181,22 +131,20 @@ export class SetupSimulation {
     return {
       status: 'checking',
       appVersion: '0.1.0',
-      items: [...downloads, ...DETECTED],
+      items: downloads,
       speed: 0,
       error: null,
     };
   }
 
   private finishChecking(current: SetupState): void {
-    const items = current.items.map(detect.bind(null, this.scenario.missing));
-    if (items.every(isDone)) {
-      this.state.set({ ...current, items, status: 'ready' });
+    if (current.items.every(isDone)) {
+      this.state.set({ ...current, status: 'ready' });
       return;
     }
     const offline = this.scenario.failure === 'offline' && !this.failed;
     this.state.set({
       ...current,
-      items,
       status: offline ? 'offline' : 'running',
       speed: offline ? 0 : SPEED,
     });

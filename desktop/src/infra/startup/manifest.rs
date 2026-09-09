@@ -21,6 +21,14 @@ pub enum ArchiveFormat {
     TarGz,
     #[serde(rename = "zip")]
     Zip,
+    #[serde(rename = "raw")]
+    Raw,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HashAlgorithm {
+    Sha256,
+    Sha512,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -32,13 +40,18 @@ pub struct ManifestItem {
     pub build: String,
     pub file: String,
     pub urls: Vec<String>,
+    #[serde(default)]
     pub sha256: String,
+    #[serde(default)]
+    pub sha512: String,
     pub size: u64,
     pub format: ArchiveFormat,
     pub root: String,
     #[serde(default)]
     pub include: Vec<String>,
     pub entry: String,
+    #[serde(default)]
+    pub on_demand: bool,
 }
 
 impl ManifestItem {
@@ -61,6 +74,21 @@ impl ManifestItem {
         self.group_dir(config).join(DOWNLOADS_DIR)
     }
 
+    pub fn algorithm(&self) -> HashAlgorithm {
+        if self.sha512.is_empty() {
+            HashAlgorithm::Sha256
+        } else {
+            HashAlgorithm::Sha512
+        }
+    }
+
+    pub fn digest(&self) -> &str {
+        match self.algorithm() {
+            HashAlgorithm::Sha256 => &self.sha256,
+            HashAlgorithm::Sha512 => &self.sha512,
+        }
+    }
+
     pub fn display_version(&self) -> String {
         format!("{} {}", self.version, self.build)
     }
@@ -74,6 +102,17 @@ pub struct SetupManifest {
 impl SetupManifest {
     pub fn parse(text: &str) -> Result<Self, String> {
         serde_json::from_str(text).map_err(|error| error.to_string())
+    }
+
+    pub fn startup(&self) -> Self {
+        Self {
+            items: self
+                .items
+                .iter()
+                .filter(|item| !item.on_demand)
+                .cloned()
+                .collect(),
+        }
     }
 
     pub fn item(&self, id: &str) -> Option<&ManifestItem> {

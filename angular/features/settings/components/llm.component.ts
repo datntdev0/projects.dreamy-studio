@@ -1,14 +1,19 @@
+// prettier-ignore
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Badge } from '@components/badge';
 import { Icon } from '@components/icon';
 import { TabOption, Tabs } from '@components/tabs';
+import { formatBytes } from '@features/library/library.rules';
 import { CoreModule } from '@shared/core.module';
-import { LanguageKey } from '@shared/language/language.models';
+import { LanguageKey, LanguageParams } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
+import { DownloadState } from '../backend.models';
+import { downloadPercent } from '../backend.rules';
 import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from '../llm.providers';
-import { isReady, LlmService } from '../llm.service';
-import { LlmCapability, LlmEffort, LlmFeature, LlmProvider } from '../settings.models';
+import { isInstalled, isReady, LlmService } from '../llm.service';
+// prettier-ignore
+import { LlmCapability, LlmEffort, LlmFeature, LlmInstall, LlmProvider } from '../settings.models';
 
 type LlmTab = 'cli' | 'cloud' | 'features';
 
@@ -37,6 +42,12 @@ const EFFORT_OPTIONS: EffortOption[] = [
   { value: 'medium', key: 'settings.llm.feature.effort.medium' },
   { value: 'high', key: 'settings.llm.feature.effort.high' },
 ];
+
+const INSTALL_STATUS: Record<Exclude<DownloadState, 'installed'>, [Tone, LanguageKey]> = {
+  none: ['default', 'settings.llm.status.notInstalled'],
+  downloading: ['running', 'settings.llm.status.installing'],
+  error: ['danger', 'settings.llm.status.installFailed'],
+};
 
 function toEffort(value: string): LlmEffort | null {
   const option = EFFORT_OPTIONS.find((item) => item.value === value);
@@ -74,9 +85,13 @@ export class SettingsLlm {
     this.tab.set(tab ?? 'cli');
   }
 
+  installed(provider: LlmProvider): boolean {
+    return isInstalled(provider);
+  }
+
   mode(provider: LlmProvider): string {
-    if (!provider.found) {
-      return 'is-missing';
+    if (!isInstalled(provider)) {
+      return provider.install.state === 'error' ? 'is-error' : 'is-missing';
     }
     if (provider.signedIn === false) {
       return 'is-login';
@@ -88,7 +103,11 @@ export class SettingsLlm {
   }
 
   statusTone(provider: LlmProvider): Tone {
-    if (!provider.found || provider.signedIn === false) {
+    const install = this.installStatus(provider);
+    if (install) {
+      return install[0];
+    }
+    if (provider.signedIn === false) {
       return 'warning';
     }
     const tones: Record<string, Tone> = {
@@ -101,10 +120,9 @@ export class SettingsLlm {
   }
 
   statusKey(provider: LlmProvider): LanguageKey {
-    if (!provider.found) {
-      return provider.status === 'checking'
-        ? 'settings.llm.status.checking'
-        : 'settings.llm.status.notInstalled';
+    const install = this.installStatus(provider);
+    if (install) {
+      return install[1];
     }
     if (provider.signedIn === false) {
       return 'settings.llm.status.notSignedIn';
@@ -121,9 +139,6 @@ export class SettingsLlm {
   message(provider: LlmProvider): LlmMessage {
     if (provider.status === 'checking') {
       return { key: 'settings.llm.msg.checking', tone: 'mute' };
-    }
-    if (!provider.found) {
-      return { key: 'settings.llm.msg.notInstalled', tone: 'mute' };
     }
     if (provider.signing) {
       return { key: 'settings.llm.msg.waiting', tone: 'mute' };
@@ -144,6 +159,30 @@ export class SettingsLlm {
     return { key: 'settings.llm.msg.unchecked', tone: 'mute' };
   }
 
+  installPercent(install: LlmInstall): number {
+    return downloadPercent(install);
+  }
+
+  installProgress(install: LlmInstall): LanguageParams {
+    return {
+      received: formatBytes(install.receivedBytes),
+      total: formatBytes(install.totalBytes),
+      percent: downloadPercent(install),
+    };
+  }
+
+  installSize(install: LlmInstall): string {
+    return formatBytes(install.totalBytes);
+  }
+
+  install(provider: LlmProvider): void {
+    void this.llm.install(provider.id);
+  }
+
+  cancelInstall(provider: LlmProvider): void {
+    void this.llm.cancelInstall(provider.id);
+  }
+
   check(provider: LlmProvider): void {
     void this.llm.check(provider.id);
   }
@@ -154,14 +193,6 @@ export class SettingsLlm {
 
   logout(provider: LlmProvider): void {
     void this.llm.logout(provider.id);
-  }
-
-  onPath(provider: LlmProvider, value: string): void {
-    void this.llm.setPath(provider.id, value);
-  }
-
-  copyPath(provider: LlmProvider): void {
-    void this.llm.copyPath(provider.id);
   }
 
   openProfile(provider: LlmProvider): void {
@@ -177,10 +208,7 @@ export class SettingsLlm {
   }
 
   providersFor(feature: LlmFeature): LlmProvider[] {
-    return this.providers().filter(
-      (provider) =>
-        provider.caps.includes(feature.id) && (provider.found || provider.id === feature.provider),
-    );
+    return this.providers().filter((provider) => provider.caps.includes(feature.id));
   }
 
   modelsFor(feature: LlmFeature): string[] {
@@ -215,6 +243,11 @@ export class SettingsLlm {
 
   canCheck(provider: LlmProvider): boolean {
     return provider.status !== 'checking';
+  }
+
+  private installStatus(provider: LlmProvider): [Tone, LanguageKey] | null {
+    const state = provider.install.state;
+    return state === 'installed' ? null : INSTALL_STATUS[state];
   }
 
   private buildTabOptions(): TabOption[] {

@@ -7,9 +7,10 @@ import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { LanguageService } from '@shared/language/language.service';
 import { applicationConfig, type Decorator } from '@storybook/angular-vite';
 
-import { APP_INFO, CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider } from '../features/mocks';
+import { APP_INFO, CURRENT_WORKSPACE } from '../features/mocks';
 import { backendServiceProvider } from '../features/settings-backend.mocks';
 import { cloudServiceProvider } from '../features/settings-cloud.mocks';
+import { LLM_PROVIDERS, llmServiceProvider } from '../features/settings-llm.mocks';
 
 export type IpcHandlers = Record<string, (args: Record<string, unknown>) => unknown>;
 

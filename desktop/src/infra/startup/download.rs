@@ -1,5 +1,6 @@
 use sha2::Digest;
 use sha2::Sha256;
+use sha2::Sha512;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -14,6 +15,7 @@ use ureq::Agent;
 use ureq::Body;
 use ureq::http::Response;
 
+use crate::infra::startup::manifest::HashAlgorithm;
 use crate::infra::startup::manifest::ManifestItem;
 use crate::infra::startup::models::SetupError;
 use crate::infra::startup::models::SetupErrorCode;
@@ -79,12 +81,13 @@ impl Fetch<'_> {
         } else {
             self.part()
         };
-        let digest = sha256_file(&source).map_err(|error| SetupError::io(&error))?;
-        if !digest.eq_ignore_ascii_case(&self.item.sha256) {
+        let algorithm = self.item.algorithm();
+        let digest = hash_file(&source, algorithm).map_err(|error| SetupError::io(&error))?;
+        if !digest.eq_ignore_ascii_case(self.item.digest()) {
             let _ = fs::remove_file(&source);
             return Err(SetupError::new(
                 SetupErrorCode::Checksum,
-                format!("{} has sha256 {digest}", self.item.file),
+                format!("{} has {algorithm:?} {digest}", self.item.file),
             ));
         }
         if source != archive {
@@ -214,9 +217,16 @@ fn file_len(path: &Path) -> u64 {
         .unwrap_or(0)
 }
 
-pub fn sha256_file(path: &Path) -> std::io::Result<String> {
+pub fn hash_file(path: &Path, algorithm: HashAlgorithm) -> std::io::Result<String> {
+    match algorithm {
+        HashAlgorithm::Sha256 => digest_file::<Sha256>(path),
+        HashAlgorithm::Sha512 => digest_file::<Sha512>(path),
+    }
+}
+
+fn digest_file<D: Digest>(path: &Path) -> std::io::Result<String> {
     let mut file = File::open(path)?;
-    let mut hasher = Sha256::new();
+    let mut hasher = D::new();
     let mut buffer = vec![0u8; CHUNK_SIZE];
     loop {
         let count = file.read(&mut buffer)?;
@@ -225,5 +235,9 @@ pub fn sha256_file(path: &Path) -> std::io::Result<String> {
         }
         hasher.update(&buffer[..count]);
     }
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }

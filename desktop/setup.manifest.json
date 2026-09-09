@@ -33,6 +33,57 @@
         "ffmpeg.exe"
       ],
       "entry": "ffmpeg.exe"
+    },
+    {
+      "id": "claude",
+      "group": "toolbox",
+      "version": "2.1.332",
+      "build": "win32-x64",
+      "file": "claude-2.1.332-win32-x64.exe",
+      "urls": [
+        "https://downloads.claude.ai/claude-code-releases/2.1.332/win32-x64/claude.exe"
+      ],
+      "sha256": "e6652f9170a07df45f1db3e0520f1df0f7b385181ff74f70f49398a67b5fd320",
+      "size": 403083424,
+      "format": "raw",
+      "root": "",
+      "include": [],
+      "entry": "claude.exe",
+      "onDemand": true
+    },
+    {
+      "id": "antigravity",
+      "group": "toolbox",
+      "version": "1.5.17",
+      "build": "4823843970351104",
+      "file": "agy-1.5.17-windows-x64.exe",
+      "urls": [
+        "https://storage.googleapis.com/antigravity-public/antigravity-cli/1.5.17-4823843970351104/windows-x64/cli_windows_x64.exe"
+      ],
+      "sha512": "7b468fb7b83f0dbd5be39afebc5ce71570de4d1020e248cf1d2461d338f5d0f6eb689500e0f68a36d26179be6632f74a2d96a34f37d6ef20f62b28b87d7c55b2",
+      "size": 243373976,
+      "format": "raw",
+      "root": "",
+      "include": [],
+      "entry": "agy.exe",
+      "onDemand": true
+    },
+    {
+      "id": "codex",
+      "group": "toolbox",
+      "version": "0.172.0",
+      "build": "x86_64-pc-windows-msvc",
+      "file": "codex-package-0.172.0-x86_64-pc-windows-msvc.tar.gz",
+      "urls": [
+        "https://github.com/openai/codex/releases/download/rust-v0.172.0/codex-package-x86_64-pc-windows-msvc.tar.gz"
+      ],
+      "sha256": "b723674d7caf26a3f55121a02d6cad8f3ac8ddf5860747a6edde1c904cf593af",
+      "size": 218274372,
+      "format": "tar.gz",
+      "root": "",
+      "include": [],
+      "entry": "bin/codex.exe",
+      "onDemand": true
     }
   ]
 }

@@ -5,7 +5,7 @@ import {
   TranslationReview,
 } from '@features/assistant/assistant.models';
 
-import { NOVEL_ID } from './novel-translation.mocks';
+import { NOVEL_ID } from '../screens/novel-translation.mocks';
 
 export function translationReview(chapter: number, chapterTitle: string): TranslationReview {
   return {

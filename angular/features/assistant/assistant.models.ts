@@ -272,6 +272,13 @@ export interface MarkedText {
   after: string;
 }
 
+export interface InlineDiff {
+  before: string;
+  removed: string;
+  added: string;
+  after: string;
+}
+
 export interface AssistantMessage {
   id: string;
   role: AssistantRole;

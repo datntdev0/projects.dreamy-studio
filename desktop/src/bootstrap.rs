@@ -32,6 +32,7 @@ use crate::features::pipeline::jobs::audio::AudioJobFactory;
 use crate::features::pipeline::jobs::translation::TranslationJobFactory;
 use crate::features::pipeline::llm::LlmTranslator;
 use crate::features::project::service::ProjectService;
+use crate::features::settings::install::CliInstaller;
 use crate::features::settings::models::Theme;
 use crate::features::settings::repository::SettingsRepository;
 use crate::features::settings::service::SettingsService;
@@ -72,10 +73,11 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::settings::settings_folder_open,
             commands::settings::settings_layout_save,
             commands::settings::llm_get,
-            commands::settings::llm_provider_save,
             commands::settings::llm_feature_save,
             commands::settings::llm_probe,
             commands::settings::llm_login,
+            commands::settings::llm_install,
+            commands::settings::llm_install_cancel,
             commands::settings::llm_logout,
             commands::settings::llm_profile_open,
             commands::settings::window_background_set,
@@ -140,6 +142,7 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::assistant::assistant_message_send,
             commands::assistant::assistant_proposal_resolve,
             commands::assistant::assistant_session_delete,
+            commands::assistant::assistant_quota_get,
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
             commands::pipeline::pipeline_history_list,
@@ -301,12 +304,16 @@ fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
 fn manage_setup<R: Runtime>(app: &App<R>, container: &AppContainer) {
     app.manage(SetupService::new(SetupDeps {
         config: container.config.clone(),
-        manifest: manifest().clone(),
+        manifest: manifest().startup(),
         llm: container.llm.clone(),
-        status: container.llm_status.clone(),
         runtime_libraries: Some(AppContainer::runtime_libraries_dir()),
         logger: container.logger.clone(),
     }));
+    app.manage(CliInstaller::new(
+        container.config.clone(),
+        manifest().clone(),
+        container.logger.clone(),
+    ));
     app.manage(StartupService::new(
         container.directories.root.clone(),
         container.database_path.clone(),

@@ -10,21 +10,12 @@ pub enum SetupGroup {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum SetupKind {
-    Download,
-    Detect,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
 pub enum ItemState {
     Pending,
-    Checking,
     Downloading,
     Verifying,
     Extracting,
     Ready,
-    Missing,
     Error,
 }
 
@@ -40,7 +31,6 @@ pub enum SetupPhase {
 pub struct SetupItemView {
     pub id: String,
     pub group: SetupGroup,
-    pub kind: SetupKind,
     pub version: Option<String>,
     pub state: ItemState,
     pub received: u64,

@@ -2,19 +2,21 @@ use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::translator::TranslateError;
 use crate::features::pipeline::translator::TranslateJob;
 use crate::features::pipeline::translator::Translator;
+use crate::features::pipeline::usage;
+use crate::features::pipeline::usage::QuotaSnapshot;
 use crate::features::settings::home::MCP_TOKEN_ENV;
 use crate::features::settings::llm::CliSpec;
 use crate::features::settings::llm::Effort;
 use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::llm::LLM_DIR;
-use crate::features::settings::llm::LlmSettings;
 use crate::features::settings::llm::spec;
-use crate::features::settings::probe::locate;
+use crate::features::settings::probe::installed;
 use crate::features::settings::probe::prepare;
 use crate::features::settings::repository::SettingsRepository;
 use crate::features::translation::service::TranslatedRun;
 use crate::shared::process::failure_snippet;
 use crate::shared::process::hide_window;
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
 use serde_json::json;
@@ -42,6 +44,16 @@ const WORK_DIR: &str = "work";
 const STARTED_PROGRESS: u8 = 10;
 const FINISHED_PROGRESS: u8 = 100;
 const SESSION_DEPTH: usize = 4;
+const CLI_SUFFIX: &str = " CLI";
+const AGY_ID: &str = "antigravity";
+const AGY_HOME: &str = ".gemini/antigravity-cli";
+const AGY_SESSION_DIRS: [&str; 3] = ["conversations", "brain", "presence"];
+const AGY_STREAM: [&str; 4] = [
+    "--input-format",
+    "stream-json",
+    "--output-format",
+    "stream-json",
+];
 
 #[derive(Debug, Clone)]
 pub struct LlmTranslator {
@@ -113,11 +125,16 @@ impl LlmClient {
                 cancel,
                 &Extras::default(),
             )?
-            .0)
+            .text)
     }
 
     pub(crate) fn provider(&self) -> Result<String, ClientError> {
         Ok(self.select()?.cli.id.to_string())
+    }
+
+    pub(crate) fn quota(&self) -> Option<QuotaSnapshot> {
+        let cli = self.select().ok()?.cli;
+        usage::load(&self.quota_path(cli))
     }
 
     pub(crate) fn start(
@@ -141,7 +158,7 @@ impl LlmClient {
         extras: &Extras,
     ) -> Result<Turn, ClientError> {
         let id = Uuid::new_v4().to_string();
-        let (text, session) = self.exchange(
+        let answer = self.exchange(
             Mode::Start(&id),
             purpose,
             prompt,
@@ -151,8 +168,8 @@ impl LlmClient {
             extras,
         )?;
         Ok(Turn {
-            text,
-            session: session.unwrap_or(id),
+            text: answer.text,
+            session: answer.session.unwrap_or(id),
         })
     }
 
@@ -187,7 +204,7 @@ impl LlmClient {
         cancel: &AtomicBool,
         extras: &Extras,
     ) -> Result<Turn, ClientError> {
-        let (text, _) = self.exchange(
+        let answer = self.exchange(
             Mode::Resume(session),
             purpose,
             prompt,
@@ -197,7 +214,7 @@ impl LlmClient {
             extras,
         )?;
         Ok(Turn {
-            text,
+            text: answer.text,
             session: session.to_string(),
         })
     }
@@ -210,13 +227,13 @@ impl LlmClient {
         let Some(cli) = feature.provider.as_deref().and_then(spec) else {
             return;
         };
-        let folder = match cli.id {
-            "claude" => "projects",
-            "codex" => "sessions",
-            _ => return,
-        };
-        let root = cli.profile_dir(&self.data_dir()).join(folder);
-        remove_session(&root, session, SESSION_DEPTH);
+        let profile = cli.profile_dir(&self.data_dir());
+        match cli.id {
+            "claude" => remove_session(&profile.join("projects"), session, SESSION_DEPTH),
+            "codex" => remove_session(&profile.join("sessions"), session, SESSION_DEPTH),
+            AGY_ID => remove_agy_session(&profile, session),
+            _ => {}
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -229,7 +246,7 @@ impl LlmClient {
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
         extras: &Extras,
-    ) -> Result<(String, Option<String>), ClientError> {
+    ) -> Result<Answer, ClientError> {
         let result = self.exchange_once(mode, purpose, prompt, log, progress, cancel, extras);
         match &result {
             Err(ClientError::Cancelled) => log.line("exchange cancelled"),
@@ -249,7 +266,7 @@ impl LlmClient {
         progress: &dyn Fn(u8),
         cancel: &AtomicBool,
         extras: &Extras,
-    ) -> Result<(String, Option<String>), ClientError> {
+    ) -> Result<Answer, ClientError> {
         if cancel.load(Ordering::SeqCst) {
             return Err(ClientError::Cancelled);
         }
@@ -261,12 +278,56 @@ impl LlmClient {
         let number = log.next_exchange();
         record_call(log, number, purpose, mode, &command, &prompt);
         let started = Instant::now();
-        let output = run(command, prompt, self.timeout, cancel)?;
+        let input = stdin_of(provider.cli, prompt);
+        let output = run(command, input, self.timeout, cancel)?;
         record_output(log, number, purpose, &output, started.elapsed());
         if !output.success {
             return Err(failed(failure_detail(provider.cli, &output)));
         }
-        reply_of(provider.cli, mode, output.stdout).map_err(failed)
+        let mut reply =
+            reply_of(provider.cli, mode, provider.streamed, output.stdout).map_err(failed)?;
+        if provider.streamed {
+            self.read_rollout(provider.cli, mode, &mut reply);
+            self.remember(provider.cli, reply.usage.quota.take());
+        }
+        Ok(Answer {
+            text: reply.text.unwrap_or_default(),
+            session: reply.session,
+        })
+    }
+
+    fn read_rollout(&self, cli: &CliSpec, mode: Mode, reply: &mut usage::StreamReply) {
+        if cli.id != "codex" {
+            return;
+        }
+        let id = match mode {
+            Mode::Resume(id) => Some(id.to_string()),
+            _ => reply.session.clone(),
+        };
+        let root = cli.profile_dir(&self.data_dir()).join("sessions");
+        let Some(file) = id.and_then(|id| find_rollout(&root, &id, SESSION_DEPTH)) else {
+            return;
+        };
+        if let Ok(text) = std::fs::read_to_string(file) {
+            reply.usage = usage::codex_rollout(&text);
+        }
+    }
+
+    fn remember(&self, cli: &CliSpec, reading: Option<usage::QuotaReading>) {
+        let Some(reading) = reading else {
+            return;
+        };
+        let name = cli.name.trim_end_matches(CLI_SUFFIX);
+        usage::save(
+            &self.quota_path(cli),
+            &usage::snapshot(name, reading, Utc::now()),
+        );
+    }
+
+    fn quota_path(&self, cli: &CliSpec) -> PathBuf {
+        self.data_dir()
+            .join(LLM_DIR)
+            .join(format!("quota-{}.json", cli.id))
     }
 
     fn data_dir(&self) -> PathBuf {
@@ -293,32 +354,22 @@ impl LlmClient {
         let cli = spec(&id)
             .filter(|cli| cli.caps.contains(&self.feature))
             .ok_or_else(|| failed(format!("{id} cannot be used for {}.", self.label)))?;
-        Ok(Selection {
-            settings,
-            feature,
-            cli,
-        })
+        Ok(Selection { feature, cli })
     }
 
     fn resolve(&self, mode: Mode, extras: &Extras) -> Result<Provider, ClientError> {
-        let Selection {
-            settings,
-            feature,
-            cli,
-        } = self.select()?;
-        let configured = settings.provider(cli.id).normalized();
-        let path = locate(cli, configured.path()).ok_or_else(|| {
-            failed(format!(
-                "{} was not found. Check its path in Settings > LLM.",
-                cli.name
-            ))
-        })?;
+        let Selection { feature, cli } = self.select()?;
+        let path = installed(cli).map_err(failed)?;
+        let streamed = self.feature == ASSISTANT_FEATURE;
         let args = build_args(
             cli,
             &feature,
             self.label,
             mode,
-            self.feature != ASSISTANT_FEATURE,
+            Flags {
+                tools_off: !streamed,
+                streamed,
+            },
             &extras.args,
         )
         .map_err(failed)?;
@@ -327,28 +378,36 @@ impl LlmClient {
             path,
             args,
             env: extras.env.clone(),
+            streamed,
         })
     }
 
     fn command(&self, provider: &Provider) -> Result<Command, ClientError> {
-        let data_dir = self.data_dir();
-        prepare(provider.cli, &data_dir).map_err(failed)?;
-        let work = data_dir.join(LLM_DIR).join(WORK_DIR);
-        std::fs::create_dir_all(&work)
-            .map_err(|error| failed(format!("Could not create {}: {error}", work.display())))?;
-        let mut command = Command::new(&provider.path);
+        let mut command = self.launcher(provider.cli, &provider.path)?;
         command
             .args(&provider.args)
-            .current_dir(work)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        if let Some(name) = provider.cli.profile_env {
-            command.env(name, provider.cli.profile_dir(&data_dir));
-        }
         command.envs(provider.env.iter().map(|(name, value)| (name, value)));
+        Ok(command)
+    }
+
+    fn launcher(&self, cli: &CliSpec, path: &Path) -> Result<Command, ClientError> {
+        let data_dir = self.data_dir();
+        prepare(cli, &data_dir).map_err(failed)?;
+        let work = self.work_dir();
+        std::fs::create_dir_all(&work)
+            .map_err(|error| failed(format!("Could not create {}: {error}", work.display())))?;
+        let mut command = Command::new(path);
+        command.current_dir(work);
+        cli.configure(&mut command, &data_dir);
         hide_window(&mut command);
         Ok(command)
+    }
+
+    fn work_dir(&self) -> PathBuf {
+        self.data_dir().join(LLM_DIR).join(WORK_DIR)
     }
 }
 
@@ -373,6 +432,17 @@ pub(crate) struct Turn {
     pub session: String,
 }
 
+struct Answer {
+    text: String,
+    session: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Flags {
+    tools_off: bool,
+    streamed: bool,
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Mode<'a> {
     Once,
@@ -387,7 +457,6 @@ pub(crate) struct Extras {
 }
 
 struct Selection {
-    settings: LlmSettings,
     feature: FeatureSettings,
     cli: &'static CliSpec,
 }
@@ -397,6 +466,7 @@ struct Provider {
     path: PathBuf,
     args: Vec<String>,
     env: Vec<(String, String)>,
+    streamed: bool,
 }
 
 struct Captured {
@@ -419,19 +489,31 @@ fn failed(message: impl Into<String>) -> ClientError {
 
 #[cfg(test)]
 pub fn invocation_args(cli: &CliSpec, feature: &FeatureSettings) -> Result<Vec<String>, String> {
-    build_args(cli, feature, FEATURE, Mode::Once, true, &[])
+    build_args(
+        cli,
+        feature,
+        FEATURE,
+        Mode::Once,
+        Flags {
+            tools_off: true,
+            streamed: false,
+        },
+        &[],
+    )
 }
 
-fn base_args(
-    cli: &CliSpec,
-    label: &str,
-    mode: Mode,
-    tools_off: bool,
-) -> Result<Vec<String>, String> {
+fn base_args(cli: &CliSpec, label: &str, mode: Mode, flags: Flags) -> Result<Vec<String>, String> {
+    let format = if flags.streamed {
+        "stream-json"
+    } else {
+        "text"
+    };
     let args: Vec<&str> = match (cli.id, mode) {
         ("claude", Mode::Once) => vec!["-p", "--output-format", "text", "--no-session-persistence"],
-        ("claude", Mode::Start(id)) => vec!["-p", "--output-format", "text", "--session-id", id],
-        ("claude", Mode::Resume(id)) => vec!["-p", "--output-format", "text", "--resume", id],
+        ("claude", Mode::Start(id)) => vec!["-p", "--output-format", format, "--session-id", id],
+        ("claude", Mode::Resume(id)) => vec!["-p", "--output-format", format, "--resume", id],
+        (AGY_ID, Mode::Resume(id)) => [AGY_STREAM.as_slice(), &["--conversation", id]].concat(),
+        (AGY_ID, _) => AGY_STREAM.to_vec(),
         ("codex", Mode::Once) => vec![
             "exec",
             "--skip-git-repo-check",
@@ -457,7 +539,10 @@ fn base_args(
         _ => return Err(format!("{} cannot be used for {label} yet.", cli.name)),
     };
     let mut args: Vec<String> = args.into_iter().map(String::from).collect();
-    if cli.id == "claude" && tools_off {
+    if cli.id == "claude" && flags.streamed && !matches!(mode, Mode::Once) {
+        args.push("--verbose".to_string());
+    }
+    if cli.id == "claude" && flags.tools_off {
         args.extend(["--tools".to_string(), String::new()]);
     }
     Ok(args)
@@ -468,10 +553,10 @@ fn build_args(
     feature: &FeatureSettings,
     label: &str,
     mode: Mode,
-    tools_off: bool,
+    flags: Flags,
     extras: &[String],
 ) -> Result<Vec<String>, String> {
-    let mut args = base_args(cli, label, mode, tools_off)?;
+    let mut args = base_args(cli, label, mode, flags)?;
     if let Some(model) = &feature.model {
         args.extend(model_args(cli.id, model));
     }
@@ -491,43 +576,63 @@ fn build_args(
     Ok(args)
 }
 
-fn reply_of(cli: &CliSpec, mode: Mode, stdout: String) -> Result<(String, Option<String>), String> {
-    if cli.id != "codex" || matches!(mode, Mode::Once) {
-        return Ok((stdout, None));
+fn reply_of(
+    cli: &CliSpec,
+    mode: Mode,
+    streamed: bool,
+    stdout: String,
+) -> Result<usage::StreamReply, String> {
+    let reply = match (cli.id, mode) {
+        (AGY_ID, _) => usage::agy_stream(&stdout),
+        (_, Mode::Once) => return Ok(plain(stdout)),
+        ("codex", _) => codex_events(&stdout),
+        ("claude", _) if streamed => usage::claude_stream(&stdout),
+        _ => return Ok(plain(stdout)),
+    };
+    match reply.text {
+        Some(_) => Ok(reply),
+        None => Err(format!("{} returned no message.", cli.name)),
     }
-    let mut session = None;
-    let mut text = None;
+}
+
+fn stdin_of(cli: &CliSpec, prompt: String) -> String {
+    if cli.id != AGY_ID {
+        return prompt;
+    }
+    let message = json!({ "event": "user", "message": { "role": "user", "content": prompt } });
+    format!("{message}\n")
+}
+
+fn plain(stdout: String) -> usage::StreamReply {
+    usage::StreamReply {
+        text: Some(stdout),
+        ..usage::StreamReply::default()
+    }
+}
+
+fn codex_events(stdout: &str) -> usage::StreamReply {
+    let mut reply = usage::StreamReply::default();
     for line in stdout.lines() {
         let Ok(event) = serde_json::from_str::<Value>(line.trim()) else {
             continue;
         };
         match event.get("type").and_then(Value::as_str) {
             Some("thread.started") => {
-                session = event
+                reply.session = event
                     .get("thread_id")
                     .and_then(Value::as_str)
                     .map(String::from);
             }
             Some("item.completed") => {
-                let item = event.get("item");
-                if item
-                    .and_then(|item| item.get("type"))
-                    .and_then(Value::as_str)
-                    == Some("agent_message")
-                {
-                    text = item
-                        .and_then(|item| item.get("text"))
-                        .and_then(Value::as_str)
-                        .map(String::from);
+                let item = &event["item"];
+                if item["type"].as_str() == Some("agent_message") {
+                    reply.text = item["text"].as_str().map(String::from);
                 }
             }
             _ => {}
         }
     }
-    match text {
-        Some(text) => Ok((text, session)),
-        None => Err(format!("{} returned no message.", cli.name)),
-    }
+    reply
 }
 
 fn quoted(text: &str) -> String {
@@ -633,6 +738,46 @@ fn remove_session(dir: &Path, id: &str, depth: usize) {
             let _ = std::fs::remove_file(&path);
         }
     }
+}
+
+fn remove_agy_session(profile: &Path, id: &str) {
+    let home = profile.join(AGY_HOME);
+    for folder in AGY_SESSION_DIRS {
+        let Ok(entries) = std::fs::read_dir(home.join(folder)) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            if !entry.file_name().to_string_lossy().starts_with(id) {
+                continue;
+            }
+            let path = entry.path();
+            let _ = if path.is_dir() {
+                std::fs::remove_dir_all(&path)
+            } else {
+                std::fs::remove_file(&path)
+            };
+        }
+    }
+}
+
+fn find_rollout(dir: &Path, id: &str, depth: usize) -> Option<PathBuf> {
+    let suffix = format!("{id}.jsonl");
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        let found = if path.is_dir() && depth > 0 {
+            find_rollout(&path, id, depth - 1)
+        } else {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .ends_with(&suffix)
+                .then_some(path)
+        };
+        if found.is_some() {
+            return found;
+        }
+    }
+    None
 }
 
 fn model_args(id: &str, model: &str) -> Vec<String> {

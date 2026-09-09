@@ -13,46 +13,33 @@ const GROUP_KEYS: Record<SetupGroupId, LanguageKey> = {
 const ITEM_ICONS: Record<SetupItemId, string> = {
   python: 'terminal',
   ffmpeg: 'film',
-  codex: 'prompt',
-  claude: 'spark',
-  antigravity: 'globe',
 };
 
 const ITEM_NAME_KEYS: Record<SetupItemId, LanguageKey> = {
   python: 'setup.item.python',
   ffmpeg: 'setup.item.ffmpeg',
-  codex: 'setup.item.codex',
-  claude: 'setup.item.claude',
-  antigravity: 'setup.item.antigravity',
 };
 
 const ITEM_ROLE_KEYS: Record<SetupItemId, LanguageKey> = {
   python: 'setup.role.python',
   ffmpeg: 'setup.role.ffmpeg',
-  codex: 'setup.role.cli',
-  claude: 'setup.role.cli',
-  antigravity: 'setup.role.cli',
 };
 
 const STATE_ICONS: Record<SetupItemState, string> = {
   pending: 'clock',
-  checking: 'search',
   downloading: 'download',
   verifying: 'shield',
   extracting: 'archive',
   ready: 'check-circle',
-  missing: 'info',
   error: 'x-circle',
 };
 
 const STATE_KEYS: Record<SetupItemState, LanguageKey> = {
   pending: 'setup.state.pending',
-  checking: 'setup.state.checking',
   downloading: 'setup.state.downloading',
   verifying: 'setup.state.verifying',
   extracting: 'setup.state.extracting',
   ready: 'setup.state.ready',
-  missing: 'setup.state.missing',
   error: 'setup.state.error',
 };
 
@@ -113,24 +100,16 @@ export function groupsOf(items: SetupItem[]): SetupGroup[] {
   );
 }
 
-export function downloadsOf(items: SetupItem[]): SetupItem[] {
-  return items.filter((item) => item.kind === 'download');
-}
-
-export function missingOf(items: SetupItem[]): SetupItem[] {
-  return items.filter((item) => item.state === 'missing');
-}
-
 export function receivedOf(item: SetupItem): number {
   return item.state === 'ready' ? item.total : Math.min(item.received, item.total);
 }
 
 export function totalBytes(items: SetupItem[]): number {
-  return downloadsOf(items).reduce((sum, item) => sum + item.total, 0);
+  return items.reduce((sum, item) => sum + item.total, 0);
 }
 
 export function receivedBytes(items: SetupItem[]): number {
-  return downloadsOf(items).reduce((sum, item) => sum + receivedOf(item), 0);
+  return items.reduce((sum, item) => sum + receivedOf(item), 0);
 }
 
 export function ratioPercent(received: number, total: number): number {
@@ -228,7 +207,7 @@ export function isSetupFailure(value: unknown): value is SetupFailure {
 }
 
 export function canContinue(state: SetupState): boolean {
-  return state.status === 'ready' && missingOf(state.items).length === 0;
+  return state.status === 'ready';
 }
 
 export function initialStartupView(): StepsView {
@@ -265,14 +244,4 @@ export function isStartupFailure(value: unknown): value is { code: StartupErrorC
   if (typeof value !== 'object' || value === null) return false;
   const code = (value as Record<string, unknown>)['code'];
   return typeof code === 'string' && code in STARTUP_CAUSE_KEYS;
-}
-
-const GUIDE_URLS: Partial<Record<SetupItemId, string>> = {
-  codex: 'https://github.com/openai/codex',
-  claude: 'https://docs.claude.com/en/docs/claude-code/setup',
-  antigravity: 'https://antigravity.google',
-};
-
-export function guideUrl(id: SetupItemId): string | null {
-  return GUIDE_URLS[id] ?? null;
 }

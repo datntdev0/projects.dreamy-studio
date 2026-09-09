@@ -54,12 +54,7 @@
       <span class="eyebrow" data-testid="setup-card-group-title">{{ groupKey(group.id) | t }}</span>
       <ul class="rs-parts" data-testid="setup-card-items">
         @for (item of group.items; track item.id) {
-          <li
-            class="rs-part"
-            [attr.data-state]="item.state"
-            [attr.data-kind]="item.kind"
-            data-testid="setup-card-item"
-          >
+          <li class="rs-part" [attr.data-state]="item.state" data-testid="setup-card-item">
             <span class="rs-part-icon" data-testid="setup-card-item-icon">
               <ds-icon [name]="itemIcon(item.id)" [size]="18" />
             </span>
@@ -75,35 +70,22 @@
               <div class="rs-part-role t-mute" data-testid="setup-card-item-role">
                 {{ itemRoleKey(item.id) | t }}
               </div>
-              @if (item.kind === 'download') {
-                <div
-                  class="progress rs-part-bar"
-                  [class.is-done]="item.state === 'ready'"
-                  data-testid="setup-card-item-progress"
-                >
-                  <i [style.width.%]="itemPercent(item)"></i>
-                </div>
-              }
+              <div
+                class="progress rs-part-bar"
+                [class.is-done]="item.state === 'ready'"
+                data-testid="setup-card-item-progress"
+              >
+                <i [style.width.%]="itemPercent(item)"></i>
+              </div>
             </div>
             <div class="rs-part-status" data-testid="setup-card-item-status">
               <span class="rs-part-state" data-testid="setup-card-item-state">
                 <ds-icon [name]="stateIcon(item.state)" [size]="14" />
                 {{ stateKey(item.state) | t }}
               </span>
-              @if (item.kind === 'download') {
-                <span class="mono t-mute" data-testid="setup-card-item-bytes">
-                  {{ itemBytes(item) }}
-                </span>
-              } @else if (item.state === 'missing') {
-                <button
-                  type="button"
-                  class="rs-link"
-                  data-testid="setup-card-item-guide"
-                  (click)="guideOpened.emit(item.id)"
-                >
-                  {{ 'setup.guide' | t }}
-                </button>
-              }
+              <span class="mono t-mute" data-testid="setup-card-item-bytes">
+                {{ itemBytes(item) }}
+              </span>
             </div>
           </li>
         }
@@ -121,12 +103,6 @@
     <div class="ld-warn rs-alert" role="alert" data-testid="setup-card-offline">
       <ds-icon name="unlink" />
       <span>{{ 'setup.offlineNote' | t }}</span>
-    </div>
-  }
-  @if (status() === 'ready' && missingCount()) {
-    <div class="ld-warn rs-alert" data-testid="setup-card-missing">
-      <ds-icon name="info" />
-      <span>{{ 'setup.missingNote' | t: { count: missingCount() } }}</span>
     </div>
   }
 

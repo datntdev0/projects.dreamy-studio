@@ -7,19 +7,10 @@ export interface Translatable {
 
 export type SetupGroupId = 'runtime' | 'toolbox';
 
-export type SetupItemId = 'python' | 'ffmpeg' | 'codex' | 'claude' | 'antigravity';
-
-export type SetupItemKind = 'download' | 'detect';
+export type SetupItemId = 'python' | 'ffmpeg';
 
 export type SetupItemState =
-  | 'pending'
-  | 'checking'
-  | 'downloading'
-  | 'verifying'
-  | 'extracting'
-  | 'ready'
-  | 'missing'
-  | 'error';
+  'pending' | 'downloading' | 'verifying' | 'extracting' | 'ready' | 'error';
 
 export type SetupStatus = 'checking' | 'running' | 'paused' | 'failed' | 'offline' | 'ready';
 
@@ -30,7 +21,6 @@ export type SetupFailureCode = SetupErrorCode | 'offline' | 'busy';
 export interface SetupItem {
   id: SetupItemId;
   group: SetupGroupId;
-  kind: SetupItemKind;
   version: string | null;
   state: SetupItemState;
   received: number;

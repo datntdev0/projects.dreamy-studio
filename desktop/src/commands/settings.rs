@@ -1,5 +1,7 @@
 use crate::commands::workspace::MAIN_WINDOW_LABEL;
-use crate::features::settings::llm::CliSettings;
+use crate::features::settings::install::CliInstaller;
+use crate::features::settings::install::InstallProgress;
+use crate::features::settings::install::InstallView;
 use crate::features::settings::llm::FeatureSettings;
 use crate::features::settings::llm::LlmView;
 use crate::features::settings::models::GeneralSettings;
@@ -15,7 +17,9 @@ use std::path::PathBuf;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Runtime;
+use tauri::State;
 use tauri::async_runtime::spawn_blocking;
+use tauri::ipc::Channel;
 use tauri_plugin_opener::OpenerExt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -65,21 +69,17 @@ pub async fn settings_layout_save<R: Runtime>(
 
 #[tauri::command]
 pub async fn llm_get<R: Runtime>(app: AppHandle<R>) -> Result<LlmView, String> {
-    let task = spawn_blocking(move || app.state::<SettingsService>().llm_view());
+    let task = spawn_blocking(move || {
+        with_installs(app.state::<SettingsService>().llm_view(), &app.state())
+    });
     task.await.map_err(|error| error.to_string())
 }
 
-#[tauri::command]
-pub async fn llm_provider_save<R: Runtime>(
-    app: AppHandle<R>,
-    id: String,
-    provider: CliSettings,
-) -> Result<LlmView, String> {
-    let task = spawn_blocking(move || {
-        app.state::<SettingsService>()
-            .save_llm_provider(&id, provider)
-    });
-    task.await.map_err(|error| error.to_string())?
+pub fn with_installs(mut view: LlmView, installer: &State<'_, CliInstaller>) -> LlmView {
+    for provider in &mut view.providers {
+        provider.install = installer.view(provider.id);
+    }
+    view
 }
 
 #[tauri::command]
@@ -91,6 +91,7 @@ pub async fn llm_feature_save<R: Runtime>(
     let task = spawn_blocking(move || {
         app.state::<SettingsService>()
             .save_llm_feature(&feature, config)
+            .map(|view| with_installs(view, &app.state()))
     });
     task.await.map_err(|error| error.to_string())?
 }
@@ -111,6 +112,25 @@ pub async fn llm_login<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), 
 pub async fn llm_logout<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().logout_llm(&id));
     task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_install<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    channel: Channel<InstallProgress>,
+) -> Result<InstallView, String> {
+    let task = spawn_blocking(move || {
+        app.state::<CliInstaller>().install(&id, &|progress| {
+            let _ = channel.send(progress);
+        })
+    });
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_install_cancel<R: Runtime>(app: AppHandle<R>, id: String) {
+    app.state::<CliInstaller>().cancel(&id);
 }
 
 #[tauri::command]

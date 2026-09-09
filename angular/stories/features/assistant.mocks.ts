@@ -4,16 +4,16 @@ import { novelScope, projectScope, WORKSPACE_SCOPE } from '@features/assistant/a
 import { NovelSummary } from '@features/novel/novel.models';
 import type { Decorator } from '@storybook/angular-vite';
 
+import { knowledgeScreenHandlers } from '../screens/novel-knowledge.mocks';
+import { LANTERN_VI_TITLES } from '../screens/novel-translation.fixtures';
+import { NOVEL_ID } from '../screens/novel-translation.mocks';
+import { IpcHandlers, withScreen } from '../screens/screen.mocks';
 import {
   knowledgeChanges,
   pipelineRun,
   scriptDraft,
   translationReview,
 } from './assistant.fixtures';
-import { knowledgeScreenHandlers } from './novel-knowledge.mocks';
-import { LANTERN_VI_TITLES } from './novel-translation.fixtures';
-import { NOVEL_ID } from './novel-translation.mocks';
-import { IpcHandlers, withScreen } from './screen.mocks';
 
 export const SECOND_NOVEL_ID = 2;
 
@@ -233,6 +233,21 @@ const SCRIPT_TURNS: Turn[] = [
   },
 ];
 
+const APPROVAL_TURNS: Turn[] = [
+  { role: 'user', text: 'Chuẩn bị giúp tôi các việc cần duyệt cho chương 1–4.' },
+  {
+    role: 'assistant',
+    text: 'Mình đã gom các đề xuất cần bạn duyệt: lượt dịch chương 3–4, bản viết lại script chương 1, rà soát bản dịch chương 3 và bộ sửa knowledgebase.',
+    activities: ['novel_outline → 12 chương', 'propose_passage × 4', 'propose_kb(4 edits)'],
+    attachments: [
+      pipelineRun(),
+      scriptDraft(),
+      translationReview(3, 'Con tàu cuối mùa'),
+      knowledgeChanges(),
+    ],
+  },
+];
+
 const WORKSPACE_TURNS: Turn[] = [
   { role: 'user', text: 'Novel nào còn nhiều chương chưa dịch?' },
   {
@@ -242,8 +257,15 @@ const WORKSPACE_TURNS: Turn[] = [
   },
 ];
 
-function seedSessions(): AssistantSession[] {
+function baseSessions(): AssistantSession[] {
   return [
+    session(
+      's-approvals',
+      'Duyệt đề xuất chương 1–4',
+      novelScope(NOVEL_ID),
+      60 * 1000,
+      APPROVAL_TURNS,
+    ),
     session(
       's-review',
       'Rà soát bản dịch chương 2',
@@ -406,7 +428,7 @@ async function send(state: MockState, args: Record<string, unknown>): Promise<As
   return clone(target);
 }
 
-export function decideAttachment(
+function decideAttachment(
   attachment: AssistantAttachment,
   ids: Set<string>,
   status: ProposalDecision,
@@ -531,7 +553,7 @@ function assistantHandlers(scenario: AssistantScenario): IpcHandlers {
   const base = knowledgeScreenHandlers({});
   const state: MockState = {
     scenario,
-    sessions: scenario.sessions === false ? [] : seedSessions(),
+    sessions: scenario.sessions === false ? [] : baseSessions(),
     nextSession: 1,
     nextMessage: 1,
   };

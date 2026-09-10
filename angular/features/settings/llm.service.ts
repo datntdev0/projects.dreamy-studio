@@ -151,14 +151,6 @@ export class LlmService {
     await this.check(id);
   }
 
-  async openProfile(id: string): Promise<void> {
-    try {
-      await this.ipc.invoke<void>('llm_profile_open', { id });
-    } catch {
-      this.toasts.show(this.languageService.translate('settings.general.openFailed'), 'danger');
-    }
-  }
-
   private find(id: string): LlmProvider | undefined {
     return this.providers().find((provider) => provider.id === id);
   }

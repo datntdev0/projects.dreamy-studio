@@ -338,7 +338,6 @@ export function llmServiceProvider(
     check: () => Promise.resolve(),
     login: () => Promise.resolve(),
     logout: () => Promise.resolve(),
-    openProfile: () => Promise.resolve(),
     install: install.bind(null, state),
     cancelInstall: cancelInstall.bind(null, state),
     refreshUsage: refreshUsage.bind(null, state),

@@ -5,7 +5,7 @@
   "identifier": "com.datntdev.dreamy-studio",
   "build": {
     "beforeDevCommand": "pnpm run angular:serve",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:1421",
     "beforeBuildCommand": "pnpm run angular:build",
     "frontendDist": "../_output/angular/dist/browser"
   },

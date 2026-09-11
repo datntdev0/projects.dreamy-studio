@@ -6,7 +6,6 @@ from pathlib import Path
 DATA_DIR_ENV = "DREAMY_BACKEND_DATA_DIR"
 DEVICE_ENV = "DREAMY_BACKEND_DEVICE"
 WORKER_PYTHON_ENV = "DREAMY_BACKEND_WORKER_PYTHON"
-LOG_DIR_ENV = "DREAMY_BACKEND_LOG_DIR"
 PORT_ENV = "DREAMY_BACKEND_PORT"
 RUN_MODE_ENV = "DREAMY_BACKEND_RUN_MODE"
 API_KEY_ENV = "DREAMY_BACKEND_API_KEY"
@@ -17,16 +16,16 @@ WORKERS_ENV = "DREAMY_BACKEND_WORKERS"
 
 DEFAULT_PORT = 8765
 DEFAULT_RUN_MODE = "prod"
-DEFAULT_LOG_DIR = "logs"
 DEFAULT_DATA_DIR = "data"
+LOGS_DIR = "logs"
 DEFAULT_WORKERS = 1
 MAX_WORKERS = 8
 RUN_MODES = ("dev", "test", "prod")
 DEVICES = ("cpu", "cuda")
 
 
-def optional_path(value: str | None) -> Path | None:
-    return Path(value) if value else None
+def read_data_dir(value: str | None) -> Path:
+    return Path(value or DEFAULT_DATA_DIR).resolve()
 
 
 def read_port(value: str | None) -> int:
@@ -64,7 +63,11 @@ def read_run_mode(value: str | None) -> str:
 class ServerOptions:
     port: int = DEFAULT_PORT
     run_mode: str = DEFAULT_RUN_MODE
-    log_dir: Path = Path(DEFAULT_LOG_DIR)
+    data_dir: Path = Path(DEFAULT_DATA_DIR)
+
+    @property
+    def log_dir(self) -> Path:
+        return self.data_dir / LOGS_DIR
 
     @property
     def log_level(self) -> str:
@@ -75,7 +78,7 @@ class ServerOptions:
         return cls(
             port=read_port(os.environ.get(PORT_ENV)),
             run_mode=read_run_mode(os.environ.get(RUN_MODE_ENV)),
-            log_dir=Path(os.environ.get(LOG_DIR_ENV) or DEFAULT_LOG_DIR).resolve(),
+            data_dir=read_data_dir(os.environ.get(DATA_DIR_ENV)),
         )
 
 
@@ -87,7 +90,6 @@ class Settings:
     hf_endpoint: str | None = None
     worker_python: str = sys.executable
     wheel_mirror: str | None = None
-    log_dir: Path | None = None
     tts_engine: str | None = None
     api_key: str | None = None
     workers: int = DEFAULT_WORKERS
@@ -101,19 +103,26 @@ class Settings:
         return self.data_dir / "runtime"
 
     @property
+    def caches_dir(self) -> Path:
+        return self.data_dir / "caches"
+
+    @property
     def tts_cache_dir(self) -> Path:
-        return self.data_dir / "cache" / "tts"
+        return self.caches_dir / "tts"
+
+    @property
+    def log_dir(self) -> Path:
+        return self.data_dir / LOGS_DIR
 
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            data_dir=Path(os.environ.get(DATA_DIR_ENV) or DEFAULT_DATA_DIR).resolve(),
+            data_dir=read_data_dir(os.environ.get(DATA_DIR_ENV)),
             device=read_device(os.environ.get(DEVICE_ENV)),
             nvidia_smi=os.environ.get(NVIDIA_SMI_ENV) or "nvidia-smi",
             hf_endpoint=os.environ.get("HF_ENDPOINT") or None,
             worker_python=os.environ.get(WORKER_PYTHON_ENV) or sys.executable,
             wheel_mirror=os.environ.get(WHEEL_MIRROR_ENV) or None,
-            log_dir=optional_path(os.environ.get(LOG_DIR_ENV)),
             tts_engine=os.environ.get(TTS_ENGINE_ENV) or None,
             api_key=os.environ.get(API_KEY_ENV) or None,
             workers=read_workers(os.environ.get(WORKERS_ENV)),

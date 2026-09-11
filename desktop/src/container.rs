@@ -56,10 +56,10 @@ impl AppContainer {
     }
 
     pub fn from_config(config: AppConfig) -> Self {
-        let root = config.app_data_dir.clone();
-        let logs = root.join("logs");
+        let data_dir = config.backend_data_dir.clone();
+        let logs = config.backend_logs_dir();
         let python = executable_of(&config, "python").unwrap_or_default();
-        let backend = BackendProcess::new(BackendLaunch::resolve(root, logs, python));
+        let backend = BackendProcess::new(BackendLaunch::resolve(data_dir, logs, python));
         let mut container = Self::assemble(config, Arc::new(backend));
         let data_dir = container.directories.root.clone();
         container.llm = Arc::new(LlmCheck::new(data_dir, container.llm_status.clone()));

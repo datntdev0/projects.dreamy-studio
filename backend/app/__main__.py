@@ -7,8 +7,8 @@ import uvicorn
 
 from app.shared.config import (
     API_KEY_ENV,
+    DATA_DIR_ENV,
     DEVICE_ENV,
-    LOG_DIR_ENV,
     WORKER_PYTHON_ENV,
     ServerOptions,
     Settings,
@@ -31,7 +31,7 @@ def main() -> None:
     if args.worker_python:
         os.environ[WORKER_PYTHON_ENV] = str(args.worker_python.resolve())
     options = ServerOptions.from_env()
-    os.environ[LOG_DIR_ENV] = str(options.log_dir)
+    os.environ[DATA_DIR_ENV] = str(options.data_dir)
     os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
     setup_logging(options.log_dir, options.log_level)
     install_excepthook()

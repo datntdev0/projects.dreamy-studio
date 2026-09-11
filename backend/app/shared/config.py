@@ -14,11 +14,14 @@ PYPI_URL_ENV = "DREAMY_BACKEND_PYPI_URL"
 NVIDIA_SMI_ENV = "DREAMY_BACKEND_NVIDIA_SMI"
 WHEEL_MIRROR_ENV = "DREAMY_BACKEND_WHEEL_MIRROR"
 TTS_ENGINE_ENV = "DREAMY_BACKEND_TTS_ENGINE"
+WORKERS_ENV = "DREAMY_BACKEND_WORKERS"
 
 DEFAULT_PORT = 8765
 DEFAULT_RUN_MODE = "prod"
 DEFAULT_LOG_DIR = "logs"
 DEFAULT_DATA_DIR = "data"
+DEFAULT_WORKERS = 1
+MAX_WORKERS = 8
 RUN_MODES = ("dev", "test", "prod")
 
 
@@ -31,6 +34,14 @@ def read_port(value: str | None) -> int:
         return DEFAULT_PORT
     if not value.isdigit() or not 0 < int(value) < 65536:
         raise ValueError(f"{PORT_ENV} must be a port number between 1 and 65535, got {value!r}")
+    return int(value)
+
+
+def read_workers(value: str | None) -> int:
+    if not value:
+        return DEFAULT_WORKERS
+    if not value.isdigit() or not 0 < int(value) <= MAX_WORKERS:
+        raise ValueError(f"{WORKERS_ENV} must be between 1 and {MAX_WORKERS}, got {value!r}")
     return int(value)
 
 
@@ -75,6 +86,7 @@ class Settings:
     log_dir: Path | None = None
     tts_engine: str | None = None
     api_key: str | None = None
+    workers: int = DEFAULT_WORKERS
 
     @property
     def models_dir(self) -> Path:
@@ -105,4 +117,5 @@ class Settings:
             log_dir=optional_path(os.environ.get(LOG_DIR_ENV)),
             tts_engine=os.environ.get(TTS_ENGINE_ENV) or None,
             api_key=os.environ.get(API_KEY_ENV) or None,
+            workers=read_workers(os.environ.get(WORKERS_ENV)),
         )

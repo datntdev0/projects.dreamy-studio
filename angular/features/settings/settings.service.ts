@@ -9,6 +9,7 @@ import { ToastService } from '@shared/toast/toast.service';
 import { BackendService } from './backend.service';
 import { CloudService } from './cloud.service';
 import { LlmService } from './llm.service';
+import { RemoteBackendService } from './remote.service';
 // prettier-ignore
 import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from './settings.models';
 
@@ -30,6 +31,7 @@ export class SettingsService {
   private readonly toasts = inject(ToastService);
   private readonly llm = inject(LlmService);
   private readonly backend = inject(BackendService);
+  private readonly remote = inject(RemoteBackendService);
   private readonly cloud = inject(CloudService);
   private writes: Promise<void> = Promise.resolve();
 
@@ -47,6 +49,7 @@ export class SettingsService {
       this.loadGeneral(),
       this.llm.load(),
       this.backend.load(),
+      this.remote.load(),
       this.cloud.load(),
     ]);
   }

@@ -5,9 +5,12 @@ use std::fmt;
 use std::time::Duration;
 use ureq::Agent;
 use ureq::Body;
+use ureq::RequestBuilder;
 use ureq::http::Response;
 
 const HOST: &str = "127.0.0.1";
+pub const API_KEY_HEADER: &str = "X-API-Key";
+const JSON_TYPE: &str = "application/json";
 const HEALTH_PATH: &str = "/health";
 const HEALTH_OK: &str = "ok";
 const MAX_BINARY_BYTES: u64 = 256 * 1024 * 1024;
@@ -79,17 +82,39 @@ struct ApiError {
 pub struct BackendClient {
     agent: Agent,
     base: String,
+    api_key: Option<String>,
 }
 
 impl BackendClient {
     pub fn new(port: u16, timeout: Duration) -> Self {
+        Self::at(format!("http://{HOST}:{port}"), None, timeout)
+    }
+
+    pub fn remote(url: &str, api_key: &str, timeout: Duration) -> Self {
+        let api_key = Some(api_key.to_string()).filter(|key| !key.is_empty());
+        Self::at(
+            url.trim().trim_end_matches('/').to_string(),
+            api_key,
+            timeout,
+        )
+    }
+
+    fn at(base: String, api_key: Option<String>, timeout: Duration) -> Self {
         let config = Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
             .build();
         Self {
             agent: Agent::new_with_config(config),
-            base: format!("http://{HOST}:{port}"),
+            base,
+            api_key,
+        }
+    }
+
+    fn authorize<B>(&self, request: RequestBuilder<B>) -> RequestBuilder<B> {
+        match &self.api_key {
+            Some(key) => request.header(API_KEY_HEADER, key),
+            None => request,
         }
     }
 
@@ -108,9 +133,9 @@ impl BackendClient {
     pub fn send<T: DeserializeOwned>(&self, method: Method, path: &str) -> Result<T, ClientError> {
         let url = format!("{}{path}", self.base);
         let result = match method {
-            Method::Get => self.agent.get(&url).call(),
-            Method::Post => self.agent.post(&url).send_empty(),
-            Method::Delete => self.agent.delete(&url).call(),
+            Method::Get => self.authorize(self.agent.get(&url)).call(),
+            Method::Post => self.authorize(self.agent.post(&url)).send_empty(),
+            Method::Delete => self.authorize(self.agent.delete(&url)).call(),
         };
         match result {
             Ok(response) => decode(response),
@@ -124,17 +149,19 @@ impl BackendClient {
         body: &B,
     ) -> Result<BinaryResponse, ClientError> {
         let url = format!("{}{path}", self.base);
-        let payload =
-            serde_json::to_vec(body).map_err(|error| ClientError::Invalid(error.to_string()))?;
+        let payload = encode(body)?;
         let request = self
-            .agent
-            .post(&url)
-            .header("Content-Type", "application/json");
+            .authorize(self.agent.post(&url))
+            .header("Content-Type", JSON_TYPE);
         match request.send(&payload[..]) {
             Ok(response) => read_binary(response),
             Err(error) => Err(ClientError::Unreachable(error.to_string())),
         }
     }
+}
+
+fn encode<B: Serialize>(body: &B) -> Result<Vec<u8>, ClientError> {
+    serde_json::to_vec(body).map_err(|error| ClientError::Invalid(error.to_string()))
 }
 
 fn read_binary(mut response: Response<Body>) -> Result<BinaryResponse, ClientError> {

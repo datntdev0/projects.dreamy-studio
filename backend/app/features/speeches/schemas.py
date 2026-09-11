@@ -21,6 +21,8 @@ class SynthesizeRequest(CamelModel):
     preset: str = ""
     prompt: str = ""
     reference_path: str = ""
+    reference_audio: str = ""
+    reference_name: str = ""
     sentence_pause_ms: int = Field(
         default=DEFAULT_SENTENCE_PAUSE_MS, ge=0, le=MAX_SENTENCE_PAUSE_MS
     )

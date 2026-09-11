@@ -81,12 +81,13 @@ export class SettingsRemote {
     this.resetDraft();
   }
 
-  connect(): void {
+  async connect(): Promise<void> {
     if (!this.canConnect()) {
       return;
     }
-    void this.remote.connect(this.draftUrl(), this.draftKey());
-    this.resetDraft();
+    if (await this.remote.connect(this.draftUrl(), this.draftKey())) {
+      this.resetDraft();
+    }
   }
 
   disconnect(): void {

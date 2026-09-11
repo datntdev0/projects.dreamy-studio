@@ -358,6 +358,7 @@ pub fn synthesis_request(
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default(),
         sentence_pause_ms,
+        ..SynthesisRequest::default()
     })
 }
 

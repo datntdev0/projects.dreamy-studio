@@ -114,6 +114,10 @@ class Settings:
     def log_dir(self) -> Path:
         return self.data_dir / LOGS_DIR
 
+    @property
+    def references_dir(self) -> Path:
+        return self.data_dir / "references"
+
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(

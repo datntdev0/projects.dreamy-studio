@@ -40,6 +40,7 @@ def pick_variant(requested: str | None, gpu: Gpu) -> str:
 
 class SystemService:
     def __init__(self, settings: Settings) -> None:
+        self.models_dir = settings.models_dir
         self.started_at = utc_now()
         self.version = package_version()
         self.gpu = GpuDetector(settings.nvidia_smi)
@@ -57,4 +58,8 @@ class SystemService:
         )
 
     def system_view(self) -> SystemResponse:
-        return SystemResponse(gpu=GpuResponse.of(self.gpu.get()), device=self.device)
+        return SystemResponse(
+            gpu=GpuResponse.of(self.gpu.get()),
+            device=self.device,
+            models_dir=str(self.models_dir),
+        )

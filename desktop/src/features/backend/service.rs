@@ -1,3 +1,4 @@
+use crate::features::backend::api;
 use crate::features::backend::models::BackendView;
 use crate::features::backend::models::ServerView;
 use crate::features::backend::models::SynthesisRequest;
@@ -5,15 +6,13 @@ use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::models::SystemView;
 use crate::features::backend::models::TtsModel;
 use crate::features::backend::monitor::MonitorState;
+use crate::features::backend::remote::RemoteBackendService;
 use crate::features::backend::supervisor::BackendSupervisor;
 use crate::infra::backend_client::BackendClient;
 use crate::infra::backend_client::ClientError;
 use crate::infra::backend_client::Method;
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD;
 use chrono::SecondsFormat;
 use chrono::Utc;
-use serde::de::DeserializeOwned;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -26,7 +25,6 @@ pub const MODELS_DIR: &str = "models";
 const STATUS_TIMEOUT: Duration = Duration::from_secs(3);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const SYNTHESIS_TIMEOUT: Duration = Duration::from_secs(1_200);
-const SYNTHESIS_PATH: &str = "/tts/synthesize";
 const NOT_RUNNING: &str = "The local backend is not running.";
 
 pub trait Synthesizer: Send + Sync {
@@ -35,14 +33,21 @@ pub trait Synthesizer: Send + Sync {
 
 pub struct BackendService {
     supervisor: Arc<BackendSupervisor>,
+    remote: Arc<RemoteBackendService>,
     logs_dir: PathBuf,
     models_dir: PathBuf,
 }
 
 impl BackendService {
-    pub fn new(supervisor: Arc<BackendSupervisor>, data_dir: PathBuf, logs_dir: PathBuf) -> Self {
+    pub fn new(
+        supervisor: Arc<BackendSupervisor>,
+        remote: Arc<RemoteBackendService>,
+        data_dir: PathBuf,
+        logs_dir: PathBuf,
+    ) -> Self {
         Self {
             supervisor,
+            remote,
             logs_dir,
             models_dir: data_dir.join(MODELS_DIR),
         }
@@ -92,23 +97,19 @@ impl BackendService {
         let Some(client) = self.client() else {
             return Ok(Vec::new());
         };
-        match client.send(Method::Get, "/models") {
-            Ok(models) => Ok(models),
-            Err(ClientError::Unreachable(_)) => Ok(Vec::new()),
-            Err(error) => Err(error.to_string()),
-        }
+        api::list_models(&client).map_err(|error| error.to_string())
     }
 
     pub fn download_model(&self, id: &str) -> Result<(), String> {
-        self.proxy(Method::Post, &format!("{}/download", model_path(id)?))
+        self.proxy(Method::Post, &format!("{}/download", api::model_path(id)?))
     }
 
     pub fn cancel_model(&self, id: &str) -> Result<(), String> {
-        self.proxy(Method::Post, &format!("{}/cancel", model_path(id)?))
+        self.proxy(Method::Post, &format!("{}/cancel", api::model_path(id)?))
     }
 
     pub fn remove_model(&self, id: &str) -> Result<(), String> {
-        self.proxy(Method::Delete, &model_path(id)?)
+        self.proxy(Method::Delete, &api::model_path(id)?)
     }
 
     pub fn logs_dir(&self) -> Result<PathBuf, String> {
@@ -120,12 +121,20 @@ impl BackendService {
     }
 
     fn proxy(&self, method: Method, path: &str) -> Result<(), String> {
-        self.call::<serde_json::Value>(method, path).map(drop)
+        let client = self.client().ok_or_else(|| NOT_RUNNING.to_string())?;
+        api::proxy(&client, method, path).map_err(|error| error.to_string())
     }
 
-    fn call<T: DeserializeOwned>(&self, method: Method, path: &str) -> Result<T, String> {
-        let client = self.client().ok_or_else(|| NOT_RUNNING.to_string())?;
-        client.send(method, path).map_err(|error| error.to_string())
+    fn synthesize_locally(
+        &self,
+        request: &SynthesisRequest,
+    ) -> Result<SynthesizedAudio, ClientError> {
+        let port = self
+            .supervisor
+            .monitor()
+            .port()
+            .ok_or_else(|| ClientError::Unreachable(NOT_RUNNING.to_string()))?;
+        api::synthesize(&BackendClient::new(port, SYNTHESIS_TIMEOUT), request)
     }
 
     fn client(&self) -> Option<BackendClient> {
@@ -138,26 +147,9 @@ fn restart_quietly(supervisor: &BackendSupervisor) {
     let _ = supervisor.restart();
 }
 
-fn model_path(id: &str) -> Result<String, String> {
-    let valid = !id.is_empty()
-        && id
-            .chars()
-            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_'));
-    if valid {
-        Ok(format!("/models/{id}"))
-    } else {
-        Err(format!("Unknown TTS model: {id}"))
-    }
-}
-
 fn ensure_dir(path: &Path) -> Result<PathBuf, String> {
     fs::create_dir_all(path).map_err(|error| error.to_string())?;
     Ok(path.to_path_buf())
-}
-
-pub fn decode_subtitles(value: &str) -> Option<String> {
-    let bytes = STANDARD.decode(value.trim()).ok()?;
-    String::from_utf8(bytes).ok()
 }
 
 fn now() -> String {
@@ -166,20 +158,9 @@ fn now() -> String {
 
 impl Synthesizer for BackendService {
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
-        let port = self
-            .supervisor
-            .monitor()
-            .port()
-            .ok_or_else(|| ClientError::Unreachable(NOT_RUNNING.to_string()))?;
-        let response =
-            BackendClient::new(port, SYNTHESIS_TIMEOUT).post_for_bytes(SYNTHESIS_PATH, request)?;
-        Ok(SynthesizedAudio {
-            duration_ms: response
-                .header("x-duration-ms")
-                .and_then(|value| value.parse().ok()),
-            cached: response.header("x-cache") == Some("hit"),
-            subtitles: response.header("x-subtitles").and_then(decode_subtitles),
-            bytes: response.bytes,
-        })
+        if self.remote.active() {
+            return self.remote.synthesize(request);
+        }
+        self.synthesize_locally(request)
     }
 }

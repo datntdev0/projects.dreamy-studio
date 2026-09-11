@@ -241,18 +241,19 @@ function remoteGpu(scenario: RemoteScenario): BackendGpu {
   };
 }
 
-function connectRemote(
+async function connectRemote(
   state: BackendMockState,
   remote: RemoteMock,
   scenario: RemoteScenario,
   url: string,
   key: string,
-): Promise<void> {
+): Promise<boolean> {
   remote.url.set(url.trim());
   remote.keyHint.set(key ? keyHintOf(key) : '');
   state.gpu.set(remoteGpu(scenario));
   state.models.set(scenario.models ?? BACKEND_MODELS);
-  return restartServer(state);
+  await restartServer(state);
+  return true;
 }
 
 function disconnectRemote(state: BackendMockState, remote: RemoteMock): Promise<void> {

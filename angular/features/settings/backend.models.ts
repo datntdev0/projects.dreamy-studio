@@ -27,16 +27,13 @@ export interface BackendGpu {
   name: string;
   vramMb: number;
   driver: string;
-}
-
-export interface BackendCuda extends BackendDownload {
-  version: string;
+  computeCapability: string;
+  cudaSupported: boolean;
 }
 
 export interface BackendView {
   server: BackendServer;
   gpu: BackendGpu;
-  cuda: BackendCuda;
   device: BackendDevice;
   modelsDir: string;
 }

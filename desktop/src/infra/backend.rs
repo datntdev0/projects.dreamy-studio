@@ -34,7 +34,6 @@ const DATA_DIR_VAR: &str = "DREAMY_BACKEND_DATA_DIR";
 const API_KEY_VAR: &str = "DREAMY_BACKEND_API_KEY";
 
 const BACKEND_DIR: &str = "backend";
-pub const DEFAULT_DEVICE: &str = "cpu";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BackendError {
@@ -66,7 +65,6 @@ pub struct BackendReady {
 pub trait BackendHost: Send + Sync {
     fn start(&self, cancel: &AtomicBool) -> Result<BackendReady, BackendError>;
     fn stop(&self);
-    fn set_device(&self, device: &str);
 }
 
 #[derive(Debug, Clone)]
@@ -152,7 +150,6 @@ struct Running {
 pub struct BackendProcess {
     launch: BackendLaunch,
     state: Mutex<Option<Running>>,
-    device: Mutex<String>,
 }
 
 impl BackendProcess {
@@ -160,12 +157,7 @@ impl BackendProcess {
         Self {
             launch,
             state: Mutex::new(None),
-            device: Mutex::new(DEFAULT_DEVICE.to_string()),
         }
-    }
-
-    fn device(&self) -> String {
-        lock(&self.device).clone()
     }
 
     fn running_port(&self) -> Option<u16> {
@@ -196,8 +188,6 @@ impl BackendProcess {
         let mut command = Command::new(&launch.program);
         command
             .args(&launch.args)
-            .arg("--device")
-            .arg(self.device())
             .env(PORT_VAR, port.to_string())
             .env(RUN_MODE_VAR, launch.run_mode)
             .env(LOG_DIR_VAR, &launch.log_dir)
@@ -279,10 +269,6 @@ impl BackendHost for BackendProcess {
         if let Some(mut running) = running {
             terminate(&mut running.child);
         }
-    }
-
-    fn set_device(&self, device: &str) {
-        *lock(&self.device) = device.to_string();
     }
 }
 

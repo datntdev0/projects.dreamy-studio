@@ -6,8 +6,6 @@ use crate::features::backend::models::SystemView;
 use crate::features::backend::models::TtsModel;
 use crate::features::backend::monitor::MonitorState;
 use crate::features::backend::supervisor::BackendSupervisor;
-use crate::features::settings::backend::Device;
-use crate::features::settings::repository::SettingsRepository;
 use crate::infra::backend_client::BackendClient;
 use crate::infra::backend_client::ClientError;
 use crate::infra::backend_client::Method;
@@ -20,7 +18,6 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -31,8 +28,6 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const SYNTHESIS_TIMEOUT: Duration = Duration::from_secs(1_200);
 const SYNTHESIS_PATH: &str = "/tts/synthesize";
 const NOT_RUNNING: &str = "The local backend is not running.";
-const CUDA_NOT_READY: &str =
-    "CUDA needs an NVIDIA GPU and an installed CUDA runtime before it can be selected.";
 
 pub trait Synthesizer: Send + Sync {
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError>;
@@ -40,23 +35,14 @@ pub trait Synthesizer: Send + Sync {
 
 pub struct BackendService {
     supervisor: Arc<BackendSupervisor>,
-    settings: SettingsRepository,
-    gate: Mutex<()>,
     logs_dir: PathBuf,
     models_dir: PathBuf,
 }
 
 impl BackendService {
-    pub fn new(
-        supervisor: Arc<BackendSupervisor>,
-        settings: SettingsRepository,
-        data_dir: PathBuf,
-        logs_dir: PathBuf,
-    ) -> Self {
+    pub fn new(supervisor: Arc<BackendSupervisor>, data_dir: PathBuf, logs_dir: PathBuf) -> Self {
         Self {
             supervisor,
-            settings,
-            gate: Mutex::new(()),
             logs_dir,
             models_dir: data_dir.join(MODELS_DIR),
         }
@@ -71,8 +57,7 @@ impl BackendService {
         BackendView {
             server,
             gpu: system.gpu,
-            cuda: system.cuda,
-            device: self.supervisor.device(),
+            device: system.device,
             models_dir: self.models_dir.to_string_lossy().into_owned(),
         }
     }
@@ -101,40 +86,6 @@ impl BackendService {
         self.supervisor.monitor().set(MonitorState::Starting);
         let supervisor = self.supervisor.clone();
         thread::spawn(move || restart_quietly(&supervisor));
-    }
-
-    pub fn scan_gpu(&self) -> Result<(), String> {
-        self.call::<SystemView>(Method::Post, "/system/gpu/scan")
-            .map(drop)
-    }
-
-    pub fn set_device(&self, device: &str) -> Result<(), String> {
-        let device = Device::parse(device)?;
-        if device == Device::Cuda {
-            let system: SystemView = self.call(Method::Get, "/system")?;
-            if !system.cuda_ready() {
-                return Err(CUDA_NOT_READY.to_string());
-            }
-        }
-        self.save_device(device)?;
-        self.apply_device()
-    }
-
-    pub fn download_cuda(&self) -> Result<(), String> {
-        self.proxy(Method::Post, "/cuda/download")
-    }
-
-    pub fn cancel_cuda(&self) -> Result<(), String> {
-        self.proxy(Method::Post, "/cuda/cancel")
-    }
-
-    pub fn remove_cuda(&self) -> Result<(), String> {
-        self.proxy(Method::Delete, "/cuda")?;
-        if self.supervisor.device() != Device::Cuda {
-            return Ok(());
-        }
-        self.save_device(Device::Cpu)?;
-        self.apply_device()
     }
 
     pub fn models(&self) -> Result<Vec<TtsModel>, String> {
@@ -166,28 +117,6 @@ impl BackendService {
 
     pub fn models_dir(&self) -> Result<PathBuf, String> {
         ensure_dir(&self.models_dir)
-    }
-
-    fn save_device(&self, device: Device) -> Result<(), String> {
-        let _guard = self
-            .gate
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut settings = self.settings.load().map_err(|error| error.to_string())?;
-        settings.backend.device = Some(device);
-        self.settings
-            .save(&settings)
-            .map_err(|error| error.to_string())
-    }
-
-    fn apply_device(&self) -> Result<(), String> {
-        if self.supervisor.monitor().state() == MonitorState::Stopped {
-            return Ok(());
-        }
-        self.supervisor
-            .restart()
-            .map(drop)
-            .map_err(|error| error.to_string())
     }
 
     fn proxy(&self, method: Method, path: &str) -> Result<(), String> {

@@ -69,9 +69,6 @@
   color: var(--ink);
   font-weight: 400;
 }
-.st-row.is-disabled .field {
-  opacity: 0.55;
-}
 .st-slider {
   display: flex;
   align-items: center;
@@ -393,13 +390,6 @@
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.be-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--sp-sm);
-  flex-wrap: wrap;
-}
 .be-dl {
   display: grid;
   gap: var(--sp-xs);
@@ -417,9 +407,4 @@
   border-radius: var(--r-full);
   background: var(--primary);
   transition: width 0.3s ease;
-}
-@media (max-width: 680px) {
-  .be-actions {
-    justify-content: flex-start;
-  }
 }

@@ -1,7 +1,5 @@
 use crate::features::backend::monitor::BackendMonitor;
 use crate::features::backend::monitor::MonitorState;
-use crate::features::settings::backend::Device;
-use crate::features::settings::repository::SettingsRepository;
 use crate::infra::backend::BackendError;
 use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendReady;
@@ -12,17 +10,15 @@ use std::sync::atomic::Ordering;
 
 pub struct BackendSupervisor {
     inner: Arc<dyn BackendHost>,
-    settings: SettingsRepository,
     monitor: BackendMonitor,
     restart_gate: Mutex<()>,
     restart_cancel: AtomicBool,
 }
 
 impl BackendSupervisor {
-    pub fn new(inner: Arc<dyn BackendHost>, settings: SettingsRepository) -> Self {
+    pub fn new(inner: Arc<dyn BackendHost>) -> Self {
         Self {
             inner,
-            settings,
             monitor: BackendMonitor::new(),
             restart_gate: Mutex::new(()),
             restart_cancel: AtomicBool::new(false),
@@ -31,13 +27,6 @@ impl BackendSupervisor {
 
     pub fn monitor(&self) -> &BackendMonitor {
         &self.monitor
-    }
-
-    pub fn device(&self) -> Device {
-        self.settings
-            .load()
-            .map(|settings| settings.backend.device())
-            .unwrap_or_default()
     }
 
     pub fn restart(&self) -> Result<BackendReady, BackendError> {
@@ -55,7 +44,6 @@ impl BackendSupervisor {
 impl BackendHost for BackendSupervisor {
     fn start(&self, cancel: &AtomicBool) -> Result<BackendReady, BackendError> {
         self.monitor.set(MonitorState::Starting);
-        self.inner.set_device(self.device().as_str());
         let result = self.inner.start(cancel);
         self.monitor.set(state_after(&result));
         result
@@ -65,10 +53,6 @@ impl BackendHost for BackendSupervisor {
         self.restart_cancel.store(true, Ordering::SeqCst);
         self.inner.stop();
         self.monitor.set(MonitorState::Stopped);
-    }
-
-    fn set_device(&self, device: &str) {
-        self.inner.set_device(device);
     }
 }
 

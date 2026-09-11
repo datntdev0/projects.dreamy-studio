@@ -19,8 +19,6 @@ class Platform:
     system: str
     pip_tags: tuple[str, ...]
     wheel_tags: tuple[str, ...]
-    library_dir: str
-    library_path_env: str
 
     def accepts_wheel(self, filename: str) -> bool:
         tags = filename.removesuffix(".whl").rsplit("-", 1)[-1].split(".")
@@ -32,16 +30,12 @@ WINDOWS_X64 = Platform(
     system="win32",
     pip_tags=("win_amd64",),
     wheel_tags=("win_amd64",),
-    library_dir="bin",
-    library_path_env="PATH",
 )
 LINUX_X64 = Platform(
     name="linux_x86_64",
     system="linux",
     pip_tags=manylinux_tags("x86_64"),
     wheel_tags=manylinux_tags("x86_64"),
-    library_dir="lib",
-    library_path_env="LD_LIBRARY_PATH",
 )
 PLATFORMS = {item.name: item for item in (WINDOWS_X64, LINUX_X64)}
 

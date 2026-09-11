@@ -2,7 +2,6 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Badge } from '@components/badge';
 import { Icon } from '@components/icon';
-import { SegmentOption, Segments } from '@components/segments';
 import { TabOption, Tabs } from '@components/tabs';
 import { formatBytes } from '@features/library/library.rules';
 import { CoreModule } from '@shared/core.module';
@@ -10,8 +9,7 @@ import { LanguageKey, LanguageParams } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
 import { modelNoteKey } from '../backend.catalog';
-// prettier-ignore
-import { BackendDevice, BackendDownload, BackendStatus, DownloadState, TtsModel } from '../backend.models';
+import { BackendDownload, BackendStatus, DownloadState, TtsModel } from '../backend.models';
 import { downloadPercent, formatUptime, formatVram } from '../backend.rules';
 import { BackendService } from '../backend.service';
 
@@ -20,8 +18,6 @@ type BackendTab = 'general' | 'models';
 type Tone = 'default' | 'primary' | 'running' | 'success' | 'warning' | 'danger' | 'info';
 
 const BACKEND_TABS: BackendTab[] = ['general', 'models'];
-
-const DEVICES: BackendDevice[] = ['cpu', 'cuda'];
 
 const SERVER_TONES: Record<BackendStatus, Tone> = {
   running: 'success',
@@ -98,14 +94,10 @@ function orMissing(value: string): string {
   return value || MISSING;
 }
 
-function toDevice(value: string): BackendDevice {
-  return DEVICES.find((device) => device === value) ?? 'cpu';
-}
-
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings-backend',
-  imports: [Badge, Icon, CoreModule, NgTemplateOutlet, Segments, Tabs],
+  imports: [Badge, Icon, CoreModule, NgTemplateOutlet, Tabs],
   templateUrl: './backend.component.html',
   host: { 'data-testid': 'settings-backend' },
 })
@@ -115,16 +107,12 @@ export class SettingsBackend {
 
   readonly server = this.backend.server;
   readonly gpu = this.backend.gpu;
-  readonly cuda = this.backend.cuda;
   readonly device = this.backend.device;
   readonly modelsDir = this.backend.modelsDir;
   readonly models = this.backend.models;
   readonly checking = this.backend.checking;
-  readonly scanning = this.backend.scanning;
-  readonly gpuReady = this.backend.gpuReady;
   readonly tab = signal<BackendTab>('general');
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
-  readonly deviceOptions = computed(this.buildDeviceOptions.bind(this));
   readonly serverMode = computed(this.buildServerMode.bind(this));
   readonly serverTone = computed(this.buildServerTone.bind(this));
   readonly serverKey = computed(this.buildServerKey.bind(this));
@@ -132,15 +120,14 @@ export class SettingsBackend {
   readonly address = computed(this.buildAddress.bind(this));
   readonly uptime = computed(this.buildUptime.bind(this));
   readonly gpuHint = computed(this.buildGpuHint.bind(this));
-  readonly cudaHint = computed(this.buildCudaHint.bind(this));
-  readonly deviceHintKey = computed(this.buildDeviceHintKey.bind(this));
+  readonly gpuTone = computed(this.buildGpuTone.bind(this));
+  readonly gpuKey = computed(this.buildGpuKey.bind(this));
+  readonly deviceTone = computed(this.buildDeviceTone.bind(this));
+  readonly deviceKey = computed(this.buildDeviceKey.bind(this));
+  readonly deviceHint = computed(this.buildDeviceHint.bind(this));
 
   onTab(value: string): void {
     this.tab.set(BACKEND_TABS.find((tab) => tab === value) ?? 'general');
-  }
-
-  onDevice(value: string): void {
-    void this.backend.setDevice(toDevice(value));
   }
 
   check(): void {
@@ -153,22 +140,6 @@ export class SettingsBackend {
 
   openLogs(): void {
     void this.backend.openLogs();
-  }
-
-  scanGpu(): void {
-    void this.backend.scanGpu();
-  }
-
-  downloadCuda(): void {
-    void this.backend.downloadCuda();
-  }
-
-  cancelCuda(): void {
-    void this.backend.cancelCuda();
-  }
-
-  removeCuda(): void {
-    void this.backend.removeCuda();
   }
 
   openModelsDir(): void {
@@ -193,10 +164,6 @@ export class SettingsBackend {
 
   canCheck(): boolean {
     return this.server().status !== 'starting' && !this.checking();
-  }
-
-  canScan(): boolean {
-    return this.server().status !== 'starting' && !this.scanning();
   }
 
   text(value: string): string {
@@ -263,17 +230,6 @@ export class SettingsBackend {
     ];
   }
 
-  private buildDeviceOptions(): SegmentOption[] {
-    return [
-      { value: 'cpu', label: this.languageService.translate('settings.backend.device.cpu') },
-      {
-        value: 'cuda',
-        label: this.languageService.translate('settings.backend.device.gpu'),
-        disabled: !this.gpuReady(),
-      },
-    ];
-  }
-
   private buildServerMode(): string {
     return SERVER_MODES[this.server().status];
   }
@@ -322,27 +278,52 @@ export class SettingsBackend {
       name: orMissing(gpu.name),
       vram: gpu.vramMb > 0 ? formatVram(gpu.vramMb) : MISSING,
       driver: orMissing(gpu.driver),
+      compute: orMissing(gpu.computeCapability),
     });
   }
 
-  private buildCudaHint(): string {
-    const cuda = this.cuda();
-    const size = this.size(cuda);
-    return cuda.version
-      ? this.languageService.translate('settings.backend.cuda.hintVersion', {
-          version: cuda.version,
-          size,
-        })
-      : this.languageService.translate('settings.backend.cuda.hint', { size });
+  private buildGpuTone(): Tone {
+    const gpu = this.gpu();
+    if (!gpu.found) {
+      return 'default';
+    }
+    return gpu.cudaSupported ? 'success' : 'warning';
   }
 
-  private buildDeviceHintKey(): LanguageKey {
-    if (!this.gpu().found) {
-      return 'settings.backend.gpu.none';
+  private buildGpuKey(): LanguageKey {
+    const gpu = this.gpu();
+    if (!gpu.found) {
+      return 'settings.backend.gpu.notFound';
     }
-    return this.cuda().state === 'installed'
-      ? 'settings.backend.device.hint'
-      : 'settings.backend.device.needCuda';
+    return gpu.cudaSupported
+      ? 'settings.backend.gpu.supported'
+      : 'settings.backend.gpu.unsupported';
+  }
+
+  private buildDeviceTone(): Tone {
+    return this.device() === 'cuda' ? 'success' : 'default';
+  }
+
+  private buildDeviceKey(): LanguageKey {
+    return this.device() === 'cuda' ? 'settings.backend.device.gpu' : 'settings.backend.device.cpu';
+  }
+
+  private buildDeviceHint(): string {
+    const gpu = this.gpu();
+    const name = orMissing(gpu.name);
+    if (this.device() === 'cuda') {
+      return this.languageService.translate('settings.backend.device.onGpu', { name });
+    }
+    if (!gpu.found) {
+      return this.languageService.translate('settings.backend.device.noGpu');
+    }
+    if (!gpu.cudaSupported) {
+      return this.languageService.translate('settings.backend.device.unsupported', {
+        name,
+        compute: orMissing(gpu.computeCapability),
+      });
+    }
+    return this.languageService.translate('settings.backend.device.auto', { name });
   }
 
   private timeOf(checkedAt: string): string {

@@ -1,5 +1,4 @@
 use crate::features::backend::monitor::MonitorState;
-use crate::features::settings::backend::Device;
 use crate::infra::backend_client::Health;
 use serde::Deserialize;
 use serde::Serialize;
@@ -83,33 +82,23 @@ pub struct GpuView {
     pub name: String,
     pub vram_mb: u64,
     pub driver: String,
+    pub compute_capability: String,
+    pub cuda_supported: bool,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct CudaView {
-    #[serde(flatten)]
-    pub download: Download,
-    pub version: String,
-}
-
-impl CudaView {
-    pub fn installed(&self) -> bool {
-        self.download.state == DownloadState::Installed
-    }
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Device {
+    #[default]
+    Cpu,
+    Cuda,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SystemView {
     pub gpu: GpuView,
-    pub cuda: CudaView,
-}
-
-impl SystemView {
-    pub fn cuda_ready(&self) -> bool {
-        self.gpu.found && self.cuda.installed()
-    }
+    pub device: Device,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -152,7 +141,6 @@ pub struct VoicePreset {
 pub struct BackendView {
     pub server: ServerView,
     pub gpu: GpuView,
-    pub cuda: CudaView,
     pub device: Device,
     pub models_dir: String,
 }

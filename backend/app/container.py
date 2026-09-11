@@ -9,7 +9,7 @@ from app.shared.config import Settings
 class Container:
     def __init__(self, settings: Settings, catalog: Catalog | None = None) -> None:
         catalog = catalog or load_catalog()
-        self.system = SystemService(settings, catalog.cuda)
+        self.system = SystemService(settings)
         self.device = self.system.device
         cache = TtsCache(settings.tts_cache_dir)
         self.models = ModelService(settings, catalog, self.device, cache.clear)

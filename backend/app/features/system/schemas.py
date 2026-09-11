@@ -1,8 +1,7 @@
 from typing import Literal
 
 from app.features.system.gpu import Gpu
-from app.shared.downloads import Download
-from app.shared.schemas import CamelModel, Device, DownloadResponse, download_fields
+from app.shared.schemas import CamelModel, Device
 
 
 class HealthResponse(CamelModel):
@@ -18,20 +17,21 @@ class GpuResponse(CamelModel):
     name: str
     vram_mb: int
     driver: str
+    compute_capability: str
+    cuda_supported: bool
 
     @classmethod
     def of(cls, gpu: Gpu) -> "GpuResponse":
-        return cls(found=gpu.found, name=gpu.name, vram_mb=gpu.vram_mb, driver=gpu.driver)
-
-
-class CudaResponse(DownloadResponse):
-    version: str
-
-    @classmethod
-    def of(cls, download: Download, version: str) -> "CudaResponse":
-        return cls(**download_fields(download), version=version)
+        return cls(
+            found=gpu.found,
+            name=gpu.name,
+            vram_mb=gpu.vram_mb,
+            driver=gpu.driver,
+            compute_capability=gpu.compute_capability,
+            cuda_supported=gpu.cuda_supported,
+        )
 
 
 class SystemResponse(CamelModel):
     gpu: GpuResponse
-    cuda: CudaResponse
+    device: Device

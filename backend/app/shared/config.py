@@ -10,7 +10,6 @@ LOG_DIR_ENV = "DREAMY_BACKEND_LOG_DIR"
 PORT_ENV = "DREAMY_BACKEND_PORT"
 RUN_MODE_ENV = "DREAMY_BACKEND_RUN_MODE"
 API_KEY_ENV = "DREAMY_BACKEND_API_KEY"
-PYPI_URL_ENV = "DREAMY_BACKEND_PYPI_URL"
 NVIDIA_SMI_ENV = "DREAMY_BACKEND_NVIDIA_SMI"
 WHEEL_MIRROR_ENV = "DREAMY_BACKEND_WHEEL_MIRROR"
 TTS_ENGINE_ENV = "DREAMY_BACKEND_TTS_ENGINE"
@@ -23,6 +22,7 @@ DEFAULT_DATA_DIR = "data"
 DEFAULT_WORKERS = 1
 MAX_WORKERS = 8
 RUN_MODES = ("dev", "test", "prod")
+DEVICES = ("cpu", "cuda")
 
 
 def optional_path(value: str | None) -> Path | None:
@@ -43,6 +43,14 @@ def read_workers(value: str | None) -> int:
     if not value.isdigit() or not 0 < int(value) <= MAX_WORKERS:
         raise ValueError(f"{WORKERS_ENV} must be between 1 and {MAX_WORKERS}, got {value!r}")
     return int(value)
+
+
+def read_device(value: str | None) -> str | None:
+    if not value:
+        return None
+    if value not in DEVICES:
+        raise ValueError(f"{DEVICE_ENV} must be one of {', '.join(DEVICES)}, got {value!r}")
+    return value
 
 
 def read_run_mode(value: str | None) -> str:
@@ -71,14 +79,10 @@ class ServerOptions:
         )
 
 
-DEFAULT_PYPI_URL = "https://pypi.org"
-
-
 @dataclass(frozen=True)
 class Settings:
     data_dir: Path
-    device: str = "cpu"
-    pypi_url: str = DEFAULT_PYPI_URL
+    device: str | None = None
     nvidia_smi: str = "nvidia-smi"
     hf_endpoint: str | None = None
     worker_python: str = sys.executable
@@ -100,16 +104,11 @@ class Settings:
     def tts_cache_dir(self) -> Path:
         return self.data_dir / "cache" / "tts"
 
-    @property
-    def cuda_dir(self) -> Path:
-        return self.runtime_dir / "cuda"
-
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
             data_dir=Path(os.environ.get(DATA_DIR_ENV) or DEFAULT_DATA_DIR).resolve(),
-            device=os.environ.get(DEVICE_ENV) or "cpu",
-            pypi_url=(os.environ.get(PYPI_URL_ENV) or DEFAULT_PYPI_URL).rstrip("/"),
+            device=read_device(os.environ.get(DEVICE_ENV)),
             nvidia_smi=os.environ.get(NVIDIA_SMI_ENV) or "nvidia-smi",
             hf_endpoint=os.environ.get("HF_ENDPOINT") or None,
             worker_python=os.environ.get(WORKER_PYTHON_ENV) or sys.executable,

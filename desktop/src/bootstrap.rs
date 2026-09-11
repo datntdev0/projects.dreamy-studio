@@ -85,11 +85,6 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::backend::backend_restart,
             commands::backend::backend_logs_open,
             commands::backend::backend_models_open,
-            commands::backend::backend_gpu_scan,
-            commands::backend::backend_device_set,
-            commands::backend::backend_cuda_download,
-            commands::backend::backend_cuda_cancel,
-            commands::backend::backend_cuda_remove,
             commands::backend::backend_model_list,
             commands::backend::backend_model_download,
             commands::backend::backend_model_cancel,
@@ -295,7 +290,6 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
 fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
     app.manage(BackendService::new(
         container.supervisor.clone(),
-        SettingsRepository::new(container.settings_path.clone()),
         container.directories.root.clone(),
         container.directories.logs.clone(),
     ));

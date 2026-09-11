@@ -14,12 +14,12 @@ class ModelService:
         self,
         settings: Settings,
         catalog: Catalog,
-        device: str,
+        variant: str,
         on_removed: Callable[[str], None],
     ) -> None:
         self.settings = settings
         self.catalog = catalog
-        self.device = device
+        self.variant = variant
         self.on_removed = on_removed
         self.runtimes = self.build_runtimes()
         self.models = {
@@ -39,7 +39,7 @@ class ModelService:
 
     def build_runtimes(self) -> dict[str, RuntimeInstaller]:
         return {
-            runtime_id: self.installer(runtime.variant_for(self.device))
+            runtime_id: self.installer(runtime.variant_for(self.variant))
             for runtime_id, runtime in self.catalog.runtimes.items()
         }
 

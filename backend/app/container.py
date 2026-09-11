@@ -12,7 +12,7 @@ class Container:
         self.system = SystemService(settings)
         self.device = self.system.device
         cache = TtsCache(settings.tts_cache_dir)
-        self.models = ModelService(settings, catalog, self.device, cache.clear)
+        self.models = ModelService(settings, catalog, self.system.variant, cache.clear)
         self.speeches = SpeechService(settings, self.device, cache, self.models)
 
     def close(self) -> None:

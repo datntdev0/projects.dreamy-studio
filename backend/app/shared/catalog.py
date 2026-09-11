@@ -9,6 +9,7 @@ from app.shared.platforms import Platform, current_platform
 
 CPU_VARIANT = "cpu"
 CUDA_VARIANT = "cuda"
+CU126_VARIANT = "cu126"
 
 
 @dataclass(frozen=True)
@@ -81,10 +82,8 @@ class CatalogRuntime:
     id: str
     variants: dict[str, RuntimeVariant]
 
-    def variant_for(self, device: str) -> RuntimeVariant:
-        if device == CUDA_VARIANT and CUDA_VARIANT in self.variants:
-            return self.variants[CUDA_VARIANT]
-        return self.variants[CPU_VARIANT]
+    def variant_for(self, name: str) -> RuntimeVariant:
+        return self.variants.get(name) or self.variants[CPU_VARIANT]
 
 
 @dataclass(frozen=True)

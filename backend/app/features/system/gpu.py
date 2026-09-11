@@ -10,7 +10,7 @@ QUERY_ARGS = (
     "--format=csv,noheader,nounits",
 )
 
-MIN_CUDA_CAPABILITY = (7, 0)
+MIN_CUDA_CAPABILITY = (6, 0)
 
 logger = logging.getLogger("gpu")
 
@@ -31,8 +31,12 @@ class Gpu:
     compute_capability: str = ""
 
     @property
+    def capability(self) -> tuple[int, int] | None:
+        return parse_capability(self.compute_capability)
+
+    @property
     def cuda_supported(self) -> bool:
-        capability = parse_capability(self.compute_capability)
+        capability = self.capability
         return self.found and capability is not None and capability >= MIN_CUDA_CAPABILITY
 
 

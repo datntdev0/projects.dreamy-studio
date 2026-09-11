@@ -406,7 +406,8 @@
       "id": "torch",
       "variants": {
         "cpu": "torch-cpu",
-        "cuda": "torch-cuda"
+        "cuda": "torch-cuda",
+        "cu126": "torch-cu126"
       }
     }
   ]

@@ -1,21 +1,28 @@
 {
   "cuda": {
-    "version": "12.4",
-    "sizeBytes": 1077700558,
-    "packages": [
-      {
-        "name": "nvidia-cuda-runtime-cu12",
-        "version": "12.4.127"
-      },
-      {
-        "name": "nvidia-cublas-cu12",
-        "version": "12.4.5.8"
-      },
-      {
-        "name": "nvidia-cudnn-cu12",
-        "version": "9.1.0.70"
-      }
-    ]
+    "win_amd64": {
+      "version": "12.4",
+      "sizeBytes": 1077700558,
+      "packages": [
+        {
+          "name": "nvidia-cuda-runtime-cu12",
+          "version": "12.4.127"
+        },
+        {
+          "name": "nvidia-cublas-cu12",
+          "version": "12.4.5.8"
+        },
+        {
+          "name": "nvidia-cudnn-cu12",
+          "version": "9.1.0.70"
+        }
+      ]
+    },
+    "linux_x86_64": {
+      "version": "12.8",
+      "sizeBytes": 0,
+      "packages": []
+    }
   },
   "models": [
     {
@@ -417,14 +424,14 @@
     {
       "id": "vieneu",
       "variants": {
-        "cpu": "runtimes/vieneu-cpu.json"
+        "cpu": "vieneu-cpu"
       }
     },
     {
       "id": "torch",
       "variants": {
-        "cpu": "runtimes/torch-cpu.json",
-        "cuda": "runtimes/torch-cuda.json"
+        "cpu": "torch-cpu",
+        "cuda": "torch-cuda"
       }
     }
   ]

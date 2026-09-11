@@ -8,46 +8,69 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from app.shared.platforms import PLATFORMS, Platform
+
 RUNTIMES_DIR = Path(__file__).resolve().parents[1] / "app" / "shared" / "resources" / "runtimes"
-PLATFORM = "win_amd64"
 USER_AGENT = "dreamy-studio-lock"
 
 
-def pip_report(
-    requirements: list[str], python: str, indexes: list[str], extras: list[str], no_deps: bool
-) -> Any:
-    with tempfile.TemporaryDirectory() as work:
-        report = Path(work) / "report.json"
-        command = [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--dry-run",
-            "--ignore-installed",
-            "--quiet",
-            "--disable-pip-version-check",
-            "--only-binary=:all:",
-            "--platform",
-            PLATFORM,
-            "--python-version",
-            python,
-            "--implementation",
-            "cp",
-            "--target",
-            str(Path(work) / "target"),
-            "--report",
-            str(report),
-            *requirements,
-        ]
-        if no_deps:
-            command.append("--no-deps")
-        for index in indexes:
-            command += ["--index-url", index]
-        for extra in extras:
-            command += ["--extra-index-url", extra]
-        subprocess.run(command, check=True)
-        return json.loads(report.read_text(encoding="utf-8"))
+def lock_path(platform_name: str, runtime: str, variant: str) -> Path:
+    return RUNTIMES_DIR / platform_name / f"{runtime}-{variant}.json"
+
+
+def ensure_host(target: Platform) -> None:
+    if not sys.platform.startswith(target.system):
+        raise SystemExit(
+            f"Lock {target.name} on a {target.system} host: pip evaluates environment markers "
+            f"against the running interpreter, so a {sys.platform} host resolves the wrong "
+            "dependencies"
+        )
+
+
+def platform_options(target: Platform) -> list[str]:
+    return [option for tag in target.pip_tags for option in ("--platform", tag)]
+
+
+def pip_command(
+    args: argparse.Namespace, work: Path, requirements: list[str], no_deps: bool
+) -> list[str]:
+    command = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--dry-run",
+        "--ignore-installed",
+        "--quiet",
+        "--disable-pip-version-check",
+        "--only-binary=:all:",
+        *platform_options(PLATFORMS[args.platform]),
+        "--python-version",
+        args.python,
+        "--implementation",
+        "cp",
+        "--target",
+        str(work / "target"),
+        "--report",
+        str(work / "report.json"),
+        *requirements,
+    ]
+    if no_deps:
+        command.append("--no-deps")
+    if args.constraint:
+        command += ["--constraint", str(args.constraint)]
+    for index in args.index_url:
+        command += ["--index-url", index]
+    for extra in args.extra_index_url:
+        command += ["--extra-index-url", extra]
+    return command
+
+
+def pip_report(args: argparse.Namespace, requirements: list[str], no_deps: bool) -> Any:
+    with tempfile.TemporaryDirectory() as directory:
+        work = Path(directory)
+        subprocess.run(pip_command(args, work, requirements, no_deps), check=True)
+        return json.loads((work / "report.json").read_text(encoding="utf-8"))
 
 
 def remote_size(url: str) -> int:
@@ -81,8 +104,7 @@ def lock_entry(item: dict[str, Any]) -> dict[str, Any]:
 def resolve(args: argparse.Namespace, requirements: list[str], no_deps: bool) -> list[Any]:
     if not requirements:
         return []
-    report = pip_report(requirements, args.python, args.index_url, args.extra_index_url, no_deps)
-    return report["install"]
+    return pip_report(args, requirements, no_deps)["install"]
 
 
 def build_lock(args: argparse.Namespace) -> dict[str, Any]:
@@ -95,27 +117,52 @@ def build_lock(args: argparse.Namespace) -> dict[str, Any]:
         "runtime": args.runtime,
         "variant": args.variant,
         "python": args.python,
-        "platform": PLATFORM,
+        "platform": PLATFORMS[args.platform].pip_tags[0],
         "wheels": wheels,
     }
 
 
-def main() -> None:
+def write_alignment(args: argparse.Namespace, directory: Path) -> Path:
+    source = json.loads(
+        lock_path(args.align_with, args.runtime, args.variant).read_text(encoding="utf-8")
+    )
+    constraint = directory / "constraints.txt"
+    lines = [f"{wheel['name']}=={wheel['version']}" for wheel in source["wheels"]]
+    constraint.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return constraint
+
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Pin a worker runtime to exact wheels")
     parser.add_argument("runtime")
     parser.add_argument("variant", choices=("cpu", "cuda"))
+    parser.add_argument("--platform", choices=sorted(PLATFORMS), required=True)
     parser.add_argument("--requirements", type=Path, required=True)
     parser.add_argument("--standalone", action="append", default=[])
     parser.add_argument("--python", default="3.12")
     parser.add_argument("--index-url", action="append", default=[])
     parser.add_argument("--extra-index-url", action="append", default=[])
-    args = parser.parse_args()
+    parser.add_argument("--constraint", type=Path)
+    parser.add_argument("--align-with", choices=sorted(PLATFORMS))
+    return parser.parse_args()
+
+
+def write_lock(args: argparse.Namespace) -> None:
     lock = build_lock(args)
-    target = RUNTIMES_DIR / f"{args.runtime}-{args.variant}.json"
+    target = lock_path(args.platform, args.runtime, args.variant)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8", newline="\n")
     total = sum(wheel["size"] for wheel in lock["wheels"])
-    print(f"{target.name}: {len(lock['wheels'])} wheels, {total} bytes")
+    print(f"{args.platform}/{target.name}: {len(lock['wheels'])} wheels, {total} bytes")
+
+
+def main() -> None:
+    args = parse_args()
+    ensure_host(PLATFORMS[args.platform])
+    with tempfile.TemporaryDirectory() as directory:
+        if args.align_with:
+            args.constraint = write_alignment(args, Path(directory))
+        write_lock(args)
 
 
 if __name__ == "__main__":

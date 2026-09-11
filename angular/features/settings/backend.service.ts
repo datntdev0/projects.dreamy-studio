@@ -5,11 +5,12 @@ import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
+import { BackendHost } from './backend.host';
 import { BackendDevice, BackendGpu, BackendServer, BackendView, TtsModel } from './backend.models';
 
 const POLL_MS = 1000;
 
-const NO_SERVER: BackendServer = {
+export const NO_SERVER: BackendServer = {
   status: 'stopped',
   port: null,
   version: '',
@@ -20,7 +21,7 @@ const NO_SERVER: BackendServer = {
   error: '',
 };
 
-const NO_GPU: BackendGpu = {
+export const NO_GPU: BackendGpu = {
   found: false,
   name: '',
   vramMb: 0,
@@ -47,7 +48,7 @@ function toModels(raw: TtsModel[] | null | undefined): TtsModel[] {
 }
 
 @Injectable({ providedIn: 'root' })
-export class BackendService {
+export class BackendService implements BackendHost {
   private readonly ipc = inject(DesktopIpcService);
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);

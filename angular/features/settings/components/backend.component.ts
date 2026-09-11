@@ -1,37 +1,16 @@
-import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Badge } from '@components/badge';
 import { Icon } from '@components/icon';
-import { TabOption, Tabs } from '@components/tabs';
-import { formatBytes } from '@features/library/library.rules';
 import { CoreModule } from '@shared/core.module';
-import { LanguageKey, LanguageParams } from '@shared/language/language.models';
+import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 
-import { modelNoteKey } from '../backend.catalog';
-import { BackendDownload, BackendStatus, DownloadState, TtsModel } from '../backend.models';
-import { downloadPercent, formatUptime, formatVram } from '../backend.rules';
+import { BackendStatus } from '../backend.models';
 import { BackendService } from '../backend.service';
-
-type BackendTab = 'general' | 'models';
-
-type Tone = 'default' | 'primary' | 'running' | 'success' | 'warning' | 'danger' | 'info';
-
-const BACKEND_TABS: BackendTab[] = ['general', 'models'];
-
-const SERVER_TONES: Record<BackendStatus, Tone> = {
-  running: 'success',
-  starting: 'running',
-  stopped: 'default',
-  error: 'danger',
-};
-
-const SERVER_MODES: Record<BackendStatus, string> = {
-  running: 'is-ready',
-  starting: 'is-missing',
-  stopped: 'is-missing',
-  error: 'is-error',
-};
+// prettier-ignore
+import { BackendMessage, healthMessage, message, MISSING, orMissing, serverMode, serverTone, serverUptime, Tone } from '../backend.status';
+import { BackendPanel } from './backend-panel.component';
+import { BackendStatusLine } from './backend-status.component';
 
 const SERVER_KEYS: Record<BackendStatus, LanguageKey> = {
   running: 'settings.backend.status.running',
@@ -40,95 +19,25 @@ const SERVER_KEYS: Record<BackendStatus, LanguageKey> = {
   error: 'settings.backend.status.error',
 };
 
-const MODEL_TONES: Record<DownloadState, Tone> = {
-  none: 'default',
-  downloading: 'running',
-  installed: 'success',
-  error: 'danger',
-};
-
-const MODEL_MODES: Record<DownloadState, string> = {
-  none: 'is-missing',
-  downloading: 'is-missing',
-  installed: 'is-ready',
-  error: 'is-error',
-};
-
-const MODEL_KEYS: Record<DownloadState, LanguageKey> = {
-  none: 'settings.backend.model.status.none',
-  downloading: 'settings.backend.model.status.downloading',
-  installed: 'settings.backend.model.status.installed',
-  error: 'settings.backend.model.status.error',
-};
-
-export interface BackendMessage {
-  key: LanguageKey;
-  tone: 'ok' | 'warn' | 'mute';
-  busy: boolean;
-  params?: LanguageParams;
-}
-
-function message(
-  key: LanguageKey,
-  tone: BackendMessage['tone'],
-  busy = false,
-  params?: LanguageParams,
-): BackendMessage {
-  return { key, tone, busy, params };
-}
-
-const MODEL_MESSAGES: Record<DownloadState, BackendMessage> = {
-  none: message('settings.backend.model.msg.none', 'mute'),
-  downloading: message('settings.backend.model.msg.downloading', 'mute', true),
-  installed: message('settings.backend.model.msg.installed', 'ok'),
-  error: message('settings.backend.model.msg.error', 'warn'),
-};
-
-const LANGUAGE_KEYS: Record<string, LanguageKey> = {
-  mul: 'settings.backend.model.lang.mul',
-};
-
-const MISSING = '—';
-
-function orMissing(value: string): string {
-  return value || MISSING;
-}
-
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings-backend',
-  imports: [Badge, Icon, CoreModule, NgTemplateOutlet, Tabs],
+  imports: [Badge, BackendPanel, BackendStatusLine, Icon, CoreModule],
   templateUrl: './backend.component.html',
   host: { 'data-testid': 'settings-backend' },
 })
 export class SettingsBackend {
-  private readonly backend = inject(BackendService);
   private readonly languageService = inject(LanguageService);
 
+  readonly backend = inject(BackendService);
   readonly server = this.backend.server;
-  readonly gpu = this.backend.gpu;
-  readonly device = this.backend.device;
-  readonly modelsDir = this.backend.modelsDir;
-  readonly models = this.backend.models;
   readonly checking = this.backend.checking;
-  readonly tab = signal<BackendTab>('general');
-  readonly tabOptions = computed(this.buildTabOptions.bind(this));
   readonly serverMode = computed(this.buildServerMode.bind(this));
   readonly serverTone = computed(this.buildServerTone.bind(this));
   readonly serverKey = computed(this.buildServerKey.bind(this));
   readonly serverMessage = computed(this.buildServerMessage.bind(this));
   readonly address = computed(this.buildAddress.bind(this));
   readonly uptime = computed(this.buildUptime.bind(this));
-  readonly gpuHint = computed(this.buildGpuHint.bind(this));
-  readonly gpuTone = computed(this.buildGpuTone.bind(this));
-  readonly gpuKey = computed(this.buildGpuKey.bind(this));
-  readonly deviceTone = computed(this.buildDeviceTone.bind(this));
-  readonly deviceKey = computed(this.buildDeviceKey.bind(this));
-  readonly deviceHint = computed(this.buildDeviceHint.bind(this));
-
-  onTab(value: string): void {
-    this.tab.set(BACKEND_TABS.find((tab) => tab === value) ?? 'general');
-  }
 
   check(): void {
     void this.backend.check();
@@ -146,18 +55,6 @@ export class SettingsBackend {
     void this.backend.openModelsDir();
   }
 
-  downloadModel(model: TtsModel): void {
-    void this.backend.downloadModel(model.id);
-  }
-
-  cancelModel(model: TtsModel): void {
-    void this.backend.cancelModel(model.id);
-  }
-
-  removeModel(model: TtsModel): void {
-    void this.backend.removeModel(model.id);
-  }
-
   canRestart(): boolean {
     return this.server().status !== 'starting';
   }
@@ -170,72 +67,12 @@ export class SettingsBackend {
     return orMissing(value);
   }
 
-  percent(download: BackendDownload): number {
-    return downloadPercent(download);
-  }
-
-  progress(download: BackendDownload): LanguageParams {
-    return {
-      received: formatBytes(download.receivedBytes),
-      total: formatBytes(download.totalBytes),
-      percent: downloadPercent(download),
-    };
-  }
-
-  size(download: BackendDownload): string {
-    return download.totalBytes > 0 ? formatBytes(download.totalBytes) : MISSING;
-  }
-
-  languageLabel(language: string): string {
-    const key = LANGUAGE_KEYS[language];
-    return key ? this.languageService.translate(key) : language;
-  }
-
-  modelMode(model: TtsModel): string {
-    return MODEL_MODES[model.state];
-  }
-
-  modelTone(model: TtsModel): Tone {
-    return MODEL_TONES[model.state];
-  }
-
-  modelKey(model: TtsModel): LanguageKey {
-    return MODEL_KEYS[model.state];
-  }
-
-  modelNote(model: TtsModel): LanguageKey | null {
-    return modelNoteKey(model.id);
-  }
-
-  modelMessage(model: TtsModel): BackendMessage {
-    return MODEL_MESSAGES[model.state];
-  }
-
-  warnsCpu(model: TtsModel): boolean {
-    return model.gpuRecommended && this.device() !== 'cuda';
-  }
-
-  private buildTabOptions(): TabOption[] {
-    return [
-      {
-        value: 'general',
-        label: this.languageService.translate('settings.backend.general'),
-        icon: 'server',
-      },
-      {
-        value: 'models',
-        label: this.languageService.translate('settings.backend.models'),
-        icon: 'voice',
-      },
-    ];
-  }
-
   private buildServerMode(): string {
-    return SERVER_MODES[this.server().status];
+    return serverMode(this.server());
   }
 
   private buildServerTone(): Tone {
-    return SERVER_TONES[this.server().status];
+    return serverTone(this.server());
   }
 
   private buildServerKey(): LanguageKey {
@@ -256,10 +93,7 @@ export class SettingsBackend {
     if (server.latencyMs === null) {
       return message('settings.backend.msg.running', 'mute');
     }
-    return message('settings.backend.msg.ok', 'ok', false, {
-      ms: server.latencyMs,
-      time: this.timeOf(server.checkedAt),
-    });
+    return healthMessage(server, this.languageService.locale());
   }
 
   private buildAddress(): string {
@@ -268,68 +102,6 @@ export class SettingsBackend {
   }
 
   private buildUptime(): string {
-    const server = this.server();
-    return server.status === 'running' ? formatUptime(server.startedAt, Date.now()) : MISSING;
-  }
-
-  private buildGpuHint(): string {
-    const gpu = this.gpu();
-    return this.languageService.translate('settings.backend.gpu.found', {
-      name: orMissing(gpu.name),
-      vram: gpu.vramMb > 0 ? formatVram(gpu.vramMb) : MISSING,
-      driver: orMissing(gpu.driver),
-      compute: orMissing(gpu.computeCapability),
-    });
-  }
-
-  private buildGpuTone(): Tone {
-    const gpu = this.gpu();
-    if (!gpu.found) {
-      return 'default';
-    }
-    return gpu.cudaSupported ? 'success' : 'warning';
-  }
-
-  private buildGpuKey(): LanguageKey {
-    const gpu = this.gpu();
-    if (!gpu.found) {
-      return 'settings.backend.gpu.notFound';
-    }
-    return gpu.cudaSupported
-      ? 'settings.backend.gpu.supported'
-      : 'settings.backend.gpu.unsupported';
-  }
-
-  private buildDeviceTone(): Tone {
-    return this.device() === 'cuda' ? 'success' : 'default';
-  }
-
-  private buildDeviceKey(): LanguageKey {
-    return this.device() === 'cuda' ? 'settings.backend.device.gpu' : 'settings.backend.device.cpu';
-  }
-
-  private buildDeviceHint(): string {
-    const gpu = this.gpu();
-    const name = orMissing(gpu.name);
-    if (this.device() === 'cuda') {
-      return this.languageService.translate('settings.backend.device.onGpu', { name });
-    }
-    if (!gpu.found) {
-      return this.languageService.translate('settings.backend.device.noGpu');
-    }
-    if (!gpu.cudaSupported) {
-      return this.languageService.translate('settings.backend.device.unsupported', {
-        name,
-        compute: orMissing(gpu.computeCapability),
-      });
-    }
-    return this.languageService.translate('settings.backend.device.auto', { name });
-  }
-
-  private timeOf(checkedAt: string): string {
-    const time = Date.parse(checkedAt);
-    return Number.isFinite(time)
-      ? new Date(time).toLocaleTimeString(this.languageService.locale())
-      : checkedAt;
+    return serverUptime(this.server());
   }
 }

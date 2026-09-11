@@ -29,3 +29,12 @@ export function formatUptime(startedAt: string | null, now: number): string {
 export function formatVram(vramMb: number): string {
   return String(Math.round((vramMb / 1024) * 10) / 10);
 }
+
+export function isBackendUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '';
+  } catch {
+    return false;
+  }
+}

@@ -1,0 +1,14 @@
+@switch (message().tone) {
+  @case ('ok') {
+    <ds-icon name="check" [size]="14" />
+  }
+  @case ('warn') {
+    <ds-icon name="alert" [size]="14" />
+  }
+  @default {
+    @if (message().busy) {
+      <span class="dot dot-running"></span>
+    }
+  }
+}
+<span>{{ message().key | t: message().params }}</span>

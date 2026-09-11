@@ -1,0 +1,195 @@
+<div class="st be" data-testid="settings-remote-content">
+  <p class="t-sm t-mute" data-testid="settings-remote-intro">{{ 'settings.remote.intro' | t }}</p>
+  <app-backend-panel [host]="remote" kind="remote" prefix="settings-remote">
+    <ng-template #serverCard>
+      <article class="llm-card" [class]="serverMode()" data-testid="settings-remote-server">
+        <header class="llm-card-h">
+          <div class="llm-card-t">
+            <span class="t-ink llm-name" data-testid="settings-remote-server-name">
+              {{ 'settings.remote.server' | t }}
+            </span>
+            <ds-badge [tone]="serverTone()" data-testid="settings-remote-server-badge">
+              {{ serverKey() | t }}
+            </ds-badge>
+          </div>
+        </header>
+        @if (editing()) {
+          <div class="llm-fields" data-testid="settings-remote-form">
+            <div class="field llm-field-wide">
+              <label for="settings-remote-url">{{ 'settings.remote.url' | t }}</label>
+              <input
+                id="settings-remote-url"
+                class="input mono-in"
+                type="url"
+                [class.is-invalid]="urlInvalid()"
+                [value]="draftUrl()"
+                [placeholder]="'settings.remote.url.placeholder' | t"
+                data-testid="settings-remote-url"
+                autocomplete="off"
+                spellcheck="false"
+                (input)="onUrl(urlInput.value)"
+                (keydown.enter)="connect()"
+                #urlInput
+              />
+              @if (urlInvalid()) {
+                <span class="field-err" data-testid="settings-remote-url-error">
+                  {{ 'settings.remote.url.invalid' | t }}
+                </span>
+              } @else {
+                <span class="field-hint" data-testid="settings-remote-url-hint">
+                  {{ 'settings.remote.url.hint' | t }}
+                </span>
+              }
+            </div>
+            <div class="field llm-field-wide">
+              <label for="settings-remote-key">{{ 'settings.remote.key' | t }}</label>
+              <div class="llm-row">
+                <input
+                  id="settings-remote-key"
+                  class="input mono-in"
+                  [type]="revealed() ? 'text' : 'password'"
+                  [value]="draftKey()"
+                  [placeholder]="'settings.remote.key.placeholder' | t"
+                  data-testid="settings-remote-key"
+                  autocomplete="off"
+                  spellcheck="false"
+                  (input)="onKey(keyInput.value)"
+                  (keydown.enter)="connect()"
+                  #keyInput
+                />
+                <button
+                  type="button"
+                  class="btn btn-sm btn-icon"
+                  [attr.aria-pressed]="revealed()"
+                  [attr.aria-label]="
+                    (revealed() ? 'settings.cloud.key.hide' : 'settings.cloud.key.show') | t
+                  "
+                  data-testid="settings-remote-key-reveal"
+                  (click)="toggleReveal()"
+                >
+                  <ds-icon name="eye" [size]="16" />
+                </button>
+              </div>
+              <span class="field-hint" data-testid="settings-remote-key-hint">
+                {{ 'settings.remote.key.hint' | t }}
+              </span>
+            </div>
+          </div>
+        } @else {
+          <dl class="be-facts" data-testid="settings-remote-facts">
+            <div class="be-fact" data-testid="settings-remote-address-fact">
+              <dt class="t-sm t-mute">{{ 'settings.backend.fact.address' | t }}</dt>
+              <dd class="path" data-testid="settings-remote-address">{{ text(url()) }}</dd>
+            </div>
+            <div class="be-fact" data-testid="settings-remote-key-fact">
+              <dt class="t-sm t-mute">{{ 'settings.remote.key' | t }}</dt>
+              <dd class="path" data-testid="settings-remote-key-value">
+                {{ keyHint() || ('settings.remote.key.none' | t) }}
+              </dd>
+            </div>
+            <div class="be-fact" data-testid="settings-remote-version-fact">
+              <dt class="t-sm t-mute">{{ 'settings.backend.fact.version' | t }}</dt>
+              <dd class="path" data-testid="settings-remote-version">
+                {{ text(server().version) }}
+              </dd>
+            </div>
+            <div class="be-fact" data-testid="settings-remote-python-fact">
+              <dt class="t-sm t-mute">{{ 'settings.backend.fact.python' | t }}</dt>
+              <dd class="path" data-testid="settings-remote-python">
+                {{ text(server().pythonVersion) }}
+              </dd>
+            </div>
+            <div class="be-fact" data-testid="settings-remote-uptime-fact">
+              <dt class="t-sm t-mute">{{ 'settings.backend.fact.uptime' | t }}</dt>
+              <dd class="path" data-testid="settings-remote-uptime">{{ uptime() }}</dd>
+            </div>
+          </dl>
+        }
+        @if (server().error) {
+          <div class="llm-err" role="alert" data-testid="settings-remote-server-error">
+            <ds-icon name="alert" [size]="14" />
+            <span>{{ server().error }}</span>
+          </div>
+        }
+        <footer class="llm-foot">
+          <app-backend-status [message]="serverMessage()" testid="settings-remote-status" />
+          @if (editing()) {
+            @if (url()) {
+              <button
+                type="button"
+                class="btn btn-sm"
+                data-testid="settings-remote-cancel"
+                (click)="cancelEdit()"
+              >
+                {{ 'settings.backend.cancel' | t }}
+              </button>
+            }
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              [disabled]="!canConnect()"
+              data-testid="settings-remote-connect"
+              (click)="connect()"
+            >
+              <ds-icon name="link" [size]="16" />
+              {{ 'settings.remote.connect' | t }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-sm"
+              data-testid="settings-remote-edit"
+              (click)="startEdit()"
+            >
+              <ds-icon name="pen" [size]="16" />
+              {{ 'settings.remote.edit' | t }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm"
+              data-testid="settings-remote-disconnect"
+              (click)="disconnect()"
+            >
+              <ds-icon name="unlink" [size]="16" />
+              {{ 'settings.remote.disconnect' | t }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm"
+              [class.btn-primary]="server().status === 'error'"
+              [disabled]="!canCheck()"
+              data-testid="settings-remote-check"
+              (click)="check()"
+            >
+              <ds-icon name="refresh" [size]="16" />
+              {{ 'settings.backend.check' | t }}
+            </button>
+          }
+        </footer>
+      </article>
+      <section
+        class="st-card"
+        [attr.aria-label]="'settings.remote.usage' | t"
+        data-testid="settings-remote-usage"
+      >
+        <div class="st-rows">
+          <div class="st-row" data-testid="settings-remote-usage-row">
+            <div class="field">
+              <span class="t-ink">{{ 'settings.remote.usage' | t }}</span>
+              <span class="field-hint" data-testid="settings-remote-usage-hint">
+                {{ usageHintKey() | t }}
+              </span>
+            </div>
+            <ds-segments
+              data-testid="settings-remote-usage-target"
+              [label]="'settings.remote.usage' | t"
+              [options]="usageOptions()"
+              [value]="usage()"
+              (valueChange)="onUsage($event)"
+            />
+          </div>
+        </div>
+      </section>
+    </ng-template>
+  </app-backend-panel>
+</div>

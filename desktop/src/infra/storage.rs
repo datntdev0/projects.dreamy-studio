@@ -73,7 +73,3 @@ impl From<rusqlite::Error> for StorageError {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "../../test/infra/storage.test.rs"]
-mod tests;

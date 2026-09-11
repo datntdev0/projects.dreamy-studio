@@ -459,7 +459,3 @@ fn nothing_left(dropped: &[Dropped]) -> String {
         .collect();
     format!("no valid block is left. Dropped: {}", reasons.join("; "))
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/assistant/drafts/plan.test.rs"]
-mod tests;

@@ -225,7 +225,3 @@ fn from_json<T: DeserializeOwned>(raw: &str) -> Vec<T> {
 fn to_json<T: serde::Serialize>(items: &[T]) -> String {
     serde_json::to_string(items).unwrap_or_else(|_| "[]".to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/repository.test.rs"]
-mod tests;

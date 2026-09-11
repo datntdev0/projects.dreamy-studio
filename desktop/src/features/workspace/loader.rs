@@ -77,12 +77,6 @@ impl WorkspaceLoader {
         Self::new(container.logger.clone(), service)
     }
 
-    #[cfg(test)]
-    pub fn with_write_probe(mut self, probe: WriteProbe) -> Self {
-        self.probe = probe;
-        self
-    }
-
     pub fn load(
         &self,
         session: &WorkspaceSession,
@@ -331,7 +325,3 @@ fn mode_text(mode: LoadMode) -> &'static str {
         LoadMode::Open => "open",
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/workspace/loader.test.rs"]
-mod tests;

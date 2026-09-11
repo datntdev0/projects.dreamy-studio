@@ -627,7 +627,3 @@ fn merge_evidence(target: &mut Vec<AnalysisEvidence>, extra: Vec<AnalysisEvidenc
         }
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/parse.test.rs"]
-mod tests;

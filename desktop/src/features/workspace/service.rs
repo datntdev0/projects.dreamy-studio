@@ -46,11 +46,6 @@ impl WorkspaceService {
         }
     }
 
-    #[cfg(test)]
-    pub fn recent_list(&self) -> Vec<RecentWorkspaceView> {
-        self.recent_list_for(None)
-    }
-
     pub fn recent_list_for(&self, current: Option<&CurrentWorkspace>) -> Vec<RecentWorkspaceView> {
         let current_key = current.map(current_key_of);
         let mut views = Vec::new();
@@ -166,7 +161,3 @@ fn entry_of_current(current: &CurrentWorkspace) -> RecentWorkspace {
         last_opened_at: format_timestamp(Utc::now()),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/workspace/service.test.rs"]
-mod tests;

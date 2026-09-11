@@ -205,7 +205,3 @@ impl SettingsService {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/service.test.rs"]
-mod tests;

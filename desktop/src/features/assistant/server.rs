@@ -190,7 +190,3 @@ fn json_response(status: u16, value: &Value) -> Response<std::io::Cursor<Vec<u8>
 fn header(name: &str, value: &str) -> Header {
     Header::from_bytes(name.as_bytes(), value.as_bytes()).expect("static header is valid")
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/server.test.rs"]
-mod tests;

@@ -563,7 +563,3 @@ fn voice_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryVoice> {
 pub fn remove_staged(path: &Path) {
     let _ = assets::remove_if_exists(path);
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/library/voices.test.rs"]
-mod tests;

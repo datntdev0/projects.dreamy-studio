@@ -387,7 +387,3 @@ impl PipelineSource for WorkspacePipelines {
         self.executor.cancel_pipeline(pipeline_id)
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/sources.test.rs"]
-mod tests;

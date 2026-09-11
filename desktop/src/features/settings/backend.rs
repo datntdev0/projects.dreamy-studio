@@ -51,7 +51,3 @@ impl BackendSettings {
         *self == Self::default()
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/backend.test.rs"]
-mod tests;

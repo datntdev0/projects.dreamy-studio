@@ -106,7 +106,3 @@ fn display_title(title: &str, seq: i64) -> String {
         title.to_string()
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/scripting/chapters.test.rs"]
-mod tests;

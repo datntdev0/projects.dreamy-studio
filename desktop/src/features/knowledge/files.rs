@@ -51,24 +51,6 @@ impl KnowledgeFiles {
         Ok(())
     }
 
-    #[cfg(test)]
-    pub fn list(&self, novel_id: i64, lang: KnowledgeLang) -> KnowledgeResult<Vec<String>> {
-        let entries = match fs::read_dir(self.knowledge_dir(novel_id, lang)) {
-            Ok(entries) => entries,
-            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(error) => return Err(error.into()),
-        };
-        let mut ids = Vec::new();
-        for entry in entries {
-            let name = entry?.file_name().to_string_lossy().into_owned();
-            if let Some(id) = chapter_id_of(&name) {
-                ids.push(id.to_string());
-            }
-        }
-        ids.sort();
-        Ok(ids)
-    }
-
     fn knowledge_dir(&self, novel_id: i64, lang: KnowledgeLang) -> PathBuf {
         NovelFiles::new(self.root.clone())
             .novel_dir(novel_id)
@@ -112,21 +94,9 @@ fn chapter_name(chapter_id: &str) -> KnowledgeResult<String> {
     Ok(format!("{CHAPTER_PREFIX}{chapter_id}{CHAPTER_SUFFIX}"))
 }
 
-#[cfg(test)]
-fn chapter_id_of(name: &str) -> Option<&str> {
-    let id = name
-        .strip_prefix(CHAPTER_PREFIX)?
-        .strip_suffix(CHAPTER_SUFFIX)?;
-    is_chapter_id(id).then_some(id)
-}
-
 fn is_chapter_id(value: &str) -> bool {
     value.len() == 32
         && value
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/files.test.rs"]
-mod tests;

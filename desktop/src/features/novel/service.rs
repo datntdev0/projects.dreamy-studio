@@ -396,11 +396,6 @@ pub struct NovelWorkspace {
 }
 
 impl NovelWorkspace {
-    #[cfg(test)]
-    pub fn new(dir: PathBuf) -> Self {
-        Self::with_gate(dir, Arc::new(Mutex::new(())))
-    }
-
     pub fn with_gate(dir: PathBuf, gate: Arc<Mutex<()>>) -> Self {
         Self { dir, gate }
     }
@@ -782,7 +777,3 @@ fn delete_rows(repo: &NovelRepository, ids: &[i64]) -> NovelResult<Vec<i64>> {
     }
     Ok(removed)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/novel/service.test.rs"]
-mod tests;

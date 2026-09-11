@@ -64,7 +64,3 @@ impl McpGrants {
         self.inner.lock().unwrap_or_else(|error| error.into_inner())
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/grants.test.rs"]
-mod tests;

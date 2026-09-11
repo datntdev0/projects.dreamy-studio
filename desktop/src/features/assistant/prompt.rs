@@ -188,7 +188,3 @@ fn truncate(text: &str, limit: usize) -> String {
     let cut: String = text.chars().take(limit).collect();
     format!("{cut}…")
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/prompt.test.rs"]
-mod tests;

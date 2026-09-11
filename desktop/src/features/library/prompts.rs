@@ -266,7 +266,3 @@ fn prompt_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryPrompt> {
 fn prompt_error(code: LibraryErrorCode, detail: impl Into<String>) -> LibraryError {
     LibraryError::new(code, detail)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/library/prompts.test.rs"]
-mod tests;

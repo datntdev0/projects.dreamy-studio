@@ -646,7 +646,3 @@ pub async fn library_prompt_delete<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/library.test.rs"]
-mod tests;

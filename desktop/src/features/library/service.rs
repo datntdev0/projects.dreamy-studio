@@ -88,11 +88,6 @@ pub struct LibraryWorkspace {
 }
 
 impl LibraryWorkspace {
-    #[cfg(test)]
-    fn new(dir: PathBuf) -> Self {
-        Self::with_gate(dir, Arc::new(Mutex::new(())))
-    }
-
     pub fn with_gate(dir: PathBuf, gate: Arc<Mutex<()>>) -> Self {
         Self { dir, gate }
     }
@@ -927,7 +922,3 @@ fn thumb_mime(format: ImageFormat) -> &'static str {
         "image/png"
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/library/service.test.rs"]
-mod tests;

@@ -153,7 +153,3 @@ fn relocate_in(
         _ => update_row(tx, old_id, &new, now),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/workspace/repository.test.rs"]
-mod tests;

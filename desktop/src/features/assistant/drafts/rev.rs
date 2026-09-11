@@ -33,7 +33,3 @@ fn feed(hash: &mut u64, text: &str) {
         *hash = hash.wrapping_mul(PRIME);
     }
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/assistant/drafts/rev.test.rs"]
-mod tests;

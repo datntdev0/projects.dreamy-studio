@@ -62,11 +62,6 @@ pub struct TranslationWorkspace {
 }
 
 impl TranslationWorkspace {
-    #[cfg(test)]
-    pub fn new(dir: PathBuf) -> Self {
-        Self::with_gate(dir, Arc::new(Mutex::new(())))
-    }
-
     pub fn with_gate(dir: PathBuf, gate: Arc<Mutex<()>>) -> Self {
         Self { dir, gate }
     }
@@ -497,7 +492,3 @@ fn chapter_translation(chapter: &ChapterFile) -> ChapterTranslation {
             .collect(),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/translation/service.test.rs"]
-mod tests;

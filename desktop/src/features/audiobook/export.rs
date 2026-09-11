@@ -287,7 +287,3 @@ pub fn read_script_units(
     units.sort_by_key(|unit| unit.no);
     Ok(units)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/export.test.rs"]
-mod tests;

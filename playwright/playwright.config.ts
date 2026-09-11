@@ -1,8 +1,9 @@
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { defineConfig } from '@playwright/test';
 
-import { outputRoot } from './scripts/paths.ts';
+const outputRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '_output', 'playwright');
 
 export default defineConfig({
   outputDir: join(outputRoot, 'results'),

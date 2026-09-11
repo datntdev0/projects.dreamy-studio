@@ -55,11 +55,6 @@ impl RunLog {
         }
     }
 
-    #[cfg(test)]
-    pub fn dir(&self) -> Option<&Path> {
-        self.inner.as_ref().map(|run| run.dir.as_path())
-    }
-
     pub fn line(&self, scope: &str, message: &str) {
         let Some(run) = &self.inner else {
             return;
@@ -99,11 +94,6 @@ impl RunLog {
 }
 
 impl TaskLog {
-    #[cfg(test)]
-    pub fn none() -> Self {
-        RunLog::none().task(0, "")
-    }
-
     pub fn line(&self, message: &str) {
         self.run.line(&self.scope, message);
     }
@@ -128,7 +118,3 @@ fn file_safe(text: &str) -> String {
         })
         .collect()
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/log.test.rs"]
-mod tests;

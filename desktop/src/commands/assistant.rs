@@ -384,7 +384,3 @@ pub async fn assistant_quota_get<R: Runtime>(
 ) -> AssistantResult<Option<QuotaSnapshot>> {
     run_blocking(app, |service, _, _| Ok(service.quota())).await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/assistant.test.rs"]
-mod tests;

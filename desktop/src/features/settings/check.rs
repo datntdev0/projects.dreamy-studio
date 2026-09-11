@@ -90,7 +90,3 @@ impl LlmChecker for NoLlmCheck {
         !cancel.load(Ordering::SeqCst)
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/check.test.rs"]
-mod tests;

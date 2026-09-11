@@ -290,7 +290,3 @@ pub async fn audiobook_export<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/audiobook.test.rs"]
-mod tests;

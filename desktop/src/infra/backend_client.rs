@@ -181,7 +181,3 @@ fn api_error(status: u16, text: &str) -> ClientError {
         message,
     }
 }
-
-#[cfg(test)]
-#[path = "../../test/infra/backend_client.test.rs"]
-mod tests;

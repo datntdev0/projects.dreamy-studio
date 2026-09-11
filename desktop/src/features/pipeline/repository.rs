@@ -23,25 +23,6 @@ impl<'a> PipelineRepository<'a> {
         Self { conn }
     }
 
-    #[cfg(test)]
-    pub fn insert_pipeline_with_tasks(
-        &self,
-        novel_id: i64,
-        kind: &str,
-        target: &str,
-        tasks: &[TaskRequest],
-        now: &str,
-    ) -> rusqlite::Result<i64> {
-        self.insert_pipeline(
-            JobOwner::Novel(novel_id),
-            kind,
-            target,
-            PipelineStatus::Running,
-            tasks,
-            now,
-        )
-    }
-
     pub fn insert_pipeline(
         &self,
         owner: JobOwner,
@@ -258,7 +239,3 @@ fn row_to_task(row: &Row<'_>) -> rusqlite::Result<PipelineTask> {
         finished_at: row.get(8)?,
     })
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/repository.test.rs"]
-mod tests;

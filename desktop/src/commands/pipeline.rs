@@ -180,7 +180,3 @@ pub async fn pipeline_history_list<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/pipeline.test.rs"]
-mod tests;

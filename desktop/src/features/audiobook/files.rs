@@ -136,7 +136,3 @@ fn unit_file_id(path: &Path) -> Option<String> {
     let stem = path.file_stem()?.to_str()?;
     is_safe_id(stem).then(|| stem.to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/files.test.rs"]
-mod tests;

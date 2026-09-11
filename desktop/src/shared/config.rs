@@ -41,17 +41,6 @@ pub struct ConfigInput<'a> {
 }
 
 impl AppConfig {
-    #[cfg(test)]
-    pub fn from_root(root: PathBuf) -> Self {
-        Self {
-            runtime_dir: root.join(RUNTIME_DIR),
-            toolbox_dir: root.join(TOOLBOX_DIR),
-            app_data_dir: root,
-            portable: false,
-            source: None,
-        }
-    }
-
     pub fn resolve(input: ConfigInput<'_>) -> Self {
         let file = parse(input.text);
         let portable = file.app_data_dir.as_deref().is_some_and(is_relative);

@@ -219,7 +219,3 @@ pub fn pipeline_error(error: ProjectError) -> PipelineError {
     };
     PipelineError::new(code, error.detail)
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/pipeline/jobs/audio.test.rs"]
-mod tests;

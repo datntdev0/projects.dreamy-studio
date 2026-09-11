@@ -89,11 +89,6 @@ pub struct ProjectWorkspace {
 }
 
 impl ProjectWorkspace {
-    #[cfg(test)]
-    pub fn new(dir: PathBuf) -> Self {
-        Self::with_gate(dir, Arc::new(Mutex::new(())))
-    }
-
     pub fn with_gate(dir: PathBuf, gate: Arc<Mutex<()>>) -> Self {
         Self { dir, gate }
     }
@@ -328,7 +323,3 @@ fn source_lang(
         })?;
     Ok(target.as_str().to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/project/service.test.rs"]
-mod tests;

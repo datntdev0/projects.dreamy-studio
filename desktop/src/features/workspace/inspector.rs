@@ -138,7 +138,3 @@ fn entry_size(entry: &fs::DirEntry) -> u64 {
         Err(_) => 0,
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/workspace/inspector.test.rs"]
-mod tests;

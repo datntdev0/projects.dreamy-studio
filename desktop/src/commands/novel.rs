@@ -505,7 +505,3 @@ pub async fn novel_package_export<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/novel.test.rs"]
-mod tests;

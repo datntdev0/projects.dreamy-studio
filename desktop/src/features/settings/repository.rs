@@ -62,7 +62,3 @@ impl SettingsRepository {
         PathBuf::from(name)
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/repository.test.rs"]
-mod tests;

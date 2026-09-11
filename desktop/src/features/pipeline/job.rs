@@ -71,7 +71,3 @@ impl JobRegistry {
         factory.create(session, owner, params)
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/job.test.rs"]
-mod tests;

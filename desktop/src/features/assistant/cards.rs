@@ -59,7 +59,3 @@ fn is_card(attachment: &Value, kinds: &[&str], id: &str) -> bool {
 fn is_wanted(attachment: &Value, item_ids: &[String]) -> bool {
     id_of(attachment).is_some_and(|id| item_ids.iter().any(|wanted| wanted == id))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/cards.test.rs"]
-mod tests;

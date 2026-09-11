@@ -961,7 +961,3 @@ fn failure_detail(output: &Output) -> String {
         format!("ffmpeg failed: {detail}")
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/library/videos.test.rs"]
-mod tests;

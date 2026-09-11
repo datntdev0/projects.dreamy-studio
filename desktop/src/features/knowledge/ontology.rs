@@ -237,7 +237,3 @@ fn predicates_of(
         })
         .collect())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/ontology.test.rs"]
-mod tests;

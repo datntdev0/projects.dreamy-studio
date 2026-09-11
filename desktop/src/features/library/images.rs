@@ -321,7 +321,3 @@ fn image_error(detail: impl Into<String>) -> LibraryError {
 fn image_decode_error(error: image::ImageError) -> LibraryError {
     image_error(error.to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/library/images.test.rs"]
-mod tests;

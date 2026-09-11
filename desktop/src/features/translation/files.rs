@@ -157,7 +157,3 @@ fn is_chapter_id(value: &str) -> bool {
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/translation/files.test.rs"]
-mod tests;

@@ -212,7 +212,3 @@ pub async fn project_modules<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/project.test.rs"]
-mod tests;

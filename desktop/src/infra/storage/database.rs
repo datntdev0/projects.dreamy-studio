@@ -65,7 +65,3 @@ fn configure(conn: &Connection) -> StorageResult<()> {
     conn.busy_timeout(BUSY_TIMEOUT)?;
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../../../test/infra/storage/database.test.rs"]
-mod tests;

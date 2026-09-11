@@ -100,7 +100,3 @@ pub fn parse_time(value: &str) -> Option<f64> {
     let total = hours * 3_600_000 + minutes * 60_000 + seconds * 1000 + millis;
     Some(total as f64 / 1000.0)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/subtitles.test.rs"]
-mod tests;

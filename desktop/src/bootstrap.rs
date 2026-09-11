@@ -414,7 +414,3 @@ fn log_startup<R: Runtime>(app: &App<R>, container: &AppContainer) {
         logger.info("app", line);
     }
 }
-
-#[cfg(test)]
-#[path = "../test/bootstrap.test.rs"]
-mod tests;

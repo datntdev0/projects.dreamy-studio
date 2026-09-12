@@ -52,6 +52,8 @@ pub struct ManifestItem {
     pub entry: String,
     #[serde(default)]
     pub on_demand: bool,
+    #[serde(default)]
+    pub packages: Vec<String>,
 }
 
 impl ManifestItem {

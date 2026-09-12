@@ -207,3 +207,11 @@ pub struct SynthesizedAudio {
     pub cached: bool,
     pub subtitles: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudCheckResult {
+    pub ok: bool,
+    pub error: String,
+    pub checked_at_ms: i64,
+}

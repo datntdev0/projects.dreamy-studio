@@ -7,6 +7,8 @@ use std::io;
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+use std::process::Stdio;
 
 use crate::infra::startup::manifest::ArchiveFormat;
 use crate::infra::startup::manifest::ManifestItem;
@@ -14,11 +16,24 @@ use crate::infra::startup::models::SetupError;
 use crate::infra::startup::models::SetupErrorCode;
 use crate::infra::startup::models::is_disk_full;
 use crate::shared::config::AppConfig;
+use crate::shared::process::failure_snippet;
+use crate::shared::process::hide_window;
 
 pub const MARKER_FILE: &str = ".dreamy-setup.json";
 const STAGING_PREFIX: &str = ".staging-";
 const RETIRED_PREFIX: &str = ".retired-";
 const DLL_EXTENSION: &str = "dll";
+const PIP_INSTALL_ARGS: [&str; 9] = [
+    "-E",
+    "-s",
+    "-m",
+    "pip",
+    "install",
+    "--disable-pip-version-check",
+    "--no-cache-dir",
+    "--no-warn-script-location",
+    "--only-binary=:all:",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstallMarker {
@@ -26,6 +41,8 @@ pub struct InstallMarker {
     pub build: String,
     #[serde(alias = "sha256")]
     pub digest: String,
+    #[serde(default)]
+    pub packages: Vec<String>,
 }
 
 impl InstallMarker {
@@ -34,6 +51,7 @@ impl InstallMarker {
             version: item.version.clone(),
             build: item.build.clone(),
             digest: item.digest().to_string(),
+            packages: item.packages.clone(),
         }
     }
 }
@@ -81,6 +99,7 @@ impl Installation<'_> {
         if let Some(source) = self.extra_files {
             copy_libraries(source, staging).map_err(|error| SetupError::io(&error))?;
         }
+        install_packages(self.item, staging)?;
         let marker = serde_json::to_string_pretty(&InstallMarker::of(self.item))
             .map_err(|error| SetupError::new(SetupErrorCode::Io, error.to_string()))?;
         fs::write(staging.join(MARKER_FILE), marker).map_err(|error| SetupError::io(&error))
@@ -212,4 +231,28 @@ fn copy_libraries(source: &Path, target: &Path) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn install_packages(item: &ManifestItem, staging: &Path) -> Result<(), SetupError> {
+    if item.packages.is_empty() {
+        return Ok(());
+    }
+    let mut command = Command::new(staging.join(&item.entry));
+    command
+        .args(PIP_INSTALL_ARGS)
+        .args(&item.packages)
+        .stdin(Stdio::null());
+    hide_window(&mut command);
+    let output = command.output().map_err(|error| SetupError::io(&error))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let detail = failure_snippet(
+        &String::from_utf8_lossy(&output.stdout),
+        &String::from_utf8_lossy(&output.stderr),
+    );
+    Err(SetupError::new(
+        SetupErrorCode::Network,
+        format!("installing {} failed: {detail}", item.packages.join(", ")),
+    ))
 }

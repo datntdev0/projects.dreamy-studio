@@ -98,6 +98,7 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::backend::backend_remote_model_download,
             commands::backend::backend_remote_model_cancel,
             commands::backend::backend_remote_model_remove,
+            commands::backend::cloud_account_check,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
             commands::workspace::workspace_delete,

@@ -1,3 +1,4 @@
+use crate::features::backend::edge;
 use crate::features::backend::models::SynthesisRequest;
 use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::service::Synthesizer;
@@ -28,7 +29,7 @@ use std::path::PathBuf;
 pub const VOICE_NAME_MAX: usize = 255;
 pub const SAMPLE_TEXT_MAX: usize = 500;
 pub const RECORDING_MAX_MS: i64 = 30_500;
-pub const PRESET_ONLY_ENGINES: [&str; 1] = ["edge-read-aloud"];
+pub const PRESET_ONLY_ENGINES: [&str; 1] = [edge::EDGE_ENGINE];
 
 const ENGINE_UNAVAILABLE_CODES: [&str; 4] = [
     "MODEL_NOT_FOUND",
@@ -340,7 +341,7 @@ pub fn synthesis_request(
     text: &str,
     sentence_pause_ms: i64,
 ) -> LibraryResult<SynthesisRequest> {
-    if voice.engine_kind == VoiceEngineKind::Cloud {
+    if voice.engine_kind == VoiceEngineKind::Cloud && !edge::supports(&voice.engine) {
         return Err(LibraryError::new(
             LibraryErrorCode::VoiceEngineUnavailable,
             "cloud voices cannot be previewed yet",

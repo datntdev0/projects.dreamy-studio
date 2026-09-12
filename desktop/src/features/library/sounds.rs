@@ -11,6 +11,7 @@ use rusqlite::OptionalExtension;
 use rusqlite::params;
 use std::fs;
 use std::fs::File;
+use std::io::Cursor;
 use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -20,6 +21,7 @@ use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::DecoderOptions;
 use symphonia::core::errors::Error as SymphoniaError;
 use symphonia::core::formats::FormatOptions;
+use symphonia::core::io::MediaSource;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
@@ -106,6 +108,20 @@ pub fn decode(path: &Path, format: SoundFormat) -> LibraryResult<DecodedSound> {
     })
 }
 
+pub fn decode_bytes(bytes: Vec<u8>, format: SoundFormat) -> LibraryResult<DecodedSound> {
+    require_format(&bytes, format)?;
+    let mut samples = Vec::new();
+    let source = Box::new(Cursor::new(bytes));
+    let (sample_rate, channels) = decode_source(source, format, &mut |values, _, _| {
+        samples.extend_from_slice(values);
+    })?;
+    Ok(DecodedSound {
+        sample_rate,
+        channels,
+        samples,
+    })
+}
+
 pub fn analyze(path: &Path, format: SoundFormat) -> LibraryResult<SoundAnalysis> {
     let mut peaks = Vec::new();
     let mut frames = 0_u64;
@@ -167,16 +183,28 @@ fn decode_with(
     let mut header = [0_u8; 16];
     let mut source = File::open(path)?;
     let count = source.read(&mut header)?;
-    if !format.matches(&header[..count]) {
-        return Err(sound_unreadable(
-            "sound extension and file content do not match",
-        ));
-    }
+    require_format(&header[..count], format)?;
     source.seek(SeekFrom::Start(0))?;
+    decode_source(Box::new(source), format, sink)
+}
 
+fn require_format(header: &[u8], format: SoundFormat) -> LibraryResult<()> {
+    if format.matches(header) {
+        return Ok(());
+    }
+    Err(sound_unreadable(
+        "sound extension and file content do not match",
+    ))
+}
+
+fn decode_source(
+    source: Box<dyn MediaSource>,
+    format: SoundFormat,
+    sink: &mut SampleSink<'_>,
+) -> LibraryResult<(u32, u32)> {
     let mut hint = Hint::new();
     hint.with_extension(format.extension());
-    let stream = MediaSourceStream::new(Box::new(source), Default::default());
+    let stream = MediaSourceStream::new(source, Default::default());
     let probed = symphonia::default::get_probe()
         .format(
             &hint,

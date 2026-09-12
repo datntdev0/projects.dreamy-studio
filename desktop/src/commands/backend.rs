@@ -1,5 +1,7 @@
 use crate::commands::blocking::run_blocking_with;
+use crate::features::backend::edge;
 use crate::features::backend::models::BackendView;
+use crate::features::backend::models::CloudCheckResult;
 use crate::features::backend::models::RemoteView;
 use crate::features::backend::models::TtsModel;
 use crate::features::backend::remote::RemoteBackendService;
@@ -144,4 +146,12 @@ pub async fn backend_remote_model_remove<R: Runtime>(
     id: String,
 ) -> Result<(), String> {
     run_remote(app, move |remote| remote.remove_model(&id)).await
+}
+
+#[tauri::command]
+pub async fn cloud_account_check<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> Result<CloudCheckResult, String> {
+    run_blocking_with(app, task_failure, move |_| edge::check(&id)).await
 }

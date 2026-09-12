@@ -14,7 +14,8 @@
       "format": "tar.gz",
       "root": "python",
       "include": [],
-      "entry": "python.exe"
+      "entry": "python.exe",
+      "packages": ["edge-tts==7.3.1"]
     },
     {
       "id": "ffmpeg",

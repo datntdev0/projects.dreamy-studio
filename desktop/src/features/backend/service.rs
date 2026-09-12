@@ -1,4 +1,5 @@
 use crate::features::backend::api;
+use crate::features::backend::edge;
 use crate::features::backend::models::BackendView;
 use crate::features::backend::models::ServerView;
 use crate::features::backend::models::SynthesisRequest;
@@ -158,6 +159,9 @@ fn now() -> String {
 
 impl Synthesizer for BackendService {
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
+        if edge::supports(&request.model) {
+            return edge::synthesize(request);
+        }
         if self.remote.active() {
             return self.remote.synthesize(request);
         }

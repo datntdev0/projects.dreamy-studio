@@ -19,6 +19,7 @@ use crate::features::assistant::server::McpServer;
 use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::service::CliAssistantLlm;
 use crate::features::assistant::service::McpEndpoint;
+use crate::features::backend::cache::SpeechCache;
 use crate::features::backend::cloud::CloudAccountService;
 use crate::features::backend::remote::RemoteBackendService;
 use crate::features::backend::service::BackendService;
@@ -104,6 +105,9 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::backend::cloud_account_key_remove,
             commands::backend::cloud_account_check,
             commands::backend::cloud_voice_search,
+            commands::backend::cloud_cache_status,
+            commands::backend::cloud_cache_clear,
+            commands::backend::cloud_cache_open,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
             commands::workspace::workspace_delete,
@@ -306,9 +310,10 @@ fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let remote = Arc::new(RemoteBackendService::new(SettingsRepository::new(
         container.settings_path.clone(),
     )));
-    let cloud = Arc::new(CloudAccountService::new(SettingsRepository::new(
-        container.settings_path.clone(),
-    )));
+    let cloud = Arc::new(CloudAccountService::new(
+        SettingsRepository::new(container.settings_path.clone()),
+        SpeechCache::new(&container.config.caches_dir),
+    ));
     app.manage(remote.clone());
     app.manage(cloud.clone());
     app.manage(BackendService::new(

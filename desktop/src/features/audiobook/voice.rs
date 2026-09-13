@@ -12,6 +12,7 @@ use std::sync::Arc;
 pub struct Speech {
     pub wav: Vec<u8>,
     pub subtitles: Option<String>,
+    pub source: Option<String>,
 }
 
 pub trait SegmentVoice: Send + Sync {
@@ -48,6 +49,7 @@ impl SegmentVoice for LibrarySpeaker {
         .map(|audio| Speech {
             wav: audio.bytes,
             subtitles: audio.subtitles,
+            source: audio.cache_key,
         })
         .map_err(voice_error)
     }

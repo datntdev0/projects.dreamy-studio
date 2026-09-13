@@ -1,4 +1,5 @@
 use crate::features::audiobook::audio::encode_wav;
+use crate::features::backend::cache::CloudSpeech;
 use crate::features::backend::models::CloudCheckResult;
 use crate::features::backend::models::SynthesizedAudio;
 use crate::features::library::sounds;
@@ -9,12 +10,8 @@ pub const FAILURE_STATUS: u16 = 502;
 pub const INVALID_STATUS: u16 = 422;
 pub const UNAVAILABLE_STATUS: u16 = 409;
 
-pub fn mp3_audio(
-    mp3: Vec<u8>,
-    subtitles: Option<String>,
-    failure_code: &str,
-) -> Result<SynthesizedAudio, ClientError> {
-    let sound = sounds::decode_bytes(mp3, SoundFormat::Mp3)
+pub fn mp3_audio(speech: CloudSpeech, failure_code: &str) -> Result<SynthesizedAudio, ClientError> {
+    let sound = sounds::decode_bytes(speech.mp3, SoundFormat::Mp3)
         .map_err(|error| api_error(FAILURE_STATUS, failure_code, &error.to_string()))?;
     let channels = sound.channels.max(1);
     let frames = (sound.samples.len() / channels as usize) as i64;
@@ -22,7 +19,8 @@ pub fn mp3_audio(
         bytes: encode_wav(&sound.samples, sound.sample_rate, channels, 1.0),
         duration_ms: Some(frames * 1_000 / i64::from(sound.sample_rate.max(1))),
         cached: false,
-        subtitles: subtitles.filter(|text| !text.trim().is_empty()),
+        cache_key: None,
+        subtitles: speech.subtitles.filter(|text| !text.trim().is_empty()),
     })
 }
 

@@ -205,6 +205,7 @@ pub struct SynthesizedAudio {
     pub bytes: Vec<u8>,
     pub duration_ms: Option<i64>,
     pub cached: bool,
+    pub cache_key: Option<String>,
     pub subtitles: Option<String>,
 }
 

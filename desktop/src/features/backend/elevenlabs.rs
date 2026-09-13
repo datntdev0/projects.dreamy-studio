@@ -1,7 +1,8 @@
+use crate::features::backend::cache::CloudSpeech;
+use crate::features::backend::cache::SpeechOrder;
 use crate::features::backend::models::CloudCheckResult;
 use crate::features::backend::models::CloudVoice;
 use crate::features::backend::models::SynthesisRequest;
-use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::speech;
 use crate::features::backend::speech::FAILURE_STATUS;
 use crate::features::backend::speech::INVALID_STATUS;
@@ -27,6 +28,7 @@ const SHARED_VOICES_PATH: &str = "/v1/shared-voices";
 const SPEECH_PATH: &str = "/v1/text-to-speech";
 const SUBSCRIPTION_PATH: &str = "/v1/user/subscription";
 const OUTPUT_FORMAT: &str = "mp3_44100_128";
+const OUTPUT_FORMAT_FIELD: &str = "output_format";
 const SPEECH_MODEL: &str = "eleven_v4";
 const STABILITY: f64 = 0.5;
 const SIMILARITY_BOOST: f64 = 0.75;
@@ -88,19 +90,27 @@ pub fn search(api_key: &str, query: &str) -> Result<Vec<CloudVoice>, ClientError
     Ok(voices)
 }
 
-pub fn synthesize(
-    api_key: &str,
-    request: &SynthesisRequest,
-) -> Result<SynthesizedAudio, ClientError> {
+pub fn order(request: &SynthesisRequest) -> Result<SpeechOrder, ClientError> {
     if request.source != PRESET_SOURCE {
         let message = format!("ElevenLabs does not support {} voices yet", request.source);
         return Err(api_error(INVALID_STATUS, "SOURCE_UNSUPPORTED", &message));
     }
-    let voice = path_segment(&request.preset)?;
-    let text = speech::collapsed_text(&request.text)?;
+    Ok(SpeechOrder {
+        provider: ELEVENLABS_ENGINE,
+        voice: path_segment(&request.preset)?.to_string(),
+        text: speech::collapsed_text(&request.text)?,
+        settings: speech_settings(),
+        failure_code: FAILURE_CODE,
+    })
+}
+
+pub fn speak(api_key: &str, order: &SpeechOrder) -> Result<CloudSpeech, ClientError> {
     let client = ElevenLabsClient::new(api_key, SPEECH_TIMEOUT);
-    let mp3 = client.speak(voice, &text)?;
-    speech::mp3_audio(mp3, None, FAILURE_CODE)
+    let mp3 = client.speak(order)?;
+    Ok(CloudSpeech {
+        mp3,
+        subtitles: None,
+    })
 }
 
 pub fn check(api_key: &str) -> CloudCheckResult {
@@ -143,12 +153,15 @@ impl ElevenLabsClient {
         Ok(list.voices.into_iter().map(VoiceItem::into_voice).collect())
     }
 
-    fn speak(&self, voice: &str, text: &str) -> Result<Vec<u8>, ClientError> {
-        let path = format!("{SPEECH_PATH}/{voice}");
-        let body = speech_body(text);
+    fn speak(&self, order: &SpeechOrder) -> Result<Vec<u8>, ClientError> {
+        let path = format!("{SPEECH_PATH}/{}", order.voice);
+        let format = order.settings[OUTPUT_FORMAT_FIELD]
+            .as_str()
+            .unwrap_or(OUTPUT_FORMAT);
+        let body = speech_body(order);
         let request = self
             .post(&path)
-            .query("output_format", OUTPUT_FORMAT)
+            .query(OUTPUT_FORMAT_FIELD, format)
             .header("Content-Type", JSON_TYPE);
         read_bytes(request.send(&encode(&body)?[..]))
     }
@@ -188,15 +201,24 @@ fn first_text(primary: Option<String>, fallback: Option<String>) -> String {
         .unwrap_or_default()
 }
 
-fn speech_body(text: &str) -> Value {
+fn speech_settings() -> Value {
     json!({
-        "text": text,
         "model_id": SPEECH_MODEL,
         "voice_settings": {
             "stability": STABILITY,
             "similarity_boost": SIMILARITY_BOOST,
         },
+        OUTPUT_FORMAT_FIELD: OUTPUT_FORMAT,
     })
+}
+
+fn speech_body(order: &SpeechOrder) -> Value {
+    let mut body = order.settings.clone();
+    if let Some(fields) = body.as_object_mut() {
+        fields.remove(OUTPUT_FORMAT_FIELD);
+        fields.insert("text".to_string(), Value::from(order.text.as_str()));
+    }
+    body
 }
 
 fn path_segment(value: &str) -> Result<&str, ClientError> {

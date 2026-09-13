@@ -4,7 +4,7 @@ import { ipcErrorMessage } from '@shared/desktop/desktop-ipc-error';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
-import { CloudAccount, CloudCheckResult } from './cloud.models';
+import { CloudAccount, CloudCacheStatus, CloudCheckResult } from './cloud.models';
 import {
   BackendCloudAccount,
   CLOUD_DISCONNECTED,
@@ -26,6 +26,8 @@ export class CloudService {
   private readonly toasts = inject(ToastService);
 
   readonly accounts = signal<CloudAccount[]>(DEFAULT_CLOUD_ACCOUNTS);
+  readonly cache = signal<CloudCacheStatus | null>(null);
+  readonly clearingCache = signal(false);
 
   async load(): Promise<void> {
     try {
@@ -77,6 +79,40 @@ export class CloudService {
       this.patch(id, this.fromCheck(result));
     } catch (error) {
       this.patch(id, { status: 'error', error: this.describe(error) });
+    }
+  }
+
+  async loadCache(): Promise<void> {
+    try {
+      this.cache.set((await this.ipc.invoke<CloudCacheStatus>('cloud_cache_status')) ?? null);
+    } catch {
+      this.cache.set(null);
+    }
+  }
+
+  async clearCache(): Promise<void> {
+    if (this.clearingCache()) {
+      return;
+    }
+    this.clearingCache.set(true);
+    try {
+      this.cache.set((await this.ipc.invoke<CloudCacheStatus>('cloud_cache_clear')) ?? null);
+      this.toasts.show(this.languageService.translate('settings.cloud.cache.cleared'), 'success');
+    } catch {
+      this.toasts.show(
+        this.languageService.translate('settings.cloud.cache.clearFailed'),
+        'danger',
+      );
+    } finally {
+      this.clearingCache.set(false);
+    }
+  }
+
+  async openCache(): Promise<void> {
+    try {
+      await this.ipc.invoke<void>('cloud_cache_open');
+    } catch {
+      this.toasts.show(this.languageService.translate('settings.cloud.cache.openFailed'), 'danger');
     }
   }
 

@@ -172,5 +172,46 @@
         </footer>
       </article>
     }
+    @if (tab() === 'speech') {
+      <article class="llm-card" data-testid="settings-cloud-cache">
+        <header class="llm-card-h">
+          <div class="llm-card-t">
+            <span class="t-ink llm-name" data-testid="settings-cloud-cache-title">
+              {{ 'settings.cloud.cache.title' | t }}
+            </span>
+          </div>
+        </header>
+        <p class="t-sm t-mute" data-testid="settings-cloud-cache-description">
+          {{ 'settings.cloud.cache.description' | t }}
+        </p>
+        <footer class="llm-foot">
+          <div class="llm-msg t-sm" role="status" data-testid="settings-cloud-cache-usage">
+            @if (cacheUsage(); as usage) {
+              <span>{{ 'settings.cloud.cache.usage' | t: usage }}</span>
+            } @else {
+              <span>{{ 'settings.cloud.cache.unavailable' | t }}</span>
+            }
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="!cache()"
+            data-testid="settings-cloud-cache-open"
+            (click)="openCache()"
+          >
+            {{ 'settings.cloud.cache.open' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="!canClearCache()"
+            data-testid="settings-cloud-cache-clear"
+            (click)="clearCache()"
+          >
+            {{ 'settings.cloud.cache.clear' | t }}
+          </button>
+        </footer>
+      </article>
+    }
   </section>
 </div>

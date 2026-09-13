@@ -66,6 +66,7 @@ export interface AudioRecord {
   dur: number;
   at: string;
   flag: string;
+  source?: string;
 }
 
 export interface UnitAudio {

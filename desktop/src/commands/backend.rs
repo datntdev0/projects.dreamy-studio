@@ -1,4 +1,5 @@
 use crate::commands::blocking::run_blocking_with;
+use crate::features::backend::cache::CacheStatus;
 use crate::features::backend::cloud::CloudAccountService;
 use crate::features::backend::models::BackendView;
 use crate::features::backend::models::CloudAccountView;
@@ -200,4 +201,20 @@ pub async fn cloud_voice_search<R: Runtime>(
     query: String,
 ) -> Result<Vec<CloudVoice>, String> {
     run_cloud(app, move |cloud| cloud.search_voices(&id, &query)).await
+}
+
+#[tauri::command]
+pub async fn cloud_cache_status<R: Runtime>(app: AppHandle<R>) -> Result<CacheStatus, String> {
+    run_cloud(app, |cloud| Ok(cloud.cache_status())).await
+}
+
+#[tauri::command]
+pub async fn cloud_cache_clear<R: Runtime>(app: AppHandle<R>) -> Result<CacheStatus, String> {
+    run_cloud(app, |cloud| cloud.cache_clear()).await
+}
+
+#[tauri::command]
+pub async fn cloud_cache_open<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let path = app.state::<Arc<CloudAccountService>>().cache_dir()?;
+    open_folder(&app, path)
 }

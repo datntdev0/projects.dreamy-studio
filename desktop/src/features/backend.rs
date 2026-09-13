@@ -1,4 +1,5 @@
 pub mod api;
+pub mod cache;
 pub mod cloud;
 pub mod edge;
 pub mod elevenlabs;

@@ -57,6 +57,7 @@ pub fn synthesized(response: BinaryResponse) -> SynthesizedAudio {
             .header("x-duration-ms")
             .and_then(|value| value.parse().ok()),
         cached: response.header("x-cache") == Some("hit"),
+        cache_key: None,
         subtitles: response.header("x-subtitles").and_then(decode_subtitles),
         bytes: response.bytes,
     }

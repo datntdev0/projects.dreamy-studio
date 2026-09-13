@@ -146,6 +146,7 @@ impl AudiobookWorkspace {
             dur,
             at: format_timestamp(Utc::now()),
             flag: String::new(),
+            source: speech.source.unwrap_or_default(),
         };
         self.with_files(project_id, |files| {
             let srt_target = files.segment_srt_path(unit_id, block_id)?;

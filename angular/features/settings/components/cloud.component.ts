@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { Badge } from '@components/badge';
 import { Icon } from '@components/icon';
 import { TabOption, Tabs } from '@components/tabs';
+import { formatBytes } from '@features/library/library.rules';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
@@ -94,7 +102,7 @@ function toggled(ids: string[], id: string): string[] {
   templateUrl: './cloud.component.html',
   host: { 'data-testid': 'settings-cloud' },
 })
-export class SettingsCloud {
+export class SettingsCloud implements OnInit {
   private readonly cloud = inject(CloudService);
   private readonly languageService = inject(LanguageService);
 
@@ -104,6 +112,22 @@ export class SettingsCloud {
   readonly drafts = signal<Record<string, string>>({});
   readonly revealed = signal<string[]>([]);
   readonly replacing = signal<string[]>([]);
+  readonly cache = this.cloud.cache;
+  readonly clearingCache = this.cloud.clearingCache;
+  readonly cacheUsage = computed(this.buildCacheUsage.bind(this));
+  readonly canClearCache = computed(this.buildCanClearCache.bind(this));
+
+  ngOnInit(): void {
+    void this.cloud.loadCache();
+  }
+
+  openCache(): void {
+    void this.cloud.openCache();
+  }
+
+  clearCache(): void {
+    void this.cloud.clearCache();
+  }
 
   onTab(value: string): void {
     this.tab.set(CLOUD_SERVICE_KINDS.find((kind) => kind === value) ?? 'speech');
@@ -203,6 +227,22 @@ export class SettingsCloud {
 
   message(account: CloudAccount): CloudMessage {
     return this.isKeyless(account) ? keylessMessage(account) : keyedMessage(account);
+  }
+
+  private buildCacheUsage(): Record<string, string | number> | null {
+    const cache = this.cache();
+    if (!cache) {
+      return null;
+    }
+    return {
+      entries: cache.entries,
+      used: formatBytes(cache.bytes),
+      limit: formatBytes(cache.limitBytes),
+    };
+  }
+
+  private buildCanClearCache(): boolean {
+    return (this.cache()?.entries ?? 0) > 0 && !this.clearingCache();
   }
 
   private buildVisible(): CloudAccount[] {

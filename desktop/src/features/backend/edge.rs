@@ -1,6 +1,7 @@
+use crate::features::backend::cache::CloudSpeech;
+use crate::features::backend::cache::SpeechOrder;
 use crate::features::backend::models::CloudCheckResult;
 use crate::features::backend::models::SynthesisRequest;
-use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::speech;
 use crate::features::backend::speech::FAILURE_STATUS;
 use crate::features::backend::speech::INVALID_STATUS;
@@ -11,6 +12,7 @@ use crate::infra::startup::manifest::installed_executable;
 use crate::shared::config;
 use crate::shared::process::failure_snippet;
 use crate::shared::process::hide_window;
+use serde_json::json;
 use std::fmt::Display;
 use std::fs;
 use std::io::Write;
@@ -33,11 +35,7 @@ const CHECK_VOICE: &str = "vi-VN-HoaiMyNeural";
 const CHECK_TEXT: &str = "Xin chào.";
 const PRESET_SOURCE: &str = "preset";
 const FAILURE_CODE: &str = "EDGE_TTS_FAILED";
-
-struct EdgeSpeech {
-    mp3: Vec<u8>,
-    subtitles: String,
-}
+const AUDIO_FORMAT: &str = "audio-24khz-48kbitrate-mono-mp3";
 
 struct EdgeRuntime {
     python: PathBuf,
@@ -48,11 +46,18 @@ pub fn supports(engine: &str) -> bool {
     engine == EDGE_ENGINE
 }
 
-pub fn synthesize(request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
-    let voice = require_voice(request)?;
-    let text = speech::collapsed_text(&request.text)?;
-    let spoken = EdgeRuntime::current()?.speak(voice, &text)?;
-    speech::mp3_audio(spoken.mp3, Some(spoken.subtitles), FAILURE_CODE)
+pub fn order(request: &SynthesisRequest) -> Result<SpeechOrder, ClientError> {
+    Ok(SpeechOrder {
+        provider: EDGE_ENGINE,
+        voice: require_voice(request)?.to_string(),
+        text: speech::collapsed_text(&request.text)?,
+        settings: json!({ "format": AUDIO_FORMAT }),
+        failure_code: FAILURE_CODE,
+    })
+}
+
+pub fn speak(order: &SpeechOrder) -> Result<CloudSpeech, ClientError> {
+    EdgeRuntime::current()?.speak(&order.voice, &order.text)
 }
 
 pub fn check() -> CloudCheckResult {
@@ -93,7 +98,7 @@ impl EdgeRuntime {
         })
     }
 
-    fn speak(&self, voice: &str, text: &str) -> Result<EdgeSpeech, ClientError> {
+    fn speak(&self, voice: &str, text: &str) -> Result<CloudSpeech, ClientError> {
         let script = self.ensure_script()?;
         let job = self
             .home
@@ -111,7 +116,7 @@ impl EdgeRuntime {
         job: &Path,
         voice: &str,
         text: &str,
-    ) -> Result<EdgeSpeech, ClientError> {
+    ) -> Result<CloudSpeech, ClientError> {
         let audio = job.join(AUDIO_FILE);
         let subtitles = job.join(SUBTITLES_FILE);
         let mut command = self.python_command();
@@ -124,9 +129,9 @@ impl EdgeRuntime {
             .arg(&subtitles);
         let output = run_with_input(command, text.as_bytes())?;
         require_success(&output, "Microsoft Edge Read Aloud failed")?;
-        Ok(EdgeSpeech {
+        Ok(CloudSpeech {
             mp3: fs::read(&audio).map_err(failure)?,
-            subtitles: fs::read_to_string(&subtitles).unwrap_or_default(),
+            subtitles: fs::read_to_string(&subtitles).ok(),
         })
     }
 

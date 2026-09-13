@@ -20,3 +20,10 @@ export interface CloudCheckResult {
   error: string;
   checkedAtMs: number;
 }
+
+export interface CloudCacheStatus {
+  entries: number;
+  bytes: number;
+  limitBytes: number;
+  dir: string;
+}

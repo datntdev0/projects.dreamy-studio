@@ -43,6 +43,8 @@ pub struct AudioRecord {
     pub dur: f64,
     pub at: String,
     pub flag: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub source: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

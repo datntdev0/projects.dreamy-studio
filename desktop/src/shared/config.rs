@@ -10,6 +10,7 @@ const PRODUCT_DIR: &str = "DreamyStudio";
 const DATA_DIR: &str = "appdata";
 const RUNTIME_DIR: &str = "runtime";
 const TOOLBOX_DIR: &str = "toolbox";
+const CACHES_DIR: &str = "caches";
 const BACKEND_DIR: &str = "backend";
 const LOGS_DIR: &str = "logs";
 const WEBVIEW_DIR: &str = "webview";
@@ -30,6 +31,7 @@ pub struct AppConfig {
     pub app_data_dir: PathBuf,
     pub runtime_dir: PathBuf,
     pub toolbox_dir: PathBuf,
+    pub caches_dir: PathBuf,
     pub backend_data_dir: PathBuf,
     pub portable: bool,
     pub source: Option<PathBuf>,
@@ -53,6 +55,7 @@ impl AppConfig {
             app_data_dir: root_dir.join(DATA_DIR),
             runtime_dir: root_dir.join(RUNTIME_DIR),
             toolbox_dir: root_dir.join(TOOLBOX_DIR),
+            caches_dir: root_dir.join(DATA_DIR).join(CACHES_DIR),
             root_dir,
             backend_data_dir,
             portable,

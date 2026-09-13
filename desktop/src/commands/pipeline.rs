@@ -100,17 +100,26 @@ pub fn limits_of(settings: PipelineSettings) -> PipelineLimits {
     )
 }
 
+fn workspace_db(session: &WorkspaceSession) -> PipelineResult<std::path::PathBuf> {
+    let workspace = session.current().ok_or_else(|| {
+        PipelineError::new(PipelineErrorCode::NoWorkspace, "no workspace is open")
+    })?;
+    Ok(Path::new(&workspace.path).join(WORKSPACE_DB_FILE))
+}
+
 pub fn list_history(
     session: &WorkspaceSession,
     owner: Option<JobOwner>,
     limit: Option<i64>,
 ) -> PipelineResult<Vec<PipelineSnapshot>> {
-    let workspace = session.current().ok_or_else(|| {
-        PipelineError::new(PipelineErrorCode::NoWorkspace, "no workspace is open")
-    })?;
     let limit = limit.unwrap_or(20).clamp(1, 100);
-    let database = Database::open_read_only(&Path::new(&workspace.path).join(WORKSPACE_DB_FILE))?;
+    let database = Database::open_read_only(&workspace_db(session)?)?;
     Ok(PipelineRepository::new(database.connection()).list_history(owner, limit)?)
+}
+
+pub fn clear_history(session: &WorkspaceSession) -> PipelineResult<usize> {
+    let database = Database::open_read_write(&workspace_db(session)?)?;
+    Ok(PipelineRepository::new(database.connection()).clear_history()?)
 }
 
 fn task_failure(error: tauri::Error) -> PipelineError {
@@ -179,4 +188,9 @@ pub async fn pipeline_history_list<R: Runtime>(
         list_history(session, JobOwner::filter(novel_id, project_id)?, limit)
     })
     .await
+}
+
+#[tauri::command]
+pub async fn pipeline_history_clear<R: Runtime>(app: AppHandle<R>) -> PipelineResult<usize> {
+    run_blocking(app, move |_, _, session| clear_history(session)).await
 }

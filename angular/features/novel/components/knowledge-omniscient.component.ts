@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { Icon } from '@components/icon';
 import { SegmentOption, Segments } from '@components/segments';
 import { Slider } from '@components/slider';
@@ -12,14 +12,7 @@ import { NovelKnowledgeService } from '../novel.knowledge.service';
 import { ChapterRow, NovelSummary } from '../novel.models';
 import { displayName } from '../novel.rules';
 import { NovelService } from '../novel.service';
-
-export interface OmniscientTick {
-  seq: number;
-  analyzed: boolean;
-  hidden: boolean;
-  cursor: boolean;
-  title: string;
-}
+import { NovelTranslationService } from '../novel.translation.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,6 +24,7 @@ export class NovelOmniscient {
   private readonly tabs = inject(TabsService);
   private readonly novels = inject(NovelService);
   private readonly knowledge = inject(NovelKnowledgeService);
+  private readonly translation = inject(NovelTranslationService);
   private readonly languageService = inject(LanguageService);
 
   readonly novelId = computed(this.buildNovelId.bind(this));
@@ -39,8 +33,11 @@ export class NovelOmniscient {
   readonly view = computed(this.buildView.bind(this));
   readonly total = computed(this.buildTotal.bind(this));
   readonly modes = computed(this.buildModes.bind(this));
-  readonly ticks = computed(this.buildTicks.bind(this));
   readonly cursor = computed(this.buildCursor.bind(this));
+
+  constructor() {
+    effect(this.loadTitles.bind(this));
+  }
 
   nameOf(novel: NovelSummary): string {
     return displayName(novel);
@@ -49,7 +46,7 @@ export class NovelOmniscient {
   titleOf(row: ChapterRow): string {
     return this.languageService.translate('novel.knowledge.omniscient.chapter', {
       n: row.seq,
-      title: row.title,
+      title: this.localTitleOf(row),
     });
   }
 
@@ -72,8 +69,19 @@ export class NovelOmniscient {
     this.setUpTo(this.cursor() + delta);
   }
 
-  jump(seq: number): void {
-    this.setUpTo(seq);
+  private localTitleOf(row: ChapterRow): string {
+    const id = this.novelId();
+    const lang = this.view().lang;
+    if (id === null || lang === 'src') return row.title;
+    return this.translation.titleOf(id, row.id, lang) ?? row.title;
+  }
+
+  private loadTitles(): void {
+    const id = this.novelId();
+    const lang = this.view().lang;
+    if (id !== null && lang !== 'src') {
+      void this.translation.ensure(id, lang);
+    }
   }
 
   private setUpTo(value: number): void {
@@ -124,19 +132,5 @@ export class NovelOmniscient {
         label: this.languageService.translate('novel.knowledge.omniscient.mode.chapter'),
       },
     ];
-  }
-
-  private buildTicks(): OmniscientTick[] {
-    const id = this.novelId();
-    const analyzed = id === null ? {} : this.knowledge.of(id).analyzed;
-    const spoiler = this.view().spoiler;
-    const cursor = this.cursor();
-    return this.chapters().map((row) => ({
-      seq: row.seq,
-      analyzed: analyzed[row.seq] !== undefined,
-      hidden: spoiler && row.seq > cursor,
-      cursor: spoiler && row.seq === cursor,
-      title: this.titleOf(row),
-    }));
   }
 }

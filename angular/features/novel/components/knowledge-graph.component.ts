@@ -22,7 +22,7 @@ export class NovelKnowledgeGraph {
 
   readonly novelId = input.required<number>();
 
-  readonly hiddenGroups: string[] = ['term', 'event'];
+  readonly hiddenGroups: string[] = ['term', 'event', 'character'];
 
   readonly view = computed(this.buildView.bind(this));
   readonly nodes = computed(this.buildNodes.bind(this));

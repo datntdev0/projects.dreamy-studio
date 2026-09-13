@@ -259,26 +259,5 @@
         </section>
       </aside>
     </div>
-
-    <section class="hm-sec" data-testid="home-templates">
-      <header class="hm-sec-head">
-        <h2 class="eyebrow">{{ 'home.templates.title' | t }}</h2>
-      </header>
-      <div class="hm-tpls">
-        @for (template of templates; track template.id) {
-          <button
-            type="button"
-            class="card hm-tpl"
-            [attr.data-template]="template.id"
-            [attr.data-tip-t]="template.blurbKey | t"
-            data-testid="home-template"
-            (click)="newProject(template.id)"
-          >
-            <span class="hm-tpl-ico"><ds-icon [name]="templateIcon(template)" [size]="18" /></span>
-            <span class="hm-tpl-name">{{ template.labelKey | t }}</span>
-          </button>
-        }
-      </div>
-    </section>
   </div>
 }

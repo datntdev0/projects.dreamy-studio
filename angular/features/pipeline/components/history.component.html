@@ -38,6 +38,38 @@
     </div>
     <span class="spacer"></span>
     <div class="nv-bar-r" data-testid="pipeline-history-bar-right">
+      @if (confirmingClear()) {
+        <span class="t-sm t-mute" data-testid="pipeline-history-clear-all-prompt">
+          {{ 'pipeline.clearAll.prompt' | t }}
+        </span>
+        <button
+          type="button"
+          class="btn btn-sm btn-danger"
+          data-testid="pipeline-history-clear-all-confirm"
+          (click)="confirmClear()"
+        >
+          {{ 'pipeline.clearAll.confirm' | t }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-ghost"
+          data-testid="pipeline-history-clear-all-cancel"
+          (click)="cancelClear()"
+        >
+          {{ 'pipeline.clearAll.cancel' | t }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="!canClear()"
+          data-testid="pipeline-history-clear-all"
+          (click)="askClear()"
+        >
+          <ds-icon name="trash" [size]="16" />
+          {{ 'pipeline.clearAll' | t }}
+        </button>
+      }
       <button
         type="button"
         class="btn btn-sm"

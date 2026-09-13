@@ -32,6 +32,7 @@ export class PipelineService {
 
   readonly loaded = signal(false);
   readonly loading = signal(false);
+  readonly clearing = signal(false);
   readonly error = signal<NovelError | null>(null);
   readonly selectedId = signal<number | null>(null);
   readonly running = computed(this.buildRunning.bind(this));
@@ -104,6 +105,20 @@ export class PipelineService {
       if (epoch === this.epoch) {
         this.loading.set(false);
       }
+    }
+  }
+
+  async clearHistory(): Promise<void> {
+    this.clearing.set(true);
+    this.error.set(null);
+    try {
+      await this.ipc.invoke<number>('pipeline_history_clear');
+      this.selectedId.set(null);
+      await this.load();
+    } catch (cause) {
+      this.error.set(toNovelError(cause));
+    } finally {
+      this.clearing.set(false);
     }
   }
 

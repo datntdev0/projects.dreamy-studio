@@ -16,6 +16,10 @@ import { durationMs, formatDuration, kindIcon, kindKey, kindSize, matchesFilter,
 import { PipelineService } from '../pipeline.service';
 import { PipelineStrip } from './strip.component';
 
+function isFinished(pipeline: PipelineSnapshot): boolean {
+  return pipeline.status !== 'running' && pipeline.status !== 'queued';
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-pipeline-history',
@@ -31,6 +35,8 @@ export class PipelineHistory implements OnInit {
   readonly filter = signal<PipelineFilter>('all');
   readonly visible = computed(this.buildVisible.bind(this));
   readonly filterActive = computed(this.buildFilterActive.bind(this));
+  readonly confirmingClear = signal(false);
+  readonly canClear = computed(this.buildCanClear.bind(this));
 
   readonly tableRowClass = (row: object): Record<string, boolean> => ({
     'is-selected': this.pipelines.selectedId() === this.snapshotOf(row).id,
@@ -124,6 +130,24 @@ export class PipelineHistory implements OnInit {
 
   refresh(): void {
     void this.pipelines.load();
+  }
+
+  askClear(): void {
+    this.confirmingClear.set(true);
+  }
+
+  cancelClear(): void {
+    this.confirmingClear.set(false);
+  }
+
+  async confirmClear(): Promise<void> {
+    this.confirmingClear.set(false);
+    await this.pipelines.clearHistory();
+  }
+
+  private buildCanClear(): boolean {
+    const busy = this.pipelines.loading() || this.pipelines.clearing();
+    return !busy && this.pipelines.history().some(isFinished);
   }
 
   private buildFilterActive(): boolean {

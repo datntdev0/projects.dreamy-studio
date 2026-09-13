@@ -167,6 +167,20 @@ impl<'a> PipelineRepository<'a> {
             .map(|snapshots| snapshots.into_iter().flatten().collect())
     }
 
+    pub fn clear_history(&self) -> rusqlite::Result<usize> {
+        let transaction = self.conn.unchecked_transaction()?;
+        transaction.execute(
+            "DELETE FROM ws_pipeline_tasks WHERE pipeline_id IN              (SELECT id FROM ws_pipeline_history WHERE status NOT IN ('running', 'queued'))",
+            [],
+        )?;
+        let removed = transaction.execute(
+            "DELETE FROM ws_pipeline_history WHERE status NOT IN ('running', 'queued')",
+            [],
+        )?;
+        transaction.commit()?;
+        Ok(removed)
+    }
+
     pub fn cancel_orphans(&self, now: &str) -> rusqlite::Result<usize> {
         let transaction = self.conn.unchecked_transaction()?;
         let changed = transaction.execute(

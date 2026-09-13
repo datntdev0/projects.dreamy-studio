@@ -267,29 +267,6 @@ app-novel-knowledge-ontology-dialog {
   gap: 4px;
   padding: 0 8px;
 }
-.om-ticks {
-  display: flex;
-  gap: 1px;
-  height: 10px;
-}
-.om-tick {
-  flex: 1;
-  min-width: 1px;
-  border-radius: 1px;
-  background: var(--canvas-mid);
-  cursor: pointer;
-}
-.om-tick.is-done {
-  background: var(--success);
-  opacity: 0.6;
-}
-.om-tick.is-hidden {
-  opacity: 0.2;
-}
-.om-tick.is-cursor {
-  background: var(--primary);
-  opacity: 1;
-}
 .om-empty {
   grid-column: 1 / -1;
   display: flex;

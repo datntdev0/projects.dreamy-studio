@@ -68,19 +68,6 @@
         [class.is-off]="!view().spoiler"
         data-testid="novel-omniscient-track"
       >
-        <div class="om-ticks" role="presentation">
-          @for (tick of ticks(); track tick.seq) {
-            <span
-              class="om-tick"
-              [class.is-done]="tick.analyzed"
-              [class.is-hidden]="tick.hidden"
-              [class.is-cursor]="tick.cursor"
-              [attr.title]="tick.title"
-              data-testid="novel-omniscient-tick"
-              (click)="jump(tick.seq)"
-            ></span>
-          }
-        </div>
         <ds-slider
           [label]="'novel.knowledge.omniscient.slider' | t"
           [min]="1"

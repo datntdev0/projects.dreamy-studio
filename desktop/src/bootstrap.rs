@@ -159,6 +159,7 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
             commands::pipeline::pipeline_history_list,
+            commands::pipeline::pipeline_history_clear,
             commands::project::project_list,
             commands::project::project_create,
             commands::project::project_update,

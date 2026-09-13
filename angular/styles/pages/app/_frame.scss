@@ -133,6 +133,7 @@ button.menu-row {
   display: grid;
   grid-template-columns: 44px var(--exc) var(--exr) minmax(0, 1fr) var(--inr) var(--inc);
   min-height: 0;
+  position: relative;
 }
 .resizer-v {
   position: relative;
@@ -168,6 +169,33 @@ button.menu-row {
 .shell.no-inspector {
   --inc: 0px;
   --inr: 0px;
+}
+@media (max-width: 1599.98px) {
+  .shell {
+    --inc: 0px;
+    --inr: 0px;
+    --drawer-w: min(var(--in-w, 320px), calc(100% - 44px));
+  }
+  .shell .inspector {
+    grid-column: auto;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--drawer-w);
+    z-index: 20;
+    border-left: 1px solid var(--hairline);
+    box-shadow: var(--shadow-float);
+  }
+  .shell .divider-inspector {
+    grid-column: auto;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: var(--drawer-w);
+    width: 1px;
+    z-index: 21;
+  }
 }
 .no-explorer .explorer,
 .no-explorer .divider-explorer,

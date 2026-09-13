@@ -28,7 +28,7 @@ import { failedCount, greetingKey, libraryTotal, moduleAttention, pipelineAttent
 
 const RECENT_PROJECTS = 3;
 const RECENT_NOVELS = 4;
-const HOME_LIST_LIMIT = 3;
+const HOME_LIST_LIMIT = 5;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

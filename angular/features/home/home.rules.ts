@@ -1,6 +1,6 @@
 import { LibrarySummary } from '@features/library/library.models';
 import { PipelineSnapshot } from '@features/novel/novel.translation.models';
-import { compareNewestFirst, firstError } from '@features/pipeline/pipeline.rules';
+import { compareNewestFirst } from '@features/pipeline/pipeline.rules';
 import { ProjectModuleState, ProjectSummary } from '@features/project/project.models';
 import { enabledModuleStates, projectPercent } from '@features/project/project.rules';
 import { LanguageKey } from '@shared/language/language.models';
@@ -77,8 +77,7 @@ function failedAttention(
     moduleId: null,
     pipelineId: pipeline.id,
     owner: ownerOf(pipeline),
-    detail: firstError(pipeline),
-    pipelineKind: pipeline.kind,
+    pipeline,
   };
 }
 
@@ -86,7 +85,10 @@ export function pipelineAttention(
   pipelines: PipelineSnapshot[],
   ownerOf: (pipeline: PipelineSnapshot) => string,
 ): HomeAttention[] {
-  return pipelines.filter(isFailed).map(failedAttention.bind(null, ownerOf));
+  return pipelines
+    .filter(isFailed)
+    .sort(compareNewestFirst)
+    .map(failedAttention.bind(null, ownerOf));
 }
 
 export function failedCount(pipelines: PipelineSnapshot[]): number {

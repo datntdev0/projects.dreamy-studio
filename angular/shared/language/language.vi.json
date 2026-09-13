@@ -148,6 +148,7 @@
   "home.attention.empty": "Mọi thứ đều ổn.",
   "home.attention.module": "{module} cần rà soát",
   "home.attention.pipeline": "Pipeline {kind} bị lỗi",
+  "home.attention.pipelineSummary": "{done}/{total} tác vụ · {failed} lỗi · {clock}",
   "home.activity.title": "Hoạt động gần đây",
   "home.activity.empty": "Chưa có pipeline nào chạy.",
   "home.templates.title": "Bắt đầu dự án mới",

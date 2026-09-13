@@ -74,6 +74,12 @@ export class PipelineService {
     return undefined;
   }
 
+  async ensureLoaded(): Promise<void> {
+    if (!this.loaded() && !this.loading()) {
+      await this.load();
+    }
+  }
+
   async load(): Promise<void> {
     const epoch = this.epoch;
     this.loading.set(true);

@@ -19,8 +19,8 @@ export interface HomeAttention {
   moduleId: ProjectModuleId | null;
   pipelineId: number | null;
   owner: string;
-  detail: string;
-  pipelineKind?: string;
+  detail?: string;
+  pipeline?: PipelineSnapshot;
 }
 
 export interface HomeActivity {

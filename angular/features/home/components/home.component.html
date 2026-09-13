@@ -50,7 +50,7 @@
             <ds-icon [name]="stat.icon" [size]="16" />
             <span class="eyebrow">{{ stat.labelKey | t }}</span>
           </span>
-          <span class="hm-stat-val t-display-sm" data-testid="home-stat-value">
+          <span class="hm-stat-val" data-testid="home-stat-value">
             {{ stat.value }}
           </span>
           <span class="hm-stat-note t-sm" [class.is-warn]="stat.warn">
@@ -172,16 +172,20 @@
         </section>
       </div>
 
-      <aside class="hm-col">
+      <aside class="hm-side">
         <section class="card hm-panel" data-testid="home-attention">
           <header class="hm-sec-head">
             <h2 class="eyebrow">{{ 'home.attention.title' | t }}</h2>
             <span class="spacer"></span>
-            @if (attention().length) {
+            @if (allAttention().length) {
               <span class="badge badge-warning" data-testid="home-attention-count">
-                {{ attention().length }}
+                {{ allAttention().length }}
               </span>
             }
+            <button type="button" class="btn btn-ghost btn-sm" (click)="openPipelines()">
+              {{ 'home.viewAll' | t }}
+              <ds-icon name="chev-r" [size]="14" />
+            </button>
           </header>
           @if (attention().length) {
             <div class="hm-issues">
@@ -200,8 +204,8 @@
                   ></span>
                   <span class="hm-issue-main">
                     <span class="t-sm t-ink">{{ attentionTitle(item) }}</span>
-                    @if (item.detail) {
-                      <span class="t-sm">{{ item.detail }}</span>
+                    @if (attentionDetail(item); as detail) {
+                      <span class="t-sm">{{ detail }}</span>
                     }
                     <span class="t-sm t-mute">{{ item.owner }}</span>
                   </span>
@@ -266,13 +270,12 @@
             type="button"
             class="card hm-tpl"
             [attr.data-template]="template.id"
+            [attr.data-tip-t]="template.blurbKey | t"
             data-testid="home-template"
             (click)="newProject(template.id)"
           >
             <span class="hm-tpl-ico"><ds-icon [name]="templateIcon(template)" [size]="18" /></span>
             <span class="hm-tpl-name">{{ template.labelKey | t }}</span>
-            <span class="t-sm t-mute">{{ template.blurbKey | t }}</span>
-            <span class="hm-tpl-mods mono">{{ templateModules(template) }}</span>
           </button>
         }
       </div>

@@ -28,7 +28,7 @@ import { failedCount, greetingKey, libraryTotal, moduleAttention, pipelineAttent
 
 const RECENT_PROJECTS = 3;
 const RECENT_NOVELS = 4;
-const RECENT_ACTIVITY = 6;
+const HOME_LIST_LIMIT = 3;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,11 +57,13 @@ export class Home {
   readonly cards = computed(this.buildCards.bind(this));
   readonly recentNovels = computed(this.buildRecentNovels.bind(this));
   readonly stats = computed(this.buildStats.bind(this));
+  readonly allAttention = computed(this.buildAllAttention.bind(this));
   readonly attention = computed(this.buildAttention.bind(this));
   readonly activity = computed(this.buildActivity.bind(this));
 
   constructor() {
     effect(this.loadSources.bind(this));
+    effect(this.loadPipelines.bind(this));
     effect(this.loadModules.bind(this));
     effect(this.loadCovers.bind(this));
   }
@@ -157,21 +159,26 @@ export class Home {
     return `${label} · ${this.languageService.translate(moduleStateKey(state.state))}`;
   }
 
-  templateModules(template: ProjectTemplate): string {
-    if (template.modules.length === 0) {
-      return this.languageService.translate('home.templates.pickModules');
-    }
-    return template.modules.map(this.moduleLabel.bind(this)).join(' · ');
-  }
-
   attentionTitle(item: HomeAttention): string {
     if (item.kind === 'module' && item.moduleId !== null) {
       const module = this.languageService.translate(projectModule(item.moduleId).labelKey);
       return this.languageService.translate('home.attention.module', { module });
     }
     return this.languageService.translate('home.attention.pipeline', {
-      kind: this.kindLabel(item.pipelineKind ?? ''),
+      kind: this.kindLabel(item.pipeline?.kind ?? ''),
     });
+  }
+
+  attentionDetail(item: HomeAttention): string {
+    const pipeline = item.pipeline;
+    if (!pipeline) return item.detail ?? '';
+    const summary = this.languageService.translate('home.attention.pipelineSummary', {
+      done: pipeline.done,
+      total: pipeline.total,
+      failed: pipeline.failed,
+      clock: formatClock(pipeline.finishedAt ?? pipeline.startedAt ?? pipeline.createdAt),
+    });
+    return pipeline.target ? `${summary} · ${pipeline.target}` : summary;
   }
 
   activityTitle(activity: HomeActivity): string {
@@ -186,10 +193,6 @@ export class Home {
 
   clockOf(value: string): string {
     return formatClock(value);
-  }
-
-  private moduleLabel(id: ProjectModuleId): string {
-    return this.languageService.translate(projectModule(id).labelKey);
   }
 
   private kindLabel(kind: string): string {
@@ -258,15 +261,19 @@ export class Home {
     ];
   }
 
-  private buildAttention(): HomeAttention[] {
+  private buildAllAttention(): HomeAttention[] {
     return [
       ...pipelineAttention(this.pipelines.history(), this.ownerOf),
       ...moduleAttention(this.cards()),
     ];
   }
 
+  private buildAttention(): HomeAttention[] {
+    return this.allAttention().slice(0, HOME_LIST_LIMIT);
+  }
+
   private buildActivity(): HomeActivity[] {
-    return recentActivity(this.pipelines.history(), this.ownerOf, RECENT_ACTIVITY);
+    return recentActivity(this.pipelines.history(), this.ownerOf, HOME_LIST_LIMIT);
   }
 
   private loadSources(): void {
@@ -280,9 +287,21 @@ export class Home {
     void this.projects.ensureLoaded();
     void this.novels.ensureLoaded();
     void this.library.ensureLoaded();
-    if (!this.pipelines.loaded() && !this.pipelines.loading()) {
-      void this.pipelines.load();
+  }
+
+  private loadPipelines(): void {
+    const workspace = this.workspace();
+    const projectsLoaded = this.projects.loaded();
+    const novelsLoaded = this.novels.loaded();
+    const loaded = this.pipelines.loaded();
+    const loading = this.pipelines.loading();
+    if (workspace && projectsLoaded && novelsLoaded && !loaded && !loading) {
+      untracked(this.requestPipelines.bind(this));
     }
+  }
+
+  private requestPipelines(): void {
+    void this.pipelines.ensureLoaded();
   }
 
   private loadModules(): void {

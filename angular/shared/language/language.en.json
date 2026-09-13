@@ -148,6 +148,7 @@
   "home.attention.empty": "Everything is up to date.",
   "home.attention.module": "{module} needs review",
   "home.attention.pipeline": "{kind} pipeline failed",
+  "home.attention.pipelineSummary": "{done}/{total} tasks · {failed} failed · {clock}",
   "home.activity.title": "Recent activity",
   "home.activity.empty": "No pipelines have run yet.",
   "home.templates.title": "Start a new project",

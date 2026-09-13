@@ -10,14 +10,14 @@ import { LanguageService } from '@shared/language/language.service';
 
 import { DownloadState } from '../backend.models';
 import { downloadPercent } from '../backend.rules';
-import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from '../llm.providers';
+import { MODEL_SUGGESTIONS } from '../llm.providers';
 import { isInstalled, LlmService } from '../llm.service';
 // prettier-ignore
 import { LlmCapability, LlmEffort, LlmFeature, LlmInstall, LlmProvider, LlmUsageWindow, LlmUsageWindowId } from '../settings.models';
 
-type LlmTab = 'cli' | 'cloud' | 'features';
+type LlmTab = 'cli' | 'features';
 
-const LLM_TABS: LlmTab[] = ['cli', 'cloud', 'features'];
+const LLM_TABS: LlmTab[] = ['cli', 'features'];
 
 const FEATURE_NAME_KEYS: Record<LlmCapability, LanguageKey> = {
   translation: 'settings.llm.feature.translation',
@@ -92,7 +92,6 @@ export class SettingsLlm implements OnInit {
   readonly providers = this.llm.providers;
   readonly features = this.llm.features;
   readonly efforts = EFFORT_OPTIONS;
-  readonly cloud = CLOUD_PROVIDERS;
   readonly tab = signal<LlmTab>('cli');
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
 
@@ -299,11 +298,6 @@ export class SettingsLlm implements OnInit {
   private buildTabOptions(): TabOption[] {
     return [
       { value: 'cli', label: this.languageService.translate('settings.llm.cli'), icon: 'terminal' },
-      {
-        value: 'cloud',
-        label: this.languageService.translate('settings.llm.cloud'),
-        icon: 'cloud',
-      },
       {
         value: 'features',
         label: this.languageService.translate('settings.llm.features'),

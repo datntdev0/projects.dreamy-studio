@@ -135,11 +135,3 @@ export interface LlmProvider extends Omit<LlmCliView, 'probe'> {
   usageLoading: boolean;
   usageError: string;
 }
-
-export interface CloudProvider {
-  id: string;
-  name: string;
-  site: string;
-  note: LanguageKey;
-  baseUrl: string | null;
-}

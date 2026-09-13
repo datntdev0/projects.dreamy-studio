@@ -146,13 +146,6 @@
   }
 }
 
-.llm-sec-h {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-}
 .llm-list {
   display: grid;
   gap: var(--sp-sm);
@@ -183,9 +176,6 @@
 }
 .llm-card.is-error {
   border-left-color: var(--danger);
-}
-.llm-cloud {
-  opacity: 0.6;
 }
 .llm-card-h {
   display: flex;

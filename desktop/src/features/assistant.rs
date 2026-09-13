@@ -1,4 +1,5 @@
 pub mod cards;
+pub mod catalog;
 pub mod drafts;
 pub mod edits;
 pub mod grants;

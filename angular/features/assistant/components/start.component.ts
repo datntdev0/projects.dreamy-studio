@@ -3,7 +3,7 @@ import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementR
 import { Button } from '@components/button';
 import { Icon } from '@components/icon';
 import { NovelSummary } from '@features/novel/novel.models';
-import { displayName, formatCount } from '@features/novel/novel.rules';
+import { analyzedOf, displayName, formatCount, translatedOf } from '@features/novel/novel.rules';
 import { NovelService } from '@features/novel/novel.service';
 import { ProjectSummary } from '@features/project/project.models';
 import { ProjectService } from '@features/project/project.service';
@@ -131,8 +131,8 @@ export class AssistantStart {
   novelMeta(novel: NovelSummary): string {
     return this.languageService.translate('assistant.scope.novelMeta', {
       chapters: formatCount(novel.chapterCount),
-      translated: novel.translatedCount,
-      analyzed: novel.analyzedCount,
+      translated: translatedOf(novel),
+      analyzed: analyzedOf(novel),
     });
   }
 

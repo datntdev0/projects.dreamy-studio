@@ -1,3 +1,5 @@
+use crate::features::settings::home;
+use crate::features::settings::llm::spec;
 use crate::infra::logging::Logger;
 use crate::infra::startup::download::Fetch;
 use crate::infra::startup::download::FetchStop;
@@ -108,6 +110,7 @@ impl CliInstaller {
             .item(id)
             .ok_or_else(|| InstallView::unavailable().error)?;
         if is_installed(item, &self.config) {
+            self.install_skills(id);
             return Ok(self.view(id));
         }
         let cancel = self.begin(id)?;
@@ -119,6 +122,7 @@ impl CliInstaller {
                     LOG_TARGET,
                     &format!("{} {} installed", item.id, item.display_version()),
                 );
+                self.install_skills(id);
                 Ok(self.view(id))
             }
             Err(FetchStop::Cancelled) => Ok(self.view(id)),
@@ -132,6 +136,18 @@ impl CliInstaller {
                 );
                 Err(error.detail)
             }
+        }
+    }
+
+    fn install_skills(&self, id: &str) {
+        let Some(cli) = spec(id) else {
+            return;
+        };
+        if let Err(error) = home::install_skills(cli, &self.config.app_data_dir) {
+            self.logger.error(
+                LOG_TARGET,
+                &format!("{id} skills install failed detail={error}"),
+            );
         }
     }
 

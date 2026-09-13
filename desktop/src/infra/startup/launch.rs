@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 
+use crate::features::settings::home;
 use crate::features::workspace::load::ErrorCode;
 use crate::features::workspace::load::StepState;
 use crate::features::workspace::load::storage_failure;
@@ -162,7 +163,16 @@ impl StartupService {
                 ErrorCode::LogsFailed,
                 error.to_string(),
             )
-        })
+        })?;
+        self.install_skills();
+        Ok(())
+    }
+
+    fn install_skills(&self) {
+        for error in home::install_present_skills(&self.root) {
+            self.logger
+                .error(LOG_TARGET, &format!("skills install failed detail={error}"));
+        }
     }
 
     fn prepare_database(&self) -> StorageResult<()> {

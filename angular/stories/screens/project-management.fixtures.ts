@@ -77,8 +77,8 @@ function novelOf(
     updatedAt: stamp(9, '09:15'),
     chapterCount,
     wordCount: chapterCount * 2400,
-    translatedCount: 0,
-    analyzedCount: 0,
+    translated: {},
+    analyzed: {},
     tags: [],
   };
 }

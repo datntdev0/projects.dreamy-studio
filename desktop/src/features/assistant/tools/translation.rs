@@ -37,14 +37,7 @@ pub(super) fn read_translation(
         .get(&chapter.id)
         .ok_or_else(|| format!("chapter {seq} has no {} translation yet", target.as_str()))?;
     let total = rows.len();
-    let sizes: Vec<usize> = rows
-        .iter()
-        .map(|row| {
-            let own = translated.paragraphs.get(row.n - 1);
-            row.text.chars().count() + own.map_or(0, |item| item.text.chars().count())
-        })
-        .collect();
-    let (start, end) = page_bounds(&sizes, from, to);
+    let (start, end) = page_bounds(total, from, to);
     let paragraphs: Vec<Value> = rows[start.saturating_sub(1)..end]
         .iter()
         .map(|row| {

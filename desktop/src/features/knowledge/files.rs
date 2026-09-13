@@ -4,6 +4,7 @@ use crate::features::knowledge::models::KnowledgeErrorCode;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::models::KnowledgeResult;
 use crate::features::novel::files::NovelFiles;
+use crate::features::novel::files::list_chapter_ids;
 use crate::features::novel::files::write_atomic;
 use std::fs;
 use std::io::ErrorKind;
@@ -49,6 +50,10 @@ impl KnowledgeFiles {
         fs::create_dir_all(self.knowledge_dir(novel_id, lang))?;
         write_atomic(&path, &bytes)?;
         Ok(())
+    }
+
+    pub fn list(&self, novel_id: i64, lang: KnowledgeLang) -> KnowledgeResult<Vec<String>> {
+        Ok(list_chapter_ids(&self.knowledge_dir(novel_id, lang))?)
     }
 
     fn knowledge_dir(&self, novel_id: i64, lang: KnowledgeLang) -> PathBuf {

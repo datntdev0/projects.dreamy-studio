@@ -16,6 +16,8 @@ pub const NOVELS_DIR: &str = "novels";
 pub const COVER_MAX_BYTES: usize = 8 * 1024 * 1024;
 
 const COVER_STEM: &str = "cover";
+const CHAPTER_PREFIX: &str = "chapter_";
+const CHAPTER_SUFFIX: &str = ".json";
 const JPEG_MAGIC: [u8; 3] = [0xFF, 0xD8, 0xFF];
 const PNG_MAGIC: [u8; 4] = [0x89, 0x50, 0x4E, 0x47];
 
@@ -193,7 +195,31 @@ fn chapter_name(chapter_id: &str) -> NovelResult<String> {
     if !is_chapter_id(chapter_id) {
         return Err(NovelError::invalid("chapter id is malformed"));
     }
-    Ok(format!("chapter_{chapter_id}.json"))
+    Ok(format!("{CHAPTER_PREFIX}{chapter_id}{CHAPTER_SUFFIX}"))
+}
+
+pub(crate) fn list_chapter_ids(dir: &Path) -> std::io::Result<Vec<String>> {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(error),
+    };
+    let mut ids = Vec::new();
+    for entry in entries {
+        let name = entry?.file_name().to_string_lossy().into_owned();
+        if let Some(id) = chapter_id_of(&name) {
+            ids.push(id.to_string());
+        }
+    }
+    ids.sort();
+    Ok(ids)
+}
+
+fn chapter_id_of(name: &str) -> Option<&str> {
+    let id = name
+        .strip_prefix(CHAPTER_PREFIX)?
+        .strip_suffix(CHAPTER_SUFFIX)?;
+    is_chapter_id(id).then_some(id)
 }
 
 fn is_chapter_id(value: &str) -> bool {

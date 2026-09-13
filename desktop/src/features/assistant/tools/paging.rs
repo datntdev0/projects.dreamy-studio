@@ -1,28 +1,17 @@
 use serde_json::Value;
 use serde_json::json;
 
-pub const PAGE_PARAGRAPHS: usize = 60;
-pub const PAGE_CHARS: usize = 12_000;
+pub const PAGE_PARAGRAPHS: usize = 200;
 pub(super) const NEXT_NOTE: &str =
     "Results come in pages: while `next` is not null, call again with `from` set to `next`.";
 
-pub(super) fn page_bounds(sizes: &[usize], from: Option<i64>, to: Option<i64>) -> (usize, usize) {
-    let total = sizes.len();
+pub(super) fn page_bounds(total: usize, from: Option<i64>, to: Option<i64>) -> (usize, usize) {
     if total == 0 {
         return (1, 0);
     }
     let start = clamp_position(from.unwrap_or(1), 1, total);
     let wanted = clamp_position(to.unwrap_or(total as i64), start, total);
-    let mut end = start - 1;
-    let mut chars = 0;
-    for size in &sizes[start - 1..wanted] {
-        if end >= start && (end - start + 1 >= PAGE_PARAGRAPHS || chars + *size > PAGE_CHARS) {
-            break;
-        }
-        chars += *size;
-        end += 1;
-    }
-    (start, end)
+    (start, wanted.min(start + PAGE_PARAGRAPHS - 1))
 }
 
 fn clamp_position(value: i64, low: usize, high: usize) -> usize {

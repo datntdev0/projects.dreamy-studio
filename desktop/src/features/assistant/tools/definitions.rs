@@ -1,3 +1,4 @@
+use crate::features::assistant::tools::novel::OUTLINE_PAGE;
 use crate::features::assistant::tools::paging::NEXT_NOTE;
 use serde_json::Value;
 use serde_json::json;
@@ -150,11 +151,13 @@ fn read_definitions() -> Vec<Value> {
     vec![
         json!({
             "name": "read_novel",
-            "description": "Without `novelId`, list every novel (id, title, author, language, tags, chapter counts). With `novelId`, read one novel: its metadata and the outline of its chapters (number, title, word count, translation and analysis status).",
+            "description": format!("Without `novelId`, list every novel (id, title, author, language, tags, chapter count, and per language the number of translated and analyzed chapters). With `novelId`, read one novel: its metadata, per target language the translated chapters and per language the analyzed chapters as number ranges (e.g. \"1-49,52\"), and a page of at most {OUTLINE_PAGE} chapters of the outline (number, title, word count). While `next` is not null, call again with `from` set to `next`."),
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "novelId": { "type": "integer", "description": "Novel id; leave out to list the novels." }
+                    "novelId": { "type": "integer", "description": "Novel id; leave out to list the novels." },
+                    "from": { "type": "integer", "minimum": 1, "description": "First chapter number of the outline page, default the first chapter." },
+                    "to": { "type": "integer", "minimum": 1, "description": "Last chapter number of the outline page, default the last chapter." }
                 },
                 "additionalProperties": false
             }

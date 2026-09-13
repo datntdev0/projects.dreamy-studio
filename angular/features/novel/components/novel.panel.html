@@ -92,13 +92,13 @@
     <div class="nm-fr" data-testid="novel-panel-progress">
       <app-novel-progress-frac
         icon="lang"
-        [done]="n.translatedCount"
+        [done]="translatedOf(n)"
         [total]="n.chapterCount"
         [label]="'novel.frac.translated' | t"
       />
       <app-novel-progress-frac
         icon="graph"
-        [done]="n.analyzedCount"
+        [done]="analyzedOf(n)"
         [total]="n.chapterCount"
         [label]="'novel.frac.analyzed' | t"
       />

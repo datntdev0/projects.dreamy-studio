@@ -94,6 +94,14 @@ impl TranslationWorkspace {
         })
     }
 
+    pub fn translated_chapters(
+        &self,
+        novel_id: i64,
+        target: &str,
+    ) -> TranslationResult<Vec<String>> {
+        self.files().list_chapters(novel_id, parse_target(target)?)
+    }
+
     pub fn warnings(
         &self,
         novel_id: i64,
@@ -292,8 +300,7 @@ impl TranslationWorkspace {
     }
 
     pub fn target_for(&self, novel_id: i64, raw: &str) -> TranslationResult<TranslationTarget> {
-        let target = TranslationTarget::parse(raw)
-            .ok_or_else(|| TranslationError::invalid(format!("unsupported target '{raw}'")))?;
+        let target = parse_target(raw)?;
         let db = self.database()?;
         let novel = require_novel(&NovelRepository::new(db.connection()), novel_id)?;
         if novel.lang.eq_ignore_ascii_case(target.as_str()) {
@@ -401,6 +408,11 @@ fn lock(mutex: &Mutex<()>) -> MutexGuard<'_, ()> {
 
 fn now() -> String {
     format_timestamp(Utc::now())
+}
+
+fn parse_target(raw: &str) -> TranslationResult<TranslationTarget> {
+    TranslationTarget::parse(raw)
+        .ok_or_else(|| TranslationError::invalid(format!("unsupported target '{raw}'")))
 }
 
 fn require_novel(repo: &NovelRepository, id: i64) -> TranslationResult<NovelRow> {

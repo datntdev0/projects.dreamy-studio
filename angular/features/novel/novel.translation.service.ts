@@ -429,6 +429,9 @@ export class NovelTranslationService {
   }
 
   private async finishPipeline(pipeline: PipelineSnapshot): Promise<void> {
+    if (pipeline.novelId !== null) {
+      void this.novels.load();
+    }
     if (pipeline.kind === ANALYSIS_KIND) {
       this.removePipeline(pipeline.id);
       this.finished.set(pipeline);

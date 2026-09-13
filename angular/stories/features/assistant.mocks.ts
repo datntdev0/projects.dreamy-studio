@@ -486,8 +486,8 @@ function secondNovel(base: NovelSummary): NovelSummary {
     updatedAt: ago(30 * DAY_MS),
     chapterCount: 24,
     wordCount: 61000,
-    translatedCount: 0,
-    analyzedCount: 0,
+    translated: { VI: 0, EN: 0 },
+    analyzed: { src: 0, VI: 0, EN: 0 },
     tags: ['奇幻'],
   };
 }
@@ -523,8 +523,8 @@ function extraNovel(base: NovelSummary, index: number): NovelSummary {
   const entry = EXTRA_NOVELS[index % EXTRA_NOVELS.length];
   const round = Math.floor(index / EXTRA_NOVELS.length);
   const chapterCount = 8 + ((index * 37) % 1400);
-  const translatedCount = Math.min(chapterCount, (index * 11) % 90);
-  const analyzedCount = Math.min(chapterCount, (index * 7) % 60);
+  const translated = Math.min(chapterCount, (index * 11) % 90);
+  const analyzed = Math.min(chapterCount, (index * 7) % 60);
   return {
     ...base,
     id: SECOND_NOVEL_ID + 1 + index,
@@ -534,8 +534,8 @@ function extraNovel(base: NovelSummary, index: number): NovelSummary {
     description: '',
     chapterCount,
     wordCount: chapterCount * 2600,
-    translatedCount,
-    analyzedCount,
+    translated: { VI: translated, EN: 0 },
+    analyzed: { src: analyzed, VI: 0, EN: 0 },
     tags: [],
     updatedAt: ago((index + 1) * 19 * HOUR_MS + index * 7 * 60 * 1000),
   };
@@ -567,7 +567,7 @@ function assistantHandlers(scenario: AssistantScenario): IpcHandlers {
         return rows;
       }
       return [
-        { ...first, name: 'Người giữ đèn Harrowmere', analyzedCount: 3 },
+        { ...first, name: 'Người giữ đèn Harrowmere', analyzed: { ...first.analyzed, src: 3 } },
         secondNovel(first),
         ...extraNovels(first, scenario.novels ?? 0),
       ];

@@ -200,11 +200,7 @@ pub(super) fn block_page(
     from: Option<i64>,
     to: Option<i64>,
 ) -> (usize, usize) {
-    let sizes: Vec<usize> = blocks
-        .iter()
-        .map(|block| block.text.chars().count())
-        .collect();
-    page_bounds(&sizes, from, to)
+    page_bounds(blocks.len(), from, to)
 }
 
 pub(crate) struct UnitTarget<'a> {

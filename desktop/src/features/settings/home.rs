@@ -1,10 +1,14 @@
+use crate::features::assistant::catalog::SKILL_DOCS;
+use crate::features::assistant::catalog::skill_file;
 use crate::features::novel::files::write_atomic;
+use crate::features::settings::llm::CLI_SPECS;
 use crate::features::settings::llm::CliSpec;
 use serde_json::Map;
 use serde_json::Value;
 use serde_json::json;
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 use toml_edit::DocumentMut;
 use toml_edit::Item;
 use toml_edit::Table;
@@ -16,8 +20,9 @@ pub const CLAUDE_MCP_FILE: &str = "dreamy-mcp.json";
 pub const CLAUDE_SETTINGS_FILE: &str = "settings.json";
 pub const CODEX_CONFIG_FILE: &str = "config.toml";
 pub const CODEX_APPROVAL_MODE: &str = "approve";
+pub const SKILL_FILE: &str = "SKILL.md";
 
-const CLAUDE_ALLOW: [&str; 1] = ["mcp__dreamy"];
+const CLAUDE_ALLOW: [&str; 2] = ["mcp__dreamy", "Skill"];
 const CLAUDE_DENY: [&str; 10] = [
     "Bash",
     "Read",
@@ -69,6 +74,38 @@ pub fn codex_config(existing: &str, endpoint: &str) -> Result<String, String> {
 }
 
 pub fn provision(cli: &CliSpec, data_dir: &Path, endpoint: &str) -> Result<(), String> {
+    provision_config(cli, data_dir, endpoint)?;
+    install_skills(cli, data_dir)
+}
+
+pub fn skills_dir(cli: &CliSpec, data_dir: &Path) -> Option<PathBuf> {
+    let profile = cli.profile_dir(data_dir);
+    match cli.id {
+        "claude" | "codex" => Some(profile.join("skills")),
+        "antigravity" => Some(profile.join(".gemini").join("config").join("skills")),
+        _ => None,
+    }
+}
+
+pub fn install_skills(cli: &CliSpec, data_dir: &Path) -> Result<(), String> {
+    let Some(dir) = skills_dir(cli, data_dir) else {
+        return Ok(());
+    };
+    for doc in &SKILL_DOCS {
+        write_if_changed(&dir.join(doc.name).join(SKILL_FILE), &skill_file(doc))?;
+    }
+    Ok(())
+}
+
+pub fn install_present_skills(data_dir: &Path) -> Vec<String> {
+    CLI_SPECS
+        .iter()
+        .filter(|cli| cli.profile_dir(data_dir).exists())
+        .filter_map(|cli| install_skills(cli, data_dir).err())
+        .collect()
+}
+
+fn provision_config(cli: &CliSpec, data_dir: &Path, endpoint: &str) -> Result<(), String> {
     let dir = cli.profile_dir(data_dir);
     match cli.id {
         "claude" => {

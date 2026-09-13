@@ -12,7 +12,7 @@ import { NovelConfirmService } from '../novel.confirm.service';
 import { NovelDialogsService } from '../novel.dialogs.service';
 import { NovelLang, NovelSummary, NovelViewMode } from '../novel.models';
 import { NovelReaderService } from '../novel.reader.service';
-import { displayName, formatCount, hasCustomName } from '../novel.rules';
+import { analyzedOf, displayName, formatCount, hasCustomName, translatedOf } from '../novel.rules';
 import { NovelService } from '../novel.service';
 import { NovelProgressFrac } from './progress-frac.component';
 
@@ -102,6 +102,14 @@ export class NovelList {
 
   fmt(value: number): string {
     return formatCount(value);
+  }
+
+  translatedOf(novel: NovelSummary): number {
+    return translatedOf(novel);
+  }
+
+  analyzedOf(novel: NovelSummary): number {
+    return analyzedOf(novel);
   }
 
   imageOf(novel: NovelSummary): string {

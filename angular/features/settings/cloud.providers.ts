@@ -33,23 +33,19 @@ export const DEFAULT_CLOUD_ACCOUNTS: CloudAccount[] = [
 
 export type BackendCloudAccount = Partial<CloudAccount> & { id: string };
 
-function normaliseAccount(item: BackendCloudAccount): CloudAccount {
-  const base = DEFAULT_CLOUD_ACCOUNTS.find((account) => account.id === item.id);
-  const merged = { ...base, ...item } as CloudAccount;
-  const requiresKey = item.requiresKey ?? base?.requiresKey ?? true;
+function mergeAccount(base: CloudAccount, item: BackendCloudAccount | undefined): CloudAccount {
+  const merged = { ...base, ...item };
+  const requiresKey = item?.requiresKey ?? base.requiresKey;
   return { ...merged, requiresKey, connected: requiresKey ? merged.connected : true };
 }
 
-function isCatalogued(account: CloudAccount): boolean {
-  return DEFAULT_CLOUD_ACCOUNTS.some((entry) => entry.id === account.id);
-}
-
 export function mergeCloudCatalogue(list: BackendCloudAccount[]): CloudAccount[] {
-  const accounts = list.map(normaliseAccount);
-  const catalogued = DEFAULT_CLOUD_ACCOUNTS.map(
-    (entry) => accounts.find((account) => account.id === entry.id) ?? entry,
+  return DEFAULT_CLOUD_ACCOUNTS.map((base) =>
+    mergeAccount(
+      base,
+      list.find((item) => item.id === base.id),
+    ),
   );
-  return [...catalogued, ...accounts.filter((account) => !isCatalogued(account))];
 }
 
 export const CLOUD_DISCONNECTED: Partial<CloudAccount> = {

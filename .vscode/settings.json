@@ -15,6 +15,7 @@
         "**/.coverage": true,
         "**/.ruff_cache": true,
         "**/.playwright-cli": true,
+        "**/*.tsbuildinfo": true,
         "backend/.venv": true,
         "desktop/gen/": true,
         "desktop/binaries": true,

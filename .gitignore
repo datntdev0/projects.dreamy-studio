@@ -5,6 +5,7 @@
 /storybook-static/
 /tmp
 /bazel-out
+*.tsbuildinfo
 
 # Node
 node_modules

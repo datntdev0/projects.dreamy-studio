@@ -3,6 +3,7 @@
   inset: 0;
   display: grid;
   place-items: center;
+  place-content: safe center;
   padding: var(--sp-xl);
   overflow: auto;
   background:

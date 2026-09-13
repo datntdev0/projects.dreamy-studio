@@ -1,3 +1,4 @@
+use crate::features::settings::secrets::ApiKey;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -11,7 +12,8 @@ pub struct CloudSettings {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CloudAccountSettings {
-    pub api_key: String,
+    #[serde(flatten)]
+    pub key: ApiKey,
 }
 
 impl CloudSettings {
@@ -22,7 +24,6 @@ impl CloudSettings {
     pub fn api_key(&self, id: &str) -> Option<&str> {
         self.accounts
             .get(id)
-            .map(|account| account.api_key.as_str())
-            .filter(|key| !key.is_empty())
+            .and_then(|account| account.key.secret())
     }
 }

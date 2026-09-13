@@ -10,6 +10,8 @@ use crate::features::backend::models::TtsModel;
 use crate::features::backend::monitor::MonitorState;
 use crate::features::settings::backend::RemoteSettings;
 use crate::features::settings::repository::SettingsRepository;
+use crate::features::settings::secrets::ApiKey;
+use crate::features::settings::secrets::REMOTE_ACCOUNT;
 use crate::infra::backend_client::BackendClient;
 use crate::infra::backend_client::ClientError;
 use crate::infra::backend_client::Health;
@@ -30,8 +32,6 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 const SYNTHESIS_TIMEOUT: Duration = Duration::from_secs(1_200);
 const SYNTHESIS_ATTEMPTS: usize = 6;
 const GATEWAY_TIMEOUT: u16 = 524;
-const KEY_HINT_MASK: &str = "••••";
-const KEY_HINT_LENGTH: usize = 4;
 const NOT_CONNECTED: &str = "No remote backend is connected.";
 const INVALID_URL: &str = "Enter an address that starts with http:// or https://.";
 
@@ -72,16 +72,18 @@ impl RemoteBackendService {
         let client = BackendClient::remote(&url, api_key, STATUS_TIMEOUT);
         client.health().map_err(remote_error)?;
         let active = self.active();
-        self.save(Some(RemoteSettings {
-            url,
-            api_key: api_key.trim().to_string(),
-            active,
-        }))?;
+        let key = ApiKey::new(api_key);
+        if key.secret().is_none() {
+            self.settings.forget(REMOTE_ACCOUNT);
+        }
+        self.save(Some(RemoteSettings { url, key, active }))?;
         Ok(self.view())
     }
 
     pub fn disconnect(&self) -> Result<(), String> {
-        self.save(None)
+        self.save(None)?;
+        self.settings.forget(REMOTE_ACCOUNT);
+        Ok(())
     }
 
     pub fn set_active(&self, active: bool) -> Result<(), String> {
@@ -151,7 +153,11 @@ impl RemoteBackendService {
 }
 
 fn client_for(remote: &RemoteSettings, timeout: Duration) -> BackendClient {
-    BackendClient::remote(&remote.url, &remote.api_key, timeout)
+    BackendClient::remote(
+        &remote.url,
+        remote.key.secret().unwrap_or_default(),
+        timeout,
+    )
 }
 
 fn inspect(remote: &RemoteSettings) -> RemoteView {
@@ -168,7 +174,7 @@ fn inspect(remote: &RemoteSettings) -> RemoteView {
     RemoteView {
         backend,
         url: remote.url.clone(),
-        key_hint: key_hint(&remote.api_key),
+        key_hint: remote.key.hint(),
         active: remote.active,
     }
 }
@@ -227,21 +233,6 @@ pub fn valid_url(url: &str) -> Result<String, String> {
         return Err(INVALID_URL.to_string());
     }
     Ok(url.to_string())
-}
-
-pub fn key_hint(api_key: &str) -> String {
-    if api_key.is_empty() {
-        return String::new();
-    }
-    let tail: String = api_key
-        .chars()
-        .rev()
-        .take(KEY_HINT_LENGTH)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    format!("{KEY_HINT_MASK}{tail}")
 }
 
 pub fn remote_error(error: ClientError) -> String {

@@ -37,11 +37,17 @@ export interface LayoutSettings {
   bottomSize?: number;
 }
 
+export interface KeyStoreView {
+  secure: boolean;
+  portable: boolean;
+}
+
 export interface SettingsView {
   general: GeneralSettings;
   layout: LayoutSettings;
   dataDir: string;
   file: string;
+  keyStore: KeyStoreView;
 }
 
 export type LlmCapability = 'translation' | 'knowledge' | 'assistant';

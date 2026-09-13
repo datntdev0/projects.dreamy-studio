@@ -86,6 +86,7 @@ function settingsMock(
     section,
     dataDir: signal(scenario.dataDir ?? 'C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio'),
     file: signal('settings.json'),
+    keyStore: signal({ secure: true, portable: false }),
     maxPipelines,
     maxTasks,
     setMaxPipelines: (value) => maxPipelines.set(value),

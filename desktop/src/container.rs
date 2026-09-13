@@ -7,10 +7,12 @@ use crate::features::settings::check::LlmChecker;
 use crate::features::settings::check::LlmStatus;
 use crate::features::settings::check::NoLlmCheck;
 use crate::features::settings::repository::SETTINGS_FILE;
+use crate::features::settings::repository::SettingsRepository;
 use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendLaunch;
 use crate::infra::backend::BackendProcess;
 use crate::infra::logging::Logger;
+use crate::infra::secret_store::SecretStore;
 use crate::infra::startup::manifest::executable_of;
 use crate::shared::config;
 use crate::shared::config::AppConfig;
@@ -44,6 +46,7 @@ pub struct AppContainer {
     pub database_path: PathBuf,
     pub settings_path: PathBuf,
     pub logger: Logger,
+    pub secrets: SecretStore,
     pub backend: Arc<dyn BackendHost>,
     pub supervisor: Arc<BackendSupervisor>,
     pub llm_status: LlmStatus,
@@ -66,6 +69,10 @@ impl AppContainer {
         container
     }
 
+    pub fn settings_repository(&self) -> SettingsRepository {
+        SettingsRepository::new(self.settings_path.clone(), self.secrets.clone())
+    }
+
     pub fn runtime_libraries_dir() -> PathBuf {
         let base = if cfg!(debug_assertions) {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -82,6 +89,7 @@ impl AppContainer {
         let database_path = directories.database_path();
         let settings_path = directories.settings_path();
         let logger = Logger::new(directories.logs.clone());
+        let secrets = SecretStore::new(logger.clone());
         let supervisor = Arc::new(BackendSupervisor::new(backend));
 
         Self {
@@ -90,6 +98,7 @@ impl AppContainer {
             database_path,
             settings_path,
             logger,
+            secrets,
             backend: supervisor.clone(),
             supervisor,
             llm_status: LlmStatus::default(),

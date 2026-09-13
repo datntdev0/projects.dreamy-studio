@@ -37,7 +37,6 @@ use crate::features::pipeline::llm::LlmTranslator;
 use crate::features::project::service::ProjectService;
 use crate::features::settings::install::CliInstaller;
 use crate::features::settings::models::Theme;
-use crate::features::settings::repository::SettingsRepository;
 use crate::features::settings::service::SettingsService;
 use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
@@ -292,8 +291,9 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let service = WorkspaceService::new(repository);
     let loader = WorkspaceLoader::from_container(container, service.clone());
     app.manage(
-        SettingsService::new(SettingsRepository::new(container.settings_path.clone()))
-            .with_status(container.llm_status.clone()),
+        SettingsService::new(container.settings_repository())
+            .with_status(container.llm_status.clone())
+            .with_portable(container.config.portable),
     );
     app.manage(WorkspaceSession::new());
     app.manage(service);
@@ -307,11 +307,9 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
 }
 
 fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
-    let remote = Arc::new(RemoteBackendService::new(SettingsRepository::new(
-        container.settings_path.clone(),
-    )));
+    let remote = Arc::new(RemoteBackendService::new(container.settings_repository()));
     let cloud = Arc::new(CloudAccountService::new(
-        SettingsRepository::new(container.settings_path.clone()),
+        container.settings_repository(),
         SpeechCache::new(&container.config.caches_dir),
     ));
     app.manage(remote.clone());
@@ -350,7 +348,7 @@ fn manage_assistant<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let grants = McpGrants::new();
     let endpoint: McpEndpoint = Arc::new(Mutex::new(None));
     let llm = Arc::new(CliAssistantLlm::new(
-        SettingsRepository::new(container.settings_path.clone()),
+        container.settings_repository(),
         Some(container.directories.logs.clone()),
         endpoint.clone(),
     ));
@@ -376,13 +374,9 @@ fn manage_pipeline<R: Runtime>(
     library: &LibraryService,
 ) {
     let translation = crate::features::translation::service::TranslationService::new();
-    let translator = std::sync::Arc::new(LlmTranslator::new(SettingsRepository::new(
-        container.settings_path.clone(),
-    )));
+    let translator = std::sync::Arc::new(LlmTranslator::new(container.settings_repository()));
     let knowledge = KnowledgeService::new();
-    let analyzer = std::sync::Arc::new(LlmAnalyzer::new(SettingsRepository::new(
-        container.settings_path.clone(),
-    )));
+    let analyzer = std::sync::Arc::new(LlmAnalyzer::new(container.settings_repository()));
     app.manage(translation.clone());
     app.manage(knowledge.clone());
     app.manage(PipelineExecutor::with_logs(

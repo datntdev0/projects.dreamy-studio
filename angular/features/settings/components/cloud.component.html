@@ -2,7 +2,7 @@
   <p class="t-sm t-mute" data-testid="settings-cloud-intro">{{ 'settings.cloud.intro' | t }}</p>
   <div class="st-note" data-testid="settings-cloud-note">
     <ds-icon name="shield" [size]="15" />
-    <span>{{ 'settings.cloud.note' | t }}</span>
+    <span>{{ storageNote() | t }}</span>
   </div>
   <ds-tabs
     data-testid="settings-cloud-tabs"

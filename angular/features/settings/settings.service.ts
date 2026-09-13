@@ -11,10 +11,11 @@ import { CloudService } from './cloud.service';
 import { LlmService } from './llm.service';
 import { RemoteBackendService } from './remote.service';
 // prettier-ignore
-import { GeneralSettings, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from './settings.models';
+import { GeneralSettings, KeyStoreView, LayoutSettings, MAX_PIPELINES_LIMIT, MAX_TASKS_LIMIT, SettingsFolderTarget, SettingsSectionId, SettingsView } from './settings.models';
 
 const DEFAULT_MAX_PIPELINES = 1;
 const DEFAULT_MAX_TASKS = 5;
+const DEFAULT_KEY_STORE: KeyStoreView = { secure: true, portable: false };
 
 function clampLimit(value: number | undefined, max: number, fallback: number): number {
   if (value === undefined || !Number.isFinite(value)) {
@@ -40,6 +41,7 @@ export class SettingsService {
   readonly dataDir = signal('');
   readonly file = signal('');
   readonly layout = signal<LayoutSettings>({});
+  readonly keyStore = signal<KeyStoreView>(DEFAULT_KEY_STORE);
   readonly maxPipelines = signal(DEFAULT_MAX_PIPELINES);
   readonly maxTasks = signal(DEFAULT_MAX_TASKS);
 
@@ -60,6 +62,7 @@ export class SettingsService {
       this.dataDir.set(view.dataDir);
       this.file.set(view.file);
       this.layout.set(view.layout ?? {});
+      this.keyStore.set(view.keyStore ?? DEFAULT_KEY_STORE);
       this.applyGeneral(view.general);
       await this.syncBackground();
     } catch {

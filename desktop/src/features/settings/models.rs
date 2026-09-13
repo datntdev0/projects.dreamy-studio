@@ -195,6 +195,14 @@ pub struct SettingsView {
     pub layout: LayoutSettings,
     pub data_dir: String,
     pub file: String,
+    pub key_store: KeyStoreView,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyStoreView {
+    pub secure: bool,
+    pub portable: bool,
 }
 
 pub fn lenient<'de, D, T>(deserializer: D) -> Result<T, D::Error>

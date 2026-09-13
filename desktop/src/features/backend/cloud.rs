@@ -9,12 +9,13 @@ use crate::features::backend::models::CloudCheckResult;
 use crate::features::backend::models::CloudVoice;
 use crate::features::backend::models::SynthesisRequest;
 use crate::features::backend::models::SynthesizedAudio;
-use crate::features::backend::remote::key_hint;
 use crate::features::backend::speech::UNAVAILABLE_STATUS;
 use crate::features::backend::speech::api_error;
 use crate::features::backend::speech::mp3_audio;
 use crate::features::settings::cloud::CloudAccountSettings;
 use crate::features::settings::repository::SettingsRepository;
+use crate::features::settings::secrets::ApiKey;
+use crate::features::settings::secrets::cloud_account;
 use crate::infra::backend_client::ClientError;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -47,11 +48,11 @@ impl CloudAccountService {
             .cloud
             .accounts
             .iter()
-            .filter(|(_, account)| !account.api_key.is_empty())
+            .filter(|(_, account)| account.key.is_set())
             .map(|(id, account)| CloudAccountView {
                 id: id.clone(),
-                connected: true,
-                key_hint: key_hint(&account.api_key),
+                connected: account.key.secret().is_some(),
+                key_hint: account.key.hint(),
             })
             .collect())
     }
@@ -63,7 +64,7 @@ impl CloudAccountService {
             return Err("The API key is empty.".to_string());
         }
         let account = CloudAccountSettings {
-            api_key: key.to_string(),
+            key: ApiKey::new(key),
         };
         self.update(|accounts| {
             accounts.insert(id.to_string(), account);
@@ -74,7 +75,9 @@ impl CloudAccountService {
         let id = keyed_account(id)?;
         self.update(|accounts| {
             accounts.remove(id);
-        })
+        })?;
+        self.settings.forget(&cloud_account(id));
+        Ok(())
     }
 
     pub fn check(&self, id: &str) -> Result<CloudCheckResult, String> {

@@ -17,6 +17,7 @@ export type IpcHandlers = Record<string, (args: Record<string, unknown>) => unkn
 const SETTINGS: SettingsView = {
   dataDir: 'C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio',
   file: 'settings.json',
+  keyStore: { secure: true, portable: false },
   general: {},
   layout: { explorerOpen: true, inspectorOpen: true, bottomOpen: true, rightTab: 'inspector' },
 };

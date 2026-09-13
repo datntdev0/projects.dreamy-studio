@@ -17,6 +17,8 @@ import { LanguageService } from '@shared/language/language.service';
 import { CloudAccount, CloudServiceKind } from '../cloud.models';
 import { CLOUD_NOTE_KEYS, CLOUD_SERVICE_KINDS } from '../cloud.providers';
 import { CloudService } from '../cloud.service';
+import { KeyStoreView } from '../settings.models';
+import { SettingsService } from '../settings.service';
 
 type Tone = 'default' | 'primary' | 'running' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -95,6 +97,13 @@ function toggled(ids: string[], id: string): string[] {
   return ids.includes(id) ? withoutId(ids, id) : [...ids, id];
 }
 
+function keyStoreNote(store: KeyStoreView): LanguageKey {
+  if (!store.secure) {
+    return 'settings.cloud.note.file';
+  }
+  return store.portable ? 'settings.cloud.note.portable' : 'settings.cloud.note';
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings-cloud',
@@ -105,6 +114,7 @@ function toggled(ids: string[], id: string): string[] {
 export class SettingsCloud implements OnInit {
   private readonly cloud = inject(CloudService);
   private readonly languageService = inject(LanguageService);
+  private readonly settings = inject(SettingsService);
 
   readonly tab = signal<CloudServiceKind>('speech');
   readonly tabOptions = computed(this.buildTabOptions.bind(this));
@@ -116,6 +126,7 @@ export class SettingsCloud implements OnInit {
   readonly clearingCache = this.cloud.clearingCache;
   readonly cacheUsage = computed(this.buildCacheUsage.bind(this));
   readonly canClearCache = computed(this.buildCanClearCache.bind(this));
+  readonly storageNote = computed(this.buildStorageNote.bind(this));
 
   ngOnInit(): void {
     void this.cloud.loadCache();
@@ -239,6 +250,10 @@ export class SettingsCloud implements OnInit {
       used: formatBytes(cache.bytes),
       limit: formatBytes(cache.limitBytes),
     };
+  }
+
+  private buildStorageNote(): LanguageKey {
+    return keyStoreNote(this.settings.keyStore());
   }
 
   private buildCanClearCache(): boolean {

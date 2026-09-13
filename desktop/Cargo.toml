@@ -33,6 +33,12 @@ ureq = { version = "3", default-features = false, features = ["rustls"] }
 tar = "0.4.46"
 flate2 = "1.1.11"
 
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3.6.3", features = ["windows-native"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3.6.3", features = ["apple-native"] }
+
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

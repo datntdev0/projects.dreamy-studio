@@ -1,4 +1,5 @@
 use crate::features::settings::models::lenient;
+use crate::features::settings::secrets::ApiKey;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Map;
@@ -21,7 +22,8 @@ pub struct BackendSettings {
 #[serde(default, rename_all = "camelCase")]
 pub struct RemoteSettings {
     pub url: String,
-    pub api_key: String,
+    #[serde(flatten)]
+    pub key: ApiKey,
     pub active: bool,
 }
 

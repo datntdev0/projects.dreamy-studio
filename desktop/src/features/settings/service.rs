@@ -6,6 +6,7 @@ use crate::features::settings::llm::LlmSettings;
 use crate::features::settings::llm::LlmView;
 use crate::features::settings::llm::spec;
 use crate::features::settings::models::GeneralSettings;
+use crate::features::settings::models::KeyStoreView;
 use crate::features::settings::models::LayoutSettings;
 use crate::features::settings::models::SettingsView;
 use crate::features::settings::probe::CliProbe;
@@ -25,6 +26,7 @@ pub struct SettingsService {
     repository: SettingsRepository,
     gate: Mutex<()>,
     status: LlmStatus,
+    portable: bool,
     logins: Mutex<HashMap<String, Child>>,
 }
 
@@ -34,12 +36,18 @@ impl SettingsService {
             repository,
             gate: Mutex::new(()),
             status: LlmStatus::default(),
+            portable: false,
             logins: Mutex::new(HashMap::new()),
         }
     }
 
     pub fn with_status(mut self, status: LlmStatus) -> Self {
         self.status = status;
+        self
+    }
+
+    pub fn with_portable(mut self, portable: bool) -> Self {
+        self.portable = portable;
         self
     }
 
@@ -53,6 +61,10 @@ impl SettingsService {
             layout: settings.layout,
             data_dir: self.data_dir().to_string_lossy().into_owned(),
             file: self.repository.path().to_string_lossy().into_owned(),
+            key_store: KeyStoreView {
+                secure: self.repository.secrets().available(),
+                portable: self.portable,
+            },
         }
     }
 

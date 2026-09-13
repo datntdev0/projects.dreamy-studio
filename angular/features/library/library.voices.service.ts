@@ -191,7 +191,7 @@ export class LibraryVoiceService {
     this.playingId.set(null);
   }
 
-  private async load(): Promise<void> {
+  async load(): Promise<void> {
     const epoch = this.epoch;
     this.loading.set(true);
     let voices: LibraryVoice[] = [];

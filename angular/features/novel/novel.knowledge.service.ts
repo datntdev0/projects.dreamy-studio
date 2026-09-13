@@ -123,6 +123,11 @@ export class NovelKnowledgeService {
     await Promise.all(this.langsOf(novelId).map((lang) => this.ensure(novelId, lang)));
   }
 
+  async reload(novelId: number): Promise<void> {
+    const langs = this.langsOf(novelId).filter((lang) => this.isLoaded(novelId, lang));
+    await Promise.all(langs.map((lang) => this.load(novelId, lang)));
+  }
+
   async load(novelId: number, lang: KnowledgeLang = this.viewOf(novelId).lang): Promise<void> {
     this.loading.set(true);
     this.error.set(null);

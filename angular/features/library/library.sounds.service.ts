@@ -94,7 +94,7 @@ export class LibrarySoundService {
     this.selectedId.set(id);
   }
 
-  private async load(): Promise<void> {
+  async load(): Promise<void> {
     const epoch = this.epoch;
     this.loading.set(true);
     this.error.set(null);

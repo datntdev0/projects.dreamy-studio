@@ -19,10 +19,14 @@ function isProjectTab(tab: EditorTab, projectId: number): boolean {
   return (tab.kind === 'project' || tab.kind === 'module') && tab.projectId === projectId;
 }
 
+export type TabReopenListener = (tab: EditorTab) => void;
+
 @Injectable({ providedIn: 'root' })
 export class TabsService {
   private readonly workspace = inject(WorkspaceService);
   private readonly workspacePath = computed(this.currentPath.bind(this));
+  private readonly closedIds = new Set<string>();
+  private readonly reopenListeners: TabReopenListener[] = [];
 
   readonly tabs = signal<EditorTab[]>([HOME_TAB]);
   readonly activeId = signal<string>(HOME_TAB_ID);
@@ -30,6 +34,10 @@ export class TabsService {
 
   constructor() {
     effect(this.clearOnWorkspaceChange.bind(this));
+  }
+
+  onReopen(listener: TabReopenListener): void {
+    this.reopenListeners.push(listener);
   }
 
   isActive(id: string): boolean {
@@ -178,6 +186,7 @@ export class TabsService {
     }
     const next = [...tabs];
     next.splice(index, 1);
+    this.closedIds.add(id);
     this.tabs.set(next);
     if (this.activeId() === id) {
       this.activeId.set(next[Math.min(index, next.length - 1)].id);
@@ -216,15 +225,26 @@ export class TabsService {
   }
 
   reset(): void {
+    this.closedIds.clear();
     this.tabs.set([HOME_TAB]);
     this.activeId.set(HOME_TAB_ID);
   }
 
   private open(tab: EditorTab): void {
     if (indexOfTab(this.tabs(), tab.id) < 0) {
+      this.notifyReopen(tab);
       this.tabs.set([...this.tabs(), tab]);
     }
     this.activeId.set(tab.id);
+  }
+
+  private notifyReopen(tab: EditorTab): void {
+    if (!this.closedIds.delete(tab.id)) {
+      return;
+    }
+    for (const listener of this.reopenListeners) {
+      listener(tab);
+    }
   }
 
   private findActive(): EditorTab {

@@ -124,6 +124,13 @@ export class NovelTranslationService {
     }
   }
 
+  async reload(novelId: number): Promise<void> {
+    const targets = targetsOf(this.novels.novelById(novelId)?.lang).filter(
+      (target) => this.store()[storeKey(novelId, target)] !== undefined,
+    );
+    await Promise.all(targets.map((target) => this.load(novelId, target)));
+  }
+
   titleOf(
     novelId: number,
     chapterId: string,

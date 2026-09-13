@@ -328,6 +328,12 @@ export class NovelReaderService {
     this.views.set(views);
   }
 
+  release(novelId: number): void {
+    if (this.novelId() === novelId) {
+      this.clearOpen();
+    }
+  }
+
   reset(): void {
     this.clearOpen();
     this.screens.set({});

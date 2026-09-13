@@ -178,6 +178,13 @@ export class AudiobookService {
     }
   }
 
+  async reload(projectId: number): Promise<void> {
+    if (this.isLoaded(projectId)) {
+      await this.flush(projectId);
+      await this.load(projectId);
+    }
+  }
+
   flush(projectId: number): Promise<void> {
     return this.chains.get(projectId) ?? Promise.resolve();
   }

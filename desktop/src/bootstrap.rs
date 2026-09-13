@@ -19,6 +19,7 @@ use crate::features::assistant::server::McpServer;
 use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::service::CliAssistantLlm;
 use crate::features::assistant::service::McpEndpoint;
+use crate::features::backend::cloud::CloudAccountService;
 use crate::features::backend::remote::RemoteBackendService;
 use crate::features::backend::service::BackendService;
 use crate::features::knowledge::service::KnowledgeService;
@@ -98,7 +99,11 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::backend::backend_remote_model_download,
             commands::backend::backend_remote_model_cancel,
             commands::backend::backend_remote_model_remove,
+            commands::backend::cloud_account_list,
+            commands::backend::cloud_account_key_set,
+            commands::backend::cloud_account_key_remove,
             commands::backend::cloud_account_check,
+            commands::backend::cloud_voice_search,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
             commands::workspace::workspace_delete,
@@ -301,10 +306,15 @@ fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let remote = Arc::new(RemoteBackendService::new(SettingsRepository::new(
         container.settings_path.clone(),
     )));
+    let cloud = Arc::new(CloudAccountService::new(SettingsRepository::new(
+        container.settings_path.clone(),
+    )));
     app.manage(remote.clone());
+    app.manage(cloud.clone());
     app.manage(BackendService::new(
         container.supervisor.clone(),
         remote,
+        cloud,
         container.config.backend_data_dir.clone(),
         container.config.backend_logs_dir(),
     ));

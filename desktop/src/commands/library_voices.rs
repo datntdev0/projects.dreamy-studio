@@ -47,6 +47,9 @@ pub fn preview_voice(
 ) -> LibraryResult<Vec<u8>> {
     let workspace = library.open(session)?;
     let (voice, reference) = workspace.voice_for_synthesis(id)?;
+    if let Some(bytes) = workspace.voice_cached_preview(&voice) {
+        return Ok(bytes);
+    }
     let audio = voices::synthesize(
         backend,
         &voice,
@@ -54,6 +57,7 @@ pub fn preview_voice(
         &voice.sample_text,
         MixSettings::default().sentence_pause_ms(),
     )?;
+    workspace.voice_store_preview(&voice, &audio.bytes)?;
     Ok(audio.bytes)
 }
 

@@ -684,6 +684,18 @@ impl LibraryWorkspace {
         Ok(deleted.len())
     }
 
+    pub fn voice_cached_preview(&self, voice: &LibraryVoice) -> Option<Vec<u8>> {
+        let key = voices::preview_key(voice)?;
+        VoiceFiles::new(self.dir.clone()).cached_preview(voice.id, &key)
+    }
+
+    pub fn voice_store_preview(&self, voice: &LibraryVoice, bytes: &[u8]) -> LibraryResult<()> {
+        match voices::preview_key(voice) {
+            Some(key) => VoiceFiles::new(self.dir.clone()).store_preview(voice.id, &key, bytes),
+            None => Ok(()),
+        }
+    }
+
     pub fn voice_for_synthesis(&self, id: i64) -> LibraryResult<(LibraryVoice, Option<PathBuf>)> {
         let voice = voices::get(self.database()?.connection(), id)?;
         let reference = VoiceFiles::new(self.dir.clone()).existing_reference(id);

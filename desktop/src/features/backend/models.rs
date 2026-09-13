@@ -215,3 +215,24 @@ pub struct CloudCheckResult {
     pub error: String,
     pub checked_at_ms: i64,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudAccountView {
+    pub id: String,
+    pub connected: bool,
+    pub key_hint: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudVoice {
+    pub id: String,
+    pub name: String,
+    pub gender: String,
+    pub language: String,
+    pub accent: String,
+    pub category: String,
+    pub description: String,
+    pub preview_url: String,
+}

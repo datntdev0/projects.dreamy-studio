@@ -9,6 +9,7 @@ import { CollectionFilter } from './library.models';
 import { durationText, hasAllTags, matchesCollection, matchesNameOrTags } from './library.rules';
 import { LibrarySound } from './library.sounds.models';
 import {
+  CloudVoice,
   LibraryVoice,
   VOICE_ENGINE_KINDS,
   VOICE_GENDERS,
@@ -52,7 +53,12 @@ export interface VoiceDraft {
   description: string;
 }
 
-const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([['edge-read-aloud', ['preset']]]);
+const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([
+  ['edge-read-aloud', ['preset']],
+  ['elevenlabs', ['preset']],
+]);
+const SEARCHABLE_ENGINES = new Set(['elevenlabs']);
+const MULTI_LANGUAGE: (typeof VOICE_LANGUAGES)[number] = 'multi';
 const CLOUD_ENGINE_PRESETS = new Map<string, VoicePreset[]>([
   [
     'edge-read-aloud',
@@ -164,6 +170,7 @@ function toLocalEngine(model: TtsModel): VoiceEngine {
     ready: isLocalReady(model),
     sources: (model.sources ?? []).filter(isVoiceSource),
     presets: (model.presets ?? []).map(toVoicePreset),
+    searchable: false,
   };
 }
 
@@ -179,6 +186,7 @@ function toCloudEngine(account: CloudAccount): VoiceEngine {
     ready: account.connected,
     sources: CLOUD_ENGINE_SOURCES.get(account.id) ?? VOICE_SOURCES,
     presets: CLOUD_ENGINE_PRESETS.get(account.id) ?? [],
+    searchable: SEARCHABLE_ENGINES.has(account.id),
   };
 }
 
@@ -335,7 +343,38 @@ export function presetMetaText(preset: VoicePreset, translate: VoiceTranslate): 
   const parts = [translate(voiceGenderKey(preset.gender))];
   if (region) parts.push(translate(region));
   if (style) parts.push(translate(style));
+  if (preset.detail) parts.push(preset.detail);
   return parts.join(' · ');
+}
+
+export function cloudVoiceLanguage(language: string): string {
+  const code = language.trim().toLowerCase().split(/[-_]/)[0];
+  return (VOICE_LANGUAGES as readonly string[]).includes(code) ? code : MULTI_LANGUAGE;
+}
+
+function cloudVoiceDetail(voice: CloudVoice, translate: VoiceTranslate): string {
+  const language = voice.language
+    ? voiceLanguageText(cloudVoiceLanguage(voice.language), translate)
+    : '';
+  return [language, voice.accent, voice.category].filter(Boolean).join(' · ');
+}
+
+export function toCloudVoicePreset(translate: VoiceTranslate, voice: CloudVoice): VoicePreset {
+  const gender = voice.gender.toLowerCase();
+  return {
+    id: voice.id,
+    name: voice.name,
+    gender: isVoiceGender(gender) ? gender : 'neutral',
+    region: '',
+    style: '',
+    language: voice.language ? cloudVoiceLanguage(voice.language) : MULTI_LANGUAGE,
+    detail: cloudVoiceDetail(voice, translate),
+    previewUrl: voice.previewUrl || undefined,
+  };
+}
+
+export function presetPreviewUrl(engineId: string, preset: VoicePreset): string {
+  return preset.previewUrl ?? presetSampleUrl(engineId, preset.id);
 }
 
 export function presetSampleSlug(presetId: string): string {

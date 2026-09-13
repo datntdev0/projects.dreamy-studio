@@ -1,7 +1,10 @@
 pub mod api;
+pub mod cloud;
 pub mod edge;
+pub mod elevenlabs;
 pub mod models;
 pub mod monitor;
 pub mod remote;
 pub mod service;
+pub mod speech;
 pub mod supervisor;

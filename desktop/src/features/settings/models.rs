@@ -1,4 +1,5 @@
 use crate::features::settings::backend::BackendSettings;
+use crate::features::settings::cloud::CloudSettings;
 use crate::features::settings::llm::LlmSettings;
 use crate::features::settings::window::WindowSettings;
 use serde::Deserialize;
@@ -171,6 +172,12 @@ pub struct AppSettings {
         skip_serializing_if = "BackendSettings::is_empty"
     )]
     pub backend: BackendSettings,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "CloudSettings::is_empty"
+    )]
+    pub cloud: CloudSettings,
     #[serde(
         default,
         deserialize_with = "lenient",

@@ -1,5 +1,6 @@
 use crate::features::backend::api;
-use crate::features::backend::edge;
+use crate::features::backend::cloud;
+use crate::features::backend::cloud::CloudAccountService;
 use crate::features::backend::models::BackendView;
 use crate::features::backend::models::ServerView;
 use crate::features::backend::models::SynthesisRequest;
@@ -35,6 +36,7 @@ pub trait Synthesizer: Send + Sync {
 pub struct BackendService {
     supervisor: Arc<BackendSupervisor>,
     remote: Arc<RemoteBackendService>,
+    cloud: Arc<CloudAccountService>,
     logs_dir: PathBuf,
     models_dir: PathBuf,
 }
@@ -43,12 +45,14 @@ impl BackendService {
     pub fn new(
         supervisor: Arc<BackendSupervisor>,
         remote: Arc<RemoteBackendService>,
+        cloud: Arc<CloudAccountService>,
         data_dir: PathBuf,
         logs_dir: PathBuf,
     ) -> Self {
         Self {
             supervisor,
             remote,
+            cloud,
             logs_dir,
             models_dir: data_dir.join(MODELS_DIR),
         }
@@ -159,8 +163,8 @@ fn now() -> String {
 
 impl Synthesizer for BackendService {
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
-        if edge::supports(&request.model) {
-            return edge::synthesize(request);
+        if cloud::supports(&request.model) {
+            return self.cloud.synthesize(request);
         }
         if self.remote.active() {
             return self.remote.synthesize(request);

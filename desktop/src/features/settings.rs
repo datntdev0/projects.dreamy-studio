@@ -1,6 +1,7 @@
 pub mod account;
 pub mod backend;
 pub mod check;
+pub mod cloud;
 pub mod home;
 pub mod install;
 pub mod llm;

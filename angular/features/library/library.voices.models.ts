@@ -59,6 +59,20 @@ export interface VoicePreset {
   gender: VoiceGender;
   region: string;
   style: string;
+  language?: string;
+  detail?: string;
+  previewUrl?: string;
+}
+
+export interface CloudVoice {
+  id: string;
+  name: string;
+  gender: string;
+  language: string;
+  accent: string;
+  category: string;
+  description: string;
+  previewUrl: string;
 }
 
 export interface VoiceEngine {
@@ -68,6 +82,7 @@ export interface VoiceEngine {
   ready: boolean;
   sources: VoiceSource[];
   presets: VoicePreset[];
+  searchable: boolean;
 }
 
 export const VOICE_LANGUAGES = ['vi', 'en', 'ja', 'zh', 'ko', 'multi'] as const;

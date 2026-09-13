@@ -1,9 +1,11 @@
-use crate::features::audiobook::audio::encode_wav;
 use crate::features::backend::models::CloudCheckResult;
 use crate::features::backend::models::SynthesisRequest;
 use crate::features::backend::models::SynthesizedAudio;
-use crate::features::library::sounds;
-use crate::features::library::sounds::SoundFormat;
+use crate::features::backend::speech;
+use crate::features::backend::speech::FAILURE_STATUS;
+use crate::features::backend::speech::INVALID_STATUS;
+use crate::features::backend::speech::UNAVAILABLE_STATUS;
+use crate::features::backend::speech::api_error;
 use crate::infra::backend_client::ClientError;
 use crate::infra::startup::manifest::installed_executable;
 use crate::shared::config;
@@ -30,9 +32,6 @@ const PYTHON_ITEM: &str = "python";
 const CHECK_VOICE: &str = "vi-VN-HoaiMyNeural";
 const CHECK_TEXT: &str = "Xin chào.";
 const PRESET_SOURCE: &str = "preset";
-const FAILURE_STATUS: u16 = 502;
-const INVALID_STATUS: u16 = 422;
-const UNAVAILABLE_STATUS: u16 = 409;
 const FAILURE_CODE: &str = "EDGE_TTS_FAILED";
 
 struct EdgeSpeech {
@@ -51,43 +50,14 @@ pub fn supports(engine: &str) -> bool {
 
 pub fn synthesize(request: &SynthesisRequest) -> Result<SynthesizedAudio, ClientError> {
     let voice = require_voice(request)?;
-    let text = request
-        .text
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
-    if text.is_empty() {
-        return Err(api_error(
-            INVALID_STATUS,
-            "TEXT_EMPTY",
-            "Sample text is empty",
-        ));
-    }
-    let speech = EdgeRuntime::current()?.speak(voice, &text)?;
-    let sound = sounds::decode_bytes(speech.mp3, SoundFormat::Mp3).map_err(failure)?;
-    let channels = sound.channels.max(1);
-    let frames = (sound.samples.len() / channels as usize) as i64;
-    Ok(SynthesizedAudio {
-        bytes: encode_wav(&sound.samples, sound.sample_rate, channels, 1.0),
-        duration_ms: Some(frames * 1_000 / i64::from(sound.sample_rate.max(1))),
-        cached: false,
-        subtitles: Some(speech.subtitles).filter(|text| !text.trim().is_empty()),
-    })
+    let text = speech::collapsed_text(&request.text)?;
+    let spoken = EdgeRuntime::current()?.speak(voice, &text)?;
+    speech::mp3_audio(spoken.mp3, Some(spoken.subtitles), FAILURE_CODE)
 }
 
-pub fn check(id: &str) -> Result<CloudCheckResult, String> {
-    if !supports(id) {
-        return Err(format!("{id} cannot be checked yet"));
-    }
+pub fn check() -> CloudCheckResult {
     let outcome = EdgeRuntime::current().and_then(|runtime| runtime.speak(CHECK_VOICE, CHECK_TEXT));
-    Ok(CloudCheckResult {
-        ok: outcome.is_ok(),
-        error: outcome
-            .err()
-            .map(|error| error.to_string())
-            .unwrap_or_default(),
-        checked_at_ms: chrono::Utc::now().timestamp_millis(),
-    })
+    speech::check_result(outcome.map(drop))
 }
 
 fn require_voice(request: &SynthesisRequest) -> Result<&str, ClientError> {
@@ -202,12 +172,4 @@ fn require_success(output: &Output, context: &str) -> Result<(), ClientError> {
 
 fn failure(detail: impl Display) -> ClientError {
     api_error(FAILURE_STATUS, FAILURE_CODE, &detail.to_string())
-}
-
-fn api_error(status: u16, code: &str, message: &str) -> ClientError {
-    ClientError::Api {
-        status,
-        code: code.to_string(),
-        message: message.to_string(),
-    }
 }

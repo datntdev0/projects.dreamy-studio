@@ -1,4 +1,6 @@
+use crate::features::backend::cloud;
 use crate::features::backend::edge;
+use crate::features::backend::elevenlabs;
 use crate::features::backend::models::SynthesisRequest;
 use crate::features::backend::models::SynthesizedAudio;
 use crate::features::backend::service::Synthesizer;
@@ -22,6 +24,8 @@ use base64::Engine;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::params;
+use sha2::Digest;
+use sha2::Sha256;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -29,7 +33,7 @@ use std::path::PathBuf;
 pub const VOICE_NAME_MAX: usize = 255;
 pub const SAMPLE_TEXT_MAX: usize = 500;
 pub const RECORDING_MAX_MS: i64 = 30_500;
-pub const PRESET_ONLY_ENGINES: [&str; 1] = [edge::EDGE_ENGINE];
+pub const PRESET_ONLY_ENGINES: [&str; 2] = [edge::EDGE_ENGINE, elevenlabs::ELEVENLABS_ENGINE];
 
 const ENGINE_UNAVAILABLE_CODES: [&str; 4] = [
     "MODEL_NOT_FOUND",
@@ -38,6 +42,9 @@ const ENGINE_UNAVAILABLE_CODES: [&str; 4] = [
     "ENGINE_UNSUPPORTED",
 ];
 const REFERENCE_FILE: &str = "reference.wav";
+const PREVIEW_PREFIX: &str = "preview-";
+const PREVIEW_EXTENSION: &str = ".wav";
+const PREVIEW_KEY_LENGTH: usize = 16;
 const STAGING_PREFIX: &str = ".staging-";
 const VOICE_TAG_TYPE: &str = "library_voice";
 const VOICE_COLUMNS: &str = "id, name, description, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, created_at, updated_at, rights, collection_id";
@@ -114,6 +121,28 @@ impl VoiceFiles {
         fs::create_dir_all(&directory)?;
         fs::rename(staged, self.reference_path(id))?;
         Ok(())
+    }
+
+    pub fn cached_preview(&self, id: i64, key: &str) -> Option<Vec<u8>> {
+        fs::read(self.preview_path(id, key)).ok()
+    }
+
+    pub fn store_preview(&self, id: i64, key: &str, bytes: &[u8]) -> LibraryResult<()> {
+        let directory = self.voice_dir(id);
+        fs::create_dir_all(&directory)?;
+        for entry in fs::read_dir(&directory)?.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with(PREVIEW_PREFIX) {
+                let _ = fs::remove_file(entry.path());
+            }
+        }
+        fs::write(self.preview_path(id, key), bytes)?;
+        Ok(())
+    }
+
+    fn preview_path(&self, id: i64, key: &str) -> PathBuf {
+        self.voice_dir(id)
+            .join(format!("{PREVIEW_PREFIX}{key}{PREVIEW_EXTENSION}"))
     }
 
     pub fn remove(&self, id: i64) -> LibraryResult<()> {
@@ -341,7 +370,7 @@ pub fn synthesis_request(
     text: &str,
     sentence_pause_ms: i64,
 ) -> LibraryResult<SynthesisRequest> {
-    if voice.engine_kind == VoiceEngineKind::Cloud && !edge::supports(&voice.engine) {
+    if voice.engine_kind == VoiceEngineKind::Cloud && !cloud::supports(&voice.engine) {
         return Err(LibraryError::new(
             LibraryErrorCode::VoiceEngineUnavailable,
             "cloud voices cannot be previewed yet",
@@ -361,6 +390,21 @@ pub fn synthesis_request(
         sentence_pause_ms,
         ..SynthesisRequest::default()
     })
+}
+
+pub fn preview_key(voice: &LibraryVoice) -> Option<String> {
+    if voice.engine_kind != VoiceEngineKind::Cloud {
+        return None;
+    }
+    let parts = [
+        voice.engine.as_str(),
+        voice.preset.as_deref().unwrap_or_default(),
+        voice.language.as_str(),
+        voice.sample_text.as_str(),
+    ];
+    let digest = Sha256::digest(parts.join("\0").as_bytes());
+    let hex: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
+    Some(hex[..PREVIEW_KEY_LENGTH].to_string())
 }
 
 pub fn synthesize(

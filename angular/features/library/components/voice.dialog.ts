@@ -13,11 +13,12 @@ import { LibraryDialogsService } from '../library.dialogs.service';
 import { durationText, formatBytes } from '../library.rules';
 import { LibrarySound } from '../library.sounds.models';
 import { LibrarySoundService } from '../library.sounds.service';
+import { LibraryVoiceCloudSearch } from '../library.voices.cloud';
 // prettier-ignore
 import { VOICE_LANGUAGES, VOICE_REFERENCE_MODES, VOICE_SOURCES, VoiceEngine, VoiceEngineGroup, VoiceGender, VoicePreset, VoicePresetFilter, VoiceReference, VoiceReferenceFile, VoiceReferenceMode, VoiceSource } from '../library.voices.models';
 import { VOICE_RECORDING_MAX_MS, VoiceRecorder } from '../library.voices.recorder';
 // prettier-ignore
-import { buildVoiceReference, engineGroupKey, engineOptionText, engineSupportsSource, filterPresets, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetFilterOptions, presetMetaText, presetSampleUrl, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, VoiceDraft, voiceGenderOptions, voiceLanguageText, voiceSourceKey } from '../library.voices.rules';
+import { buildVoiceReference, engineGroupKey, engineOptionText, engineSupportsSource, filterPresets, findEngine, firstReadyEngine, groupVoiceEngines, hasReadyEngine, isVoiceDraftValid, presetFilterOptions, presetMetaText, presetPreviewUrl, soundOptionText, supportedPreset, supportedVoiceSource, toVoiceInput, VoiceDraft, voiceGenderOptions, voiceLanguageText, voiceSourceKey } from '../library.voices.rules';
 import { LibraryVoiceSamples } from '../library.voices.samples';
 import { LibraryVoiceService } from '../library.voices.service';
 import { LibraryVoiceNotice } from './voice-notice.component';
@@ -39,6 +40,7 @@ export class LibraryVoiceDialog {
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
   private readonly samples = inject(LibraryVoiceSamples);
+  readonly cloudSearch = inject(LibraryVoiceCloudSearch);
   private readonly translate = this.languageService.translate.bind(this.languageService);
   readonly open = this.dialogs.createVoiceOpen;
   readonly name = signal('');
@@ -54,6 +56,7 @@ export class LibraryVoiceDialog {
   readonly language = signal<string>(DEFAULT_LANGUAGE);
   readonly requestedGender = signal<VoiceGender | null>(null);
   readonly description = signal('');
+  readonly requestedQuery = signal<string | null>(null);
   readonly referenceFile = signal<VoiceReferenceFile | null>(null);
   readonly busy = signal(false);
   readonly presets = computed(this.buildPresets.bind(this));
@@ -74,9 +77,12 @@ export class LibraryVoiceDialog {
   readonly sourceOptions = computed(this.buildSourceOptions.bind(this));
   readonly genderOptions = computed(this.buildGenderOptions.bind(this));
   readonly soundItems = this.sounds.items;
+  readonly searchable = computed(this.buildSearchable.bind(this));
+  readonly searchQuery = computed(this.buildSearchQuery.bind(this));
 
   constructor() {
     effect(this.syncOpen.bind(this));
+    effect(this.syncSearch.bind(this));
     inject(DestroyRef).onDestroy(this.recorder.discard.bind(this.recorder));
   }
 
@@ -126,6 +132,10 @@ export class LibraryVoiceDialog {
 
   onName(event: Event): void {
     this.name.set(fieldValue(event));
+  }
+
+  onSearch(event: Event): void {
+    this.requestedQuery.set(fieldValue(event));
   }
 
   onDescription(event: Event): void {
@@ -208,6 +218,7 @@ export class LibraryVoiceDialog {
   close(): void {
     this.recorder.discard();
     this.samples.stop();
+    this.cloudSearch.reset();
     this.dialogs.closeCreateVoice();
   }
 
@@ -215,18 +226,57 @@ export class LibraryVoiceDialog {
     if (!this.canSubmit() || this.busy()) return;
     this.busy.set(true);
     try {
-      const input = toVoiceInput(this.draft(), {
-        language: this.language(),
+      const draft = this.savedDraft();
+      const preset = this.source() === 'preset' ? this.selectedPreset() : null;
+      const input = toVoiceInput(draft, {
+        language: preset?.language ?? this.language(),
         gender: this.gender(),
       });
       const voice = await this.voices.create(input);
       this.voices.select(voice.id);
       this.close();
+      if (this.isSearchedPreset(preset)) void this.voices.togglePreview(voice.id);
     } catch {
       this.toasts.show(this.translate('library.voice.toast.failed'), 'danger');
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private savedDraft(): VoiceDraft {
+    const draft = this.draft();
+    const preset = this.selectedPreset();
+    if (!this.searchable() || draft.source !== 'preset' || !preset) return draft;
+    return { ...draft, description: draft.description.trim() || preset.name };
+  }
+
+  private isSearchedPreset(preset: VoicePreset | null): boolean {
+    return this.searchable() && preset !== null;
+  }
+
+  private buildSearchable(): boolean {
+    return this.engine()?.searchable ?? false;
+  }
+
+  private buildSearchQuery(): string {
+    return this.requestedQuery() ?? this.name();
+  }
+
+  private syncSearch(): void {
+    const open = this.open();
+    const engine = this.engine();
+    const query = this.searchQuery();
+    const active =
+      open && engine?.searchable === true && engine.ready && this.source() === 'preset';
+    untracked(this.applySearch.bind(this, active, engine?.id ?? '', query));
+  }
+
+  private applySearch(active: boolean, engineId: string, query: string): void {
+    if (!active) {
+      this.cloudSearch.reset();
+      return;
+    }
+    this.cloudSearch.schedule(engineId, query);
   }
 
   private draft(): VoiceDraft {
@@ -260,6 +310,7 @@ export class LibraryVoiceDialog {
   }
 
   private buildPresets(): VoicePreset[] {
+    if (this.searchable()) return this.cloudSearch.results();
     return this.engine()?.presets ?? [];
   }
 
@@ -272,11 +323,13 @@ export class LibraryVoiceDialog {
   }
 
   private sampleUrl(preset: VoicePreset): string {
-    return presetSampleUrl(this.engine()?.id ?? '', preset.id);
+    return presetPreviewUrl(this.engine()?.id ?? '', preset);
   }
 
   private buildSelectedPreset(): VoicePreset | null {
-    return supportedPreset(this.engine(), this.requestedPreset());
+    const engine = this.engine();
+    if (!this.searchable() || !engine) return supportedPreset(engine, this.requestedPreset());
+    return supportedPreset({ ...engine, presets: this.presets() }, this.requestedPreset());
   }
 
   private buildPresetId(): string {
@@ -350,6 +403,7 @@ export class LibraryVoiceDialog {
     this.referenceMode.set('library');
     this.referenceFile.set(null);
     this.description.set('');
+    this.requestedQuery.set(null);
     this.requestedPreset.set('');
     this.presetFilter.set('all');
     this.referenceSoundId.set(null);

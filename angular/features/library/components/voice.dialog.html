@@ -140,7 +140,27 @@
       />
       }
     </div>
-    @if (presets().length) {
+    @if (searchable()) {
+    <input
+      id="library-voice-dialog-search"
+      class="input"
+      type="search"
+      autocomplete="off"
+      [value]="searchQuery()"
+      [attr.aria-label]="'library.voice.dialog.search' | t"
+      [attr.placeholder]="'library.voice.dialog.search.placeholder' | t"
+      data-testid="library-voice-dialog-search"
+      (input)="onSearch($event)"
+    />
+    @switch (cloudSearch.state()) { @case ('searching') {
+    <p class="t-sm t-mute" role="status" data-testid="library-voice-dialog-search-busy">
+      {{ 'library.voice.dialog.search.busy' | t }}
+    </p>
+    } @case ('error') {
+    <span class="field-err" role="alert" data-testid="library-voice-dialog-search-error">
+      {{ cloudSearch.error() }}
+    </span>
+    } } } @if (presets().length) {
     <div
       class="lb-vo-pk"
       role="radiogroup"
@@ -198,7 +218,8 @@
     </div>
     } @else {
     <p class="t-sm t-mute" data-testid="library-voice-dialog-preset-empty">
-      {{ 'library.voice.dialog.noPresets' | t }}
+      {{ (searchable() ? 'library.voice.dialog.search.empty' : 'library.voice.dialog.noPresets') | t
+      }}
     </p>
     }
   </div>

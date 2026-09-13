@@ -1,7 +1,9 @@
 use crate::commands::blocking::run_blocking_with;
-use crate::features::backend::edge;
+use crate::features::backend::cloud::CloudAccountService;
 use crate::features::backend::models::BackendView;
+use crate::features::backend::models::CloudAccountView;
 use crate::features::backend::models::CloudCheckResult;
+use crate::features::backend::models::CloudVoice;
 use crate::features::backend::models::RemoteView;
 use crate::features::backend::models::TtsModel;
 use crate::features::backend::remote::RemoteBackendService;
@@ -24,6 +26,17 @@ where
 {
     run_blocking_with(app, task_failure, move |app| {
         job(&app.state::<BackendService>())
+    })
+    .await
+}
+
+async fn run_cloud<R: Runtime, T, F>(app: AppHandle<R>, job: F) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: FnOnce(&CloudAccountService) -> Result<T, String> + Send + 'static,
+{
+    run_blocking_with(app, task_failure, move |app| {
+        job(&app.state::<Arc<CloudAccountService>>())
     })
     .await
 }
@@ -149,9 +162,42 @@ pub async fn backend_remote_model_remove<R: Runtime>(
 }
 
 #[tauri::command]
+pub async fn cloud_account_list<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<Vec<CloudAccountView>, String> {
+    run_cloud(app, |cloud| cloud.list()).await
+}
+
+#[tauri::command]
+pub async fn cloud_account_key_set<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    key: String,
+) -> Result<(), String> {
+    run_cloud(app, move |cloud| cloud.set_key(&id, &key)).await
+}
+
+#[tauri::command]
+pub async fn cloud_account_key_remove<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> Result<(), String> {
+    run_cloud(app, move |cloud| cloud.remove_key(&id)).await
+}
+
+#[tauri::command]
 pub async fn cloud_account_check<R: Runtime>(
     app: AppHandle<R>,
     id: String,
 ) -> Result<CloudCheckResult, String> {
-    run_blocking_with(app, task_failure, move |_| edge::check(&id)).await
+    run_cloud(app, move |cloud| cloud.check(&id)).await
+}
+
+#[tauri::command]
+pub async fn cloud_voice_search<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    query: String,
+) -> Result<Vec<CloudVoice>, String> {
+    run_cloud(app, move |cloud| cloud.search_voices(&id, &query)).await
 }

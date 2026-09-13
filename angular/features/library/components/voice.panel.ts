@@ -86,21 +86,8 @@ export class LibraryVoicePanel {
     void this.save(voice, { sampleText: fieldValue(event) });
   }
 
-  descriptionChange(voice: LibraryVoice, event: Event): void {
-    void this.save(voice, { description: fieldValue(event) });
-  }
-
   openSettings(voice: LibraryVoice): void {
     this.settings.openDialog(engineSection(voice.engineKind));
-  }
-
-  async duplicate(voice: LibraryVoice): Promise<void> {
-    try {
-      await this.voices.duplicate(voice.id);
-      this.toasts.show(this.translate('library.voice.toast.duplicated'));
-    } catch {
-      this.notifyFailure();
-    }
   }
 
   remove(voice: LibraryVoice): void {

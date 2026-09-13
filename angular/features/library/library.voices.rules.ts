@@ -50,7 +50,6 @@ export interface VoiceDraft {
   reference: VoiceReference | null;
   consent: boolean;
   prompt: string;
-  description: string;
 }
 
 const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([
@@ -134,10 +133,6 @@ function compareNew(a: LibraryVoice, b: LibraryVoice): number {
 
 function hasVoiceId(id: number, voice: LibraryVoice): boolean {
   return voice.id === id;
-}
-
-function matchesQuery(needle: string, voice: LibraryVoice): boolean {
-  return matchesNameOrTags(needle, voice) || voice.description.toLocaleLowerCase().includes(needle);
 }
 
 function isLocalReady(model: TtsModel): boolean {
@@ -285,7 +280,7 @@ export function engineIcon(kind: VoiceEngineKind): 'cpu' | 'cloud' {
 
 export function searchVoices(items: LibraryVoice[], query: string): LibraryVoice[] {
   const needle = query.trim().toLocaleLowerCase();
-  return items.filter(matchesQuery.bind(null, needle));
+  return items.filter(matchesNameOrTags.bind(null, needle));
 }
 
 export function sortVoices(items: LibraryVoice[]): LibraryVoice[] {
@@ -425,7 +420,6 @@ export function toVoiceInput(
 ): VoiceInput {
   return {
     name: draft.name.trim(),
-    description: draft.description.trim(),
     engine: draft.engine?.id ?? '',
     engineKind: draft.engine?.kind ?? 'local',
     source: draft.source,

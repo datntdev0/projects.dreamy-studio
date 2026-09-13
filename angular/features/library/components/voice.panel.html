@@ -65,28 +65,10 @@
       <textarea
         id="library-voice-panel-sample-text"
         class="textarea"
-        rows="3"
+        rows="5"
         [value]="item.sampleText"
         data-testid="library-voice-panel-sample-text"
         (change)="sampleChange(item, $event)"
-      ></textarea>
-    </div>
-  </section>
-  <section class="ins-sec ins-form" data-testid="library-voice-panel-description-section">
-    <div class="field" data-testid="library-voice-panel-description-field">
-      <label
-        for="library-voice-panel-description"
-        data-testid="library-voice-panel-description-label"
-      >
-        {{ 'library.voice.field.description' | t }}
-      </label>
-      <textarea
-        id="library-voice-panel-description"
-        class="textarea"
-        rows="3"
-        [value]="item.description"
-        data-testid="library-voice-panel-description"
-        (change)="descriptionChange(item, $event)"
       ></textarea>
     </div>
   </section>
@@ -131,20 +113,6 @@
       </dt>
       <dd class="mono" data-testid="library-voice-panel-updated">{{ updatedAt(item) }}</dd>
     </dl>
-    <p class="t-sm t-mute lb-vo-hint" data-testid="library-voice-panel-immutable-hint">
-      {{ 'library.voice.panel.immutable' | t }}
-    </p>
-  </section>
-  <section class="ins-sec ins-actions" data-testid="library-voice-panel-actions">
-    <button
-      type="button"
-      class="btn"
-      data-testid="library-voice-panel-duplicate"
-      (click)="duplicate(item)"
-    >
-      <ds-icon name="copy" [size]="16" data-testid="library-voice-panel-duplicate-icon" />
-      {{ 'library.voice.duplicate' | t }}
-    </button>
   </section>
 </section>
 } @else {

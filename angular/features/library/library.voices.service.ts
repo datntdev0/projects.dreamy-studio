@@ -123,19 +123,6 @@ export class LibraryVoiceService {
     return voice;
   }
 
-  async duplicate(id: number): Promise<LibraryVoice> {
-    const source = voiceById(this.items(), id);
-    if (!source) throw new Error('voice_unavailable');
-    const name = this.languageService.translate('library.voice.copyName', { name: source.name });
-    const copy = requireVoice(
-      await this.ipc.invoke<LibraryVoice>('library_voice_duplicate', { id, name }),
-    );
-    this.items.set([copy, ...this.items()]);
-    this.select(copy.id);
-    await this.library.refreshTaxonomy();
-    return copy;
-  }
-
   async remove(ids: number | number[]): Promise<number> {
     const list = Array.isArray(ids) ? ids : [ids];
     const count = await this.ipc.invoke<number>('library_voice_delete', { ids: list });

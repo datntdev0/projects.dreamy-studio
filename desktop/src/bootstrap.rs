@@ -221,7 +221,6 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::library_voices::library_voice_list,
             commands::library_voices::library_voice_create,
             commands::library_voices::library_voice_update,
-            commands::library_voices::library_voice_duplicate,
             commands::library_voices::library_voice_delete,
             commands::library_voices::library_voice_preview,
         ],

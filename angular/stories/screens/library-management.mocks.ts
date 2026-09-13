@@ -152,7 +152,6 @@ function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
   return {
     id,
     name: '',
-    description: '',
     engine: 'vieneu-turbo',
     engineKind: 'local',
     source: 'preset',
@@ -175,10 +174,9 @@ function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
 
 export function libraryVoiceFixtures(): LibraryVoice[] {
   return [
-    voice(1, { name: 'Narrator An', description: 'Warm default narration voice.' }),
+    voice(1, { name: 'Narrator An' }),
     voice(2, {
       name: 'Old Captain',
-      description: 'Gruff harbor captain cloned from the harbor ambience recording.',
       gender: 'male',
       source: 'clone',
       preset: null,
@@ -203,7 +201,6 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
     }),
     voice(5, {
       name: 'Storyteller Bao',
-      description: 'Deep storyteller for fireside chapters.',
       engine: 'vieneu-nano',
       gender: 'male',
       source: 'clone',

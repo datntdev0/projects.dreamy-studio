@@ -47,7 +47,7 @@ const PREVIEW_EXTENSION: &str = ".wav";
 const PREVIEW_KEY_LENGTH: usize = 16;
 const STAGING_PREFIX: &str = ".staging-";
 const VOICE_TAG_TYPE: &str = "library_voice";
-const VOICE_COLUMNS: &str = "id, name, description, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, created_at, updated_at, rights, collection_id";
+const VOICE_COLUMNS: &str = "id, name, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, created_at, updated_at, rights, collection_id";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceKind {
@@ -69,7 +69,6 @@ impl ReferenceKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewVoice {
     pub name: String,
-    pub description: String,
     pub engine: String,
     pub engine_kind: VoiceEngineKind,
     pub source: VoiceSource,
@@ -109,11 +108,6 @@ impl VoiceFiles {
         let directory = self.voices_dir();
         fs::create_dir_all(&directory)?;
         Ok(directory.join(format!("{STAGING_PREFIX}{}.{suffix}", uuid::Uuid::new_v4())))
-    }
-
-    pub fn copy_reference(&self, from: i64, staged: &Path) -> LibraryResult<()> {
-        fs::copy(self.reference_path(from), staged)?;
-        Ok(())
     }
 
     pub fn adopt_reference(&self, id: i64, staged: &Path) -> LibraryResult<()> {
@@ -198,10 +192,6 @@ pub fn normalize_patch(patch: &VoicePatch) -> LibraryResult<VoicePatch> {
             .as_deref()
             .map(normalize_sample_text)
             .transpose()?,
-        description: patch
-            .description
-            .as_deref()
-            .map(|text| text.trim().to_string()),
         rights: patch.rights,
         collection_id: patch.collection_id,
         tags: patch
@@ -237,7 +227,6 @@ pub fn validate_input(input: &VoiceInput) -> LibraryResult<NewVoice> {
     }
     Ok(NewVoice {
         name: normalize_name(&input.name)?,
-        description: input.description.trim().to_string(),
         engine: engine.to_string(),
         engine_kind: input.engine_kind,
         source: input.source,
@@ -258,36 +247,6 @@ pub fn validate_input(input: &VoiceInput) -> LibraryResult<NewVoice> {
         rights: AssetRights::Own,
         collection_id: None,
         tags: Vec::new(),
-    })
-}
-
-pub fn copy_of(voice: &LibraryVoice, name: &str) -> LibraryResult<NewVoice> {
-    let keeps_reference = voice.reference_kind.as_deref() == Some(ReferenceKind::Sound.as_str());
-    Ok(NewVoice {
-        name: normalize_name(name)?,
-        description: voice.description.clone(),
-        engine: voice.engine.clone(),
-        engine_kind: voice.engine_kind,
-        source: voice.source,
-        language: voice.language.clone(),
-        gender: voice.gender,
-        preset: voice.preset.clone(),
-        prompt: voice.prompt.clone(),
-        reference_kind: keeps_reference.then_some(ReferenceKind::Sound),
-        reference_sound_id: if keeps_reference {
-            voice.reference_sound_id
-        } else {
-            None
-        },
-        reference_name: if keeps_reference {
-            voice.reference_name.clone()
-        } else {
-            String::new()
-        },
-        sample_text: voice.sample_text.clone(),
-        rights: voice.rights,
-        collection_id: voice.collection_id,
-        tags: voice.tags.clone(),
     })
 }
 
@@ -443,10 +402,9 @@ pub fn get(conn: &Connection, id: i64) -> LibraryResult<LibraryVoice> {
 pub fn insert(conn: &Connection, voice: &NewVoice, now: &str) -> LibraryResult<i64> {
     assets::require_collection(conn, voice.collection_id)?;
     conn.execute(
-        "INSERT INTO ws_library_voices (name, description, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at, rights, collection_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14, ?15, ?16)",
+        "INSERT INTO ws_library_voices (name, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at, rights, collection_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, ?14, ?15)",
         params![
             voice.name,
-            voice.description,
             voice.engine,
             voice.engine_kind.as_str(),
             voice.source.as_str(),
@@ -489,14 +447,6 @@ pub fn update(
         conn.execute(
             "UPDATE ws_library_voices SET sample_text = ?1, updated_at = ?2 WHERE id = ?3",
             params![text, now, id],
-        )?;
-    }
-    if let Some(description) = patch.description.as_deref()
-        && description != current.description
-    {
-        conn.execute(
-            "UPDATE ws_library_voices SET description = ?1, updated_at = ?2 WHERE id = ?3",
-            params![description, now, id],
         )?;
     }
     if let Some(rights) = patch.rights
@@ -586,22 +536,21 @@ fn voice_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryVoice> {
     Ok(LibraryVoice {
         id: row.get(0)?,
         name: row.get(1)?,
-        description: row.get(2)?,
-        engine: row.get(3)?,
-        engine_kind: parse_column(row, 4, "engine kind", VoiceEngineKind::parse)?,
-        source: parse_column(row, 5, "source", VoiceSource::parse)?,
-        language: row.get(6)?,
-        gender: parse_column(row, 7, "gender", VoiceGender::parse)?,
-        preset: row.get(8)?,
-        reference_kind: row.get(9)?,
-        reference_sound_id: row.get(10)?,
-        reference_name: row.get(11)?,
-        prompt: row.get(12)?,
-        sample_text: row.get(13)?,
-        created_at: row.get(14)?,
-        updated_at: row.get(15)?,
-        rights: parse_column(row, 16, "rights", AssetRights::parse)?,
-        collection_id: row.get(17)?,
+        engine: row.get(2)?,
+        engine_kind: parse_column(row, 3, "engine kind", VoiceEngineKind::parse)?,
+        source: parse_column(row, 4, "source", VoiceSource::parse)?,
+        language: row.get(5)?,
+        gender: parse_column(row, 6, "gender", VoiceGender::parse)?,
+        preset: row.get(7)?,
+        reference_kind: row.get(8)?,
+        reference_sound_id: row.get(9)?,
+        reference_name: row.get(10)?,
+        prompt: row.get(11)?,
+        sample_text: row.get(12)?,
+        created_at: row.get(13)?,
+        updated_at: row.get(14)?,
+        rights: parse_column(row, 15, "rights", AssetRights::parse)?,
+        collection_id: row.get(16)?,
         tags: Vec::new(),
     })
 }

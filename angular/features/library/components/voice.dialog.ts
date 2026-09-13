@@ -55,7 +55,6 @@ export class LibraryVoiceDialog {
   readonly prompt = signal('');
   readonly language = signal<string>(DEFAULT_LANGUAGE);
   readonly requestedGender = signal<VoiceGender | null>(null);
-  readonly description = signal('');
   readonly requestedQuery = signal<string | null>(null);
   readonly referenceFile = signal<VoiceReferenceFile | null>(null);
   readonly busy = signal(false);
@@ -136,10 +135,6 @@ export class LibraryVoiceDialog {
 
   onSearch(event: Event): void {
     this.requestedQuery.set(fieldValue(event));
-  }
-
-  onDescription(event: Event): void {
-    this.description.set(fieldValue(event));
   }
 
   onEngine(event: Event): void {
@@ -226,7 +221,7 @@ export class LibraryVoiceDialog {
     if (!this.canSubmit() || this.busy()) return;
     this.busy.set(true);
     try {
-      const draft = this.savedDraft();
+      const draft = this.draft();
       const preset = this.source() === 'preset' ? this.selectedPreset() : null;
       const input = toVoiceInput(draft, {
         language: preset?.language ?? this.language(),
@@ -241,13 +236,6 @@ export class LibraryVoiceDialog {
     } finally {
       this.busy.set(false);
     }
-  }
-
-  private savedDraft(): VoiceDraft {
-    const draft = this.draft();
-    const preset = this.selectedPreset();
-    if (!this.searchable() || draft.source !== 'preset' || !preset) return draft;
-    return { ...draft, description: draft.description.trim() || preset.name };
   }
 
   private isSearchedPreset(preset: VoicePreset | null): boolean {
@@ -288,7 +276,6 @@ export class LibraryVoiceDialog {
       reference: this.reference(),
       consent: this.consent(),
       prompt: this.prompt(),
-      description: this.description(),
     };
   }
 
@@ -402,7 +389,6 @@ export class LibraryVoiceDialog {
     this.requestedSource.set('preset');
     this.referenceMode.set('library');
     this.referenceFile.set(null);
-    this.description.set('');
     this.requestedQuery.set(null);
     this.requestedPreset.set('');
     this.presetFilter.set('all');

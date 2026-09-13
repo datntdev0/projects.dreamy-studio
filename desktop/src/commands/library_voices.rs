@@ -96,19 +96,6 @@ pub async fn library_voice_update<R: Runtime>(
 }
 
 #[tauri::command]
-pub async fn library_voice_duplicate<R: Runtime>(
-    app: AppHandle<R>,
-    id: i64,
-    name: String,
-) -> LibraryResult<LibraryVoice> {
-    run_blocking(app, move |app| {
-        let (library, session) = library_job(app);
-        library.open(&session)?.voice_duplicate(id, &name)
-    })
-    .await
-}
-
-#[tauri::command]
 pub async fn library_voice_delete<R: Runtime>(
     app: AppHandle<R>,
     ids: Vec<i64>,

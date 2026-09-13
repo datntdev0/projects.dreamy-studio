@@ -96,22 +96,6 @@
     </div>
   </div>
   }
-  <div class="field" data-testid="library-voice-dialog-description-field">
-    <label
-      for="library-voice-dialog-description"
-      data-testid="library-voice-dialog-description-label"
-    >
-      {{ 'library.voice.field.description' | t }}
-    </label>
-    <textarea
-      id="library-voice-dialog-description"
-      class="textarea"
-      rows="2"
-      [value]="description()"
-      data-testid="library-voice-dialog-description"
-      (input)="onDescription($event)"
-    ></textarea>
-  </div>
   <div class="field" data-testid="library-voice-dialog-source-field">
     <label data-testid="library-voice-dialog-source-label">
       {{ 'library.voice.field.source' | t }}
@@ -379,7 +363,7 @@
     <textarea
       id="library-voice-dialog-prompt"
       class="textarea"
-      rows="3"
+      rows="5"
       [value]="prompt()"
       [attr.placeholder]="'library.voice.dialog.promptPlaceholder' | t"
       data-testid="library-voice-dialog-prompt"

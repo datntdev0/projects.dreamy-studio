@@ -10,7 +10,6 @@ import { AssetRights } from './library.models';
 export interface LibraryVoice {
   id: number;
   name: string;
-  description: string;
   engine: string;
   engineKind: VoiceEngineKind;
   source: VoiceSource;
@@ -42,7 +41,6 @@ export interface VoiceReferenceFile {
 
 export interface VoiceInput {
   name: string;
-  description: string;
   engine: string;
   engineKind: VoiceEngineKind;
   source: VoiceSource;
@@ -94,7 +92,6 @@ export const VOICE_ENGINE_KINDS: VoiceEngineKind[] = ['local', 'cloud'];
 export interface VoicePatch {
   name?: string;
   sampleText?: string;
-  description?: string;
   rights?: AssetRights;
   collectionId?: number | null;
   tags?: string[];

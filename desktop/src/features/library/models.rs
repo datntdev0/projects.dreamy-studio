@@ -429,8 +429,6 @@ pub enum VoiceReference {
 #[serde(rename_all = "camelCase")]
 pub struct VoiceInput {
     pub name: String,
-    #[serde(default)]
-    pub description: String,
     pub engine: String,
     pub engine_kind: VoiceEngineKind,
     pub source: VoiceSource,
@@ -452,8 +450,6 @@ pub struct VoicePatch {
     #[serde(default)]
     pub sample_text: Option<String>,
     #[serde(default)]
-    pub description: Option<String>,
-    #[serde(default)]
     pub rights: Option<AssetRights>,
     #[serde(default, deserialize_with = "deserialize_optional_collection_id")]
     pub collection_id: Option<Option<i64>>,
@@ -466,7 +462,6 @@ pub struct VoicePatch {
 pub struct LibraryVoice {
     pub id: i64,
     pub name: String,
-    pub description: String,
     pub engine: String,
     pub engine_kind: VoiceEngineKind,
     pub source: VoiceSource,

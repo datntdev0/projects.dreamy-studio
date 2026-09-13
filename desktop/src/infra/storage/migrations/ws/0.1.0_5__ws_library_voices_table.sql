@@ -1,7 +1,6 @@
 CREATE TABLE ws_library_voices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    description TEXT NOT NULL,
     engine TEXT NOT NULL,
     engine_kind TEXT NOT NULL,
     source TEXT NOT NULL,

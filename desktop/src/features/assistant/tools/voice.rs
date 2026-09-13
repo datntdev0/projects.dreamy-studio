@@ -43,7 +43,7 @@ pub(super) fn definitions() -> Vec<Value> {
     vec![
         json!({
             "name": "list_voice",
-            "description": "List the voices of the voice library that an audiobook can use: id, name, description, gender, language, engine, engine kind (local or cloud) and source. It does not tell whether the engine is installed on this computer. Use these ids with edit_audiobook and never invent one.",
+            "description": "List the voices of the voice library that an audiobook can use: id, name, gender, language, engine, engine kind (local or cloud) and source. It does not tell whether the engine is installed on this computer. Use these ids with edit_audiobook and never invent one.",
             "inputSchema": {
                 "type": "object",
                 "properties": {},
@@ -247,7 +247,6 @@ fn voice_json(voice: &LibraryVoice) -> Value {
     json!({
         "voiceId": voice.id,
         "name": voice.name,
-        "description": voice.description,
         "gender": voice.gender.as_str(),
         "language": voice.language,
         "engine": voice.engine,

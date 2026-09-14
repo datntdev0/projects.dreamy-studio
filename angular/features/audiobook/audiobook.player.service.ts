@@ -34,6 +34,7 @@ export class AudiobookPlayerService {
   private token = 0;
 
   readonly state = signal<PlayerState>(idlePlayer());
+  readonly preparingSpeaker = signal<string | null>(null);
   readonly current = computed(() => currentItem(this.state()));
   readonly playing = computed(() => this.state().on);
   readonly elapsed = computed(() => elapsedSeconds(this.state()));
@@ -103,19 +104,26 @@ export class AudiobookPlayerService {
     }
     const unitId = ctx.unit ? ctx.unit.id : '';
     const token = this.begin([previewItem(projectId, unitId, row.member.name, row.voice.name, 0)]);
+    this.preparingSpeaker.set(speakerId);
     try {
       const data = await this.ipc.invoke<ArrayBuffer>('audiobook_voice_preview', {
         projectId,
         ...previewRequestOf(row.voice, row.speed),
       });
+      this.clearPreparing(token);
       if (token === this.token) {
         await this.playData(token, data);
       }
       return 'started';
     } catch {
+      this.clearPreparing(token);
       this.halt(token);
       return 'failed';
     }
+  }
+
+  isPreparing(speakerId: string): boolean {
+    return this.preparingSpeaker() === speakerId;
   }
 
   toggle(): void {
@@ -133,8 +141,15 @@ export class AudiobookPlayerService {
 
   stop(): void {
     this.token += 1;
+    this.preparingSpeaker.set(null);
     this.output.stop();
     this.state.set(idlePlayer());
+  }
+
+  private clearPreparing(token: number): void {
+    if (token === this.token) {
+      this.preparingSpeaker.set(null);
+    }
   }
 
   private begin(queue: PlayItem[]): number {

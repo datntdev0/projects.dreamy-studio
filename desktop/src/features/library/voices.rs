@@ -47,7 +47,7 @@ const PREVIEW_EXTENSION: &str = ".wav";
 const PREVIEW_KEY_LENGTH: usize = 16;
 const STAGING_PREFIX: &str = ".staging-";
 const VOICE_TAG_TYPE: &str = "library_voice";
-const VOICE_COLUMNS: &str = "id, name, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, prompt, sample_text, created_at, updated_at, rights, collection_id";
+const VOICE_COLUMNS: &str = "id, name, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at, rights, collection_id";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceKind {
@@ -75,7 +75,6 @@ pub struct NewVoice {
     pub language: String,
     pub gender: VoiceGender,
     pub preset: Option<String>,
-    pub prompt: String,
     pub reference_kind: Option<ReferenceKind>,
     pub reference_sound_id: Option<i64>,
     pub reference_name: String,
@@ -218,10 +217,6 @@ pub fn validate_input(input: &VoiceInput) -> LibraryResult<NewVoice> {
     if input.source == VoiceSource::Preset && preset.is_none() {
         return Err(voice_invalid("preset voices need a preset"));
     }
-    let prompt = input.prompt.trim();
-    if input.source == VoiceSource::Design && prompt.is_empty() {
-        return Err(voice_invalid("designed voices need a description"));
-    }
     if input.source == VoiceSource::Clone && input.reference.is_none() {
         return Err(reference_invalid("cloned voices need reference audio"));
     }
@@ -235,11 +230,6 @@ pub fn validate_input(input: &VoiceInput) -> LibraryResult<NewVoice> {
         preset: (input.source == VoiceSource::Preset)
             .then(|| preset.map(str::to_string))
             .flatten(),
-        prompt: if input.source == VoiceSource::Design {
-            prompt.to_string()
-        } else {
-            String::new()
-        },
         reference_kind: None,
         reference_sound_id: None,
         reference_name: String::new(),
@@ -342,7 +332,6 @@ pub fn synthesis_request(
         language: voice.language.clone(),
         gender: voice.gender.as_str().to_string(),
         preset: voice.preset.clone().unwrap_or_default(),
-        prompt: voice.prompt.clone(),
         reference_path: reference
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default(),
@@ -402,7 +391,7 @@ pub fn get(conn: &Connection, id: i64) -> LibraryResult<LibraryVoice> {
 pub fn insert(conn: &Connection, voice: &NewVoice, now: &str) -> LibraryResult<i64> {
     assets::require_collection(conn, voice.collection_id)?;
     conn.execute(
-        "INSERT INTO ws_library_voices (name, engine, engine_kind, source, language, gender, preset, prompt, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at, rights, collection_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, ?14, ?15)",
+        "INSERT INTO ws_library_voices (name, engine, engine_kind, source, language, gender, preset, reference_kind, reference_sound_id, reference_name, sample_text, created_at, updated_at, rights, collection_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12, ?13, ?14)",
         params![
             voice.name,
             voice.engine,
@@ -411,7 +400,6 @@ pub fn insert(conn: &Connection, voice: &NewVoice, now: &str) -> LibraryResult<i
             voice.language,
             voice.gender.as_str(),
             voice.preset,
-            voice.prompt,
             voice.reference_kind.map(ReferenceKind::as_str),
             voice.reference_sound_id,
             voice.reference_name,
@@ -545,12 +533,11 @@ fn voice_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryVoice> {
         reference_kind: row.get(8)?,
         reference_sound_id: row.get(9)?,
         reference_name: row.get(10)?,
-        prompt: row.get(11)?,
-        sample_text: row.get(12)?,
-        created_at: row.get(13)?,
-        updated_at: row.get(14)?,
-        rights: parse_column(row, 15, "rights", AssetRights::parse)?,
-        collection_id: row.get(16)?,
+        sample_text: row.get(11)?,
+        created_at: row.get(12)?,
+        updated_at: row.get(13)?,
+        rights: parse_column(row, 14, "rights", AssetRights::parse)?,
+        collection_id: row.get(15)?,
         tags: Vec::new(),
     })
 }

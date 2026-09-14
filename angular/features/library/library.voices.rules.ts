@@ -49,7 +49,6 @@ export interface VoiceDraft {
   preset: string;
   reference: VoiceReference | null;
   consent: boolean;
-  prompt: string;
 }
 
 const CLOUD_ENGINE_SOURCES = new Map<string, VoiceSource[]>([
@@ -100,13 +99,11 @@ const GENDER_KEYS: Record<VoiceGender, LanguageKey> = {
 const SOURCE_KEYS: Record<VoiceSource, LanguageKey> = {
   preset: 'library.voice.source.preset',
   clone: 'library.voice.source.clone',
-  design: 'library.voice.source.design',
 };
 
 const SOURCE_NAME_KEYS: Record<VoiceSource, LanguageKey> = {
   preset: 'library.voice.sourceName.preset',
   clone: 'library.voice.sourceName.clone',
-  design: 'library.voice.sourceName.design',
 };
 
 const REGION_KEYS: Record<string, LanguageKey> = {
@@ -410,8 +407,7 @@ export function isVoiceDraftValid(draft: VoiceDraft): boolean {
   if (!draft.name.trim() || !draft.engine?.ready) return false;
   if (!engineSupportsSource(draft.engine, draft.source)) return false;
   if (draft.source === 'preset') return draft.preset !== '';
-  if (draft.source === 'clone') return draft.reference !== null && draft.consent;
-  return draft.prompt.trim() !== '';
+  return draft.reference !== null && draft.consent;
 }
 
 export function toVoiceInput(
@@ -427,7 +423,6 @@ export function toVoiceInput(
     gender: options.gender,
     preset: draft.source === 'preset' ? draft.preset : null,
     reference: draft.source === 'clone' ? draft.reference : null,
-    prompt: draft.source === 'design' ? draft.prompt.trim() : '',
   };
 }
 
@@ -448,7 +443,6 @@ export function voiceSourceDetail(
   engines: VoiceEngine[],
 ): string {
   if (voice.source === 'preset') return presetName(engines, voice);
-  if (voice.source === 'design') return voice.prompt || '—';
   return voiceReferenceName(voice, translate);
 }
 

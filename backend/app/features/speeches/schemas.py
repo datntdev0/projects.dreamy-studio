@@ -9,7 +9,7 @@ from app.features.speeches.synthesis import (
 )
 from app.shared.schemas import CamelModel
 
-VoiceSource = Literal["preset", "clone", "design"]
+VoiceSource = Literal["preset", "clone"]
 
 
 class SynthesizeRequest(CamelModel):
@@ -19,7 +19,6 @@ class SynthesizeRequest(CamelModel):
     language: str = ""
     gender: str = ""
     preset: str = ""
-    prompt: str = ""
     reference_path: str = ""
     reference_audio: str = ""
     reference_name: str = ""
@@ -35,7 +34,6 @@ class SynthesizeRequest(CamelModel):
             language=self.language,
             gender=self.gender,
             preset=self.preset,
-            prompt=self.prompt,
             reference_path=self.reference_path,
             sentence_pause_ms=self.sentence_pause_ms,
         )

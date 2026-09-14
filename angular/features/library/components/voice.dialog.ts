@@ -52,7 +52,6 @@ export class LibraryVoiceDialog {
   readonly referenceSoundId = signal<number | null>(null);
   readonly recorder = new VoiceRecorder();
   readonly consent = signal(false);
-  readonly prompt = signal('');
   readonly language = signal<string>(DEFAULT_LANGUAGE);
   readonly requestedGender = signal<VoiceGender | null>(null);
   readonly requestedQuery = signal<string | null>(null);
@@ -198,10 +197,6 @@ export class LibraryVoiceDialog {
     this.consent.set(fieldChecked(event));
   }
 
-  onPrompt(event: Event): void {
-    this.prompt.set(fieldValue(event));
-  }
-
   onLanguage(event: Event): void {
     this.language.set(fieldValue(event));
   }
@@ -275,7 +270,6 @@ export class LibraryVoiceDialog {
       preset: this.preset(),
       reference: this.reference(),
       consent: this.consent(),
-      prompt: this.prompt(),
     };
   }
 
@@ -394,7 +388,6 @@ export class LibraryVoiceDialog {
     this.presetFilter.set('all');
     this.referenceSoundId.set(null);
     this.consent.set(false);
-    this.prompt.set('');
     this.language.set(DEFAULT_LANGUAGE);
     this.requestedGender.set(null);
     this.busy.set(false);

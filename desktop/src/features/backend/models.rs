@@ -191,7 +191,6 @@ pub struct SynthesisRequest {
     pub language: String,
     pub gender: String,
     pub preset: String,
-    pub prompt: String,
     pub reference_path: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     pub reference_audio: String,

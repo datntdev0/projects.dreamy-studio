@@ -7,7 +7,6 @@ CREATE TABLE ws_library_voices (
     language TEXT NOT NULL,
     gender TEXT NOT NULL,
     preset TEXT NULL,
-    prompt TEXT NOT NULL,
     reference_kind TEXT NULL,
     reference_sound_id INTEGER NULL,
     reference_name TEXT NOT NULL,

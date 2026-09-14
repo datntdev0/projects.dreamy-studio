@@ -333,7 +333,6 @@ impl StreamKind {
 pub enum VoiceSource {
     Preset,
     Clone,
-    Design,
 }
 
 impl VoiceSource {
@@ -341,7 +340,6 @@ impl VoiceSource {
         match self {
             Self::Preset => "preset",
             Self::Clone => "clone",
-            Self::Design => "design",
         }
     }
 
@@ -349,7 +347,6 @@ impl VoiceSource {
         match value {
             "preset" => Some(Self::Preset),
             "clone" => Some(Self::Clone),
-            "design" => Some(Self::Design),
             _ => None,
         }
     }
@@ -438,8 +435,6 @@ pub struct VoiceInput {
     pub preset: Option<String>,
     #[serde(default)]
     pub reference: Option<VoiceReference>,
-    #[serde(default)]
-    pub prompt: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -471,7 +466,6 @@ pub struct LibraryVoice {
     pub reference_kind: Option<String>,
     pub reference_sound_id: Option<i64>,
     pub reference_name: String,
-    pub prompt: String,
     pub sample_text: String,
     pub rights: AssetRights,
     pub collection_id: Option<i64>,

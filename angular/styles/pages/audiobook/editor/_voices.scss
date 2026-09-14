@@ -22,3 +22,16 @@
   gap: var(--sp-sm);
   max-width: 420px;
 }
+.ab-spk-play {
+  justify-content: center;
+  min-width: 96px;
+  white-space: nowrap;
+}
+.ab-spk-play.is-busy .ic {
+  animation: ab-spk-spin 1s linear infinite;
+}
+@keyframes ab-spk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

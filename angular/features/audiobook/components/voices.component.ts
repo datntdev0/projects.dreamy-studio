@@ -3,6 +3,7 @@ import { Icon } from '@components/icon';
 import { ProjectService } from '@features/project/project.service';
 import { TabsService } from '@layout/tabs.service';
 import { CoreModule } from '@shared/core.module';
+import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 import { fieldValue, setFieldValue } from '@shared/utils/dom';
@@ -46,6 +47,14 @@ export class AudiobookVoices {
 
   issueText(row: SpeakerRow): string {
     return row.issue ? this.audiobook.issueText(row.issue) : '';
+  }
+
+  isPreparing(row: SpeakerRow): boolean {
+    return this.player.isPreparing(row.member.id);
+  }
+
+  previewKey(row: SpeakerRow): LanguageKey {
+    return this.isPreparing(row) ? 'audiobook.voices.previewPreparing' : 'audiobook.voices.preview';
   }
 
   setVoice(row: SpeakerRow, event: Event): void {

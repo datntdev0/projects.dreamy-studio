@@ -323,8 +323,7 @@
       "engine": "engine_omnivoice",
       "sources": [
         "preset",
-        "clone",
-        "design"
+        "clone"
       ],
       "extraSources": [
         {

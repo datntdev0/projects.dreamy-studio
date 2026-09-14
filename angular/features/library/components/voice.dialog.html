@@ -355,24 +355,6 @@
       {{ 'library.voice.dialog.consent' | t }}
     </label>
   </div>
-  } @case ('design') {
-  <div class="field" data-testid="library-voice-dialog-prompt-field">
-    <label for="library-voice-dialog-prompt" data-testid="library-voice-dialog-prompt-label">
-      {{ 'library.voice.dialog.prompt' | t }}
-    </label>
-    <textarea
-      id="library-voice-dialog-prompt"
-      class="textarea"
-      rows="5"
-      [value]="prompt()"
-      [attr.placeholder]="'library.voice.dialog.promptPlaceholder' | t"
-      data-testid="library-voice-dialog-prompt"
-      (input)="onPrompt($event)"
-    ></textarea>
-    <p class="t-sm t-mute" data-testid="library-voice-dialog-prompt-hint">
-      {{ 'library.voice.dialog.promptHint' | t }}
-    </p>
-  </div>
   } }
   <ds-button dialogFoot data-testid="library-voice-dialog-cancel" (pressed)="close()">
     {{ 'common.cancel' | t }}

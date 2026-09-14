@@ -19,13 +19,11 @@ LOAD_TIMEOUT = 600.0
 SYNTHESIZE_TIMEOUT = 300.0
 PRESET_SOURCE = "preset"
 CLONE_SOURCE = "clone"
-DESIGN_SOURCE = "design"
 ERROR_STATUS = {
     "TEXT_EMPTY": 422,
     "PRESET_UNKNOWN": 422,
     "SOURCE_UNSUPPORTED": 422,
     "REFERENCE_MISSING": 422,
-    "PROMPT_EMPTY": 422,
     "PROMPT_INVALID": 422,
     "REFERENCE_INVALID": 422,
     "MODEL_NOT_INSTALLED": 409,
@@ -41,7 +39,6 @@ class SynthesisRequest:
     language: str = ""
     gender: str = ""
     preset: str = ""
-    prompt: str = ""
     reference_path: str = ""
     sentence_pause_ms: int = DEFAULT_SENTENCE_PAUSE_MS
 
@@ -104,11 +101,6 @@ def check_voice(model: CatalogModel, request: SynthesisRequest) -> dict[str, Any
             voice["prompt"] = preset.prompt
     if request.source == CLONE_SOURCE:
         voice["referencePath"] = str(check_reference(request.reference_path))
-    if request.source == DESIGN_SOURCE:
-        prompt = normalize_text(request.prompt)
-        if not prompt:
-            raise reject("PROMPT_EMPTY", "Voice description is empty")
-        voice["prompt"] = prompt
     return voice
 
 

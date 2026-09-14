@@ -1,5 +1,5 @@
 export type VoiceEngineKind = 'local' | 'cloud';
-export type VoiceSource = 'preset' | 'clone' | 'design';
+export type VoiceSource = 'preset' | 'clone';
 export type VoiceGender = 'female' | 'male' | 'neutral';
 export type VoicePresetFilter = 'all' | VoiceGender;
 export type VoiceReferenceMode = 'library' | 'upload' | 'record';
@@ -19,7 +19,6 @@ export interface LibraryVoice {
   referenceKind: VoiceReferenceKind | null;
   referenceSoundId: number | null;
   referenceName: string;
-  prompt: string;
   sampleText: string;
   rights: AssetRights;
   collectionId: number | null;
@@ -48,7 +47,6 @@ export interface VoiceInput {
   gender: VoiceGender;
   preset: string | null;
   reference: VoiceReference | null;
-  prompt: string;
 }
 
 export interface VoicePreset {
@@ -85,7 +83,7 @@ export interface VoiceEngine {
 
 export const VOICE_LANGUAGES = ['vi', 'en', 'ja', 'zh', 'ko', 'multi'] as const;
 export const VOICE_GENDERS: VoiceGender[] = ['female', 'male', 'neutral'];
-export const VOICE_SOURCES: VoiceSource[] = ['preset', 'clone', 'design'];
+export const VOICE_SOURCES: VoiceSource[] = ['preset', 'clone'];
 export const VOICE_REFERENCE_MODES: VoiceReferenceMode[] = ['library', 'upload', 'record'];
 export const VOICE_ENGINE_KINDS: VoiceEngineKind[] = ['local', 'cloud'];
 

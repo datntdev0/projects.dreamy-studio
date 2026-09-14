@@ -123,13 +123,15 @@
                 <td class="row-actions">
                   <button
                     type="button"
-                    class="btn btn-sm"
-                    [disabled]="!row.canPreview"
+                    class="btn btn-sm ab-spk-play"
+                    [class.is-busy]="isPreparing(row)"
+                    [attr.aria-busy]="isPreparing(row)"
+                    [disabled]="!row.canPreview || isPreparing(row)"
                     [attr.data-testid]="'ab-spk-preview-' + row.member.id"
                     (click)="preview(row)"
                   >
-                    <ds-icon name="play" [size]="16" />
-                    {{ 'audiobook.voices.preview' | t }}
+                    <ds-icon [name]="isPreparing(row) ? 'refresh' : 'play'" [size]="16" />
+                    {{ previewKey(row) | t }}
                   </button>
                   <button
                     type="button"

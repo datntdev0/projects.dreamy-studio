@@ -161,7 +161,6 @@ function voice(id: number, fields: Partial<LibraryVoice>): LibraryVoice {
     referenceKind: null,
     referenceSoundId: null,
     referenceName: '',
-    prompt: '',
     sampleText: SAMPLE_TEXT,
     rights: 'own',
     collectionId: null,
@@ -188,9 +187,9 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
       engine: 'omnivoice',
       language: 'en',
       gender: 'neutral',
-      source: 'design',
+      source: 'clone',
       preset: null,
-      prompt: 'A quiet, weathered voice that sounds like it has told the same story for decades.',
+      referenceName: 'lantern-keeper-reference.wav',
     }),
     voice(4, {
       name: 'Mira',
@@ -213,9 +212,7 @@ export function libraryVoiceFixtures(): LibraryVoice[] {
       engineKind: 'cloud',
       language: 'multi',
       gender: 'neutral',
-      source: 'design',
-      preset: null,
-      prompt: 'A layered crowd of dockworkers murmuring in several languages.',
+      preset: 'harbor-chorus',
     }),
   ];
 }

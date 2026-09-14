@@ -1,0 +1,2476 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Hướng dẫn sử dụng — Dreamy Studio</title>
+    <meta
+      name="description"
+      content="Hướng dẫn từng bước sử dụng Dreamy Studio: bắt đầu, tiểu thuyết, dịch thuật, tri thức, kịch bản, audiobook, giọng đọc và trợ lý AI."
+    />
+    <link rel="icon" type="image/svg+xml" href="../assets/dreamy-studio-app-icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script src="docs.js" defer></script>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="container nav-inner">
+        <a class="brand" href="../index.html" aria-label="Dreamy Studio">
+          <img src="../assets/dreamy-studio-app-icon.svg" alt="" width="28" height="28" />
+          <span>Dreamy Studio</span>
+        </a>
+        <nav class="nav-links" aria-label="Điều hướng chính">
+          <a href="../index.html#tools">Công cụ</a>
+          <a href="../index.html#roadmap">Sắp ra mắt</a>
+          <a href="../index.html#install">Cài đặt</a>
+          <a href="index.html" aria-current="page">Tài liệu</a>
+        </nav>
+        <a class="btn btn-sm btn-primary nav-cta" href="../index.html#install">Tải về</a>
+      </div>
+    </header>
+    <div class="docs-hero">
+      <div class="container">
+        <p class="eyebrow">Tài liệu · Phiên bản 0.1.0</p>
+        <h1>Hướng dẫn sử dụng</h1>
+        <p>
+          Mỗi phần là một chuỗi bước. Bấm vào từng bước để xem đúng màn hình cần thao tác trong app.
+        </p>
+      </div>
+    </div>
+    <div class="container docs-layout">
+      <aside class="toc" aria-label="Mục lục">
+        <p class="eyebrow">Mục lục</p>
+        <ol>
+          <li><a href="#bat-dau">Bắt đầu</a></li>
+          <li><a href="#tieu-thuyet">Tiểu thuyết</a></li>
+          <li><a href="#dich-thuat">Dịch thuật</a></li>
+          <li><a href="#tri-thuc">Tri thức</a></li>
+          <li><a href="#kich-ban">Dự án & kịch bản</a></li>
+          <li><a href="#audiobook">Audiobook</a></li>
+          <li><a href="#giong-doc">Giọng đọc</a></li>
+          <li><a href="#tro-ly">Trợ lý AI</a></li>
+          <li><a href="#su-co">Khắc phục sự cố</a></li>
+        </ol>
+      </aside>
+      <article class="doc">
+        <section id="bat-dau" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Bắt đầu</h2>
+            <p>Cài app, tạo nơi lưu dữ liệu và kết nối các công cụ AI. Chỉ cần làm một lần.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Bắt đầu">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="bat-dau-tab-0"
+                aria-controls="bat-dau-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Cài và mở app</strong>
+                  <small>Lần mở đầu tiên</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="bat-dau-tab-1"
+                aria-controls="bat-dau-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Tạo workspace</strong>
+                  <small>Nơi chứa dữ liệu</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="bat-dau-tab-2"
+                aria-controls="bat-dau-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Kết nối AI</strong>
+                  <small>Cho dịch, tri thức, trợ lý</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="bat-dau-tab-3"
+                aria-controls="bat-dau-step-3"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">04</span>
+                <span class="flow-label">
+                  <strong>Chuẩn bị giọng nói</strong>
+                  <small>Máy chủ và model TTS</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="bat-dau-step-0"
+              aria-labelledby="bat-dau-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/splash-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/splash-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/splash-dark.jpg"
+                      width="756"
+                      height="530"
+                      loading="lazy"
+                      alt="Màn hình khởi động đang tải Python runtime và FFmpeg."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/4</p>
+                <h3>Cài và mở app</h3>
+                <p>
+                  Cài theo
+                  <a href="../index.html#install">hướng dẫn ở trang chủ</a>
+                  rồi mở Dreamy Studio từ Start menu. Lần đầu mở, app tự tải các thành phần cần
+                  thiết. Bạn chỉ cần chờ vài phút.
+                </p>
+                <ul class="flow-tips">
+                  <li>Có thể bấm Tạm dừng và tiếp tục tải sau.</li>
+                  <li>Góc trên bên phải có nút đổi ngôn ngữ và giao diện sáng/tối.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="bat-dau-step-1"
+              aria-labelledby="bat-dau-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/workspace-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/workspace-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/workspace-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Trang chủ của một workspace mới, chưa có dự án."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/4</p>
+                <h3>Tạo workspace</h3>
+                <p>
+                  Workspace là một thư mục trên máy chứa toàn bộ truyện, dự án và thư viện của bạn.
+                  Chọn vị trí, đặt tên và app sẽ tạo sẵn mọi thứ. Lần sau chỉ cần chọn lại từ danh
+                  sách gần đây.
+                </p>
+                <ul class="flow-tips">
+                  <li>Dữ liệu chỉ nằm trên máy bạn, không đồng bộ lên đâu cả.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="bat-dau-step-2"
+              aria-labelledby="bat-dau-tab-2"
+            >
+              <figure class="flow-shot is-tall">
+                <a
+                  href="../assets/docs/settings-llm-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/settings-llm-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/settings-llm-dark.jpg"
+                      width="880"
+                      height="716"
+                      loading="lazy"
+                      alt="Cài đặt, mục LLM providers, với Claude Code CLI và Codex CLI ở trạng thái sẵn sàng."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/4</p>
+                <h3>Kết nối AI</h3>
+                <p>
+                  Mở
+                  <strong>Cài đặt → LLM providers,</strong>
+                  chọn CLI bạn muốn dùng (Claude Code, Codex hoặc Antigravity) và bấm
+                  <strong>Tải xuống.</strong>
+                  Tải xong, bấm
+                  <strong>Đăng nhập,</strong>
+                  làm theo hướng dẫn trong cửa sổ terminal hiện ra, rồi bấm
+                  <strong>Kiểm tra</strong>
+                  để thấy trạng thái
+                  <strong>Sẵn sàng.</strong>
+                </p>
+                <ul class="flow-tips">
+                  <li>
+                    CLI được tải vào thư mục dữ liệu của app và chỉ Dreamy Studio dùng, không ảnh
+                    hưởng tới máy bạn.
+                  </li>
+                  <li>
+                    Chỉ cần đăng nhập một lần. Thanh mức sử dụng cho biết bạn còn bao nhiêu lượt
+                    trong phiên và trong tuần.
+                  </li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="bat-dau-step-3"
+              aria-labelledby="bat-dau-tab-3"
+            >
+              <figure class="flow-shot is-tall">
+                <a
+                  href="../assets/docs/settings-backend-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/settings-backend-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/settings-backend-dark.jpg"
+                      width="880"
+                      height="716"
+                      loading="lazy"
+                      alt="Cài đặt, mục Local backend, máy chủ đang chạy và GPU NVIDIA được hỗ trợ."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 4/4</p>
+                <h3>Chuẩn bị giọng nói</h3>
+                <p>
+                  Mở
+                  <strong>Cài đặt → Local backend.</strong>
+                  Đây là máy chủ giọng nói chạy ngay trên máy bạn. Vào tab
+                  <strong>Mô hình TTS</strong>
+                  để tải model giọng đọc.
+                </p>
+                <ul class="flow-tips">
+                  <li>
+                    Có GPU NVIDIA thì app tự dùng để tạo giọng nhanh hơn; không có thì chạy bằng
+                    CPU.
+                  </li>
+                  <li>Nếu có lỗi, bấm Khởi động lại hoặc Mở nhật ký.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="tieu-thuyet" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Tiểu thuyết</h2>
+            <p>Đưa truyện vào app và làm việc với từng chương.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Tiểu thuyết">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tieu-thuyet-tab-0"
+                aria-controls="tieu-thuyet-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Mở danh sách truyện</strong>
+                  <small>Novel management</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tieu-thuyet-tab-1"
+                aria-controls="tieu-thuyet-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Nhập truyện</strong>
+                  <small>Chọn gói .dsnovel/.zip</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tieu-thuyet-tab-2"
+                aria-controls="tieu-thuyet-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Kiểm tra và nhập</strong>
+                  <small>Xem trước, chỉnh sửa</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tieu-thuyet-tab-3"
+                aria-controls="tieu-thuyet-step-3"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">04</span>
+                <span class="flow-label">
+                  <strong>Quản lý chương</strong>
+                  <small>Thêm, sắp xếp, theo dõi</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tieu-thuyet-tab-4"
+                aria-controls="tieu-thuyet-step-4"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">05</span>
+                <span class="flow-label">
+                  <strong>Đọc và chỉnh sửa</strong>
+                  <small>Trình đọc</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tieu-thuyet-step-0"
+              aria-labelledby="tieu-thuyet-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/novel-list-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/novel-list-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/novel-list-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Màn Novel management với một truyện trong workspace."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/5</p>
+                <h3>Mở danh sách truyện</h3>
+                <p>
+                  Bấm biểu tượng
+                  <strong>Novels</strong>
+                  ở thanh bên trái rồi chọn
+                  <strong>Novel management.</strong>
+                  Bấm
+                  <strong>Mới</strong>
+                  để tạo truyện trống, hoặc
+                  <strong>Nhập…</strong>
+                  để đưa một truyện có sẵn vào app.
+                </p>
+                <ul class="flow-tips">
+                  <li>
+                    Có thể xuất truyện thành gói .dsnovel để sao lưu hoặc chuyển sang máy khác.
+                  </li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tieu-thuyet-step-1"
+              aria-labelledby="tieu-thuyet-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/novel-import-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/novel-import-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/novel-import-dark.jpg"
+                      width="720"
+                      height="532"
+                      loading="lazy"
+                      alt="Hộp thoại Nhập novel từ package ở bước Chọn file, kèm cấu trúc package gợi ý."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/5</p>
+                <h3>Nhập truyện</h3>
+                <p>
+                  Bấm
+                  <strong>Nhập…,</strong>
+                  kéo thả file vào khung hoặc bấm
+                  <strong>Chọn file…</strong>
+                  App nhận gói
+                  <strong>.dsnovel</strong>
+                  hoặc
+                  <strong>.zip.</strong>
+                  Khung bên dưới cho thấy cấu trúc cần có:
+                  <code class="inline">manifest.json</code>
+                  chứa tên, tác giả, ngôn ngữ; ảnh bìa
+                  <code class="inline">cover.jpg</code>
+                  (tùy chọn) và thư mục
+                  <code class="inline">chapters</code>
+                  chứa các file .md, mỗi file là một chương.
+                </p>
+                <ul class="flow-tips">
+                  <li>Tự đóng gói truyện của bạn theo đúng cấu trúc này là nhập được.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tieu-thuyet-step-2"
+              aria-labelledby="tieu-thuyet-tab-2"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/novel-check-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/novel-check-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/novel-check-dark.jpg"
+                      width="720"
+                      height="456"
+                      loading="lazy"
+                      alt="Bước Kiểm tra báo package hợp lệ với 24 chương và ngôn ngữ phát hiện được."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/5</p>
+                <h3>Kiểm tra và nhập</h3>
+                <p>
+                  App kiểm tra lần lượt định dạng file, manifest, danh sách chương và ảnh bìa. Khi
+                  thấy
+                  <strong>Package hợp lệ,</strong>
+                  bấm
+                  <strong>Tiếp</strong>
+                  để xem trước và sửa tên, tác giả, mô tả trước khi nhập.
+                </p>
+                <ul class="flow-tips">
+                  <li>Nếu trùng tên với truyện đã có, app sẽ cảnh báo trước khi nhập.</li>
+                  <li>Nhập lỗi giữa chừng sẽ không để lại dữ liệu dở dang.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tieu-thuyet-step-3"
+              aria-labelledby="tieu-thuyet-tab-3"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/novel-chapters-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/novel-chapters-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/novel-chapters-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Danh sách chương với số từ, trạng thái dịch và phân tích."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 4/5</p>
+                <h3>Quản lý chương</h3>
+                <p>
+                  Mở một truyện để xem danh sách chương kèm số từ và trạng thái dịch, phân tích. Bạn
+                  có thể thêm, đổi tên và sắp xếp lại chương. Bảng bên phải dùng để sửa tên, tác
+                  giả, mô tả, tag và ảnh bìa.
+                </p>
+                <ul class="flow-tips">
+                  <li>Chương đã dịch hoặc đã phân tích sẽ bị khóa để không làm hỏng kết quả.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tieu-thuyet-step-4"
+              aria-labelledby="tieu-thuyet-tab-4"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/novel-reader-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/novel-reader-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/novel-reader-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Trình đọc chương với bảng tùy chỉnh phông chữ và màu nền."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 5/5</p>
+                <h3>Đọc và chỉnh sửa</h3>
+                <p>
+                  Nhấn đúp vào một chương để mở trình đọc. Bảng bên phải cho chỉnh phông chữ, cỡ
+                  chữ, giãn dòng, độ rộng và màu nền. Bạn có thể sửa đoạn văn ngay tại chỗ.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="dich-thuat" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Dịch thuật</h2>
+            <p>Năm bước nằm ngay trên đầu màn Dịch thuật, đi lần lượt từ trái sang phải.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Dịch thuật">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="dich-thuat-tab-0"
+                aria-controls="dich-thuat-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Từ điển</strong>
+                  <small>Chốt tên riêng</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="dich-thuat-tab-1"
+                aria-controls="dich-thuat-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Hướng dẫn dịch</strong>
+                  <small>Văn phong, xưng hô</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="dich-thuat-tab-2"
+                aria-controls="dich-thuat-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Dịch</strong>
+                  <small>Chạy dịch</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="dich-thuat-tab-3"
+                aria-controls="dich-thuat-step-3"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">04</span>
+                <span class="flow-label">
+                  <strong>Kết quả</strong>
+                  <small>Rà soát bản dịch</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="dich-thuat-tab-4"
+                aria-controls="dich-thuat-step-4"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">05</span>
+                <span class="flow-label">
+                  <strong>Cảnh báo</strong>
+                  <small>Sai từ điển</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="dich-thuat-step-0"
+              aria-labelledby="dich-thuat-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/screens/translation-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/screens/translation-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/screens/translation-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Bước Từ điển với danh sách thuật ngữ gốc và bản dịch."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/5</p>
+                <h3>Từ điển</h3>
+                <p>
+                  Mở truyện, chọn
+                  <strong>Dịch thuật</strong>
+                  và chọn ngôn ngữ đích. Ở bước Từ điển, nhập cách dịch cho tên nhân vật, địa danh
+                  và thuật ngữ để bản dịch luôn thống nhất.
+                </p>
+                <ul class="flow-tips">
+                  <li>Mỗi ngôn ngữ đích có từ điển riêng.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="dich-thuat-step-1"
+              aria-labelledby="dich-thuat-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/tr-guide-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/tr-guide-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/tr-guide-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Bước Hướng dẫn dịch với nội dung hướng dẫn đã viết."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/5</p>
+                <h3>Hướng dẫn dịch</h3>
+                <p>
+                  Viết vài dòng về văn phong, cách xưng hô và quy ước. AI sẽ làm theo hướng dẫn này
+                  cho mọi chương.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="dich-thuat-step-2"
+              aria-labelledby="dich-thuat-tab-2"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/tr-translate-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/tr-translate-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/tr-translate-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Bước Dịch với danh sách chương và trạng thái từng chương."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/5</p>
+                <h3>Dịch</h3>
+                <p>
+                  Chọn chương chưa dịch, một khoảng chương hoặc tất cả rồi bắt đầu dịch. Tiến độ cập
+                  nhật theo từng chương và bạn có thể hủy bất cứ lúc nào.
+                </p>
+                <ul class="flow-tips">
+                  <li>Việc dịch chạy nền, bạn vẫn làm việc khác được.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="dich-thuat-step-3"
+              aria-labelledby="dich-thuat-tab-3"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/tr-result-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/tr-result-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/tr-result-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Bước Kết quả với bản gốc và bản dịch đặt song song."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 4/5</p>
+                <h3>Kết quả</h3>
+                <p>
+                  Bản gốc và bản dịch nằm song song. Các đoạn cần xem lại được đánh dấu để bạn sửa
+                  và ghi chú từng đoạn.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="dich-thuat-step-4"
+              aria-labelledby="dich-thuat-tab-4"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/tr-warn-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/tr-warn-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/tr-warn-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Bước Cảnh báo với các đoạn dịch chưa đúng từ điển."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 5/5</p>
+                <h3>Cảnh báo</h3>
+                <p>
+                  App tự tìm những đoạn chưa dùng đúng cách dịch trong từ điển. Sửa xong thì cảnh
+                  báo tự biến mất.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="tri-thuc" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Tri thức</h2>
+            <p>Để AI đọc truyện và ghi lại nhân vật, địa danh, sự kiện kèm bằng chứng.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Tri thức">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tri-thuc-tab-0"
+                aria-controls="tri-thuc-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Phân tích</strong>
+                  <small>Trích xuất tri thức</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tri-thuc-tab-1"
+                aria-controls="tri-thuc-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Khám phá</strong>
+                  <small>Đồ thị và Inspector</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tri-thuc-tab-2"
+                aria-controls="tri-thuc-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Xem xét</strong>
+                  <small>Sửa xung đột</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tri-thuc-step-0"
+              aria-labelledby="tri-thuc-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/kb-analyze-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/kb-analyze-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/kb-analyze-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Hộp thoại Phân tích tri thức với các lựa chọn phạm vi chương."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/3</p>
+                <h3>Phân tích</h3>
+                <p>
+                  Trong màn
+                  <strong>Tri thức,</strong>
+                  bấm
+                  <strong>Phân tích…</strong>
+                  Chọn bản gốc hoặc bản dịch, chọn chương cần phân tích rồi bấm
+                  <strong>Bắt đầu phân tích.</strong>
+                </p>
+                <ul class="flow-tips">
+                  <li>App chia thành từng lô tối đa 5 chương.</li>
+                  <li>AI dùng cho việc này được chọn trong Cài đặt → LLM.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tri-thuc-step-1"
+              aria-labelledby="tri-thuc-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/screens/knowledge-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/screens/knowledge-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/screens/knowledge-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Đồ thị tri thức làm nổi một nhân vật, Inspector hiện chi tiết, panel Omniscient ở dưới."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/3</p>
+                <h3>Khám phá</h3>
+                <p>
+                  Chọn một nhân vật hoặc địa danh để xem các mối quan hệ, xung đột và đoạn văn làm
+                  bằng chứng ở bảng bên phải. Panel
+                  <strong>Omniscient</strong>
+                  phía dưới cho chuyển sang chế độ
+                  <strong>Chống spoiler,</strong>
+                  chỉ hiện những gì đã xuất hiện đến chương bạn chọn.
+                </p>
+                <ul class="flow-tips">
+                  <li>Chuyển sang Danh sách để tìm và lọc nhanh hơn.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tri-thuc-step-2"
+              aria-labelledby="tri-thuc-tab-2"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/kb-review-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/kb-review-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/kb-review-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Tab Xem xét với danh sách xung đột và các nút sửa nhanh."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/3</p>
+                <h3>Xem xét</h3>
+                <p>
+                  Tab
+                  <strong>Xem xét</strong>
+                  liệt kê những chỗ chưa nhất quán như trùng nhân vật hay bằng chứng không khớp. Mỗi
+                  mục có nút sửa nhanh.
+                </p>
+                <ul class="flow-tips">
+                  <li>Trợ lý AI cũng có thể đề xuất cách sửa giúp bạn.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="kich-ban" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Dự án & kịch bản</h2>
+            <p>Mỗi sản phẩm là một dự án gắn với một truyện.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Dự án &amp; kịch bản">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="kich-ban-tab-0"
+                aria-controls="kich-ban-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Danh mục dự án</strong>
+                  <small>Projects</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="kich-ban-tab-1"
+                aria-controls="kich-ban-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Tạo dự án</strong>
+                  <small>Chọn template</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="kich-ban-tab-2"
+                aria-controls="kich-ban-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Viết kịch bản</strong>
+                  <small>Module Kịch bản</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="kich-ban-step-0"
+              aria-labelledby="kich-ban-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/proj-catalog-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/proj-catalog-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/proj-catalog-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Danh mục project dạng lưới với ảnh bìa và loại dự án."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/3</p>
+                <h3>Danh mục dự án</h3>
+                <p>
+                  Bấm biểu tượng
+                  <strong>Projects</strong>
+                  ở thanh bên trái rồi chọn
+                  <strong>Danh mục project</strong>
+                  để xem mọi dự án.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="kich-ban-step-1"
+              aria-labelledby="kich-ban-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/proj-new-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/proj-new-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/proj-new-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Hộp thoại Tạo project với các template Audiobook, Filmseries và Dự án trống."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/3</p>
+                <h3>Tạo dự án</h3>
+                <p>
+                  Bấm
+                  <strong>Tạo,</strong>
+                  chọn template
+                  <strong>Audiobook,</strong>
+                  đặt tên rồi chọn truyện làm nguồn nội dung.
+                </p>
+                <ul class="flow-tips">
+                  <li>Template Filmseries đang ở trạng thái sắp ra mắt.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="kich-ban-step-2"
+              aria-labelledby="kich-ban-tab-2"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/screens/scripting-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/screens/scripting-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/screens/scripting-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Module Kịch bản với trình soạn và danh sách nhân vật."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/3</p>
+                <h3>Viết kịch bản</h3>
+                <p>
+                  Mở
+                  <strong>Kịch bản</strong>
+                  trong dự án. App tự tạo khung theo từng chương. Mỗi dòng là một khối: lời kể, lời
+                  thoại của nhân vật hoặc khoảng nghỉ. Mọi thay đổi được lưu tự động.
+                </p>
+                <ul class="flow-tips">
+                  <li>Danh sách nhân vật bên phải lấy từ Tri thức của truyện.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="audiobook" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Audiobook</h2>
+            <p>Biến kịch bản thành file âm thanh có phụ đề.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Audiobook">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="audiobook-tab-0"
+                aria-controls="audiobook-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Gán giọng</strong>
+                  <small>Tab Giọng đọc</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="audiobook-tab-1"
+                aria-controls="audiobook-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Nghe và rà soát</strong>
+                  <small>Tab Sản xuất</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="audiobook-tab-2"
+                aria-controls="audiobook-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Tạo và xuất</strong>
+                  <small>WAV + SRT</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="audiobook-step-0"
+              aria-labelledby="audiobook-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/ab-cast-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/ab-cast-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/ab-cast-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Tab Giọng đọc của module Audiobook, mỗi nhân vật có giọng và tốc độ."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/3</p>
+                <h3>Gán giọng</h3>
+                <p>
+                  Mở
+                  <strong>Audiobook</strong>
+                  trong dự án và vào tab
+                  <strong>Giọng đọc.</strong>
+                  Chọn giọng và tốc độ đọc cho người dẫn truyện và từng nhân vật.
+                </p>
+                <ul class="flow-tips">
+                  <li>Đổi giọng sau này thì các đoạn đã tạo sẽ được đánh dấu cần tạo lại.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="audiobook-step-1"
+              aria-labelledby="audiobook-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/screens/audiobook-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/screens/audiobook-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/screens/audiobook-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Tab Sản xuất với các đoạn đọc đã tạo và nút Nghe cả chương."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/3</p>
+                <h3>Nghe và rà soát</h3>
+                <p>
+                  Tab
+                  <strong>Sản xuất</strong>
+                  chia kịch bản thành từng đoạn đọc với trạng thái riêng. Bấm
+                  <strong>Nghe cả chương</strong>
+                  hoặc nghe từng đoạn; đoạn nào chưa ổn thì tạo lại.
+                </p>
+                <ul class="flow-tips">
+                  <li>Bảng bên phải chỉnh khoảng lặng giữa các đoạn và âm lượng.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="audiobook-step-2"
+              aria-labelledby="audiobook-tab-2"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/ab-generate-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/ab-generate-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/ab-generate-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Hộp thoại Tạo âm thanh với danh sách chương và tùy chọn xuất WAV và SRT."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/3</p>
+                <h3>Tạo và xuất</h3>
+                <p>
+                  Bấm
+                  <strong>Tạo tất cả,</strong>
+                  chọn chương rồi bật
+                  <strong>Xuất WAV và SRT khi hoàn tất.</strong>
+                  File âm thanh và phụ đề được lưu trong thư mục exports của dự án.
+                </p>
+                <ul class="flow-tips">
+                  <li>Chương còn thiếu giọng sẽ được báo trước để bạn xử lý.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="giong-doc" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Giọng đọc</h2>
+            <p>
+              Thư viện giọng dùng chung cho mọi dự án. Chọn giọng mẫu có sẵn hoặc nhân bản giọng từ
+              một đoạn ghi âm.
+            </p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Giọng đọc">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="giong-doc-tab-0"
+                aria-controls="giong-doc-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Thư viện giọng</strong>
+                  <small>Library → Voices</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="giong-doc-tab-1"
+                aria-controls="giong-doc-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Chọn giọng mẫu</strong>
+                  <small>Nguồn: Có sẵn</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="giong-doc-tab-2"
+                aria-controls="giong-doc-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Nhân bản giọng</strong>
+                  <small>Nguồn: Nhân bản</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="giong-doc-step-0"
+              aria-labelledby="giong-doc-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/screens/library-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/screens/library-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/screens/library-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Danh sách giọng đọc với engine, ngôn ngữ, giới tính và nút nghe thử."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/3</p>
+                <h3>Thư viện giọng</h3>
+                <p>
+                  Bấm biểu tượng
+                  <strong>Library</strong>
+                  rồi chọn
+                  <strong>Voices.</strong>
+                  Mỗi giọng ghi rõ engine, ngôn ngữ và giới tính. Bấm
+                  <strong>Nghe thử</strong>
+                  để nghe mẫu.
+                </p>
+                <ul class="flow-tips">
+                  <li>Giọng thuộc engine chưa tải model sẽ bị khóa nghe thử.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="giong-doc-step-1"
+              aria-labelledby="giong-doc-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/voice-preset-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/voice-preset-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/voice-preset-dark.jpg"
+                      width="720"
+                      height="524"
+                      loading="lazy"
+                      alt="Hộp thoại Giọng đọc mới với lưới giọng mẫu có sẵn của VieNeu-TTS v3 Turbo."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/3</p>
+                <h3>Chọn giọng mẫu</h3>
+                <p>
+                  Bấm
+                  <strong>Giọng đọc mới,</strong>
+                  đặt tên và chọn engine. Ở
+                  <strong>Nguồn,</strong>
+                  chọn
+                  <strong>Có sẵn</strong>
+                  rồi chọn một giọng mẫu. Mỗi giọng ghi giới tính, vùng miền và phong cách đọc như
+                  tự nhiên, đọc truyện hay tin tức. Bấm ▶ để nghe thử, lọc theo Nữ hoặc Nam.
+                </p>
+                <ul class="flow-tips">
+                  <li>
+                    VieNeu-TTS v3 Turbo có 25 giọng tiếng Việt, VieNeu-TTS v3 Nano có 11 giọng,
+                    OmniVoice có 7 giọng theo độ tuổi.
+                  </li>
+                  <li>
+                    Giọng đọc truyện như Kim Thanh, Mỹ Duyên hay giọng kể chuyện Ngọc Linh hợp với
+                    người dẫn truyện.
+                  </li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="giong-doc-step-2"
+              aria-labelledby="giong-doc-tab-2"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/voice-clone-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/voice-clone-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/voice-clone-dark.jpg"
+                      width="720"
+                      height="432"
+                      loading="lazy"
+                      alt="Hộp thoại Giọng đọc mới ở chế độ Nhân bản với các lựa chọn âm thanh tham chiếu."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/3</p>
+                <h3>Nhân bản giọng</h3>
+                <p>
+                  Chọn
+                  <strong>Nhân bản,</strong>
+                  đặt ngôn ngữ và giới tính, rồi lấy âm thanh tham chiếu
+                  <strong>Từ thư viện,</strong>
+                  <strong>Tải tệp lên</strong>
+                  hoặc
+                  <strong>Ghi âm</strong>
+                  ngay trong app. Tích ô xác nhận quyền sử dụng rồi bấm
+                  <strong>Tạo.</strong>
+                </p>
+                <ul class="flow-tips">
+                  <li>Dùng 5–30 giây giọng nói rõ, sạch tiếng ồn, của một người nói.</li>
+                  <li>Chỉ nhân bản giọng mà bạn có quyền sử dụng.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="tro-ly" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Trợ lý AI</h2>
+            <p>
+              Trợ lý đọc dữ liệu trong workspace để trả lời và đề xuất chỉnh sửa. Mọi thay đổi đều
+              hiện thành thẻ để bạn duyệt trước.
+            </p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Trợ lý AI">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-0"
+                aria-controls="tro-ly-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Mở phiên</strong>
+                  <small>Chọn phạm vi</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-1"
+                aria-controls="tro-ly-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Hỏi đáp</strong>
+                  <small>Hỏi về truyện</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-2"
+                aria-controls="tro-ly-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Rà soát bản dịch</strong>
+                  <small>Lỗi và gợi ý sửa</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-3"
+                aria-controls="tro-ly-step-3"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">04</span>
+                <span class="flow-label">
+                  <strong>Sửa tri thức</strong>
+                  <small>Giải quyết xung đột</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-4"
+                aria-controls="tro-ly-step-4"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">05</span>
+                <span class="flow-label">
+                  <strong>Viết lại kịch bản</strong>
+                  <small>Ngay trong màn Kịch bản</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-5"
+                aria-controls="tro-ly-step-5"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">06</span>
+                <span class="flow-label">
+                  <strong>Chạy pipeline</strong>
+                  <small>Dịch, phân tích</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="tro-ly-tab-6"
+                aria-controls="tro-ly-step-6"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">07</span>
+                <span class="flow-label">
+                  <strong>Quyền chỉnh sửa</strong>
+                  <small>Mặc định chỉ đọc</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-0"
+              aria-labelledby="tro-ly-tab-0"
+            >
+              <figure class="flow-shot is-tall">
+                <a
+                  href="../assets/docs/assist-start-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/assist-start-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/assist-start-dark.jpg"
+                      width="479"
+                      height="520"
+                      loading="lazy"
+                      alt="Panel Smart Assistant với lựa chọn phạm vi và các phiên gần đây."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/7</p>
+                <h3>Mở phiên</h3>
+                <p>
+                  Bấm biểu tượng ✦ ở thanh bên trái hoặc tab
+                  <strong>Assistant</strong>
+                  ở bảng bên phải. Chọn phạm vi: toàn workspace, một truyện hoặc một dự án. Trợ lý
+                  chỉ đọc và đề xuất trong phạm vi đã chọn.
+                </p>
+                <ul class="flow-tips">
+                  <li>Các phiên cũ nằm ở mục Gần đây, bấm Xem tất cả để tìm theo nội dung.</li>
+                  <li>AI dùng cho Trợ lý được chọn trong Cài đặt → LLM providers → Chức năng.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-1"
+              aria-labelledby="tro-ly-tab-1"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/as-ask-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/as-ask-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/as-ask-dark.jpg"
+                      width="599"
+                      height="340"
+                      loading="lazy"
+                      alt="Trợ lý trả lời câu hỏi về quan hệ giữa hai nhân vật dựa trên tri thức của truyện."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/7</p>
+                <h3>Hỏi đáp</h3>
+                <p>
+                  Gõ câu hỏi như bình thường, ví dụ “Mối quan hệ giữa Wren và Maro Quill là gì?” rồi
+                  nhấn Enter. Trợ lý tra cứu chương, bản dịch, từ điển và tri thức để trả lời. Dòng
+                  <strong>“3 thao tác đã chạy”</strong>
+                  cho biết nó đã đọc những gì.
+                </p>
+                <ul class="flow-tips">
+                  <li>Shift+Enter để xuống dòng.</li>
+                  <li>Trợ lý nói rõ khi một ý chỉ là suy luận, chưa có bằng chứng trong truyện.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-2"
+              aria-labelledby="tro-ly-tab-2"
+            >
+              <figure class="flow-shot is-tall">
+                <a
+                  href="../assets/docs/as-review-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/as-review-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/as-review-dark.jpg"
+                      width="599"
+                      height="880"
+                      loading="lazy"
+                      alt="Thẻ rà soát chương 2 với các lỗi tên riêng, lệch từ điển, thiếu ý, văn phong và đề xuất thêm vào từ điển."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 3/7</p>
+                <h3>Rà soát bản dịch</h3>
+                <p>
+                  Nhờ “Rà soát bản dịch chương 2”. Trợ lý trả về một thẻ liệt kê vấn đề theo mức độ
+                  (lỗi, cảnh báo, gợi ý), mỗi mục có đoạn cũ, đoạn đề xuất và lý do, kèm các mục nên
+                  thêm vào từ điển. Bấm ✓ để áp dụng từng mục, ✕ để bỏ qua, hoặc
+                  <strong>Áp dụng tất cả.</strong>
+                </p>
+                <ul class="flow-tips">
+                  <li>Đề xuất không còn áp dụng được (vì đoạn đã bị sửa) sẽ được báo rõ.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-3"
+              aria-labelledby="tro-ly-tab-3"
+            >
+              <figure class="flow-shot is-tall">
+                <a
+                  href="../assets/docs/as-kbfix-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/as-kbfix-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/as-kbfix-dark.jpg"
+                      width="599"
+                      height="910"
+                      loading="lazy"
+                      alt="Thẻ đề xuất sửa xung đột tri thức với các thao tác gộp, đổi loại và sửa fact."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 4/7</p>
+                <h3>Sửa tri thức</h3>
+                <p>
+                  Nhờ “Đề xuất cách sửa các xung đột trong tri thức”. Trợ lý gom các thay đổi như
+                  gộp nhân vật trùng, đổi loại hay sửa fact vào một thẻ. Thẻ đã được kiểm tra với
+                  các quy tắc và cho biết sẽ giải quyết bao nhiêu xung đột. Bấm
+                  <strong>Áp dụng</strong>
+                  để ghi tất cả một lần.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-4"
+              aria-labelledby="tro-ly-tab-4"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/screens/assistant-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/screens/assistant-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/screens/assistant-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Trợ lý đề xuất viết lại kịch bản chương 1 ngay cạnh trình soạn."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 5/7</p>
+                <h3>Viết lại kịch bản</h3>
+                <p>
+                  Mở Trợ lý ngay trong màn Kịch bản và nhờ viết lại một chương. Thẻ đề xuất cho thấy
+                  khối nào được thêm, xóa hay giữ nguyên, nhân vật mới và số đoạn audio sẽ phải tạo
+                  lại. Bấm
+                  <strong>Áp dụng bản viết lại</strong>
+                  hoặc
+                  <strong>Bỏ qua.</strong>
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-5"
+              aria-labelledby="tro-ly-tab-5"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/as-pipeline-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/as-pipeline-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/as-pipeline-dark.jpg"
+                      width="599"
+                      height="440"
+                      loading="lazy"
+                      alt="Thẻ xác nhận chạy dịch chương 3–4 với nút Chạy 2 tác vụ."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 6/7</p>
+                <h3>Chạy pipeline</h3>
+                <p>
+                  Nhờ “Dịch tiếp chương 3 và 4 sang tiếng Việt”. Trợ lý chuẩn bị sẵn tác vụ, tự bỏ
+                  qua chương đã dịch, và chỉ bắt đầu khi bạn bấm
+                  <strong>Chạy.</strong>
+                </p>
+                <ul class="flow-tips">
+                  <li>Tiến độ xem ở bảng Pipelines phía dưới cửa sổ.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="tro-ly-step-6"
+              aria-labelledby="tro-ly-tab-6"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/as-permission-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/as-permission-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/as-permission-dark.jpg"
+                      width="520"
+                      height="234"
+                      loading="lazy"
+                      alt="Hộp thoại Cho phép Assistant chỉnh sửa với cảnh báo thay đổi được ghi thẳng vào workspace."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 7/7</p>
+                <h3>Quyền chỉnh sửa</h3>
+                <p>
+                  Mặc định trợ lý
+                  <strong>Chỉ đọc.</strong>
+                  Muốn trợ lý sửa trực tiếp thông tin truyện, nội dung chương hay tri thức theo
+                  lệnh, bấm nút
+                  <strong>Chỉ đọc</strong>
+                  dưới khung chat rồi chọn
+                  <strong>Cho phép chỉnh sửa.</strong>
+                </p>
+                <ul class="flow-tips">
+                  <li>Quyền này chỉ áp dụng cho phiên hiện tại và tắt lại được bất kỳ lúc nào.</li>
+                  <li>Thay đổi được ghi thẳng vào workspace và không tự hoàn tác.</li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="su-co" class="flow">
+          <header class="flow-head">
+            <h2>Khắc phục sự cố</h2>
+            <p>Các tình huống hay gặp và cách xử lý.</p>
+          </header>
+          <div class="faq-list">
+            <details class="faq">
+              <summary>Windows hiện “Windows protected your PC”</summary>
+              <p>
+                Bấm
+                <em>More info,</em>
+                rồi chọn
+                <em>Run anyway.</em>
+                Cảnh báo này xuất hiện vì app chưa có chữ ký số của nhà phát hành. Cài bằng
+                <a href="../index.html#install">lệnh PowerShell</a>
+                sẽ không gặp cảnh báo này.
+              </p>
+            </details>
+            <details class="faq">
+              <summary>Windows 11 vẫn chặn ứng dụng</summary>
+              <p>
+                Nếu máy bật Smart App Control, Windows có thể chặn ứng dụng chưa có chữ ký số dù bạn
+                cài bằng cách nào. Hiện chưa có cách khắc phục cho trường hợp này.
+              </p>
+            </details>
+            <details class="faq">
+              <summary>Không dịch hay phân tích được</summary>
+              <p>
+                Vào Cài đặt → LLM providers, kiểm tra CLI đã tải xong và đã đăng nhập (trạng thái
+                Sẵn sàng). Nếu vẫn lỗi, mở log của lần chạy trong Lịch sử pipeline.
+              </p>
+            </details>
+            <details class="faq">
+              <summary>Không tạo được audio</summary>
+              <p>
+                Xem các cảnh báo ở đầu màn Audiobook: nhân vật chưa có giọng hoặc model chưa tải.
+                Nếu máy chủ giọng nói báo lỗi, vào Cài đặt → Local backend và bấm Khởi động lại.
+              </p>
+            </details>
+            <details class="faq">
+              <summary>Không chọn được GPU</summary>
+              <p>Cần card NVIDIA và CUDA runtime đã tải xong trong Cài đặt → Local backend.</p>
+            </details>
+          </div>
+        </section>
+      </article>
+    </div>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="brand">
+          <img src="../assets/dreamy-studio-app-icon.svg" alt="" width="24" height="24" />
+          <span>Dreamy Studio</span>
+        </div>
+        <p class="disclaimer">
+          Người dùng chịu trách nhiệm bảo đảm mình có quyền sử dụng tài nguyên đưa vào ứng dụng và
+          quyết định nội dung được gửi đến dịch vụ bên ngoài.
+        </p>
+        <nav class="footer-links" aria-label="Liên kết cuối trang">
+          <a href="../index.html">Trang chủ</a>
+          <a href="https://github.com/datntdev0/projects.dreamy-studio" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

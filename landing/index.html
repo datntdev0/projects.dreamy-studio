@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Dreamy Studio — Studio sáng tạo từ tiểu thuyết</title>
+    <meta
+      name="description"
+      content="Dreamy Studio là desktop app giúp biến tiểu thuyết thành bản dịch, audiobook và nội dung sáng tạo ngay trên máy tính cá nhân."
+    />
+    <link rel="icon" type="image/svg+xml" href="assets/dreamy-studio-app-icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="copy.js" defer></script>
+  </head>
+  <body>
+    <svg width="0" height="0" class="sprite" aria-hidden="true">
+      <symbol id="icon-github" viewBox="0 0 16 16">
+        <path
+          fill="currentColor"
+          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+        />
+      </symbol>
+    </svg>
+
+    <header class="nav">
+      <div class="container nav-inner">
+        <a class="brand" href="#top" aria-label="Dreamy Studio">
+          <img src="assets/dreamy-studio-app-icon.svg" alt="" width="28" height="28" />
+          <span>Dreamy Studio</span>
+        </a>
+        <nav class="nav-links" aria-label="Điều hướng chính">
+          <a href="#tools">Công cụ</a>
+          <a href="#roadmap">Sắp ra mắt</a>
+          <a href="#install">Cài đặt</a>
+          <a href="docs/index.html">Tài liệu</a>
+          <a
+            class="nav-icon"
+            href="https://github.com/datntdev0/projects.dreamy-studio"
+            rel="noopener"
+            aria-label="Mã nguồn trên GitHub"
+          >
+            <svg class="icon" aria-hidden="true"><use href="#icon-github" /></svg>
+          </a>
+        </nav>
+        <a class="btn btn-sm btn-primary nav-cta" href="#install">Tải về</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="container hero-copy">
+          <a class="pill" href="#tools">
+            <span class="pill-dot"></span>
+            Phiên bản 0.1.0 · Audiobook, dịch thuật, trợ lý AI
+          </a>
+          <h1>
+            Biến tiểu thuyết thành
+            <span class="gradient-text">sản phẩm sáng tạo</span>
+            ngay trên máy của bạn
+          </h1>
+          <p class="lead">
+            Dreamy Studio gom các công đoạn dịch, phân tích tri thức, viết kịch bản và sản xuất
+            audiobook vào một studio desktop. Dữ liệu dự án nằm trên máy tính của bạn, chạy tốt cả
+            trên phần cứng khiêm tốn.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#install">Cài đặt cho Windows</a>
+            <a
+              class="btn btn-ghost"
+              href="https://github.com/datntdev0/projects.dreamy-studio"
+              rel="noopener"
+            >
+              <svg class="icon" aria-hidden="true"><use href="#icon-github" /></svg>
+              Xem mã nguồn
+            </a>
+          </div>
+          <p class="hero-meta mono">Windows 10/11 x64 · Miễn phí · Mã nguồn mở</p>
+        </div>
+
+        <div class="container hero-shot">
+          <figure class="shot-frame tilt">
+            <picture>
+              <source
+                srcset="assets/screens/audiobook-light.jpg"
+                media="(prefers-color-scheme: light)"
+              />
+              <img
+                src="assets/screens/audiobook-dark.jpg"
+                width="1920"
+                height="1080"
+                alt="Màn hình Audiobook của Dreamy Studio: danh sách chương, các đoạn đọc đã tạo theo từng người nói và bảng ghép âm thanh."
+              />
+            </picture>
+          </figure>
+          <span class="float-chip chip-a" aria-hidden="true">
+            <span class="chip-dot dot-green"></span>
+            12/12 đoạn đã tạo · 1:29
+          </span>
+          <span class="float-chip chip-b" aria-hidden="true">
+            <span class="chip-dot dot-violet"></span>
+            VieNeu Turbo · chạy cục bộ
+          </span>
+          <span class="float-chip chip-c mono" aria-hidden="true">WAV + SRT</span>
+        </div>
+      </section>
+
+      <section id="workflow" class="section">
+        <div class="container">
+          <p class="eyebrow">Quy trình</p>
+          <h2>Một luồng làm việc, từ trang sách đến file âm thanh</h2>
+          <p class="section-lead">
+            Mỗi công đoạn dùng lại kết quả của công đoạn trước: từ điển và tri thức giữ cho bản dịch
+            nhất quán, kịch bản và danh sách nhân vật quyết định giọng đọc.
+          </p>
+          <ol class="steps">
+            <li class="step">
+              <span class="step-num mono">01</span>
+              <h3>Nguồn</h3>
+              <p>Nhập, đọc và chỉnh sửa tiểu thuyết theo chương trong workspace cục bộ.</p>
+            </li>
+            <li class="step">
+              <span class="step-num mono">02</span>
+              <h3>Dịch thuật</h3>
+              <p>Dịch bằng LLM với từ điển, hướng dẫn và cảnh báo để rà soát.</p>
+            </li>
+            <li class="step">
+              <span class="step-num mono">03</span>
+              <h3>Tri thức</h3>
+              <p>Trích xuất nhân vật, sự kiện, bằng chứng và kiểm tra tính nhất quán.</p>
+            </li>
+            <li class="step">
+              <span class="step-num mono">04</span>
+              <h3>Kịch bản</h3>
+              <p>Soạn kịch bản từng chương, phân vai và gán giọng cho nhân vật.</p>
+            </li>
+            <li class="step">
+              <span class="step-num mono">05</span>
+              <h3>Audiobook</h3>
+              <p>Tổng hợp giọng nói cục bộ, nghe duyệt và xuất kèm phụ đề SRT.</p>
+            </li>
+          </ol>
+          <p class="roadmap mono">
+            Tiếp theo: storyboard, canvas, dựng video và phân phối —
+            <a href="#roadmap">xem phần Sắp ra mắt</a>
+          </p>
+        </div>
+      </section>
+
+      <section id="tools" class="section section-alt">
+        <div class="container">
+          <p class="eyebrow">Công cụ trong ứng dụng</p>
+          <h2>Mọi công đoạn trong một cửa sổ</h2>
+          <p class="section-lead">
+            Ảnh chụp từ giao diện thật của Dreamy Studio với dữ liệu mẫu, đổi theo giao diện sáng
+            hoặc tối của bạn.
+          </p>
+
+          <div class="showcase">
+            <input class="tool-radio" type="radio" name="tool" id="tool-home" checked />
+            <input class="tool-radio" type="radio" name="tool" id="tool-script" />
+            <input class="tool-radio" type="radio" name="tool" id="tool-voice" />
+            <input class="tool-radio" type="radio" name="tool" id="tool-translate" />
+            <input class="tool-radio" type="radio" name="tool" id="tool-knowledge" />
+            <input class="tool-radio" type="radio" name="tool" id="tool-assistant" />
+
+            <div class="tool-tabs">
+              <label class="tool-tab" for="tool-home">
+                <span class="tool-num mono">01</span>
+                <strong>Trang chủ</strong>
+                <small>Dự án đang làm, việc cần xử lý và hoạt động gần đây.</small>
+              </label>
+              <label class="tool-tab" for="tool-script">
+                <span class="tool-num mono">02</span>
+                <strong>Kịch bản</strong>
+                <small>Block lời kể, lời thoại, ngắt nghỉ; nhân vật lấy từ tri thức.</small>
+              </label>
+              <label class="tool-tab" for="tool-voice">
+                <span class="tool-num mono">03</span>
+                <strong>Giọng đọc</strong>
+                <small>Tạo giọng từ giọng có sẵn, âm thanh mẫu hoặc mô tả.</small>
+              </label>
+              <label class="tool-tab" for="tool-translate">
+                <span class="tool-num mono">04</span>
+                <strong>Dịch thuật</strong>
+                <small>Từ điển, hướng dẫn, dịch, kết quả và cảnh báo.</small>
+              </label>
+              <label class="tool-tab" for="tool-knowledge">
+                <span class="tool-num mono">05</span>
+                <strong>Tri thức</strong>
+                <small>Chọn một nhân vật để xem quan hệ, xung đột và bằng chứng.</small>
+              </label>
+              <label class="tool-tab" for="tool-assistant">
+                <span class="tool-num mono">06</span>
+                <strong>Trợ lý AI</strong>
+                <small>Viết lại kịch bản ngay cạnh trình soạn, bạn duyệt rồi mới áp dụng.</small>
+              </label>
+            </div>
+
+            <div class="tool-stage">
+              <figure class="tool-panel panel-home">
+                <figcaption><strong>Trang chủ</strong></figcaption>
+                <div class="shot-frame">
+                  <picture>
+                    <source
+                      srcset="assets/screens/home-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="assets/screens/home-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Trang chủ workspace với thống kê dự án, tiểu thuyết, thư viện và danh sách việc cần xử lý."
+                    />
+                  </picture>
+                </div>
+              </figure>
+              <figure class="tool-panel panel-script">
+                <figcaption><strong>Kịch bản</strong></figcaption>
+                <div class="shot-frame">
+                  <picture>
+                    <source
+                      srcset="assets/screens/scripting-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="assets/screens/scripting-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Module Kịch bản: danh sách chương, trình soạn block và danh sách nhân vật."
+                    />
+                  </picture>
+                </div>
+              </figure>
+              <figure class="tool-panel panel-voice">
+                <figcaption>
+                  <strong>Giọng đọc</strong>
+                  <small>Engine cloud trong ảnh thuộc mục Sắp ra mắt.</small>
+                </figcaption>
+                <div class="shot-frame">
+                  <picture>
+                    <source
+                      srcset="assets/screens/library-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="assets/screens/library-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Thư viện giọng đọc với engine, ngôn ngữ, giới tính và nút nghe thử."
+                    />
+                  </picture>
+                </div>
+              </figure>
+              <figure class="tool-panel panel-translate">
+                <figcaption><strong>Dịch thuật</strong></figcaption>
+                <div class="shot-frame">
+                  <picture>
+                    <source
+                      srcset="assets/screens/translation-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="assets/screens/translation-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Không gian dịch với năm bước và bảng từ điển thuật ngữ."
+                    />
+                  </picture>
+                </div>
+              </figure>
+              <figure class="tool-panel panel-knowledge">
+                <figcaption><strong>Tri thức</strong></figcaption>
+                <div class="shot-frame">
+                  <picture>
+                    <source
+                      srcset="assets/screens/knowledge-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="assets/screens/knowledge-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Đồ thị tri thức làm nổi nhân vật Wren Aldous, bảng Inspector hiện quan hệ, xung đột và bằng chứng, panel Omniscient ở dưới."
+                    />
+                  </picture>
+                </div>
+              </figure>
+              <figure class="tool-panel panel-assistant">
+                <figcaption><strong>Trợ lý AI</strong></figcaption>
+                <div class="shot-frame">
+                  <picture>
+                    <source
+                      srcset="assets/screens/assistant-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="assets/screens/assistant-dark.jpg"
+                      width="1920"
+                      height="1080"
+                      loading="lazy"
+                      alt="Màn Kịch bản với Trợ lý ở bên phải đề xuất viết lại chương 1 và nút Áp dụng bản viết lại."
+                    />
+                  </picture>
+                </div>
+              </figure>
+            </div>
+          </div>
+
+          <div class="mini-grid">
+            <article class="mini">
+              <h3>Pipelines</h3>
+              <p>
+                Dịch, phân tích và tạo audio chạy nền, có hàng đợi, giới hạn đồng thời, nút hủy và
+                log cho mỗi lần chạy.
+              </p>
+            </article>
+            <article class="mini">
+              <h3>Thư viện tài nguyên</h3>
+              <p>Ảnh, âm thanh, video và prompt với bộ sưu tập, tag và xem trước ngay trong app.</p>
+            </article>
+            <article class="mini">
+              <h3>Backend &amp; GPU</h3>
+              <p>
+                Backend TTS cục bộ, tự nhận GPU NVIDIA, tải CUDA runtime và model ngay trong phần
+                Cài đặt.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap" class="section">
+        <div class="container">
+          <p class="eyebrow">Sắp ra mắt</p>
+          <h2>Từ audiobook đến phim nhiều tập</h2>
+          <p class="section-lead">
+            Các module dưới đây đã có trong định hướng sản phẩm và một số đã có chỗ trong giao diện
+            app, nhưng chưa dùng được ở bản 0.1.0. Hiện chưa có mốc thời gian; thứ tự và phạm vi có
+            thể thay đổi.
+          </p>
+
+          <div class="roadmap-grid">
+            <article class="stage">
+              <header class="stage-head">
+                <span class="stage-num mono">01</span>
+                <h3>Tiền kỳ</h3>
+              </header>
+              <ul class="soon-list">
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Kịch bản phim</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>
+                    Template Filmseries: viết kịch bản phim nhiều tập bên cạnh kịch bản audiobook.
+                  </p>
+                </li>
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Nhân vật</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>Ảnh tham chiếu cho từng nhân vật để giữ hình ảnh nhất quán.</p>
+                </li>
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Thế giới</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>Dựng thế giới ba chiều bằng các mô hình đất sét làm bối cảnh.</p>
+                </li>
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Storyboard</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>Chia cảnh và vẽ các khung hình trước khi sản xuất.</p>
+                </li>
+              </ul>
+            </article>
+
+            <article class="stage">
+              <header class="stage-head">
+                <span class="stage-num mono">02</span>
+                <h3>Sản xuất</h3>
+              </header>
+              <ul class="soon-list">
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Canvas</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>Quy trình dạng canvas để tạo hình minh họa và tài nguyên chất lượng cao.</p>
+                </li>
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Cloud providers</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>
+                    Dùng dịch vụ giọng đọc và hình ảnh trên cloud bằng API key của bạn. Key chỉ lưu
+                    trên máy, chi phí tính theo tài khoản của bạn.
+                  </p>
+                </li>
+              </ul>
+            </article>
+
+            <article class="stage">
+              <header class="stage-head">
+                <span class="stage-num mono">03</span>
+                <h3>Hậu kỳ</h3>
+              </header>
+              <ul class="soon-list">
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Trình dựng video</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>Ghép tài nguyên đã tạo trong dự án và xuất thành video hoàn chỉnh.</p>
+                </li>
+              </ul>
+            </article>
+
+            <article class="stage">
+              <header class="stage-head">
+                <span class="stage-num mono">04</span>
+                <h3>Phân phối</h3>
+              </header>
+              <ul class="soon-list">
+                <li class="soon">
+                  <div class="soon-title">
+                    <h4>Đưa sản phẩm tới kênh</h4>
+                    <span class="badge-soon mono">Sắp ra mắt</span>
+                  </div>
+                  <p>
+                    Chuẩn bị và đưa sản phẩm hoàn chỉnh lên các nền tảng phân phối. Hiện mới ở mức
+                    định hướng, chưa có thiết kế chi tiết.
+                  </p>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-alt">
+        <div class="container split">
+          <div>
+            <p class="eyebrow">Chạy trên máy của bạn</p>
+            <h2>Bạn giữ dữ liệu, bạn kiểm soát chi phí</h2>
+          </div>
+          <ul class="facts">
+            <li>
+              <strong>Dữ liệu cục bộ.</strong>
+              Workspace, tiểu thuyết và dự án chỉ được lưu trên máy tính của bạn.
+            </li>
+            <li>
+              <strong>Phần cứng vừa phải.</strong>
+              TTS chạy được trên CPU; GPU NVIDIA giúp tăng tốc đáng kể.
+            </li>
+            <li>
+              <strong>Dùng tài khoản AI của bạn.</strong>
+              Tải Claude Code, Codex hoặc Antigravity CLI ngay trong app, đăng nhập một lần và chọn
+              model cho từng tính năng.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="install" class="section">
+        <div class="container">
+          <p class="eyebrow">Cài đặt</p>
+          <h2>Cài đặt trong 3 bước</h2>
+          <p class="section-lead">
+            Không cần quyền quản trị. Muốn cập nhật lên bản mới, chỉ cần làm lại bước 2.
+          </p>
+
+          <ol class="install-steps">
+            <li class="install-step">
+              <span class="step-num mono">01</span>
+              <h3>Mở PowerShell</h3>
+              <p>Nhấn phím Windows, gõ “PowerShell” rồi nhấn Enter.</p>
+            </li>
+            <li class="install-step">
+              <span class="step-num mono">02</span>
+              <h3>Dán lệnh cài đặt</h3>
+              <p>Bấm Sao chép ở khung bên dưới, dán vào cửa sổ PowerShell và nhấn Enter.</p>
+            </li>
+            <li class="install-step">
+              <span class="step-num mono">03</span>
+              <h3>Mở Dreamy Studio</h3>
+              <p>Khi cài xong, tìm Dreamy Studio trong Start menu.</p>
+            </li>
+          </ol>
+
+          <div class="command" role="group" aria-label="Lệnh cài đặt">
+            <span class="prompt mono" aria-hidden="true">PS&gt;</span>
+            <code id="install-command">irm https://example.com/install.ps1 | iex</code>
+            <button class="btn btn-sm btn-copy" type="button" data-copy-target="install-command">
+              Sao chép
+            </button>
+          </div>
+
+          <div class="install-grid">
+            <article class="panel panel-note">
+              <h3>Vì sao nên cài bằng lệnh?</h3>
+              <p>
+                Dreamy Studio chưa có chữ ký số của nhà phát hành. Nếu tải file bằng trình duyệt,
+                Windows sẽ hiện cảnh báo “Windows protected your PC” và không cho mở ngay.
+              </p>
+              <p>
+                Cài bằng lệnh sẽ không gặp cảnh báo này. Các tính năng bảo vệ của Windows vẫn hoạt
+                động bình thường.
+              </p>
+              <p class="note-small">
+                Trên Windows 11, nếu bạn bật Smart App Control, Windows vẫn có thể chặn ứng dụng.
+              </p>
+            </article>
+
+            <article class="panel">
+              <h3>Thích tải file cài đặt hơn?</h3>
+              <ul class="downloads">
+                <li>
+                  <a href="https://example.com/downloads/DreamyStudio_0.1.0_x64-setup.exe">
+                    Bộ cài Windows (.exe)
+                  </a>
+                  <span class="mono">72 MB</span>
+                </li>
+                <li>
+                  <a href="https://example.com/downloads/DreamyStudio_0.1.0_x64_en-US.msi">
+                    Bộ cài MSI
+                  </a>
+                  <span class="mono">99 MB</span>
+                </li>
+                <li>
+                  <a href="https://example.com/downloads/DreamyStudio-0.1.0-win-x64-portable.zip">
+                    Bản portable (.zip), không cần cài
+                  </a>
+                  <span class="mono">99 MB</span>
+                </li>
+              </ul>
+              <p class="note-small">
+                Nếu Windows hiện cảnh báo, bấm “More info” rồi chọn “Run anyway”.
+              </p>
+            </article>
+          </div>
+
+          <details class="tech">
+            <summary>Chi tiết kỹ thuật</summary>
+            <ul>
+              <li>
+                Script tải gói portable bằng
+                <code class="inline">curl.exe</code>
+                rồi kiểm tra mã SHA-256, giải nén bằng
+                <code class="inline">tar.exe</code>
+                vào
+                <code class="inline">%LOCALAPPDATA%\Programs\DreamyStudio</code>
+                và tạo shortcut. Dữ liệu được giữ nguyên khi cập nhật.
+              </li>
+              <li>
+                File tải bằng curl.exe không bị gắn Mark-of-the-Web, nên SmartScreen không chặn.
+                Smart App Control kiểm tra mọi file thực thi nên vẫn có thể chặn.
+              </li>
+              <li>
+                Từ Command Prompt dùng
+                <code class="inline">
+                  powershell -c "irm https://example.com/install.ps1 | iex"
+                </code>
+                — nên
+                <a href="https://example.com/install.ps1">đọc script</a>
+                trước khi chạy.
+              </li>
+            </ul>
+          </details>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container split">
+          <div>
+            <p class="eyebrow">Lưu ý</p>
+            <h2>Bản phát hành sớm</h2>
+          </div>
+          <ul class="facts">
+            <li>Hiện chỉ hỗ trợ Windows x64.</li>
+            <li>Tăng tốc GPU cho TTS cần card NVIDIA.</li>
+            <li>Định dạng dữ liệu có thể thay đổi giữa các phiên bản.</li>
+            <li>Một số tính năng như dịch, tri thức và trợ lý cần internet và LLM CLI.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="brand">
+          <img src="assets/dreamy-studio-app-icon.svg" alt="" width="24" height="24" />
+          <span>Dreamy Studio</span>
+        </div>
+        <p class="disclaimer">
+          Người dùng chịu trách nhiệm bảo đảm mình có quyền sử dụng tài nguyên đưa vào ứng dụng và
+          quyết định nội dung được gửi đến dịch vụ bên ngoài.
+        </p>
+        <nav class="footer-links" aria-label="Liên kết cuối trang">
+          <a href="docs/index.html">Tài liệu</a>
+          <a href="https://github.com/datntdev0/projects.dreamy-studio" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

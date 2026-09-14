@@ -1,8 +1,6 @@
 // prettier-ignore
 import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { Icon } from '@components/icon';
-import { novelScope } from '@features/assistant/assistant.rules';
-import { AssistantService } from '@features/assistant/assistant.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
@@ -40,7 +38,6 @@ export class NovelTranslationResult {
   private readonly translation = inject(NovelTranslationService);
   private token = 0;
 
-  readonly assistant = inject(AssistantService);
   readonly novelId = input.required<number>();
   readonly source = signal<ParagraphRow[]>([]);
   readonly editing = signal<number | null>(null);
@@ -113,23 +110,6 @@ export class NovelTranslationResult {
 
   onOnly(event: Event): void {
     this.onlyReview.set(fieldChecked(event));
-  }
-
-  askReview(): void {
-    const chapter = this.chapter();
-    if (!chapter || !this.translated()) {
-      return;
-    }
-    const target = this.translation.targetOf(this.novelId());
-    const text = this.languageService.translate('assistant.ask.translation', {
-      n: chapter.seq,
-      title: chapter.title,
-    });
-    void this.assistant.ask(novelScope(this.novelId()), text, {
-      kind: 'translation_review',
-      chapterId: chapter.id,
-      target,
-    });
   }
 
   translateThis(): void {

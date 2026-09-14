@@ -46,16 +46,6 @@
       </span>
     }
     <span class="spacer"></span>
-    <button
-      type="button"
-      class="btn btn-sm"
-      [disabled]="!ctx().kb.novel || assistant.sending()"
-      data-testid="sc-rewrite-btn"
-      (click)="rewrite()"
-    >
-      <ds-icon name="spark" [size]="16" />
-      {{ 'scripting.editor.sub.assistant' | t }}
-    </button>
     @if (unit.blocks) {
       @if (ctx().hasDefault) {
         <button type="button" class="btn btn-sm" data-testid="sc-reset-btn" (click)="reset()">

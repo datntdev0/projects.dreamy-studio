@@ -20,7 +20,7 @@ import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
 // prettier-ignore
-import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution, ScriptDraft } from './assistant.models';
+import { AssistantChange, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution, ScriptDraft } from './assistant.models';
 import { overwritesAudio, runItemIds } from './assistant.proposals';
 // prettier-ignore
 import { compareRecentFirst, isProjectChange, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
@@ -209,20 +209,6 @@ export class AssistantService {
     }
   }
 
-  async ask(scope: AssistantScope, text: string, context: AssistantContext): Promise<boolean> {
-    if (this.sending()) {
-      return false;
-    }
-    if (!this.layout.assistantActive()) {
-      this.layout.toggleAssistant();
-    }
-    await this.ensureLoaded();
-    this.active.set(null);
-    this.draft.set('');
-    this.draftScope.set(scope);
-    return this.send(text, context);
-  }
-
   async resolve(resolution: ProposalResolution): Promise<void> {
     const session = this.active();
     if (!session || this.resolving() !== null) {
@@ -314,7 +300,7 @@ export class AssistantService {
     }
   }
 
-  async send(text: string, context: AssistantContext | null = null): Promise<boolean> {
+  async send(text: string): Promise<boolean> {
     const body = text.trim();
     if (body === '' || this.sending()) {
       return false;
@@ -330,7 +316,6 @@ export class AssistantService {
       const next = await this.ipc.invoke<AssistantSession>('assistant_message_send', {
         sessionId: session.id,
         text: body,
-        context,
         onEvent: this.ipc.channel<AssistantEvent>(this.onEvent.bind(this)),
       });
       if (epoch === this.epoch && this.active()?.id === next.id) {

@@ -7,7 +7,6 @@ use crate::features::assistant::grants::TurnSink;
 use crate::features::assistant::grants::next_card_number;
 use crate::features::assistant::models::AssistantChange;
 use crate::features::assistant::models::AssistantCitation;
-use crate::features::assistant::models::AssistantContext;
 use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
@@ -26,18 +25,10 @@ use crate::features::assistant::reply;
 use crate::features::assistant::repository::AssistantRepository;
 use crate::features::assistant::runs;
 use crate::features::assistant::runs::RUN_KIND;
-use crate::features::assistant::skills;
 use crate::features::assistant::sources::NovelSource;
 use crate::features::assistant::sources::ProjectSource;
 use crate::features::assistant::sources::Sources;
 use crate::features::assistant::sources::linked_novel;
-use crate::features::assistant::tools::unit_target;
-use crate::features::knowledge::check::KnowledgeIssue;
-use crate::features::knowledge::check::check;
-use crate::features::knowledge::ontology::Ontology;
-use crate::features::knowledge::service::parse_lang;
-use crate::features::novel::models::ChapterRow;
-use crate::features::novel::models::NovelSummary;
 use crate::features::pipeline::llm::ClientError;
 use crate::features::pipeline::llm::Extras;
 use crate::features::pipeline::llm::LlmClient;
@@ -45,11 +36,9 @@ use crate::features::pipeline::llm::Turn;
 use crate::features::pipeline::log::RunLog;
 use crate::features::pipeline::log::TaskLog;
 use crate::features::pipeline::usage::QuotaSnapshot;
-use crate::features::project::models::ProjectSummary;
 use crate::features::settings::home;
 use crate::features::settings::llm::spec;
 use crate::features::settings::repository::SettingsRepository;
-use crate::features::translation::models::TranslationTarget;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::storage::database::Database;
@@ -296,7 +285,6 @@ impl AssistantWorkspace {
         &self,
         session_id: &str,
         text: &str,
-        context: Option<AssistantContext>,
         sink: Arc<dyn AssistantEventSink>,
         sources: &Sources,
     ) -> AssistantResult<AssistantSession> {
@@ -306,14 +294,10 @@ impl AssistantWorkspace {
         }
         let _guard = self.claim(session_id)?;
         let record = self.load(session_id)?;
-        let skill = match context {
-            Some(context) => Some(skill_of(context, &record.summary.scope, sources)?),
-            None => None,
-        };
         let history = self.history(session_id)?;
         let user = new_message(Role::User, text, Vec::new(), Vec::new());
         self.append(session_id, &user)?;
-        let exchange = self.exchange(&record, &history, text, skill.as_ref(), sink, sources);
+        let exchange = self.exchange(&record, &history, text, sink, sources);
         match exchange {
             Ok(done) => self.finish(record, user, done),
             Err(error) => {
@@ -363,7 +347,6 @@ impl AssistantWorkspace {
         record: &SessionRecord,
         history: &[AssistantMessage],
         text: &str,
-        skill: Option<&Skill>,
         sink: Arc<dyn AssistantEventSink>,
         sources: &Sources,
     ) -> AssistantResult<Exchange> {
@@ -385,7 +368,7 @@ impl AssistantWorkspace {
             _ => None,
         };
         let turn = match resumable {
-            Some(session) => llm.resume(session, resume_prompt(text, skill), &token),
+            Some(session) => llm.resume(session, prompt::follow_up(text), &token),
             None => {
                 let start = history.len().saturating_sub(HISTORY_LIMIT);
                 let novels = sources.novels.list().unwrap_or_default();
@@ -393,7 +376,7 @@ impl AssistantWorkspace {
                 let linked = linked_novel(scope, sources.projects.as_ref())
                     .map_err(AssistantError::not_found)?;
                 let opening = prompt::opening(scope, &history[start..], text, &novels, linked);
-                llm.start(start_prompt(opening, skill), &token)
+                llm.start(opening, &token)
             }
         };
         self.service.grants.revoke(&token);
@@ -495,26 +478,6 @@ struct Exchange {
     attachments: Vec<Value>,
 }
 
-enum Skill {
-    Script {
-        project: ProjectSummary,
-        unit_id: String,
-        unit_title: String,
-        chapter: Option<i64>,
-        note: Option<String>,
-    },
-    Translation {
-        novel: NovelSummary,
-        chapter: ChapterRow,
-        target: String,
-    },
-    Knowledge {
-        novel: NovelSummary,
-        lang: String,
-        issues: Vec<KnowledgeIssue>,
-    },
-}
-
 struct BusyGuard {
     busy: Arc<Mutex<HashSet<String>>>,
     id: String,
@@ -610,197 +573,6 @@ fn resolve_attachments(
             runs::resolve(attachments, item_ids, status, pipeline_id)?;
             drafts::resolve(attachments, item_ids, status, sources)
         }
-    }
-}
-
-fn skill_of(
-    context: AssistantContext,
-    scope: &AssistantScope,
-    sources: &Sources,
-) -> AssistantResult<Skill> {
-    match context {
-        AssistantContext::TranslationReview { chapter_id, target } => {
-            translation_skill(&chapter_id, &target, scope, sources)
-        }
-        AssistantContext::KnowledgeReview { lang, issue_ids } => {
-            knowledge_skill(&lang, &issue_ids, scope, sources)
-        }
-        AssistantContext::ScriptRewrite { unit_id, note } => {
-            script_skill(&unit_id, note, scope, sources)
-        }
-    }
-}
-
-fn novel_of(scope: &AssistantScope, what: &str) -> AssistantResult<i64> {
-    match (scope.kind, scope.novel_id) {
-        (ScopeKind::Novel, Some(id)) => Ok(id),
-        _ => Err(AssistantError::invalid(format!(
-            "{what} needs a novel scope"
-        ))),
-    }
-}
-
-fn summary_of(sources: &Sources, novel_id: i64) -> AssistantResult<NovelSummary> {
-    sources
-        .novels
-        .list()
-        .map_err(AssistantError::storage)?
-        .into_iter()
-        .find(|row| row.id == novel_id)
-        .ok_or_else(|| AssistantError::invalid(format!("novel {novel_id} not found")))
-}
-
-fn translation_skill(
-    chapter_id: &str,
-    target: &str,
-    scope: &AssistantScope,
-    sources: &Sources,
-) -> AssistantResult<Skill> {
-    let novel_id = novel_of(scope, "a translation review")?;
-    let target = TranslationTarget::parse(target)
-        .ok_or_else(|| AssistantError::invalid(format!("unsupported target '{target}'")))?;
-    let chapter = sources
-        .novels
-        .chapters(novel_id)
-        .map_err(AssistantError::storage)?
-        .into_iter()
-        .find(|row| row.id == chapter_id)
-        .ok_or_else(|| {
-            AssistantError::invalid(format!("chapter {chapter_id} is not in novel {novel_id}"))
-        })?;
-    let book = sources
-        .translation
-        .get(novel_id, target.as_str())
-        .map_err(AssistantError::storage)?;
-    if !book.chapters.contains_key(&chapter.id) {
-        return Err(AssistantError::invalid(format!(
-            "chapter {} has no {} translation yet",
-            chapter.seq,
-            target.as_str()
-        )));
-    }
-    Ok(Skill::Translation {
-        novel: summary_of(sources, novel_id)?,
-        chapter,
-        target: target.as_str().to_string(),
-    })
-}
-
-fn knowledge_skill(
-    lang: &str,
-    issue_ids: &[String],
-    scope: &AssistantScope,
-    sources: &Sources,
-) -> AssistantResult<Skill> {
-    let novel_id = novel_of(scope, "a knowledge review")?;
-    let lang = parse_lang(lang).map_err(|error| AssistantError::invalid(error.to_string()))?;
-    let knowledge = sources
-        .knowledge
-        .get(novel_id, lang.as_str())
-        .map_err(AssistantError::storage)?;
-    let issues: Vec<KnowledgeIssue> = check(Ontology::get(), &knowledge.items)
-        .into_iter()
-        .filter(|issue| issue_ids.contains(&issue.id))
-        .collect();
-    if issues.is_empty() {
-        return Err(AssistantError::invalid(
-            "none of the selected issues exist in the knowledge base",
-        ));
-    }
-    Ok(Skill::Knowledge {
-        novel: summary_of(sources, novel_id)?,
-        lang: lang.as_str().to_string(),
-        issues,
-    })
-}
-
-fn script_skill(
-    unit_id: &str,
-    note: Option<String>,
-    scope: &AssistantScope,
-    sources: &Sources,
-) -> AssistantResult<Skill> {
-    let project_id = match (scope.kind, scope.project_id) {
-        (ScopeKind::Project, Some(id)) => id,
-        _ => {
-            return Err(AssistantError::invalid(
-                "a script rewrite needs a project scope",
-            ));
-        }
-    };
-    let project = sources
-        .projects
-        .get(project_id)
-        .map_err(AssistantError::storage)?
-        .ok_or_else(|| AssistantError::invalid(format!("project {project_id} not found")))?;
-    let script = sources
-        .scripts
-        .script(project_id)
-        .map_err(AssistantError::storage)?
-        .ok_or_else(|| {
-            AssistantError::invalid(
-                "the project has no script yet; open its scripting module once to create it",
-            )
-        })?;
-    let chapters = sources
-        .scripts
-        .chapters(project_id)
-        .map_err(AssistantError::storage)?;
-    let target =
-        unit_target(&script, &chapters, project_id, unit_id).map_err(AssistantError::invalid)?;
-    Ok(Skill::Script {
-        project,
-        unit_id: unit_id.to_string(),
-        unit_title: target.title,
-        chapter: target.chapter,
-        note: note
-            .map(|text| text.trim().to_string())
-            .filter(|text| !text.is_empty()),
-    })
-}
-
-fn start_prompt(opening: String, skill: Option<&Skill>) -> String {
-    match skill {
-        Some(skill) => skill_prompt(skill, Some(opening)),
-        None => opening,
-    }
-}
-
-fn resume_prompt(text: &str, skill: Option<&Skill>) -> String {
-    match skill {
-        Some(skill) => skill_prompt(skill, None),
-        None => prompt::follow_up(text),
-    }
-}
-
-fn skill_prompt(skill: &Skill, opening: Option<String>) -> String {
-    match skill {
-        Skill::Script {
-            project,
-            unit_id,
-            unit_title,
-            chapter,
-            note,
-        } => skills::rewrite_script_unit(
-            &skills::ScriptRewrite {
-                project,
-                unit_id,
-                unit_title,
-                chapter: *chapter,
-                note: note.as_deref(),
-            },
-            opening,
-        ),
-        Skill::Translation {
-            novel,
-            chapter,
-            target,
-        } => skills::review_translation(novel, chapter, target, opening),
-        Skill::Knowledge {
-            novel,
-            lang,
-            issues,
-        } => skills::review_knowledgebase(novel, lang, issues, opening),
     }
 }
 

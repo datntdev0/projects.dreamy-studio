@@ -12,6 +12,5 @@ pub mod repository;
 pub mod runs;
 pub mod server;
 pub mod service;
-pub mod skills;
 pub mod sources;
 pub mod tools;

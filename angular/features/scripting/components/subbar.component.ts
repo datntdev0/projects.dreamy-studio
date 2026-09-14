@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Icon } from '@components/icon';
-import { projectScope } from '@features/assistant/assistant.rules';
-import { AssistantService } from '@features/assistant/assistant.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageService } from '@shared/language/language.service';
 
@@ -23,7 +21,6 @@ export class ScriptingSubbar {
   private readonly scripting = inject(ScriptingService);
   private readonly dialogs = inject(ScriptingDialogsService);
   private readonly menus = inject(ScriptingMenuService);
-  protected readonly assistant = inject(AssistantService);
   private readonly languageService = inject(LanguageService);
 
   readonly ctx = input.required<ScriptContext>();
@@ -43,21 +40,6 @@ export class ScriptingSubbar {
 
   reset(): void {
     this.dialogs.openReset(this.ctx().projectId);
-  }
-
-  rewrite(): void {
-    const ctx = this.ctx();
-    const unit = ctx.unit;
-    if (!unit || !ctx.kb.novel) {
-      return;
-    }
-    const text = this.languageService.translate('assistant.ask.script', {
-      unit: this.labels.unitTitle(ctx.config, unit.no, unit.title),
-    });
-    void this.assistant.ask(projectScope(ctx.projectId), text, {
-      kind: 'script_rewrite',
-      unitId: unit.id,
-    });
   }
 
   openAddMenu(event: Event): void {

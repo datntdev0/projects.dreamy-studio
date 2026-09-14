@@ -1,5 +1,5 @@
 // prettier-ignore
-import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from '@features/assistant/assistant.models';
+import { AssistantAttachment, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from '@features/assistant/assistant.models';
 import { novelScope, projectScope, WORKSPACE_SCOPE } from '@features/assistant/assistant.rules';
 import { NovelSummary } from '@features/novel/novel.models';
 import type { Decorator } from '@storybook/angular-vite';
@@ -342,13 +342,7 @@ function titleOf(text: string): string {
   return line.length > 48 ? `${line.slice(0, 47)}…` : line;
 }
 
-function replyFor(text: string, scope: AssistantScope, context: AssistantContext | null): Turn {
-  if (context?.kind === 'translation_review') {
-    return reviewTurn(Number(context.chapterId.replace('ch-', '')) || 1);
-  }
-  if (context?.kind === 'knowledge_review') {
-    return knowledgeTurn(context.issueIds.length);
-  }
+function replyFor(text: string, scope: AssistantScope): Turn {
   const lower = text.toLowerCase();
   if (lower.includes('quan hệ')) {
     return RELATION_TURNS[1];
@@ -412,11 +406,7 @@ async function send(state: MockState, args: Record<string, unknown>): Promise<As
   }
   const target = find(state, String(args['sessionId']));
   const text = String(args['text']);
-  const reply = replyFor(
-    text,
-    target.scope,
-    (args['context'] as AssistantContext | null | undefined) ?? null,
-  );
+  const reply = replyFor(text, target.scope);
   await playActivities(args, reply.activities ?? [], total);
   const now = new Date().toISOString();
   target.messages.push(message(`m-${state.nextMessage++}`, { role: 'user', text }, now));

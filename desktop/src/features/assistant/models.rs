@@ -137,24 +137,6 @@ pub struct SessionRecord {
     pub cli_session: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum AssistantContext {
-    #[serde(rename_all = "camelCase")]
-    TranslationReview { chapter_id: String, target: String },
-    #[serde(rename_all = "camelCase")]
-    KnowledgeReview {
-        lang: String,
-        issue_ids: Vec<String>,
-    },
-    #[serde(rename_all = "camelCase")]
-    ScriptRewrite {
-        unit_id: String,
-        #[serde(default)]
-        note: Option<String>,
-    },
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Decision {
     Applied,

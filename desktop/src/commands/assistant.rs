@@ -1,6 +1,5 @@
 use crate::commands::blocking::run_blocking_with;
 use crate::features::assistant::grants::Grant;
-use crate::features::assistant::models::AssistantContext;
 use crate::features::assistant::models::AssistantError;
 use crate::features::assistant::models::AssistantEvent;
 use crate::features::assistant::models::AssistantEventSink;
@@ -25,7 +24,6 @@ use crate::features::project::models::ProjectError;
 use crate::features::project::service::ProjectService;
 use crate::features::translation::service::TranslationService;
 use crate::features::workspace::session::WorkspaceSession;
-use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::AppHandle;
@@ -164,7 +162,6 @@ pub fn delete_session(
 pub struct SendInput<'a> {
     pub session_id: &'a str,
     pub text: &'a str,
-    pub context: Option<Value>,
 }
 
 pub struct SourceServices<'a> {
@@ -184,9 +181,8 @@ pub fn send_message(
     sink: Arc<dyn AssistantEventSink>,
 ) -> AssistantResult<AssistantSession> {
     let workspace = service.open(session)?;
-    let context = parse_context(input.context)?;
     let sources = build_sources(services, session).map_err(AssistantError::storage)?;
-    workspace.send(input.session_id, input.text, context, sink, &sources)
+    workspace.send(input.session_id, input.text, sink, &sources)
 }
 
 pub struct ResolveInput<'a> {
@@ -215,15 +211,6 @@ pub fn resolve_proposal(
         input.pipeline_id,
         &sources,
     )
-}
-
-fn parse_context(context: Option<Value>) -> AssistantResult<Option<AssistantContext>> {
-    match context {
-        None | Some(Value::Null) => Ok(None),
-        Some(value) => serde_json::from_value(value)
-            .map(Some)
-            .map_err(|error| AssistantError::invalid(format!("bad context: {error}"))),
-    }
 }
 
 fn novel_failure(error: NovelError) -> AssistantError {
@@ -290,7 +277,6 @@ pub async fn assistant_message_send<R: Runtime>(
     app: AppHandle<R>,
     session_id: String,
     text: String,
-    context: Option<Value>,
     on_event: Channel<AssistantEvent>,
 ) -> AssistantResult<AssistantSession> {
     let sink: Arc<dyn AssistantEventSink> = Arc::new(ChannelSink(on_event));
@@ -312,7 +298,6 @@ pub async fn assistant_message_send<R: Runtime>(
         let input = SendInput {
             session_id: &session_id,
             text: &text,
-            context,
         };
         send_message(service, &services, session, input, sink)
     })

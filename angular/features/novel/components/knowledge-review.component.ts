@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Icon } from '@components/icon';
-import { novelScope } from '@features/assistant/assistant.rules';
-import { AssistantService } from '@features/assistant/assistant.service';
 import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
@@ -49,7 +47,6 @@ export class NovelKnowledgeReview {
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
 
-  readonly assistant = inject(AssistantService);
   readonly novelId = input.required<number>();
 
   readonly view = computed(this.buildView.bind(this));
@@ -57,20 +54,6 @@ export class NovelKnowledgeReview {
   readonly issues = computed(this.buildIssues.bind(this));
   readonly counts = computed(this.buildCounts.bind(this));
   readonly cards = computed(this.buildCards.bind(this));
-
-  askAssistant(): void {
-    const cards = this.cards();
-    if (cards.length === 0) {
-      return;
-    }
-    const text = this.languageService.translate('assistant.ask.knowledge', { count: cards.length });
-    const issueIds = cards.map(this.issueIdOf.bind(this));
-    void this.assistant.ask(novelScope(this.novelId()), text, {
-      kind: 'knowledge_review',
-      lang: this.view().lang,
-      issueIds,
-    });
-  }
 
   onRule(event: Event): void {
     this.knowledge.patchView(this.novelId(), {
@@ -205,10 +188,6 @@ export class NovelKnowledgeReview {
     const option = this.optionOf(map, id);
     const item = map.get(id);
     return { id, label: option.label, type: item && isEntity(item) ? item.type : '' };
-  }
-
-  private issueIdOf(card: IssueCard): string {
-    return card.issue.id;
   }
 
   private buildView(): KnowledgeView {

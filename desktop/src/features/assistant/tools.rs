@@ -33,7 +33,6 @@ pub(crate) use args::required_int;
 pub(crate) use args::required_str;
 pub(crate) use scope::chapter_by_seq;
 pub(crate) use scope::find_novel;
-pub(crate) use script::unit_target;
 pub(crate) use translation::dict_json;
 pub(crate) use translation::required_target;
 

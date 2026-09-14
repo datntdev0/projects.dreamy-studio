@@ -38,17 +38,6 @@
     />
     <span>{{ 'novel.translation.result.only' | t }}</span>
   </label>
-  <span class="spacer"></span>
-  <button
-    type="button"
-    class="btn btn-sm"
-    data-testid="novel-translation-result-review"
-    [disabled]="!translated() || assistant.sending()"
-    (click)="askReview()"
-  >
-    <ds-icon name="spark" [size]="16" />
-    {{ 'novel.translation.result.review' | t }}
-  </button>
 </div>
 @if (chapter(); as chapter) {
   @if (translated(); as translated) {

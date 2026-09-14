@@ -254,11 +254,6 @@ export interface ScriptDraftDiff {
 export type AssistantAttachment =
   TranslationReview | KnowledgeChangeSet | PipelineRun | ScriptDraft;
 
-export type AssistantContext =
-  | { kind: 'translation_review'; chapterId: string; target: string }
-  | { kind: 'knowledge_review'; lang: string; issueIds: string[] }
-  | { kind: 'script_rewrite'; unitId: string; note?: string };
-
 export interface ProposalResolution {
   messageId: string;
   itemIds: string[];

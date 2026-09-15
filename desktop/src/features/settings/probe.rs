@@ -4,8 +4,8 @@ use crate::infra::startup::manifest::installed_executable;
 use crate::shared::config;
 use crate::shared::process::failure_snippet;
 use crate::shared::process::hide_window;
+use crate::shared::process::output_with_timeout;
 use serde::Serialize;
-use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Child;
@@ -17,7 +17,6 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(15);
-const POLL_INTERVAL: Duration = Duration::from_millis(25);
 const ACCOUNT_LIMIT: usize = 80;
 #[cfg(windows)]
 const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
@@ -216,16 +215,24 @@ pub fn installed(spec: &CliSpec) -> Result<PathBuf, String> {
 }
 
 pub(crate) fn capture(mut command: Command) -> Result<Captured, String> {
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("Could not run the command: {error}"))?;
-    let status = wait_with_timeout(&mut child)?;
+    let output = output_with_timeout(&mut command, PROBE_TIMEOUT).map_err(capture_error)?;
     Ok(Captured {
-        success: status.success(),
-        status: status.to_string(),
-        stdout: drain(child.stdout.take()),
-        stderr: drain(child.stderr.take()),
+        success: output.status.success(),
+        status: output.status.to_string(),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
     })
+}
+
+fn capture_error(error: std::io::Error) -> String {
+    if error.kind() == std::io::ErrorKind::TimedOut {
+        format!(
+            "The command did not finish within {} seconds.",
+            PROBE_TIMEOUT.as_secs()
+        )
+    } else {
+        format!("Could not run the command: {error}")
+    }
 }
 
 impl Captured {
@@ -236,33 +243,6 @@ impl Captured {
             self.stdout.clone()
         }
     }
-}
-
-fn wait_with_timeout(child: &mut Child) -> Result<std::process::ExitStatus, String> {
-    let deadline = Instant::now() + PROBE_TIMEOUT;
-    loop {
-        match child.try_wait() {
-            Ok(Some(status)) => return Ok(status),
-            Ok(None) if Instant::now() >= deadline => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(format!(
-                    "The command did not finish within {} seconds.",
-                    PROBE_TIMEOUT.as_secs()
-                ));
-            }
-            Ok(None) => std::thread::sleep(POLL_INTERVAL),
-            Err(error) => return Err(format!("Could not run the command: {error}")),
-        }
-    }
-}
-
-fn drain<R: Read>(stream: Option<R>) -> String {
-    let mut bytes = Vec::new();
-    if let Some(mut stream) = stream {
-        let _ = stream.read_to_end(&mut bytes);
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 pub(crate) fn failure_detail(output: &Captured) -> String {

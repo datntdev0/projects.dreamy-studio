@@ -3,16 +3,16 @@
     {
       "id": "python",
       "group": "runtime",
-      "version": "3.12.16",
-      "build": "20261124",
-      "file": "cpython-3.12.16+20261124-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "version": "3.12.10",
+      "build": "nuget",
+      "file": "python.3.12.10.nupkg",
       "urls": [
-        "https://github.com/astral-sh/python-build-standalone/releases/download/20261124/cpython-3.12.16%2B20261124-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+        "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg"
       ],
-      "sha256": "96694b50dcfde13d56e40346ddaa552a9cd650290e9b933cecf83c1d82226960",
-      "size": 22388338,
-      "format": "tar.gz",
-      "root": "python",
+      "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+      "size": 14515433,
+      "format": "zip",
+      "root": "tools",
       "include": [],
       "entry": "python.exe",
       "packages": ["edge-tts==7.3.1"]

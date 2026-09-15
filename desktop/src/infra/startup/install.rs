@@ -9,6 +9,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
+use std::time::Duration;
 
 use crate::infra::startup::manifest::ArchiveFormat;
 use crate::infra::startup::manifest::ManifestItem;
@@ -18,11 +19,13 @@ use crate::infra::startup::models::is_disk_full;
 use crate::shared::config::AppConfig;
 use crate::shared::process::failure_snippet;
 use crate::shared::process::hide_window;
+use crate::shared::process::output_with_timeout;
 
 pub const MARKER_FILE: &str = ".dreamy-setup.json";
 const STAGING_PREFIX: &str = ".staging-";
 const RETIRED_PREFIX: &str = ".retired-";
 const DLL_EXTENSION: &str = "dll";
+const PIP_TIMEOUT: Duration = Duration::from_secs(600);
 const PIP_INSTALL_ARGS: [&str; 9] = [
     "-E",
     "-s",
@@ -243,7 +246,8 @@ fn install_packages(item: &ManifestItem, staging: &Path) -> Result<(), SetupErro
         .args(&item.packages)
         .stdin(Stdio::null());
     hide_window(&mut command);
-    let output = command.output().map_err(|error| SetupError::io(&error))?;
+    let output =
+        output_with_timeout(&mut command, PIP_TIMEOUT).map_err(|error| SetupError::io(&error))?;
     if output.status.success() {
         return Ok(());
     }

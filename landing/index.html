@@ -18,6 +18,7 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <script src="copy.js" defer></script>
+    <script src="releases.js" defer></script>
   </head>
   <body>
     <svg width="0" height="0" class="sprite" aria-hidden="true">
@@ -185,7 +186,7 @@
               <label class="tool-tab" for="tool-voice">
                 <span class="tool-num mono">03</span>
                 <strong>Giọng đọc</strong>
-                <small>Tạo giọng từ giọng có sẵn, âm thanh mẫu hoặc mô tả.</small>
+                <small>Chọn giọng mẫu có sẵn hoặc nhân bản giọng từ âm thanh mẫu.</small>
               </label>
               <label class="tool-tab" for="tool-translate">
                 <span class="tool-num mono">04</span>
@@ -244,7 +245,7 @@
               <figure class="tool-panel panel-voice">
                 <figcaption>
                   <strong>Giọng đọc</strong>
-                  <small>Engine cloud trong ảnh thuộc mục Sắp ra mắt.</small>
+                  <small>Dùng engine cục bộ hoặc cloud như ElevenLabs, Edge Read Aloud.</small>
                 </figcaption>
                 <div class="shot-frame">
                   <picture>
@@ -332,10 +333,10 @@
               <p>Ảnh, âm thanh, video và prompt với bộ sưu tập, tag và xem trước ngay trong app.</p>
             </article>
             <article class="mini">
-              <h3>Backend &amp; GPU</h3>
+              <h3>Giọng đọc cục bộ &amp; cloud</h3>
               <p>
-                Backend TTS cục bộ, tự nhận GPU NVIDIA, tải CUDA runtime và model ngay trong phần
-                Cài đặt.
+                TTS cục bộ tự nhận GPU NVIDIA, tải CUDA runtime và model ngay trong phần Cài đặt.
+                Hoặc dùng ElevenLabs với API key của bạn, Microsoft Edge Read Aloud miễn phí.
               </p>
             </article>
           </div>
@@ -407,12 +408,12 @@
                 </li>
                 <li class="soon">
                   <div class="soon-title">
-                    <h4>Cloud providers</h4>
+                    <h4>Hình ảnh trên cloud</h4>
                     <span class="badge-soon mono">Sắp ra mắt</span>
                   </div>
                   <p>
-                    Dùng dịch vụ giọng đọc và hình ảnh trên cloud bằng API key của bạn. Key chỉ lưu
-                    trên máy, chi phí tính theo tài khoản của bạn.
+                    Tạo hình minh họa bằng dịch vụ cloud với API key của bạn. Giọng đọc cloud
+                    (ElevenLabs, Edge Read Aloud) đã có từ bản 0.1.0.
                   </p>
                 </li>
               </ul>
@@ -508,7 +509,9 @@
 
           <div class="command" role="group" aria-label="Lệnh cài đặt">
             <span class="prompt mono" aria-hidden="true">PS&gt;</span>
-            <code id="install-command">irm https://example.com/install.ps1 | iex</code>
+            <code id="install-command">
+              irm https://datntdev0.github.io/projects.dreamy-studio/install.ps1 | iex
+            </code>
             <button class="btn btn-sm btn-copy" type="button" data-copy-target="install-command">
               Sao chép
             </button>
@@ -534,22 +537,31 @@
               <h3>Thích tải file cài đặt hơn?</h3>
               <ul class="downloads">
                 <li>
-                  <a href="https://example.com/downloads/DreamyStudio_0.1.0_x64-setup.exe">
+                  <a
+                    href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
+                    data-release-asset="-setup.exe"
+                  >
                     Bộ cài Windows (.exe)
                   </a>
-                  <span class="mono">72 MB</span>
+                  <span class="mono" data-release-size="-setup.exe"></span>
                 </li>
                 <li>
-                  <a href="https://example.com/downloads/DreamyStudio_0.1.0_x64_en-US.msi">
+                  <a
+                    href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
+                    data-release-asset=".msi"
+                  >
                     Bộ cài MSI
                   </a>
-                  <span class="mono">99 MB</span>
+                  <span class="mono" data-release-size=".msi"></span>
                 </li>
                 <li>
-                  <a href="https://example.com/downloads/DreamyStudio-0.1.0-win-x64-portable.zip">
+                  <a
+                    href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
+                    data-release-asset="-win-x64-portable.zip"
+                  >
                     Bản portable (.zip), không cần cài
                   </a>
-                  <span class="mono">99 MB</span>
+                  <span class="mono" data-release-size="-win-x64-portable.zip"></span>
                 </li>
               </ul>
               <p class="note-small">
@@ -577,10 +589,11 @@
               <li>
                 Từ Command Prompt dùng
                 <code class="inline">
-                  powershell -c "irm https://example.com/install.ps1 | iex"
+                  powershell -c "irm https://datntdev0.github.io/projects.dreamy-studio/install.ps1
+                  | iex"
                 </code>
                 — nên
-                <a href="https://example.com/install.ps1">đọc script</a>
+                <a href="install.ps1">đọc script</a>
                 trước khi chạy.
               </li>
             </ul>

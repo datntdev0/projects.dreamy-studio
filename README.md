@@ -8,17 +8,14 @@ Dreamy Studio là phần mềm desktop gom các công đoạn dịch thuật, ph
 
 ## Cài đặt
 
-Yêu cầu Windows 10 (1803 trở lên) hoặc Windows 11, 64-bit. Không cần quyền quản trị.
+Yêu cầu Windows 10 (1803 trở lên) hoặc Windows 11, 64-bit.
 
-Mở PowerShell, dán lệnh sau và nhấn Enter:
+Tải bản portable `.zip` (nên dùng), bộ cài `.exe` hoặc `.msi` từ trang [Releases](https://github.com/datntdev0/projects.dreamy-studio/releases/latest). Hướng dẫn từng bước tải về, thiết lập Windows và mở app có trong [tài liệu](https://datntdev0.github.io/projects.dreamy-studio/docs/#cai-dat).
 
-```powershell
-irm https://datntdev0.github.io/projects.dreamy-studio/install.ps1 | iex
-```
+Ứng dụng chưa có chữ ký số:
 
-Script tải bản portable mới nhất từ GitHub Releases, kiểm tra SHA-256, giải nén vào `%LOCALAPPDATA%\Programs\DreamyStudio` và tạo shortcut ở Start menu và Desktop. Muốn cập nhật, chạy lại lệnh trên; dữ liệu trong thư mục cài đặt được giữ nguyên.
-
-Nếu thích tải thủ công, vào trang [Releases](https://github.com/datntdev0/projects.dreamy-studio/releases/latest) để lấy bộ cài `.exe`, `.msi` hoặc bản portable `.zip`. Do ứng dụng chưa có chữ ký số, Windows có thể hiện cảnh báo SmartScreen: bấm “More info” rồi chọn “Run anyway”.
+- Nếu Windows hiện cảnh báo SmartScreen, bấm “More info” rồi chọn “Run anyway”.
+- Trên Windows 11, nếu Smart App Control đang bật, Windows sẽ chặn app. Cần tắt Smart App Control trong Windows Security trước khi mở app.
 
 ## Tính năng
 
@@ -49,7 +46,7 @@ Ngoài ra còn có:
 | `desktop/` | Ứng dụng desktop (Tauri, Rust). |
 | `backend/` | Backend TTS (Python). |
 | `playwright/` | Kiểm thử end-to-end. |
-| `landing/` | Trang giới thiệu, tài liệu và script cài đặt, deploy lên GitHub Pages. |
+| `landing/` | Trang giới thiệu và tài liệu, deploy lên GitHub Pages. |
 | `_scripts/` | Script build, lint, format và coverage. |
 
 ### Yêu cầu

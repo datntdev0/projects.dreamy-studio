@@ -17,8 +17,6 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
     />
     <link rel="stylesheet" href="styles.css" />
-    <script src="copy.js" defer></script>
-    <script src="releases.js" defer></script>
   </head>
   <body>
     <svg width="0" height="0" class="sprite" aria-hidden="true">
@@ -484,120 +482,14 @@
       <section id="install" class="section">
         <div class="container">
           <p class="eyebrow">Cài đặt</p>
-          <h2>Cài đặt trong 3 bước</h2>
+          <h2>Tải về và cài đặt</h2>
           <p class="section-lead">
-            Không cần quyền quản trị. Muốn cập nhật lên bản mới, chỉ cần làm lại bước 2.
+            Dreamy Studio chạy trên Windows 10/11 64-bit. Tài liệu hướng dẫn từng bước tải bản mới
+            nhất, mở app và cài đặt ban đầu.
           </p>
-
-          <ol class="install-steps">
-            <li class="install-step">
-              <span class="step-num mono">01</span>
-              <h3>Mở PowerShell</h3>
-              <p>Nhấn phím Windows, gõ “PowerShell” rồi nhấn Enter.</p>
-            </li>
-            <li class="install-step">
-              <span class="step-num mono">02</span>
-              <h3>Dán lệnh cài đặt</h3>
-              <p>Bấm Sao chép ở khung bên dưới, dán vào cửa sổ PowerShell và nhấn Enter.</p>
-            </li>
-            <li class="install-step">
-              <span class="step-num mono">03</span>
-              <h3>Mở Dreamy Studio</h3>
-              <p>Khi cài xong, tìm Dreamy Studio trong Start menu.</p>
-            </li>
-          </ol>
-
-          <div class="command" role="group" aria-label="Lệnh cài đặt">
-            <span class="prompt mono" aria-hidden="true">PS&gt;</span>
-            <code id="install-command">
-              irm https://datntdev0.github.io/projects.dreamy-studio/install.ps1 | iex
-            </code>
-            <button class="btn btn-sm btn-copy" type="button" data-copy-target="install-command">
-              Sao chép
-            </button>
+          <div class="section-cta">
+            <a class="btn btn-primary" href="docs/index.html#cai-dat">Xem hướng dẫn cài đặt</a>
           </div>
-
-          <div class="install-grid">
-            <article class="panel panel-note">
-              <h3>Vì sao nên cài bằng lệnh?</h3>
-              <p>
-                Dreamy Studio chưa có chữ ký số của nhà phát hành. Nếu tải file bằng trình duyệt,
-                Windows sẽ hiện cảnh báo “Windows protected your PC” và không cho mở ngay.
-              </p>
-              <p>
-                Cài bằng lệnh sẽ không gặp cảnh báo này. Các tính năng bảo vệ của Windows vẫn hoạt
-                động bình thường.
-              </p>
-              <p class="note-small">
-                Trên Windows 11, nếu bạn bật Smart App Control, Windows vẫn có thể chặn ứng dụng.
-              </p>
-            </article>
-
-            <article class="panel">
-              <h3>Thích tải file cài đặt hơn?</h3>
-              <ul class="downloads">
-                <li>
-                  <a
-                    href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
-                    data-release-asset="-setup.exe"
-                  >
-                    Bộ cài Windows (.exe)
-                  </a>
-                  <span class="mono" data-release-size="-setup.exe"></span>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
-                    data-release-asset=".msi"
-                  >
-                    Bộ cài MSI
-                  </a>
-                  <span class="mono" data-release-size=".msi"></span>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
-                    data-release-asset="-win-x64-portable.zip"
-                  >
-                    Bản portable (.zip), không cần cài
-                  </a>
-                  <span class="mono" data-release-size="-win-x64-portable.zip"></span>
-                </li>
-              </ul>
-              <p class="note-small">
-                Nếu Windows hiện cảnh báo, bấm “More info” rồi chọn “Run anyway”.
-              </p>
-            </article>
-          </div>
-
-          <details class="tech">
-            <summary>Chi tiết kỹ thuật</summary>
-            <ul>
-              <li>
-                Script tải gói portable bằng
-                <code class="inline">curl.exe</code>
-                rồi kiểm tra mã SHA-256, giải nén bằng
-                <code class="inline">tar.exe</code>
-                vào
-                <code class="inline">%LOCALAPPDATA%\Programs\DreamyStudio</code>
-                và tạo shortcut. Dữ liệu được giữ nguyên khi cập nhật.
-              </li>
-              <li>
-                File tải bằng curl.exe không bị gắn Mark-of-the-Web, nên SmartScreen không chặn.
-                Smart App Control kiểm tra mọi file thực thi nên vẫn có thể chặn.
-              </li>
-              <li>
-                Từ Command Prompt dùng
-                <code class="inline">
-                  powershell -c "irm https://datntdev0.github.io/projects.dreamy-studio/install.ps1
-                  | iex"
-                </code>
-                — nên
-                <a href="install.ps1">đọc script</a>
-                trước khi chạy.
-              </li>
-            </ul>
-          </details>
         </div>
       </section>
 

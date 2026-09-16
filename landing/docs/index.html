@@ -18,6 +18,7 @@
     />
     <link rel="stylesheet" href="../styles.css" />
     <script src="docs.js" defer></script>
+    <script src="../releases.js" defer></script>
   </head>
   <body>
     <header class="nav">
@@ -29,10 +30,10 @@
         <nav class="nav-links" aria-label="Điều hướng chính">
           <a href="../index.html#tools">Công cụ</a>
           <a href="../index.html#roadmap">Sắp ra mắt</a>
-          <a href="../index.html#install">Cài đặt</a>
+          <a href="#cai-dat">Cài đặt</a>
           <a href="index.html" aria-current="page">Tài liệu</a>
         </nav>
-        <a class="btn btn-sm btn-primary nav-cta" href="../index.html#install">Tải về</a>
+        <a class="btn btn-sm btn-primary nav-cta" href="#cai-dat">Tải về</a>
       </div>
     </header>
     <div class="docs-hero">
@@ -48,7 +49,8 @@
       <aside class="toc" aria-label="Mục lục">
         <p class="eyebrow">Mục lục</p>
         <ol>
-          <li><a href="#bat-dau">Bắt đầu</a></li>
+          <li><a href="#cai-dat">Cài đặt</a></li>
+          <li><a href="#cau-hinh">Cấu hình</a></li>
           <li><a href="#tieu-thuyet">Tiểu thuyết</a></li>
           <li><a href="#dich-thuat">Dịch thuật</a></li>
           <li><a href="#tri-thuc">Tri thức</a></li>
@@ -60,25 +62,25 @@
         </ol>
       </aside>
       <article class="doc">
-        <section id="bat-dau" class="flow" data-flow>
+        <section id="cai-dat" class="flow" data-flow>
           <header class="flow-head">
-            <h2>Bắt đầu</h2>
-            <p>Cài app, tạo nơi lưu dữ liệu và kết nối các công cụ AI. Chỉ cần làm một lần.</p>
+            <h2>Cài đặt</h2>
+            <p>Tải app, thiết lập Windows nếu cần và mở app lần đầu.</p>
           </header>
-          <ol class="flow-steps" role="tablist" aria-label="Các bước Bắt đầu">
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Cài đặt">
             <li>
               <button
                 class="flow-tab"
                 type="button"
                 role="tab"
-                id="bat-dau-tab-0"
-                aria-controls="bat-dau-step-0"
+                id="cai-dat-tab-0"
+                aria-controls="cai-dat-step-0"
                 aria-selected="true"
               >
                 <span class="flow-num mono">01</span>
                 <span class="flow-label">
-                  <strong>Cài và mở app</strong>
-                  <small>Lần mở đầu tiên</small>
+                  <strong>Tải về</strong>
+                  <small>Bộ cài hoặc bản portable</small>
                 </span>
               </button>
             </li>
@@ -87,14 +89,14 @@
                 class="flow-tab"
                 type="button"
                 role="tab"
-                id="bat-dau-tab-1"
-                aria-controls="bat-dau-step-1"
+                id="cai-dat-tab-1"
+                aria-controls="cai-dat-step-1"
                 aria-selected="false"
               >
                 <span class="flow-num mono">02</span>
                 <span class="flow-label">
-                  <strong>Tạo workspace</strong>
-                  <small>Nơi chứa dữ liệu</small>
+                  <strong>Thiết lập Windows</strong>
+                  <small>Tắt Smart App Control</small>
                 </span>
               </button>
             </li>
@@ -103,30 +105,14 @@
                 class="flow-tab"
                 type="button"
                 role="tab"
-                id="bat-dau-tab-2"
-                aria-controls="bat-dau-step-2"
+                id="cai-dat-tab-2"
+                aria-controls="cai-dat-step-2"
                 aria-selected="false"
               >
                 <span class="flow-num mono">03</span>
                 <span class="flow-label">
-                  <strong>Kết nối AI</strong>
-                  <small>Cho dịch, tri thức, trợ lý</small>
-                </span>
-              </button>
-            </li>
-            <li>
-              <button
-                class="flow-tab"
-                type="button"
-                role="tab"
-                id="bat-dau-tab-3"
-                aria-controls="bat-dau-step-3"
-                aria-selected="false"
-              >
-                <span class="flow-num mono">04</span>
-                <span class="flow-label">
-                  <strong>Chuẩn bị giọng nói</strong>
-                  <small>Máy chủ và model TTS</small>
+                  <strong>Mở app</strong>
+                  <small>Tự tải thành phần</small>
                 </span>
               </button>
             </li>
@@ -135,8 +121,187 @@
             <div
               class="flow-panel"
               role="tabpanel"
-              id="bat-dau-step-0"
-              aria-labelledby="bat-dau-tab-0"
+              id="cai-dat-step-0"
+              aria-labelledby="cai-dat-tab-0"
+            >
+              <figure class="flow-shot">
+                <a
+                  href="../assets/docs/install-download-dark.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <picture>
+                    <source
+                      srcset="../assets/docs/install-download-light.jpg"
+                      media="(prefers-color-scheme: light)"
+                    />
+                    <img
+                      src="../assets/docs/install-download-dark.jpg"
+                      width="1182"
+                      height="292"
+                      loading="lazy"
+                      alt="Mục Assets trên trang phát hành GitHub với bộ cài, file MSI và bản portable."
+                    />
+                  </picture>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 1/3</p>
+                <h3>Tải về</h3>
+                <p>
+                  Mở
+                  <a href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest">
+                    trang phát hành mới nhất
+                  </a>
+                  trên GitHub, tìm mục
+                  <strong>Assets</strong>
+                  và tải một trong các file sau:
+                </p>
+                <ul class="downloads">
+                  <li>
+                    <a
+                      href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
+                      data-release-asset="-setup.exe"
+                    >
+                      Bộ cài Windows (.exe), nên dùng
+                    </a>
+                    <span class="mono" data-release-size="-setup.exe"></span>
+                  </li>
+                  <li>
+                    <a
+                      href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
+                      data-release-asset=".msi"
+                    >
+                      Bộ cài MSI
+                    </a>
+                    <span class="mono" data-release-size=".msi"></span>
+                  </li>
+                  <li>
+                    <a
+                      href="https://github.com/datntdev0/projects.dreamy-studio/releases/latest"
+                      data-release-asset="-win-x64-portable.zip"
+                    >
+                      Bản portable (.zip), không cần cài
+                    </a>
+                    <span class="mono" data-release-size="-win-x64-portable.zip"></span>
+                  </li>
+                </ul>
+                <p>
+                  Với bộ cài, chạy file vừa tải và làm theo các bước trên màn hình. Với bản
+                  portable, giải nén vào một thư mục bất kỳ.
+                </p>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="cai-dat-step-1"
+              aria-labelledby="cai-dat-tab-1"
+            >
+              <figure class="flow-shot is-gallery">
+                <a
+                  href="../assets/docs/windows-security-home.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <img
+                    src="../assets/docs/windows-security-home.jpg"
+                    width="1200"
+                    height="932"
+                    loading="lazy"
+                    alt="Trang Security at a glance của Windows Security, mục App &amp; browser control."
+                  />
+                  <span class="flow-shot-caption mono">1 · Windows Security</span>
+                </a>
+                <a
+                  href="../assets/docs/windows-security-app-control.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <img
+                    src="../assets/docs/windows-security-app-control.jpg"
+                    width="1200"
+                    height="932"
+                    loading="lazy"
+                    alt="Trang App &amp; browser control với liên kết Smart App Control settings."
+                  />
+                  <span class="flow-shot-caption mono">2 · App &amp; browser control</span>
+                </a>
+                <a
+                  href="../assets/docs/windows-security-sac-off.jpg"
+                  target="_blank"
+                  rel="noopener"
+                  title="Mở ảnh gốc"
+                >
+                  <img
+                    src="../assets/docs/windows-security-sac-off.jpg"
+                    width="1200"
+                    height="932"
+                    loading="lazy"
+                    alt="Trang Smart App Control với lựa chọn Off."
+                  />
+                  <span class="flow-shot-caption mono">3 · Chọn Off</span>
+                </a>
+              </figure>
+              <div class="flow-text">
+                <p class="flow-count mono">Bước 2/3</p>
+                <h3>Thiết lập Windows</h3>
+                <p>
+                  Dreamy Studio chưa có chữ ký số. Trên Windows 11, nếu Smart App Control đang bật,
+                  Windows sẽ chặn app ngay khi mở. Tắt Smart App Control trước khi mở app:
+                </p>
+                <ol class="numbered">
+                  <li>
+                    Mở
+                    <strong>Windows Security</strong>
+                    từ Start menu, chọn
+                    <strong>App &amp; browser control.</strong>
+                  </li>
+                  <li>
+                    Bấm
+                    <strong>Smart App Control settings.</strong>
+                  </li>
+                  <li>
+                    Chọn
+                    <strong>Off.</strong>
+                  </li>
+                </ol>
+                <ul class="flow-tips">
+                  <li>
+                    Windows 10 không có Smart App Control. Nếu không thấy mục này hoặc nó đã ở Off,
+                    bỏ qua bước này.
+                  </li>
+                  <li>
+                    Tùy phiên bản Windows, sau khi tắt có thể không bật lại được Smart App Control
+                    nếu không cài lại Windows.
+                  </li>
+                </ul>
+                <div class="flow-nav">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                    ← Bước trước
+                  </button>
+                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                    Bước tiếp →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div
+              class="flow-panel"
+              role="tabpanel"
+              id="cai-dat-step-2"
+              aria-labelledby="cai-dat-tab-2"
             >
               <figure class="flow-shot">
                 <a
@@ -161,33 +326,102 @@
                 </a>
               </figure>
               <div class="flow-text">
-                <p class="flow-count mono">Bước 1/4</p>
-                <h3>Cài và mở app</h3>
+                <p class="flow-count mono">Bước 3/3</p>
+                <h3>Mở app</h3>
                 <p>
-                  Cài theo
-                  <a href="../index.html#install">hướng dẫn ở trang chủ</a>
-                  rồi mở Dreamy Studio từ Start menu. Lần đầu mở, app tự tải các thành phần cần
-                  thiết. Bạn chỉ cần chờ vài phút.
+                  Mở Dreamy Studio từ Start menu, hoặc chạy
+                  <code class="inline">DreamyStudio.exe</code>
+                  trong thư mục đã giải nén nếu dùng bản portable. Lần đầu mở, app tự tải các thành
+                  phần cần thiết. Bạn chỉ cần chờ vài phút.
                 </p>
                 <ul class="flow-tips">
+                  <li>
+                    Nếu Windows hiện “Windows protected your PC”, bấm
+                    <strong>More info</strong>
+                    rồi chọn
+                    <strong>Run anyway.</strong>
+                  </li>
                   <li>Có thể bấm Tạm dừng và tiếp tục tải sau.</li>
                   <li>Góc trên bên phải có nút đổi ngôn ngữ và giao diện sáng/tối.</li>
                 </ul>
                 <div class="flow-nav">
-                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
                     ← Bước trước
                   </button>
-                  <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
+                  <button
+                    class="btn btn-sm btn-primary"
+                    type="button"
+                    data-step-nav="next"
+                    disabled
+                  >
                     Bước tiếp →
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+        <section id="cau-hinh" class="flow" data-flow>
+          <header class="flow-head">
+            <h2>Cấu hình</h2>
+            <p>Tạo nơi lưu dữ liệu và kết nối các công cụ AI, giọng nói. Chỉ cần làm một lần.</p>
+          </header>
+          <ol class="flow-steps" role="tablist" aria-label="Các bước Cấu hình">
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="cau-hinh-tab-0"
+                aria-controls="cau-hinh-step-0"
+                aria-selected="true"
+              >
+                <span class="flow-num mono">01</span>
+                <span class="flow-label">
+                  <strong>Tạo workspace</strong>
+                  <small>Nơi chứa dữ liệu</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="cau-hinh-tab-1"
+                aria-controls="cau-hinh-step-1"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">02</span>
+                <span class="flow-label">
+                  <strong>Kết nối AI</strong>
+                  <small>Cho dịch, tri thức, trợ lý</small>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                class="flow-tab"
+                type="button"
+                role="tab"
+                id="cau-hinh-tab-2"
+                aria-controls="cau-hinh-step-2"
+                aria-selected="false"
+              >
+                <span class="flow-num mono">03</span>
+                <span class="flow-label">
+                  <strong>Chuẩn bị giọng nói</strong>
+                  <small>Máy chủ và model TTS</small>
+                </span>
+              </button>
+            </li>
+          </ol>
+          <div class="flow-panels">
             <div
               class="flow-panel"
               role="tabpanel"
-              id="bat-dau-step-1"
-              aria-labelledby="bat-dau-tab-1"
+              id="cau-hinh-step-0"
+              aria-labelledby="cau-hinh-tab-0"
             >
               <figure class="flow-shot">
                 <a
@@ -212,7 +446,7 @@
                 </a>
               </figure>
               <div class="flow-text">
-                <p class="flow-count mono">Bước 2/4</p>
+                <p class="flow-count mono">Bước 1/3</p>
                 <h3>Tạo workspace</h3>
                 <p>
                   Workspace là một thư mục trên máy chứa toàn bộ truyện, dự án và thư viện của bạn.
@@ -223,7 +457,7 @@
                   <li>Dữ liệu chỉ nằm trên máy bạn, không đồng bộ lên đâu cả.</li>
                 </ul>
                 <div class="flow-nav">
-                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev">
+                  <button class="btn btn-sm btn-ghost" type="button" data-step-nav="prev" disabled>
                     ← Bước trước
                   </button>
                   <button class="btn btn-sm btn-primary" type="button" data-step-nav="next">
@@ -235,8 +469,8 @@
             <div
               class="flow-panel"
               role="tabpanel"
-              id="bat-dau-step-2"
-              aria-labelledby="bat-dau-tab-2"
+              id="cau-hinh-step-1"
+              aria-labelledby="cau-hinh-tab-1"
             >
               <figure class="flow-shot is-tall">
                 <a
@@ -261,7 +495,7 @@
                 </a>
               </figure>
               <div class="flow-text">
-                <p class="flow-count mono">Bước 3/4</p>
+                <p class="flow-count mono">Bước 2/3</p>
                 <h3>Kết nối AI</h3>
                 <p>
                   Mở
@@ -298,8 +532,8 @@
             <div
               class="flow-panel"
               role="tabpanel"
-              id="bat-dau-step-3"
-              aria-labelledby="bat-dau-tab-3"
+              id="cau-hinh-step-2"
+              aria-labelledby="cau-hinh-tab-2"
             >
               <figure class="flow-shot is-tall">
                 <a
@@ -324,7 +558,7 @@
                 </a>
               </figure>
               <div class="flow-text">
-                <p class="flow-count mono">Bước 4/4</p>
+                <p class="flow-count mono">Bước 3/3</p>
                 <h3>Chuẩn bị giọng nói</h3>
                 <p>
                   Mở

@@ -11,7 +11,7 @@ export default tseslint.config(
     ignores: ["_output/**", "**/node_modules/**"],
   },
   {
-    files: ["angular/**/*.ts", "playwright/**/*.ts"],
+    files: ["angular/**/*.ts"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     plugins: {
       import: importPlugin,

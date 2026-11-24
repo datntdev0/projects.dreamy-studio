@@ -7,7 +7,6 @@ disable-model-invocation: true
 Rules:
 - Common rules: `./.claude/rules/conventions.md`.
 - Angular rules: `./.claude/rules/coding_angular.md`.
-- Playwright rules: `./.claude/rules/coding_playwright.md`.
 - Reply the review results using the provided response templates.
 - Reply the fixing results using the provided response templates.
 - Out of scope: any changes outside the specified rules or requests.

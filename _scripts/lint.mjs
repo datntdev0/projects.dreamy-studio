@@ -46,8 +46,8 @@ if (args.some((arg) => !["--fix", "--angular", "--backend", "--desktop"].include
     ]);
   }
   if (allTargets || targets.has("--angular")) {
-    const paths = allTargets ? ["angular", "playwright"] : ["angular"];
-    lint(allTargets ? "Angular and Playwright" : "Angular", process.execPath, [ESLINT, ...paths, ...(fix ? ["--fix"] : [])]);
+    const paths = ["angular"];
+    lint("Angular", process.execPath, [ESLINT, ...paths, ...(fix ? ["--fix"] : [])]);
   }
 
   if (failed) {

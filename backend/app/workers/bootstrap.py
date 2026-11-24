@@ -1,4 +1,5 @@
 import argparse
+import faulthandler
 import importlib
 import json
 import logging
@@ -92,6 +93,7 @@ def serve(engine: Any, engine_name: str, channel: TextIO) -> None:
 def main() -> None:
     args = parse_args()
     channel = open_channel()
+    faulthandler.enable(file=sys.stderr, all_threads=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     add_sites(args.site)
     engine = importlib.import_module(args.engine).create_engine()

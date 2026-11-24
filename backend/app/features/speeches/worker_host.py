@@ -6,6 +6,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import IO, Any
 
@@ -17,6 +18,7 @@ BOOTSTRAP = WORKERS_DIR / "bootstrap.py"
 STOP_TIMEOUT = 5.0
 DEFAULT_IDLE_SECONDS = 600.0
 MAX_REAP_INTERVAL = 30.0
+MAX_LOG_BYTES = 10 * 1024 * 1024
 WORKER_ENV = {
     "HF_HUB_OFFLINE": "1",
     "HF_HUB_DISABLE_TELEMETRY": "1",
@@ -39,9 +41,17 @@ class WorkerTimeout(WorkerError):
         super().__init__("WORKER_TIMEOUT", f"Worker did not answer '{op}' within {seconds:g}s")
 
 
+def describe_exit(exit_code: int | None) -> str:
+    if exit_code is None:
+        return "code None"
+    return f"code {exit_code}, 0x{exit_code & 0xFFFFFFFF:08X}"
+
+
 class WorkerCrashed(WorkerError):
     def __init__(self, exit_code: int | None) -> None:
-        super().__init__("WORKER_CRASHED", f"Worker exited unexpectedly (code {exit_code})")
+        super().__init__(
+            "WORKER_CRASHED", f"Worker exited unexpectedly ({describe_exit(exit_code)})"
+        )
 
 
 @dataclass(frozen=True)
@@ -68,7 +78,12 @@ def open_log(log_dir: Path | None, key: str) -> IO[bytes] | int:
     if log_dir is None:
         return subprocess.DEVNULL
     log_dir.mkdir(parents=True, exist_ok=True)
-    return (log_dir / f"worker-{key}.log").open("wb")
+    path = log_dir / f"worker-{key}.log"
+    oversized = path.is_file() and path.stat().st_size > MAX_LOG_BYTES
+    log = path.open("wb" if oversized else "ab")
+    log.write(f"\n===== worker {key} started at {datetime.now().isoformat()} =====\n".encode())
+    log.flush()
+    return log
 
 
 class WorkerProcess:
@@ -136,7 +151,9 @@ class WorkerProcess:
                 self.kill()
                 raise WorkerTimeout(op, timeout) from error
             if line is None:
-                raise WorkerCrashed(self.process.wait())
+                exit_code = self.process.wait()
+                logger.error("Worker %s crashed (%s)", self.spec.key, describe_exit(exit_code))
+                raise WorkerCrashed(exit_code)
             response = json.loads(line)
             if response.get("id") == request_id:
                 return response

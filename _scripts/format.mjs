@@ -33,8 +33,8 @@ if (args.some((arg) => !["--fix", "--angular", "--backend", "--desktop"].include
     }
 
     if (allTargets || targets.has("--angular")) {
-      const paths = allTargets ? ["angular", "playwright"] : ["angular"];
-      console.log(`${check ? "checking" : "formatting"} ${allTargets ? "Angular and Playwright" : "Angular"}`);
+      const paths = ["angular"];
+      console.log(`${check ? "checking" : "formatting"} Angular`);
       run(process.execPath, [PRETTIER, check ? "--check" : "--write", ...paths]);
     }
   } catch (error) {

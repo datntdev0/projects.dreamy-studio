@@ -13,6 +13,25 @@ PRESET_SOURCE = "preset"
 CLONE_SOURCE = "clone"
 
 
+def native_fbank_available() -> bool:
+    try:
+        import kaldi_native_fbank  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def use_portable_fbank() -> None:
+    try:
+        from vieneu._v3_turbo_engine.speaker import audio_utils
+    except ImportError:
+        return
+    if not native_fbank_available():
+        import kaldi_fbank
+
+        audio_utils._kaldi_fbank = kaldi_fbank.kaldi_fbank
+
+
 def preset_ids(tts: Any) -> set[str]:
     return {voice_id for _, voice_id in tts.list_preset_voices()}
 
@@ -38,6 +57,7 @@ class VieneuEngine:
 
         if mode == TURBO_MODE:
             self.use_local_codec(model_dir)
+            use_portable_fbank()
             return Vieneu(
                 mode=TURBO_MODE,
                 backbone_repo=str(model_dir),

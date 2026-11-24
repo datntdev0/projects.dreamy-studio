@@ -26,8 +26,12 @@ WHEEL_PATH = re.compile(r"^/files/(?P<file>[^/?]+)$")
 
 
 class AsgiCall:
-    def __init__(self, method: str, path: str, body: bytes = b"") -> None:
+    def __init__(
+        self, method: str, path: str, body: bytes = b"", headers: dict[str, str] | None = None
+    ) -> None:
         self.body = body
+        content_type = [(b"content-type", b"application/json")] if body else []
+        extra = [(name.lower().encode(), value.encode()) for name, value in (headers or {}).items()]
         self.scope = {
             "type": "http",
             "asgi": {"version": "3.0"},
@@ -38,7 +42,7 @@ class AsgiCall:
             "raw_path": path.encode(),
             "query_string": b"",
             "root_path": "",
-            "headers": [(b"content-type", b"application/json")] if body else [],
+            "headers": [*content_type, *extra],
             "server": ("localhost", 80),
             "client": ("127.0.0.1", 1),
         }
@@ -70,17 +74,27 @@ class AsgiCall:
         return self.messages[0]["status"], json.loads(self.content())
 
 
-def run_call(app: FastAPI, method: str, path: str, payload: object | None) -> AsgiCall:
+def run_call(
+    app: FastAPI,
+    method: str,
+    path: str,
+    payload: object | None,
+    headers: dict[str, str] | None = None,
+) -> AsgiCall:
     body = json.dumps(payload).encode() if payload is not None else b""
-    call = AsgiCall(method, path, body)
+    call = AsgiCall(method, path, body, headers)
     asyncio.run(call.run(app))
     return call
 
 
 def asgi_request(
-    app: FastAPI, method: str, path: str, payload: object | None = None
+    app: FastAPI,
+    method: str,
+    path: str,
+    payload: object | None = None,
+    headers: dict[str, str] | None = None,
 ) -> tuple[int, object]:
-    return run_call(app, method, path, payload).result()
+    return run_call(app, method, path, payload, headers).result()
 
 
 def asgi_raw(

@@ -7,13 +7,14 @@ from support import ServerTestCase, wait_until
 from app.main import create_app
 from app.shared.catalog import Catalog, ExtraSource, cuda_catalog, model_catalog
 from app.shared.config import Settings
+from app.shared.platforms import LINUX_X64, WINDOWS_X64
 
 TURBO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
 
 
 def standalone_catalog() -> Catalog:
     models = tuple(replace(model, runtime=None, extra_sources=()) for model in model_catalog())
-    return Catalog(models=models, cuda=cuda_catalog())
+    return Catalog(models=models, cuda=cuda_catalog(WINDOWS_X64))
 
 
 class DownloadTestCase(ServerTestCase):
@@ -128,7 +129,7 @@ class ModelDownloadTests(DownloadTestCase):
             runtime=None,
             extra_sources=(ExtraSource(codec, "codec", 4_002),),
         )
-        app = create_app(self.settings(), Catalog(models=(model,), cuda=cuda_catalog()))
+        app = create_app(self.settings(), Catalog(models=(model,), cuda=cuda_catalog(WINDOWS_X64)))
         self.call("POST", "/models/vieneu-turbo/download", app)
         wait_until(lambda: self.model(app=app)["state"] == "installed")
         installed = self.model(app=app)
@@ -223,7 +224,7 @@ class CudaDownloadTests(DownloadTestCase):
         requested = {p for m, p, _ in self.remote.requests if p.startswith("/pypi/")}
         self.assertEqual(
             requested,
-            {f"/pypi/{p.name}/{p.version}/json" for p in cuda_catalog().packages},
+            {f"/pypi/{p.name}/{p.version}/json" for p in cuda_catalog(WINDOWS_X64).packages},
         )
         self.assertFalse(self.remote.gets("manylinux2014_x86_64.whl"))
 
@@ -272,3 +273,17 @@ class CudaDownloadTests(DownloadTestCase):
             lambda: self.call("GET", "/system", restarted)[1]["cuda"]["state"] == "installed"
         )
         self.assertEqual(self.remote.gets(wheel)[-1][2], "bytes=1000-")
+
+
+class LinuxCudaDownloadTests(DownloadTestCase):
+    def make_app(self, device: str = "cpu", smi: Path | None = None):
+        catalog = replace(standalone_catalog(), cuda=cuda_catalog(LINUX_X64))
+        return create_app(self.settings(device, smi), catalog)
+
+    def test_install_completes_without_downloads_when_runtime_bundles_cuda(self):
+        status, body = self.call("POST", "/cuda/download")
+        self.assertEqual((status, body["version"]), (202, "12.8"))
+        installed = self.wait_cuda("installed")
+        self.assertEqual((installed["receivedBytes"], installed["totalBytes"]), (0, 0))
+        self.assertFalse([r for r in self.remote.requests if r[1].startswith("/pypi/")])
+        self.assertEqual(self.make_app(device="cuda").state.container.device, "cuda")

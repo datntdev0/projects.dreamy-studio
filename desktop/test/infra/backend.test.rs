@@ -78,19 +78,49 @@ fn command_passes_the_data_dir_and_the_selected_device() {
         dir.path().to_path_buf(),
     );
     let process = BackendProcess::new(launch);
-    let default_args = arguments(&process.command(5000));
+    let default_command = process.command(5000);
+    let default_args = arguments(&default_command);
     process.set_device("cuda");
     let cuda_args = arguments(&process.command(5000));
 
     let data_dir = dir.path().join("data").to_string_lossy().to_string();
+    let log_dir = dir.path().to_string_lossy().to_string();
     assert_eq!(
-        &default_args[..4],
-        &["-m", "app", "--port", "5000"].map(String::from)
+        default_args,
+        ["-m", "app", "--device", "cpu"].map(String::from)
     );
-    assert_eq!(flag(&default_args, "--data-dir"), data_dir);
-    assert_eq!(flag(&default_args, "--device"), "cpu");
     assert_eq!(flag(&cuda_args, "--device"), "cuda");
-    assert_eq!(flag(&cuda_args, "--run-mode"), "test");
+    assert_eq!(
+        variable(&default_command, PORT_VAR),
+        Some("5000".to_string())
+    );
+    assert_eq!(
+        variable(&default_command, RUN_MODE_VAR),
+        Some("test".to_string())
+    );
+    assert_eq!(variable(&default_command, LOG_DIR_VAR), Some(log_dir));
+    assert_eq!(variable(&default_command, DATA_DIR_VAR), Some(data_dir));
+}
+
+#[test]
+fn command_blanks_the_api_key_so_neither_shell_nor_env_file_enables_it() {
+    let dir = tempdir().unwrap();
+    let launch = launch_of(
+        dir.path().join("python"),
+        Vec::new(),
+        dir.path().to_path_buf(),
+    );
+    let command = BackendProcess::new(launch).command(5000);
+
+    assert_eq!(variable(&command, API_KEY_VAR), Some(String::new()));
+}
+
+fn variable(command: &Command, name: &str) -> Option<String> {
+    command
+        .get_envs()
+        .find(|(key, _)| *key == name)
+        .and_then(|(_, value)| value)
+        .map(|value| value.to_string_lossy().to_string())
 }
 
 fn arguments(command: &Command) -> Vec<String> {

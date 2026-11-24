@@ -5,6 +5,8 @@ from importlib import resources
 from typing import Any
 from urllib.parse import unquote
 
+from app.shared.platforms import Platform, current_platform
+
 CPU_VARIANT = "cpu"
 CUDA_VARIANT = "cuda"
 
@@ -56,6 +58,7 @@ class CudaCatalog:
     version: str
     size_bytes: int
     packages: tuple[CudaPackage, ...]
+    platform: Platform | None = None
 
 
 @dataclass(frozen=True)
@@ -105,10 +108,18 @@ class Catalog:
     runtimes: dict[str, CatalogRuntime] = field(default_factory=dict)
 
 
+def resource_exists(path: str) -> bool:
+    return resources.files("app.shared.resources").joinpath(path).is_file()
+
+
 def read_resource(path: str) -> Any:
     return json.loads(
         resources.files("app.shared.resources").joinpath(path).read_text(encoding="utf-8")
     )
+
+
+def runtime_lock_path(target: Platform, name: str) -> str:
+    return f"runtimes/{target.name}/{name}.json"
 
 
 @cache
@@ -170,35 +181,60 @@ def parse_variant(runtime: str, variant: str, lock: dict[str, Any]) -> RuntimeVa
     )
 
 
-def parse_runtime(entry: dict[str, Any]) -> CatalogRuntime:
-    return CatalogRuntime(
-        id=entry["id"],
-        variants={
-            variant: parse_variant(entry["id"], variant, read_resource(path))
-            for variant, path in entry["variants"].items()
-        },
-    )
+def parse_runtime(entry: dict[str, Any], target: Platform) -> CatalogRuntime | None:
+    paths = {
+        variant: runtime_lock_path(target, name) for variant, name in entry["variants"].items()
+    }
+    variants = {
+        variant: parse_variant(entry["id"], variant, read_resource(path))
+        for variant, path in paths.items()
+        if resource_exists(path)
+    }
+    if CPU_VARIANT not in variants:
+        return None
+    return CatalogRuntime(id=entry["id"], variants=variants)
 
 
 def model_catalog() -> tuple[CatalogModel, ...]:
     return tuple(parse_model(entry) for entry in read_catalog()["models"])
 
 
-def cuda_catalog() -> CudaCatalog:
-    entry = read_catalog()["cuda"]
+def empty_cuda_catalog() -> CudaCatalog:
+    return CudaCatalog(version="", size_bytes=0, packages=())
+
+
+def cuda_catalog(target: Platform | None = None) -> CudaCatalog:
+    target = target or current_platform()
+    entry = read_catalog()["cuda"].get(target.name) if target else None
+    if entry is None:
+        return empty_cuda_catalog()
     return CudaCatalog(
         version=entry["version"],
         size_bytes=int(entry["sizeBytes"]),
         packages=tuple(CudaPackage(item["name"], item["version"]) for item in entry["packages"]),
+        platform=target,
     )
 
 
-def runtime_catalog() -> dict[str, CatalogRuntime]:
-    return {
-        runtime.id: runtime
-        for runtime in (parse_runtime(entry) for entry in read_catalog().get("runtimes", []))
-    }
+def runtime_catalog(target: Platform | None = None) -> dict[str, CatalogRuntime]:
+    target = target or current_platform()
+    if target is None:
+        return {}
+    entries = read_catalog().get("runtimes", [])
+    runtimes = (parse_runtime(entry, target) for entry in entries)
+    return {runtime.id: runtime for runtime in runtimes if runtime is not None}
 
 
-def load_catalog() -> Catalog:
-    return Catalog(models=model_catalog(), cuda=cuda_catalog(), runtimes=runtime_catalog())
+def supported_models(
+    models: tuple[CatalogModel, ...], runtimes: dict[str, CatalogRuntime]
+) -> tuple[CatalogModel, ...]:
+    return tuple(model for model in models if model.runtime is None or model.runtime in runtimes)
+
+
+def load_catalog(target: Platform | None = None) -> Catalog:
+    runtimes = runtime_catalog(target)
+    return Catalog(
+        models=supported_models(model_catalog(), runtimes),
+        cuda=cuda_catalog(target),
+        runtimes=runtimes,
+    )

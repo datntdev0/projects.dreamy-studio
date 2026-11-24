@@ -27,6 +27,12 @@ const POLL_INTERVAL: Duration = Duration::from_millis(100);
 const PROBE_TIMEOUT: Duration = Duration::from_millis(300);
 const STDERR_FILE: &str = "backend-stderr.log";
 
+const PORT_VAR: &str = "DREAMY_BACKEND_PORT";
+const RUN_MODE_VAR: &str = "DREAMY_BACKEND_RUN_MODE";
+const LOG_DIR_VAR: &str = "DREAMY_BACKEND_LOG_DIR";
+const DATA_DIR_VAR: &str = "DREAMY_BACKEND_DATA_DIR";
+const API_KEY_VAR: &str = "DREAMY_BACKEND_API_KEY";
+
 const BACKEND_DIR: &str = "backend";
 const PYTHON_DIR: &str = "python";
 const RESOURCES_DIR: &str = "resources";
@@ -212,16 +218,13 @@ impl BackendProcess {
         let mut command = Command::new(&launch.program);
         command
             .args(&launch.args)
-            .arg("--port")
-            .arg(port.to_string())
-            .arg("--run-mode")
-            .arg(launch.run_mode)
-            .arg("--log-dir")
-            .arg(&launch.log_dir)
-            .arg("--data-dir")
-            .arg(&launch.data_dir)
             .arg("--device")
             .arg(self.device())
+            .env(PORT_VAR, port.to_string())
+            .env(RUN_MODE_VAR, launch.run_mode)
+            .env(LOG_DIR_VAR, &launch.log_dir)
+            .env(DATA_DIR_VAR, &launch.data_dir)
+            .env(API_KEY_VAR, "")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(stderr_target(&launch.stderr_path()));

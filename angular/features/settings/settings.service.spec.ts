@@ -32,6 +32,7 @@ describe('SettingsService', () => {
       'general',
       'llm',
       'backend',
+      'remote',
       'cloud',
     ]);
     expect(CLOUD_PROVIDERS.length).toBeGreaterThan(0);

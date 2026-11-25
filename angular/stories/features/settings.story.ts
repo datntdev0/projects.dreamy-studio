@@ -4,15 +4,20 @@ import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 // prettier-ignore
 import { CURRENT_WORKSPACE, LLM_PROVIDERS, llmServiceProvider, settingsProvider, withProviders, workspaceProvider } from './mocks';
-import { backendServiceProvider } from './settings-backend.mocks';
+// prettier-ignore
+import { backendServiceProvider, COLAB_T4, remoteBackendServiceProvider,RemoteScenario } from './settings-backend.mocks';
 import { cloudServiceProvider } from './settings-cloud.mocks';
 
-function settings(section: SettingsSectionId): StoryObj<SettingsDialog> {
+function settings(
+  section: SettingsSectionId,
+  remote: RemoteScenario = {},
+): StoryObj<SettingsDialog> {
   return withProviders([
     settingsProvider({ section }),
     workspaceProvider({ current: CURRENT_WORKSPACE }),
     llmServiceProvider(LLM_PROVIDERS),
     backendServiceProvider(),
+    remoteBackendServiceProvider(remote),
     cloudServiceProvider(),
   ]);
 }
@@ -30,3 +35,9 @@ type Story = StoryObj<SettingsDialog>;
 export const General: Story = settings('general');
 
 export const LlmProviders: Story = settings('llm');
+
+export const LocalBackend: Story = settings('backend');
+
+export const RemoteBackend: Story = settings('remote', COLAB_T4);
+
+export const RemoteBackendSetup: Story = settings('remote');

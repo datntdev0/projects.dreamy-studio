@@ -6,6 +6,7 @@ import { SettingsService } from '../settings.service';
 import { SettingsBackend } from './backend.component';
 import { SettingsGeneral } from './general.component';
 import { SettingsLlm } from './llm.component';
+import { SettingsRemote } from './remote.component';
 import { SettingsDialog } from './settings.dialog';
 
 async function warm(): Promise<void> {
@@ -16,6 +17,7 @@ const cases: ComponentCase[] = [
   { name: 'SettingsGeneral', type: SettingsGeneral, before: warm },
   { name: 'SettingsLlm', type: SettingsLlm, before: warm },
   { name: 'SettingsBackend', type: SettingsBackend, before: warm },
+  { name: 'SettingsRemote', type: SettingsRemote, before: warm },
   {
     name: 'SettingsDialog (general)',
     type: SettingsDialog,
@@ -38,6 +40,14 @@ const cases: ComponentCase[] = [
     before: async () => {
       await warm();
       TestBed.inject(SettingsService).openDialog('backend');
+    },
+  },
+  {
+    name: 'SettingsDialog (remote)',
+    type: SettingsDialog,
+    before: async () => {
+      await warm();
+      TestBed.inject(SettingsService).openDialog('remote');
     },
   },
   {

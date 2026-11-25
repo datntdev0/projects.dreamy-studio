@@ -1,7 +1,7 @@
 import { Language, LanguageKey } from '@shared/language/language.models';
 import { Theme } from '@shared/theme/theme.models';
 
-export type SettingsSectionId = 'general' | 'llm' | 'backend' | 'cloud';
+export type SettingsSectionId = 'general' | 'llm' | 'backend' | 'remote' | 'cloud';
 
 export type SettingsFolderTarget = 'workspace' | 'appData';
 

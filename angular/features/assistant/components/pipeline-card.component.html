@@ -7,94 +7,102 @@
 >
   <header class="asst-card-head" data-testid="assistant-pipeline-head">
     <span class="asst-card-ico" data-testid="assistant-pipeline-icon">
-      <ds-icon [name]="kind().icon" [size]="15" />
+      <ds-icon [name]="kind().icon" [size]="14" />
     </span>
     <div class="asst-card-title" data-testid="assistant-pipeline-title">
-      <span class="t-ink" data-testid="assistant-pipeline-name">{{ data.title }}</span>
-      <span class="t-sm t-mute" data-testid="assistant-pipeline-meta">
-        {{ kind().labelKey | t }} ·
-        {{ 'assistant.pipeline.summary' | t: { items: data.items.length, tasks: data.totalTasks } }}
+      <span class="asst-card-name" data-testid="assistant-pipeline-name">{{ data.title }}</span>
+      <span class="asst-card-meta" data-testid="assistant-pipeline-meta">
+        <span>{{ kind().labelKey | t }}</span>
+        <span>
+          {{
+            'assistant.pipeline.summary' | t: { items: data.items.length, tasks: data.totalTasks }
+          }}
+        </span>
+        @if (data.target !== null) {
+          <span data-testid="assistant-pipeline-target">
+            {{ 'assistant.pipeline.target' | t: { target: data.target } }}
+          </span>
+        }
+        @if (modeKey(); as key) {
+          <span data-testid="assistant-pipeline-mode">{{ key | t }}</span>
+        }
+        @if (data.overwrite) {
+          <span class="is-warn" data-testid="assistant-pipeline-overwrite">
+            {{ 'assistant.pipeline.overwrite' | t }}
+          </span>
+        }
       </span>
     </div>
+    @if (data.status !== 'pending') {
+      <span
+        class="asst-status"
+        [class]="'asst-status is-' + data.status"
+        data-testid="assistant-pipeline-status"
+      >
+        <ds-icon [name]="data.status === 'applied' ? 'check-circle' : 'x-circle'" [size]="13" />
+        {{
+          data.status === 'applied'
+            ? ('assistant.pipeline.started' | t)
+            : (statusKey(data.status) | t)
+        }}
+      </span>
+    }
   </header>
 
-  <div class="asst-card-stats" data-testid="assistant-pipeline-stats">
-    @if (data.target !== null) {
-      <span class="badge badge-info" data-testid="assistant-pipeline-target">
-        {{ 'assistant.pipeline.target' | t: { target: data.target } }}
-      </span>
-    }
-    @if (modeKey(); as key) {
-      <span class="badge badge-info" data-testid="assistant-pipeline-mode">{{ key | t }}</span>
-    }
-    @if (data.overwrite) {
-      <span class="badge badge-warning" data-testid="assistant-pipeline-overwrite">
-        {{ 'assistant.pipeline.overwrite' | t }}
-      </span>
-    }
-  </div>
-
   @for (warning of data.warnings; track $index) {
-    <div class="asst-valid is-warn" data-testid="assistant-pipeline-warning">
-      <ds-icon name="alert" [size]="14" />
+    <p class="asst-note is-warn" data-testid="assistant-pipeline-warning">
+      <ds-icon name="alert" [size]="13" />
       <span>{{ warning }}</span>
-    </div>
+    </p>
   }
 
-  <ol class="asst-pipeline-items" data-testid="assistant-pipeline-items">
+  <ol class="asst-rows" data-testid="assistant-pipeline-items">
     @for (item of data.items; track item.id) {
       <li
-        class="asst-pipeline-item"
+        class="asst-row asst-pipeline-item"
         [attr.data-item-id]="item.id"
+        [attr.title]="item.note"
         data-testid="assistant-pipeline-item"
       >
         @if (item.seq !== null) {
-          <span class="chip is-static" data-testid="assistant-pipeline-item-seq">
+          <span class="asst-row-key" data-testid="assistant-pipeline-item-seq">
             #{{ item.seq }}
           </span>
         }
-        <span class="asst-pipeline-item-title t-ink" data-testid="assistant-pipeline-item-title">
+        <span class="asst-row-main" data-testid="assistant-pipeline-item-title">
           {{ item.title }}
         </span>
-        <span class="t-sm t-mute" data-testid="assistant-pipeline-item-tasks">
+        @if (item.note !== null) {
+          <span class="sr-only" data-testid="assistant-pipeline-item-note">{{ item.note }}</span>
+        }
+        <span class="asst-row-end" data-testid="assistant-pipeline-item-tasks">
           {{ 'assistant.pipeline.itemTasks' | t: { count: item.tasks } }}
         </span>
-        @if (item.note !== null) {
-          <span
-            class="asst-pipeline-item-note t-sm t-mute"
-            data-testid="assistant-pipeline-item-note"
-          >
-            {{ item.note }}
-          </span>
-        }
       </li>
     }
   </ol>
 
   @if (data.skipped.length > 0) {
-    <details class="asst-pipeline-skipped" data-testid="assistant-pipeline-skipped">
-      <summary class="t-sm t-mute" data-testid="assistant-pipeline-skipped-summary">
+    <details class="asst-more" data-testid="assistant-pipeline-skipped">
+      <summary data-testid="assistant-pipeline-skipped-summary">
         {{ 'assistant.pipeline.skipped' | t: { count: data.skipped.length } }}
       </summary>
-      <ul data-testid="assistant-pipeline-skipped-list">
+      <ul class="asst-rows" data-testid="assistant-pipeline-skipped-list">
         @for (skip of data.skipped; track skip.id) {
-          <li class="t-sm t-mute" data-testid="assistant-pipeline-skipped-item">
+          <li class="asst-row" data-testid="assistant-pipeline-skipped-item">
             @if (skip.seq !== null) {
-              <span>#{{ skip.seq }}</span>
+              <span class="asst-row-key">#{{ skip.seq }}</span>
             }
-            <span class="t-ink">{{ skip.title }}</span>
-            <span>{{ skip.reason }}</span>
+            <span class="asst-row-main">{{ skip.title }}</span>
+            <span class="asst-row-end">{{ skip.reason }}</span>
           </li>
         }
       </ul>
     </details>
   }
 
-  <footer class="asst-card-foot" data-testid="assistant-pipeline-foot">
-    @if (data.status === 'pending') {
-      <span class="t-sm t-mute asst-card-note" data-testid="assistant-pipeline-note">
-        {{ 'assistant.pipeline.note' | t }}
-      </span>
+  @if (data.status === 'pending') {
+    <footer class="asst-card-foot" data-testid="assistant-pipeline-foot">
       <button
         type="button"
         class="btn btn-sm btn-ghost"
@@ -108,35 +116,25 @@
         type="button"
         class="btn btn-sm btn-primary"
         [disabled]="busy() || !runnable()"
+        [attr.title]="'assistant.pipeline.note' | t"
         data-testid="assistant-pipeline-run"
         (click)="start()"
       >
-        <ds-icon name="play" [size]="14" />
+        <ds-icon name="play" [size]="13" />
         {{ 'assistant.pipeline.run' | t: { count: data.totalTasks } }}
       </button>
-    } @else {
-      <span
-        class="asst-status"
-        [class]="'asst-status is-' + data.status"
-        data-testid="assistant-pipeline-status"
+    </footer>
+  } @else if (data.status === 'applied' && data.pipelineId !== null) {
+    <footer class="asst-card-foot" data-testid="assistant-pipeline-foot">
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost"
+        data-testid="assistant-pipeline-open"
+        (click)="open()"
       >
-        <ds-icon [name]="data.status === 'applied' ? 'check-circle' : 'x-circle'" [size]="13" />
-        {{
-          data.status === 'applied'
-            ? ('assistant.pipeline.started' | t)
-            : (statusKey(data.status) | t)
-        }}
-      </span>
-      @if (data.status === 'applied' && data.pipelineId !== null) {
-        <button
-          type="button"
-          class="btn btn-sm btn-ghost"
-          data-testid="assistant-pipeline-open"
-          (click)="open()"
-        >
-          {{ 'assistant.pipeline.open' | t }}
-        </button>
-      }
-    }
-  </footer>
+        {{ 'assistant.pipeline.open' | t }}
+        <ds-icon name="chev-r" [size]="13" />
+      </button>
+    </footer>
+  }
 </section>

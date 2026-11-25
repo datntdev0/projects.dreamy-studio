@@ -272,6 +272,13 @@ export interface MarkedText {
   after: string;
 }
 
+export interface InlineDiff {
+  before: string;
+  removed: string;
+  added: string;
+  after: string;
+}
+
 export interface AssistantMessage {
   id: string;
   role: AssistantRole;
@@ -293,6 +300,30 @@ export interface AssistantSessionSummary {
   editGranted: boolean;
 }
 
+export interface AssistantContextUsage {
+  usedTokens: number;
+  maxTokens: number | null;
+}
+
+export type AssistantQuotaWindow = 'session' | 'weekly';
+
+export type AssistantQuotaStatus = 'ok' | 'warning' | 'limited';
+
+export interface AssistantQuota {
+  window: AssistantQuotaWindow;
+  status: AssistantQuotaStatus;
+  usedPercent: number | null;
+  resetsAt: string | null;
+}
+
+export interface AssistantQuotaSnapshot {
+  provider: string;
+  plan: string | null;
+  updatedAt: string;
+  quotas: AssistantQuota[];
+}
+
 export interface AssistantSession extends AssistantSessionSummary {
   messages: AssistantMessage[];
+  context?: AssistantContextUsage | null;
 }

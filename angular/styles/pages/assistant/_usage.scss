@@ -1,0 +1,159 @@
+app-assistant-usage {
+  display: contents;
+}
+
+.asst-composer {
+  position: relative;
+}
+
+.asst-usage-chip {
+  position: relative;
+  gap: 5px;
+  font: 500 11.5px/1 var(--font-mono);
+  color: var(--mute);
+}
+.asst-usage-chip[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--canvas-soft);
+}
+.asst-usage-ring {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+}
+.asst-usage-ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+.asst-usage-ring-track {
+  stroke: var(--canvas-mid);
+}
+.asst-usage-ring-fill {
+  stroke: var(--info);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+.asst-usage-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+}
+.asst-usage[data-tone='danger'] .asst-usage-dot {
+  background: var(--danger);
+}
+
+.asst-usage-pop {
+  position: absolute;
+  z-index: 20;
+  right: var(--sp-md);
+  bottom: calc(100% - var(--sp-xs));
+  left: var(--sp-md);
+  display: grid;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-md);
+  background: var(--canvas-card);
+  box-shadow: var(--shadow-float);
+}
+.asst-usage-sec {
+  display: grid;
+  gap: var(--sp-sm);
+  padding: var(--sp-md);
+}
+.asst-usage-sec + .asst-usage-sec {
+  border-top: 1px solid var(--hairline);
+}
+.asst-usage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.asst-usage-label {
+  font-weight: 600;
+}
+.asst-usage-value {
+  font: 12px/1 var(--font-mono);
+  color: var(--mute);
+}
+.asst-usage-head b,
+.asst-usage-value b {
+  margin-left: var(--sp-xs);
+  font: 600 12px/1 var(--font-mono);
+  color: var(--ink);
+}
+.asst-usage-plan {
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.asst-usage-track {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--r-xs);
+  background: var(--canvas-mid);
+}
+.asst-usage-track > i {
+  display: block;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.asst-usage-track > i {
+  background: var(--info);
+}
+
+.asst-usage-quota {
+  display: grid;
+  gap: 5px;
+}
+.asst-usage-quota .asst-usage-head {
+  font-size: 12px;
+}
+.asst-usage-reset {
+  font-size: 11.5px;
+}
+.asst-usage-out {
+  color: var(--danger);
+  font-weight: 500;
+}
+.asst-usage-updated {
+  color: var(--mute);
+  font-size: 11px;
+}
+.asst-usage-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--mute);
+}
+
+.asst-usage [data-tone='warning'] {
+  --tone: var(--warning);
+}
+.asst-usage [data-tone='danger'] {
+  --tone: var(--danger);
+}
+.asst-usage-ring-fill[data-tone='warning'],
+.asst-usage-ring-fill[data-tone='danger'] {
+  stroke: var(--tone);
+}
+.asst-usage-track > i[data-tone='warning'],
+.asst-usage-track > i[data-tone='danger'] {
+  background: var(--tone);
+}
+.asst-usage b[data-tone='warning'],
+.asst-usage b[data-tone='danger'],
+.asst-usage-note[data-tone='warning'],
+.asst-usage-note[data-tone='danger'] {
+  color: var(--tone);
+}

@@ -1,0 +1,133 @@
+<div class="asst-usage" [attr.data-tone]="alert()" data-testid="assistant-usage">
+  <button
+    type="button"
+    class="btn btn-sm btn-ghost asst-usage-chip"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="open()"
+    [attr.title]="'assistant.usage.open' | t"
+    data-testid="assistant-usage-toggle"
+    (click)="toggle()"
+  >
+    @if (percent() !== null) {
+      <svg class="asst-usage-ring" viewBox="0 0 16 16" aria-hidden="true">
+        <circle class="asst-usage-ring-track" cx="8" cy="8" r="6" />
+        <circle
+          class="asst-usage-ring-fill"
+          cx="8"
+          cy="8"
+          r="6"
+          [attr.data-tone]="tone()"
+          [attr.stroke-dasharray]="ringDash()"
+        />
+      </svg>
+    }
+    <span data-testid="assistant-usage-percent">
+      @if (percent() !== null) {
+        {{ percent() }}%
+      } @else if (context(); as current) {
+        {{ tokens(current.usedTokens) }}
+      } @else {
+        —
+      }
+    </span>
+    @if (alert() !== 'ok') {
+      <span class="asst-usage-dot" aria-hidden="true" data-testid="assistant-usage-alert"></span>
+    }
+  </button>
+  @if (open()) {
+    <div
+      class="asst-usage-pop"
+      role="dialog"
+      [attr.aria-label]="'assistant.usage.open' | t"
+      data-testid="assistant-usage-pop"
+    >
+      @if (context(); as current) {
+        <section class="asst-usage-sec" data-testid="assistant-usage-context">
+          <header class="asst-usage-head">
+            <span class="asst-usage-label">{{ 'assistant.usage.context' | t }}</span>
+            <span class="asst-usage-value" data-testid="assistant-usage-context-value">
+              {{ tokens(current.usedTokens) }}
+              @if (current.maxTokens; as max) {
+                / {{ tokens(max) }}
+              }
+              @if (percent() !== null) {
+                <b [attr.data-tone]="tone()">{{ percent() }}%</b>
+              }
+            </span>
+          </header>
+          @if (percent() !== null) {
+            <div class="asst-usage-track" data-testid="assistant-usage-context-bar">
+              <i [attr.data-tone]="tone()" [style.width.%]="percent()"></i>
+            </div>
+          }
+          <p
+            class="asst-usage-note"
+            [attr.data-tone]="tone()"
+            data-testid="assistant-usage-context-note"
+          >
+            {{ contextNoteKey() | t: { free: freeTokens() } }}
+          </p>
+        </section>
+      }
+      <section class="asst-usage-sec" data-testid="assistant-usage-quota">
+        <header class="asst-usage-head">
+          <span class="asst-usage-label">{{ 'assistant.usage.quota' | t }}</span>
+          @if (quota(); as snapshot) {
+            <span class="asst-usage-plan" data-testid="assistant-usage-plan">
+              {{ snapshot.provider }}
+              @if (snapshot.plan; as plan) {
+                · {{ plan }}
+              }
+            </span>
+          }
+        </header>
+        @for (row of quotas(); track row.window) {
+          <div
+            class="asst-usage-quota"
+            [attr.data-window]="row.window"
+            data-testid="assistant-usage-quota-row"
+          >
+            <div class="asst-usage-head">
+              <span>{{ row.labelKey | t }}</span>
+              @if (row.percent !== null) {
+                <b [attr.data-tone]="row.tone">{{ row.percent }}%</b>
+              } @else {
+                <b [attr.data-tone]="row.tone" data-testid="assistant-usage-quota-status">
+                  {{ row.statusKey | t }}
+                </b>
+              }
+            </div>
+            @if (row.percent !== null) {
+              <div class="asst-usage-track">
+                <i [attr.data-tone]="row.tone" [style.width.%]="row.percent"></i>
+              </div>
+            }
+            @if (row.limited || row.reset !== '') {
+              <span class="asst-usage-reset">
+                @if (row.limited) {
+                  <span class="asst-usage-out" data-testid="assistant-usage-quota-out">
+                    {{ 'assistant.usage.quota.out' | t }}
+                  </span>
+                }
+                {{ row.reset }}
+              </span>
+            }
+          </div>
+        } @empty {
+          <p class="asst-usage-note" data-testid="assistant-usage-quota-empty">
+            @if (quota(); as snapshot) {
+              {{ 'assistant.usage.quota.none' | t: { provider: snapshot.provider } }}
+            } @else {
+              {{ 'assistant.usage.quota.pending' | t }}
+            }
+          </p>
+        }
+        @if (updated() !== '') {
+          <span class="asst-usage-updated" data-testid="assistant-usage-updated">
+            {{ updated() }}
+          </span>
+        }
+      </section>
+    </div>
+  }
+</div>

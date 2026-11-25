@@ -4,9 +4,9 @@ import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { DictProposal, MarkedText, ProposalDecision, ProposalResolution, ProposalStatus, TranslationFinding, TranslationReview } from '../assistant.models';
+import { DictProposal, InlineDiff, ProposalDecision, ProposalResolution, ProposalStatus, TranslationFinding, TranslationReview } from '../assistant.models';
 // prettier-ignore
-import { CATEGORY_KEYS, countResolved, countSeverity, markText, pendingIds, SEVERITY_BADGES, SEVERITY_KEYS, STATUS_KEYS } from '../assistant.proposals';
+import { CATEGORY_KEYS, countResolved, countSeverity, inlineDiff, pendingIds, SEVERITY_KEYS, STATUS_KEYS } from '../assistant.proposals';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,10 +31,6 @@ export class AssistantReviewCard {
     return SEVERITY_KEYS[finding.severity];
   }
 
-  severityBadge(finding: TranslationFinding): string {
-    return SEVERITY_BADGES[finding.severity];
-  }
-
   categoryKey(finding: TranslationFinding): LanguageKey {
     return CATEGORY_KEYS[finding.category];
   }
@@ -43,12 +39,8 @@ export class AssistantReviewCard {
     return STATUS_KEYS[status];
   }
 
-  currentOf(finding: TranslationFinding): MarkedText {
-    return markText(finding.current, finding.from);
-  }
-
-  suggestedOf(finding: TranslationFinding): MarkedText {
-    return markText(finding.suggested, finding.to);
+  diffOf(finding: TranslationFinding): InlineDiff {
+    return inlineDiff(finding);
   }
 
   decide(ids: string[], status: ProposalDecision): void {

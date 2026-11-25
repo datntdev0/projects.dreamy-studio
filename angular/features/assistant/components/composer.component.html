@@ -17,6 +17,11 @@
       {{ 'assistant.composer.hint' | t }}
     </span>
     <span class="spacer"></span>
+    @if (assistant.active(); as session) {
+      @if (session.context || assistant.quota()) {
+        <app-assistant-usage [context]="session.context ?? null" [quota]="assistant.quota()" />
+      }
+    }
     @if (assistant.active()) {
       <button
         type="button"

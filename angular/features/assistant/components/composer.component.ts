@@ -5,11 +5,12 @@ import { CoreModule } from '@shared/core.module';
 import { fieldValue } from '@shared/utils/dom';
 
 import { AssistantService } from '../assistant.service';
+import { AssistantUsageMeter } from './usage.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-assistant-composer',
-  imports: [Button, Icon, CoreModule],
+  imports: [AssistantUsageMeter, Button, Icon, CoreModule],
   templateUrl: './composer.component.html',
 })
 export class AssistantComposer {

@@ -68,6 +68,22 @@ describe('AssistantService', () => {
     expect(assistant.sessions()).toEqual([]);
   });
 
+  it('refreshes the account quota after loading and after each reply', async () => {
+    const snapshot = { provider: 'Codex', plan: 'Plus', updatedAt: '2026-05-01', quotas: [] };
+    ipc.on('assistant_quota_get', snapshot);
+    await assistant.load();
+    await Promise.resolve();
+    expect(assistant.quota()).toEqual(snapshot);
+    ipc.fail('assistant_quota_get', { code: 'x', detail: 'unsupported' });
+    expect(await assistant.send('hello')).toBe(true);
+    await Promise.resolve();
+    expect(assistant.quota()).toEqual(snapshot);
+    ipc.on('assistant_quota_get', null);
+    await assistant.load();
+    await Promise.resolve();
+    expect(assistant.quota()).toBeNull();
+  });
+
   it('resolves the context scope', () => {
     expect(assistant.contextScope()).toEqual(WORKSPACE_SCOPE);
     TestBed.inject(TabsService).openNovel(1, 'Alpha');

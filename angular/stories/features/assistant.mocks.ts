@@ -1,19 +1,19 @@
 // prettier-ignore
-import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from '@features/assistant/assistant.models';
+import { AssistantAttachment, AssistantContext, AssistantMessage, AssistantQuota, AssistantQuotaSnapshot, AssistantScope, AssistantSession, AssistantSessionSummary, ProposalDecision } from '@features/assistant/assistant.models';
 import { novelScope, projectScope, WORKSPACE_SCOPE } from '@features/assistant/assistant.rules';
 import { NovelSummary } from '@features/novel/novel.models';
 import type { Decorator } from '@storybook/angular-vite';
 
+import { knowledgeScreenHandlers } from '../screens/novel-knowledge.mocks';
+import { LANTERN_VI_TITLES } from '../screens/novel-translation.fixtures';
+import { NOVEL_ID } from '../screens/novel-translation.mocks';
+import { IpcHandlers, withScreen } from '../screens/screen.mocks';
 import {
   knowledgeChanges,
   pipelineRun,
   scriptDraft,
   translationReview,
 } from './assistant.fixtures';
-import { knowledgeScreenHandlers } from './novel-knowledge.mocks';
-import { LANTERN_VI_TITLES } from './novel-translation.fixtures';
-import { NOVEL_ID } from './novel-translation.mocks';
-import { IpcHandlers, withScreen } from './screen.mocks';
 
 export const SECOND_NOVEL_ID = 2;
 
@@ -27,7 +27,11 @@ export interface AssistantScenario {
   resolveConflict?: boolean;
   replyDelayMs?: number;
   novels?: number;
+  usage?: UsageLevel;
 }
+
+// prettier-ignore
+export type UsageLevel = 'codex' | 'codex-filling' | 'claude' | 'claude-limited' | 'claude-api-key' | 'claude-legacy' | 'antigravity' | 'pending';
 
 interface MockState {
   scenario: AssistantScenario;
@@ -46,6 +50,140 @@ interface Turn {
 
 function ago(ms: number): string {
   return new Date(Date.now() - ms).toISOString();
+}
+
+const TOKENS_PER_MESSAGE = 6200;
+const MINUTE = 60 * 1000;
+
+interface QuotaShape {
+  status: AssistantQuota['status'];
+  usedPercent: number | null;
+  resetMs: number | null;
+}
+
+interface UsageShape {
+  provider: string;
+  plan: string | null;
+  baseTokens: number;
+  maxTokens: number | null;
+  updatedMs: number | null;
+  session: QuotaShape | null;
+  weekly: QuotaShape | null;
+}
+
+const SESSION_RESET_MS = 2 * HOUR_MS + 14 * MINUTE;
+
+const USAGE_SHAPES: Record<UsageLevel, UsageShape> = {
+  codex: {
+    provider: 'Codex',
+    plan: 'Plus',
+    baseTokens: 38000,
+    maxTokens: 272000,
+    updatedMs: 0,
+    session: { status: 'ok', usedPercent: 31, resetMs: SESSION_RESET_MS },
+    weekly: { status: 'ok', usedPercent: 46, resetMs: 3 * DAY_MS },
+  },
+  'codex-filling': {
+    provider: 'Codex',
+    plan: 'Plus',
+    baseTokens: 188000,
+    maxTokens: 272000,
+    updatedMs: 0,
+    session: { status: 'warning', usedPercent: 82, resetMs: 3 * HOUR_MS + 5 * MINUTE },
+    weekly: { status: 'ok', usedPercent: 64, resetMs: 3 * DAY_MS },
+  },
+  claude: {
+    provider: 'Claude Code',
+    plan: null,
+    baseTokens: 30000,
+    maxTokens: 200000,
+    updatedMs: 12 * MINUTE,
+    session: { status: 'ok', usedPercent: 27, resetMs: SESSION_RESET_MS },
+    weekly: { status: 'ok', usedPercent: 41, resetMs: 3 * DAY_MS },
+  },
+  'claude-limited': {
+    provider: 'Claude Code',
+    plan: null,
+    baseTokens: 162000,
+    maxTokens: 200000,
+    updatedMs: 2 * MINUTE,
+    session: { status: 'limited', usedPercent: 100, resetMs: 48 * MINUTE },
+    weekly: { status: 'warning', usedPercent: 88, resetMs: DAY_MS + 6 * HOUR_MS },
+  },
+  'claude-api-key': {
+    provider: 'Claude Code',
+    plan: null,
+    baseTokens: 30000,
+    maxTokens: 200000,
+    updatedMs: 0,
+    session: null,
+    weekly: null,
+  },
+  'claude-legacy': {
+    provider: 'Claude Code',
+    plan: null,
+    baseTokens: 30000,
+    maxTokens: 200000,
+    updatedMs: 25 * MINUTE,
+    session: { status: 'warning', usedPercent: null, resetMs: SESSION_RESET_MS },
+    weekly: { status: 'ok', usedPercent: null, resetMs: 3 * DAY_MS },
+  },
+  antigravity: {
+    provider: 'Antigravity',
+    plan: null,
+    baseTokens: 52000,
+    maxTokens: null,
+    updatedMs: 0,
+    session: { status: 'ok', usedPercent: 18, resetMs: 4 * HOUR_MS + 2 * MINUTE },
+    weekly: { status: 'ok', usedPercent: 37, resetMs: 5 * DAY_MS },
+  },
+  pending: {
+    provider: 'Codex',
+    plan: null,
+    baseTokens: 38000,
+    maxTokens: 272000,
+    updatedMs: null,
+    session: null,
+    weekly: null,
+  },
+};
+
+function ahead(ms: number): string {
+  return new Date(Date.now() + ms).toISOString();
+}
+
+function quotaOf(window: AssistantQuota['window'], shape: QuotaShape | null): AssistantQuota[] {
+  if (shape === null) {
+    return [];
+  }
+  const resetsAt = shape.resetMs === null ? null : ahead(shape.resetMs);
+  return [{ window, status: shape.status, usedPercent: shape.usedPercent, resetsAt }];
+}
+
+function shapeOf(scenario: AssistantScenario): UsageShape {
+  return USAGE_SHAPES[scenario.usage ?? 'codex'];
+}
+
+function quotaFor(scenario: AssistantScenario): AssistantQuotaSnapshot | null {
+  const shape = shapeOf(scenario);
+  if (shape.updatedMs === null) {
+    return null;
+  }
+  return {
+    provider: shape.provider,
+    plan: shape.plan,
+    updatedAt: ago(shape.updatedMs),
+    quotas: [...quotaOf('session', shape.session), ...quotaOf('weekly', shape.weekly)],
+  };
+}
+
+function withUsage(scenario: AssistantScenario, value: AssistantSession): AssistantSession {
+  const shape = shapeOf(scenario);
+  value.context = {
+    usedTokens: shape.baseTokens + value.messageCount * TOKENS_PER_MESSAGE,
+    maxTokens: shape.maxTokens,
+  };
+  return value;
 }
 
 function message(id: string, turn: Turn, createdAt: string): AssistantMessage {
@@ -233,6 +371,21 @@ const SCRIPT_TURNS: Turn[] = [
   },
 ];
 
+const APPROVAL_TURNS: Turn[] = [
+  { role: 'user', text: 'Chuẩn bị giúp tôi các việc cần duyệt cho chương 1–4.' },
+  {
+    role: 'assistant',
+    text: 'Mình đã gom các đề xuất cần bạn duyệt: lượt dịch chương 3–4, bản viết lại script chương 1, rà soát bản dịch chương 3 và bộ sửa knowledgebase.',
+    activities: ['novel_outline → 12 chương', 'propose_passage × 4', 'propose_kb(4 edits)'],
+    attachments: [
+      pipelineRun(),
+      scriptDraft(),
+      translationReview(3, 'Con tàu cuối mùa'),
+      knowledgeChanges(),
+    ],
+  },
+];
+
 const WORKSPACE_TURNS: Turn[] = [
   { role: 'user', text: 'Novel nào còn nhiều chương chưa dịch?' },
   {
@@ -242,8 +395,19 @@ const WORKSPACE_TURNS: Turn[] = [
   },
 ];
 
-function seedSessions(): AssistantSession[] {
+function seedSessions(scenario: AssistantScenario): AssistantSession[] {
+  return baseSessions().map((item) => withUsage(scenario, item));
+}
+
+function baseSessions(): AssistantSession[] {
   return [
+    session(
+      's-approvals',
+      'Duyệt đề xuất chương 1–4',
+      novelScope(NOVEL_ID),
+      60 * 1000,
+      APPROVAL_TURNS,
+    ),
     session(
       's-review',
       'Rà soát bản dịch chương 2',
@@ -359,7 +523,7 @@ function create(state: MockState, args: Record<string, unknown>): AssistantSessi
     editGranted: false,
     messages: [],
   };
-  state.sessions.unshift(created);
+  state.sessions.unshift(withUsage(state.scenario, created));
   return clone(created);
 }
 
@@ -403,10 +567,11 @@ async function send(state: MockState, args: Record<string, unknown>): Promise<As
   target.updatedAt = now;
   target.messageCount = target.messages.length;
   target.preview = reply.text.split('\n')[0];
+  withUsage(state.scenario, target);
   return clone(target);
 }
 
-export function decideAttachment(
+function decideAttachment(
   attachment: AssistantAttachment,
   ids: Set<string>,
   status: ProposalDecision,
@@ -531,7 +696,7 @@ function assistantHandlers(scenario: AssistantScenario): IpcHandlers {
   const base = knowledgeScreenHandlers({});
   const state: MockState = {
     scenario,
-    sessions: scenario.sessions === false ? [] : seedSessions(),
+    sessions: scenario.sessions === false ? [] : seedSessions(scenario),
     nextSession: 1,
     nextMessage: 1,
   };
@@ -561,6 +726,7 @@ function assistantHandlers(scenario: AssistantScenario): IpcHandlers {
       target.editGranted = Boolean(args['editGranted']);
       return clone(target);
     },
+    assistant_quota_get: () => quotaFor(scenario),
     assistant_session_delete: (args) => {
       state.sessions = state.sessions.filter((item) => item.id !== String(args['id']));
       return null;

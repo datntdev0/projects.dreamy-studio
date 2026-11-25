@@ -20,7 +20,7 @@ import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
 // prettier-ignore
-import { AssistantChange, AssistantContext, AssistantEvent, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution, ScriptDraft } from './assistant.models';
+import { AssistantChange, AssistantContext, AssistantEvent, AssistantQuotaSnapshot, AssistantScope, AssistantSession, AssistantSessionSummary, AssistantView, PipelineRun, ProposalResolution, ScriptDraft } from './assistant.models';
 import { overwritesAudio, runItemIds } from './assistant.proposals';
 // prettier-ignore
 import { compareRecentFirst, isProjectChange, NOVEL_SCOPES, novelScope, projectScope, RECENT_SESSIONS, WORKSPACE_SCOPE } from './assistant.rules';
@@ -107,6 +107,7 @@ export class AssistantService {
   readonly permitting = signal(false);
   readonly draft = signal('');
   readonly draftScope = signal<AssistantScope>(WORKSPACE_SCOPE);
+  readonly quota = signal<AssistantQuotaSnapshot | null>(null);
   readonly sessions = computed(this.buildSessions.bind(this));
   readonly recent = computed(this.buildRecent.bind(this));
 
@@ -130,6 +131,7 @@ export class AssistantService {
       if (epoch === this.epoch) {
         this.items.set(rows ?? []);
         this.loaded.set(true);
+        void this.refreshQuota();
       }
     } catch (cause) {
       if (epoch === this.epoch) {
@@ -337,6 +339,7 @@ export class AssistantService {
         this.active.set(next);
         this.upsert(summaryOf(next));
       }
+      void this.refreshQuota();
       return true;
     } catch (cause) {
       if (epoch === this.epoch) {
@@ -407,6 +410,7 @@ export class AssistantService {
     this.loading.set(false);
     this.error.set(null);
     this.active.set(null);
+    this.quota.set(null);
     this.opening.set(false);
     this.sending.set(false);
     this.pendingText.set(null);
@@ -514,6 +518,18 @@ export class AssistantService {
       return this.translation.translate(novelId, ids, run.target as TargetLang);
     }
     return Promise.resolve(null);
+  }
+
+  private async refreshQuota(): Promise<void> {
+    const epoch = this.epoch;
+    try {
+      const snapshot = await this.ipc.invoke<AssistantQuotaSnapshot | null>('assistant_quota_get');
+      if (epoch === this.epoch) {
+        this.quota.set(snapshot ?? null);
+      }
+    } catch {
+      return;
+    }
   }
 
   private showPipelineFailure(key: LanguageKey, detail: string): void {

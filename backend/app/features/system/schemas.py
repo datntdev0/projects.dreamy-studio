@@ -35,3 +35,4 @@ class GpuResponse(CamelModel):
 class SystemResponse(CamelModel):
     gpu: GpuResponse
     device: Device
+    models_dir: str = ""

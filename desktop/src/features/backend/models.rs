@@ -99,6 +99,8 @@ pub enum Device {
 pub struct SystemView {
     pub gpu: GpuView,
     pub device: Device,
+    #[serde(rename = "modelsDir")]
+    pub models_dir: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -145,6 +147,41 @@ pub struct BackendView {
     pub models_dir: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteView {
+    #[serde(flatten)]
+    pub backend: BackendView,
+    pub url: String,
+    pub key_hint: String,
+    pub active: bool,
+}
+
+impl RemoteView {
+    pub fn disconnected(checked_at: String) -> Self {
+        Self {
+            backend: BackendView::offline(ServerView::from_state(
+                &MonitorState::Stopped,
+                checked_at,
+            )),
+            url: String::new(),
+            key_hint: String::new(),
+            active: false,
+        }
+    }
+}
+
+impl BackendView {
+    pub fn offline(server: ServerView) -> Self {
+        Self {
+            server,
+            gpu: GpuView::default(),
+            device: Device::default(),
+            models_dir: String::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SynthesisRequest {
@@ -156,6 +193,10 @@ pub struct SynthesisRequest {
     pub preset: String,
     pub prompt: String,
     pub reference_path: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub reference_audio: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub reference_name: String,
     pub sentence_pause_ms: i64,
 }
 

@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { SettingsService } from '@features/settings/settings.service';
+import { Translatable } from '@features/setup/setup.models';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
 import { LanguageKey } from '@shared/language/language.models';
@@ -12,13 +13,11 @@ import { AppInfo, CancelOutcome, CurrentWorkspace, EnterOutcome, LoadError, Load
 
 const FAILURE_HOLD_MS = 1200;
 
-const STEP_ORDER: LoadStepId[] = ['application', 'backend', 'llm', 'workspace'];
+const STEP_ORDER: LoadStepId[] = ['folder', 'database'];
 
 const STEP_NAME_KEYS: Record<LoadStepId, LanguageKey> = {
-  application: 'loading.stepName.application',
-  backend: 'loading.stepName.backend',
-  workspace: 'loading.stepName.workspace',
-  llm: 'loading.stepName.llm',
+  folder: 'loading.stepName.folder',
+  database: 'loading.stepName.database',
 };
 
 const ERROR_CAUSE_KEYS: Record<LoadErrorCode, LanguageKey> = {
@@ -62,6 +61,7 @@ function initialLoadState(path: string, origin: LoadOrigin): LoadState {
     steps: STEP_ORDER.map(pendingStep),
     percent: 0,
     status: 'running',
+    error: null,
   };
 }
 
@@ -119,6 +119,7 @@ export class WorkspaceService {
   private readonly opened = signal<CurrentWorkspace | null>(null);
   private previous: CurrentWorkspace | null = null;
   private origin: LoadOrigin = 'splash';
+  private lastRequest: LoadRequest | null = null;
 
   readonly current = this.opened.asReadonly();
   readonly state = signal<LoadState | null>(null);
@@ -172,7 +173,19 @@ export class WorkspaceService {
     await this.start({ ...request, origin: 'switch' });
   }
 
+  async retry(): Promise<void> {
+    if (this.lastRequest) {
+      await this.start(this.lastRequest);
+    }
+  }
+
+  dismiss(): void {
+    this.nextRun();
+    this.clearState();
+  }
+
   async start(request: LoadRequest): Promise<void> {
+    this.lastRequest = request;
     const token = this.nextRun();
     this.origin = request.origin ?? 'splash';
     this.notice.set(null);
@@ -199,12 +212,20 @@ export class WorkspaceService {
   }
 
   private describeLoadError(error: LoadError): string {
+    const message = this.loadErrorMessage(error);
+    return this.languageService.translate(message.key, message.params);
+  }
+
+  private loadErrorMessage(error: LoadError): Translatable {
     const showDetail = error.detail !== '' && !CODES_WITHOUT_DETAIL.includes(error.code);
-    return this.languageService.translate('loading.error', {
-      step: this.languageService.translate(STEP_NAME_KEYS[error.step]),
-      cause: this.languageService.translate(ERROR_CAUSE_KEYS[error.code]),
-      suffix: showDetail ? ` (${error.detail})` : '',
-    });
+    return {
+      key: 'loading.error',
+      params: {
+        step: this.languageService.translate(STEP_NAME_KEYS[error.step]),
+        cause: this.languageService.translate(ERROR_CAUSE_KEYS[error.code]),
+        suffix: showDetail ? ` (${error.detail})` : '',
+      },
+    };
   }
 
   private requestLoad(
@@ -268,7 +289,7 @@ export class WorkspaceService {
     try {
       outcome = await this.requestLoad(request.path, channel, request.relocateFrom);
     } catch (cause) {
-      await this.fail(token, cause, 'application');
+      await this.fail(token, cause, 'folder');
       return;
     }
     await this.afterLoad(token, outcome);
@@ -303,7 +324,7 @@ export class WorkspaceService {
       const outcome = await this.requestEnter();
       entered = outcome.result === 'entered';
     } catch (cause) {
-      await this.fail(token, cause, 'application');
+      await this.fail(token, cause, 'folder');
       return;
     }
     if (!this.isCurrent(token)) {
@@ -354,6 +375,11 @@ export class WorkspaceService {
     }
     const error = toLoadError(cause, fallbackStep);
     this.state.update((state) => this.markFailed(state, error.step));
+    if (this.origin === 'splash') {
+      const message = this.loadErrorMessage(error);
+      this.state.update((state) => (state ? { ...state, error: message } : state));
+      return;
+    }
     await this.hold(FAILURE_HOLD_MS);
     if (this.isCurrent(token)) {
       this.publishFailure(this.describeLoadError(error));

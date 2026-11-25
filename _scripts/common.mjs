@@ -1,16 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { createWriteStream, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const DESKTOP = join(ROOT, "desktop");
-export const TRIPLE = "x86_64-pc-windows-msvc";
+export const BUILD_DIR = join(ROOT, "_output", "desktop", "build");
 
 const BSDTAR = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe");
-const DOWNLOAD_ATTEMPTS = 3;
 
 export function run(file, args, options = {}) {
   const result = spawnSync(file, args, { cwd: ROOT, stdio: "inherit", ...options });
@@ -39,28 +36,24 @@ export function appVersion() {
   return JSON.parse(readFileSync(join(DESKTOP, "tauri.conf.json"), "utf8")).version;
 }
 
-export function extract(archive, destination, patterns = []) {
-  const filters = patterns.flatMap((pattern) => ["--include", pattern]);
-  run(BSDTAR, ["-xf", archive, "-C", destination, ...filters]);
-}
-
 export function compress(archive, directory, name) {
   run(BSDTAR, ["-a", "-c", "-f", archive, "-C", directory, name]);
 }
 
-export async function download(url, file, headers = {}) {
-  let failure;
-  for (let attempt = 1; attempt <= DOWNLOAD_ATTEMPTS; attempt += 1) {
-    try {
-      const response = await fetch(url, { headers, redirect: "follow" });
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
-      await pipeline(Readable.fromWeb(response.body), createWriteStream(file));
-      return;
-    } catch (error) {
-      failure = error;
-    }
+export const STAGED_PARTS = ["backend", "vcruntime"];
+
+export function requireStaged() {
+  for (const part of STAGED_PARTS) {
+    const path = join(BUILD_DIR, part);
+    if (!existsSync(path)) throw new Error(`${path} is missing; run "pnpm build:prepare" first`);
   }
-  throw failure;
+}
+
+export function buildPython() {
+  if (process.env.PYTHON) return process.env.PYTHON;
+  const windows = process.platform === "win32";
+  const venv = join(ROOT, "backend", ".venv", windows ? "Scripts" : "bin", windows ? "python.exe" : "python");
+  return existsSync(venv) ? venv : "python";
 }
 
 export function fail(error) {

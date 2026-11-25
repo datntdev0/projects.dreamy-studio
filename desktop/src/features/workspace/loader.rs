@@ -1,6 +1,5 @@
 use crate::container::AppContainer;
 use crate::features::pipeline::repository::PipelineRepository;
-use crate::features::settings::check::LlmChecker;
 use crate::features::workspace::inspector::WORKSPACE_DB_FILE;
 use crate::features::workspace::load::EnterOutcome;
 use crate::features::workspace::load::ErrorCode;
@@ -15,15 +14,11 @@ use crate::features::workspace::load::StepState;
 use crate::features::workspace::repository::format_timestamp;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
-use crate::infra::backend::BackendError;
-use crate::infra::backend::BackendHost;
 use crate::infra::logging::Logger;
 use crate::infra::storage::StorageError;
 use crate::infra::storage::StorageResult;
 use crate::infra::storage::database::Database;
 use crate::infra::storage::migrator::Migrator;
-use crate::infra::storage::migrator::Script;
-use crate::infra::storage::migrator::app_scripts;
 use crate::infra::storage::migrator::workspace_scripts;
 use crate::shared::path::NormalizedPath;
 use chrono::Utc;
@@ -33,7 +28,6 @@ use std::io;
 use std::io::ErrorKind;
 use std::io::Write;
 use std::path::Path;
-use std::path::PathBuf;
 use std::process;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -65,44 +59,22 @@ pub fn default_write_probe(folder: &Path) -> io::Result<()> {
 
 #[derive(Clone)]
 pub struct WorkspaceLoader {
-    root: PathBuf,
-    database_path: PathBuf,
     logger: Logger,
     service: WorkspaceService,
-    backend: Arc<dyn BackendHost>,
-    llm: Arc<dyn LlmChecker>,
     probe: WriteProbe,
 }
 
 impl WorkspaceLoader {
-    pub fn new(
-        root: PathBuf,
-        database_path: PathBuf,
-        logger: Logger,
-        service: WorkspaceService,
-        backend: Arc<dyn BackendHost>,
-        llm: Arc<dyn LlmChecker>,
-    ) -> Self {
+    pub fn new(logger: Logger, service: WorkspaceService) -> Self {
         Self {
-            root,
-            database_path,
             logger,
             service,
-            backend,
-            llm,
             probe: default_write_probe,
         }
     }
 
     pub fn from_container(container: &AppContainer, service: WorkspaceService) -> Self {
-        Self::new(
-            container.directories.root.clone(),
-            container.database_path.clone(),
-            container.logger.clone(),
-            service,
-            container.backend.clone(),
-            container.llm.clone(),
-        )
+        Self::new(container.logger.clone(), service)
     }
 
     #[cfg(test)]
@@ -126,11 +98,9 @@ impl WorkspaceLoader {
             session,
             sink,
             cancel,
-            log: RunLog::new(&self.logger),
             target,
             mode,
             finished: 0,
-            backend_spawned: false,
         };
         run.start();
         let result = run.execute();
@@ -154,6 +124,14 @@ impl WorkspaceLoader {
         }
         result
     }
+
+    fn info(&self, message: &str) {
+        self.logger.info(LOG_TARGET, message);
+    }
+
+    fn error(&self, message: &str) {
+        self.logger.error(LOG_TARGET, message);
+    }
 }
 
 enum Stop {
@@ -161,85 +139,19 @@ enum Stop {
     Cancelled,
 }
 
-struct PendingLine {
-    error: bool,
-    message: String,
-}
-
-struct RunLog<'a> {
-    logger: &'a Logger,
-    pending: Vec<PendingLine>,
-    ready: bool,
-}
-
-impl<'a> RunLog<'a> {
-    fn new(logger: &'a Logger) -> Self {
-        Self {
-            logger,
-            pending: Vec::new(),
-            ready: false,
-        }
-    }
-
-    fn info(&mut self, message: String) {
-        self.push(false, message);
-    }
-
-    fn error(&mut self, message: String) {
-        self.push(true, message);
-    }
-
-    fn mark_ready(&mut self) {
-        self.ready = true;
-        self.flush();
-    }
-
-    fn finish(&mut self) {
-        if !self.ready {
-            let _ = self.logger.prepare();
-            self.flush();
-        }
-    }
-
-    fn push(&mut self, error: bool, message: String) {
-        if self.ready {
-            self.write(error, &message);
-        } else {
-            self.pending.push(PendingLine { error, message });
-        }
-    }
-
-    fn flush(&mut self) {
-        let pending = std::mem::take(&mut self.pending);
-        for line in &pending {
-            self.write(line.error, &line.message);
-        }
-    }
-
-    fn write(&self, error: bool, message: &str) {
-        if error {
-            self.logger.error(LOG_TARGET, message);
-        } else {
-            self.logger.info(LOG_TARGET, message);
-        }
-    }
-}
-
 struct LoadRun<'a> {
     loader: &'a WorkspaceLoader,
     session: &'a WorkspaceSession,
     sink: &'a dyn LoadEventSink,
     cancel: Arc<AtomicBool>,
-    log: RunLog<'a>,
     target: NormalizedPath,
     mode: LoadMode,
     finished: u8,
-    backend_spawned: bool,
 }
 
 impl LoadRun<'_> {
     fn start(&mut self) {
-        self.log.info(format!(
+        self.loader.info(&format!(
             "load started mode={} path={}",
             mode_text(self.mode),
             self.target.path
@@ -259,12 +171,11 @@ impl LoadRun<'_> {
         self.ensure_active()
     }
 
-    fn conclude(mut self, result: Result<(), Stop>) -> Result<LoadOutcome, LoadError> {
+    fn conclude(self, result: Result<(), Stop>) -> Result<LoadOutcome, LoadError> {
         match result {
             Ok(()) if self.session.complete() => {
-                self.log
-                    .info(format!("load result=ready path={}", self.target.path));
-                self.log.finish();
+                self.loader
+                    .info(&format!("load result=ready path={}", self.target.path));
                 Ok(LoadOutcome::Ready {
                     name: self.target.name.clone(),
                     path: self.target.path.clone(),
@@ -273,24 +184,14 @@ impl LoadRun<'_> {
             }
             Ok(()) | Err(Stop::Cancelled) => {
                 self.session.abandon();
-                self.release_backend();
-                self.log
-                    .info(format!("load result=cancelled path={}", self.target.path));
-                self.log.finish();
+                self.loader
+                    .info(&format!("load result=cancelled path={}", self.target.path));
                 Ok(LoadOutcome::Cancelled)
             }
             Err(Stop::Failed(error)) => {
                 self.session.abandon();
-                self.release_backend();
-                self.log.finish();
                 Err(error)
             }
-        }
-    }
-
-    fn release_backend(&self) {
-        if self.backend_spawned {
-            self.loader.backend.stop();
         }
     }
 
@@ -307,7 +208,7 @@ impl LoadRun<'_> {
         match self.perform(step) {
             Ok(()) => {
                 self.finished += 1;
-                self.log.info(format!(
+                self.loader.info(&format!(
                     "load step={step} result=done path={}",
                     self.target.path
                 ));
@@ -318,7 +219,7 @@ impl LoadRun<'_> {
                 Ok(())
             }
             Err(Stop::Failed(error)) => {
-                self.log.error(format!(
+                self.loader.error(&format!(
                     "load step={step} result=error code={} detail={}",
                     error.code.as_str(),
                     error.detail
@@ -336,47 +237,12 @@ impl LoadRun<'_> {
 
     fn perform(&mut self, step: LoadStep) -> Result<(), Stop> {
         match step {
-            LoadStep::Application => self.start_application(),
-            LoadStep::Backend => self.start_backend(),
-            LoadStep::Llm => self.check_llms(),
-            LoadStep::Workspace => self.start_workspace(),
+            LoadStep::Folder => self.check_folder().map_err(Stop::Failed),
+            LoadStep::Database => {
+                let workspace_db = self.prepare_workspace_db();
+                storage_stop(LoadStep::Database, workspace_db)
+            }
         }
-    }
-
-    fn start_application(&mut self) -> Result<(), Stop> {
-        let app_db = self.prepare_app_db();
-        storage_stop(LoadStep::Application, app_db)?;
-        self.checked("app_db");
-        self.ensure_active()?;
-        self.prepare_logs().map_err(Stop::Failed)?;
-        self.checked("logs");
-        Ok(())
-    }
-
-    fn start_workspace(&mut self) -> Result<(), Stop> {
-        self.check_folder().map_err(Stop::Failed)?;
-        self.checked("folder");
-        self.ensure_active()?;
-        let workspace_db = self.prepare_workspace_db();
-        storage_stop(LoadStep::Workspace, workspace_db)?;
-        self.checked("workspace_db");
-        Ok(())
-    }
-
-    fn check_llms(&mut self) -> Result<(), Stop> {
-        if self.loader.llm.check(&self.cancel) {
-            self.checked("llm");
-            Ok(())
-        } else {
-            Err(Stop::Cancelled)
-        }
-    }
-
-    fn checked(&mut self, name: &str) {
-        self.log.info(format!(
-            "load check={name} result=done path={}",
-            self.target.path
-        ));
     }
 
     fn check_folder(&self) -> Result<(), LoadError> {
@@ -387,21 +253,21 @@ impl LoadRun<'_> {
         };
         if !metadata.is_dir() {
             return Err(LoadError::new(
-                LoadStep::Workspace,
+                LoadStep::Folder,
                 ErrorCode::FolderNotDirectory,
                 format!("{} is not a folder", self.target.path),
             ));
         }
         if let Err(error) = fs::read_dir(folder) {
             return Err(LoadError::new(
-                LoadStep::Workspace,
+                LoadStep::Folder,
                 ErrorCode::FolderNotReadable,
                 error.to_string(),
             ));
         }
         if let Err(error) = (self.loader.probe)(folder) {
             return Err(LoadError::new(
-                LoadStep::Workspace,
+                LoadStep::Folder,
                 ErrorCode::FolderNotWritable,
                 error.to_string(),
             ));
@@ -418,74 +284,20 @@ impl LoadRun<'_> {
             self.session.mark_created();
             Database::create(&db_path)?
         };
-        self.migrate(&mut database, &scripts)?;
+        self.session
+            .set_interrupt(Some(database.interrupt_handle()));
+        let migrated = Migrator::migrate(database.connection_mut(), &scripts, &self.cancel);
+        self.session.set_interrupt(None);
+        migrated?;
         PipelineRepository::new(database.connection())
             .cancel_orphans(&format_timestamp(Utc::now()))?;
         Ok(())
-    }
-
-    fn prepare_app_db(&mut self) -> StorageResult<()> {
-        let scripts = app_scripts()?;
-        fs::create_dir_all(&self.loader.root)?;
-        let db_path = &self.loader.database_path;
-        let mut database = if db_path.exists() {
-            Database::open_existing(db_path)?
-        } else {
-            Database::create(db_path)?
-        };
-        self.migrate(&mut database, &scripts)
-    }
-
-    fn migrate(&self, database: &mut Database, scripts: &[Script]) -> StorageResult<()> {
-        self.session
-            .set_interrupt(Some(database.interrupt_handle()));
-        let result = Migrator::migrate(database.connection_mut(), scripts, &self.cancel);
-        self.session.set_interrupt(None);
-        result
-    }
-
-    fn prepare_logs(&mut self) -> Result<(), LoadError> {
-        match self.loader.logger.prepare() {
-            Ok(()) => {
-                self.log.mark_ready();
-                Ok(())
-            }
-            Err(error) => Err(LoadError::new(
-                LoadStep::Application,
-                ErrorCode::LogsFailed,
-                error.to_string(),
-            )),
-        }
-    }
-
-    fn start_backend(&mut self) -> Result<(), Stop> {
-        match self.loader.backend.start(&self.cancel) {
-            Ok(ready) => {
-                self.backend_spawned = ready.spawned;
-                self.log.info(format!(
-                    "backend ready port={} spawned={}",
-                    ready.port, ready.spawned
-                ));
-                Ok(())
-            }
-            Err(error) => Err(backend_stop(error)),
-        }
     }
 }
 
 fn percent_done(finished: u8) -> u8 {
     let percent = usize::from(finished) * 100 / TOTAL_STEPS;
     u8::try_from(percent).unwrap_or(100)
-}
-
-fn backend_stop(error: BackendError) -> Stop {
-    let (code, detail) = match error {
-        BackendError::Cancelled => return Stop::Cancelled,
-        BackendError::Missing(detail) => (ErrorCode::BackendMissing, detail),
-        BackendError::StartFailed(detail) => (ErrorCode::BackendStartFailed, detail),
-        BackendError::Timeout(detail) => (ErrorCode::BackendTimeout, detail),
-    };
-    Stop::Failed(LoadError::new(LoadStep::Backend, code, detail))
 }
 
 fn storage_stop(step: LoadStep, result: StorageResult<()>) -> Result<(), Stop> {
@@ -502,7 +314,7 @@ fn folder_access_error(error: &io::Error) -> LoadError {
     } else {
         ErrorCode::FolderNotReadable
     };
-    LoadError::new(LoadStep::Workspace, code, error.to_string())
+    LoadError::new(LoadStep::Folder, code, error.to_string())
 }
 
 fn detect_mode(folder: &str) -> LoadMode {

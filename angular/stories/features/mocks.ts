@@ -45,21 +45,6 @@ export const RECENT_WORKSPACES: RecentWorkspace[] = [
   },
 ];
 
-export const LOADING_STATE: LoadState = {
-  origin: 'splash',
-  path: 'D:\\Dreamy\\Harrowmere',
-  name: 'Harrowmere',
-  mode: 'open',
-  steps: [
-    { id: 'application', state: 'done' },
-    { id: 'backend', state: 'running' },
-    { id: 'llm', state: 'pending' },
-    { id: 'workspace', state: 'pending' },
-  ],
-  percent: 25,
-  status: 'running',
-};
-
 export interface WorkspaceScenario {
   recent?: RecentWorkspace[];
   current?: CurrentWorkspace | null;

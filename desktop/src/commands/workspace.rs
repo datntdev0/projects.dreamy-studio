@@ -164,7 +164,7 @@ pub async fn workspace_load<R: Runtime>(
     let task = spawn_blocking(move || load_workspace_blocking(&app, request, &sink));
     match task.await {
         Ok(result) => result,
-        Err(error) => Err(task_failure(LoadStep::Application, error)),
+        Err(error) => Err(task_failure(LoadStep::Folder, error)),
     }
 }
 
@@ -182,7 +182,7 @@ pub async fn workspace_enter<R: Runtime>(app: AppHandle<R>) -> Result<EnterOutco
     let task = spawn_blocking(move || enter_workspace_blocking(&background));
     let outcome = match task.await {
         Ok(result) => result?,
-        Err(error) => return Err(task_failure(LoadStep::Application, error)),
+        Err(error) => return Err(task_failure(LoadStep::Folder, error)),
     };
     if let Some(title) = entered_title(&outcome) {
         apply_window_title(&app, &title);

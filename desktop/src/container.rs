@@ -1,10 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use tauri::App;
-use tauri::Manager;
-use tauri::Runtime;
-
 use crate::features::backend::supervisor::BackendSupervisor;
 use crate::features::settings::check::LlmCheck;
 use crate::features::settings::check::LlmChecker;
@@ -16,7 +12,12 @@ use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendLaunch;
 use crate::infra::backend::BackendProcess;
 use crate::infra::logging::Logger;
-use crate::shared::env;
+use crate::infra::startup::manifest::executable_of;
+use crate::shared::config;
+use crate::shared::config::AppConfig;
+
+const RUNTIME_LIBRARIES_DIR: &str = "vcruntime";
+const DEV_BUILD_DIR: &str = "_output/desktop/build";
 
 pub struct AppDirectories {
     pub root: PathBuf,
@@ -39,6 +40,7 @@ impl AppDirectories {
 }
 
 pub struct AppContainer {
+    pub config: AppConfig,
     pub directories: AppDirectories,
     pub database_path: PathBuf,
     pub settings_path: PathBuf,
@@ -50,18 +52,21 @@ pub struct AppContainer {
 }
 
 impl AppContainer {
-    pub fn new<R: Runtime>(app: &App<R>) -> tauri::Result<Self> {
-        let root = match env::data_dir().or_else(env::portable_data_dir) {
-            Some(root) => root,
-            None => app.path().local_data_dir()?.join("DreamyStudio"),
-        };
-        Ok(Self::from_root(root))
+    pub fn new() -> Self {
+        Self::from_config(config::current().clone())
     }
 
+    #[cfg(test)]
     pub fn from_root(root: PathBuf) -> Self {
+        Self::from_config(AppConfig::from_root(root))
+    }
+
+    pub fn from_config(config: AppConfig) -> Self {
+        let root = config.app_data_dir.clone();
         let logs = root.join("logs");
-        let backend = BackendProcess::new(BackendLaunch::resolve(root.clone(), logs));
-        let mut container = Self::with_backend(root, Arc::new(backend));
+        let python = executable_of(&config, "python").unwrap_or_default();
+        let backend = BackendProcess::new(BackendLaunch::resolve(root, logs, python));
+        let mut container = Self::assemble(config, Arc::new(backend));
         let repository = SettingsRepository::new(container.settings_path.clone());
         let data_dir = container.directories.root.clone();
         container.llm = Arc::new(LlmCheck::new(
@@ -72,8 +77,24 @@ impl AppContainer {
         container
     }
 
+    pub fn runtime_libraries_dir() -> PathBuf {
+        let base = if cfg!(debug_assertions) {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join(DEV_BUILD_DIR)
+        } else {
+            config::install_dir()
+        };
+        base.join(RUNTIME_LIBRARIES_DIR)
+    }
+
+    #[cfg(test)]
     pub fn with_backend(root: PathBuf, backend: Arc<dyn BackendHost>) -> Self {
-        let directories = AppDirectories::new(root);
+        Self::assemble(AppConfig::from_root(root), backend)
+    }
+
+    fn assemble(config: AppConfig, backend: Arc<dyn BackendHost>) -> Self {
+        let directories = AppDirectories::new(config.app_data_dir.clone());
         let database_path = directories.database_path();
         let settings_path = directories.settings_path();
         let logger = Logger::new(directories.logs.clone());
@@ -83,6 +104,7 @@ impl AppContainer {
         ));
 
         Self {
+            config,
             directories,
             database_path,
             settings_path,

@@ -39,6 +39,10 @@ use crate::features::workspace::loader::WorkspaceLoader;
 use crate::features::workspace::repository::WorkspaceRepository;
 use crate::features::workspace::service::WorkspaceService;
 use crate::features::workspace::session::WorkspaceSession;
+use crate::infra::startup::launch::StartupService;
+use crate::infra::startup::manifest::manifest;
+use crate::infra::startup::setup::SetupDeps;
+use crate::infra::startup::setup::SetupService;
 use crate::infra::window_state;
 
 pub fn run() {
@@ -57,6 +61,12 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
     register_stream(builder, "dreamy-video", StreamKind::Video).invoke_handler(
         tauri::generate_handler![
             commands::app::app_info,
+            commands::app::app_quit,
+            commands::setup::setup_run,
+            commands::setup::setup_pause,
+            commands::setup::setup_package_pick,
+            commands::setup::setup_package_import,
+            commands::setup::startup_run,
             commands::settings::settings_get,
             commands::settings::settings_general_save,
             commands::settings::settings_folder_open,
@@ -235,7 +245,7 @@ fn handle_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
 }
 
 fn setup<R: Runtime>(app: &mut App<R>) -> Result<(), Box<dyn std::error::Error>> {
-    let container = AppContainer::new(app)?;
+    let container = AppContainer::new();
     install(app, container);
     Ok(())
 }
@@ -245,6 +255,7 @@ pub fn install<R: Runtime>(app: &App<R>, container: AppContainer) {
     manage_workspace(app, &container);
     manage_assistant(app, &container);
     manage_backend(app, &container);
+    manage_setup(app, &container);
     app.manage(container);
     prepare_window(app);
 }
@@ -284,6 +295,23 @@ fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
         SettingsRepository::new(container.settings_path.clone()),
         container.directories.root.clone(),
         container.directories.logs.clone(),
+    ));
+}
+
+fn manage_setup<R: Runtime>(app: &App<R>, container: &AppContainer) {
+    app.manage(SetupService::new(SetupDeps {
+        config: container.config.clone(),
+        manifest: manifest().clone(),
+        llm: container.llm.clone(),
+        status: container.llm_status.clone(),
+        runtime_libraries: Some(AppContainer::runtime_libraries_dir()),
+        logger: container.logger.clone(),
+    }));
+    app.manage(StartupService::new(
+        container.directories.root.clone(),
+        container.database_path.clone(),
+        container.logger.clone(),
+        container.backend.clone(),
     ));
 }
 
@@ -362,6 +390,18 @@ fn log_startup<R: Runtime>(app: &App<R>, container: &AppContainer) {
             container.database_path.display()
         ),
         format!("settings file: {}", container.settings_path.display()),
+        format!(
+            "runtime directory: {}",
+            container.config.runtime_dir.display()
+        ),
+        format!(
+            "toolbox directory: {}",
+            container.config.toolbox_dir.display()
+        ),
+        match &container.config.source {
+            Some(source) => format!("configuration: {}", source.display()),
+            None => "configuration: defaults".to_string(),
+        },
     ];
     for line in &lines {
         logger.info("app", line);

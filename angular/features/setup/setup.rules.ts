@@ -1,7 +1,7 @@
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { SetupErrorCode, SetupGroup, SetupGroupId, SetupItem, SetupItemId, SetupItemState, SetupState, SetupStatus, StepItem, Translatable } from './setup.models';
+import { SetupErrorCode, SetupEvent, SetupFailure, SetupGroup, SetupGroupId, SetupItem, SetupItemId, SetupItemState, SetupState, SetupStatus, StartupErrorCode, StartupEvent, StartupStepId, StepItem, StepsView, Translatable } from './setup.models';
 
 const GROUP_ORDER: SetupGroupId[] = ['runtime', 'toolbox'];
 
@@ -70,6 +70,7 @@ const ERROR_KEYS: Record<SetupErrorCode, LanguageKey> = {
   checksum: 'setup.error.checksum',
   disk_full: 'setup.error.disk_full',
   extract: 'setup.error.extract',
+  io: 'setup.error.io',
 };
 
 const SECONDS_PER_MINUTE = 60;
@@ -163,4 +164,115 @@ export function isBusy(status: SetupStatus): boolean {
 export function stepsPercent(steps: StepItem[]): number {
   const done = steps.filter((step) => step.state === 'done').length;
   return ratioPercent(done, steps.length);
+}
+
+const STARTUP_STEP_KEYS: Record<StartupStepId, LanguageKey> = {
+  application: 'loading.step.application',
+  backend: 'loading.step.backend',
+};
+
+const STARTUP_CAUSE_KEYS: Record<StartupErrorCode, LanguageKey> = {
+  db_corrupt: 'loading.cause.db_corrupt',
+  db_newer_version: 'loading.cause.db_newer_version',
+  db_migration_failed: 'loading.cause.db_migration_failed',
+  db_io: 'loading.cause.db_io',
+  logs_failed: 'loading.cause.logs_failed',
+  backend_missing: 'loading.cause.backend_missing',
+  backend_start_failed: 'loading.cause.backend_start_failed',
+  backend_timeout: 'loading.cause.backend_timeout',
+};
+
+const STARTUP_ORDER: StartupStepId[] = ['application', 'backend'];
+
+export function initialSetupState(appVersion: string): SetupState {
+  return { status: 'checking', appVersion, items: [], speed: 0, error: null };
+}
+
+function replaceItem(items: SetupItem[], item: SetupItem): SetupItem[] {
+  return items.map((current) => (current.id === item.id ? item : current));
+}
+
+function progressItem(items: SetupItem[], id: SetupItemId, received: number): SetupItem[] {
+  return items.map((item) => (item.id === id ? { ...item, state: 'downloading', received } : item));
+}
+
+export function applySetupEvent(state: SetupState, event: SetupEvent): SetupState {
+  switch (event.kind) {
+    case 'snapshot':
+      return { ...state, status: event.status, items: event.items, speed: 0, error: null };
+    case 'phase':
+      return { ...state, status: event.status };
+    case 'item':
+      return { ...state, items: replaceItem(state.items, event.item) };
+    case 'progress':
+      return {
+        ...state,
+        speed: event.speed,
+        items: progressItem(state.items, event.id, event.received),
+      };
+  }
+}
+
+export function failedSetupState(state: SetupState, failure: SetupFailure): SetupState {
+  if (failure.code === 'offline') {
+    return { ...state, status: 'offline', speed: 0, error: null };
+  }
+  const error: SetupErrorCode = failure.code === 'busy' ? 'io' : failure.code;
+  return { ...state, status: 'failed', speed: 0, error };
+}
+
+export function isSetupFailure(value: unknown): value is SetupFailure {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate['code'] === 'string' && typeof candidate['detail'] === 'string';
+}
+
+export function canContinue(state: SetupState): boolean {
+  return state.status === 'ready' && missingOf(state.items).length === 0;
+}
+
+export function initialStartupView(): StepsView {
+  return {
+    eyebrow: 'startup.eyebrow',
+    title: '',
+    titleKey: 'startup.title',
+    path: null,
+    steps: STARTUP_ORDER.map((id) => ({ id, label: STARTUP_STEP_KEYS[id], state: 'pending' })),
+    status: 'running',
+    error: null,
+  };
+}
+
+export function applyStartupEvent(view: StepsView, event: StartupEvent): StepsView {
+  return {
+    ...view,
+    steps: view.steps.map((step) =>
+      step.id === event.id ? { ...step, state: event.state } : step,
+    ),
+  };
+}
+
+export function failedStartupView(view: StepsView, code: StartupErrorCode | null): StepsView {
+  return {
+    ...view,
+    titleKey: 'startup.titleFailed',
+    status: 'failed',
+    error: { key: code ? STARTUP_CAUSE_KEYS[code] : 'loading.cause.backend_start_failed' },
+  };
+}
+
+export function isStartupFailure(value: unknown): value is { code: StartupErrorCode } {
+  if (typeof value !== 'object' || value === null) return false;
+  const code = (value as Record<string, unknown>)['code'];
+  return typeof code === 'string' && code in STARTUP_CAUSE_KEYS;
+}
+
+const GUIDE_URLS: Partial<Record<SetupItemId, string>> = {
+  codex: 'https://github.com/openai/codex',
+  claude: 'https://docs.claude.com/en/docs/claude-code/setup',
+  antigravity: 'https://antigravity.google',
+};
+
+export function guideUrl(id: SetupItemId): string | null {
+  return GUIDE_URLS[id] ?? null;
 }

@@ -1,5 +1,44 @@
-@if (state(); as s) {
+@switch (stage()) { @case ('setup') {
+<div class="splash" data-testid="setup-page">
+  <app-splash-tools />
+  <app-setup-card
+    [state]="setup.setup()"
+    (paused)="pauseSetup()"
+    (resumed)="runSetup()"
+    (retried)="runSetup()"
+    (quit)="quit()"
+    (continued)="continueToStartup()"
+    (offlineImported)="importPackage()"
+    (guideOpened)="openGuide($event)"
+  />
+</div>
+} @case ('startup') {
+<div class="splash" data-testid="startup-page">
+  <app-splash-tools />
+  <app-steps-card [view]="setup.startup()">
+    @if (setup.startup().status === 'failed') {
+    <ds-button variant="ghost" size="small" data-testid="startup-quit" (pressed)="quit()">
+      {{ 'setup.quit' | t }}
+    </ds-button>
+    <ds-button variant="outline" size="small" data-testid="startup-logs" (pressed)="openLogs()">
+      <ds-icon name="file-code" [size]="14" />
+      {{ 'startup.logs' | t }}
+    </ds-button>
+    <ds-button
+      variant="primary"
+      size="small"
+      data-testid="startup-retry"
+      (pressed)="retryStartup()"
+    >
+      <ds-icon name="refresh" [size]="14" />
+      {{ 'setup.retry' | t }}
+    </ds-button>
+    }
+  </app-steps-card>
+</div>
+} @default { @if (state(); as s) {
 <div class="splash" data-testid="loading-page">
+  <app-splash-tools />
   <app-workspace-loading [state]="s" />
 </div>
 } @else {
@@ -69,4 +108,4 @@
   </div>
   <app-dialog-host />
 </div>
-}
+} } }

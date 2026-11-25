@@ -12,26 +12,17 @@ pub enum LoadMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LoadStep {
-    Application,
-    Backend,
-    Llm,
-    Workspace,
+    Folder,
+    Database,
 }
 
 impl LoadStep {
-    pub const ALL: [LoadStep; 4] = [
-        LoadStep::Application,
-        LoadStep::Backend,
-        LoadStep::Llm,
-        LoadStep::Workspace,
-    ];
+    pub const ALL: [LoadStep; 2] = [LoadStep::Folder, LoadStep::Database];
 
     pub fn as_str(self) -> &'static str {
         match self {
-            LoadStep::Application => "application",
-            LoadStep::Backend => "backend",
-            LoadStep::Llm => "llm",
-            LoadStep::Workspace => "workspace",
+            LoadStep::Folder => "folder",
+            LoadStep::Database => "database",
         }
     }
 }
@@ -132,18 +123,21 @@ impl LoadError {
     }
 
     pub fn from_storage(step: LoadStep, error: &StorageError) -> Self {
-        match error {
-            StorageError::Corrupt(detail) => Self::new(step, ErrorCode::DbCorrupt, detail.clone()),
-            StorageError::NewerVersion => {
-                Self::new(step, ErrorCode::DbNewerVersion, error.to_string())
-            }
-            StorageError::Migration { .. } | StorageError::InvalidScript(_) => {
-                Self::new(step, ErrorCode::DbMigrationFailed, error.to_string())
-            }
-            StorageError::Io(source) => Self::new(step, ErrorCode::DbIo, source.to_string()),
-            StorageError::Db(source) => Self::new(step, ErrorCode::DbIo, source.to_string()),
-            StorageError::Cancelled => Self::new(step, ErrorCode::DbIo, error.to_string()),
+        let (code, detail) = storage_failure(error);
+        Self::new(step, code, detail)
+    }
+}
+
+pub fn storage_failure(error: &StorageError) -> (ErrorCode, String) {
+    match error {
+        StorageError::Corrupt(detail) => (ErrorCode::DbCorrupt, detail.clone()),
+        StorageError::NewerVersion => (ErrorCode::DbNewerVersion, error.to_string()),
+        StorageError::Migration { .. } | StorageError::InvalidScript(_) => {
+            (ErrorCode::DbMigrationFailed, error.to_string())
         }
+        StorageError::Io(source) => (ErrorCode::DbIo, source.to_string()),
+        StorageError::Db(source) => (ErrorCode::DbIo, source.to_string()),
+        StorageError::Cancelled => (ErrorCode::DbIo, error.to_string()),
     }
 }
 

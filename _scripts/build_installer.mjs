@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, fail, run, runShell, targetDirectory } from "./common.mjs";
+import { ROOT, fail, requireStaged, runShell, targetDirectory } from "./common.mjs";
 
 const BUNDLES = ["nsis", "msi"];
 const OUTPUT = join(ROOT, "_output", "installer");
@@ -25,7 +25,7 @@ try {
   const bundleDir = join(targetDirectory(), "release", "bundle");
   rmSync(bundleDir, { recursive: true, force: true });
 
-  run("node", [join(ROOT, "_scripts", "build_prepare.mjs")]);
+  requireStaged();
   runShell(
     `pnpm exec tauri build --bundles ${BUNDLES.join(",")} --config desktop/tauri.installer.conf.json`,
   );

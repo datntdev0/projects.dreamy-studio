@@ -4,6 +4,7 @@ import { Button } from '@components/button';
 import { Icon } from '@components/icon';
 import { SetupCard } from '@features/setup/components/setup-card.component';
 import { StepsCard } from '@features/setup/components/steps-card.component';
+import { SetupService, SplashStage } from '@features/setup/setup.service';
 // prettier-ignore
 import { AppInfo, CurrentWorkspace, LoadRequest, LoadState, RecentWorkspace } from '@features/workspace/workspace.models';
 import { WorkspaceService } from '@features/workspace/workspace.service';
@@ -119,8 +120,17 @@ export class FlowWorkspace {
   }
 }
 
+const STARTED_SETUP: Partial<SetupService> = {
+  stage: signal<SplashStage>('workspace'),
+  begin: () => Promise.resolve(),
+};
+
 export function flowProviders(): Provider[] {
-  return [FlowWorkspace, { provide: WorkspaceService, useExisting: FlowWorkspace }];
+  return [
+    FlowWorkspace,
+    { provide: WorkspaceService, useExisting: FlowWorkspace },
+    { provide: SetupService, useValue: STARTED_SETUP },
+  ];
 }
 
 @Component({

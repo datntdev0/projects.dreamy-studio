@@ -1,3 +1,5 @@
+use crate::infra::startup::manifest::installed_executable;
+use crate::shared::config;
 use crate::shared::process::failure_snippet;
 use crate::shared::process::hide_window;
 use std::ffi::OsString;
@@ -6,22 +8,11 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
 
-const SIDECAR_MISSING: &str = "ffmpeg sidecar is missing";
+const FFMPEG_MISSING: &str = "ffmpeg is not installed; restart Dreamy Studio to finish setup";
+const FFMPEG_ITEM: &str = "ffmpeg";
 
 pub fn sidecar_path() -> Result<PathBuf, String> {
-    let executable = std::env::current_exe().map_err(|error| error.to_string())?;
-    let name = if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    };
-    executable
-        .ancestors()
-        .skip(1)
-        .take(2)
-        .map(|directory| directory.join(name))
-        .find(|candidate| candidate.is_file())
-        .ok_or_else(|| SIDECAR_MISSING.to_string())
+    installed_executable(config::current(), FFMPEG_ITEM).ok_or_else(|| FFMPEG_MISSING.to_string())
 }
 
 pub fn wav_args(input: &Path, output: &Path, options: &[String]) -> Vec<OsString> {

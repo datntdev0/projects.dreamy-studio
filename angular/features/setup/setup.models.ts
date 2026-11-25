@@ -23,7 +23,9 @@ export type SetupItemState =
 
 export type SetupStatus = 'checking' | 'running' | 'paused' | 'failed' | 'offline' | 'ready';
 
-export type SetupErrorCode = 'network' | 'checksum' | 'disk_full' | 'extract';
+export type SetupErrorCode = 'network' | 'checksum' | 'disk_full' | 'extract' | 'io';
+
+export type SetupFailureCode = SetupErrorCode | 'offline' | 'busy';
 
 export interface SetupItem {
   id: SetupItemId;
@@ -66,4 +68,66 @@ export interface StepsView {
   steps: StepItem[];
   status: StepsStatus;
   error: Translatable | null;
+}
+
+export type SetupPhase = 'checking' | 'running';
+
+export interface SetupSnapshotEvent {
+  kind: 'snapshot';
+  status: SetupPhase;
+  items: SetupItem[];
+}
+
+export interface SetupPhaseEvent {
+  kind: 'phase';
+  status: SetupPhase;
+}
+
+export interface SetupItemEvent {
+  kind: 'item';
+  item: SetupItem;
+}
+
+export interface SetupProgressEvent {
+  kind: 'progress';
+  id: SetupItemId;
+  received: number;
+  total: number;
+  speed: number;
+}
+
+export type SetupEvent = SetupSnapshotEvent | SetupPhaseEvent | SetupItemEvent | SetupProgressEvent;
+
+export interface SetupOutcome {
+  result: 'ready' | 'paused';
+}
+
+export interface SetupFailure {
+  code: SetupFailureCode;
+  detail: string;
+}
+
+export type StartupStepId = 'application' | 'backend';
+
+export type StartupErrorCode =
+  | 'db_corrupt'
+  | 'db_newer_version'
+  | 'db_migration_failed'
+  | 'db_io'
+  | 'logs_failed'
+  | 'backend_missing'
+  | 'backend_start_failed'
+  | 'backend_timeout';
+
+export interface StartupEvent {
+  kind: 'step';
+  id: StartupStepId;
+  state: Exclude<StepState, 'pending'>;
+  detail?: string;
+}
+
+export interface StartupFailure {
+  step: StartupStepId;
+  code: StartupErrorCode;
+  detail: string;
 }

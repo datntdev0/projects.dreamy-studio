@@ -1,3 +1,4 @@
+pub mod config;
 pub mod env;
 pub mod ffmpeg;
 pub mod files;

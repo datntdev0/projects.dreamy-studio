@@ -1,90 +1,80 @@
 import { computed, Injectable, signal } from '@angular/core';
 
-import { BackendHost } from './backend.host';
-// prettier-ignore
-import { BackendCuda, BackendDevice, BackendGpu, BackendServer, TtsModel } from './backend.models';
-import { NO_CUDA, NO_GPU, NO_SERVER } from './backend.service';
-import { keyHintOf } from './cloud.service';
+import { RemoteView } from './backend.models';
+import { BackendCommands, BackendStore, toView } from './backend.store';
 
-function done(): Promise<void> {
-  return Promise.resolve();
+const REMOTE_COMMANDS: BackendCommands = {
+  status: 'backend_remote_status',
+  models: 'backend_remote_model_list',
+  gpuScan: 'backend_remote_gpu_scan',
+  deviceSet: 'backend_remote_device_set',
+  cudaDownload: 'backend_remote_cuda_download',
+  cudaCancel: 'backend_remote_cuda_cancel',
+  cudaRemove: 'backend_remote_cuda_remove',
+  modelDownload: 'backend_remote_model_download',
+  modelCancel: 'backend_remote_model_cancel',
+  modelRemove: 'backend_remote_model_remove',
+};
+
+function toRemoteView(raw: Partial<RemoteView> | null | undefined): RemoteView {
+  return {
+    ...toView(raw),
+    url: raw?.url ?? '',
+    keyHint: raw?.keyHint ?? '',
+    active: raw?.active === true,
+  };
 }
 
 @Injectable({ providedIn: 'root' })
-export class RemoteBackendService implements BackendHost {
+export class RemoteBackendService extends BackendStore<RemoteView> {
+  protected readonly commands = REMOTE_COMMANDS;
+
   readonly url = signal('');
   readonly keyHint = signal('');
   readonly active = signal(false);
-  readonly server = signal<BackendServer>(NO_SERVER);
-  readonly gpu = signal<BackendGpu>(NO_GPU);
-  readonly cuda = signal<BackendCuda>(NO_CUDA);
-  readonly device = signal<BackendDevice>('cpu');
-  readonly modelsDir = signal('');
-  readonly models = signal<TtsModel[]>([]);
-  readonly checking = signal(false);
-  readonly scanning = signal(false);
   readonly connected = computed(this.isConnected.bind(this));
-  readonly gpuReady = computed(this.isGpuReady.bind(this));
 
-  connect(url: string, key: string): Promise<void> {
-    this.url.set(url.trim());
-    this.keyHint.set(key ? keyHintOf(key) : '');
-    return done();
+  async connect(url: string, apiKey: string): Promise<boolean> {
+    this.server.update((server) => ({ ...server, status: 'starting', error: '' }));
+    let succeeded = true;
+    try {
+      const view = await this.ipc.invoke<Partial<RemoteView>>('backend_remote_connect', {
+        url,
+        apiKey,
+      });
+      this.applyView(toRemoteView(view));
+    } catch (error) {
+      succeeded = false;
+      this.fail(error, 'settings.remote.msg.failed');
+    }
+    await this.refresh();
+    return succeeded;
   }
 
-  disconnect(): Promise<void> {
-    this.server.set(NO_SERVER);
-    this.active.set(false);
-    return done();
+  async disconnect(): Promise<void> {
+    await this.run('backend_remote_disconnect');
   }
 
-  check(): Promise<void> {
-    return done();
+  async setActive(active: boolean): Promise<void> {
+    if (active && !this.connected()) {
+      return;
+    }
+    this.active.set(active);
+    await this.run('backend_remote_active_set', { active });
   }
 
-  setActive(active: boolean): Promise<void> {
-    this.active.set(active && this.connected());
-    return done();
+  protected toView(raw: Partial<RemoteView> | null | undefined): RemoteView {
+    return toRemoteView(raw);
   }
 
-  scanGpu(): Promise<void> {
-    return done();
-  }
-
-  setDevice(device: BackendDevice): Promise<void> {
-    this.device.set(device === 'cuda' && !this.gpuReady() ? 'cpu' : device);
-    return done();
-  }
-
-  downloadCuda(): Promise<void> {
-    return done();
-  }
-
-  cancelCuda(): Promise<void> {
-    return done();
-  }
-
-  removeCuda(): Promise<void> {
-    return done();
-  }
-
-  downloadModel(_id: string): Promise<void> {
-    return done();
-  }
-
-  cancelModel(_id: string): Promise<void> {
-    return done();
-  }
-
-  removeModel(_id: string): Promise<void> {
-    return done();
+  protected override applyView(view: RemoteView): void {
+    super.applyView(view);
+    this.url.set(view.url);
+    this.keyHint.set(view.keyHint);
+    this.active.set(view.active);
   }
 
   private isConnected(): boolean {
     return this.server().status === 'running';
-  }
-
-  private isGpuReady(): boolean {
-    return this.gpu().found && this.cuda().state === 'installed';
   }
 }

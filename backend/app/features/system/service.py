@@ -32,6 +32,8 @@ def effective_device(settings: Settings) -> str:
 
 class SystemService:
     def __init__(self, settings: Settings, cuda: CudaCatalog) -> None:
+        self.models_dir = settings.models_dir
+        self.cuda_dir = settings.cuda_dir
         self.started_at = utc_now()
         self.version = package_version()
         self.device = effective_device(settings)
@@ -54,7 +56,18 @@ class SystemService:
         return self.cuda_response(self.cuda.slot.status())
 
     def system_view(self) -> SystemResponse:
-        return SystemResponse(gpu=GpuResponse.of(self.gpu.get()), cuda=self.cuda_view())
+        return SystemResponse(
+            gpu=GpuResponse.of(self.gpu.get()),
+            cuda=self.cuda_view(),
+            models_dir=str(self.models_dir),
+        )
+
+    def downloading(self) -> bool:
+        return self.cuda.slot.status().state == "downloading"
+
+    def check_device(self, device: str) -> None:
+        if device == "cuda" and not cuda_installed(self.cuda_dir):
+            raise BackendError(409, "CUDA_NOT_INSTALLED", "Install the CUDA runtime first")
 
     def scan_gpu(self) -> SystemResponse:
         self.gpu.scan()

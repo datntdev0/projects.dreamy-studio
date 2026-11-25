@@ -18,7 +18,8 @@ SpeechesDep = Annotated[SpeechService, Depends(get_speeches)]
 
 @router.post("/tts/synthesize", response_class=Response)
 def tts_synthesize(body: SynthesizeRequest, speeches: SpeechesDep) -> Response:
-    result = speeches.synthesize(body.to_request())
+    request = speeches.store_reference(body.to_request(), body.reference_audio, body.reference_name)
+    result = speeches.synthesize(request)
     return Response(
         content=result.content,
         media_type="audio/wav",

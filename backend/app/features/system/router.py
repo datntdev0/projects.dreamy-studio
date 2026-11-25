@@ -2,7 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from app.features.system.schemas import CudaResponse, HealthResponse, SystemResponse
+from app.features.system.schemas import (
+    CudaResponse,
+    DeviceRequest,
+    HealthResponse,
+    SystemResponse,
+)
 from app.features.system.service import SystemService
 
 router = APIRouter()
@@ -43,3 +48,10 @@ def cuda_cancel(system: SystemDep) -> CudaResponse:
 @router.delete("/cuda", response_model=CudaResponse)
 def cuda_remove(system: SystemDep) -> CudaResponse:
     return system.remove_cuda()
+
+
+@router.put("/system/device", response_model=HealthResponse)
+def device_set(body: DeviceRequest, request: Request) -> HealthResponse:
+    container = request.app.state.container.switch_device(body.device)
+    request.app.state.container = container
+    return container.system.health()

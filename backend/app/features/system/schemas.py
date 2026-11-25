@@ -35,3 +35,8 @@ class CudaResponse(DownloadResponse):
 class SystemResponse(CamelModel):
     gpu: GpuResponse
     cuda: CudaResponse
+    models_dir: str = ""
+
+
+class DeviceRequest(CamelModel):
+    device: Device

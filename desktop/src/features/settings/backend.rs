@@ -38,8 +38,22 @@ pub struct BackendSettings {
         skip_serializing_if = "Option::is_none"
     )]
     pub device: Option<Device>,
+    #[serde(
+        default,
+        deserialize_with = "lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub remote: Option<RemoteSettings>,
     #[serde(flatten)]
     pub other: Map<String, Value>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct RemoteSettings {
+    pub url: String,
+    pub api_key: String,
+    pub active: bool,
 }
 
 impl BackendSettings {

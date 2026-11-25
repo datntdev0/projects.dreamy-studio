@@ -510,6 +510,7 @@ fn synthesis_request_carries_the_voice_settings() {
             prompt: "male, low pitch".to_string(),
             reference_path: reference.to_string_lossy().into_owned(),
             sentence_pause_ms: 300,
+            ..SynthesisRequest::default()
         }
     );
     let preset = synthesis_request(

@@ -89,6 +89,10 @@ class Settings:
         return self.data_dir / "cache" / "tts"
 
     @property
+    def references_dir(self) -> Path:
+        return self.data_dir / "references"
+
+    @property
     def cuda_dir(self) -> Path:
         return self.runtime_dir / "cuda"
 

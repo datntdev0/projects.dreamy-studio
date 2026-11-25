@@ -1,6 +1,7 @@
 use serde_json::Value;
 use serde_json::json;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
@@ -11,12 +12,26 @@ use tiny_http::Response;
 use tiny_http::Server;
 
 type Routes = Arc<Mutex<HashMap<String, (u16, String)>>>;
-type Requests = Arc<Mutex<Vec<String>>>;
+type Queues = Arc<Mutex<HashMap<String, VecDeque<(u16, String)>>>>;
+type Requests = Arc<Mutex<Vec<Recorded>>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Recorded {
+    pub name: String,
+    pub api_key: Option<String>,
+    pub body: String,
+}
+
+#[derive(Clone, Default)]
+struct Answers {
+    routes: Routes,
+    queues: Queues,
+}
 
 pub struct FakeHttp {
     pub port: u16,
     server: Arc<Server>,
-    routes: Routes,
+    answers: Answers,
     requests: Requests,
     thread: Option<JoinHandle<()>>,
 }
@@ -25,18 +40,18 @@ impl FakeHttp {
     pub fn start() -> Self {
         let server = Arc::new(Server::http("127.0.0.1:0").unwrap());
         let port = server.server_addr().to_ip().unwrap().port();
-        let routes: Routes = Arc::default();
+        let answers = Answers::default();
         let requests: Requests = Arc::default();
         let thread = spawn({
             let server = server.clone();
-            let routes = routes.clone();
+            let answers = answers.clone();
             let requests = requests.clone();
-            move || serve(&server, &routes, &requests)
+            move || serve(&server, &answers, &requests)
         });
         Self {
             port,
             server,
-            routes,
+            answers,
             requests,
             thread: Some(thread),
         }
@@ -49,11 +64,26 @@ impl FakeHttp {
     }
 
     pub fn route(&self, method: &str, path: &str, status: u16, body: Value) -> &Self {
-        lock(&self.routes).insert(key(method, path), (status, body.to_string()));
+        lock(&self.answers.routes).insert(key(method, path), (status, body.to_string()));
+        self
+    }
+
+    pub fn queue(&self, method: &str, path: &str, status: u16, body: Value) -> &Self {
+        lock(&self.answers.queues)
+            .entry(key(method, path))
+            .or_default()
+            .push_back((status, body.to_string()));
         self
     }
 
     pub fn requests(&self) -> Vec<String> {
+        self.recorded()
+            .into_iter()
+            .map(|request| request.name)
+            .collect()
+    }
+
+    pub fn recorded(&self) -> Vec<Recorded> {
         lock(&self.requests).clone()
     }
 }
@@ -81,19 +111,44 @@ pub fn api_error(code: &str, message: &str) -> Value {
     json!({ "code": code, "message": message, "details": null })
 }
 
-fn serve(server: &Server, routes: &Routes, requests: &Requests) {
+fn serve(server: &Server, answers: &Answers, requests: &Requests) {
     for request in server.incoming_requests() {
-        respond(request, routes, requests);
+        respond(request, answers, requests);
     }
 }
 
-fn respond(request: Request, routes: &Routes, requests: &Requests) {
-    let name = key(request.method().as_str(), request.url());
-    lock(requests).push(name.clone());
-    let (status, body) = lock(routes)
-        .get(&name)
+fn record(request: &mut Request) -> Recorded {
+    let mut body = String::new();
+    let _ = request.as_reader().read_to_string(&mut body);
+    let api_key = request
+        .headers()
+        .iter()
+        .find(|header| header.field.equiv("X-API-Key"))
+        .map(|header| header.value.to_string());
+    Recorded {
+        name: key(request.method().as_str(), request.url()),
+        api_key,
+        body,
+    }
+}
+
+fn answer(answers: &Answers, name: &str) -> (u16, String) {
+    if let Some(queued) = lock(&answers.queues)
+        .get_mut(name)
+        .and_then(VecDeque::pop_front)
+    {
+        return queued;
+    }
+    lock(&answers.routes)
+        .get(name)
         .cloned()
-        .unwrap_or_else(|| (404, api_error("NOT_FOUND", "Not Found").to_string()));
+        .unwrap_or_else(|| (404, api_error("NOT_FOUND", "Not Found").to_string()))
+}
+
+fn respond(mut request: Request, answers: &Answers, requests: &Requests) {
+    let recorded = record(&mut request);
+    let (status, body) = answer(answers, &recorded.name);
+    lock(requests).push(recorded);
     let header = Header::from_bytes("Content-Type", "application/json").unwrap();
     let response = Response::from_string(body)
         .with_status_code(status)

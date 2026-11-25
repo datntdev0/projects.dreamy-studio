@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from support import asgi_request, write_fake_smi
 
@@ -93,6 +93,60 @@ class HealthTests(unittest.TestCase):
             self.assertEqual(
                 asgi_request(create_app(settings), "GET", "/health")[1]["device"], "cuda"
             )
+
+
+class DeviceSwitchTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.settings = Settings(data_dir=Path(temp.name))
+        self.app = create_app(self.settings)
+        self.addCleanup(self.close)
+
+    def close(self) -> None:
+        self.app.state.container.close()
+
+    def install_cuda(self) -> None:
+        self.settings.cuda_dir.mkdir(parents=True)
+        write_manifest(self.settings.cuda_dir, {"version": "12.8", "totalBytes": 0})
+
+    def switch(self, device: str) -> tuple[int, dict]:
+        return asgi_request(self.app, "PUT", "/system/device", {"device": device})
+
+    def test_cuda_needs_the_runtime(self):
+        self.assertEqual(self.switch("cuda"), (409, self.error("CUDA_NOT_INSTALLED")))
+        self.assertEqual(self.app.state.container.device, "cpu")
+
+    def test_switching_rebuilds_the_services_on_the_new_device(self):
+        self.install_cuda()
+        previous = self.app.state.container
+        status, body = self.switch("cuda")
+        self.assertEqual((status, body["device"]), (200, "cuda"))
+        self.assertIsNot(self.app.state.container, previous)
+        self.assertEqual(self.app.state.container.speeches.synthesizer.device, "cuda")
+        self.assertEqual(asgi_request(self.app, "GET", "/health")[1]["device"], "cuda")
+        self.assertEqual(self.switch("cpu")[1]["device"], "cpu")
+
+    def test_same_device_keeps_the_services(self):
+        previous = self.app.state.container
+        self.assertEqual(self.switch("cpu")[0], 200)
+        self.assertIs(self.app.state.container, previous)
+
+    def test_busy_downloads_block_the_switch(self):
+        self.install_cuda()
+        with patch.object(type(self.app.state.container), "downloading", return_value=True):
+            self.assertEqual(self.switch("cuda"), (409, self.error("DEVICE_BUSY")))
+
+    def test_unknown_device_is_rejected(self):
+        self.assertEqual(self.switch("tpu")[0], 422)
+
+    def test_system_reports_the_models_folder(self):
+        body = asgi_request(self.app, "GET", "/system")[1]
+        self.assertEqual(body["modelsDir"], str(self.settings.models_dir))
+
+    @staticmethod
+    def error(code: str) -> dict:
+        return {"code": code, "message": ANY, "details": None}
 
 
 class CudaDllTests(unittest.TestCase):

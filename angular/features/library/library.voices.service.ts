@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { BackendService } from '@features/settings/backend.service';
 import { CloudService } from '@features/settings/cloud.service';
+import { RemoteBackendService } from '@features/settings/remote.service';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
@@ -48,6 +49,7 @@ export class LibraryVoiceService {
   private readonly library = inject(LibraryService);
   private readonly sounds = inject(LibrarySoundService);
   private readonly backend = inject(BackendService);
+  private readonly remote = inject(RemoteBackendService);
   private readonly cloud = inject(CloudService);
   private readonly languageService = inject(LanguageService);
   private readonly toasts = inject(ToastService);
@@ -216,7 +218,8 @@ export class LibraryVoiceService {
   }
 
   private buildEngines(): VoiceEngine[] {
-    return buildVoiceEngines(this.backend.models(), this.cloud.accounts());
+    const models = this.remote.active() ? this.remote.models() : this.backend.models();
+    return buildVoiceEngines(models, this.cloud.accounts());
   }
 
   private findSelected(): LibraryVoice | null {

@@ -161,6 +161,26 @@ class SynthesisTests(unittest.TestCase):
         self.reference.write_bytes(b"second take")
         self.assertEqual(self.synthesize(**clone)[1]["x-cache"], "miss")
 
+    def test_uploaded_reference_is_stored_and_cached_by_content(self):
+        upload = {
+            "source": "clone",
+            "referenceAudio": base64.b64encode(b"first take").decode("ascii"),
+            "referenceName": "Mai.MP3",
+        }
+        status, headers, _ = self.synthesize(**upload)
+        self.assertEqual((status, headers["x-cache"]), (200, "miss"))
+        stored = list((self.data / "references").iterdir())
+        self.assertEqual([path.suffix for path in stored], [".mp3"])
+        self.assertEqual(stored[0].read_bytes(), b"first take")
+        self.assertEqual(self.synthesize(**upload)[1]["x-cache"], "hit")
+        clone = {"source": "clone", "referencePath": str(self.reference)}
+        self.assertEqual(self.synthesize(**clone)[1]["x-cache"], "hit")
+
+    def test_uploaded_reference_must_be_base64_audio(self):
+        self.assertEqual(
+            self.error(source="clone", referenceAudio="not base64!"), (422, "REFERENCE_INVALID")
+        )
+
     def test_design_synthesis(self):
         status, headers, _ = self.synthesize(source="design", prompt="female, young adult")
         self.assertEqual((status, headers["x-cache"]), (200, "miss"))

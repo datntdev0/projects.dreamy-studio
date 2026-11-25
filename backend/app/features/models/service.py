@@ -77,6 +77,11 @@ class ModelService:
         downloader = self.model(model_id)
         return TtsModelResponse.of(downloader.model, downloader.status())
 
+    def downloading(self) -> bool:
+        return any(
+            downloader.status().state == "downloading" for downloader in self.models.values()
+        )
+
     def model_list(self) -> list[TtsModelResponse]:
         return [self.model_view(model_id) for model_id in self.models]
 

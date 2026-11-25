@@ -1,4 +1,5 @@
 use super::*;
+use crate::features::backend::api::decode_subtitles;
 use crate::features::backend::models::DownloadState;
 use crate::features::backend::models::ServerStatus;
 use crate::features::settings::repository::SETTINGS_FILE;
@@ -6,6 +7,8 @@ use crate::infra::backend::BackendHost;
 use crate::testing::backend::StubBackend;
 use crate::testing::http::FakeHttp;
 use crate::testing::http::api_error;
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use serde_json::Value;
 use serde_json::json;
 use std::net::Ipv4Addr;
@@ -40,8 +43,10 @@ fn fixture(port: u16) -> Fixture {
     let settings = SettingsRepository::new(dir.path().join(SETTINGS_FILE));
     let stub = Arc::new(StubBackend::on_port(port));
     let supervisor = Arc::new(BackendSupervisor::new(stub.clone(), settings.clone()));
+    let remote = Arc::new(RemoteBackendService::new(settings.clone()));
     let service = BackendService::new(
         supervisor.clone(),
+        remote,
         settings,
         dir.path().to_path_buf(),
         dir.path().join("logs"),
@@ -545,5 +550,35 @@ fn synthesis_requests_send_the_sentence_pause() {
     assert_eq!(
         serde_json::to_value(&request).unwrap()["sentencePauseMs"],
         250
+    );
+}
+
+#[test]
+fn speech_goes_to_the_remote_backend_when_it_is_active() {
+    let local = FakeHttp::healthy();
+    local.route("POST", "/tts/synthesize", 200, json!("local"));
+    let remote = FakeHttp::healthy();
+    remote.route("POST", "/tts/synthesize", 200, json!("remote"));
+    let fixture = running(&local);
+    let address = format!("http://127.0.0.1:{}", remote.port);
+    fixture.write_settings(json!({
+        "backend": { "remote": { "url": address, "apiKey": "key", "active": false } }
+    }));
+    let request = SynthesisRequest::default();
+
+    assert_eq!(
+        fixture.service.synthesize(&request).unwrap().bytes,
+        b"\"local\"".to_vec()
+    );
+    fixture.write_settings(json!({
+        "backend": { "remote": { "url": address, "apiKey": "key", "active": true } }
+    }));
+    assert_eq!(
+        fixture.service.synthesize(&request).unwrap().bytes,
+        b"\"remote\"".to_vec()
+    );
+    assert_eq!(
+        remote.recorded().last().unwrap().api_key.as_deref(),
+        Some("key")
     );
 }

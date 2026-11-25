@@ -19,6 +19,7 @@ use crate::features::assistant::server::McpServer;
 use crate::features::assistant::service::AssistantService;
 use crate::features::assistant::service::CliAssistantLlm;
 use crate::features::assistant::service::McpEndpoint;
+use crate::features::backend::remote::RemoteBackendService;
 use crate::features::backend::service::BackendService;
 use crate::features::knowledge::service::KnowledgeService;
 use crate::features::library::models::StreamKind;
@@ -82,6 +83,19 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::backend::backend_model_download,
             commands::backend::backend_model_cancel,
             commands::backend::backend_model_remove,
+            commands::backend::backend_remote_status,
+            commands::backend::backend_remote_connect,
+            commands::backend::backend_remote_disconnect,
+            commands::backend::backend_remote_active_set,
+            commands::backend::backend_remote_gpu_scan,
+            commands::backend::backend_remote_device_set,
+            commands::backend::backend_remote_cuda_download,
+            commands::backend::backend_remote_cuda_cancel,
+            commands::backend::backend_remote_cuda_remove,
+            commands::backend::backend_remote_model_list,
+            commands::backend::backend_remote_model_download,
+            commands::backend::backend_remote_model_cancel,
+            commands::backend::backend_remote_model_remove,
             commands::workspace::recent_list,
             commands::workspace::workspace_measure,
             commands::workspace::workspace_delete,
@@ -280,8 +294,13 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
 }
 
 fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
+    let remote = Arc::new(RemoteBackendService::new(SettingsRepository::new(
+        container.settings_path.clone(),
+    )));
+    app.manage(remote.clone());
     app.manage(BackendService::new(
         container.supervisor.clone(),
+        remote,
         SettingsRepository::new(container.settings_path.clone()),
         container.directories.root.clone(),
         container.directories.logs.clone(),

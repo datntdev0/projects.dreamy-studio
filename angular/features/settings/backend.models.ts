@@ -41,6 +41,12 @@ export interface BackendView {
   modelsDir: string;
 }
 
+export interface RemoteView extends BackendView {
+  url: string;
+  keyHint: string;
+  active: boolean;
+}
+
 export interface TtsVoicePreset {
   id: string;
   name: string;

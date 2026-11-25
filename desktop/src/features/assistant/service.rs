@@ -44,6 +44,8 @@ use crate::features::pipeline::llm::LlmClient;
 use crate::features::pipeline::llm::Turn;
 use crate::features::pipeline::log::RunLog;
 use crate::features::pipeline::log::TaskLog;
+use crate::features::pipeline::usage::ContextUsage;
+use crate::features::pipeline::usage::QuotaSnapshot;
 use crate::features::project::models::ProjectSummary;
 use crate::features::settings::home;
 use crate::features::settings::llm::spec;
@@ -77,6 +79,9 @@ pub trait AssistantLlm: Send + Sync {
     fn start(&self, prompt: String, token: &str) -> Result<Turn, String>;
     fn resume(&self, session: &str, prompt: String, token: &str) -> Result<Turn, String>;
     fn forget(&self, session: &str);
+    fn quota(&self) -> Option<QuotaSnapshot> {
+        None
+    }
 }
 
 pub struct CliAssistantLlm {
@@ -163,6 +168,10 @@ impl AssistantLlm for CliAssistantLlm {
     fn forget(&self, session: &str) {
         self.client.forget(session);
     }
+
+    fn quota(&self) -> Option<QuotaSnapshot> {
+        self.client.quota()
+    }
 }
 
 #[derive(Clone)]
@@ -181,6 +190,10 @@ impl AssistantService {
             busy: Arc::new(Mutex::new(HashSet::new())),
             gate: Arc::new(Mutex::new(())),
         }
+    }
+
+    pub fn quota(&self) -> Option<QuotaSnapshot> {
+        self.llm.quota()
     }
 
     pub fn open(&self, session: &WorkspaceSession) -> AssistantResult<AssistantWorkspace> {
@@ -217,6 +230,7 @@ impl AssistantWorkspace {
         Ok(AssistantSession {
             summary: record.summary,
             messages: repo.messages(id)?,
+            context: record.context,
         })
     }
 
@@ -241,6 +255,7 @@ impl AssistantWorkspace {
             },
             provider: None,
             cli_session: None,
+            context: None,
         };
         let _gate = lock(&self.service.gate);
         let db = self.database()?;
@@ -248,6 +263,7 @@ impl AssistantWorkspace {
         Ok(AssistantSession {
             summary: record.summary,
             messages: Vec::new(),
+            context: None,
         })
     }
 
@@ -261,6 +277,7 @@ impl AssistantWorkspace {
         Ok(AssistantSession {
             summary: record.summary,
             messages: repo.messages(id)?,
+            context: record.context,
         })
     }
 
@@ -343,6 +360,7 @@ impl AssistantWorkspace {
         Ok(AssistantSession {
             summary: record.summary,
             messages: repo.messages(session_id)?,
+            context: record.context,
         })
     }
 
@@ -390,6 +408,7 @@ impl AssistantWorkspace {
         Ok(Exchange {
             provider,
             session: turn.session,
+            context: turn.context,
             text: answer,
             citations: reply::verify(citations, sources.novels.as_ref()),
             activities: collector.labels(),
@@ -418,6 +437,7 @@ impl AssistantWorkspace {
         }
         record.provider = Some(done.provider);
         record.cli_session = Some(done.session);
+        record.context = done.context.or(record.context);
         record.summary.message_count = messages.len() as i64;
         record.summary.preview = clip(&assistant.text, PREVIEW_LIMIT);
         record.summary.updated_at = now();
@@ -425,6 +445,7 @@ impl AssistantWorkspace {
         Ok(AssistantSession {
             summary: record.summary,
             messages,
+            context: record.context,
         })
     }
 
@@ -477,6 +498,7 @@ impl AssistantWorkspace {
 struct Exchange {
     provider: String,
     session: String,
+    context: Option<ContextUsage>,
     text: String,
     citations: Vec<AssistantCitation>,
     activities: Vec<String>,

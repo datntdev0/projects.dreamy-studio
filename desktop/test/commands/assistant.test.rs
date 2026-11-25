@@ -778,3 +778,12 @@ fn sending_to_an_unknown_assistant_session_fails_through_ipc() {
 
     assert_eq!(error["code"], "not_found");
 }
+
+#[test]
+fn the_quota_is_empty_until_an_assistant_turn_reports_it() {
+    let host = MockHost::new();
+
+    let quota = host.invoke("assistant_quota_get", json!({})).unwrap();
+
+    assert!(quota.is_null());
+}

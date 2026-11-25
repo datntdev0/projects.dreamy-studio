@@ -2038,3 +2038,44 @@ fn a_script_rewrite_of_an_unknown_unit_or_without_a_script_is_invalid() {
     assert_eq!(code(no_script), AssistantErrorCode::Invalid);
     assert!(fixture.llm.calls().is_empty());
 }
+
+#[test]
+fn send_keeps_the_last_reported_context_of_the_session() {
+    let fixture = fixture();
+    let source = novels();
+    fixture.llm.push_context(8400, Some(200000));
+    let id = fixture
+        .workspace
+        .create(workspace_scope(), &novels(), &projects())
+        .unwrap()
+        .summary
+        .id;
+
+    let first = send(&fixture, &id, "Hello", &source).unwrap();
+    let second = send(&fixture, &id, "Again", &source).unwrap();
+    let loaded = fixture.workspace.get(&id).unwrap();
+
+    let expected = Some(ContextUsage {
+        used_tokens: 8400,
+        max_tokens: Some(200000),
+    });
+    assert_eq!(first.context, expected);
+    assert_eq!(second.context, expected);
+    assert_eq!(loaded.context, expected);
+}
+
+#[test]
+fn the_service_reports_the_quota_of_its_llm() {
+    let llm = Arc::new(FakeLlm::new());
+    let service = AssistantService::new(llm.clone(), McpGrants::new());
+    let snapshot = QuotaSnapshot {
+        provider: "Codex".to_string(),
+        plan: Some("Plus".to_string()),
+        updated_at: "2026-11-25T00:00:00+00:00".to_string(),
+        quotas: Vec::new(),
+    };
+
+    assert_eq!(service.quota(), None);
+    llm.set_quota(snapshot.clone());
+    assert_eq!(service.quota(), Some(snapshot));
+}

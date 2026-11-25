@@ -7,3 +7,4 @@ pub mod log;
 pub mod models;
 pub mod repository;
 pub mod translator;
+pub mod usage;

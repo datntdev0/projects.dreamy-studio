@@ -130,6 +130,7 @@ pub fn configure<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::assistant::assistant_message_send,
             commands::assistant::assistant_proposal_resolve,
             commands::assistant::assistant_session_delete,
+            commands::assistant::assistant_quota_get,
             commands::pipeline::pipeline_start,
             commands::pipeline::pipeline_cancel,
             commands::pipeline::pipeline_history_list,

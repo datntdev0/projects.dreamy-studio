@@ -655,6 +655,7 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
   ipc.on('assistant_session_delete', null);
   ipc.on('assistant_message_send', worldSession('s1'));
   ipc.on('assistant_proposal_resolve', worldSession('s1'));
+  ipc.on('assistant_quota_get', null);
   return ipc;
 }
 

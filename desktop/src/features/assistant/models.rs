@@ -1,3 +1,4 @@
+use crate::features::pipeline::usage::ContextUsage;
 use rusqlite::Error as SqliteError;
 use serde::Deserialize;
 use serde::Serialize;
@@ -128,6 +129,7 @@ pub struct AssistantSession {
     #[serde(flatten)]
     pub summary: AssistantSessionSummary,
     pub messages: Vec<AssistantMessage>,
+    pub context: Option<ContextUsage>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,6 +137,7 @@ pub struct SessionRecord {
     pub summary: AssistantSessionSummary,
     pub provider: Option<String>,
     pub cli_session: Option<String>,
+    pub context: Option<ContextUsage>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

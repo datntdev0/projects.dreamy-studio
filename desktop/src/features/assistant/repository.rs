@@ -5,6 +5,7 @@ use crate::features::assistant::models::AssistantSessionSummary;
 use crate::features::assistant::models::Role;
 use crate::features::assistant::models::ScopeKind;
 use crate::features::assistant::models::SessionRecord;
+use crate::features::pipeline::usage::ContextUsage;
 use rusqlite::Connection;
 use rusqlite::OptionalExtension;
 use rusqlite::Row;
@@ -28,8 +29,8 @@ impl<'a> AssistantRepository<'a> {
         self.conn.execute(
             "INSERT INTO ws_assistant_sessions \
              (id, title, scope_kind, novel_id, project_id, provider, cli_session, message_count, \
-              preview, created_at, updated_at, edit_granted) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+              preview, created_at, updated_at, edit_granted, context_used, context_max) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 summary.id,
                 summary.title,
@@ -42,7 +43,9 @@ impl<'a> AssistantRepository<'a> {
                 summary.preview,
                 summary.created_at,
                 summary.updated_at,
-                summary.edit_granted
+                summary.edit_granted,
+                context_used(record),
+                context_max(record)
             ],
         )?;
         Ok(())
@@ -54,7 +57,7 @@ impl<'a> AssistantRepository<'a> {
             "UPDATE ws_assistant_sessions \
              SET title = ?2, scope_kind = ?3, novel_id = ?4, project_id = ?5, provider = ?6, \
                  cli_session = ?7, message_count = ?8, preview = ?9, updated_at = ?10, \
-                 edit_granted = ?11 \
+                 edit_granted = ?11, context_used = ?12, context_max = ?13 \
              WHERE id = ?1",
             params![
                 summary.id,
@@ -67,7 +70,9 @@ impl<'a> AssistantRepository<'a> {
                 summary.message_count,
                 summary.preview,
                 summary.updated_at,
-                summary.edit_granted
+                summary.edit_granted,
+                context_used(record),
+                context_max(record)
             ],
         )?;
         Ok(())
@@ -86,7 +91,7 @@ impl<'a> AssistantRepository<'a> {
         self.conn
             .query_row(
                 &format!(
-                    "SELECT {SESSION_COLUMNS}, provider, cli_session \
+                    "SELECT {SESSION_COLUMNS}, provider, cli_session, context_used, context_max \
                      FROM ws_assistant_sessions WHERE id = ?1"
                 ),
                 params![id],
@@ -95,6 +100,7 @@ impl<'a> AssistantRepository<'a> {
                         summary: row_to_summary(row)?,
                         provider: row.get(10)?,
                         cli_session: row.get(11)?,
+                        context: row_to_context(row)?,
                     })
                 },
             )
@@ -200,6 +206,34 @@ fn row_to_summary(row: &Row<'_>) -> rusqlite::Result<AssistantSessionSummary> {
         updated_at: row.get(8)?,
         edit_granted: row.get(9)?,
     })
+}
+
+fn row_to_context(row: &Row<'_>) -> rusqlite::Result<Option<ContextUsage>> {
+    let used: Option<i64> = row.get(12)?;
+    let max: Option<i64> = row.get(13)?;
+    Ok(used.map(|used| ContextUsage {
+        used_tokens: to_count(used),
+        max_tokens: max.map(to_count),
+    }))
+}
+
+fn to_count(value: i64) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn to_column(value: u64) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+fn context_used(record: &SessionRecord) -> Option<i64> {
+    record.context.map(|context| to_column(context.used_tokens))
+}
+
+fn context_max(record: &SessionRecord) -> Option<i64> {
+    record
+        .context
+        .and_then(|context| context.max_tokens)
+        .map(to_column)
 }
 
 fn row_to_message(row: &Row<'_>) -> rusqlite::Result<AssistantMessage> {

@@ -48,6 +48,7 @@ fn record(id: &str, count: i64, updated_at: &str) -> SessionRecord {
         },
         provider: None,
         cli_session: None,
+        context: None,
     }
 }
 
@@ -294,6 +295,7 @@ fn serializes_session_in_wire_format() {
     let session = AssistantSession {
         summary: record("s1", 1, "2026-11-01T00:00:00+00:00").summary,
         messages: vec![message("m1", Role::User)],
+        context: None,
     };
     let value = serde_json::to_value(&session).unwrap();
     assert_eq!(value["messageCount"], 1);

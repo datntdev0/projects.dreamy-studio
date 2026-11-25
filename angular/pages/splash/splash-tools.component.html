@@ -1,0 +1,19 @@
+<div class="sp-tools" data-testid="splash-tools">
+  <ds-segments
+    data-testid="splash-language"
+    [label]="'language.label' | t"
+    [options]="languageOptions"
+    [value]="language()"
+    (valueChange)="changeLanguage($event)"
+  />
+  <ds-button
+    variant="ghost"
+    size="small"
+    [iconOnly]="true"
+    [label]="themeToggleKey() | t"
+    data-testid="splash-theme-toggle"
+    (pressed)="toggleTheme()"
+  >
+    <ds-icon [name]="themeIcon()" [size]="16" />
+  </ds-button>
+</div>

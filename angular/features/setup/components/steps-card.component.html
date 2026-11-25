@@ -1,0 +1,76 @@
+<div
+  class="rs"
+  role="status"
+  aria-live="polite"
+  [attr.data-status]="status()"
+  data-testid="steps-card-body"
+>
+  <header class="rs-head" data-testid="steps-card-head">
+    <img
+      class="rs-logo"
+      [class.is-busy]="status() === 'running'"
+      src="/assets/dreamy-studio-mark.svg"
+      alt=""
+      data-testid="steps-card-logo"
+    />
+    <div class="rs-intro" data-testid="steps-card-intro">
+      <span class="eyebrow" data-testid="steps-card-eyebrow">{{ view().eyebrow | t }}</span>
+      <h2 class="t-display-xs" data-testid="steps-card-title">
+        @if (view().titleKey; as key) {
+          {{ key | t }}
+        } @else {
+          {{ view().title }}
+        }
+      </h2>
+      @if (view().path; as path) {
+        <span class="path t-mute" data-testid="steps-card-path">{{ path }}</span>
+      }
+    </div>
+  </header>
+
+  <div
+    class="progress rs-bar"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="percent()"
+    [class.is-done]="status() === 'done'"
+    data-testid="steps-card-progress"
+  >
+    <i [style.width.%]="percent()"></i>
+  </div>
+
+  <ul class="rs-steps" data-testid="steps-card-steps">
+    @for (step of view().steps; track step.id) {
+      <li class="rs-step" [attr.data-state]="step.state" data-testid="steps-card-step">
+        @switch (step.state) {
+          @case ('done') {
+            <ds-icon name="check-circle" [size]="16" />
+          }
+          @case ('error') {
+            <ds-icon name="x-circle" [size]="16" />
+          }
+          @case ('running') {
+            <span class="dot dot-running" data-testid="steps-card-step-running"></span>
+          }
+          @default {
+            <span class="dot" data-testid="steps-card-step-pending"></span>
+          }
+        }
+        <span data-testid="steps-card-step-label">{{ step.label | t }}</span>
+      </li>
+    }
+  </ul>
+
+  @if (view().error; as message) {
+    <div class="ld-warn is-error rs-alert" role="alert" data-testid="steps-card-error">
+      <ds-icon name="alert" />
+      <span>{{ message.key | t: message.params }}</span>
+    </div>
+  }
+
+  <footer class="rs-foot" data-testid="steps-card-foot">
+    <span class="spacer" data-testid="steps-card-spacer"></span>
+    <ng-content />
+  </footer>
+</div>

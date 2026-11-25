@@ -1,0 +1,223 @@
+<div
+  class="rs"
+  role="status"
+  aria-live="polite"
+  [attr.data-status]="status()"
+  data-testid="setup-card-body"
+>
+  <header class="rs-head" data-testid="setup-card-head">
+    <img
+      class="rs-logo"
+      [class.is-busy]="busy()"
+      src="/assets/dreamy-studio-mark.svg"
+      alt=""
+      data-testid="setup-card-logo"
+    />
+    <div class="rs-intro" data-testid="setup-card-intro">
+      <span class="eyebrow" data-testid="setup-card-eyebrow">{{ 'setup.eyebrow' | t }}</span>
+      <h2 class="t-display-xs" data-testid="setup-card-title">{{ title() | t }}</h2>
+      <p class="t-sm t-mute" data-testid="setup-card-description">
+        {{ 'setup.description' | t: { size: totalText(), version: state().appVersion } }}
+      </p>
+    </div>
+  </header>
+
+  <section class="rs-overall" data-testid="setup-card-overall">
+    <div class="rs-overall-row" data-testid="setup-card-overall-row">
+      <span class="rs-percent" data-testid="setup-card-percent">{{ percent() }}%</span>
+      <span class="mono t-mute" data-testid="setup-card-bytes">
+        {{ receivedText() }} / {{ totalText() }}
+        @if (status() === 'running') {
+          · {{ speedText() }}
+        }
+        @if (eta(); as remaining) {
+          · {{ remaining.key | t: remaining.params }}
+        }
+      </span>
+    </div>
+    <div
+      class="progress rs-bar"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="percent()"
+      [class.is-done]="status() === 'ready'"
+      [class.is-indeterminate]="status() === 'checking'"
+      data-testid="setup-card-progress"
+    >
+      <i [style.width.%]="status() === 'checking' ? 30 : percent()"></i>
+    </div>
+  </section>
+
+  @for (group of groups(); track group.id) {
+    <section class="rs-group" data-testid="setup-card-group">
+      <span class="eyebrow" data-testid="setup-card-group-title">{{ groupKey(group.id) | t }}</span>
+      <ul class="rs-parts" data-testid="setup-card-items">
+        @for (item of group.items; track item.id) {
+          <li
+            class="rs-part"
+            [attr.data-state]="item.state"
+            [attr.data-kind]="item.kind"
+            data-testid="setup-card-item"
+          >
+            <span class="rs-part-icon" data-testid="setup-card-item-icon">
+              <ds-icon [name]="itemIcon(item.id)" [size]="18" />
+            </span>
+            <div class="rs-part-main" data-testid="setup-card-item-main">
+              <div class="rs-part-name" data-testid="setup-card-item-name">
+                <span>{{ itemNameKey(item.id) | t }}</span>
+                @if (item.version) {
+                  <span class="mono t-mute" data-testid="setup-card-item-version">
+                    {{ item.version }}
+                  </span>
+                }
+              </div>
+              <div class="rs-part-role t-mute" data-testid="setup-card-item-role">
+                {{ itemRoleKey(item.id) | t }}
+              </div>
+              @if (item.kind === 'download') {
+                <div
+                  class="progress rs-part-bar"
+                  [class.is-done]="item.state === 'ready'"
+                  data-testid="setup-card-item-progress"
+                >
+                  <i [style.width.%]="itemPercent(item)"></i>
+                </div>
+              }
+            </div>
+            <div class="rs-part-status" data-testid="setup-card-item-status">
+              <span class="rs-part-state" data-testid="setup-card-item-state">
+                <ds-icon [name]="stateIcon(item.state)" [size]="14" />
+                {{ stateKey(item.state) | t }}
+              </span>
+              @if (item.kind === 'download') {
+                <span class="mono t-mute" data-testid="setup-card-item-bytes">
+                  {{ itemBytes(item) }}
+                </span>
+              } @else if (item.state === 'missing') {
+                <button
+                  type="button"
+                  class="rs-link"
+                  data-testid="setup-card-item-guide"
+                  (click)="guideOpened.emit(item.id)"
+                >
+                  {{ 'setup.guide' | t }}
+                </button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (error(); as message) {
+    <div class="ld-warn is-error rs-alert" role="alert" data-testid="setup-card-error">
+      <ds-icon name="alert" />
+      <span>{{ message | t }}</span>
+    </div>
+  }
+  @if (status() === 'offline') {
+    <div class="ld-warn rs-alert" role="alert" data-testid="setup-card-offline">
+      <ds-icon name="unlink" />
+      <span>{{ 'setup.offlineNote' | t }}</span>
+    </div>
+  }
+  @if (status() === 'ready' && missingCount()) {
+    <div class="ld-warn rs-alert" data-testid="setup-card-missing">
+      <ds-icon name="info" />
+      <span>{{ 'setup.missingNote' | t: { count: missingCount() } }}</span>
+    </div>
+  }
+
+  <footer class="rs-foot" data-testid="setup-card-foot">
+    @if (status() === 'ready') {
+      <span class="rs-note t-mute" data-testid="setup-card-ready-note">
+        <ds-icon name="lock" [size]="14" />
+        {{ 'setup.readyNote' | t }}
+      </span>
+    }
+    <span class="spacer" data-testid="setup-card-spacer"></span>
+    @switch (status()) {
+      @case ('running') {
+        <ds-button
+          variant="ghost"
+          size="small"
+          data-testid="setup-card-pause"
+          (pressed)="paused.emit()"
+        >
+          <ds-icon name="pause" [size]="14" />
+          {{ 'setup.pause' | t }}
+        </ds-button>
+      }
+      @case ('paused') {
+        <ds-button
+          variant="ghost"
+          size="small"
+          data-testid="setup-card-quit"
+          (pressed)="quit.emit()"
+        >
+          {{ 'setup.quit' | t }}
+        </ds-button>
+        <ds-button
+          variant="primary"
+          size="small"
+          data-testid="setup-card-resume"
+          (pressed)="resumed.emit()"
+        >
+          <ds-icon name="play" [size]="14" />
+          {{ 'setup.resume' | t }}
+        </ds-button>
+      }
+      @case ('ready') {
+        <ds-button
+          variant="primary"
+          size="small"
+          data-testid="setup-card-continue"
+          (pressed)="continued.emit()"
+        >
+          {{ 'setup.continue' | t }}
+          <ds-icon name="chev-r" [size]="14" />
+        </ds-button>
+      }
+      @case ('checking') {
+        <ds-button
+          variant="ghost"
+          size="small"
+          data-testid="setup-card-quit"
+          (pressed)="quit.emit()"
+        >
+          {{ 'setup.quit' | t }}
+        </ds-button>
+      }
+      @default {
+        <ds-button
+          variant="ghost"
+          size="small"
+          data-testid="setup-card-quit"
+          (pressed)="quit.emit()"
+        >
+          {{ 'setup.quit' | t }}
+        </ds-button>
+        <ds-button
+          variant="outline"
+          size="small"
+          data-testid="setup-card-offline-import"
+          (pressed)="offlineImported.emit()"
+        >
+          <ds-icon name="package" [size]="14" />
+          {{ 'setup.offlineImport' | t }}
+        </ds-button>
+        <ds-button
+          variant="primary"
+          size="small"
+          data-testid="setup-card-retry"
+          (pressed)="retried.emit()"
+        >
+          <ds-icon name="refresh" [size]="14" />
+          {{ 'setup.retry' | t }}
+        </ds-button>
+      }
+    }
+  </footer>
+</div>

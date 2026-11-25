@@ -1,0 +1,90 @@
+<div class="sf" data-testid="splash-flow">
+  @switch (stage()) { @case ('setup') {
+  <div class="splash" data-testid="splash-flow-setup">
+    <app-splash-tools />
+    <app-setup-card
+      [state]="setup().state()"
+      (paused)="setup().pause()"
+      (resumed)="setup().resume()"
+      (retried)="setup().retry()"
+      (quit)="restart()"
+      (continued)="continueToStartup()"
+    />
+  </div>
+  } @case ('startup') {
+  <div class="splash" data-testid="splash-flow-startup">
+    <app-splash-tools />
+    <app-steps-card [view]="startup().view()">
+      @if (startup().view().status === 'failed') {
+      <ds-button
+        variant="ghost"
+        size="small"
+        data-testid="splash-flow-startup-quit"
+        (pressed)="restart()"
+      >
+        {{ 'setup.quit' | t }}
+      </ds-button>
+      <ds-button variant="outline" size="small" data-testid="splash-flow-startup-logs">
+        <ds-icon name="file-code" [size]="14" />
+        {{ 'startup.logs' | t }}
+      </ds-button>
+      <ds-button
+        variant="primary"
+        size="small"
+        data-testid="splash-flow-startup-retry"
+        (pressed)="startup().retry()"
+      >
+        <ds-icon name="refresh" [size]="14" />
+        {{ 'setup.retry' | t }}
+      </ds-button>
+      }
+    </app-steps-card>
+  </div>
+  } @case ('opening') { @if (opening(); as simulation) {
+  <div class="splash" data-testid="splash-flow-opening">
+    <app-splash-tools />
+    <app-steps-card [view]="simulation.view()">
+      @if (simulation.view().status === 'failed') {
+      <ds-button
+        variant="ghost"
+        size="small"
+        data-testid="splash-flow-opening-back"
+        (pressed)="backToWorkspaces()"
+      >
+        <ds-icon name="arrow-left" [size]="14" />
+        {{ 'open.back' | t }}
+      </ds-button>
+      <ds-button
+        variant="primary"
+        size="small"
+        data-testid="splash-flow-opening-retry"
+        (pressed)="simulation.retry()"
+      >
+        <ds-icon name="refresh" [size]="14" />
+        {{ 'setup.retry' | t }}
+      </ds-button>
+      } @else if (simulation.view().status === 'running') {
+      <ds-button
+        variant="ghost"
+        size="small"
+        data-testid="splash-flow-opening-cancel"
+        (pressed)="backToWorkspaces()"
+      >
+        {{ 'common.cancel' | t }}
+      </ds-button>
+      }
+    </app-steps-card>
+  </div>
+  } } @case ('main') {
+  <div class="splash" data-testid="splash-flow-main">
+    <div class="rs ws-first" data-testid="splash-flow-main-card">
+      <ds-icon name="check-circle" [size]="32" />
+      <h2 class="t-display-xs" data-testid="splash-flow-main-title">Main page</h2>
+      <p class="path t-mute" data-testid="splash-flow-main-path">{{ opened() }}</p>
+      <p class="t-sm t-mute" data-testid="splash-flow-main-note">navigate → /home (MainPage)</p>
+    </div>
+  </div>
+  } @default {
+  <app-splash-page />
+  } }
+</div>

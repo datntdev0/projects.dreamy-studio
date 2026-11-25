@@ -1,30 +1,36 @@
-import { SplashPage } from '@pages/splash/splash.page';
-import type { Meta, StoryObj } from '@storybook/angular-vite';
+import {
+  applicationConfig,
+  type Meta,
+  moduleMetadata,
+  type StoryObj,
+} from '@storybook/angular-vite';
 
-// prettier-ignore
-import { LOADING_STATE, RECENT_WORKSPACES, settingsProvider, withProviders, workspaceProvider, WorkspaceScenario } from './mocks';
+import { settingsProvider } from './mocks';
+import { FLOW_FAILURES, flowProviders, SplashFlowDemo } from './splash.mocks';
 
-function splash(scenario: WorkspaceScenario): StoryObj<SplashPage> {
-  return withProviders([workspaceProvider(scenario), settingsProvider()]);
-}
-
-const meta: Meta<SplashPage> = {
+const meta: Meta<SplashFlowDemo> = {
   title: 'Features/Splash',
-  component: SplashPage,
+  component: SplashFlowDemo,
+  decorators: [
+    moduleMetadata({ imports: [SplashFlowDemo] }),
+    applicationConfig({ providers: [...flowProviders(), settingsProvider()] }),
+  ],
   parameters: { layout: 'fullscreen' },
+  argTypes: {
+    failure: {
+      control: 'select',
+      options: FLOW_FAILURES,
+      description:
+        'Inject one failure; setup-* failures need firstLaunch because nothing is downloaded otherwise.',
+    },
+    firstLaunch: { control: 'boolean' },
+  },
 };
 
 export default meta;
 
-type Story = StoryObj<SplashPage>;
+type Story = StoryObj<SplashFlowDemo>;
 
-export const WithRecent: Story = splash({ recent: RECENT_WORKSPACES });
+export const FirstLaunch: Story = { args: { firstLaunch: true, failure: 'none' } };
 
-export const FirstRun: Story = splash({ recent: [] });
-
-export const WithNotice: Story = splash({
-  recent: RECENT_WORKSPACES,
-  notice: 'Không thể mở workspace: thư mục không còn tồn tại.',
-});
-
-export const Loading: Story = splash({ recent: RECENT_WORKSPACES, state: LOADING_STATE });
+export const ReturningUser: Story = { args: { firstLaunch: false, failure: 'none' } };

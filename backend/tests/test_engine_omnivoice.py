@@ -43,6 +43,17 @@ def record(entry):
         output.write(json.dumps(entry, default=str) + "\\n")
 
 
+class VoiceClonePrompt(dict):
+    def save(self, path):
+        with open(path, "w", encoding="utf-8") as output:
+            json.dump(self, output)
+
+    @classmethod
+    def load(cls, path):
+        with open(path, encoding="utf-8") as source:
+            return cls(json.load(source))
+
+
 class OmniVoice:
     sampling_rate = 24_000
 
@@ -55,7 +66,7 @@ class OmniVoice:
         record({"op": "prompt", "ref_audio": ref_audio})
         if ref_audio.endswith("silent.wav"):
             raise ValueError("Reference audio is empty after silence removal.")
-        return {"prompt": ref_audio}
+        return VoiceClonePrompt(prompt=ref_audio)
 
     def generate(self, text, language=None, **kwargs):
         record({"op": "generate", "text": text, "language": language, "kwargs": kwargs})
@@ -164,6 +175,48 @@ class OmniVoiceEngineTests(unittest.TestCase):
         generated = self.recorded("generate")[-1]
         self.assertEqual(
             generated["kwargs"], {"voice_clone_prompt": {"prompt": str(self.reference)}}
+        )
+
+    def restart(self) -> None:
+        self.host.close()
+        self.host = WorkerHost(sys.executable, self.root / "logs")
+        self.addCleanup(self.host.close)
+        self.load()
+
+    def test_clone_prompts_persist_across_workers(self):
+        self.load()
+        stored = self.root / "prompts" / "voice.prompt"
+        clone = {
+            "source": "clone",
+            "referencePath": str(self.reference),
+            "promptPath": str(stored),
+        }
+        self.synthesize(clone)
+        self.assertEqual(
+            json.loads(stored.read_text(encoding="utf-8")), {"prompt": str(self.reference)}
+        )
+        self.restart()
+        self.synthesize(clone, text="Sau khi khởi động lại")
+        self.assertEqual(len(self.recorded("prompt")), 1)
+        self.assertEqual(
+            self.recorded("generate")[-1]["kwargs"],
+            {"voice_clone_prompt": {"prompt": str(self.reference)}},
+        )
+        self.assertEqual(list(stored.parent.iterdir()), [stored])
+
+    def test_unreadable_prompt_is_rebuilt(self):
+        self.load()
+        stored = self.root / "voice.prompt"
+        stored.write_text("not json", encoding="utf-8")
+        clone = {
+            "source": "clone",
+            "referencePath": str(self.reference),
+            "promptPath": str(stored),
+        }
+        self.synthesize(clone)
+        self.assertEqual(len(self.recorded("prompt")), 1)
+        self.assertEqual(
+            json.loads(stored.read_text(encoding="utf-8")), {"prompt": str(self.reference)}
         )
 
     def test_rejections(self):

@@ -58,6 +58,17 @@ def tone_catalog() -> Catalog:
     )
 
 
+class RecordingWorkers:
+    def __init__(self, workers) -> None:
+        self.workers = workers
+        self.jobs: list[dict] = []
+
+    def call(self, spec, op: str, payload: dict, timeout: float) -> dict:
+        if op == "synthesize":
+            self.jobs.append(payload)
+        return self.workers.call(spec, op, payload, timeout)
+
+
 def subtitles(headers: dict[str, str]) -> str:
     return base64.b64decode(headers["x-subtitles"].encode("ascii")).decode("utf-8")
 
@@ -176,10 +187,41 @@ class SynthesisTests(unittest.TestCase):
         clone = {"source": "clone", "referencePath": str(self.reference)}
         self.assertEqual(self.synthesize(**clone)[1]["x-cache"], "hit")
 
+    def test_uploaded_reference_shares_the_prompt_of_identical_audio(self):
+        jobs = self.record_jobs()
+        self.synthesize(source="clone", referencePath=str(self.reference))
+        upload = base64.b64encode(self.reference.read_bytes()).decode("ascii")
+        self.synthesize(source="clone", referenceAudio=upload, text="Một câu khác")
+        local, remote = (job["voice"] for job in jobs)
+        self.assertEqual(remote["promptPath"], local["promptPath"])
+        self.assertEqual(Path(remote["referencePath"]).parent, self.data / "references")
+
     def test_uploaded_reference_must_be_base64_audio(self):
         self.assertEqual(
             self.error(source="clone", referenceAudio="not base64!"), (422, "REFERENCE_INVALID")
         )
+
+    def record_jobs(self) -> list[dict]:
+        synthesizer = self.app.state.container.speeches.synthesizer
+        jobs = RecordingWorkers(synthesizer.workers)
+        synthesizer.workers = jobs
+        return jobs.jobs
+
+    def test_clone_prompt_path_follows_reference_and_model(self):
+        jobs = self.record_jobs()
+        clone = {"source": "clone", "referencePath": str(self.reference)}
+        self.synthesize(**clone)
+        self.synthesize(**clone, text="Một câu khác")
+        self.synthesize()
+        first, second, preset = (job["voice"] for job in jobs)
+        prompt = Path(first["promptPath"])
+        self.assertEqual(prompt.parent, self.data / "cache" / "tts" / "tone" / "prompts")
+        self.assertEqual(prompt.suffix, ".prompt")
+        self.assertEqual(second["promptPath"], first["promptPath"])
+        self.assertNotIn("promptPath", preset)
+        self.reference.write_bytes(b"second take")
+        self.synthesize(**clone)
+        self.assertNotEqual(jobs[-1]["voice"]["promptPath"], first["promptPath"])
 
     def test_design_synthesis(self):
         status, headers, _ = self.synthesize(source="design", prompt="female, young adult")

@@ -3,7 +3,7 @@ import gc
 from pathlib import Path
 from typing import Any
 
-from protocol import EngineError, model_path, reference_path
+from protocol import EngineError, PromptStore, model_path
 
 TURBO_MODE = "v3turbo"
 NANO_MODE = "v3nano"
@@ -11,6 +11,25 @@ TURBO_ONNX_DIR = "onnx_update"
 CODEC_DIR = "codec"
 PRESET_SOURCE = "preset"
 CLONE_SOURCE = "clone"
+SPEAKER_KEY = "speaker_emb"
+CODES_KEY = "codes"
+VOICE_KEYS = (SPEAKER_KEY, CODES_KEY)
+PROMPT_CACHE_SIZE = 32
+
+
+def read_voice(path: str) -> dict[str, Any]:
+    import numpy
+
+    with numpy.load(path, allow_pickle=False) as archive:
+        return {key: archive[key] if key in archive.files else None for key in VOICE_KEYS}
+
+
+def write_voice(voice: dict[str, Any], path: str) -> None:
+    import numpy
+
+    arrays = {key: value for key, value in voice.items() if value is not None}
+    with open(path, "wb") as output:
+        numpy.savez(output, **arrays)
 
 
 def native_fbank_available() -> bool:
@@ -42,6 +61,7 @@ class VieneuEngine:
         self.loaded: tuple[str, str] | None = None
         self.presets: set[str] = set()
         self.lite_engine: Any = None
+        self.voices = PromptStore(PROMPT_CACHE_SIZE, read_voice, write_voice)
 
     def use_local_codec(self, model_dir: Path) -> None:
         from vieneu._v3_turbo_engine import onnx_runtime_lite
@@ -84,8 +104,13 @@ class VieneuEngine:
         self.tts = None
         self.loaded = None
         self.presets = set()
+        self.voices.clear()
         gc.collect()
         return {}
+
+    def enroll(self, reference: Path) -> dict[str, Any]:
+        speaker_emb, codes = self.tts.encode_reference(str(reference))
+        return {SPEAKER_KEY: speaker_emb, CODES_KEY: codes}
 
     def voice_arguments(self, voice: dict[str, Any]) -> dict[str, Any]:
         source = voice.get("source")
@@ -95,7 +120,7 @@ class VieneuEngine:
                 raise EngineError("PRESET_UNKNOWN", f"Unknown preset voice '{preset}'")
             return {"voice": preset}
         if source == CLONE_SOURCE:
-            return {"ref_audio": str(reference_path(voice))}
+            return {"voice": self.voices.get(voice, self.enroll)}
         raise EngineError("SOURCE_UNSUPPORTED", f"VieNeu does not support '{source}' voices")
 
     def synthesize(self, payload: dict[str, Any]) -> dict[str, Any]:

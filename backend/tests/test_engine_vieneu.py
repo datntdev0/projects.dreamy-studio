@@ -33,6 +33,10 @@ class FakeTts:
     def list_preset_voices(self):
         return [("Hải Đăng (Nam)", "Hải Đăng"), ("Mai Anh (Nữ)", "Mai Anh")]
 
+    def encode_reference(self, ref_audio):
+        record({"op": "enroll", "ref_audio": ref_audio})
+        return [0.5, 0.25], [[1, 2], [3, 4]]
+
     def infer(self, text, **kwargs):
         record({"op": "infer", "text": text, "kwargs": kwargs})
         return [0.0] * (self.sample_rate // 2)
@@ -62,9 +66,41 @@ class OnnxV3LiteEngine:
 """
 
 
+FAKE_NUMPY = """
+import json
+
+
+class Archive(dict):
+    @property
+    def files(self):
+        return list(self)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *details):
+        return False
+
+
+def savez(output, **arrays):
+    output.write(json.dumps(arrays).encode("utf-8"))
+
+
+def load(path, allow_pickle=True):
+    if allow_pickle:
+        raise AssertionError("pickled arrays must stay disabled")
+    with open(path, "rb") as source:
+        return Archive(json.loads(source.read()))
+"""
+
+
+ENROLLED = {"speaker_emb": [0.5, 0.25], "codes": [[1, 2], [3, 4]]}
+
+
 def write_fake_vieneu(site: Path) -> None:
     package = site / "vieneu"
     (package / "_v3_turbo_engine").mkdir(parents=True)
+    (site / "numpy.py").write_text(FAKE_NUMPY, encoding="utf-8")
     (package / "__init__.py").write_text(FAKE_FACTORY, encoding="utf-8")
     (package / "_v3_turbo_engine" / "__init__.py").write_text("", encoding="utf-8")
     (package / "_v3_turbo_engine" / "onnx_runtime_lite.py").write_text(FAKE_LITE, encoding="utf-8")
@@ -155,7 +191,36 @@ class VieneuEngineTests(unittest.TestCase):
         self.assertEqual(
             preset, {"op": "infer", "text": "Xin chào", "kwargs": {"voice": "Mai Anh"}}
         )
-        self.assertEqual(clone["kwargs"], {"ref_audio": str(self.reference)})
+        self.assertEqual(clone["kwargs"], {"voice": ENROLLED})
+
+    def clone(self, text: str, voice: dict) -> None:
+        payload = {"text": text, "voice": voice, "outPath": str(self.root / "clone.wav")}
+        self.call("synthesize", payload)
+
+    def operations(self, op: str) -> list[dict]:
+        return [entry for entry in self.recorded() if entry["op"] == op]
+
+    def test_clone_voices_persist_across_workers(self):
+        self.load("v3nano", self.nano_dir)
+        stored = self.root / "prompts" / "voice.prompt"
+        voice = {
+            "source": "clone",
+            "referencePath": str(self.reference),
+            "promptPath": str(stored),
+        }
+        self.clone("Một", voice)
+        self.clone("Hai", voice)
+        self.assertEqual(json.loads(stored.read_bytes()), ENROLLED)
+        self.host.close()
+        self.host = WorkerHost(sys.executable, self.root / "logs")
+        self.addCleanup(self.host.close)
+        self.load("v3nano", self.nano_dir)
+        self.clone("Ba", voice)
+        self.assertEqual(len(self.operations("enroll")), 1)
+        self.assertEqual(
+            [entry["kwargs"] for entry in self.operations("infer")], [{"voice": ENROLLED}] * 3
+        )
+        self.assertEqual(list(stored.parent.iterdir()), [stored])
 
     def test_rejected_requests(self):
         cases = [

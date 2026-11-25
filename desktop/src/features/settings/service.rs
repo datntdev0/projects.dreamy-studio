@@ -13,6 +13,8 @@ use crate::features::settings::probe::login;
 use crate::features::settings::probe::logout;
 use crate::features::settings::probe::probe;
 use crate::features::settings::repository::SettingsRepository;
+use crate::features::settings::usage::LlmUsage;
+use crate::features::settings::usage::read_usage;
 use crate::features::settings::window::WindowSettings;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -136,6 +138,10 @@ impl SettingsService {
             self.close_login(id);
         }
         Ok(result)
+    }
+
+    pub fn llm_usage(&self, id: &str) -> Result<Option<LlmUsage>, String> {
+        read_usage(self.llm_target(id)?, &self.data_dir())
     }
 
     pub fn login_llm(&self, id: &str) -> Result<(), String> {

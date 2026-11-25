@@ -341,6 +341,7 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
       { id: 'assistant', provider: null, model: '', effort: null, args: '' },
     ],
   });
+  ipc.on('llm_usage', null);
   ipc.on('llm_probe', {
     id: 'claude',
     found: true,

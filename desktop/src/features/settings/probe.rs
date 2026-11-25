@@ -1,3 +1,4 @@
+use crate::features::settings::account::profile_account;
 use crate::features::settings::llm::CliSpec;
 use crate::infra::startup::manifest::installed_executable;
 use crate::shared::config;
@@ -49,11 +50,11 @@ impl CliProbe {
     }
 }
 
-struct Captured {
-    success: bool,
-    status: String,
-    stdout: String,
-    stderr: String,
+pub(crate) struct Captured {
+    pub success: bool,
+    pub status: String,
+    pub stdout: String,
+    pub stderr: String,
 }
 
 pub fn probe(spec: &CliSpec, data_dir: &Path) -> CliProbe {
@@ -62,7 +63,7 @@ pub fn probe(spec: &CliSpec, data_dir: &Path) -> CliProbe {
     result
 }
 
-fn now_ms() -> u64 {
+pub(crate) fn now_ms() -> u64 {
     match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(elapsed) => u64::try_from(elapsed.as_millis()).unwrap_or(0),
         Err(_) => 0,
@@ -101,6 +102,15 @@ fn fill(result: &mut CliProbe, spec: &CliSpec, path: &Path, data_dir: &Path) {
     };
     result.ok = true;
     result.version = parse_version(&version.stdout_or_stderr());
+    detect_sign_in(result, spec, path, data_dir);
+    if result.signed_in == Some(true)
+        && let Some(account) = profile_account(spec, data_dir)
+    {
+        result.account = account;
+    }
+}
+
+fn detect_sign_in(result: &mut CliProbe, spec: &CliSpec, path: &Path, data_dir: &Path) {
     if let Some(token) = spec.token_path(data_dir) {
         result.signed_in = Some(token.is_file());
         return;
@@ -162,10 +172,29 @@ pub fn prepare(spec: &CliSpec, data_dir: &Path) -> Result<(), String> {
     }
     let dir = spec.profile_dir(data_dir);
     std::fs::create_dir_all(&dir)
-        .map_err(|error| format!("Could not create {}: {error}", dir.display()))
+        .map_err(|error| format!("Could not create {}: {error}", dir.display()))?;
+    match spec.update_stamp_path(data_dir) {
+        Some(stamp) => refresh_stamp(&stamp),
+        None => Ok(()),
+    }
 }
 
-fn command(spec: &CliSpec, path: &Path, args: &[&str], data_dir: &Path) -> Command {
+fn refresh_stamp(stamp: &Path) -> Result<(), String> {
+    touch(stamp).map_err(|error| format!("Could not update {}: {error}", stamp.display()))
+}
+
+fn touch(path: &Path) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?
+        .set_modified(SystemTime::now())
+}
+
+pub(crate) fn command(spec: &CliSpec, path: &Path, args: &[&str], data_dir: &Path) -> Command {
     let mut command = Command::new(path);
     command
         .args(args)
@@ -186,7 +215,7 @@ pub fn installed(spec: &CliSpec) -> Result<PathBuf, String> {
     })
 }
 
-fn capture(mut command: Command) -> Result<Captured, String> {
+pub(crate) fn capture(mut command: Command) -> Result<Captured, String> {
     let mut child = command
         .spawn()
         .map_err(|error| format!("Could not run the command: {error}"))?;
@@ -236,7 +265,7 @@ fn drain<R: Read>(stream: Option<R>) -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-fn failure_detail(output: &Captured) -> String {
+pub(crate) fn failure_detail(output: &Captured) -> String {
     let detail = failure_snippet(&output.stdout, &output.stderr);
     if detail.is_empty() {
         format!("Command exited with {}.", output.status)

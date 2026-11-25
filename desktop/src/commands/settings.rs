@@ -10,6 +10,7 @@ use crate::features::settings::models::SettingsView;
 use crate::features::settings::models::Theme;
 use crate::features::settings::probe::CliProbe;
 use crate::features::settings::service::SettingsService;
+use crate::features::settings::usage::LlmUsage;
 use crate::features::workspace::session::WorkspaceSession;
 use crate::infra::window_state;
 use serde::Deserialize;
@@ -99,6 +100,15 @@ pub async fn llm_feature_save<R: Runtime>(
 #[tauri::command]
 pub async fn llm_probe<R: Runtime>(app: AppHandle<R>, id: String) -> Result<CliProbe, String> {
     let task = spawn_blocking(move || app.state::<SettingsService>().probe_llm(&id));
+    task.await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn llm_usage<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> Result<Option<LlmUsage>, String> {
+    let task = spawn_blocking(move || app.state::<SettingsService>().llm_usage(&id));
     task.await.map_err(|error| error.to_string())?
 }
 

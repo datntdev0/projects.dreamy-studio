@@ -36,3 +36,7 @@ export const LlmNotInstalled: Story = settings('llm', { install: 'missing' });
 export const LlmDownloading: Story = settings('llm', { install: 'downloading' });
 
 export const LlmDownloadFailed: Story = settings('llm', { install: 'failed' });
+
+export const LlmUsageLimited: Story = settings('llm', { usage: 'limited' });
+
+export const LlmUsageFailed: Story = settings('llm', { usage: 'failed' });

@@ -13,6 +13,7 @@ const TEST_SPEC: CliSpec = CliSpec {
     logout_args: Some(&["logout"]),
     status_args: Some(&["status"]),
     token_file: None,
+    update_stamp: None,
 };
 
 const PLAIN_SPEC: CliSpec = CliSpec {
@@ -26,6 +27,7 @@ const PLAIN_SPEC: CliSpec = CliSpec {
     logout_args: None,
     status_args: None,
     token_file: None,
+    update_stamp: None,
 };
 
 fn script(dir: &TempDir, name: &str, version: &str, code: i32) -> String {
@@ -202,4 +204,39 @@ fn reads_the_account_from_json_and_plain_output() {
         stderr: String::new(),
     };
     assert_eq!(account_of(&plain), "Logged in using ChatGPT");
+}
+
+const STAMPED_SPEC: CliSpec = CliSpec {
+    update_stamp: Some("state/last_check.timestamp"),
+    ..TEST_SPEC
+};
+
+#[test]
+fn refreshes_the_update_stamp_before_running_the_cli() {
+    let dir = TempDir::new().unwrap();
+    let stamp = STAMPED_SPEC.update_stamp_path(dir.path()).unwrap();
+    std::fs::create_dir_all(stamp.parent().unwrap()).unwrap();
+    std::fs::write(&stamp, "").unwrap();
+    let stale = SystemTime::now() - Duration::from_secs(3600);
+    std::fs::File::options()
+        .append(true)
+        .open(&stamp)
+        .unwrap()
+        .set_modified(stale)
+        .unwrap();
+    prepare(&STAMPED_SPEC, dir.path()).unwrap();
+    let modified = std::fs::metadata(&stamp).unwrap().modified().unwrap();
+    assert!(modified.elapsed().unwrap() < Duration::from_secs(60));
+}
+
+#[test]
+fn creates_a_missing_update_stamp() {
+    let dir = TempDir::new().unwrap();
+    prepare(&STAMPED_SPEC, dir.path()).unwrap();
+    assert!(
+        STAMPED_SPEC
+            .update_stamp_path(dir.path())
+            .unwrap()
+            .is_file()
+    );
 }

@@ -52,6 +52,22 @@ export interface LlmInstall extends BackendDownload {
   version: string;
 }
 
+export type LlmUsageWindowId = 'session' | 'weekly';
+
+export interface LlmUsageWindow {
+  window: LlmUsageWindowId;
+  group: string | null;
+  usedPercent: number | null;
+  resetsAt: string | null;
+  resetsNote: string | null;
+}
+
+export interface LlmUsage {
+  plan: string | null;
+  windows: LlmUsageWindow[];
+  checkedAtMs: number;
+}
+
 export interface LlmInstallProgress {
   receivedBytes: number;
   totalBytes: number;
@@ -109,6 +125,9 @@ export interface LlmProvider extends Omit<LlmCliView, 'probe'> {
   error: string;
   latencyMs: number;
   checkedAt: string;
+  usage: LlmUsage | null;
+  usageLoading: boolean;
+  usageError: string;
 }
 
 export interface CloudProvider {

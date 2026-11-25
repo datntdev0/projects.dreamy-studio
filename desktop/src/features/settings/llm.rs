@@ -1,3 +1,4 @@
+use crate::features::settings::account::AccountSource;
 use crate::features::settings::install::InstallView;
 use crate::features::settings::models::lenient;
 use crate::features::settings::probe::CliProbe;
@@ -11,6 +12,7 @@ use std::process::Command;
 pub const LLM_DIR: &str = "llm";
 
 const AGY_TOKEN_FILE: &str = ".gemini/antigravity-cli/antigravity-oauth-token";
+const AGY_UPDATE_STAMP: &str = ".gemini/antigravity-cli/last_check.timestamp";
 
 pub const FEATURES: [&str; 3] = ["translation", "knowledge", "assistant"];
 
@@ -25,6 +27,8 @@ pub struct CliSpec {
     pub logout_args: Option<&'static [&'static str]>,
     pub status_args: Option<&'static [&'static str]>,
     pub token_file: Option<&'static str>,
+    pub update_stamp: Option<&'static str>,
+    pub account: Option<AccountSource>,
 }
 
 impl CliSpec {
@@ -41,6 +45,11 @@ impl CliSpec {
 
     pub fn token_path(&self, data_dir: &Path) -> Option<PathBuf> {
         self.token_file
+            .map(|file| self.profile_dir(data_dir).join(file))
+    }
+
+    pub fn update_stamp_path(&self, data_dir: &Path) -> Option<PathBuf> {
+        self.update_stamp
             .map(|file| self.profile_dir(data_dir).join(file))
     }
 
@@ -72,6 +81,11 @@ pub const CLI_SPECS: [CliSpec; 3] = [
         logout_args: Some(&["auth", "logout"]),
         status_args: Some(&["auth", "status"]),
         token_file: None,
+        update_stamp: None,
+        account: Some(AccountSource::Field {
+            file: ".claude.json",
+            pointer: "/oauthAccount/emailAddress",
+        }),
     },
     CliSpec {
         id: "antigravity",
@@ -87,6 +101,11 @@ pub const CLI_SPECS: [CliSpec; 3] = [
         logout_args: None,
         status_args: None,
         token_file: Some(AGY_TOKEN_FILE),
+        update_stamp: Some(AGY_UPDATE_STAMP),
+        account: Some(AccountSource::Field {
+            file: AGY_TOKEN_FILE,
+            pointer: "/id_token_email",
+        }),
     },
     CliSpec {
         id: "codex",
@@ -99,6 +118,12 @@ pub const CLI_SPECS: [CliSpec; 3] = [
         logout_args: Some(&["logout"]),
         status_args: Some(&["login", "status"]),
         token_file: None,
+        update_stamp: None,
+        account: Some(AccountSource::TokenClaim {
+            file: "auth.json",
+            pointer: "/tokens/id_token",
+            claim: "email",
+        }),
     },
 ];
 

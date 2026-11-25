@@ -5,7 +5,7 @@ import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
 // prettier-ignore
-import { LlmCapability, LlmCliView, LlmFeature, LlmFeatureSettings, LlmInstall, LlmInstallProgress, LlmProbe, LlmProvider, LlmView } from './settings.models';
+import { LlmCapability, LlmCliView, LlmFeature, LlmFeatureSettings, LlmInstall, LlmInstallProgress, LlmProbe, LlmProvider, LlmUsage, LlmView } from './settings.models';
 
 const SIGN_IN_POLL_MS = 3000;
 const SIGN_IN_POLL_LIMIT = 100;
@@ -33,6 +33,9 @@ function fresh(view: Omit<LlmCliView, 'probe'>): LlmProvider {
     error: '',
     latencyMs: 0,
     checkedAt: '',
+    usage: null,
+    usageLoading: false,
+    usageError: '',
   };
 }
 
@@ -59,6 +62,13 @@ export class LlmService {
       return;
     }
     await this.probeProvider(provider);
+  }
+
+  async refreshUsage(): Promise<void> {
+    const targets = this.providers().filter(
+      (provider) => isInstalled(provider) && !provider.usageLoading,
+    );
+    await Promise.all(targets.map((provider) => this.loadUsage(provider.id)));
   }
 
   async install(id: string): Promise<void> {
@@ -181,6 +191,16 @@ export class LlmService {
         item.id === id ? { ...item, install: { ...item.install, ...change } } : item,
       ),
     );
+  }
+
+  private async loadUsage(id: string): Promise<void> {
+    this.patch(id, { usageLoading: true, usageError: '' });
+    try {
+      const usage = await this.ipc.invoke<LlmUsage | null>('llm_usage', { id });
+      this.patch(id, { usage: usage ?? null, usageLoading: false });
+    } catch (error) {
+      this.patch(id, { usageLoading: false, usageError: this.describe(error) });
+    }
   }
 
   private onInstallProgress(id: string, progress: LlmInstallProgress): void {

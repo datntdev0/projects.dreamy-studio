@@ -286,6 +286,62 @@
 .llm-dl {
   flex: 1;
 }
+.llm-usage {
+  display: grid;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--r-sm);
+  background: var(--canvas-soft);
+}
+.llm-usage-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.llm-usage-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.llm-usage-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 160px) minmax(0, 1fr) 48px minmax(0, 180px);
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.llm-usage-label {
+  display: grid;
+  min-width: 0;
+}
+.llm-usage-label small {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.llm-usage-row b {
+  text-align: right;
+}
+.llm-usage-row[data-tone='warning'] {
+  --usage-tone: var(--warning);
+}
+.llm-usage-row[data-tone='danger'] {
+  --usage-tone: var(--danger);
+}
+.llm-usage-row[data-tone] .be-progress > i {
+  background: var(--usage-tone, var(--primary));
+}
+.llm-usage-row[data-tone] b {
+  color: var(--usage-tone, var(--ink));
+}
+@media (max-width: 760px) {
+  .llm-usage-row {
+    grid-template-columns: minmax(80px, 140px) minmax(0, 1fr) 44px;
+  }
+  .llm-usage-reset {
+    grid-column: 1 / -1;
+  }
+}
 .llm-msg {
   display: flex;
   align-items: center;

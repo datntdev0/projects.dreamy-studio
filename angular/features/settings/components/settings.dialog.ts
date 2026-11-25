@@ -9,11 +9,20 @@ import { SettingsBackend } from './backend.component';
 import { SettingsCloud } from './cloud.component';
 import { SettingsGeneral } from './general.component';
 import { SettingsLlm } from './llm.component';
+import { SettingsRemote } from './remote.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings-dialog',
-  imports: [Icon, CoreModule, SettingsBackend, SettingsCloud, SettingsGeneral, SettingsLlm],
+  imports: [
+    Icon,
+    CoreModule,
+    SettingsBackend,
+    SettingsCloud,
+    SettingsGeneral,
+    SettingsLlm,
+    SettingsRemote,
+  ],
   templateUrl: './settings.dialog.html',
   host: { 'data-testid': 'settings-dialog' },
 })

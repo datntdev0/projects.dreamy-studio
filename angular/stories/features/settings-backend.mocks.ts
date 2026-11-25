@@ -1,7 +1,10 @@
-import { Provider, signal, WritableSignal } from '@angular/core';
+import { computed, Provider, signal, WritableSignal } from '@angular/core';
+import { BackendHost } from '@features/settings/backend.host';
 // prettier-ignore
 import { BackendDevice, BackendDownload, BackendGpu, BackendServer, TtsModel } from '@features/settings/backend.models';
-import { BackendService } from '@features/settings/backend.service';
+import { BackendService, NO_GPU, NO_SERVER } from '@features/settings/backend.service';
+import { keyHintOf } from '@features/settings/cloud.service';
+import { RemoteBackendService } from '@features/settings/remote.service';
 
 const GIB = 1024 * 1024 * 1024;
 const MIB = 1024 * 1024;
@@ -13,6 +16,13 @@ export interface BackendScenario {
   server?: Partial<BackendServer>;
   gpu?: Partial<BackendGpu>;
   device?: BackendDevice;
+  models?: TtsModel[];
+}
+
+export interface RemoteScenario extends BackendScenario {
+  url?: string;
+  keyHint?: string;
+  active?: boolean;
 }
 
 interface BackendMockState {
@@ -98,7 +108,7 @@ function createState(scenario: BackendScenario): BackendMockState {
       ...scenario.gpu,
     }),
     device: signal(scenario.device ?? 'cuda'),
-    models: signal(BACKEND_MODELS),
+    models: signal(scenario.models ?? BACKEND_MODELS),
     timers: new Map(),
   };
 }
@@ -186,23 +196,110 @@ function checkServer(state: BackendMockState): Promise<void> {
   return Promise.resolve();
 }
 
-export function backendServiceProvider(scenario: BackendScenario = {}): Provider {
-  const state = createState(scenario);
-  const mock: Partial<BackendService> = {
+function hostMock(state: BackendMockState): Pick<BackendService, keyof BackendHost> {
+  return {
     server: state.server,
     gpu: state.gpu,
     device: state.device,
     modelsDir: signal('C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio\\models'),
     models: state.models,
+    downloadModel: downloadModel.bind(null, state),
+    cancelModel: cancelModel.bind(null, state),
+    removeModel: removeModel.bind(null, state),
+  };
+}
+
+export function backendServiceProvider(scenario: BackendScenario = {}): Provider {
+  const state = createState(scenario);
+  const mock: Partial<BackendService> = {
+    ...hostMock(state),
     checking: signal(false),
     load: () => Promise.resolve(),
     check: checkServer.bind(null, state),
     restart: restartServer.bind(null, state),
     openLogs: () => Promise.resolve(),
     openModelsDir: () => Promise.resolve(),
-    downloadModel: downloadModel.bind(null, state),
-    cancelModel: cancelModel.bind(null, state),
-    removeModel: removeModel.bind(null, state),
   };
   return { provide: BackendService, useValue: mock };
+}
+
+interface RemoteMock {
+  url: WritableSignal<string>;
+  keyHint: WritableSignal<string>;
+  active: WritableSignal<boolean>;
+}
+
+function remoteGpu(scenario: RemoteScenario): BackendGpu {
+  return {
+    found: true,
+    name: 'Tesla T4',
+    vramMb: 15360,
+    driver: '580.82.07',
+    computeCapability: '7.5',
+    cudaSupported: true,
+    ...scenario.gpu,
+  };
+}
+
+function connectRemote(
+  state: BackendMockState,
+  remote: RemoteMock,
+  scenario: RemoteScenario,
+  url: string,
+  key: string,
+): Promise<void> {
+  remote.url.set(url.trim());
+  remote.keyHint.set(key ? keyHintOf(key) : '');
+  state.gpu.set(remoteGpu(scenario));
+  state.models.set(scenario.models ?? BACKEND_MODELS);
+  return restartServer(state);
+}
+
+function disconnectRemote(state: BackendMockState, remote: RemoteMock): Promise<void> {
+  state.server.set(NO_SERVER);
+  state.gpu.set(NO_GPU);
+  state.models.set([]);
+  remote.active.set(false);
+  return Promise.resolve();
+}
+
+function setActive(state: BackendMockState, remote: RemoteMock, active: boolean): Promise<void> {
+  remote.active.set(active && isRunning(state));
+  return Promise.resolve();
+}
+
+function isRunning(state: BackendMockState): boolean {
+  return state.server().status === 'running';
+}
+
+export const COLAB_T4: RemoteScenario = {
+  url: 'https://quiet-river-sample.trycloudflare.com',
+  keyHint: keyHintOf('sample-remote-api-key-9f2c'),
+  server: { port: null, pythonVersion: '3.13.16', latencyMs: 184 },
+  gpu: remoteGpu({}),
+  device: 'cuda',
+};
+
+export function remoteBackendServiceProvider(scenario: RemoteScenario = {}): Provider {
+  const state = createState(scenario);
+  const remote: RemoteMock = {
+    url: signal(scenario.url ?? ''),
+    keyHint: signal(scenario.keyHint ?? ''),
+    active: signal(scenario.active ?? false),
+  };
+  if (!remote.url()) {
+    void disconnectRemote(state, remote);
+  }
+  const mock: Partial<RemoteBackendService> = {
+    ...hostMock(state),
+    ...remote,
+    modelsDir: signal('/content/dreamy-studio/backend/data/models'),
+    checking: signal(false),
+    connected: computed(isRunning.bind(null, state)),
+    connect: connectRemote.bind(null, state, remote, scenario),
+    disconnect: disconnectRemote.bind(null, state, remote),
+    check: checkServer.bind(null, state),
+    setActive: setActive.bind(null, state, remote),
+  };
+  return { provide: RemoteBackendService, useValue: mock };
 }

@@ -14,8 +14,6 @@ function row(seq: number, title = `Original ${seq}`): ChapterRow {
     seq,
     title,
     wordCount: 10,
-    translationStatus: 'none',
-    analysisStatus: 'none',
     createdAt: '',
     updatedAt: '',
   };

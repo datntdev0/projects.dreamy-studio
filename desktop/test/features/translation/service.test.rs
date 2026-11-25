@@ -76,7 +76,7 @@ fn first_load_and_guidelines_are_target_scoped() {
 }
 
 #[test]
-fn saves_runs_without_changing_translation_status() {
+fn saved_runs_count_as_translated_chapters() {
     let fixture = fixture();
     let novel = fixture.novel.create(novel_input()).unwrap();
     let chapter = fixture.novel.chapter_add(novel.id, "One").unwrap();
@@ -103,8 +103,8 @@ fn saves_runs_without_changing_translation_status() {
     assert_eq!(result.chapters[&chapter.id].title, "Translated title");
     assert_eq!(result.chapters[&chapter.id].paragraphs[0].text, "target");
     assert_eq!(
-        fixture.novel.chapters(novel.id).unwrap()[0].translation_status,
-        "none"
+        fixture.novel.list().unwrap()[0].translated.get("VI"),
+        Some(&1)
     );
 }
 

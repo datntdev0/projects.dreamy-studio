@@ -18,7 +18,7 @@ import { NovelKnowledgeService } from '../novel.knowledge.service';
 import { AnalysisStatus, ChapterRow, NovelSummary, TargetLang, TranslationStatus } from '../novel.models';
 import { NovelReaderService } from '../novel.reader.service';
 // prettier-ignore
-import { displayName, formatCount, isChapterLocked, matchesChapter, toNovelError } from '../novel.rules';
+import { displayName, formatCount, matchesChapter, toNovelError } from '../novel.rules';
 import { NovelService } from '../novel.service';
 import { NovelTranslationService } from '../novel.translation.service';
 import { NovelLangSwitch } from './lang-switch.component';
@@ -100,7 +100,7 @@ export class NovelChapters implements OnDestroy {
     const drop = this.dropTarget();
     return {
       'is-current': this.resumeSeq() === this.chapterOf(row).seq,
-      'is-reorderable': this.canMove(this.chapterOf(row)),
+      'is-reorderable': this.canMove(),
       'is-dragging': this.dragId() === id,
       'is-drop-before': drop?.id === id && drop.side === 'before',
       'is-drop-after': drop?.id === id && drop.side === 'after',
@@ -194,8 +194,8 @@ export class NovelChapters implements OnDestroy {
     this.dialogs.openAddChapter(this.novelId());
   }
 
-  canMove(row: ChapterRow): boolean {
-    return !this.filtered() && !isChapterLocked(row);
+  canMove(): boolean {
+    return !this.filtered();
   }
 
   removeRow(row: object): void {
@@ -221,11 +221,7 @@ export class NovelChapters implements OnDestroy {
   onPointerDown(event: DatatableRowEvent): void {
     const pointer = event.event as PointerEvent;
     const row = this.chapterOf(event.row);
-    if (
-      pointer.button !== 0 ||
-      !this.canMove(row) ||
-      (pointer.target as Element).closest('button')
-    ) {
+    if (pointer.button !== 0 || !this.canMove() || (pointer.target as Element).closest('button')) {
       return;
     }
     this.pressed = { id: row.id, y: pointer.clientY };
@@ -297,7 +293,7 @@ export class NovelChapters implements OnDestroy {
   private targetAt(x: number, y: number): DropTarget | null {
     const element = document.elementFromPoint(x, y)?.closest('tr[data-row-key]');
     const target = element ? this.rowById(element.getAttribute('data-row-key') ?? '') : null;
-    if (!element || !target || target.id === this.dragId() || !this.canMove(target)) {
+    if (!element || !target || target.id === this.dragId() || !this.canMove()) {
       return null;
     }
     const bounds = element.getBoundingClientRect();

@@ -73,7 +73,7 @@ pub fn opening(
     prompt.push_str(
         "Use only the MCP tools of the `dreamy` server to look at and change the workspace:\n",
     );
-    prompt.push_str("- `read_novel`: without `novelId` list every novel with its id, title, author, language, tags and chapter counts; with it read one novel with the outline of its chapters.\n");
+    prompt.push_str("- `read_novel`: without `novelId` list every novel with its id, title, author, language, tags and, per language, how many chapters are translated and analyzed; with it read one novel with, per language, the chapters already translated and analyzed, and a page of the outline of its chapters; when the result has a `next` value, call the tool again with `from` set to it to read on.\n");
     prompt.push_str("- `read_novel_chapter`: read the paragraphs of one chapter by `novelId` and `chapter` (the chapter number). A page holds a limited number of paragraphs; when the result has a `next` value, call the tool again with `from` set to it to read on.\n");
     prompt.push_str("- `read_novel_knowledge`: read the knowledge of one novel by `novelId` and `lang` (`src`, `VI` or `EN`), optionally filtered by `query` and `type`. When the result has a `next` offset, call the tool again with `offset` set to it to read on.\n");
     prompt.push_str("- `edit_novel`: change one novel by `novelId`: without `chapter` its metadata fields; with `chapter` that chapter, with an optional new `title` and `paragraphs`, a list of `{p, expected, text}` where `expected` must be the exact current text of paragraph `p` and `text` is its replacement.\n");

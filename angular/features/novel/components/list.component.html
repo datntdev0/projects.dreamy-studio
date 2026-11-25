@@ -203,13 +203,13 @@
                 <div class="nm-fr">
                   <app-novel-progress-frac
                     icon="lang"
-                    [done]="novel.translatedCount"
+                    [done]="translatedOf(novel)"
                     [total]="novel.chapterCount"
                     [label]="'novel.frac.translated' | t"
                   />
                   <app-novel-progress-frac
                     icon="graph"
-                    [done]="novel.analyzedCount"
+                    [done]="analyzedOf(novel)"
                     [total]="novel.chapterCount"
                     [label]="'novel.frac.analyzed' | t"
                   />
@@ -254,13 +254,13 @@
             <div class="nm-progress" data-testid="novel-list-progress">
               <app-novel-progress-frac
                 icon="lang"
-                [done]="novel.translatedCount"
+                [done]="translatedOf(novel)"
                 [total]="novel.chapterCount"
                 [label]="'novel.frac.translated' | t"
               />
               <app-novel-progress-frac
                 icon="graph"
-                [done]="novel.analyzedCount"
+                [done]="analyzedOf(novel)"
                 [total]="novel.chapterCount"
                 [label]="'novel.frac.analyzed' | t"
               />

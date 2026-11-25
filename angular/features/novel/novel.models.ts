@@ -14,8 +14,8 @@ export interface NovelSummary {
   updatedAt: string;
   chapterCount: number;
   wordCount: number;
-  translatedCount: number;
-  analyzedCount: number;
+  translated: Partial<Record<TargetLang, number>>;
+  analyzed: Partial<Record<KnowledgeLang, number>>;
   tags: string[];
 }
 
@@ -47,8 +47,6 @@ export interface ChapterRow {
   seq: number;
   title: string;
   wordCount: number;
-  translationStatus: TranslationStatus;
-  analysisStatus: AnalysisStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -156,6 +154,8 @@ export type ReaderMode = 'read' | 'edit' | 'write';
 export type TargetLang = 'EN' | 'VI';
 
 export type ReaderLang = 'src' | TargetLang;
+
+export type KnowledgeLang = 'src' | TargetLang;
 
 export type ReaderLayout = 'single' | 'parallel';
 

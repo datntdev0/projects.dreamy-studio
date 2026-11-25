@@ -1,6 +1,7 @@
 use crate::infra::storage::StorageError;
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -17,8 +18,8 @@ pub struct NovelSummary {
     pub updated_at: String,
     pub chapter_count: i64,
     pub word_count: i64,
-    pub translated_count: i64,
-    pub analyzed_count: i64,
+    pub translated: BTreeMap<String, usize>,
+    pub analyzed: BTreeMap<String, usize>,
     pub tags: Vec<String>,
 }
 
@@ -69,8 +70,6 @@ pub struct ChapterRow {
     pub seq: i64,
     pub title: String,
     pub word_count: i64,
-    pub translation_status: String,
-    pub analysis_status: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -173,7 +172,6 @@ pub enum NovelErrorCode {
     CoverInvalid,
     CoverTooLarge,
     ChapterFileMissing,
-    ChapterLocked,
     ParagraphOutOfRange,
     PackageFormat,
     PackageOpen,
@@ -195,7 +193,6 @@ impl NovelErrorCode {
             NovelErrorCode::CoverInvalid => "cover_invalid",
             NovelErrorCode::CoverTooLarge => "cover_too_large",
             NovelErrorCode::ChapterFileMissing => "chapter_file_missing",
-            NovelErrorCode::ChapterLocked => "chapter_locked",
             NovelErrorCode::ParagraphOutOfRange => "paragraph_out_of_range",
             NovelErrorCode::PackageFormat => "package_format",
             NovelErrorCode::PackageOpen => "package_open",

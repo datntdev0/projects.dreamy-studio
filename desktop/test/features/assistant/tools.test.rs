@@ -1,4 +1,5 @@
 use super::knowledge::MAX_ISSUES;
+use super::novel::OUTLINE_PAGE;
 use super::paging::PAGE_CHARS;
 use super::paging::PAGE_PARAGRAPHS;
 use super::*;
@@ -48,6 +49,24 @@ fn invoke_with(
     novels: &FakeNovels,
     knowledge: &FakeKnowledge,
 ) -> Result<ToolOutput, String> {
+    invoke_all(
+        name,
+        args,
+        scope,
+        novels,
+        knowledge,
+        &FakeTranslation::new(),
+    )
+}
+
+fn invoke_all(
+    name: &str,
+    args: &Value,
+    scope: &AssistantScope,
+    novels: &FakeNovels,
+    knowledge: &FakeKnowledge,
+    translation: &FakeTranslation,
+) -> Result<ToolOutput, String> {
     let sink = RecordingSink::new();
     let ctx = ToolContext {
         scope,
@@ -55,7 +74,12 @@ fn invoke_with(
         can_edit: false,
         sink: &sink,
     };
-    call(name, args, &ctx, &sources_of(novels, knowledge))
+    call(
+        name,
+        args,
+        &ctx,
+        &sources_with(novels, knowledge, translation),
+    )
 }
 
 fn invoke_in_project(
@@ -167,15 +191,48 @@ fn definitions_describe_the_tools() {
     assert_eq!(list[10]["inputSchema"]["required"], json!(["kind"]));
 }
 
+fn progress_novels() -> FakeNovels {
+    FakeNovels::new()
+        .with_novel(1, "First")
+        .with_chapter(1, 1, "One", &["alpha beta", "gamma"])
+        .with_chapter(1, 2, "Two", &["delta"])
+        .with_chapter(1, 3, "Three", &["epsilon"])
+        .with_chapter(1, 5, "Five", &["zeta"])
+        .with_progress(
+            1,
+            &[("EN", 0), ("VI", 3)],
+            &[("EN", 0), ("VI", 0), ("src", 1)],
+        )
+        .with_novel(2, "Second")
+}
+
+fn progress_knowledge() -> FakeKnowledge {
+    FakeKnowledge::new().with_analyzed_chapters("src", &["chapter-1-1"])
+}
+
+fn progress_translation() -> FakeTranslation {
+    FakeTranslation::new()
+        .with_translated_chapter(1, "VI", "chapter-1-1", "Một", &["a"])
+        .with_translated_chapter(1, "VI", "chapter-1-2", "Hai", &["b"])
+        .with_translated_chapter(1, "VI", "chapter-1-5", "Năm", &["c"])
+        .with_translated_chapter(1, "VI", "chapter-gone", "Mất", &["d"])
+}
+
+fn run_progress(name: &str, args: Value) -> Result<ToolOutput, String> {
+    invoke_all(
+        name,
+        &args,
+        &workspace(),
+        &progress_novels(),
+        &progress_knowledge(),
+        &progress_translation(),
+    )
+}
+
 #[test]
 fn list_novel_returns_the_metadata_shape() {
-    let source = FakeNovels::new()
-        .with_novel(1, "First")
-        .with_chapter(1, 1, "One", &["a"])
-        .with_chapter(1, 2, "Two", &["b"])
-        .with_statuses(1, 1, "done", "done")
-        .with_novel(2, "Second");
-    let value = run("list_novel", json!({}), &workspace(), &source).unwrap();
+    let output = run_progress("list_novel", json!({})).unwrap();
+    let value: Value = from_str(&output.text).unwrap();
     let items = value.as_array().unwrap();
     assert_eq!(items.len(), 2);
     assert_eq!(
@@ -186,14 +243,90 @@ fn list_novel_returns_the_metadata_shape() {
             "name": "First name",
             "author": "Author",
             "lang": "zh",
-            "description": "About First",
             "tags": ["tag"],
-            "chapterCount": 2,
-            "translatedCount": 1,
-            "analyzedCount": 1,
+            "chapterCount": 4,
+            "translated": {"VI": 3, "EN": 0},
+            "analyzed": {"src": 1, "VI": 0, "EN": 0},
         })
     );
-    assert_eq!(items[1]["novelId"], 2);
+    assert_eq!(items[1]["translated"], json!({}));
+}
+
+#[test]
+fn read_novel_returns_metadata_progress_and_outline() {
+    let output = run_progress("read_novel", json!({"novelId": 1})).unwrap();
+    let value: Value = from_str(&output.text).unwrap();
+    assert_eq!(value["novelId"], 1);
+    assert_eq!(value["description"], "About First");
+    assert_eq!(value["chapterCount"], 4);
+    assert_eq!(
+        value["translation"],
+        json!({
+            "VI": {"count": 3, "chapters": "1-2,5"},
+            "EN": {"count": 0, "chapters": ""},
+        })
+    );
+    assert_eq!(
+        value["analysis"]["src"],
+        json!({"count": 1, "chapters": "1"})
+    );
+    assert_eq!(
+        value["chapters"],
+        json!([
+            {"chapter": 1, "title": "One", "words": 3},
+            {"chapter": 2, "title": "Two", "words": 1},
+            {"chapter": 3, "title": "Three", "words": 1},
+            {"chapter": 5, "title": "Five", "words": 1},
+        ])
+    );
+    assert_eq!(value["next"], Value::Null);
+    assert_eq!(output.label, "read_novel(novel 1) → 4/4 chương");
+}
+
+#[test]
+fn read_novel_skips_the_language_of_the_novel() {
+    let novels = FakeNovels::new()
+        .with_novel(1, "First")
+        .with_lang(1, "vi")
+        .with_chapter(1, 1, "One", &["a"]);
+    let output = invoke("read_novel", &json!({"novelId": 1}), &workspace(), &novels).unwrap();
+    let value: Value = from_str(&output.text).unwrap();
+    assert_eq!(
+        value["translation"],
+        json!({"EN": {"count": 0, "chapters": ""}})
+    );
+    assert_eq!(
+        value["analysis"],
+        json!({
+            "src": {"count": 0, "chapters": ""},
+            "EN": {"count": 0, "chapters": ""},
+        })
+    );
+}
+
+#[test]
+fn read_novel_pages_the_outline_by_chapter_number() {
+    let total = OUTLINE_PAGE as i64 + 10;
+    let novels = (1..=total).fold(FakeNovels::new().with_novel(1, "First"), |novels, seq| {
+        novels.with_chapter(1, seq, "Chapter", &["a"])
+    });
+    let first = run("read_novel", json!({"novelId": 1}), &workspace(), &novels).unwrap();
+    let chapters = first["chapters"].as_array().unwrap();
+    assert_eq!(chapters.len(), OUTLINE_PAGE);
+    assert_eq!(first["next"], OUTLINE_PAGE as i64 + 1);
+    let args = json!({"novelId": 1, "from": first["next"], "to": total - 2});
+    let second = run("read_novel", args, &workspace(), &novels).unwrap();
+    let seqs: Vec<i64> = second["chapters"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["chapter"].as_i64().unwrap())
+        .collect();
+    assert_eq!(
+        seqs,
+        (OUTLINE_PAGE as i64 + 1..=total - 2).collect::<Vec<_>>()
+    );
+    assert_eq!(second["next"], Value::Null);
 }
 
 #[test]
@@ -203,28 +336,6 @@ fn list_novel_label_counts_novels() {
         .with_novel(2, "Second");
     let output = invoke("list_novel", &json!({}), &workspace(), &source).unwrap();
     assert_eq!(output.label, "list_novel() → 2 novel");
-}
-
-#[test]
-fn read_novel_returns_metadata_and_outline() {
-    let source = FakeNovels::new()
-        .with_novel(1, "First")
-        .with_chapter(1, 1, "One", &["alpha beta", "gamma"])
-        .with_chapter(1, 2, "Two", &["delta"])
-        .with_statuses(1, 2, "done", "none");
-    let output = invoke("read_novel", &json!({"novelId": 1}), &workspace(), &source).unwrap();
-    let value: Value = from_str(&output.text).unwrap();
-    assert_eq!(value["novelId"], 1);
-    assert_eq!(value["title"], "First");
-    assert_eq!(value["chapterCount"], 2);
-    assert_eq!(
-        value["chapters"],
-        json!([
-            {"chapter": 1, "title": "One", "words": 3, "translation": "none", "analysis": "none"},
-            {"chapter": 2, "title": "Two", "words": 1, "translation": "done", "analysis": "none"},
-        ])
-    );
-    assert_eq!(output.label, "read_novel(novel 1) → 2 chương");
 }
 
 #[test]
@@ -759,15 +870,14 @@ fn translation_tool(
     novels: &FakeNovels,
     translation: &FakeTranslation,
 ) -> Result<ToolOutput, String> {
-    let sink = RecordingSink::new();
-    let ctx = ToolContext {
+    invoke_all(
+        name,
+        &args,
         scope,
-        linked_novel: None,
-        can_edit: false,
-        sink: &sink,
-    };
-    let sources = sources_with(novels, &FakeKnowledge::new(), translation);
-    call(name, &args, &ctx, &sources)
+        novels,
+        &FakeKnowledge::new(),
+        translation,
+    )
 }
 
 fn read_translated(args: Value) -> Result<Value, String> {

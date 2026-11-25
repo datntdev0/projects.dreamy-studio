@@ -17,6 +17,7 @@ use crate::features::novel::package::ValidatedPackage;
 use crate::features::novel::package::inspect_path;
 use crate::features::novel::package::package_destination;
 use crate::features::novel::package::write_package;
+use crate::features::novel::progress::attach_progress;
 use crate::features::novel::repository::NewChapter;
 use crate::features::novel::repository::NewNovel;
 use crate::features::novel::repository::NovelRepository;
@@ -330,25 +331,12 @@ fn require_chapter(
     }
 }
 
-fn require_summary(repo: &NovelRepository, id: i64) -> NovelResult<NovelSummary> {
-    match repo.find_summary(id)? {
-        Some(summary) => Ok(summary),
-        None => Err(NovelError::not_found(format!("novel {id} does not exist"))),
-    }
-}
-
-fn chapter_is_locked(chapter: &ChapterRow) -> bool {
-    chapter.translation_status != "none" || chapter.analysis_status != "none"
-}
-
-fn require_unlocked_chapter(chapter: &ChapterRow) -> NovelResult<()> {
-    if chapter_is_locked(chapter) {
-        return Err(NovelError::new(
-            NovelErrorCode::ChapterLocked,
-            format!("chapter {} is locked", chapter.id),
-        ));
-    }
-    Ok(())
+fn require_summary(repo: &NovelRepository, root: &Path, id: i64) -> NovelResult<NovelSummary> {
+    let Some(mut summary) = repo.find_summary(id)? else {
+        return Err(NovelError::not_found(format!("novel {id} does not exist")));
+    };
+    attach_progress(root, &mut summary, &repo.list_chapters(id)?)?;
+    Ok(summary)
 }
 
 fn resequence_chapters(
@@ -407,7 +395,12 @@ impl NovelWorkspace {
 
     pub fn list(&self) -> NovelResult<Vec<NovelSummary>> {
         let db = self.database()?;
-        Ok(NovelRepository::new(db.connection()).list_summaries()?)
+        let repo = NovelRepository::new(db.connection());
+        let mut summaries = repo.list_summaries()?;
+        for summary in &mut summaries {
+            attach_progress(&self.dir, summary, &repo.list_chapters(summary.id)?)?;
+        }
+        Ok(summaries)
     }
 
     pub fn create(&self, input: NovelInput) -> NovelResult<NovelSummary> {
@@ -416,7 +409,7 @@ impl NovelWorkspace {
         let mut db = self.database()?;
         let tx = db.connection_mut().transaction()?;
         let id = insert_novel(&tx, &input, ORIGIN_CREATED, &now_text())?;
-        let summary = require_summary(&NovelRepository::new(&tx), id)?;
+        let summary = require_summary(&NovelRepository::new(&tx), &self.dir, id)?;
         tx.commit()?;
         Ok(summary)
     }
@@ -435,7 +428,7 @@ impl NovelWorkspace {
         if let Some(tags) = &tags {
             repo.replace_tags(id, tags)?;
         }
-        let summary = require_summary(&repo, id)?;
+        let summary = require_summary(&repo, &self.dir, id)?;
         tx.commit()?;
         Ok(summary)
     }
@@ -468,7 +461,7 @@ impl NovelWorkspace {
         require_novel(&repo, id)?;
         self.files().write_cover(id, kind, &bytes)?;
         repo.touch_novel(id, &now_text())?;
-        require_summary(&repo, id)
+        require_summary(&repo, &self.dir, id)
     }
 
     pub fn cover_clear(&self, id: i64) -> NovelResult<NovelSummary> {
@@ -478,7 +471,7 @@ impl NovelWorkspace {
         require_novel(&repo, id)?;
         self.files().clear_cover(id)?;
         repo.touch_novel(id, &now_text())?;
-        require_summary(&repo, id)
+        require_summary(&repo, &self.dir, id)
     }
 
     pub fn chapters(&self, novel_id: i64) -> NovelResult<Vec<ChapterRow>> {
@@ -580,8 +573,7 @@ impl NovelWorkspace {
         let _gate = lock(&self.gate);
         let db = self.database()?;
         let repo = NovelRepository::new(db.connection());
-        let chapter = require_chapter(&repo, novel_id, chapter_id)?;
-        require_unlocked_chapter(&chapter)?;
+        require_chapter(&repo, novel_id, chapter_id)?;
         let now = now_text();
         repo.delete_chapter(chapter_id)?;
         let chapters = repo.list_chapters(novel_id)?;
@@ -605,9 +597,6 @@ impl NovelWorkspace {
         if to_seq < 1 || to_seq > chapters.len() as i64 {
             return Err(NovelError::invalid("chapter position is out of range"));
         }
-        require_unlocked_chapter(&chapter)?;
-        let target = &chapters[to_seq as usize - 1];
-        require_unlocked_chapter(target)?;
         let now = now_text();
         if chapter.seq == to_seq {
             repo.touch_novel(novel_id, &now)?;
@@ -634,8 +623,7 @@ impl NovelWorkspace {
         let text = normalize_paragraph(text)?;
         let db = self.database()?;
         let repo = NovelRepository::new(db.connection());
-        let chapter = require_chapter(&repo, novel_id, chapter_id)?;
-        require_unlocked_chapter(&chapter)?;
+        require_chapter(&repo, novel_id, chapter_id)?;
         let files = self.files();
         let mut paragraphs = files.read_chapter(novel_id, chapter_id)?;
         paragraphs.push(make_paragraph(text));
@@ -679,7 +667,7 @@ impl NovelWorkspace {
     }
 
     fn finish_import(&self, tx: rusqlite::Transaction, id: i64) -> NovelResult<NovelSummary> {
-        let result = commit_import(tx, id);
+        let result = commit_import(tx, &self.dir, id);
         if result.is_err() {
             let _ = self.files().remove_novel_dir(id);
         }
@@ -743,8 +731,8 @@ impl NovelWorkspace {
     }
 }
 
-fn commit_import(tx: rusqlite::Transaction, id: i64) -> NovelResult<NovelSummary> {
-    let summary = require_summary(&NovelRepository::new(&tx), id)?;
+fn commit_import(tx: rusqlite::Transaction, root: &Path, id: i64) -> NovelResult<NovelSummary> {
+    let summary = require_summary(&NovelRepository::new(&tx), root, id)?;
     tx.commit()?;
     Ok(summary)
 }

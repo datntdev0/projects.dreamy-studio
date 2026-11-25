@@ -167,8 +167,8 @@ fn call_novel_tool(
 ) -> Result<ToolOutput, String> {
     let novels = sources.novels.as_ref();
     match name {
-        "list_novel" => novel::list_novel(ctx, novels),
-        "read_novel" => novel::read_novel(args, ctx, novels),
+        "list_novel" => novel::list_novel(ctx, sources),
+        "read_novel" => novel::read_novel(args, ctx, sources),
         "read_novel_chapter" => novel::read_novel_chapter(args, ctx, novels),
         "read_novel_knowledge" => knowledge::read_novel_knowledge(args, ctx, sources),
         "read_translation" => translation::read_translation(args, ctx, sources),

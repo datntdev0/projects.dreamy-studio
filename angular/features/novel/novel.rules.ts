@@ -2,7 +2,7 @@ import { DesktopIpcError } from '@shared/desktop/desktop-ipc-error';
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { ChapterRow, FracState, InspectCheck, InspectEvent, InspectStep, LangCount, NovelError, NovelField, NovelFilters, NovelFormValue, NovelInput, NovelLang, NovelPatch, NovelProgress, NovelSummary, NovelTotals, ReaderFont, ReaderPaper, ReaderPrefs, TagCheck, TagCount } from './novel.models';
+import { ChapterRow, FracState, InspectCheck, InspectEvent, InspectStep, KnowledgeLang, LangCount, NovelError, NovelField, NovelFilters, NovelFormValue, NovelInput, NovelLang, NovelPatch, NovelProgress, NovelSummary, NovelTotals, ReaderFont, ReaderPaper, ReaderPrefs, TagCheck, TagCount, TargetLang } from './novel.models';
 
 export const MAX_TAGS = 12;
 
@@ -221,10 +221,29 @@ export function filterNovels(
   return out;
 }
 
+function countOf<K extends string>(counts: Partial<Record<K, number>>, key?: K): number {
+  if (key !== undefined) {
+    return counts[key] ?? 0;
+  }
+  let best = 0;
+  for (const value of Object.values<number | undefined>(counts)) {
+    best = Math.max(best, value ?? 0);
+  }
+  return best;
+}
+
+export function translatedOf(novel: NovelSummary, target?: TargetLang): number {
+  return countOf(novel.translated, target);
+}
+
+export function analyzedOf(novel: NovelSummary, lang?: KnowledgeLang): number {
+  return countOf(novel.analyzed, lang);
+}
+
 export function novelProgress(novel: NovelSummary): NovelProgress {
   return {
-    translated: novel.translatedCount,
-    analyzed: novel.analyzedCount,
+    translated: translatedOf(novel),
+    analyzed: analyzedOf(novel),
     total: novel.chapterCount,
   };
 }
@@ -247,8 +266,8 @@ export function novelTotals(novels: NovelSummary[]): NovelTotals {
   for (const novel of novels) {
     totals.chapters += novel.chapterCount;
     totals.words += novel.wordCount;
-    totals.translated += novel.translatedCount;
-    totals.analyzed += novel.analyzedCount;
+    totals.translated += translatedOf(novel);
+    totals.analyzed += analyzedOf(novel);
   }
   return totals;
 }
@@ -372,10 +391,6 @@ function isNovelError(value: unknown): value is NovelError {
     return false;
   }
   return typeof value['code'] === 'string' && typeof value['detail'] === 'string';
-}
-
-export function isChapterLocked(row: ChapterRow): boolean {
-  return row.translationStatus !== 'none' || row.analysisStatus !== 'none';
 }
 
 export function toNovelError(error: unknown): NovelError {

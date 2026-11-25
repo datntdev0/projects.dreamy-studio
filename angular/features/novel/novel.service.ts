@@ -67,16 +67,6 @@ function sumWords(rows: ChapterRow[]): number {
   return total;
 }
 
-function countStatus(rows: ChapterRow[], key: 'translationStatus' | 'analysisStatus'): number {
-  let total = 0;
-  for (const row of rows) {
-    if (row[key] !== 'none') {
-      total += 1;
-    }
-  }
-  return total;
-}
-
 function replaceChapter(rows: ChapterRow[], next: ChapterRow): ChapterRow[] {
   const out: ChapterRow[] = [];
   for (const row of rows) {
@@ -419,8 +409,6 @@ export class NovelService {
         ...novel,
         chapterCount: rows.length,
         wordCount: sumWords(rows),
-        translatedCount: countStatus(rows, 'translationStatus'),
-        analyzedCount: countStatus(rows, 'analysisStatus'),
         updatedAt: stamp,
       };
       this.items.set(replaceById(this.items(), touched));

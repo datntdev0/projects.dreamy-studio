@@ -197,8 +197,8 @@ fn create_and_list_serialize_the_camel_case_contract() {
         "updatedAt",
         "chapterCount",
         "wordCount",
-        "translatedCount",
-        "analyzedCount",
+        "translated",
+        "analyzed",
         "tags",
     ] {
         assert!(value.get(key).is_some(), "{key}");
@@ -280,13 +280,12 @@ fn import_then_read_and_edit_chapters() {
         "seq",
         "title",
         "wordCount",
-        "translationStatus",
-        "analysisStatus",
         "createdAt",
         "updatedAt",
     ] {
         assert!(value.get(key).is_some(), "{key}");
     }
+    assert!(value.get("translationStatus").is_none());
     assert_eq!(serde_json::to_value(&paragraphs[0]).unwrap()["n"], 1);
 }
 

@@ -1,4 +1,5 @@
 use crate::features::novel::files::NovelFiles;
+use crate::features::novel::files::list_chapter_ids;
 use crate::features::novel::files::write_atomic;
 use crate::features::translation::models::ChapterFile;
 use crate::features::translation::models::TranslationError;
@@ -95,6 +96,14 @@ impl TranslationFiles {
         fs::create_dir_all(dir)?;
         write_atomic(&path, &bytes)?;
         Ok(())
+    }
+
+    pub fn list_chapters(
+        &self,
+        novel_id: i64,
+        target: TranslationTarget,
+    ) -> TranslationResult<Vec<String>> {
+        Ok(list_chapter_ids(&self.translation_dir(novel_id, target))?)
     }
 
     fn novel_dir(&self, novel_id: i64) -> PathBuf {

@@ -128,7 +128,7 @@ fn applies_embedded_workspace_scripts_from_empty() {
     let cancel = AtomicBool::new(false);
     Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
     assert!(table_exists(db.connection(), "sys_migration_history"));
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 17);
     for table in [
         "ws_library_voices",
         "ws_assistant_sessions",
@@ -194,7 +194,7 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
             "local".to_string()
         )
     );
-    assert_eq!(history_count(db.connection()), 16);
+    assert_eq!(history_count(db.connection()), 17);
     assert!(!table_exists(
         db.connection(),
         "ws_novel_translation_dictionary"
@@ -203,6 +203,50 @@ fn workspace_upgrade_from_0_0_0_9_preserves_existing_rows() {
     assert!(table_exists(db.connection(), "ws_pipeline_tasks"));
     assert!(table_exists(db.connection(), "ws_assistant_sessions"));
     assert!(table_exists(db.connection(), "ws_assistant_messages"));
+}
+
+#[test]
+fn workspace_upgrade_drops_the_chapter_status_columns_and_keeps_chapters() {
+    let dir = TempDir::new().unwrap();
+    let (_, mut db) = open_new(&dir);
+    let cancel = AtomicBool::new(false);
+    let old_scripts: Vec<Script> = workspace_scripts()
+        .unwrap()
+        .into_iter()
+        .filter(|script| script.version.to_string() != "0.2.0")
+        .collect();
+    Migrator::migrate(db.connection_mut(), &old_scripts, &cancel).unwrap();
+    db.connection()
+        .execute_batch(
+            "INSERT INTO ws_novels (title, lang, origin, created_at, updated_at) \
+             VALUES ('Existing', 'ZH', 'local', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'); \
+             INSERT INTO ws_novel_chapters (id, novel_id, seq, title, word_count, translation_status, \
+             created_at, updated_at) VALUES ('c1', 1, 1, 'One', 5, 'done', \
+             '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');",
+        )
+        .unwrap();
+
+    Migrator::migrate(db.connection_mut(), &workspace_scripts().unwrap(), &cancel).unwrap();
+
+    let conn = db.connection();
+    let title: String = conn
+        .query_row(
+            "SELECT title FROM ws_novel_chapters WHERE id = 'c1'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(title, "One");
+    let mut statement = conn
+        .prepare("SELECT name FROM pragma_table_info('ws_novel_chapters')")
+        .unwrap();
+    let columns: Vec<String> = statement
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(!columns.contains(&"translation_status".to_string()));
+    assert!(!columns.contains(&"analysis_status".to_string()));
 }
 
 #[test]

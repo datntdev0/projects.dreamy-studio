@@ -2,7 +2,7 @@ import { applyEdits } from '@features/novel/novel.knowledge.draft';
 // prettier-ignore
 import { AnalyzedChapter, KnowledgeEdit, KnowledgeEditResult, KnowledgeItem, KnowledgeLang, WireKnowledge } from '@features/novel/novel.knowledge.models';
 import { batchesOf } from '@features/novel/novel.knowledge.rules';
-import { ChapterRow, NovelSummary } from '@features/novel/novel.models';
+import { NovelSummary } from '@features/novel/novel.models';
 // prettier-ignore
 import { PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest } from '@features/novel/novel.translation.models';
 import { applicationConfig, type Decorator } from '@storybook/angular-vite';
@@ -296,11 +296,16 @@ function startAnalysis(state: MockState, args: Record<string, unknown>): Pipelin
   return clone(snapshot);
 }
 
-function withAnalysis(rows: ChapterRow[], state: MockState): ChapterRow[] {
-  return rows.map((row) => ({
-    ...row,
-    analysisStatus: state.langs[SEEDED_LANG].analyzed[row.seq] ? 'done' : 'none',
-  }));
+function analyzedCount(state: MockState, lang: KnowledgeLang): number {
+  return Object.keys(state.langs[lang].analyzed).length;
+}
+
+function analyzedCounts(state: MockState): Partial<Record<KnowledgeLang, number>> {
+  return {
+    src: analyzedCount(state, 'src'),
+    VI: analyzedCount(state, 'VI'),
+    EN: analyzedCount(state, 'EN'),
+  };
 }
 
 function knowledgeHandlers(state: MockState, base: IpcHandlers): IpcHandlers {
@@ -309,9 +314,8 @@ function knowledgeHandlers(state: MockState, base: IpcHandlers): IpcHandlers {
     novel_list: (args) =>
       (base['novel_list'](args) as NovelSummary[]).map((novel) => ({
         ...novel,
-        analyzedCount: Object.keys(state.langs[SEEDED_LANG].analyzed).length,
+        analyzed: analyzedCounts(state),
       })),
-    novel_chapters: (args) => withAnalysis(base['novel_chapters'](args) as ChapterRow[], state),
     knowledge_get: (args): WireKnowledge => wireOf(state, langOf(args)),
     knowledge_edit: (args) => editKnowledge(state, args),
     knowledge_stale_accept: (args) => acceptStale(state, args),

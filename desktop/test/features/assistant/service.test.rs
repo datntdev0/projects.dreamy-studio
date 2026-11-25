@@ -444,7 +444,6 @@ fn review_novels() -> FakeNovels {
     novels()
         .with_novel(2, "Beta")
         .with_chapter(2, 1, "Other", &["Elsewhere."])
-        .with_statuses(1, 1, "done", "none")
 }
 
 fn review_translation() -> FakeTranslation {

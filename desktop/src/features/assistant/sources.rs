@@ -62,6 +62,7 @@ pub trait NovelSource {
 
 pub trait KnowledgeSource {
     fn get(&self, novel_id: i64, lang: &str) -> Result<WireKnowledge, String>;
+    fn analyzed_chapters(&self, novel_id: i64, lang: &str) -> Result<Vec<String>, String>;
     fn edit(
         &self,
         novel_id: i64,
@@ -78,6 +79,7 @@ pub trait KnowledgeSource {
 
 pub trait TranslationSource {
     fn get(&self, novel_id: i64, target: &str) -> Result<NovelTranslation, String>;
+    fn translated_chapters(&self, novel_id: i64, target: &str) -> Result<Vec<String>, String>;
     fn passage_save(
         &self,
         novel_id: i64,
@@ -205,6 +207,11 @@ impl KnowledgeSource for KnowledgeWorkspace {
         KnowledgeWorkspace::get(self, novel_id, lang).map_err(|error| error.to_string())
     }
 
+    fn analyzed_chapters(&self, novel_id: i64, lang: &str) -> Result<Vec<String>, String> {
+        KnowledgeWorkspace::analyzed_chapters(self, novel_id, lang)
+            .map_err(|error| error.to_string())
+    }
+
     fn edit(
         &self,
         novel_id: i64,
@@ -227,6 +234,11 @@ impl KnowledgeSource for KnowledgeWorkspace {
 impl TranslationSource for TranslationWorkspace {
     fn get(&self, novel_id: i64, target: &str) -> Result<NovelTranslation, String> {
         TranslationWorkspace::get(self, novel_id, target).map_err(|error| error.to_string())
+    }
+
+    fn translated_chapters(&self, novel_id: i64, target: &str) -> Result<Vec<String>, String> {
+        TranslationWorkspace::translated_chapters(self, novel_id, target)
+            .map_err(|error| error.to_string())
     }
 
     fn passage_save(

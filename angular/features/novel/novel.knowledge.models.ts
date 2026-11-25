@@ -1,6 +1,8 @@
 import { LanguageKey } from '@shared/language/language.models';
 
-import { TargetLang } from './novel.models';
+import { KnowledgeLang } from './novel.models';
+
+export type { KnowledgeLang } from './novel.models';
 
 export type EntityType = string;
 export type PredicateKind = 'scalar' | 'relationship';
@@ -16,7 +18,6 @@ export type RuleId =
 
 export type KnowledgeTab = 'graph' | 'list' | 'review';
 export type KnowledgeListKind = 'entity' | 'fact';
-export type KnowledgeLang = 'src' | TargetLang;
 export type AnalyzeMode = 'missing' | 'range' | 'all';
 export type Severity = 'error' | 'warning';
 export type ItemState = 'same' | 'edited' | 'new' | 'deleted' | 'merged' | 'removed';

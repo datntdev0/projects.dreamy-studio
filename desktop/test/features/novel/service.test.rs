@@ -70,21 +70,6 @@ fn chapter_file(fixture: &Fixture, novel_id: i64, chapter_id: &str) -> PathBuf {
         .join(format!("chapter_{chapter_id}.json"))
 }
 
-fn set_chapter_status(
-    fixture: &Fixture,
-    chapter_id: &str,
-    translation_status: &str,
-    analysis_status: &str,
-) {
-    let db = Database::open_read_write(&fixture.dir.path().join(WORKSPACE_DB_FILE)).unwrap();
-    db.connection()
-        .execute(
-            "UPDATE ws_novel_chapters SET translation_status = ?2, analysis_status = ?3 WHERE id = ?1",
-            rusqlite::params![chapter_id, translation_status, analysis_status],
-        )
-        .unwrap();
-}
-
 #[test]
 fn normalizes_tags_like_the_prototype() {
     assert_eq!(
@@ -426,7 +411,6 @@ fn reads_chapters_and_edits_a_paragraph() {
     let chapters = fixture.workspace.chapters(book.id).unwrap();
     assert_eq!(chapters.len(), 2);
     assert_eq!(chapters[0].seq, 1);
-    assert_eq!(chapters[0].translation_status, "none");
     let first = &chapters[0];
 
     let paragraphs = fixture.workspace.chapter_read(book.id, &first.id).unwrap();
@@ -593,34 +577,42 @@ fn moves_chapters_up_down_same_position_and_rejects_bad_positions() {
 }
 
 #[test]
-fn rejects_changes_to_locked_chapters_and_moves_onto_locked_positions() {
+fn summaries_count_translated_and_analyzed_chapters_from_files() {
     let fixture = fixture();
     let novel = imported(&fixture, 3);
     let chapters = fixture.workspace.chapters(novel.id).unwrap();
-    set_chapter_status(&fixture, &chapters[0].id, "draft", "none");
-    set_chapter_status(&fixture, &chapters[1].id, "none", "done");
+    let novel_dir = fixture.dir.path().join("novels").join(novel.id.to_string());
+    let translations = novel_dir.join("translation_vi");
+    fs::create_dir_all(&translations).unwrap();
+    for chapter in &chapters[..2] {
+        fs::write(
+            translations.join(format!("chapter_{}.json", chapter.id)),
+            "{}",
+        )
+        .unwrap();
+    }
+    let knowledge = novel_dir.join("knowledgebase_src");
+    fs::create_dir_all(&knowledge).unwrap();
+    fs::write(
+        knowledge.join(format!("chapter_{}.json", chapters[2].id)),
+        "{}",
+    )
+    .unwrap();
 
-    let delete = fixture
+    let listed = fixture.workspace.list().unwrap();
+    let summary = listed.iter().find(|item| item.id == novel.id).unwrap();
+
+    assert_eq!(summary.translated.get("VI"), Some(&2));
+    assert_eq!(summary.translated.get("EN"), Some(&0));
+    assert_eq!(summary.analyzed.get("src"), Some(&1));
+    let deleted = fixture
         .workspace
         .chapter_delete(novel.id, &chapters[0].id)
-        .unwrap_err();
-    let move_locked = fixture
-        .workspace
-        .chapter_move(novel.id, &chapters[0].id, 2)
-        .unwrap_err();
-    let add = fixture
-        .workspace
-        .paragraph_add(novel.id, &chapters[0].id, "new paragraph")
-        .unwrap_err();
-    let move_onto_locked = fixture
-        .workspace
-        .chapter_move(novel.id, &chapters[2].id, 2)
-        .unwrap_err();
-
-    assert_eq!(delete.code, NovelErrorCode::ChapterLocked);
-    assert_eq!(move_locked.code, NovelErrorCode::ChapterLocked);
-    assert_eq!(add.code, NovelErrorCode::ChapterLocked);
-    assert_eq!(move_onto_locked.code, NovelErrorCode::ChapterLocked);
+        .unwrap();
+    assert_eq!(deleted.len(), 2);
+    let refreshed = fixture.workspace.list().unwrap();
+    let summary = refreshed.iter().find(|item| item.id == novel.id).unwrap();
+    assert_eq!(summary.translated.get("VI"), Some(&1));
 }
 
 #[test]
@@ -700,11 +692,10 @@ fn writes_full_chapter_text_and_splits_it_into_paragraphs() {
 }
 
 #[test]
-fn writing_a_translated_chapter_replaces_its_paragraphs() {
+fn writing_a_chapter_replaces_its_paragraphs() {
     let fixture = fixture();
     let novel = imported(&fixture, 1);
     let chapter = fixture.workspace.chapters(novel.id).unwrap().remove(0);
-    set_chapter_status(&fixture, &chapter.id, "draft", "none");
 
     fixture
         .workspace

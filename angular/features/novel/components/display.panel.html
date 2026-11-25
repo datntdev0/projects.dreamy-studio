@@ -127,22 +127,20 @@
     <dd>
       <span
         class="badge"
-        [class.badge-success]="chapter.translationStatus !== 'none'"
+        [class.badge-success]="isTranslated(chapter)"
         data-testid="novel-chapter-info-translation"
       >
-        {{ (chapter.translationStatus === "none" ? "novel.reader.info.none" :
-        "novel.reader.info.draft") | t }}
+        {{ (isTranslated(chapter) ? "novel.reader.info.draft" : "novel.reader.info.none") | t }}
       </span>
     </dd>
     <dt>{{ "novel.reader.info.knowledge" | t }}</dt>
     <dd>
       <span
         class="badge"
-        [class.badge-success]="chapter.analysisStatus !== 'none'"
+        [class.badge-success]="isAnalyzed(chapter)"
         data-testid="novel-chapter-info-knowledge"
       >
-        {{ (chapter.analysisStatus !== "none" ? "novel.reader.info.analyzed" :
-        "novel.reader.info.none") | t }}
+        {{ (isAnalyzed(chapter) ? "novel.reader.info.analyzed" : "novel.reader.info.none") | t }}
       </span>
     </dd>
   </dl>

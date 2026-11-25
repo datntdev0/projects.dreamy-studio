@@ -215,6 +215,8 @@ pub enum KnowledgeLang {
 }
 
 impl KnowledgeLang {
+    pub const ALL: [Self; 3] = [Self::Src, Self::Vi, Self::En];
+
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "src" => Some(Self::Src),

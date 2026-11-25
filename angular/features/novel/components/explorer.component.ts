@@ -7,7 +7,7 @@ import { CoreModule } from '@shared/core.module';
 
 import { NovelSummary } from '../novel.models';
 import { NovelReaderService } from '../novel.reader.service';
-import { displayName, passesFilters } from '../novel.rules';
+import { analyzedOf, displayName, passesFilters, translatedOf } from '../novel.rules';
 import { NovelService } from '../novel.service';
 
 @Component({
@@ -30,6 +30,14 @@ export class NovelExplorer {
 
   nameOf(novel: NovelSummary): string {
     return displayName(novel);
+  }
+
+  translatedOf(novel: NovelSummary): number {
+    return translatedOf(novel);
+  }
+
+  analyzedOf(novel: NovelSummary): number {
+    return analyzedOf(novel);
   }
 
   imageOf(novel: NovelSummary): string {

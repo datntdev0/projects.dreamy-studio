@@ -3,7 +3,7 @@ import { chapter, novel } from '@testing/fixtures';
 import { describe, expect, it } from 'vitest';
 
 // prettier-ignore
-import { applyInspectEvent, checkTag, clampSeq, compareNewestFirst, compareTagCount, compareUpdatedDesc, displayName, exportFileName, fieldPatch, fileNameOf, filterChapters, filterNovels, formatCount, formatMonthDay, formatStamp, fracState, hasCustomName, inspectPercent, isChapterLocked, isDuplicateTitle, langCounts, matchesChapter, matchesQuery, normalizeParagraphText, normTag, novelProgress, novelTotals, parseTags, passesFilters, pruneLangs, pruneTags, READER_PREF_DEFAULT, readerPageStyle, recentNovels, sanitizePrefs, tagCounts, titleTooLong, toggled, toNovelError, toNovelInput, withoutTag } from './novel.rules';
+import { analyzedOf, applyInspectEvent, checkTag, clampSeq, compareNewestFirst, compareTagCount, compareUpdatedDesc, displayName, exportFileName, fieldPatch, fileNameOf, filterChapters, filterNovels, formatCount, formatMonthDay, formatStamp, fracState, hasCustomName, inspectPercent, isDuplicateTitle, langCounts, matchesChapter, matchesQuery, normalizeParagraphText, normTag, novelProgress, novelTotals, parseTags, passesFilters, pruneLangs, pruneTags, READER_PREF_DEFAULT, readerPageStyle, recentNovels, sanitizePrefs, tagCounts, titleTooLong, toggled, toNovelError, toNovelInput, translatedOf, withoutTag } from './novel.rules';
 
 describe('novel.rules tags', () => {
   it('normalizes and parses tags', () => {
@@ -81,13 +81,23 @@ describe('novel.rules novels', () => {
     expect(
       novelTotals([
         novel(),
-        novel({ chapterCount: 5, wordCount: 5, translatedCount: 1, analyzedCount: 1 }),
+        novel({ chapterCount: 5, wordCount: 5, translated: { VI: 1 }, analyzed: { src: 1 } }),
       ]),
     ).toEqual({ novels: 2, chapters: 15, words: 1005, translated: 5, analyzed: 3 });
     expect(fracState(5, 5)).toBe('is-full');
     expect(fracState(1, 5)).toBe('is-part');
     expect(fracState(0, 5)).toBe('');
     expect(fracState(0, 0)).toBe('');
+  });
+
+  it('reads per-language counts', () => {
+    const counts = novel({ translated: { VI: 3, EN: 7 }, analyzed: { src: 2, EN: 5 } });
+    expect(translatedOf(counts)).toBe(7);
+    expect(translatedOf(counts, 'VI')).toBe(3);
+    expect(analyzedOf(counts)).toBe(5);
+    expect(analyzedOf(counts, 'src')).toBe(2);
+    expect(analyzedOf(counts, 'VI')).toBe(0);
+    expect(translatedOf(novel({ translated: {} }))).toBe(0);
   });
 
   it('validates titles', () => {
@@ -144,9 +154,6 @@ describe('novel.rules chapters and reader', () => {
     expect(clampSeq(3.7, 5)).toBe(3);
     expect(clampSeq(2, 0)).toBe(1);
     expect(normalizeParagraphText('  a \r\n b\nc ')).toBe('a b c');
-    expect(isChapterLocked(chapter())).toBe(false);
-    expect(isChapterLocked(chapter({ translationStatus: 'done' }))).toBe(true);
-    expect(isChapterLocked(chapter({ analysisStatus: 'stale' }))).toBe(true);
   });
 
   it('sanitizes reader preferences', () => {

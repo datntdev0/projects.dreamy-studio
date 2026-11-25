@@ -140,8 +140,8 @@ impl FakeNovels {
                 updated_at: "2026-01-01T00:00:00Z".to_string(),
                 chapter_count: 0,
                 word_count: 0,
-                translated_count: 0,
-                analyzed_count: 0,
+                translated: BTreeMap::new(),
+                analyzed: BTreeMap::new(),
                 tags: vec!["tag".to_string()],
             });
             state.chapters.entry(id).or_default();
@@ -164,8 +164,6 @@ impl FakeNovels {
                 seq,
                 title: title.to_string(),
                 word_count: words,
-                translation_status: "none".to_string(),
-                analysis_status: "none".to_string(),
                 created_at: "2026-01-01T00:00:00Z".to_string(),
                 updated_at: "2026-01-01T00:00:00Z".to_string(),
             });
@@ -181,31 +179,39 @@ impl FakeNovels {
         self
     }
 
-    pub fn with_statuses(self, novel_id: i64, seq: i64, translation: &str, analysis: &str) -> Self {
+    pub fn with_lang(self, novel_id: i64, lang: &str) -> Self {
+        self.edit_novel(novel_id, |novel| novel.lang = lang.to_string())
+    }
+
+    pub fn with_progress(
+        self,
+        novel_id: i64,
+        translated: &[(&str, usize)],
+        analyzed: &[(&str, usize)],
+    ) -> Self {
+        self.edit_novel(novel_id, |novel| {
+            novel.translated = counts_of(translated);
+            novel.analyzed = counts_of(analyzed);
+        })
+    }
+
+    fn edit_novel(self, novel_id: i64, change: impl FnOnce(&mut NovelSummary)) -> Self {
+        if let Some(novel) = guard(&self.state)
+            .novels
+            .iter_mut()
+            .find(|novel| novel.id == novel_id)
         {
-            let state = &mut *guard(&self.state);
-            if let Some(chapter) = state
-                .chapters
-                .get_mut(&novel_id)
-                .and_then(|rows| rows.iter_mut().find(|row| row.seq == seq))
-            {
-                chapter.translation_status = translation.to_string();
-                chapter.analysis_status = analysis.to_string();
-            }
-            if let Some(novel) = state.novels.iter_mut().find(|novel| novel.id == novel_id) {
-                let rows = &state.chapters[&novel_id];
-                novel.translated_count = rows
-                    .iter()
-                    .filter(|row| row.translation_status != "none")
-                    .count() as i64;
-                novel.analyzed_count = rows
-                    .iter()
-                    .filter(|row| row.analysis_status != "none")
-                    .count() as i64;
-            }
+            change(novel);
         }
         self
     }
+}
+
+fn counts_of(pairs: &[(&str, usize)]) -> BTreeMap<String, usize> {
+    pairs
+        .iter()
+        .map(|(lang, count)| (lang.to_string(), *count))
+        .collect()
 }
 
 impl NovelSource for FakeNovels {
@@ -347,6 +353,7 @@ struct KnowledgeState {
     preview_failure: Option<String>,
     failure: Option<String>,
     analyzed: BTreeMap<i64, AnalyzedChapter>,
+    analyzed_ids: HashMap<String, Vec<String>>,
 }
 
 #[derive(Clone)]
@@ -365,6 +372,7 @@ impl FakeKnowledge {
                 preview_failure: None,
                 failure: None,
                 analyzed: BTreeMap::new(),
+                analyzed_ids: HashMap::new(),
             })),
         }
     }
@@ -410,6 +418,14 @@ impl FakeKnowledge {
                 ev: evidence(chapters),
                 stale: Vec::new(),
             }));
+        self
+    }
+
+    pub fn with_analyzed_chapters(self, lang: &str, chapter_ids: &[&str]) -> Self {
+        guard(&self.state).analyzed_ids.insert(
+            lang.to_string(),
+            chapter_ids.iter().map(|id| id.to_string()).collect(),
+        );
         self
     }
 
@@ -482,6 +498,11 @@ impl KnowledgeSource for FakeKnowledge {
             Some(message) => Err(message),
             None => Ok(self.snapshot(lang)),
         }
+    }
+
+    fn analyzed_chapters(&self, _novel_id: i64, lang: &str) -> Result<Vec<String>, String> {
+        let state = guard(&self.state);
+        Ok(state.analyzed_ids.get(lang).cloned().unwrap_or_default())
     }
 
     fn edit(
@@ -729,6 +750,11 @@ impl TranslationSource for FakeTranslation {
             return Err(message);
         }
         Ok(self.book(novel_id, target))
+    }
+
+    fn translated_chapters(&self, novel_id: i64, target: &str) -> Result<Vec<String>, String> {
+        check_target(target)?;
+        Ok(self.book(novel_id, target).chapters.into_keys().collect())
     }
 
     fn passage_save(

@@ -5,7 +5,7 @@ import { WorkspaceService } from '../workspace/workspace.service';
 // prettier-ignore
 import { ChapterRow, NovelError, NovelScreen, ParagraphRow, ParagraphSaveResult, ReaderLang, ReaderLayout, ReaderMode, ReaderPrefs, ReaderView, TargetLang } from './novel.models';
 // prettier-ignore
-import { clampSeq, isChapterLocked, normalizeParagraphText, READER_PREF_DEFAULT, readerPageStyle, sanitizePrefs, toNovelError } from './novel.rules';
+import { clampSeq, normalizeParagraphText, READER_PREF_DEFAULT, readerPageStyle, sanitizePrefs, toNovelError } from './novel.rules';
 import { NovelService } from './novel.service';
 import { targetsOf } from './novel.translation.rules';
 import { NovelTranslationService } from './novel.translation.service';
@@ -535,8 +535,7 @@ export class NovelReaderService {
   }
 
   private buildCanAdd(): boolean {
-    const chapter = this.current();
-    return this.canEdit() && chapter !== null && !isChapterLocked(chapter);
+    return this.canEdit() && this.current() !== null;
   }
 
   private buildAdding(): boolean {

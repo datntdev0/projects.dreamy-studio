@@ -129,15 +129,8 @@ fn a_chapter_run_writes_the_translation_file() {
     let chapter = &translated.chapters[&setup.fixture.chapter_id];
     assert_eq!(chapter.title, "[translated] Chapter");
     assert_eq!(chapter.paragraphs[0].text, "[translated] source");
-    assert_eq!(
-        setup
-            .fixture
-            .novel
-            .chapters(setup.fixture.novel_id)
-            .unwrap()[0]
-            .translation_status,
-        "none"
-    );
+    let summary = setup.fixture.novel.list().unwrap();
+    assert_eq!(summary[0].translated.get("VI"), Some(&1));
 }
 
 #[test]

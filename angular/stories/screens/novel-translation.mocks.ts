@@ -1,5 +1,5 @@
 // prettier-ignore
-import { ChapterRow, NovelSummary, ParagraphRow, TranslationStatus } from '@features/novel/novel.models';
+import { ChapterRow, NovelSummary, ParagraphRow, TargetLang } from '@features/novel/novel.models';
 // prettier-ignore
 import { DictEntry, PipelineEvent, PipelineSnapshot, PipelineTask, TaskRequest, WireChapter, WireTranslation, WireWarning } from '@features/novel/novel.translation.models';
 import { PipelineService } from '@features/pipeline/pipeline.service';
@@ -25,7 +25,6 @@ const GUIDELINES = [
   'Conventions: keep proper names. Place names with a meaning are translated by meaning (Tháp Đèn, Bến Chìm). Use “ ” marks for dialogue.',
 ].join('\n');
 
-const TRANSLATED_CHAPTERS = 2;
 const SAMPLE_CHAPTERS = 3;
 
 export interface TranslationScenario {
@@ -59,28 +58,23 @@ function chapterId(seq: number): string {
   return `ch-${seq}`;
 }
 
-function status(seq: number, translated: boolean): TranslationStatus {
-  if (!translated || seq > TRANSLATED_CHAPTERS) {
-    return 'none';
-  }
-  return 'done';
-}
-
-function chapterRows(translated: boolean): ChapterRow[] {
+function chapterRows(): ChapterRow[] {
   return LANTERN_CHAPTERS.map((chapter, index) => ({
     id: chapterId(index + 1),
     novelId: NOVEL_ID,
     seq: index + 1,
     title: chapter.title,
     wordCount: chapter.words,
-    translationStatus: status(index + 1, translated),
-    analysisStatus: 'none',
     createdAt: STAMP,
     updatedAt: STAMP,
   }));
 }
 
-function novelSummary(chapters: number, words: number, translated: number): NovelSummary {
+function novelSummary(
+  chapters: number,
+  words: number,
+  translated: Partial<Record<TargetLang, number>>,
+): NovelSummary {
   return {
     id: NOVEL_ID,
     title: '哈罗米尔的守灯人',
@@ -93,8 +87,8 @@ function novelSummary(chapters: number, words: number, translated: number): Nove
     updatedAt: STAMP,
     chapterCount: chapters,
     wordCount: words,
-    translatedCount: translated,
-    analyzedCount: 0,
+    translated,
+    analyzed: { src: 0, VI: 0, EN: 0 },
     tags: ['奇幻', '暗黑', '港口'],
   };
 }
@@ -446,17 +440,19 @@ function startPipeline(state: MockState, args: Record<string, unknown>): Pipelin
   return clonePipeline(snapshot);
 }
 
+function translatedCount(state: MockState, target: TargetLang): number {
+  return Object.keys(translationFor(state, NOVEL_ID, target).chapters).length;
+}
+
+function translatedCounts(state: MockState): Partial<Record<TargetLang, number>> {
+  return { VI: translatedCount(state, 'VI'), EN: translatedCount(state, 'EN') };
+}
+
 function ipcHandlers(state: MockState, rows: ChapterRow[]): IpcHandlers {
   const words = rows.reduce((total, row) => total + row.wordCount, 0);
   return {
     ...baseHandlers(),
-    novel_list: () => [
-      novelSummary(
-        rows.length,
-        words,
-        rows.filter((row) => row.translationStatus !== 'none').length,
-      ),
-    ],
+    novel_list: () => [novelSummary(rows.length, words, translatedCounts(state))],
     novel_chapters: () => rows,
     novel_chapter_read: (args) => sourceOf(String(args['chapterId'])),
     novel_cover_get: () => COVER,
@@ -549,7 +545,7 @@ function runningHistory(scenario: TranslationScenario): PipelineSnapshot[] {
 }
 
 export function handlersFor(scenario: TranslationScenario): IpcHandlers {
-  const rows = scenario.chapters === false ? [] : chapterRows(scenario.translated !== false);
+  const rows = scenario.chapters === false ? [] : chapterRows();
   const history = scenario.history ? [...runningHistory(scenario), ...mixedHistory()] : [];
   const nextPipelineId = history.reduce((top, item) => Math.max(top, item.id), 0) + 1;
   const state: MockState = {

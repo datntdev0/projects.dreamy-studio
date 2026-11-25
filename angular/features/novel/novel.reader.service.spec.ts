@@ -11,7 +11,7 @@ import { NovelService } from './novel.service';
 const rows = () => [
   chapter({ id: 'c1', seq: 1, title: 'One' }),
   chapter({ id: 'c2', seq: 2, title: 'Two' }),
-  chapter({ id: 'c3', seq: 3, title: 'Three', translationStatus: 'done' }),
+  chapter({ id: 'c3', seq: 3, title: 'Three' }),
 ];
 const paragraphs = [
   { n: 1, text: 'first', hashcheck: 'h' },
@@ -132,7 +132,7 @@ describe('NovelReaderService', () => {
     expect(reader.editing()).toBeNull();
   });
 
-  it('adds passages to unlocked chapters only', async () => {
+  it('adds passages', async () => {
     await reader.openReader(1, 1);
     reader.setMode('edit');
     expect(reader.canAdd()).toBe(true);
@@ -141,10 +141,6 @@ describe('NovelReaderService', () => {
     ipc.on('novel_paragraph_add', chapter({ id: 'c1', seq: 1 }));
     expect(await reader.saveParagraph('third')).toBe('saved');
     expect(ipc.called('novel_paragraph_add')).toBe(1);
-    await reader.gotoChapter(3);
-    expect(reader.canAdd()).toBe(false);
-    reader.startAddPassage();
-    expect(reader.editing()).toBeNull();
   });
 
   it('renames chapters', async () => {

@@ -4,6 +4,7 @@ use crate::features::knowledge::models::KnowledgeErrorCode;
 use crate::features::knowledge::models::KnowledgeLang;
 use crate::features::knowledge::models::KnowledgeResult;
 use crate::features::novel::files::NovelFiles;
+use crate::features::novel::files::list_chapter_ids;
 use crate::features::novel::files::write_atomic;
 use std::fs;
 use std::io::ErrorKind;
@@ -51,22 +52,8 @@ impl KnowledgeFiles {
         Ok(())
     }
 
-    #[cfg(test)]
     pub fn list(&self, novel_id: i64, lang: KnowledgeLang) -> KnowledgeResult<Vec<String>> {
-        let entries = match fs::read_dir(self.knowledge_dir(novel_id, lang)) {
-            Ok(entries) => entries,
-            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(error) => return Err(error.into()),
-        };
-        let mut ids = Vec::new();
-        for entry in entries {
-            let name = entry?.file_name().to_string_lossy().into_owned();
-            if let Some(id) = chapter_id_of(&name) {
-                ids.push(id.to_string());
-            }
-        }
-        ids.sort();
-        Ok(ids)
+        Ok(list_chapter_ids(&self.knowledge_dir(novel_id, lang))?)
     }
 
     fn knowledge_dir(&self, novel_id: i64, lang: KnowledgeLang) -> PathBuf {
@@ -110,14 +97,6 @@ fn chapter_name(chapter_id: &str) -> KnowledgeResult<String> {
         return Err(KnowledgeError::invalid("chapter id is malformed"));
     }
     Ok(format!("{CHAPTER_PREFIX}{chapter_id}{CHAPTER_SUFFIX}"))
-}
-
-#[cfg(test)]
-fn chapter_id_of(name: &str) -> Option<&str> {
-    let id = name
-        .strip_prefix(CHAPTER_PREFIX)?
-        .strip_suffix(CHAPTER_SUFFIX)?;
-    is_chapter_id(id).then_some(id)
 }
 
 fn is_chapter_id(value: &str) -> bool {

@@ -4,9 +4,11 @@ import { CoreModule } from '@shared/core.module';
 import { LanguageKey } from '@shared/language/language.models';
 import { fieldChecked } from '@shared/utils/dom';
 
-import { ReaderFont, ReaderPaper } from '../novel.models';
+import { NovelKnowledgeService } from '../novel.knowledge.service';
+import { ChapterRow, ReaderFont, ReaderPaper } from '../novel.models';
 import { NovelReaderService } from '../novel.reader.service';
 import { formatCount, READER_SIZE_RANGE } from '../novel.rules';
+import { NovelTranslationService } from '../novel.translation.service';
 
 interface DisplayOption<T> {
   value: T;
@@ -45,6 +47,8 @@ const PAPER_OPTIONS: DisplayOption<ReaderPaper>[] = [
 })
 export class NovelDisplayPanel {
   readonly reader = inject(NovelReaderService);
+  private readonly translation = inject(NovelTranslationService);
+  private readonly knowledge = inject(NovelKnowledgeService);
   readonly count = formatCount;
   readonly prefs = this.reader.prefs;
   readonly fonts = FONT_OPTIONS;
@@ -52,6 +56,15 @@ export class NovelDisplayPanel {
   readonly widths = WIDTH_OPTIONS;
   readonly papers = PAPER_OPTIONS;
   readonly sizeRange = READER_SIZE_RANGE;
+
+  isTranslated(chapter: ChapterRow): boolean {
+    const target = this.reader.readerTarget(chapter.novelId);
+    return this.translation.statusOf(chapter.novelId, chapter.id, target) !== 'none';
+  }
+
+  isAnalyzed(chapter: ChapterRow): boolean {
+    return this.knowledge.analysisOf(chapter.novelId, chapter.seq) !== 'none';
+  }
 
   setFont(font: ReaderFont): void {
     this.reader.setPref('font', font);

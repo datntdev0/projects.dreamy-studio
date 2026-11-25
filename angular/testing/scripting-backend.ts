@@ -19,8 +19,6 @@ function chapterRows() {
     seq: index + 1,
     title: chapter.title,
     wordCount: chapter.words,
-    translationStatus: 'none',
-    analysisStatus: 'none',
     createdAt: STAMP,
     updatedAt: STAMP,
   }));

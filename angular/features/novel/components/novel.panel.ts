@@ -12,7 +12,7 @@ import { NovelConfirmService } from '../novel.confirm.service';
 import { checkCoverFile, prepareCover } from '../novel.cover';
 import { NovelField, NovelLang, NovelOrigin, NovelPatch, NovelSummary } from '../novel.models';
 // prettier-ignore
-import { displayName, exportFileName, fieldPatch, fileNameOf, formatCount, formatStamp, hasCustomName, MAX_TAGS, normTag, NOVEL_LANG_KEYS, NOVEL_LANGS, toNovelError } from '../novel.rules';
+import { analyzedOf, displayName, exportFileName, fieldPatch, fileNameOf, formatCount, formatStamp, hasCustomName, MAX_TAGS, normTag, NOVEL_LANG_KEYS, NOVEL_LANGS, toNovelError, translatedOf } from '../novel.rules';
 import { NovelService } from '../novel.service';
 import { NovelProgressFrac } from './progress-frac.component';
 
@@ -87,6 +87,14 @@ export class NovelPanel {
 
   chaptersOf(novel: NovelSummary): string {
     return formatCount(novel.chapterCount);
+  }
+
+  translatedOf(novel: NovelSummary): number {
+    return translatedOf(novel);
+  }
+
+  analyzedOf(novel: NovelSummary): number {
+    return analyzedOf(novel);
   }
 
   langKey(lang: NovelLang): LanguageKey {

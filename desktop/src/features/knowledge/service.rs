@@ -81,6 +81,10 @@ impl KnowledgeWorkspace {
         Ok(merge(lang, &chapters))
     }
 
+    pub fn analyzed_chapters(&self, novel_id: i64, lang: &str) -> KnowledgeResult<Vec<String>> {
+        KnowledgeFiles::new(self.dir.clone()).list(novel_id, parse_lang(lang)?)
+    }
+
     pub fn edit(
         &self,
         novel_id: i64,

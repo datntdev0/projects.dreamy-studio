@@ -36,11 +36,9 @@ export function worldChapters(novelId = 1): ChapterRow[] {
       seq: 1,
       title: 'Opening',
       wordCount: 120,
-      translationStatus: 'done',
-      analysisStatus: 'done',
     }),
     chapter({ id: 'c2', novelId, seq: 2, title: 'Journey', wordCount: 90 }),
-    chapter({ id: 'c3', novelId, seq: 3, title: 'Finale', wordCount: 0, analysisStatus: 'stale' }),
+    chapter({ id: 'c3', novelId, seq: 3, title: 'Finale', wordCount: 0 }),
   ];
 }
 
@@ -219,8 +217,8 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
       tags: ['epic', 'long'],
       chapterCount: 3,
       wordCount: 210,
-      translatedCount: 1,
-      analyzedCount: 1,
+      translated: { VI: 1 },
+      analyzed: { src: 1, VI: 0 },
       description: 'A tale.',
     }),
     novel({

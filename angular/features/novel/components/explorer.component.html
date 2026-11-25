@@ -72,7 +72,7 @@
             >
               <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-lang" /></svg>
               <span class="tree-label">{{ 'novel.explorer.translation' | t }}</span>
-              <span class="nx-n mono">{{ novel.translatedCount }}/{{ novel.chapterCount }}</span>
+              <span class="nx-n mono">{{ translatedOf(novel) }}/{{ novel.chapterCount }}</span>
             </div>
             <div
               class="tree-row nx-child"
@@ -85,7 +85,7 @@
             >
               <svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#i-graph" /></svg>
               <span class="tree-label">{{ 'novel.explorer.knowledge' | t }}</span>
-              <span class="nx-n mono">{{ novel.analyzedCount }}/{{ novel.chapterCount }}</span>
+              <span class="nx-n mono">{{ analyzedOf(novel) }}/{{ novel.chapterCount }}</span>
             </div>
           }
         </div>

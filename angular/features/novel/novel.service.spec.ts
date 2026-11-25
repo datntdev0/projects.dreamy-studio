@@ -155,8 +155,8 @@ describe('NovelService', () => {
 
   it('manages chapters', async () => {
     const rows = [
-      chapter({ id: 'c1', seq: 1, wordCount: 5, translationStatus: 'done' }),
-      chapter({ id: 'c2', seq: 2, wordCount: 7, analysisStatus: 'done' }),
+      chapter({ id: 'c1', seq: 1, wordCount: 5 }),
+      chapter({ id: 'c2', seq: 2, wordCount: 7 }),
     ];
     ipc.on('novel_chapters', rows);
     expect(novels.chaptersOf(1)).toEqual([]);
@@ -170,10 +170,10 @@ describe('NovelService', () => {
     expect(novels.novelById(1)?.chapterCount).toBe(3);
     ipc.on('novel_chapter_delete', [rows[1]]);
     await novels.deleteChapter(1, 'c1');
-    expect(novels.novelById(1)?.analyzedCount).toBe(1);
+    expect(novels.novelById(1)?.analyzed).toEqual({ src: 2, VI: 0 });
     ipc.on('novel_chapter_move', rows);
     await novels.moveChapter(1, 'c2', 1);
-    expect(novels.novelById(1)?.translatedCount).toBe(1);
+    expect(novels.novelById(1)?.translated).toEqual({ VI: 4 });
     ipc.on('novel_chapter_add', chapter({ id: 'c9', novelId: 55 }));
     await novels.addChapter(55, 'ghost');
   });

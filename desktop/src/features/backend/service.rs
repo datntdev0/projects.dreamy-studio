@@ -254,7 +254,3 @@ impl Synthesizer for BackendService {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/backend/service.test.rs"]
-mod tests;

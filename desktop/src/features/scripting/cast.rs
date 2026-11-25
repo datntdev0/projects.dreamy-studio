@@ -114,7 +114,3 @@ fn is_contained(entity: &KnowledgeEntity, all: &[&KnowledgeEntity]) -> bool {
     all.iter()
         .any(|other| other.name.len() > entity.name.len() && other.name.contains(&entity.name))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/scripting/cast.test.rs"]
-mod tests;

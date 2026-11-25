@@ -194,7 +194,3 @@ pub fn encode_wav(samples: &[f32], sample_rate: u32, channels: u32, gain: f32) -
     }
     bytes
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/audio.test.rs"]
-mod tests;

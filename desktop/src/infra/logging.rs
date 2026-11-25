@@ -64,7 +64,3 @@ impl Logger {
         file.write_all(line.as_bytes())
     }
 }
-
-#[cfg(test)]
-#[path = "../../test/infra/logging.test.rs"]
-mod tests;

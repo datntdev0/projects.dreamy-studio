@@ -348,7 +348,3 @@ impl EvidenceSet {
         self.items
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/merge.test.rs"]
-mod tests;

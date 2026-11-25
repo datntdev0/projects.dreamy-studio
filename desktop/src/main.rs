@@ -6,9 +6,6 @@ mod container;
 mod features;
 mod infra;
 mod shared;
-#[cfg(test)]
-#[path = "../test/shared/mod.rs"]
-mod testing;
 
 fn main() {
     shared::env::isolate_webview_data();

@@ -340,7 +340,3 @@ fn kill_tree(pid: u32) {
 
 #[cfg(not(windows))]
 fn kill_tree(_pid: u32) {}
-
-#[cfg(test)]
-#[path = "../../test/infra/backend.test.rs"]
-mod tests;

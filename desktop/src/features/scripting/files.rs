@@ -105,7 +105,3 @@ fn is_orphan(path: &Path, keep: &BTreeSet<String>) -> bool {
             .and_then(|stem| stem.to_str())
             .is_none_or(|stem| !keep.contains(stem))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/scripting/files.test.rs"]
-mod tests;

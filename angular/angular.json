@@ -79,7 +79,6 @@
             "buildTarget": "dreamy-studio:build:development",
             "runner": "vitest",
             "runnerConfig": "vitest.config.mjs",
-            "setupFiles": ["testing/setup.ts"],
             "include": [
               "shared/**/*.spec.ts",
               "features/**/*.spec.ts",

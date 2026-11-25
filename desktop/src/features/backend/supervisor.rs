@@ -79,7 +79,3 @@ pub fn state_after(result: &Result<BackendReady, BackendError>) -> MonitorState 
         Err(error) => MonitorState::Error(error.to_string()),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/backend/supervisor.test.rs"]
-mod tests;

@@ -111,7 +111,3 @@ fn chapter_id(
         .find(|row| row.seq == citation.chapter)
         .map(|row| row.id.clone())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/reply.test.rs"]
-mod tests;

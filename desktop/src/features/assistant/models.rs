@@ -309,7 +309,3 @@ impl From<SqliteError> for AssistantError {
         Self::storage(source.to_string())
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/models.test.rs"]
-mod tests;

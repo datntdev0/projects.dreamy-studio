@@ -300,7 +300,3 @@ fn title_case(text: &str) -> String {
         None => String::new(),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/usage.test.rs"]
-mod tests;

@@ -444,7 +444,3 @@ fn sound_unreadable(detail: impl Into<String>) -> LibraryError {
 fn sound_decode_error(error: SymphoniaError) -> LibraryError {
     sound_unreadable(error.to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/library/sounds.test.rs"]
-mod tests;

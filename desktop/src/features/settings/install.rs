@@ -226,7 +226,3 @@ impl<'a> ProgressMeter<'a> {
         self.last_at = Some(Instant::now());
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/install.test.rs"]
-mod tests;

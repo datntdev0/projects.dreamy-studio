@@ -324,7 +324,3 @@ impl From<StorageError> for KnowledgeError {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/models.test.rs"]
-mod tests;

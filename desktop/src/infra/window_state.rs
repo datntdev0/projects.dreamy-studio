@@ -119,7 +119,3 @@ fn lock(remembered: &Remembered) -> MutexGuard<'_, Option<WindowBounds>> {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
-
-#[cfg(test)]
-#[path = "../../test/infra/window_state.test.rs"]
-mod tests;

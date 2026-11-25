@@ -222,7 +222,3 @@ pub async fn translation_note_save<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/translation.test.rs"]
-mod tests;

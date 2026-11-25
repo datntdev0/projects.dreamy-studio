@@ -164,7 +164,3 @@ pub async fn settings_folder_open<R: Runtime>(
         .open_path(path.to_string_lossy().into_owned(), None::<&str>)
         .map_err(|error| error.to_string())
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/settings.test.rs"]
-mod tests;

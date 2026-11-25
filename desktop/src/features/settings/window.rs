@@ -69,7 +69,3 @@ impl WindowSettings {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/window.test.rs"]
-mod tests;

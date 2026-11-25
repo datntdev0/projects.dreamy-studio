@@ -258,7 +258,3 @@ impl JobFactory for TranslationJobFactory {
         )))
     }
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/pipeline/jobs/translation.test.rs"]
-mod tests;

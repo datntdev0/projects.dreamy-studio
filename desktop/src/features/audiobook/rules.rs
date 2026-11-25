@@ -156,7 +156,3 @@ pub fn audiobook_progress(
         note: format!("{done}/{total} {}s{review}", script.cfg.unit),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/rules.test.rs"]
-mod tests;

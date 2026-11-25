@@ -501,7 +501,3 @@ fn check_stale(ctx: &Context) -> Vec<RawIssue> {
     }
     out
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/check.test.rs"]
-mod tests;

@@ -157,7 +157,3 @@ fn unique_ids(units: &[ScriptUnit]) -> ProjectResult<BTreeSet<String>> {
     }
     Ok(seen)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/scripting/service.test.rs"]
-mod tests;

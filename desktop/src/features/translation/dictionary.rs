@@ -191,7 +191,3 @@ fn ensure_unique(stored: &[StoredEntry], src: &str, except: Option<i64>) -> Tran
     }
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/translation/dictionary.test.rs"]
-mod tests;

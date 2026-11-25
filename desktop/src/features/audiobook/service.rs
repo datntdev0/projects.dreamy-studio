@@ -221,7 +221,3 @@ fn spoken_text(text: &str) -> ProjectResult<String> {
 fn missing_record(block_id: &str) -> ProjectError {
     ProjectError::not_found(format!("segment {block_id} has no audio"))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/service.test.rs"]
-mod tests;

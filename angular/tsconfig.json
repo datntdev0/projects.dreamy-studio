@@ -19,7 +19,6 @@
       "@shared/*": ["./shared/*"],
       "@features/*": ["./features/*"],
       "@pages/*": ["./pages/*"],
-      "@testing/*": ["./testing/*"],
       "@components/*": ["./components/*"],
       "@layout/*": ["./layout/*"]
     }

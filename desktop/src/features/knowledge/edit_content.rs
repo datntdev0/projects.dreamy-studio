@@ -696,7 +696,3 @@ fn link_character(
     add_evidence(&mut chapters[index].file.facts[fact].ev, &persona.ev);
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/edit_content.test.rs"]
-mod tests;

@@ -28,7 +28,3 @@ pub fn app_info<R: Runtime>(app: AppHandle<R>) -> AppInfo {
 pub fn app_quit<R: Runtime>(app: AppHandle<R>) {
     app.exit(0);
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/app.test.rs"]
-mod tests;

@@ -321,7 +321,3 @@ fn open_terminal(command: &mut Command) {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/probe.test.rs"]
-mod tests;

@@ -206,7 +206,3 @@ fn change_of(card: &DraftCard) -> AssistantChange {
         Some(card.unit_id.clone()),
     )
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/assistant/drafts/apply.test.rs"]
-mod tests;

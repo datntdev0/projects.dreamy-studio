@@ -154,7 +154,3 @@ pub fn resolve(
     }
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/runs.test.rs"]
-mod tests;

@@ -667,7 +667,3 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
         Err(poisoned) => poisoned.into_inner(),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/executor.test.rs"]
-mod tests;

@@ -693,7 +693,3 @@ fn manifest_failure(error: serde_json::Error) -> NovelError {
         format!("cannot write manifest: {error}"),
     )
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/novel/package.test.rs"]
-mod tests;

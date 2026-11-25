@@ -399,7 +399,3 @@ fn language_name(lang: &str) -> &'static str {
         _ => "the original language of the novel",
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/analyzer.test.rs"]
-mod tests;

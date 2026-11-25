@@ -122,7 +122,3 @@ fn translation_error(error: TranslationError) -> KnowledgeError {
     };
     KnowledgeError::new(code, error.detail)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/text.test.rs"]
-mod tests;

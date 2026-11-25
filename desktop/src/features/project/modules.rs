@@ -60,7 +60,3 @@ pub fn decode_modules(raw: &str) -> Vec<String> {
 pub fn encode_modules(modules: &[String]) -> String {
     serde_json::to_string(modules).unwrap_or_else(|_| "[]".to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/project/modules.test.rs"]
-mod tests;

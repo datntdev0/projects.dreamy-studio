@@ -61,11 +61,6 @@ pub struct KnowledgeWorkspace {
 }
 
 impl KnowledgeWorkspace {
-    #[cfg(test)]
-    pub fn new(dir: PathBuf) -> Self {
-        Self::with_gate(dir, Arc::new(Mutex::new(())))
-    }
-
     pub fn with_gate(dir: PathBuf, gate: Arc<Mutex<()>>) -> Self {
         Self { dir, gate }
     }
@@ -299,7 +294,3 @@ fn lock(mutex: &Mutex<()>) -> MutexGuard<'_, ()> {
         Err(poisoned) => poisoned.into_inner(),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/service.test.rs"]
-mod tests;

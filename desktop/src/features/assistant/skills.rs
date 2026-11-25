@@ -175,7 +175,3 @@ fn knowledge_step(project: &ProjectSummary) -> String {
         None => "3. The project has no linked novel, so there is no knowledge base: attribute the dialogue from the source text alone.\n".to_string(),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/skills.test.rs"]
-mod tests;

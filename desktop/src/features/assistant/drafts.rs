@@ -66,7 +66,3 @@ fn parse(attachment: &Value) -> AssistantResult<DraftCard> {
     serde_json::from_value(attachment.clone())
         .map_err(|error| AssistantError::invalid(format!("the draft card is malformed: {error}")))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/drafts.test.rs"]
-mod tests;

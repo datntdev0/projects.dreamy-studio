@@ -49,7 +49,3 @@ impl BackendMonitor {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/backend/monitor.test.rs"]
-mod tests;

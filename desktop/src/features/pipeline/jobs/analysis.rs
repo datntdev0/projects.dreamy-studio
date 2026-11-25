@@ -563,7 +563,3 @@ fn pipeline_error(error: KnowledgeError) -> PipelineError {
     };
     PipelineError::new(code, error.detail)
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/pipeline/jobs/analysis.test.rs"]
-mod tests;

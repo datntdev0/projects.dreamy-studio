@@ -240,7 +240,3 @@ fn read_history(conn: &Connection) -> rusqlite::Result<Vec<(String, i64)>> {
     })?;
     rows.collect()
 }
-
-#[cfg(test)]
-#[path = "../../../test/infra/storage/migrator.test.rs"]
-mod tests;

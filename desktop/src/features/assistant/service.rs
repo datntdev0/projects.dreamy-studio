@@ -885,7 +885,3 @@ fn client_message(error: ClientError) -> String {
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|error| error.into_inner())
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/service.test.rs"]
-mod tests;

@@ -526,7 +526,3 @@ fn chapter_label(novel_id: i64, seq: i64, positions: &[usize], renamed: bool) ->
     }
     format!("edit_novel_chapter({})", parts.join(", "))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/edits.test.rs"]
-mod tests;

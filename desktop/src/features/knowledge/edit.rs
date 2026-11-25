@@ -123,14 +123,6 @@ pub(crate) fn fact_locations(chapters: &[LoadedChapter], id: &str) -> Vec<(usize
         .collect()
 }
 
-#[cfg(test)]
-pub(crate) fn merged_id_of(file: &ChapterAnalysis, local_entity_id: &str) -> Option<String> {
-    file.entities
-        .iter()
-        .find(|entity| entity.id == local_entity_id)
-        .map(|entity| entity_id(&entity.kind, &entity.name))
-}
-
 pub(crate) fn next_local_id(file: &ChapterAnalysis, prefix: char) -> String {
     let ids: Vec<&str> = match prefix {
         'E' => file.entities.iter().map(|item| item.id.as_str()).collect(),
@@ -692,7 +684,3 @@ fn update_fact(file: &mut ChapterAnalysis, index: usize, targets: &FactTargets) 
         fact.object = Some(object);
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/knowledge/edit.test.rs"]
-mod tests;

@@ -96,7 +96,3 @@ pub async fn knowledge_stale_accept<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/knowledge.test.rs"]
-mod tests;

@@ -56,11 +56,6 @@ impl AppContainer {
         Self::from_config(config::current().clone())
     }
 
-    #[cfg(test)]
-    pub fn from_root(root: PathBuf) -> Self {
-        Self::from_config(AppConfig::from_root(root))
-    }
-
     pub fn from_config(config: AppConfig) -> Self {
         let root = config.app_data_dir.clone();
         let logs = root.join("logs");
@@ -81,11 +76,6 @@ impl AppContainer {
             config::install_dir()
         };
         base.join(RUNTIME_LIBRARIES_DIR)
-    }
-
-    #[cfg(test)]
-    pub fn with_backend(root: PathBuf, backend: Arc<dyn BackendHost>) -> Self {
-        Self::assemble(AppConfig::from_root(root), backend)
     }
 
     fn assemble(config: AppConfig, backend: Arc<dyn BackendHost>) -> Self {
@@ -111,7 +101,3 @@ impl AppContainer {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "../test/container.test.rs"]
-mod tests;

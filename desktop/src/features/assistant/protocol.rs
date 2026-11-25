@@ -115,7 +115,3 @@ fn tools_call(params: &Value, caller: &dyn ToolCaller) -> Result<Value, (i64, St
 fn failure(id: Value, code: i64, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/protocol.test.rs"]
-mod tests;

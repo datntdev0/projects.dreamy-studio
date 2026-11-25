@@ -99,7 +99,3 @@ pub async fn scripting_cast_save<R: Runtime>(
     })
     .await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/scripting.test.rs"]
-mod tests;

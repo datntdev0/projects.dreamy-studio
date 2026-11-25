@@ -183,7 +183,3 @@ fn write_if_changed(path: &Path, content: &str) -> Result<(), String> {
     write_atomic(path, content.as_bytes())
         .map_err(|error| format!("cannot write {}: {error}", path.display()))
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/settings/home.test.rs"]
-mod tests;

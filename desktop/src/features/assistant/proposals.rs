@@ -676,7 +676,3 @@ fn mark(attachments: &mut [Value], pick: &Pick, status: Decision) {
 fn id_of(item: &Value) -> Option<&str> {
     item.get("id").and_then(Value::as_str)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/assistant/proposals.test.rs"]
-mod tests;

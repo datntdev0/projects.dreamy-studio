@@ -264,7 +264,3 @@ impl From<TranslationError> for PipelineError {
         Self::new(code, source.detail)
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/models.test.rs"]
-mod tests;

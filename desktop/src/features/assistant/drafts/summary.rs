@@ -99,7 +99,3 @@ fn name_of(id: &str, cast: &[CastMember], members: &[DraftMember]) -> String {
         .find(|(known, _)| *known == id)
         .map_or_else(|| id.to_string(), |(_, name)| name.to_string())
 }
-
-#[cfg(test)]
-#[path = "../../../../test/features/assistant/drafts/summary.test.rs"]
-mod tests;

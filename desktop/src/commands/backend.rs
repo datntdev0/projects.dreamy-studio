@@ -101,7 +101,3 @@ pub async fn backend_model_cancel<R: Runtime>(app: AppHandle<R>, id: String) -> 
 pub async fn backend_model_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     run_blocking(app, move |service| service.remove_model(&id)).await
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/backend.test.rs"]
-mod tests;

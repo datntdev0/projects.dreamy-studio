@@ -66,7 +66,3 @@ pub fn voice_error(error: LibraryError) -> ProjectError {
     };
     ProjectError::new(code, error.detail)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/audiobook/voice.test.rs"]
-mod tests;

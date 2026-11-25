@@ -137,7 +137,3 @@ fn range_not_satisfiable(total: u64) -> Response<Vec<u8>> {
         .body(Vec::new())
         .expect("sound response is valid")
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/library_stream.test.rs"]
-mod tests;

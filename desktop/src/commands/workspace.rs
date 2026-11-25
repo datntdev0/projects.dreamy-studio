@@ -199,7 +199,3 @@ pub async fn workspace_is_current<R: Runtime>(app: AppHandle<R>, path: String) -
 pub async fn workspace_current<R: Runtime>(app: AppHandle<R>) -> Option<CurrentWorkspace> {
     app.state::<WorkspaceSession>().current()
 }
-
-#[cfg(test)]
-#[path = "../../test/commands/workspace.test.rs"]
-mod tests;

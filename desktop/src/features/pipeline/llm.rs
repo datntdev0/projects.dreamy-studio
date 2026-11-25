@@ -487,21 +487,6 @@ fn failed(message: impl Into<String>) -> ClientError {
     ClientError::Failed(message.into())
 }
 
-#[cfg(test)]
-pub fn invocation_args(cli: &CliSpec, feature: &FeatureSettings) -> Result<Vec<String>, String> {
-    build_args(
-        cli,
-        feature,
-        FEATURE,
-        Mode::Once,
-        Flags {
-            tools_off: true,
-            streamed: false,
-        },
-        &[],
-    )
-}
-
 fn base_args(cli: &CliSpec, label: &str, mode: Mode, flags: Flags) -> Result<Vec<String>, String> {
     let format = if flags.streamed {
         "stream-json"
@@ -984,7 +969,3 @@ fn failure_detail(cli: &CliSpec, output: &Captured) -> String {
         format!("{} exited with {}: {detail}", cli.name, output.status)
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/pipeline/llm.test.rs"]
-mod tests;

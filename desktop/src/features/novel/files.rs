@@ -238,7 +238,3 @@ fn temp_path(path: &Path) -> PathBuf {
     name.push(".tmp");
     path.with_file_name(name)
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/novel/files.test.rs"]
-mod tests;

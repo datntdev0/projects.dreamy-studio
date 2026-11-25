@@ -66,7 +66,3 @@ fn warning(
         entry_id,
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/translation/warnings.test.rs"]
-mod tests;

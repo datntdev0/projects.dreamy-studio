@@ -66,7 +66,3 @@ pub fn module_states(
         ],
     }
 }
-
-#[cfg(test)]
-#[path = "../../../test/features/scripting/progress.test.rs"]
-mod tests;

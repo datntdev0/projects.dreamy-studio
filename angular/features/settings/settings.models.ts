@@ -1,6 +1,8 @@
 import { Language, LanguageKey } from '@shared/language/language.models';
 import { Theme } from '@shared/theme/theme.models';
 
+import { BackendDownload } from './backend.models';
+
 export type SettingsSectionId = 'general' | 'llm' | 'backend' | 'cloud';
 
 export type SettingsFolderTarget = 'workspace' | 'appData';
@@ -46,6 +48,15 @@ export type LlmCapability = 'translation' | 'knowledge' | 'assistant';
 
 export type LlmCheckStatus = 'none' | 'checking' | 'ok' | 'error';
 
+export interface LlmInstall extends BackendDownload {
+  version: string;
+}
+
+export interface LlmInstallProgress {
+  receivedBytes: number;
+  totalBytes: number;
+}
+
 export interface LlmCliView {
   id: string;
   name: string;
@@ -56,7 +67,7 @@ export interface LlmCliView {
   loginCommand: string;
   canLogout: boolean;
   canDetectLogin: boolean;
-  path: string;
+  install: LlmInstall;
   probe: LlmProbe | null;
 }
 
@@ -78,14 +89,8 @@ export interface LlmView {
   features: LlmFeature[];
 }
 
-export interface LlmCliSettings {
-  path: string;
-}
-
 export interface LlmProbe {
   id: string;
-  found: boolean;
-  path: string;
   version: string;
   ok: boolean;
   signedIn: boolean | null;
@@ -96,8 +101,6 @@ export interface LlmProbe {
 }
 
 export interface LlmProvider extends Omit<LlmCliView, 'probe'> {
-  found: boolean;
-  resolvedPath: string;
   version: string;
   signedIn: boolean | null;
   account: string;

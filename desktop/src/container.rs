@@ -67,13 +67,8 @@ impl AppContainer {
         let python = executable_of(&config, "python").unwrap_or_default();
         let backend = BackendProcess::new(BackendLaunch::resolve(root, logs, python));
         let mut container = Self::assemble(config, Arc::new(backend));
-        let repository = SettingsRepository::new(container.settings_path.clone());
         let data_dir = container.directories.root.clone();
-        container.llm = Arc::new(LlmCheck::new(
-            repository,
-            data_dir,
-            container.llm_status.clone(),
-        ));
+        container.llm = Arc::new(LlmCheck::new(data_dir, container.llm_status.clone()));
         container
     }
 

@@ -1,3 +1,4 @@
+use crate::features::settings::install::InstallView;
 use crate::features::settings::models::lenient;
 use crate::features::settings::probe::CliProbe;
 use serde::Deserialize;
@@ -5,8 +6,11 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
 
 pub const LLM_DIR: &str = "llm";
+
+const AGY_TOKEN_FILE: &str = ".gemini/antigravity-cli/antigravity-oauth-token";
 
 pub const FEATURES: [&str; 3] = ["translation", "knowledge", "assistant"];
 
@@ -16,14 +20,36 @@ pub struct CliSpec {
     pub name: &'static str,
     pub caps: &'static [&'static str],
     pub profile_env: Option<&'static str>,
+    pub env: &'static [(&'static str, &'static str)],
     pub login_args: &'static [&'static str],
     pub logout_args: Option<&'static [&'static str]>,
     pub status_args: Option<&'static [&'static str]>,
+    pub token_file: Option<&'static str>,
 }
 
 impl CliSpec {
     pub fn profile_dir(&self, data_dir: &Path) -> PathBuf {
         data_dir.join(LLM_DIR).join(self.id)
+    }
+
+    pub fn configure(&self, command: &mut Command, data_dir: &Path) {
+        if let Some(name) = self.profile_env {
+            command.env(name, self.profile_dir(data_dir));
+        }
+        command.envs(self.env.iter().copied());
+    }
+
+    pub fn token_path(&self, data_dir: &Path) -> Option<PathBuf> {
+        self.token_file
+            .map(|file| self.profile_dir(data_dir).join(file))
+    }
+
+    pub fn can_logout(&self) -> bool {
+        self.logout_args.is_some() || self.token_file.is_some()
+    }
+
+    pub fn can_detect_login(&self) -> bool {
+        self.status_args.is_some() || self.token_file.is_some()
     }
 
     pub fn login_command(&self) -> String {
@@ -41,19 +67,26 @@ pub const CLI_SPECS: [CliSpec; 3] = [
         name: "Claude Code CLI",
         caps: &["translation", "knowledge", "assistant"],
         profile_env: Some("CLAUDE_CONFIG_DIR"),
+        env: &[("DISABLE_AUTOUPDATER", "1")],
         login_args: &["auth", "login"],
         logout_args: Some(&["auth", "logout"]),
         status_args: Some(&["auth", "status"]),
+        token_file: None,
     },
     CliSpec {
         id: "antigravity",
         command: "agy",
         name: "Antigravity CLI",
         caps: &["translation", "knowledge", "assistant"],
-        profile_env: None,
+        profile_env: Some("USERPROFILE"),
+        env: &[
+            ("AGY_CLI_FORCE_FILE_TOKEN_STORAGE", "1"),
+            ("AGY_CLI_DISABLE_AUTO_UPDATE", "1"),
+        ],
         login_args: &[],
         logout_args: None,
         status_args: None,
+        token_file: Some(AGY_TOKEN_FILE),
     },
     CliSpec {
         id: "codex",
@@ -61,37 +94,16 @@ pub const CLI_SPECS: [CliSpec; 3] = [
         name: "Codex CLI",
         caps: &["translation", "knowledge", "assistant"],
         profile_env: Some("CODEX_HOME"),
+        env: &[],
         login_args: &["login"],
         logout_args: Some(&["logout"]),
         status_args: Some(&["login", "status"]),
+        token_file: None,
     },
 ];
 
 pub fn spec(id: &str) -> Option<&'static CliSpec> {
     CLI_SPECS.iter().find(|spec| spec.id == id)
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliSettings {
-    #[serde(
-        default,
-        deserialize_with = "lenient",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub path: Option<String>,
-}
-
-impl CliSettings {
-    pub fn normalized(self) -> Self {
-        Self {
-            path: self.path.map(|path| path.trim().to_string()),
-        }
-    }
-
-    pub fn path(&self) -> &str {
-        self.path.as_deref().unwrap_or("")
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,18 +173,12 @@ impl FeatureSettings {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LlmSettings {
     #[serde(default, deserialize_with = "lenient")]
-    pub providers: BTreeMap<String, CliSettings>,
-    #[serde(default, deserialize_with = "lenient")]
     pub features: BTreeMap<String, FeatureSettings>,
 }
 
 impl LlmSettings {
     pub fn is_empty(&self) -> bool {
         *self == Self::default()
-    }
-
-    pub fn provider(&self, id: &str) -> CliSettings {
-        self.providers.get(id).cloned().unwrap_or_default()
     }
 
     pub fn feature(&self, id: &str) -> FeatureSettings {
@@ -196,23 +202,20 @@ impl LlmSettings {
     pub fn view(&self, data_dir: &Path, probes: &BTreeMap<String, CliProbe>) -> LlmView {
         let providers = CLI_SPECS
             .iter()
-            .map(|spec| {
-                let settings = self.provider(spec.id);
-                CliView {
-                    id: spec.id,
-                    name: spec.name,
-                    command: spec.command,
-                    caps: spec.caps,
-                    profile_env: spec.profile_env,
-                    profile_dir: spec
-                        .profile_env
-                        .map(|_| spec.profile_dir(data_dir).to_string_lossy().into_owned()),
-                    login_command: spec.login_command(),
-                    can_logout: spec.logout_args.is_some(),
-                    can_detect_login: spec.status_args.is_some(),
-                    path: settings.path().to_string(),
-                    probe: probes.get(spec.id).cloned(),
-                }
+            .map(|spec| CliView {
+                id: spec.id,
+                name: spec.name,
+                command: spec.command,
+                caps: spec.caps,
+                profile_env: spec.profile_env,
+                profile_dir: spec
+                    .profile_env
+                    .map(|_| spec.profile_dir(data_dir).to_string_lossy().into_owned()),
+                login_command: spec.login_command(),
+                can_logout: spec.can_logout(),
+                can_detect_login: spec.can_detect_login(),
+                install: InstallView::unavailable(),
+                probe: probes.get(spec.id).cloned(),
             })
             .collect();
         let features = FEATURES.iter().map(|id| self.feature_view(id)).collect();
@@ -235,7 +238,7 @@ pub struct CliView {
     pub login_command: String,
     pub can_logout: bool,
     pub can_detect_login: bool,
-    pub path: String,
+    pub install: InstallView,
     pub probe: Option<CliProbe>,
 }
 

@@ -8,7 +8,7 @@ use crate::shared::env;
 
 pub const CONFIG_FILE: &str = "DreamyStudio.config";
 const PRODUCT_DIR: &str = "DreamyStudio";
-const DATA_DIR: &str = "data";
+const DATA_DIR: &str = "appdata";
 const RUNTIME_DIR: &str = "runtime";
 const TOOLBOX_DIR: &str = "toolbox";
 const LOCAL_APP_DATA_VAR: &str = "LOCALAPPDATA";

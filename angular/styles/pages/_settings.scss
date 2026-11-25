@@ -211,60 +211,6 @@
   gap: var(--sp-sm);
   flex-wrap: wrap;
 }
-.llm-steps {
-  display: grid;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
-.llm-step {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: var(--sp-md);
-  padding: var(--sp-md);
-}
-.llm-step + .llm-step {
-  border-top: 1px solid var(--hairline);
-}
-.llm-step.is-locked {
-  opacity: 0.5;
-}
-.llm-n {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--r-full);
-  background: var(--canvas-soft);
-  color: var(--mute);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-}
-.llm-step.is-done .llm-n {
-  background: var(--success-soft);
-  color: var(--success);
-}
-.llm-step.is-todo .llm-n {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-.llm-step-b {
-  display: grid;
-  gap: var(--sp-sm);
-  min-width: 0;
-}
-.llm-step-t {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  flex-wrap: wrap;
-  min-height: 22px;
-}
-.llm-step-t b {
-  color: var(--ink);
-  font-weight: 500;
-}
 .llm-guide {
   display: grid;
   gap: var(--sp-sm);
@@ -336,6 +282,9 @@
   align-items: center;
   gap: var(--sp-sm);
   flex-wrap: wrap;
+}
+.llm-dl {
+  flex: 1;
 }
 .llm-msg {
   display: flex;

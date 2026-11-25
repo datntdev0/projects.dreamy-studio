@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
 use std::io;
@@ -12,9 +11,6 @@ use std::time::Duration;
 use std::time::Instant;
 
 use crate::features::settings::check::LlmChecker;
-use crate::features::settings::check::LlmStatus;
-use crate::features::settings::llm::CLI_SPECS;
-use crate::features::settings::probe::CliProbe;
 use crate::infra::logging::Logger;
 use crate::infra::startup::download::Fetch;
 use crate::infra::startup::download::FetchStop;
@@ -29,7 +25,6 @@ use crate::infra::startup::models::SetupErrorCode;
 use crate::infra::startup::models::SetupEvent;
 use crate::infra::startup::models::SetupGroup;
 use crate::infra::startup::models::SetupItemView;
-use crate::infra::startup::models::SetupKind;
 use crate::infra::startup::models::SetupOutcome;
 use crate::infra::startup::models::SetupPhase;
 use crate::infra::startup::models::SetupSink;
@@ -43,7 +38,6 @@ pub struct SetupService {
     config: AppConfig,
     manifest: SetupManifest,
     llm: Arc<dyn LlmChecker>,
-    status: LlmStatus,
     runtime_libraries: Option<PathBuf>,
     logger: Logger,
     cancel: AtomicBool,
@@ -54,7 +48,6 @@ pub struct SetupDeps {
     pub config: AppConfig,
     pub manifest: SetupManifest,
     pub llm: Arc<dyn LlmChecker>,
-    pub status: LlmStatus,
     pub runtime_libraries: Option<PathBuf>,
     pub logger: Logger,
 }
@@ -65,7 +58,6 @@ impl SetupService {
             config: deps.config,
             manifest: deps.manifest,
             llm: deps.llm,
-            status: deps.status,
             runtime_libraries: deps.runtime_libraries,
             logger: deps.logger,
             cancel: AtomicBool::new(false),
@@ -85,15 +77,20 @@ impl SetupService {
             ));
         };
         self.cancel.store(false, Ordering::SeqCst);
-        let mut items = self.snapshot();
         sink.emit(SetupEvent::Snapshot {
             status: SetupPhase::Checking,
-            items: items.clone(),
+            items: self.snapshot(),
         });
+        if let Some(outcome) = self.provide_pending(sink)? {
+            return Ok(outcome);
+        }
         if !self.llm.check(&self.cancel) {
             return Ok(SetupOutcome::Paused);
         }
-        self.publish_tools(&mut items, sink);
+        Ok(SetupOutcome::Ready)
+    }
+
+    fn provide_pending(&self, sink: &dyn SetupSink) -> Result<Option<SetupOutcome>, SetupError> {
         let pending: Vec<&ManifestItem> = self
             .manifest
             .items
@@ -102,17 +99,17 @@ impl SetupService {
             .collect();
         if pending.is_empty() {
             self.logger.info(LOG_TARGET, "all components are installed");
-            return Ok(SetupOutcome::Ready);
+            return Ok(None);
         }
         sink.emit(SetupEvent::Phase {
             status: SetupPhase::Running,
         });
         for item in pending {
             if let Some(outcome) = self.provide(item, sink)? {
-                return Ok(outcome);
+                return Ok(Some(outcome));
             }
         }
-        Ok(SetupOutcome::Ready)
+        Ok(None)
     }
 
     pub fn import(&self, package: &Path) -> Result<usize, SetupError> {
@@ -145,15 +142,11 @@ impl SetupService {
     }
 
     fn snapshot(&self) -> Vec<SetupItemView> {
-        let downloads = self
-            .manifest
+        self.manifest
             .items
             .iter()
-            .map(|item| self.download_view(item));
-        let tools = CLI_SPECS
-            .iter()
-            .map(|cli| detect_view(cli.id, None, ItemState::Checking));
-        downloads.chain(tools).collect()
+            .map(|item| self.download_view(item))
+            .collect()
     }
 
     fn download_view(&self, item: &ManifestItem) -> SetupItemView {
@@ -167,7 +160,6 @@ impl SetupService {
         SetupItemView {
             id: item.id.clone(),
             group: group_of(item),
-            kind: SetupKind::Download,
             version: Some(item.version.clone()),
             state: if installed {
                 ItemState::Ready
@@ -180,17 +172,6 @@ impl SetupService {
                 fetch.received()
             },
             total: item.size,
-        }
-    }
-
-    fn publish_tools(&self, items: &mut [SetupItemView], sink: &dyn SetupSink) {
-        let probes = self.status.snapshot();
-        for view in items
-            .iter_mut()
-            .filter(|view| view.kind == SetupKind::Detect)
-        {
-            *view = tool_view(&view.id, &probes);
-            sink.emit(SetupEvent::Item { item: view.clone() });
         }
     }
 
@@ -309,28 +290,6 @@ fn group_of(item: &ManifestItem) -> SetupGroup {
     match item.group {
         ItemGroup::Runtime => SetupGroup::Runtime,
         ItemGroup::Toolbox => SetupGroup::Toolbox,
-    }
-}
-
-fn detect_view(id: &str, version: Option<String>, state: ItemState) -> SetupItemView {
-    SetupItemView {
-        id: id.to_string(),
-        group: SetupGroup::Toolbox,
-        kind: SetupKind::Detect,
-        version,
-        state,
-        received: 0,
-        total: 0,
-    }
-}
-
-fn tool_view(id: &str, probes: &BTreeMap<String, CliProbe>) -> SetupItemView {
-    match probes.get(id) {
-        Some(probe) if probe.found => {
-            let version = Some(probe.version.clone()).filter(|value| !value.is_empty());
-            detect_view(id, version, ItemState::Ready)
-        }
-        _ => detect_view(id, None, ItemState::Missing),
     }
 }
 

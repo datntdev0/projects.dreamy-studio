@@ -8,9 +8,11 @@ const TEST_SPEC: CliSpec = CliSpec {
     name: "Tool CLI",
     caps: &["knowledge"],
     profile_env: Some("DREAMY_TEST_PROFILE"),
+    env: &[],
     login_args: &["login"],
     logout_args: Some(&["logout"]),
     status_args: Some(&["status"]),
+    token_file: None,
 };
 
 const PLAIN_SPEC: CliSpec = CliSpec {
@@ -19,9 +21,11 @@ const PLAIN_SPEC: CliSpec = CliSpec {
     name: "Plain CLI",
     caps: &["knowledge"],
     profile_env: None,
+    env: &[],
     login_args: &[],
     logout_args: None,
     status_args: None,
+    token_file: None,
 };
 
 fn script(dir: &TempDir, name: &str, version: &str, code: i32) -> String {

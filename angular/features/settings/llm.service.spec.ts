@@ -18,6 +18,7 @@ function cli(id: string, overrides: Partial<LlmCliView> = {}): LlmCliView {
     canLogout: true,
     canDetectLogin: false,
     path: '',
+    install: { state: 'installed', version: '1.0', receivedBytes: 1, totalBytes: 1, error: '' },
     probe: null,
     ...overrides,
   };

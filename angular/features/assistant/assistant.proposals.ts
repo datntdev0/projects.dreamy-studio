@@ -1,7 +1,7 @@
 import { LanguageKey } from '@shared/language/language.models';
 
 // prettier-ignore
-import { DictProposal, FindingCategory, FindingSeverity, KnowledgeChangeOp, MarkedText, PipelineJobKind, PipelineRun, ProposalStatus, ScriptDraft, TranslationFinding, TranslationReview } from './assistant.models';
+import { DictProposal, FindingCategory, FindingSeverity, InlineDiff, KnowledgeChangeOp, MarkedText, PipelineJobKind, PipelineRun, ProposalStatus, ScriptDraft, TranslationFinding, TranslationReview } from './assistant.models';
 
 export const SEVERITY_KEYS: Record<FindingSeverity, LanguageKey> = {
   error: 'assistant.review.severity.error',
@@ -72,6 +72,25 @@ export function markText(text: string, needle: string): MarkedText {
     return { before: text, mark: '', after: '' };
   }
   return { before: text.slice(0, index), mark: needle, after: text.slice(index + needle.length) };
+}
+
+export function inlineDiff(finding: TranslationFinding): InlineDiff {
+  const current = markText(finding.current, finding.from);
+  if (current.mark !== '') {
+    return {
+      before: current.before,
+      removed: current.mark,
+      added: finding.to,
+      after: current.after,
+    };
+  }
+  const suggested = markText(finding.suggested, finding.to);
+  return {
+    before: suggested.before,
+    removed: '',
+    added: suggested.mark,
+    after: suggested.after,
+  };
 }
 
 export function pendingIds(review: TranslationReview): string[] {

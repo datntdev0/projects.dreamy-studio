@@ -14,7 +14,7 @@ import {
   Translatable,
 } from '../setup.models';
 // prettier-ignore
-import { durationText, errorKey, groupKey, groupsOf, isBusy, itemIcon, itemNameKey, itemPercent, itemRoleKey, missingOf, receivedBytes, receivedOf, remainingSeconds, setupPercent, stateIcon, stateKey, titleKey, totalBytes } from '../setup.rules';
+import { durationText, errorKey, groupKey, groupsOf, isBusy, itemIcon, itemNameKey, itemPercent, itemRoleKey, receivedBytes, receivedOf, remainingSeconds, setupPercent, stateIcon, stateKey, titleKey, totalBytes } from '../setup.rules';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,14 +32,12 @@ export class SetupCard {
   readonly continued = output<void>();
   readonly quit = output<void>();
   readonly offlineImported = output<void>();
-  readonly guideOpened = output<SetupItemId>();
 
   readonly status = computed(() => this.state().status);
   readonly busy = computed(() => isBusy(this.status()));
   readonly percent = computed(() => setupPercent(this.state()));
   readonly title = computed(() => titleKey(this.status()));
   readonly groups = computed(() => groupsOf(this.state().items));
-  readonly missingCount = computed(() => missingOf(this.state().items).length);
   readonly totalText = computed(() => formatBytes(totalBytes(this.state().items)));
   readonly receivedText = computed(() => formatBytes(receivedBytes(this.state().items)));
   readonly speedText = computed(() => `${formatBytes(this.state().speed)}/s`);

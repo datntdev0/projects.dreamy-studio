@@ -1,6 +1,7 @@
 pub mod backend;
 pub mod check;
 pub mod home;
+pub mod install;
 pub mod llm;
 pub mod models;
 pub mod probe;

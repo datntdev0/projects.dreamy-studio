@@ -306,6 +306,7 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
         canLogout: true,
         canDetectLogin: true,
         path: '',
+        install: { state: 'installed', version: '1.0', receivedBytes: 1, totalBytes: 1, error: '' },
         probe: {
           id: 'claude',
           found: true,
@@ -330,6 +331,7 @@ export function installWorld(ipc: FakeIpc): FakeIpc {
         canLogout: false,
         canDetectLogin: false,
         path: 'C:/custom',
+        install: { state: 'installed', version: '1.0', receivedBytes: 1, totalBytes: 1, error: '' },
         probe: null,
       },
     ],

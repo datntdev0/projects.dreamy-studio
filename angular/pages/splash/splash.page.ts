@@ -5,8 +5,6 @@ import { Button } from '@components/button';
 import { Icon } from '@components/icon';
 import { SetupCard } from '@features/setup/components/setup-card.component';
 import { StepsCard } from '@features/setup/components/steps-card.component';
-import { SetupItemId } from '@features/setup/setup.models';
-import { guideUrl } from '@features/setup/setup.rules';
 import { SetupService } from '@features/setup/setup.service';
 import { WorkspaceLoading } from '@features/workspace/components/loading.component';
 import { RecentWorkspaceList } from '@features/workspace/components/recent.component';
@@ -14,7 +12,6 @@ import { AppInfo, RecentWorkspace } from '@features/workspace/workspace.models';
 import { WorkspaceService } from '@features/workspace/workspace.service';
 import { CoreModule } from '@shared/core.module';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
-import { openUrl } from '@tauri-apps/plugin-opener';
 
 import { SplashTools } from './splash-tools.component';
 
@@ -63,11 +60,6 @@ export class SplashPage implements OnInit {
 
   retryStartup(): void {
     void this.setup.runStartup();
-  }
-
-  openGuide(id: SetupItemId): void {
-    const url = guideUrl(id);
-    if (url) void openUrl(url);
   }
 
   openLogs(): void {

@@ -126,10 +126,10 @@ describe('AssistantScriptDraftCard', () => {
       const mounted = await mountCard(scriptDraft());
       const rows = allById(mounted.root, 'assistant-script-draft-row');
       expect(rows).toHaveLength(3);
-      expect(rows[0].classList.contains('is-del')).toBe(true);
+      expect(rows[0].dataset['kind']).toBe('removed');
       expect(rows[0].dataset['kind']).toBe('removed');
       expect(rows[0].textContent).toContain('Old line');
-      expect(rows[1].classList.contains('is-ins')).toBe(true);
+      expect(rows[1].dataset['kind']).toBe('added');
       expect(rows[1].dataset['type']).toBe('dialogue');
       expect(rows[1].textContent).toContain('Lin Mo');
       expect(rows[1].textContent).toContain('(softly)');
@@ -171,7 +171,7 @@ describe('AssistantScriptDraftCard', () => {
       const mounted = await mountCard(reordered);
       const rows = allById(mounted.root, 'assistant-script-draft-row');
       expect(rows).toHaveLength(1);
-      expect(rows[0].classList.contains('is-move')).toBe(true);
+      expect(rows[0].dataset['kind']).toBe('moved');
       expect(textOf(mounted, 'assistant-script-draft-moved')).toBe(
         translate('assistant.draft.moved', { count: 1 }),
       );

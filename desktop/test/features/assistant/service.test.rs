@@ -2038,3 +2038,19 @@ fn a_script_rewrite_of_an_unknown_unit_or_without_a_script_is_invalid() {
     assert_eq!(code(no_script), AssistantErrorCode::Invalid);
     assert!(fixture.llm.calls().is_empty());
 }
+
+#[test]
+fn the_service_reports_the_quota_of_its_llm() {
+    let llm = Arc::new(FakeLlm::new());
+    let service = AssistantService::new(llm.clone(), McpGrants::new());
+    let snapshot = QuotaSnapshot {
+        provider: "Codex".to_string(),
+        plan: Some("Plus".to_string()),
+        updated_at: "2026-11-25T00:00:00+00:00".to_string(),
+        quotas: Vec::new(),
+    };
+
+    assert_eq!(service.quota(), None);
+    llm.set_quota(snapshot.clone());
+    assert_eq!(service.quota(), Some(snapshot));
+}

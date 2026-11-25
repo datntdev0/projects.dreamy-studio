@@ -176,36 +176,9 @@ app-steps-card {
 .rs-part[data-state='error'] .rs-part-bar > i {
   background: var(--danger);
 }
-.rs-part[data-kind='detect'] {
-  padding-top: var(--sp-sm);
-  padding-bottom: var(--sp-sm);
-}
-.rs-part[data-kind='detect'] .rs-part-icon {
-  width: 30px;
-  height: 30px;
-}
-.rs-part[data-state='checking'] .rs-part-state {
-  color: var(--ink);
-}
-.rs-part[data-state='missing'] .rs-part-state,
-.rs-part[data-state='missing'] .rs-part-icon {
-  color: var(--warning);
-}
 .rs-group {
   display: grid;
   gap: var(--sp-sm);
-}
-.rs-link {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--primary);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.rs-link:hover {
-  text-decoration: underline;
 }
 .rs-steps {
   list-style: none;

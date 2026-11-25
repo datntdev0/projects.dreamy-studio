@@ -39,240 +39,103 @@
             </header>
             <div class="llm-meta">
               <span class="path t-mute">{{ p.command }}</span>
-            </div>
-            <div class="llm-steps">
-              <div
-                class="llm-step"
-                [class.is-done]="p.found"
-                [class.is-todo]="!p.found"
-                [attr.data-testid]="'settings-llm-' + p.id + '-install'"
-              >
-                <span class="llm-n">
-                  @if (p.found) {
-                    <ds-icon name="check" [size]="13" />
-                  } @else {
-                    1
-                  }
+              @if (p.install.version) {
+                <span
+                  class="t-sm t-mute mono"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-version'"
+                >
+                  v{{ p.install.version }}
                 </span>
-                <div class="llm-step-b">
-                  <div class="llm-step-t">
-                    <b>{{ 'settings.llm.install' | t }}</b>
-                    @if (p.found) {
-                      <ds-badge tone="success">{{ 'settings.llm.install.found' | t }}</ds-badge>
-                    } @else {
-                      <ds-badge tone="warning">{{ 'settings.llm.install.notFound' | t }}</ds-badge>
-                      <span class="t-sm t-mute">
-                        {{ 'settings.llm.install.notInPath' | t: { command: p.command } }}
-                      </span>
-                    }
-                  </div>
-                  @if (p.found) {
-                    <div class="field">
-                      <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-path'">
-                        {{ 'settings.llm.path' | t }}
-                      </label>
-                      <div class="llm-row">
-                        <input
-                          #pathInput
-                          [id]="'settings-llm-' + p.id + '-path'"
-                          class="input mono-in"
-                          [attr.data-testid]="'settings-llm-' + p.id + '-path'"
-                          [value]="p.path || p.resolvedPath"
-                          autocomplete="off"
-                          spellcheck="false"
-                          (change)="onPath(p, pathInput.value)"
-                        />
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-icon"
-                          [attr.aria-label]="'settings.llm.copyPath' | t"
-                          [attr.data-testid]="'settings-llm-' + p.id + '-copy'"
-                          (click)="copyPath(p)"
-                        >
-                          <ds-icon name="copy" [size]="16" />
-                        </button>
-                      </div>
-                    </div>
-                  } @else {
-                    <div class="llm-guide">
-                      <span>{{ 'settings.llm.install.guide' | t }}</span>
-                      <div class="field">
-                        <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-manual'">
-                          {{ 'settings.llm.path' | t }}
-                        </label>
-                        <div class="llm-row">
-                          <input
-                            #manual
-                            [id]="'settings-llm-' + p.id + '-manual'"
-                            class="input mono-in"
-                            [attr.data-testid]="'settings-llm-' + p.id + '-manual'"
-                            [value]="p.path"
-                            [placeholder]="'C:\\...\\' + p.command + '.cmd'"
-                            autocomplete="off"
-                            spellcheck="false"
-                            (keydown.enter)="onPath(p, manual.value)"
-                          />
-                          <button
-                            type="button"
-                            class="btn btn-sm"
-                            [attr.data-testid]="'settings-llm-' + p.id + '-usepath'"
-                            (click)="onPath(p, manual.value)"
-                          >
-                            {{ 'settings.llm.usePath' | t }}
-                          </button>
-                        </div>
-                      </div>
-                      @if (p.error) {
-                        <span
-                          class="field-err"
-                          [attr.data-testid]="'settings-llm-' + p.id + '-path-error'"
-                        >
-                          {{ p.error }}
-                        </span>
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
-              @if (!p.found) {
-                <div
-                  class="llm-step is-locked"
-                  [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'"
-                >
-                  <span class="llm-n"><ds-icon name="lock" [size]="13" /></span>
-                  <div class="llm-step-b">
-                    <div class="llm-step-t">
-                      <b>{{ 'settings.llm.signin' | t }}</b>
-                      <span class="t-sm t-mute">{{ 'settings.llm.signin.locked' | t }}</span>
-                    </div>
-                  </div>
-                </div>
-              } @else {
-                <div
-                  class="llm-step"
-                  [class.is-done]="p.signedIn === true"
-                  [class.is-todo]="p.signedIn === false"
-                  [attr.data-testid]="'settings-llm-' + p.id + '-signin-step'"
-                >
-                  <span class="llm-n">
-                    @if (p.signedIn === true) {
-                      <ds-icon name="check" [size]="13" />
-                    } @else {
-                      2
-                    }
-                  </span>
-                  <div class="llm-step-b">
-                    <div class="llm-step-t">
-                      <b>{{ 'settings.llm.signin' | t }}</b>
-                      @if (p.signedIn === true) {
-                        <ds-badge tone="success">{{ 'settings.llm.signin.done' | t }}</ds-badge>
-                        @if (p.account) {
-                          <span
-                            class="t-sm t-mute"
-                            [attr.data-testid]="'settings-llm-' + p.id + '-account'"
-                          >
-                            {{ p.account }}
-                          </span>
-                        }
-                      } @else if (p.signedIn === false) {
-                        <ds-badge tone="warning">
-                          {{
-                            p.signing
-                              ? ('settings.llm.signin.waiting' | t)
-                              : ('settings.llm.status.notSignedIn' | t)
-                          }}
-                        </ds-badge>
-                      } @else {
-                        <span class="t-sm t-mute">{{ 'settings.llm.signin.unknown' | t }}</span>
-                      }
-                    </div>
-                    @if (p.signedIn === false) {
-                      <div class="llm-guide">
-                        <span>
-                          {{
-                            (p.profileDir
-                              ? 'settings.llm.signin.guide'
-                              : 'settings.llm.signin.guidePlain'
-                            ) | t: { command: p.loginCommand }
-                          }}
-                        </span>
-                      </div>
-                    } @else if (p.signedIn === null && p.status !== 'checking') {
-                      <div class="llm-guide">
-                        <span>
-                          {{ 'settings.llm.signin.guideUnknown' | t: { command: p.loginCommand } }}
-                        </span>
-                      </div>
-                    }
-                    @if (p.profileDir) {
-                      <div class="field">
-                        <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-profile'">
-                          {{ 'settings.llm.profile' | t }}
-                        </label>
-                        <div class="llm-row">
-                          <input
-                            [id]="'settings-llm-' + p.id + '-profile'"
-                            class="input mono-in"
-                            readonly
-                            [value]="p.profileDir"
-                            [attr.data-testid]="'settings-llm-' + p.id + '-profile'"
-                          />
-                          <button
-                            type="button"
-                            class="btn btn-sm btn-icon"
-                            [attr.aria-label]="'settings.llm.profile.open' | t"
-                            [attr.data-testid]="'settings-llm-' + p.id + '-profile-open'"
-                            (click)="openProfile(p)"
-                          >
-                            <ds-icon name="folder-open" [size]="16" />
-                          </button>
-                        </div>
-                        <span class="field-hint">
-                          {{ 'settings.llm.profile.hint' | t: { env: p.profileEnv ?? '' } }}
-                        </span>
-                      </div>
-                    } @else {
-                      <span class="field-hint">{{ 'settings.llm.profile.shared' | t }}</span>
-                    }
-                  </div>
-                </div>
+              }
+              @if (installed(p) && p.signedIn === true && p.account) {
+                <span class="t-sm t-mute" [attr.data-testid]="'settings-llm-' + p.id + '-account'">
+                  {{ p.account }}
+                </span>
               }
             </div>
-            @if (p.status === 'error' && p.error) {
-              <div
-                class="llm-err"
-                role="alert"
-                [attr.data-testid]="'settings-llm-' + p.id + '-error'"
-              >
-                <ds-icon name="alert" [size]="14" />
-                <span>{{ p.error }}</span>
-              </div>
-            }
-            <footer class="llm-foot">
-              @let msg = message(p);
-              <div
-                class="llm-msg t-sm"
-                [class.is-ok]="msg.tone === 'ok'"
-                [class.is-warn]="msg.tone === 'warn'"
-                role="status"
-                [attr.data-testid]="'settings-llm-' + p.id + '-status'"
-              >
-                @switch (msg.tone) {
-                  @case ('ok') {
-                    <ds-icon name="check" [size]="14" />
-                  }
-                  @case ('warn') {
-                    <ds-icon name="alert" [size]="14" />
-                  }
-                  @default {
-                    @if (p.status === 'checking' || p.signing) {
-                      <span class="dot dot-running"></span>
+            @if (installed(p)) {
+              @if (p.signedIn === false) {
+                <div class="llm-guide" [attr.data-testid]="'settings-llm-' + p.id + '-guide'">
+                  <span>
+                    {{
+                      (p.profileDir
+                        ? 'settings.llm.signin.guide'
+                        : 'settings.llm.signin.guidePlain'
+                      ) | t: { command: p.loginCommand }
+                    }}
+                  </span>
+                </div>
+              } @else if (p.signedIn === null && p.status !== 'checking') {
+                <div class="llm-guide" [attr.data-testid]="'settings-llm-' + p.id + '-guide'">
+                  <span>
+                    {{ 'settings.llm.signin.guideUnknown' | t: { command: p.loginCommand } }}
+                  </span>
+                </div>
+              }
+              @if (p.profileDir) {
+                <div class="field">
+                  <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-profile'">
+                    {{ 'settings.llm.profile' | t }}
+                  </label>
+                  <div class="llm-row">
+                    <input
+                      [id]="'settings-llm-' + p.id + '-profile'"
+                      class="input mono-in"
+                      readonly
+                      [value]="p.profileDir"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-profile'"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-icon"
+                      [attr.aria-label]="'settings.llm.profile.open' | t"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-profile-open'"
+                      (click)="openProfile(p)"
+                    >
+                      <ds-icon name="folder-open" [size]="16" />
+                    </button>
+                  </div>
+                  <span class="field-hint">
+                    {{ 'settings.llm.profile.hint' | t: { env: p.profileEnv ?? '' } }}
+                  </span>
+                </div>
+              } @else {
+                <span class="field-hint">{{ 'settings.llm.profile.shared' | t }}</span>
+              }
+              @if (p.status === 'error' && p.error) {
+                <div
+                  class="llm-err"
+                  role="alert"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-error'"
+                >
+                  <ds-icon name="alert" [size]="14" />
+                  <span>{{ p.error }}</span>
+                </div>
+              }
+              <footer class="llm-foot">
+                @let msg = message(p);
+                <div
+                  class="llm-msg t-sm"
+                  [class.is-ok]="msg.tone === 'ok'"
+                  [class.is-warn]="msg.tone === 'warn'"
+                  role="status"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-status'"
+                >
+                  @switch (msg.tone) {
+                    @case ('ok') {
+                      <ds-icon name="check" [size]="14" />
+                    }
+                    @case ('warn') {
+                      <ds-icon name="alert" [size]="14" />
+                    }
+                    @default {
+                      @if (p.status === 'checking' || p.signing) {
+                        <span class="dot dot-running"></span>
+                      }
                     }
                   }
-                }
-                <span>{{ msg.key | t: msg.params }}</span>
-              </div>
-              @if (p.found) {
+                  <span>{{ msg.key | t: msg.params }}</span>
+                </div>
                 @if (p.signedIn === true && p.canLogout) {
                   <button
                     type="button"
@@ -307,8 +170,93 @@
                   <ds-icon name="refresh" [size]="16" />
                   {{ 'settings.llm.check' | t }}
                 </button>
+              </footer>
+            } @else {
+              <div class="llm-guide" [attr.data-testid]="'settings-llm-' + p.id + '-install-guide'">
+                <span>
+                  {{
+                    'settings.llm.install.guide'
+                      | t
+                        : { name: p.name, version: p.install.version, size: installSize(p.install) }
+                  }}
+                </span>
+              </div>
+              @if (p.install.state === 'error') {
+                <div
+                  class="llm-err"
+                  role="alert"
+                  [attr.data-testid]="'settings-llm-' + p.id + '-install-error'"
+                >
+                  <ds-icon name="alert" [size]="14" />
+                  <span>{{ p.install.error || ('settings.llm.install.failed' | t) }}</span>
+                </div>
               }
-            </footer>
+              <footer class="llm-foot">
+                @switch (p.install.state) {
+                  @case ('downloading') {
+                    <div
+                      class="be-dl llm-dl"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-install-progress'"
+                    >
+                      <div
+                        class="be-progress"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        [attr.aria-valuenow]="installPercent(p.install)"
+                        [attr.aria-label]="'settings.llm.install.progress' | t: { name: p.name }"
+                      >
+                        <i [style.width.%]="installPercent(p.install)"></i>
+                      </div>
+                      <span
+                        class="t-sm t-mute mono"
+                        [attr.data-testid]="'settings-llm-' + p.id + '-install-progress-text'"
+                      >
+                        {{ 'settings.backend.progress' | t: installProgress(p.install) }}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-install-cancel'"
+                      (click)="cancelInstall(p)"
+                    >
+                      {{ 'settings.backend.cancel' | t }}
+                    </button>
+                  }
+                  @case ('error') {
+                    <span class="spacer"></span>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-primary"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-install-retry'"
+                      (click)="install(p)"
+                    >
+                      <ds-icon name="refresh" [size]="16" />
+                      {{ 'settings.backend.retry' | t }}
+                    </button>
+                  }
+                  @default {
+                    <span
+                      class="llm-msg t-sm"
+                      role="status"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-install-hint'"
+                    >
+                      {{ 'settings.llm.install.hint' | t }}
+                    </span>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-primary"
+                      [attr.data-testid]="'settings-llm-' + p.id + '-install'"
+                      (click)="install(p)"
+                    >
+                      <ds-icon name="download" [size]="16" />
+                      {{ 'settings.backend.download' | t }}
+                    </button>
+                  }
+                }
+              </footer>
+            }
           </article>
         }
       </section>

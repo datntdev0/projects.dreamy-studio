@@ -1,8 +1,9 @@
 use crate::features::settings::llm::CliSpec;
+use crate::infra::startup::manifest::installed_executable;
+use crate::shared::config;
 use crate::shared::process::failure_snippet;
 use crate::shared::process::hide_window;
 use serde::Serialize;
-use std::ffi::OsStr;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
@@ -24,8 +25,6 @@ const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
 #[serde(rename_all = "camelCase")]
 pub struct CliProbe {
     pub id: String,
-    pub found: bool,
-    pub path: String,
     pub version: String,
     pub ok: bool,
     pub signed_in: Option<bool>,
@@ -36,11 +35,9 @@ pub struct CliProbe {
 }
 
 impl CliProbe {
-    fn new(spec: &CliSpec, found: bool, path: String) -> Self {
+    fn new(spec: &CliSpec) -> Self {
         Self {
             id: spec.id.to_string(),
-            found,
-            path,
             version: String::new(),
             ok: false,
             signed_in: None,
@@ -59,8 +56,8 @@ struct Captured {
     stderr: String,
 }
 
-pub fn probe(spec: &CliSpec, configured: &str, data_dir: &Path) -> CliProbe {
-    let mut result = run_probe(spec, configured, data_dir);
+pub fn probe(spec: &CliSpec, data_dir: &Path) -> CliProbe {
+    let mut result = run_probe(spec, data_dir);
     result.checked_at_ms = now_ms();
     result
 }
@@ -72,15 +69,15 @@ fn now_ms() -> u64 {
     }
 }
 
-fn run_probe(spec: &CliSpec, configured: &str, data_dir: &Path) -> CliProbe {
-    let Some(path) = locate(spec, configured) else {
-        let mut result = CliProbe::new(spec, false, configured.to_string());
-        if !configured.is_empty() {
-            result.error = format!("File not found: {configured}");
+fn run_probe(spec: &CliSpec, data_dir: &Path) -> CliProbe {
+    let mut result = CliProbe::new(spec);
+    let path = match installed(spec) {
+        Ok(path) => path,
+        Err(error) => {
+            result.error = error;
+            return result;
         }
-        return result;
     };
-    let mut result = CliProbe::new(spec, true, path.to_string_lossy().into_owned());
     let started = Instant::now();
     match prepare(spec, data_dir) {
         Ok(()) => fill(&mut result, spec, &path, data_dir),
@@ -104,6 +101,10 @@ fn fill(result: &mut CliProbe, spec: &CliSpec, path: &Path, data_dir: &Path) {
     };
     result.ok = true;
     result.version = parse_version(&version.stdout_or_stderr());
+    if let Some(token) = spec.token_path(data_dir) {
+        result.signed_in = Some(token.is_file());
+        return;
+    }
     let Some(status_args) = spec.status_args else {
         return;
     };
@@ -120,30 +121,38 @@ fn fill(result: &mut CliProbe, spec: &CliSpec, path: &Path, data_dir: &Path) {
     }
 }
 
-pub fn login(spec: &CliSpec, configured: &str, data_dir: &Path) -> Result<(), String> {
-    let path =
-        locate(spec, configured).ok_or_else(|| format!("{} was not found.", spec.command))?;
+pub fn login(spec: &CliSpec, data_dir: &Path) -> Result<Child, String> {
+    let path = installed(spec)?;
     prepare(spec, data_dir)?;
     let mut command = command(spec, &path, spec.login_args, data_dir);
     open_terminal(&mut command);
     command
         .spawn()
-        .map(|_| ())
         .map_err(|error| format!("Could not open the terminal: {error}"))
 }
 
-pub fn logout(spec: &CliSpec, configured: &str, data_dir: &Path) -> Result<(), String> {
+pub fn logout(spec: &CliSpec, data_dir: &Path) -> Result<(), String> {
+    if let Some(token) = spec.token_path(data_dir) {
+        return remove_token(&token);
+    }
     let args = spec
         .logout_args
         .ok_or_else(|| format!("{} cannot sign out from here.", spec.name))?;
-    let path =
-        locate(spec, configured).ok_or_else(|| format!("{} was not found.", spec.command))?;
+    let path = installed(spec)?;
     prepare(spec, data_dir)?;
     let output = capture(command(spec, &path, args, data_dir))?;
     if output.success {
         Ok(())
     } else {
         Err(failure_detail(&output))
+    }
+}
+
+fn remove_token(token: &Path) -> Result<(), String> {
+    match std::fs::remove_file(token) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("Could not remove {}: {error}", token.display())),
     }
 }
 
@@ -163,51 +172,18 @@ fn command(spec: &CliSpec, path: &Path, args: &[&str], data_dir: &Path) -> Comma
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    if let Some(name) = spec.profile_env {
-        command.env(name, spec.profile_dir(data_dir));
-    }
+    spec.configure(&mut command, data_dir);
     hide_window(&mut command);
     command
 }
 
-pub fn locate(spec: &CliSpec, configured: &str) -> Option<PathBuf> {
-    if configured.is_empty() {
-        let search = std::env::var_os("PATH")?;
-        let extensions = std::env::var("PATHEXT").unwrap_or_default();
-        return resolve_command(spec.command, &search, &extensions);
-    }
-    let path = PathBuf::from(configured);
-    path.is_file().then_some(path)
-}
-
-pub fn resolve_command(command: &str, search: &OsStr, pathext: &str) -> Option<PathBuf> {
-    let suffixes = executable_suffixes(pathext);
-    std::env::split_paths(search)
-        .flat_map(|directory| {
-            suffixes
-                .iter()
-                .map(|suffix| directory.join(format!("{command}{suffix}")))
-                .collect::<Vec<_>>()
-        })
-        .find(|candidate| candidate.is_file())
-}
-
-fn executable_suffixes(pathext: &str) -> Vec<String> {
-    if !cfg!(windows) {
-        return vec![String::new()];
-    }
-    let configured = pathext
-        .split(';')
-        .filter(|suffix| !suffix.is_empty())
-        .map(str::to_lowercase);
-    let defaults = [".exe", ".cmd", ".bat", ".com"].map(String::from);
-    let mut suffixes: Vec<String> = Vec::new();
-    for suffix in defaults.into_iter().chain(configured) {
-        if !suffixes.contains(&suffix) && !matches!(suffix.as_str(), ".vbs" | ".js" | ".msc") {
-            suffixes.push(suffix);
-        }
-    }
-    suffixes
+pub fn installed(spec: &CliSpec) -> Result<PathBuf, String> {
+    installed_executable(config::current(), spec.id).ok_or_else(|| {
+        format!(
+            "{} is not installed; download it in Settings > LLM.",
+            spec.name
+        )
+    })
 }
 
 fn capture(mut command: Command) -> Result<Captured, String> {

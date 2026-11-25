@@ -47,6 +47,7 @@ use crate::features::pipeline::models::PipelineSnapshot;
 use crate::features::pipeline::models::PipelineStatus;
 use crate::features::pipeline::models::PipelineTask;
 use crate::features::pipeline::models::TaskStatus;
+use crate::features::pipeline::usage::QuotaSnapshot;
 use crate::features::project::models::ProjectModuleState;
 use crate::features::project::models::ProjectPatch;
 use crate::features::project::models::ProjectSummary;
@@ -1476,6 +1477,7 @@ pub struct FakeLlm {
     forgotten: Mutex<Vec<String>>,
     hook: Mutex<Option<Hook>>,
     started: Mutex<usize>,
+    quota: Mutex<Option<QuotaSnapshot>>,
 }
 
 impl FakeLlm {
@@ -1487,6 +1489,7 @@ impl FakeLlm {
             forgotten: Mutex::new(Vec::new()),
             hook: Mutex::new(None),
             started: Mutex::new(0),
+            quota: Mutex::new(None),
         }
     }
 
@@ -1504,6 +1507,10 @@ impl FakeLlm {
 
     pub fn push_error(&self, message: &str) {
         guard(&self.replies).push_back(Err(message.to_string()));
+    }
+
+    pub fn set_quota(&self, snapshot: QuotaSnapshot) {
+        *guard(&self.quota) = Some(snapshot);
     }
 
     pub fn set_hook(&self, hook: impl Fn(&str) + Send + Sync + 'static) {
@@ -1582,6 +1589,10 @@ impl AssistantLlm for FakeLlm {
 
     fn forget(&self, session: &str) {
         guard(&self.forgotten).push(session.to_string());
+    }
+
+    fn quota(&self) -> Option<QuotaSnapshot> {
+        guard(&self.quota).clone()
     }
 }
 

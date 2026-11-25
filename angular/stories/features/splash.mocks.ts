@@ -147,7 +147,7 @@ export class SplashFlowDemo {
   readonly failure = input<FlowFailure>('none');
 
   readonly stage = signal<FlowStage>('setup');
-  readonly setup = signal(new SetupSimulation({ installed: false, missing: [], failure: null }));
+  readonly setup = signal(new SetupSimulation({ installed: false, failure: null }));
   readonly startup = signal(new StepsSimulation(startupScenario('none')));
   readonly opening = signal<StepsSimulation | null>(null);
   readonly opened = signal<string | null>(null);
@@ -166,7 +166,6 @@ export class SplashFlowDemo {
     this.setup.set(
       new SetupSimulation({
         installed: !this.firstLaunch(),
-        missing: this.firstLaunch() ? ['antigravity'] : [],
         failure: SETUP_FAILURES[this.failure()] ?? null,
       }),
     );
@@ -216,7 +215,7 @@ export class SplashFlowDemo {
   private tickSetup(): void {
     const setup = this.setup();
     setup.tick();
-    if (setup.state().status !== 'ready' || setup.hasMissing()) {
+    if (setup.state().status !== 'ready') {
       this.ticks = 0;
       return;
     }

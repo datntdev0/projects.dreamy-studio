@@ -24,7 +24,8 @@ const DLL_EXTENSION: &str = "dll";
 pub struct InstallMarker {
     pub version: String,
     pub build: String,
-    pub sha256: String,
+    #[serde(alias = "sha256")]
+    pub digest: String,
 }
 
 impl InstallMarker {
@@ -32,7 +33,7 @@ impl InstallMarker {
         Self {
             version: item.version.clone(),
             build: item.build.clone(),
-            sha256: item.sha256.clone(),
+            digest: item.digest().to_string(),
         }
     }
 }
@@ -118,7 +119,14 @@ pub fn extract(item: &ManifestItem, archive: &Path, target: &Path) -> io::Result
     match item.format {
         ArchiveFormat::TarGz => extract_tar(item, archive, target),
         ArchiveFormat::Zip => extract_zip(item, archive, target),
+        ArchiveFormat::Raw => copy_raw(item, archive, target),
     }
+}
+
+fn copy_raw(item: &ManifestItem, archive: &Path, target: &Path) -> io::Result<()> {
+    let destination = target.join(&item.entry);
+    create_parent(&destination)?;
+    fs::copy(archive, destination).map(|_| ())
 }
 
 pub fn relative_target(item: &ManifestItem, name: &Path) -> Option<PathBuf> {

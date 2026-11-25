@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DictProposal, TranslationFinding, TranslationReview } from './assistant.models';
 // prettier-ignore
-import { canApplyDraft, canRun, changedDraftBlocks, countResolved, countSeverity, DRAFT_COLLAPSED_ROWS, draftSpeakerName, isNewSpeaker, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
+import { canApplyDraft, canRun, changedDraftBlocks, countResolved, countSeverity, DRAFT_COLLAPSED_ROWS, draftSpeakerName, inlineDiff, isNewSpeaker, markText, OP_ICONS, OP_KEYS, overwritesAudio, pendingIds, PIPELINE_MODE_KEYS, PIPELINE_RUN_KINDS, runItemIds, runKindOf, STATUS_KEYS } from './assistant.proposals';
 
 const finding = (
   id: string,
@@ -33,6 +33,16 @@ const entry = (id: string, status: DictProposal['status']): DictProposal => ({
 });
 
 describe('assistant.proposals', () => {
+  it('folds a finding into one inline diff', () => {
+    const base = finding('f', 'error', 'pending');
+    expect(
+      inlineDiff({ ...base, current: 'A cat sat', suggested: 'A dog sat', from: 'cat', to: 'dog' }),
+    ).toEqual({ before: 'A ', removed: 'cat', added: 'dog', after: ' sat' });
+    expect(
+      inlineDiff({ ...base, current: 'A sat', suggested: 'A dog sat', from: '', to: 'dog' }),
+    ).toEqual({ before: 'A ', removed: '', added: 'dog', after: ' sat' });
+  });
+
   it('marks text', () => {
     expect(markText('hello world', 'lo w')).toEqual({ before: 'hel', mark: 'lo w', after: 'orld' });
     expect(markText('hello', '')).toEqual({ before: 'hello', mark: '', after: '' });

@@ -20,6 +20,7 @@ use crate::features::library::service::LibraryService;
 use crate::features::novel::models::NovelError;
 use crate::features::novel::service::NovelService;
 use crate::features::pipeline::executor::PipelineExecutor;
+use crate::features::pipeline::usage::QuotaSnapshot;
 use crate::features::project::models::ProjectError;
 use crate::features::project::service::ProjectService;
 use crate::features::translation::service::TranslationService;
@@ -375,6 +376,13 @@ pub async fn assistant_session_delete<R: Runtime>(
         delete_session(service, session, &id)
     })
     .await
+}
+
+#[tauri::command]
+pub async fn assistant_quota_get<R: Runtime>(
+    app: AppHandle<R>,
+) -> AssistantResult<Option<QuotaSnapshot>> {
+    run_blocking(app, |service, _, _| Ok(service.quota())).await
 }
 
 #[cfg(test)]

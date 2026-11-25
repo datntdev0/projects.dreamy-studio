@@ -7,6 +7,22 @@ use tempfile::TempDir;
 const CLAUDE: &CliSpec = &crate::features::settings::llm::CLI_SPECS[0];
 const ANTIGRAVITY: &CliSpec = &crate::features::settings::llm::CLI_SPECS[1];
 const CODEX: &CliSpec = &crate::features::settings::llm::CLI_SPECS[2];
+const UNSUPPORTED: &CliSpec = &CliSpec {
+    id: "other",
+    command: "other",
+    name: "Other CLI",
+    caps: &["translation", "knowledge", "assistant"],
+    profile_env: None,
+    env: &[],
+    login_args: &[],
+    logout_args: None,
+    status_args: None,
+    token_file: None,
+};
+const TOOLS_OFF: Flags = Flags {
+    tools_off: true,
+    streamed: false,
+};
 
 fn job(passage: Option<usize>) -> TranslateJob {
     TranslateJob {
@@ -101,6 +117,17 @@ fn assistant_client(dir: &TempDir, provider: Option<(&str, &str)>) -> LlmClient 
     LlmClient::new(repository, "assistant", "assistant")
 }
 
+fn stream(text: &str) -> String {
+    [
+        r#"{"type":"system","subtype":"init","apiKeySource":"none"}"#.to_string(),
+        r#"{"type":"assistant","parent_tool_use_id":null,"message":{"model":"m1","usage":{"input_tokens":10,"cache_read_input_tokens":90,"output_tokens":5}}}"#.to_string(),
+        r#"{"type":"rate_limit_event","rate_limit_info":{"unifiedWindows":{"five_hour":{"utilization":0.25,"resetsAt":1795591200,"status":"allowed"},"seven_day":{"utilization":0.5,"resetsAt":1796068800,"status":"allowed_warning"}}}}"#.to_string(),
+        format!(r#"{{"type":"result","result":"{text}","modelUsage":{{"m1":{{"contextWindow":1000}}}}}}"#),
+    ]
+    .join("
+")
+}
+
 fn strings(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| item.to_string()).collect()
 }
@@ -182,9 +209,9 @@ fn codex_arguments_end_with_the_stdin_marker() {
 
 #[test]
 fn unsupported_provider_is_an_error() {
-    let error = invocation_args(ANTIGRAVITY, &FeatureSettings::default()).unwrap_err();
+    let error = invocation_args(UNSUPPORTED, &FeatureSettings::default()).unwrap_err();
 
-    assert!(error.contains("Antigravity CLI"));
+    assert!(error.contains("Other CLI"));
 }
 
 #[test]
@@ -397,18 +424,18 @@ fn client_rejects_a_cli_without_the_feature() {
 #[test]
 fn client_rejects_an_unsupported_cli_with_its_label() {
     let error = build_args(
-        ANTIGRAVITY,
+        UNSUPPORTED,
         &FeatureSettings::default(),
         "knowledge analysis",
         Mode::Once,
-        true,
+        TOOLS_OFF,
         &[],
     )
     .unwrap_err();
 
     assert_eq!(
         error,
-        "Antigravity CLI cannot be used for knowledge analysis yet."
+        "Other CLI cannot be used for knowledge analysis yet."
     );
 }
 
@@ -476,8 +503,8 @@ fn client_reports_the_cli_failure_detail() {
 fn claude_session_arguments_name_or_resume_the_session() {
     let feature = FeatureSettings::default();
 
-    let start = build_args(CLAUDE, &feature, "x", Mode::Start("abc"), true, &[]).unwrap();
-    let resume = build_args(CLAUDE, &feature, "x", Mode::Resume("abc"), true, &[]).unwrap();
+    let start = build_args(CLAUDE, &feature, "x", Mode::Start("abc"), TOOLS_OFF, &[]).unwrap();
+    let resume = build_args(CLAUDE, &feature, "x", Mode::Resume("abc"), TOOLS_OFF, &[]).unwrap();
 
     assert!(start.windows(2).any(|pair| pair == ["--session-id", "abc"]));
     assert!(resume.windows(2).any(|pair| pair == ["--resume", "abc"]));
@@ -489,8 +516,16 @@ fn claude_session_arguments_name_or_resume_the_session() {
 fn codex_session_arguments_read_json_and_resume_by_thread() {
     let feature = feature(Some("gpt"), None, None);
 
-    let start = build_args(CODEX, &feature, "x", Mode::Start("ignored"), true, &[]).unwrap();
-    let resume = build_args(CODEX, &feature, "x", Mode::Resume("thread-1"), true, &[]).unwrap();
+    let start = build_args(CODEX, &feature, "x", Mode::Start("ignored"), TOOLS_OFF, &[]).unwrap();
+    let resume = build_args(
+        CODEX,
+        &feature,
+        "x",
+        Mode::Resume("thread-1"),
+        TOOLS_OFF,
+        &[],
+    )
+    .unwrap();
 
     assert!(start.contains(&"--json".to_string()));
     assert!(!start.contains(&"--ephemeral".to_string()));
@@ -504,23 +539,21 @@ fn codex_session_arguments_read_json_and_resume_by_thread() {
 fn codex_json_events_give_the_thread_and_the_last_message() {
     let stdout = "{\"type\":\"thread.started\",\"thread_id\":\"t1\"}\nnot json\n{\"type\":\"item.completed\",\"item\":{\"type\":\"reasoning\",\"text\":\"hm\"}}\n{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"first\"}}\n{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"last\"}}\n";
 
-    let (text, session) = reply_of(CODEX, Mode::Start("x"), stdout.to_string()).unwrap();
+    let reply = reply_of(CODEX, Mode::Start("x"), false, stdout.to_string()).unwrap();
 
-    assert_eq!(text, "last");
-    assert_eq!(session.as_deref(), Some("t1"));
-    assert!(reply_of(CODEX, Mode::Resume("t1"), "{}\n".to_string()).is_err());
+    assert_eq!(reply.text.as_deref(), Some("last"));
+    assert_eq!(reply.session.as_deref(), Some("t1"));
+    assert!(reply_of(CODEX, Mode::Resume("t1"), false, "{}\n".to_string()).is_err());
 }
 
 #[test]
 fn plain_output_is_returned_as_is_without_a_session() {
-    let (text, session) = reply_of(CLAUDE, Mode::Start("x"), "hello".to_string()).unwrap();
+    let reply = reply_of(CLAUDE, Mode::Start("x"), false, "hello".to_string()).unwrap();
+    let once = reply_of(CODEX, Mode::Once, true, "plain".to_string()).unwrap();
 
-    assert_eq!(text, "hello");
-    assert_eq!(session, None);
-    assert_eq!(
-        reply_of(CODEX, Mode::Once, "plain".to_string()).unwrap().0,
-        "plain"
-    );
+    assert_eq!(reply.text.as_deref(), Some("hello"));
+    assert_eq!(reply.session, None);
+    assert_eq!(once.text.as_deref(), Some("plain"));
 }
 
 #[test]
@@ -684,7 +717,7 @@ fn extra_arguments_close_the_claude_arguments() {
         &feature(Some("sonnet"), None, Some("--verbose")),
         "x",
         Mode::Start("abc"),
-        true,
+        TOOLS_OFF,
         &strings(&["--mcp-config", "m.json"]),
     )
     .unwrap();
@@ -700,8 +733,8 @@ fn extra_arguments_precede_the_codex_resume_id_and_the_stdin_marker() {
     let extras = strings(&["-c", "mcp_servers.dreamy.enabled=true"]);
     let feature = feature(Some("gpt"), None, Some("--color never"));
 
-    let resume = build_args(CODEX, &feature, "x", Mode::Resume("t1"), true, &extras).unwrap();
-    let start = build_args(CODEX, &feature, "x", Mode::Start("x"), true, &extras).unwrap();
+    let resume = build_args(CODEX, &feature, "x", Mode::Resume("t1"), TOOLS_OFF, &extras).unwrap();
+    let start = build_args(CODEX, &feature, "x", Mode::Start("x"), TOOLS_OFF, &extras).unwrap();
 
     assert_eq!(
         resume[resume.len() - 5..],
@@ -717,7 +750,7 @@ fn extra_arguments_precede_the_codex_resume_id_and_the_stdin_marker() {
 fn empty_extras_leave_the_arguments_unchanged() {
     let feature = feature(Some("sonnet"), Some(Effort::High), Some("--verbose"));
 
-    let with = build_args(CLAUDE, &feature, "x", Mode::Once, true, &[]).unwrap();
+    let with = build_args(CLAUDE, &feature, "x", Mode::Once, TOOLS_OFF, &[]).unwrap();
 
     assert_eq!(with, invocation_args(CLAUDE, &feature).unwrap());
     assert!(with.windows(2).any(|pair| pair == ["--tools", ""]));
@@ -727,8 +760,8 @@ fn empty_extras_leave_the_arguments_unchanged() {
 fn claude_keeps_its_tools_off_only_when_asked() {
     let feature = FeatureSettings::default();
 
-    let off = build_args(CLAUDE, &feature, "x", Mode::Once, true, &[]).unwrap();
-    let on = build_args(CLAUDE, &feature, "x", Mode::Once, false, &[]).unwrap();
+    let off = build_args(CLAUDE, &feature, "x", Mode::Once, TOOLS_OFF, &[]).unwrap();
+    let on = build_args(CLAUDE, &feature, "x", Mode::Once, Flags::default(), &[]).unwrap();
 
     assert!(off.contains(&"--tools".to_string()));
     assert!(!on.contains(&"--tools".to_string()));
@@ -737,7 +770,7 @@ fn claude_keeps_its_tools_off_only_when_asked() {
 #[test]
 fn the_assistant_runs_claude_without_the_tools_flag() {
     let dir = TempDir::new().unwrap();
-    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one"]);
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &[&stream("one")]);
     let client = assistant_client(&dir, Some(("claude", &cli.path)));
 
     client
@@ -776,7 +809,7 @@ fn translation_and_knowledge_runs_keep_the_tools_flag() {
 #[test]
 fn start_with_and_resume_with_pass_extra_arguments_and_environment() {
     let dir = TempDir::new().unwrap();
-    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one", "two"]);
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &[&stream("one"), &stream("two")]);
     let client = assistant_client(&dir, Some(("claude", &cli.path)));
     let extras = Extras {
         args: strings(&["--mcp-config", "m.json"]),
@@ -815,7 +848,7 @@ fn start_with_and_resume_with_pass_extra_arguments_and_environment() {
 #[test]
 fn the_environment_is_left_alone_without_extras() {
     let dir = TempDir::new().unwrap();
-    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one"]);
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &[&stream("one")]);
     let client = assistant_client(&dir, Some(("claude", &cli.path)));
 
     client
@@ -861,4 +894,80 @@ fn provider_fails_when_none_is_set_or_the_cli_lacks_the_feature() {
         }
         other => panic!("unexpected result: {other:?}"),
     }
+}
+
+#[test]
+fn the_assistant_streams_claude_and_keeps_its_quota() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &[&stream("one")]);
+    let client = assistant_client(&dir, Some(("claude", &cli.path)));
+
+    let turn = client
+        .start(
+            "test",
+            "hi".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+    let quota = client.quota().unwrap();
+
+    assert!(cli.args(1).contains("--output-format stream-json"));
+    assert!(cli.args(1).contains("--verbose"));
+    assert_eq!(turn.text, "one");
+    assert_eq!(quota.provider, "Claude Code");
+    assert_eq!(quota.quotas.len(), 2);
+    assert_eq!(quota.quotas[1].used_percent, Some(50.0));
+}
+
+#[test]
+fn a_codex_assistant_turn_reads_its_rollout() {
+    let dir = TempDir::new().unwrap();
+    let events = r#"{"type":"thread.started","thread_id":"t9"}
+{"type":"item.completed","item":{"type":"agent_message","text":"done"}}"#;
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &[events]);
+    let client = assistant_client(&dir, Some(("codex", &cli.path)));
+    let day = dir.path().join("llm/codex/sessions/2026/11/25");
+    std::fs::create_dir_all(&day).unwrap();
+    std::fs::write(
+        day.join("rollout-2026-11-25T10-00-00-t9.jsonl"),
+        r#"{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"total_tokens":3200},"model_context_window":258400},"rate_limits":{"primary":{"used_percent":9.0,"window_minutes":300,"resets_at":1795276220},"plan_type":"plus"}}}"#,
+    )
+    .unwrap();
+
+    let turn = client
+        .start(
+            "test",
+            "hi".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+    let quota = client.quota().unwrap();
+
+    assert_eq!(turn.session, "t9");
+    assert_eq!(quota.provider, "Codex");
+    assert_eq!(quota.plan.as_deref(), Some("Plus"));
+}
+
+#[test]
+fn a_translation_run_leaves_the_quota_alone() {
+    let dir = TempDir::new().unwrap();
+    let cli = crate::testing::cli::ScriptedCli::new(dir.path(), &["one"]);
+    let client = client(&dir, Some(("claude", &cli.path)));
+
+    client
+        .start(
+            "test",
+            "hi".to_string(),
+            &TaskLog::none(),
+            &|_| {},
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+
+    assert!(cli.args(1).contains("--output-format text"));
+    assert!(client.quota().is_none());
 }

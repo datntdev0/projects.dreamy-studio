@@ -2,7 +2,6 @@ use crate::features::settings::llm::CLI_SPECS;
 use crate::features::settings::llm::spec;
 use crate::features::settings::probe::CliProbe;
 use crate::features::settings::probe::probe;
-use crate::features::settings::repository::SettingsRepository;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -41,24 +40,18 @@ impl LlmStatus {
 }
 
 pub struct LlmCheck {
-    repository: SettingsRepository,
     data_dir: PathBuf,
     status: LlmStatus,
 }
 
 impl LlmCheck {
-    pub fn new(repository: SettingsRepository, data_dir: PathBuf, status: LlmStatus) -> Self {
-        Self {
-            repository,
-            data_dir,
-            status,
-        }
+    pub fn new(data_dir: PathBuf, status: LlmStatus) -> Self {
+        Self { data_dir, status }
     }
 }
 
 impl LlmChecker for LlmCheck {
     fn check(&self, cancel: &AtomicBool) -> bool {
-        let settings = self.repository.load().unwrap_or_default().llm;
         let (sender, receiver) = mpsc::channel();
         let mut pending = 0;
         for id in CLI_SPECS.iter().map(|cli| cli.id) {
@@ -66,11 +59,10 @@ impl LlmChecker for LlmCheck {
                 continue;
             };
             let sender = sender.clone();
-            let configured = settings.provider(id).path().to_string();
             let data_dir = self.data_dir.clone();
             pending += 1;
             std::thread::spawn(move || {
-                let _ = sender.send(probe(cli, &configured, &data_dir));
+                let _ = sender.send(probe(cli, &data_dir));
             });
         }
         drop(sender);

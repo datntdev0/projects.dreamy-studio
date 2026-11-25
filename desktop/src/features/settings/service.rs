@@ -171,16 +171,6 @@ impl SettingsService {
         logout(spec, &self.data_dir())
     }
 
-    pub fn llm_profile_dir(&self, id: &str) -> Result<PathBuf, String> {
-        let spec = self.llm_target(id)?;
-        if spec.profile_env.is_none() {
-            return Err(format!("{} does not use an app profile.", spec.name));
-        }
-        let dir = spec.profile_dir(&self.data_dir());
-        std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
-        Ok(dir)
-    }
-
     fn llm_target(&self, id: &str) -> Result<&'static CliSpec, String> {
         spec(id).ok_or_else(|| format!("Unknown LLM provider: {id}"))
     }

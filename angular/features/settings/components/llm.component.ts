@@ -11,7 +11,7 @@ import { LanguageService } from '@shared/language/language.service';
 import { DownloadState } from '../backend.models';
 import { downloadPercent } from '../backend.rules';
 import { CLOUD_PROVIDERS, MODEL_SUGGESTIONS } from '../llm.providers';
-import { isInstalled, isReady, LlmService } from '../llm.service';
+import { isInstalled, LlmService } from '../llm.service';
 // prettier-ignore
 import { LlmCapability, LlmEffort, LlmFeature, LlmInstall, LlmProvider, LlmUsageWindow, LlmUsageWindowId } from '../settings.models';
 
@@ -152,19 +152,6 @@ export class SettingsLlm implements OnInit {
     return isInstalled(provider);
   }
 
-  mode(provider: LlmProvider): string {
-    if (!isInstalled(provider)) {
-      return provider.install.state === 'error' ? 'is-error' : 'is-missing';
-    }
-    if (provider.signedIn === false) {
-      return 'is-login';
-    }
-    if (provider.status === 'error') {
-      return 'is-error';
-    }
-    return isReady(provider) ? 'is-ready' : '';
-  }
-
   statusTone(provider: LlmProvider): Tone {
     const install = this.installStatus(provider);
     if (install) {
@@ -256,10 +243,6 @@ export class SettingsLlm implements OnInit {
 
   logout(provider: LlmProvider): void {
     void this.llm.logout(provider.id);
-  }
-
-  openProfile(provider: LlmProvider): void {
-    void this.llm.openProfile(provider.id);
   }
 
   featureNameKey(feature: LlmFeature): LanguageKey {

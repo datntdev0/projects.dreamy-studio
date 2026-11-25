@@ -165,13 +165,15 @@
   gap: var(--sp-sm);
   padding: var(--sp-md) var(--sp-lg);
   border: 1px solid var(--hairline);
-  border-left-width: 3px;
   border-radius: var(--r-md);
   background: var(--canvas-card);
   min-width: 0;
 }
 .llm-card p {
   margin: 0;
+}
+.llm-card:is(.is-missing, .is-login, .is-ready, .is-error) {
+  border-left-width: 3px;
 }
 .llm-card.is-missing {
   border-left-color: var(--hairline-strong);
@@ -187,7 +189,6 @@
 }
 .llm-cloud {
   opacity: 0.6;
-  border-left-color: var(--hairline);
 }
 .llm-card-h {
   display: flex;

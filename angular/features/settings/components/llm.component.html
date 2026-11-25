@@ -1,9 +1,5 @@
 <div class="st llm" data-testid="settings-llm-content">
   <p class="t-sm t-mute" data-testid="settings-llm-intro">{{ 'settings.llm.intro' | t }}</p>
-  <div class="st-note" data-testid="settings-llm-note">
-    <ds-icon name="shield" [size]="15" />
-    <span>{{ 'settings.llm.note' | t }}</span>
-  </div>
   <ds-tabs
     data-testid="settings-llm-tabs"
     idPrefix="settings-llm"
@@ -23,7 +19,7 @@
         data-testid="settings-llm-cli"
       >
         @for (p of providers(); track p.id) {
-          <article class="llm-card" [class]="mode(p)" [attr.data-testid]="'settings-llm-' + p.id">
+          <article class="llm-card" [attr.data-testid]="'settings-llm-' + p.id">
             <header class="llm-card-h">
               <div class="llm-card-t">
                 <span class="t-ink llm-name" [attr.data-testid]="'settings-llm-' + p.id + '-name'">
@@ -71,36 +67,6 @@
                     {{ 'settings.llm.signin.guideUnknown' | t: { command: p.loginCommand } }}
                   </span>
                 </div>
-              }
-              @if (p.profileDir) {
-                <div class="field">
-                  <label class="sr-only" [attr.for]="'settings-llm-' + p.id + '-profile'">
-                    {{ 'settings.llm.profile' | t }}
-                  </label>
-                  <div class="llm-row">
-                    <input
-                      [id]="'settings-llm-' + p.id + '-profile'"
-                      class="input mono-in"
-                      readonly
-                      [value]="p.profileDir"
-                      [attr.data-testid]="'settings-llm-' + p.id + '-profile'"
-                    />
-                    <button
-                      type="button"
-                      class="btn btn-sm btn-icon"
-                      [attr.aria-label]="'settings.llm.profile.open' | t"
-                      [attr.data-testid]="'settings-llm-' + p.id + '-profile-open'"
-                      (click)="openProfile(p)"
-                    >
-                      <ds-icon name="folder-open" [size]="16" />
-                    </button>
-                  </div>
-                  <span class="field-hint">
-                    {{ 'settings.llm.profile.hint' | t: { env: p.profileEnv ?? '' } }}
-                  </span>
-                </div>
-              } @else {
-                <span class="field-hint">{{ 'settings.llm.profile.shared' | t }}</span>
               }
               <section class="llm-usage" [attr.data-testid]="'settings-llm-' + p.id + '-usage'">
                 <header

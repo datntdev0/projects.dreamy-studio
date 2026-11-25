@@ -144,14 +144,6 @@ pub async fn llm_install_cancel<R: Runtime>(app: AppHandle<R>, id: String) {
 }
 
 #[tauri::command]
-pub async fn llm_profile_open<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
-    let path = app.state::<SettingsService>().llm_profile_dir(&id)?;
-    app.opener()
-        .open_path(path.to_string_lossy().into_owned(), None::<&str>)
-        .map_err(|error| error.to_string())
-}
-
-#[tauri::command]
 pub async fn window_background_set<R: Runtime>(app: AppHandle<R>, theme: Theme) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         window_state::apply_background(&window, theme);

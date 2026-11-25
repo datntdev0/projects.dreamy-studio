@@ -5,6 +5,8 @@ import queue
 import subprocess
 import threading
 import time
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +27,9 @@ WORKER_ENV = {
     "TRANSFORMERS_OFFLINE": "1",
 }
 STRIPPED_ENV = ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP")
+DEFAULT_POOL_SIZE = 1
+
+WorkerStep = tuple[str, dict[str, Any], float]
 
 logger = logging.getLogger("workers")
 
@@ -201,50 +206,97 @@ class WorkerHost:
         python: str,
         log_dir: Path | None = None,
         idle_seconds: float = DEFAULT_IDLE_SECONDS,
+        pool_size: int = DEFAULT_POOL_SIZE,
     ) -> None:
         self.python = python
         self.log_dir = log_dir
         self.idle_seconds = idle_seconds
+        self.pool_size = max(pool_size, 1)
         self.lock = threading.Lock()
-        self.workers: dict[str, WorkerProcess] = {}
+        self.available = threading.Condition(self.lock)
+        self.workers: dict[str, list[WorkerProcess]] = {}
         self.closed = threading.Event()
         self.reaper: threading.Thread | None = None
 
     def call(
         self, spec: WorkerSpec, op: str, payload: dict[str, Any], timeout: float
     ) -> dict[str, Any]:
+        return self.run(spec, [(op, payload, timeout)])
+
+    def run(self, spec: WorkerSpec, steps: Sequence[WorkerStep]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        with self.checkout(spec) as worker:
+            for op, payload, timeout in steps:
+                result = worker.request(op, payload, timeout)
+        return result
+
+    @contextmanager
+    def checkout(self, spec: WorkerSpec) -> Iterator[WorkerProcess]:
         worker = self.acquire(spec)
-        with worker.lock:
-            return worker.request(op, payload, timeout)
+        try:
+            yield worker
+        finally:
+            self.release(worker)
 
     def acquire(self, spec: WorkerSpec) -> WorkerProcess:
-        with self.lock:
-            worker = self.workers.get(spec.key)
-            if worker is not None and worker.alive() and worker.spec == spec:
-                return worker
+        with self.available:
+            while True:
+                pool = self.pool_for(spec)
+                worker = self.claim_idle(pool)
+                if worker is not None:
+                    return worker
+                if len(pool) < self.pool_size:
+                    return self.spawn_locked(spec, pool)
+                self.available.wait()
+
+    def release(self, worker: WorkerProcess) -> None:
+        worker.lock.release()
+        with self.available:
+            self.available.notify()
+
+    def pool_for(self, spec: WorkerSpec) -> list[WorkerProcess]:
+        pool = self.workers.get(spec.key)
+        if pool is None or any(worker.spec != spec for worker in pool):
             self.stop_all_locked()
-            worker = WorkerProcess(self.python, spec, self.log_dir)
-            self.workers[spec.key] = worker
-            self.start_reaper()
-            return worker
+            pool = self.workers[spec.key] = []
+        return pool
+
+    def claim_idle(self, pool: list[WorkerProcess]) -> WorkerProcess | None:
+        for worker in list(pool):
+            if not worker.lock.acquire(blocking=False):
+                continue
+            if worker.alive():
+                return worker
+            pool.remove(worker)
+            worker.stop()
+            worker.lock.release()
+        return None
+
+    def spawn_locked(self, spec: WorkerSpec, pool: list[WorkerProcess]) -> WorkerProcess:
+        worker = WorkerProcess(self.python, spec, self.log_dir)
+        worker.lock.acquire()
+        pool.append(worker)
+        self.start_reaper()
+        return worker
 
     def stop_all_locked(self) -> None:
-        for worker in list(self.workers.values()):
-            with worker.lock:
-                worker.stop()
+        for pool in list(self.workers.values()):
+            stop_pool(pool)
         self.workers.clear()
 
     def stop(self, key: str) -> None:
         with self.lock:
-            worker = self.workers.pop(key, None)
-        if worker is not None:
-            with worker.lock:
-                worker.stop()
+            pool = self.workers.pop(key, [])
+        stop_pool(pool)
 
     def active(self, key: str) -> WorkerProcess | None:
         with self.lock:
-            worker = self.workers.get(key)
-            return worker if worker is not None and worker.alive() else None
+            alive = [worker for worker in self.workers.get(key, []) if worker.alive()]
+            return alive[0] if alive else None
+
+    def count(self, key: str) -> int:
+        with self.lock:
+            return sum(worker.alive() for worker in self.workers.get(key, []))
 
     def start_reaper(self) -> None:
         if self.reaper is not None and self.reaper.is_alive():
@@ -261,17 +313,31 @@ class WorkerHost:
 
     def reap_idle(self) -> None:
         with self.lock:
-            for key, worker in list(self.workers.items()):
-                if not worker.lock.acquire(blocking=False):
-                    continue
-                try:
-                    if worker.idle_for() >= self.idle_seconds or not worker.alive():
-                        worker.stop()
-                        del self.workers[key]
-                finally:
-                    worker.lock.release()
+            for key, pool in list(self.workers.items()):
+                for worker in list(pool):
+                    if self.reap_worker(worker):
+                        pool.remove(worker)
+                if not pool:
+                    del self.workers[key]
+
+    def reap_worker(self, worker: WorkerProcess) -> bool:
+        if not worker.lock.acquire(blocking=False):
+            return False
+        try:
+            expired = worker.idle_for() >= self.idle_seconds or not worker.alive()
+            if expired:
+                worker.stop()
+            return expired
+        finally:
+            worker.lock.release()
 
     def close(self) -> None:
         self.closed.set()
         with self.lock:
             self.stop_all_locked()
+
+
+def stop_pool(pool: list[WorkerProcess]) -> None:
+    for worker in pool:
+        with worker.lock:
+            worker.stop()

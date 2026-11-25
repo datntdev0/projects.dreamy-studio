@@ -22,6 +22,7 @@ from app.shared.config import (
     PORT_ENV,
     RUN_MODE_ENV,
     WORKER_PYTHON_ENV,
+    WORKERS_ENV,
     ServerOptions,
     Settings,
 )
@@ -214,6 +215,15 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(run.call_args.kwargs["port"], DEFAULT_PORT)
         self.assertEqual(logging.call_args.args, (Path("logs").resolve(), "INFO"))
         self.assertEqual(Path(exported[LOG_DIR_ENV]), Path("logs").resolve())
+
+    def test_worker_count_is_read_from_environment(self):
+        with patch.dict(os.environ, {DATA_DIR_ENV: "data", WORKERS_ENV: "3"}, clear=True):
+            self.assertEqual(Settings.from_env().workers, 3)
+        with patch.dict(os.environ, {DATA_DIR_ENV: "data"}, clear=True):
+            self.assertEqual(Settings.from_env().workers, 1)
+        for value in ("0", "9", "two"):
+            with patch.dict(os.environ, {WORKERS_ENV: value}, clear=True):
+                self.assertRaises(ValueError, Settings.from_env)
 
     def test_invalid_server_options_are_rejected(self):
         for environment in ({PORT_ENV: "abc"}, {PORT_ENV: "70000"}, {RUN_MODE_ENV: "debug"}):

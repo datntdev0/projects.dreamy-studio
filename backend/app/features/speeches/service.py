@@ -14,7 +14,9 @@ class SpeechService:
     ) -> None:
         self.models = models
         self.references = ReferenceStore(settings.references_dir)
-        self.workers = WorkerHost(settings.worker_python, settings.log_dir)
+        self.workers = WorkerHost(
+            settings.worker_python, settings.log_dir, pool_size=settings.workers
+        )
         self.synthesizer = Synthesizer(self.workers, cache, device, settings.tts_engine)
 
     def close(self) -> None:

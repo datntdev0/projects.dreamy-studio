@@ -1,5 +1,7 @@
 import sys
 import tempfile
+import threading
+import time
 import unittest
 import wave
 from pathlib import Path
@@ -148,3 +150,75 @@ class WorkerHostTests(unittest.TestCase):
         worker = self.host.active("tone")
         self.host.close()
         self.assertFalse(worker.alive())
+
+
+def run_into(host: WorkerHost, spec: WorkerSpec, steps: list, results: list[dict]) -> None:
+    results.append(host.run(spec, steps))
+
+
+class WorkerPoolTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        (self.root / "engine_probe.py").write_text(PROBE_ENGINE, encoding="utf-8")
+        self.probe = WorkerSpec(key="probe-cpu", engine="engine_probe", site_dirs=(self.root,))
+        self.tone = WorkerSpec(key="tone", engine="engine_tone")
+
+    def host(self, size: int) -> WorkerHost:
+        host = WorkerHost(sys.executable, pool_size=size)
+        self.addCleanup(host.close)
+        host.call(self.probe, "load", {}, 30)
+        return host
+
+    def sleep_in_parallel(self, host: WorkerHost, requests: int) -> float:
+        sleep = {"action": "sleep", "seconds": 1.0}
+        threads = [
+            threading.Thread(target=host.call, args=(self.probe, "synthesize", sleep, 30))
+            for _ in range(requests)
+        ]
+        started = time.monotonic()
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        return time.monotonic() - started
+
+    def test_requests_share_one_worker_by_default(self):
+        host = self.host(1)
+        self.assertGreaterEqual(self.sleep_in_parallel(host, 2), 2.0)
+        self.assertEqual(host.count("probe-cpu"), 1)
+
+    def test_a_pool_runs_requests_on_separate_workers(self):
+        host = self.host(2)
+        elapsed = self.sleep_in_parallel(host, 2)
+        self.assertLess(elapsed, 1.9)
+        self.assertEqual(host.count("probe-cpu"), 2)
+        self.assertGreaterEqual(self.sleep_in_parallel(host, 3), 2.0)
+        self.assertEqual(host.count("probe-cpu"), 2)
+
+    def test_steps_of_one_run_stay_on_the_same_worker(self):
+        host = WorkerHost(sys.executable, pool_size=3)
+        self.addCleanup(host.close)
+        output = self.root / "out.wav"
+        steps = [
+            ("load", {"model": "tone"}, 30),
+            ("synthesize", {"text": "Xin chào", "outPath": str(output)}, 30),
+        ]
+        results: list[dict] = []
+        threads = [
+            threading.Thread(target=run_into, args=(host, self.tone, steps, results))
+            for _ in range(3)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(results, [{"durationMs": 500, "sampleRate": 24_000}] * 3)
+
+    def test_switching_runtime_stops_the_whole_pool(self):
+        host = self.host(2)
+        self.sleep_in_parallel(host, 2)
+        host.call(self.tone, "load", {}, 30)
+        self.assertEqual(host.count("probe-cpu"), 0)
+        self.assertEqual(host.count("tone"), 1)

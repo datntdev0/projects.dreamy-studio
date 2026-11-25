@@ -63,10 +63,9 @@ class RecordingWorkers:
         self.workers = workers
         self.jobs: list[dict] = []
 
-    def call(self, spec, op: str, payload: dict, timeout: float) -> dict:
-        if op == "synthesize":
-            self.jobs.append(payload)
-        return self.workers.call(spec, op, payload, timeout)
+    def run(self, spec, steps) -> dict:
+        self.jobs.extend(payload for op, payload, _ in steps if op == "synthesize")
+        return self.workers.run(spec, steps)
 
 
 def subtitles(headers: dict[str, str]) -> str:

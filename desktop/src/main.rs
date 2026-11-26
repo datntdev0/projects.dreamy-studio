@@ -8,6 +8,6 @@ mod infra;
 mod shared;
 
 fn main() {
-    shared::env::isolate_webview_data();
+    shared::env::export_directories();
     bootstrap::run();
 }

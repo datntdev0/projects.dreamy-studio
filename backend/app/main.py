@@ -10,7 +10,7 @@ from app.features.speeches.router import router as speeches_router
 from app.features.system.router import router as system_router
 from app.shared.auth import protect_with_api_key
 from app.shared.catalog import Catalog
-from app.shared.config import LOG_DIR_ENV, ServerOptions, Settings
+from app.shared.config import DATA_DIR_ENV, ServerOptions, Settings
 from app.shared.errors import register_error_handlers
 from app.shared.log import setup_logging
 
@@ -32,7 +32,7 @@ def create_app(settings: Settings, catalog: Catalog | None = None) -> FastAPI:
     return application
 
 
-if os.environ.get(LOG_DIR_ENV):
+if os.environ.get(DATA_DIR_ENV):
     options = ServerOptions.from_env()
     setup_logging(options.log_dir, options.log_level)
 

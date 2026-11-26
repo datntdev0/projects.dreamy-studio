@@ -290,8 +290,8 @@ fn manage_workspace<R: Runtime>(app: &App<R>, container: &AppContainer) {
 fn manage_backend<R: Runtime>(app: &App<R>, container: &AppContainer) {
     app.manage(BackendService::new(
         container.supervisor.clone(),
-        container.directories.root.clone(),
-        container.directories.logs.clone(),
+        container.config.backend_data_dir.clone(),
+        container.config.backend_logs_dir(),
     ));
 }
 
@@ -384,6 +384,7 @@ fn log_startup<R: Runtime>(app: &App<R>, container: &AppContainer) {
     let package = app.package_info();
     let lines = [
         format!("{} {} started", package.name, package.version),
+        format!("root directory: {}", container.config.root_dir.display()),
         format!("data directory: {}", container.directories.root.display()),
         format!("log directory: {}", container.directories.logs.display()),
         format!(
@@ -399,8 +400,16 @@ fn log_startup<R: Runtime>(app: &App<R>, container: &AppContainer) {
             "toolbox directory: {}",
             container.config.toolbox_dir.display()
         ),
+        format!(
+            "backend data directory: {}",
+            container.config.backend_data_dir.display()
+        ),
         match &container.config.source {
-            Some(source) => format!("configuration: {}", source.display()),
+            Some(source) => format!(
+                "configuration: {} (portable: {})",
+                source.display(),
+                container.config.portable
+            ),
             None => "configuration: defaults".to_string(),
         },
     ];

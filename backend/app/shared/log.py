@@ -26,12 +26,14 @@ class LineFormatter(logging.Formatter):
         return head
 
 
-def delete_old_logs(log_dir: Path, prefix: str, today: date, keep_days: int) -> None:
+DATED_LOG = re.compile(r"^(\d{4}-\d{2}-\d{2})\.log$")
+
+
+def delete_old_logs(log_dir: Path, today: date, keep_days: int) -> None:
     if not log_dir.is_dir():
         return
-    pattern = re.compile(rf"^{re.escape(prefix)}-(\d{{4}}-\d{{2}}-\d{{2}})\.log$")
     for path in log_dir.iterdir():
-        match = pattern.fullmatch(path.name)
+        match = DATED_LOG.fullmatch(path.name)
         if not match:
             continue
         try:
@@ -46,21 +48,19 @@ class DailyFileHandler(logging.FileHandler):
     def __init__(
         self,
         log_dir: Path,
-        prefix: str = "backend",
         keep_days: int = 7,
         clock: Callable[[], datetime] = datetime.now,
     ) -> None:
         self.log_dir = log_dir
-        self.prefix = prefix
         self.keep_days = keep_days
         self.clock = clock
         log_dir.mkdir(parents=True, exist_ok=True)
         self.current_day = clock().date()
-        delete_old_logs(log_dir, prefix, self.current_day, keep_days)
+        delete_old_logs(log_dir, self.current_day, keep_days)
         super().__init__(self.dated_file(self.current_day), encoding="utf-8")
 
     def dated_file(self, day: date) -> Path:
-        return self.log_dir / f"{self.prefix}-{day.isoformat()}.log"
+        return self.log_dir / f"{day.isoformat()}.log"
 
     def emit(self, record: logging.LogRecord) -> None:
         day = self.clock().date()
@@ -70,7 +70,7 @@ class DailyFileHandler(logging.FileHandler):
                 self.stream.close()
                 self.stream = None
             self.baseFilename = str(self.dated_file(day))
-            delete_old_logs(self.log_dir, self.prefix, day, self.keep_days)
+            delete_old_logs(self.log_dir, day, self.keep_days)
         super().emit(record)
 
 

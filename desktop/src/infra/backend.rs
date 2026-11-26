@@ -21,16 +21,15 @@ use std::time::Instant;
 
 use crate::infra::backend_client::BackendClient;
 use crate::shared::config::install_dir;
+use crate::shared::env::BACKEND_DATA_DIR_VAR;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const POLL_INTERVAL: Duration = Duration::from_millis(100);
 const PROBE_TIMEOUT: Duration = Duration::from_millis(300);
-const STDERR_FILE: &str = "backend-stderr.log";
+const STDERR_FILE: &str = "stderr.log";
 
 const PORT_VAR: &str = "DREAMY_BACKEND_PORT";
 const RUN_MODE_VAR: &str = "DREAMY_BACKEND_RUN_MODE";
-const LOG_DIR_VAR: &str = "DREAMY_BACKEND_LOG_DIR";
-const DATA_DIR_VAR: &str = "DREAMY_BACKEND_DATA_DIR";
 const API_KEY_VAR: &str = "DREAMY_BACKEND_API_KEY";
 
 const BACKEND_DIR: &str = "backend";
@@ -190,8 +189,7 @@ impl BackendProcess {
             .args(&launch.args)
             .env(PORT_VAR, port.to_string())
             .env(RUN_MODE_VAR, launch.run_mode)
-            .env(LOG_DIR_VAR, &launch.log_dir)
-            .env(DATA_DIR_VAR, &launch.data_dir)
+            .env(BACKEND_DATA_DIR_VAR, &launch.data_dir)
             .env(API_KEY_VAR, "")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -297,6 +295,9 @@ fn free_port() -> Result<u16, BackendError> {
 }
 
 fn stderr_target(path: &Path) -> Stdio {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
     match File::create(path) {
         Ok(file) => Stdio::from(file),
         Err(_) => Stdio::null(),

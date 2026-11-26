@@ -5,11 +5,7 @@ import { BUILD_DIR, ROOT, STAGED_PARTS, appVersion, compress, fail, requireStage
 const FOLDER = "DreamyStudio";
 const OUTPUT = process.argv[2] ?? join(ROOT, "_output", "portable");
 const CONFIG_FILE = "DreamyStudio.config";
-const PORTABLE_LAYOUT = {
-  AppDataDir: "./appdata",
-  RuntimeDir: "./runtime",
-  ToolboxDir: "./toolbox",
-};
+const PORTABLE_CONFIG = { IsPortable: true };
 
 function assemble() {
   const executable = join(targetDirectory(), "release", "dreamy-studio.exe");
@@ -25,7 +21,7 @@ function assemble() {
   for (const part of STAGED_PARTS) {
     cpSync(join(BUILD_DIR, part), join(stage, part), { recursive: true });
   }
-  writeFileSync(join(stage, CONFIG_FILE), `${JSON.stringify(PORTABLE_LAYOUT, null, 2)}
+  writeFileSync(join(stage, CONFIG_FILE), `${JSON.stringify(PORTABLE_CONFIG, null, 2)}
 `);
 
   compress(archive, OUTPUT, FOLDER);

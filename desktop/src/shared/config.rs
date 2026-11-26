@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -11,23 +10,27 @@ const PRODUCT_DIR: &str = "DreamyStudio";
 const DATA_DIR: &str = "appdata";
 const RUNTIME_DIR: &str = "runtime";
 const TOOLBOX_DIR: &str = "toolbox";
+const BACKEND_DIR: &str = "backend";
+const LOGS_DIR: &str = "logs";
+const WEBVIEW_DIR: &str = "webview";
 const LOCAL_APP_DATA_VAR: &str = "LOCALAPPDATA";
 
 static CURRENT: OnceLock<AppConfig> = OnceLock::new();
 
 #[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all = "PascalCase", default)]
 struct ConfigFile {
-    app_data_dir: Option<String>,
-    runtime_dir: Option<String>,
-    toolbox_dir: Option<String>,
+    #[serde(alias = "isPortable")]
+    is_portable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppConfig {
+    pub root_dir: PathBuf,
     pub app_data_dir: PathBuf,
     pub runtime_dir: PathBuf,
     pub toolbox_dir: PathBuf,
+    pub backend_data_dir: PathBuf,
     pub portable: bool,
     pub source: Option<PathBuf>,
 }
@@ -36,22 +39,22 @@ pub struct ConfigInput<'a> {
     pub install_dir: &'a Path,
     pub text: Option<&'a str>,
     pub source: Option<PathBuf>,
-    pub data_override: Option<PathBuf>,
     pub variable: &'a dyn Fn(&str) -> Option<String>,
 }
 
 impl AppConfig {
     pub fn resolve(input: ConfigInput<'_>) -> Self {
-        let file = parse(input.text);
-        let portable = file.app_data_dir.as_deref().is_some_and(is_relative);
-        let app_data_dir = match &input.data_override {
-            Some(path) => path.clone(),
-            None => directory(&input, file.app_data_dir.as_deref(), DATA_DIR),
-        };
+        let portable = parse(input.text).is_portable;
+        let root_dir = env::directory((input.variable)(env::STUDIO_DATA_DIR_VAR))
+            .unwrap_or_else(|| default_root(portable, input.install_dir, input.variable));
+        let backend_data_dir = env::directory((input.variable)(env::BACKEND_DATA_DIR_VAR))
+            .unwrap_or_else(|| root_dir.join(BACKEND_DIR));
         Self {
-            app_data_dir,
-            runtime_dir: directory(&input, file.runtime_dir.as_deref(), RUNTIME_DIR),
-            toolbox_dir: directory(&input, file.toolbox_dir.as_deref(), TOOLBOX_DIR),
+            app_data_dir: root_dir.join(DATA_DIR),
+            runtime_dir: root_dir.join(RUNTIME_DIR),
+            toolbox_dir: root_dir.join(TOOLBOX_DIR),
+            root_dir,
+            backend_data_dir,
             portable,
             source: input.source,
         }
@@ -66,13 +69,16 @@ impl AppConfig {
             install_dir: &install_dir,
             text: text.as_deref(),
             source: found,
-            data_override: env::data_dir(),
             variable: &read_variable,
         })
     }
 
     pub fn webview_dir(&self) -> Option<PathBuf> {
-        self.portable.then(|| self.app_data_dir.join("webview"))
+        self.portable.then(|| self.app_data_dir.join(WEBVIEW_DIR))
+    }
+
+    pub fn backend_logs_dir(&self) -> PathBuf {
+        self.backend_data_dir.join(LOGS_DIR)
     }
 }
 
@@ -99,75 +105,20 @@ fn parse(text: Option<&str>) -> ConfigFile {
     }
 }
 
-fn directory(input: &ConfigInput<'_>, value: Option<&str>, name: &str) -> PathBuf {
-    match value {
-        Some(value) if !value.trim().is_empty() => {
-            resolve_path(value, input.install_dir, input.variable)
-        }
-        _ => default_root(input.install_dir, input.variable).join(name),
-    }
-}
-
 fn read_variable(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|value| !value.is_empty())
 }
 
-fn default_root(install_dir: &Path, variable: &dyn Fn(&str) -> Option<String>) -> PathBuf {
+fn default_root(
+    portable: bool,
+    install_dir: &Path,
+    variable: &dyn Fn(&str) -> Option<String>,
+) -> PathBuf {
+    if portable {
+        return install_dir.to_path_buf();
+    }
     match variable(LOCAL_APP_DATA_VAR) {
         Some(local) => PathBuf::from(local).join(PRODUCT_DIR),
         None => install_dir.to_path_buf(),
     }
-}
-
-fn is_relative(value: &str) -> bool {
-    !value.contains('%') && Path::new(value).is_relative()
-}
-
-pub fn expand(value: &str, variable: &dyn Fn(&str) -> Option<String>) -> String {
-    let mut output = String::new();
-    let mut rest = value;
-    while let Some(start) = rest.find('%') {
-        output.push_str(&rest[..start]);
-        let after = &rest[start + 1..];
-        let Some(end) = after.find('%') else {
-            output.push_str(&rest[start..]);
-            return output;
-        };
-        let name = &after[..end];
-        match variable(name) {
-            Some(found) if !name.is_empty() => output.push_str(&found),
-            _ => output.push_str(&rest[start..start + end + 2]),
-        }
-        rest = &after[end + 1..];
-    }
-    output.push_str(rest);
-    output
-}
-
-fn resolve_path(
-    value: &str,
-    install_dir: &Path,
-    variable: &dyn Fn(&str) -> Option<String>,
-) -> PathBuf {
-    let expanded = PathBuf::from(expand(value.trim(), variable));
-    let joined = if expanded.is_absolute() {
-        expanded
-    } else {
-        install_dir.join(expanded)
-    };
-    normalize(&joined)
-}
-
-fn normalize(path: &Path) -> PathBuf {
-    let mut output = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                output.pop();
-            }
-            other => output.push(other.as_os_str()),
-        }
-    }
-    output
 }

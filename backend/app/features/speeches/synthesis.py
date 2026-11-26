@@ -235,8 +235,9 @@ class Synthesizer:
         }
         job = {"text": text, "voice": voice, "outPath": str(partial)}
         try:
-            self.workers.call(spec, "load", load, LOAD_TIMEOUT)
-            result = self.workers.call(spec, "synthesize", job, SYNTHESIZE_TIMEOUT)
+            result = self.workers.run(
+                spec, [("load", load, LOAD_TIMEOUT), ("synthesize", job, SYNTHESIZE_TIMEOUT)]
+            )
         except WorkerError as error:
             partial.unlink(missing_ok=True)
             raise worker_failure(error) from error

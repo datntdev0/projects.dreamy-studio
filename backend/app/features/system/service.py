@@ -4,10 +4,14 @@ from importlib import metadata
 
 from app.features.system.gpu import Gpu, GpuDetector
 from app.features.system.schemas import GpuResponse, HealthResponse, SystemResponse
+from app.shared.catalog import CPU_VARIANT, CU126_VARIANT, CUDA_VARIANT
 from app.shared.config import Settings
 from app.shared.downloads import utc_now
 
 PACKAGE_NAME = "dreamy-studio-backend"
+CPU_DEVICE = "cpu"
+CUDA_DEVICE = "cuda"
+CU128_MIN_CAPABILITY = (7, 5)
 
 logger = logging.getLogger("system")
 
@@ -19,10 +23,19 @@ def package_version() -> str:
         return "0.0.0"
 
 
-def pick_device(requested: str | None, gpu: Gpu) -> str:
-    if requested is not None:
-        return requested
-    return "cuda" if gpu.cuda_supported else "cpu"
+def cuda_variant(gpu: Gpu) -> str:
+    capability = gpu.capability
+    if capability is not None and capability < CU128_MIN_CAPABILITY:
+        return CU126_VARIANT
+    return CUDA_VARIANT
+
+
+def pick_variant(requested: str | None, gpu: Gpu) -> str:
+    if requested == CPU_DEVICE:
+        return CPU_VARIANT
+    if requested == CUDA_DEVICE or gpu.cuda_supported:
+        return cuda_variant(gpu)
+    return CPU_VARIANT
 
 
 class SystemService:
@@ -30,8 +43,9 @@ class SystemService:
         self.started_at = utc_now()
         self.version = package_version()
         self.gpu = GpuDetector(settings.nvidia_smi)
-        self.device = pick_device(settings.device, self.gpu.get())
-        logger.info("Device %s selected for %s", self.device, self.gpu.get())
+        self.variant = pick_variant(settings.device, self.gpu.get())
+        self.device = CPU_DEVICE if self.variant == CPU_VARIANT else CUDA_DEVICE
+        logger.info("Runtime variant %s selected for %s", self.variant, self.gpu.get())
 
     def health(self) -> HealthResponse:
         return HealthResponse(

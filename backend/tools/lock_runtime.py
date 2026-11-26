@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import operator
 import subprocess
@@ -12,6 +13,7 @@ from app.shared.platforms import PLATFORMS, Platform
 
 RUNTIMES_DIR = Path(__file__).resolve().parents[1] / "app" / "shared" / "resources" / "runtimes"
 USER_AGENT = "dreamy-studio-lock"
+CHUNK_SIZE = 1024 * 1024
 
 
 def lock_path(platform_name: str, runtime: str, variant: str) -> Path:
@@ -79,14 +81,23 @@ def remote_size(url: str) -> int:
         return int(response.headers["Content-Length"])
 
 
-def sha256_of(archive: dict[str, Any]) -> str:
+def remote_sha256(url: str) -> str:
+    digest = hashlib.sha256()
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        for chunk in iter(lambda: response.read(CHUNK_SIZE), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def sha256_of(archive: dict[str, Any], url: str) -> str:
     hashes = archive.get("hashes") or {}
     if "sha256" in hashes:
         return hashes["sha256"]
     algorithm, _, value = str(archive.get("hash", "")).partition("=")
     if algorithm == "sha256" and value:
         return value
-    raise ValueError("Wheel without sha256 hash")
+    return remote_sha256(url)
 
 
 def lock_entry(item: dict[str, Any]) -> dict[str, Any]:
@@ -96,7 +107,7 @@ def lock_entry(item: dict[str, Any]) -> dict[str, Any]:
         "name": item["metadata"]["name"],
         "version": item["metadata"]["version"],
         "url": url,
-        "sha256": sha256_of(info.get("archive_info", {})),
+        "sha256": sha256_of(info.get("archive_info", {}), url),
         "size": remote_size(url),
     }
 
@@ -135,7 +146,7 @@ def write_alignment(args: argparse.Namespace, directory: Path) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Pin a worker runtime to exact wheels")
     parser.add_argument("runtime")
-    parser.add_argument("variant", choices=("cpu", "cuda"))
+    parser.add_argument("variant", choices=("cpu", "cuda", "cu126"))
     parser.add_argument("--platform", choices=sorted(PLATFORMS), required=True)
     parser.add_argument("--requirements", type=Path, required=True)
     parser.add_argument("--standalone", action="append", default=[])

@@ -48,20 +48,6 @@ class CatalogModel:
 
 
 @dataclass(frozen=True)
-class CudaPackage:
-    name: str
-    version: str
-
-
-@dataclass(frozen=True)
-class CudaCatalog:
-    version: str
-    size_bytes: int
-    packages: tuple[CudaPackage, ...]
-    platform: Platform | None = None
-
-
-@dataclass(frozen=True)
 class RuntimeWheel:
     name: str
     version: str
@@ -104,7 +90,6 @@ class CatalogRuntime:
 @dataclass(frozen=True)
 class Catalog:
     models: tuple[CatalogModel, ...]
-    cuda: CudaCatalog
     runtimes: dict[str, CatalogRuntime] = field(default_factory=dict)
 
 
@@ -199,23 +184,6 @@ def model_catalog() -> tuple[CatalogModel, ...]:
     return tuple(parse_model(entry) for entry in read_catalog()["models"])
 
 
-def empty_cuda_catalog() -> CudaCatalog:
-    return CudaCatalog(version="", size_bytes=0, packages=())
-
-
-def cuda_catalog(target: Platform | None = None) -> CudaCatalog:
-    target = target or current_platform()
-    entry = read_catalog()["cuda"].get(target.name) if target else None
-    if entry is None:
-        return empty_cuda_catalog()
-    return CudaCatalog(
-        version=entry["version"],
-        size_bytes=int(entry["sizeBytes"]),
-        packages=tuple(CudaPackage(item["name"], item["version"]) for item in entry["packages"]),
-        platform=target,
-    )
-
-
 def runtime_catalog(target: Platform | None = None) -> dict[str, CatalogRuntime]:
     target = target or current_platform()
     if target is None:
@@ -235,6 +203,5 @@ def load_catalog(target: Platform | None = None) -> Catalog:
     runtimes = runtime_catalog(target)
     return Catalog(
         models=supported_models(model_catalog(), runtimes),
-        cuda=cuda_catalog(target),
         runtimes=runtimes,
     )

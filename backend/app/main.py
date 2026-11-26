@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from app.container import Container
 from app.features.models.router import router as models_router
 from app.features.speeches.router import router as speeches_router
-from app.features.system.cuda import configure_dll_search
 from app.features.system.router import router as system_router
 from app.shared.auth import protect_with_api_key
 from app.shared.catalog import Catalog
@@ -38,5 +37,4 @@ if os.environ.get(LOG_DIR_ENV):
     setup_logging(options.log_dir, options.log_level)
 
 settings = Settings.from_env()
-configure_dll_search(settings.cuda_dir)
 app = create_app(settings)

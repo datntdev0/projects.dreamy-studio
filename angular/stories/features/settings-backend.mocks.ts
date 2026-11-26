@@ -1,6 +1,6 @@
-import { computed, Provider, signal, WritableSignal } from '@angular/core';
+import { Provider, signal, WritableSignal } from '@angular/core';
 // prettier-ignore
-import { BackendCuda, BackendDevice, BackendDownload, BackendGpu, BackendServer, TtsModel } from '@features/settings/backend.models';
+import { BackendDevice, BackendDownload, BackendGpu, BackendServer, TtsModel } from '@features/settings/backend.models';
 import { BackendService } from '@features/settings/backend.service';
 
 const GIB = 1024 * 1024 * 1024;
@@ -18,7 +18,6 @@ export interface BackendScenario {
 interface BackendMockState {
   server: WritableSignal<BackendServer>;
   gpu: WritableSignal<BackendGpu>;
-  cuda: WritableSignal<BackendCuda>;
   device: WritableSignal<BackendDevice>;
   models: WritableSignal<TtsModel[]>;
   timers: Map<string, ReturnType<typeof setInterval>>;
@@ -94,10 +93,11 @@ function createState(scenario: BackendScenario): BackendMockState {
       name: 'NVIDIA GeForce RTX 4070',
       vramMb: 12282,
       driver: '566.14',
+      computeCapability: '8.9',
+      cudaSupported: true,
       ...scenario.gpu,
     }),
-    cuda: signal({ ...IDLE, version: '12.4', totalBytes: Math.round(2.4 * GIB) }),
-    device: signal(scenario.device ?? 'cpu'),
+    device: signal(scenario.device ?? 'cuda'),
     models: signal(BACKEND_MODELS),
     timers: new Map(),
   };
@@ -109,10 +109,6 @@ function patchModel(state: BackendMockState, id: string, change: Partial<TtsMode
   );
 }
 
-function patchCuda(state: BackendMockState, change: Partial<BackendDownload>): void {
-  state.cuda.update((cuda) => ({ ...cuda, ...change }));
-}
-
 function readModel(state: BackendMockState, id: string): BackendDownload {
   return state.models().find((item) => item.id === id) ?? IDLE;
 }
@@ -122,14 +118,6 @@ function modelTarget(state: BackendMockState, id: string): DownloadTarget {
     key: id,
     read: readModel.bind(null, state, id),
     patch: patchModel.bind(null, state, id),
-  };
-}
-
-function cudaTarget(state: BackendMockState): DownloadTarget {
-  return {
-    key: 'cuda',
-    read: state.cuda,
-    patch: patchCuda.bind(null, state),
   };
 }
 
@@ -198,40 +186,18 @@ function checkServer(state: BackendMockState): Promise<void> {
   return Promise.resolve();
 }
 
-function isGpuReady(state: BackendMockState): boolean {
-  return state.gpu().found && state.cuda().state === 'installed';
-}
-
-function setDevice(state: BackendMockState, device: BackendDevice): Promise<void> {
-  state.device.set(device === 'cuda' && !isGpuReady(state) ? 'cpu' : device);
-  return Promise.resolve();
-}
-
-function removeCuda(state: BackendMockState): Promise<void> {
-  state.device.set('cpu');
-  return resetDownload(state, cudaTarget(state));
-}
-
 export function backendServiceProvider(scenario: BackendScenario = {}): Provider {
   const state = createState(scenario);
   const mock: Partial<BackendService> = {
     server: state.server,
     gpu: state.gpu,
-    cuda: state.cuda,
     device: state.device,
     modelsDir: signal('C:\\Users\\dreamy\\AppData\\Roaming\\dreamy-studio\\models'),
     models: state.models,
     checking: signal(false),
-    scanning: signal(false),
-    gpuReady: computed(isGpuReady.bind(null, state)),
     load: () => Promise.resolve(),
     check: checkServer.bind(null, state),
     restart: restartServer.bind(null, state),
-    scanGpu: () => Promise.resolve(),
-    setDevice: setDevice.bind(null, state),
-    downloadCuda: startDownload.bind(null, state, cudaTarget(state)),
-    cancelCuda: resetDownload.bind(null, state, cudaTarget(state)),
-    removeCuda: removeCuda.bind(null, state),
     openLogs: () => Promise.resolve(),
     openModelsDir: () => Promise.resolve(),
     downloadModel: downloadModel.bind(null, state),

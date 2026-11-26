@@ -40,7 +40,7 @@ def main() -> None:
         "Backend starting (mode=%s, port=%s, device=%s, data=%s, api_key=%s)",
         options.run_mode,
         options.port,
-        settings.device,
+        settings.device or "auto",
         settings.data_dir,
         "on" if os.environ.get(API_KEY_ENV) else "off",
     )

@@ -7,7 +7,6 @@ use crate::features::settings::check::LlmChecker;
 use crate::features::settings::check::LlmStatus;
 use crate::features::settings::check::NoLlmCheck;
 use crate::features::settings::repository::SETTINGS_FILE;
-use crate::features::settings::repository::SettingsRepository;
 use crate::infra::backend::BackendHost;
 use crate::infra::backend::BackendLaunch;
 use crate::infra::backend::BackendProcess;
@@ -83,10 +82,7 @@ impl AppContainer {
         let database_path = directories.database_path();
         let settings_path = directories.settings_path();
         let logger = Logger::new(directories.logs.clone());
-        let supervisor = Arc::new(BackendSupervisor::new(
-            backend,
-            SettingsRepository::new(settings_path.clone()),
-        ));
+        let supervisor = Arc::new(BackendSupervisor::new(backend));
 
         Self {
             config,

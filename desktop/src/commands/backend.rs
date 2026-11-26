@@ -52,34 +52,6 @@ pub async fn backend_models_open<R: Runtime>(app: AppHandle<R>) -> Result<(), St
 }
 
 #[tauri::command]
-pub async fn backend_gpu_scan<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    run_blocking(app, BackendService::scan_gpu).await
-}
-
-#[tauri::command]
-pub async fn backend_device_set<R: Runtime>(
-    app: AppHandle<R>,
-    device: String,
-) -> Result<(), String> {
-    run_blocking(app, move |service| service.set_device(&device)).await
-}
-
-#[tauri::command]
-pub async fn backend_cuda_download<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    run_blocking(app, BackendService::download_cuda).await
-}
-
-#[tauri::command]
-pub async fn backend_cuda_cancel<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    run_blocking(app, BackendService::cancel_cuda).await
-}
-
-#[tauri::command]
-pub async fn backend_cuda_remove<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    run_blocking(app, BackendService::remove_cuda).await
-}
-
-#[tauri::command]
 pub async fn backend_model_list<R: Runtime>(app: AppHandle<R>) -> Result<Vec<TtsModel>, String> {
     run_blocking(app, BackendService::models).await
 }

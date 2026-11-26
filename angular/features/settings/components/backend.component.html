@@ -154,130 +154,20 @@
                 }
               </span>
             </div>
-            <div class="be-actions">
-              <ds-badge
-                [tone]="gpu().found ? 'success' : 'default'"
-                data-testid="settings-backend-gpu-badge"
-              >
-                {{
-                  (gpu().found ? 'settings.backend.gpu.detected' : 'settings.backend.gpu.notFound')
-                    | t
-                }}
-              </ds-badge>
-              <button
-                type="button"
-                class="btn btn-sm"
-                [disabled]="!canScan()"
-                data-testid="settings-backend-gpu-rescan"
-                (click)="scanGpu()"
-              >
-                <ds-icon name="refresh" [size]="16" />
-                {{ 'settings.backend.gpu.rescan' | t }}
-              </button>
-            </div>
-          </div>
-          <div
-            class="st-row"
-            [class.is-disabled]="!gpu().found"
-            [attr.aria-disabled]="!gpu().found"
-            data-testid="settings-backend-cuda-row"
-          >
-            <div class="field">
-              <span class="t-ink">{{ 'settings.backend.cuda' | t }}</span>
-              <span class="field-hint" data-testid="settings-backend-cuda-hint">
-                {{ cudaHint() }}
-              </span>
-            </div>
-            <div class="be-actions" data-testid="settings-backend-cuda-actions">
-              @if (!gpu().found) {
-                <span class="t-sm t-mute" data-testid="settings-backend-cuda-need-gpu">
-                  {{ 'settings.backend.cuda.needGpu' | t }}
-                </span>
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  disabled
-                  data-testid="settings-backend-cuda-download"
-                >
-                  <ds-icon name="download" [size]="16" />
-                  {{ 'settings.backend.download' | t }}
-                </button>
-              } @else {
-                @switch (cuda().state) {
-                  @case ('downloading') {
-                    <ng-container
-                      [ngTemplateOutlet]="downloadProgress"
-                      [ngTemplateOutletContext]="{
-                        $implicit: cuda(),
-                        testid: 'settings-backend-cuda-progress',
-                      }"
-                    />
-                    <button
-                      type="button"
-                      class="btn btn-sm"
-                      data-testid="settings-backend-cuda-cancel"
-                      (click)="cancelCuda()"
-                    >
-                      {{ 'settings.backend.cancel' | t }}
-                    </button>
-                  }
-                  @case ('installed') {
-                    <ds-badge tone="success" data-testid="settings-backend-cuda-badge">
-                      {{ 'settings.backend.installed' | t }}
-                    </ds-badge>
-                    <button
-                      type="button"
-                      class="btn btn-sm"
-                      data-testid="settings-backend-cuda-remove"
-                      (click)="removeCuda()"
-                    >
-                      <ds-icon name="trash" [size]="16" />
-                      {{ 'settings.backend.remove' | t }}
-                    </button>
-                  }
-                  @case ('error') {
-                    <span class="field-err" data-testid="settings-backend-cuda-error">
-                      {{ cuda().error || ('settings.backend.model.msg.error' | t) }}
-                    </span>
-                    <button
-                      type="button"
-                      class="btn btn-sm"
-                      data-testid="settings-backend-cuda-retry"
-                      (click)="downloadCuda()"
-                    >
-                      <ds-icon name="refresh" [size]="16" />
-                      {{ 'settings.backend.retry' | t }}
-                    </button>
-                  }
-                  @default {
-                    <button
-                      type="button"
-                      class="btn btn-sm btn-primary"
-                      data-testid="settings-backend-cuda-download"
-                      (click)="downloadCuda()"
-                    >
-                      <ds-icon name="download" [size]="16" />
-                      {{ 'settings.backend.download' | t }}
-                    </button>
-                  }
-                }
-              }
-            </div>
+            <ds-badge [tone]="gpuTone()" data-testid="settings-backend-gpu-badge">
+              {{ gpuKey() | t }}
+            </ds-badge>
           </div>
           <div class="st-row" data-testid="settings-backend-device-row">
             <div class="field">
               <span class="t-ink">{{ 'settings.backend.device' | t }}</span>
               <span class="field-hint" data-testid="settings-backend-device-hint">
-                {{ deviceHintKey() | t }}
+                {{ deviceHint() }}
               </span>
             </div>
-            <ds-segments
-              data-testid="settings-backend-device"
-              [label]="'settings.backend.device' | t"
-              [options]="deviceOptions()"
-              [value]="device()"
-              (valueChange)="onDevice($event)"
-            />
+            <ds-badge [tone]="deviceTone()" data-testid="settings-backend-device">
+              {{ deviceKey() | t }}
+            </ds-badge>
           </div>
         </div>
       </section>

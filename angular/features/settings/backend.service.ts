@@ -1,12 +1,11 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { DesktopIpcService } from '@shared/desktop/desktop-ipc.service';
 import { ipcErrorMessage } from '@shared/desktop/desktop-ipc-error';
 import { LanguageKey } from '@shared/language/language.models';
 import { LanguageService } from '@shared/language/language.service';
 import { ToastService } from '@shared/toast/toast.service';
 
-// prettier-ignore
-import { BackendCuda, BackendDevice, BackendGpu, BackendServer, BackendView, TtsModel } from './backend.models';
+import { BackendDevice, BackendGpu, BackendServer, BackendView, TtsModel } from './backend.models';
 
 const POLL_MS = 1000;
 
@@ -21,14 +20,13 @@ const NO_SERVER: BackendServer = {
   error: '',
 };
 
-const NO_GPU: BackendGpu = { found: false, name: '', vramMb: 0, driver: '' };
-
-const NO_CUDA: BackendCuda = {
-  state: 'none',
-  receivedBytes: 0,
-  totalBytes: 0,
-  error: '',
-  version: '',
+const NO_GPU: BackendGpu = {
+  found: false,
+  name: '',
+  vramMb: 0,
+  driver: '',
+  computeCapability: '',
+  cudaSupported: false,
 };
 
 function pause(ms: number): Promise<void> {
@@ -39,7 +37,6 @@ function toView(raw: Partial<BackendView> | null | undefined): BackendView {
   return {
     server: { ...NO_SERVER, ...raw?.server },
     gpu: { ...NO_GPU, ...raw?.gpu },
-    cuda: { ...NO_CUDA, ...raw?.cuda },
     device: raw?.device === 'cuda' ? 'cuda' : 'cpu',
     modelsDir: raw?.modelsDir ?? '',
   };
@@ -58,13 +55,10 @@ export class BackendService {
 
   readonly server = signal<BackendServer>(NO_SERVER);
   readonly gpu = signal<BackendGpu>(NO_GPU);
-  readonly cuda = signal<BackendCuda>(NO_CUDA);
   readonly device = signal<BackendDevice>('cpu');
   readonly modelsDir = signal('');
   readonly models = signal<TtsModel[]>([]);
   readonly checking = signal(false);
-  readonly scanning = signal(false);
-  readonly gpuReady = computed(this.isGpuReady.bind(this));
 
   async load(): Promise<void> {
     await this.refresh();
@@ -86,40 +80,6 @@ export class BackendService {
     }
     this.markStarting();
     await this.run('backend_restart');
-  }
-
-  async scanGpu(): Promise<void> {
-    if (this.scanning()) {
-      return;
-    }
-    this.scanning.set(true);
-    await this.run('backend_gpu_scan');
-    this.scanning.set(false);
-  }
-
-  async setDevice(device: BackendDevice): Promise<void> {
-    if (device === 'cuda' && !this.gpuReady()) {
-      return;
-    }
-    this.device.set(device);
-    if (this.server().status === 'running') {
-      this.markStarting();
-    }
-    await this.run('backend_device_set', { device });
-  }
-
-  async downloadCuda(): Promise<void> {
-    this.cuda.update((cuda) => ({ ...cuda, state: 'downloading', receivedBytes: 0, error: '' }));
-    this.pollWhileBusy();
-    await this.run('backend_cuda_download');
-  }
-
-  async cancelCuda(): Promise<void> {
-    await this.run('backend_cuda_cancel');
-  }
-
-  async removeCuda(): Promise<void> {
-    await this.run('backend_cuda_remove');
   }
 
   async openLogs(): Promise<void> {
@@ -147,10 +107,6 @@ export class BackendService {
   private markStarting(): void {
     this.server.update((server) => ({ ...server, status: 'starting', error: '' }));
     this.pollWhileBusy();
-  }
-
-  private isGpuReady(): boolean {
-    return this.gpu().found && this.cuda().state === 'installed';
   }
 
   private async run(command: string, args?: Record<string, unknown>): Promise<void> {
@@ -200,7 +156,6 @@ export class BackendService {
   private applyView(view: BackendView): void {
     this.server.set(view.server);
     this.gpu.set(view.gpu);
-    this.cuda.set(view.cuda);
     this.device.set(view.device);
     this.modelsDir.set(view.modelsDir);
   }
@@ -214,7 +169,6 @@ export class BackendService {
   private isBusy(): boolean {
     return (
       this.server().status === 'starting' ||
-      this.cuda().state === 'downloading' ||
       this.models().some((model) => model.state === 'downloading')
     );
   }

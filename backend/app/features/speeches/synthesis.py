@@ -112,11 +112,17 @@ def check_voice(model: CatalogModel, request: SynthesisRequest) -> dict[str, Any
     return voice
 
 
-def fingerprint(voice: dict[str, Any]) -> dict[str, Any]:
+def with_reference_digest(voice: dict[str, Any]) -> dict[str, Any]:
     reference = voice.get("referencePath")
     if reference is None:
         return voice
-    return {**voice, "referencePath": None, "referenceSha256": file_sha256(Path(reference))}
+    return {**voice, "referenceSha256": file_sha256(Path(reference))}
+
+
+def fingerprint(voice: dict[str, Any]) -> dict[str, Any]:
+    if voice.get("referencePath") is None:
+        return voice
+    return {**voice, "referencePath": None}
 
 
 def worker_failure(error: WorkerError) -> BackendError:
@@ -183,12 +189,29 @@ class Synthesizer:
         manifest = downloader.slot.manifest() or {}
         return str(manifest.get("completedAt", ""))
 
+    def worker_voice(
+        self, downloader: ModelDownloader, spec: WorkerSpec, voice: dict[str, Any]
+    ) -> dict[str, Any]:
+        digest = voice.get("referenceSha256")
+        if digest is None:
+            return voice
+        model = downloader.model
+        key = cache_key(
+            {
+                "model": model.id,
+                "revision": self.revision(downloader),
+                "engine": spec.engine,
+                "referenceSha256": digest,
+            }
+        )
+        return {**voice, "promptPath": str(self.cache.prompt_path(model.id, key))}
+
     def synthesize(self, downloader: ModelDownloader, request: SynthesisRequest) -> SynthesisResult:
         model = downloader.model
         spec = self.spec(downloader)
         self.check_installed(downloader)
         sentences = check_text(request.text)
-        voice = check_voice(model, request)
+        voice = with_reference_digest(check_voice(model, request))
         rendered = [self.sentence(downloader, spec, text, voice) for text in sentences]
         if len(rendered) == 1:
             return single_result(rendered[0])
@@ -233,7 +256,11 @@ class Synthesizer:
             "device": self.device,
             "options": model.engine_options,
         }
-        job = {"text": text, "voice": voice, "outPath": str(partial)}
+        job = {
+            "text": text,
+            "voice": self.worker_voice(downloader, spec, voice),
+            "outPath": str(partial),
+        }
         try:
             result = self.workers.run(
                 spec, [("load", load, LOAD_TIMEOUT), ("synthesize", job, SYNTHESIZE_TIMEOUT)]

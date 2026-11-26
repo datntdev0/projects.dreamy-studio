@@ -1,10 +1,9 @@
 import gc
-from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
 import soundfile
-from protocol import EngineError, model_path, reference_path
+from protocol import EngineError, PromptStore, model_path
 
 ASR_DIR = "asr"
 CUDA_DEVICE = "cuda"
@@ -16,9 +15,14 @@ AUTO_LANGUAGES = ("", "multi", "mul")
 PROMPT_CACHE_SIZE = 8
 
 
-def reference_key(path: Path) -> tuple[str, int, int]:
-    stat = path.stat()
-    return str(path), stat.st_size, stat.st_mtime_ns
+def read_prompt(path: str) -> Any:
+    from omnivoice import VoiceClonePrompt
+
+    return VoiceClonePrompt.load(path)
+
+
+def write_prompt(prompt: Any, path: str) -> None:
+    prompt.save(path)
 
 
 def with_gender(prompt: str, gender: str) -> str:
@@ -44,7 +48,7 @@ class OmniVoiceEngine:
     def __init__(self) -> None:
         self.model: Any = None
         self.loaded: tuple[str, str] | None = None
-        self.prompts: OrderedDict[tuple[str, int, int], Any] = OrderedDict()
+        self.prompts = PromptStore(PROMPT_CACHE_SIZE, read_prompt, write_prompt)
         self.device = CPU_DEVICE_MAP
 
     def create(self, model_dir: Path, device: str) -> Any:
@@ -76,23 +80,15 @@ class OmniVoiceEngine:
         gc.collect()
         return {}
 
-    def clone_prompt(self, voice: dict[str, Any]) -> Any:
-        key = reference_key(reference_path(voice))
-        if key in self.prompts:
-            self.prompts.move_to_end(key)
-            return self.prompts[key]
+    def enroll(self, reference: Path) -> Any:
         try:
-            prompt = self.model.create_voice_clone_prompt(ref_audio=key[0])
+            return self.model.create_voice_clone_prompt(ref_audio=str(reference))
         except ValueError as error:
             raise EngineError("REFERENCE_INVALID", str(error)) from error
-        self.prompts[key] = prompt
-        while len(self.prompts) > PROMPT_CACHE_SIZE:
-            self.prompts.popitem(last=False)
-        return prompt
 
     def voice_arguments(self, voice: dict[str, Any]) -> dict[str, Any]:
         if voice.get("source") == CLONE_SOURCE:
-            return {"voice_clone_prompt": self.clone_prompt(voice)}
+            return {"voice_clone_prompt": self.prompts.get(voice, self.enroll)}
         prompt = with_gender(str(voice.get("prompt") or ""), str(voice.get("gender") or ""))
         return {"instruct": prompt or None}
 

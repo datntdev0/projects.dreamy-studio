@@ -13,6 +13,8 @@ from app.shared.downloads import remove_tree
 AUDIO_SUFFIX = ".wav"
 META_SUFFIX = ".json"
 PARTIAL_SUFFIX = f".partial{AUDIO_SUFFIX}"
+PROMPTS_DIR = "prompts"
+PROMPT_SUFFIX = ".prompt"
 DEFAULT_LIMIT_BYTES = 500 * 1024 * 1024
 
 logger = logging.getLogger("tts-cache")
@@ -69,6 +71,9 @@ class TtsCache:
 
     def audio_path(self, namespace: str, key: str) -> Path:
         return self.root / namespace / f"{key}{AUDIO_SUFFIX}"
+
+    def prompt_path(self, namespace: str, key: str) -> Path:
+        return self.root / namespace / PROMPTS_DIR / f"{key}{PROMPT_SUFFIX}"
 
     def key_lock(self, key: str) -> threading.Lock:
         with self.lock:
